@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cupons: {
+        Row: {
+          busca: string | null
+          created_at: string
+          desconto: string | null
+          id: number
+          orcamento: number | null
+          tipo: string | null
+          updated_at: string
+          valor: number | null
+          vence: string | null
+          vendedor: string
+        }
+        Insert: {
+          busca?: string | null
+          created_at?: string
+          desconto?: string | null
+          id: number
+          orcamento?: number | null
+          tipo?: string | null
+          updated_at?: string
+          valor?: number | null
+          vence?: string | null
+          vendedor: string
+        }
+        Update: {
+          busca?: string | null
+          created_at?: string
+          desconto?: string | null
+          id?: number
+          orcamento?: number | null
+          tipo?: string | null
+          updated_at?: string
+          valor?: number | null
+          vence?: string | null
+          vendedor?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
