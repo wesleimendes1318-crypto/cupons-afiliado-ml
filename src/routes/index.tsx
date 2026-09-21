@@ -816,18 +816,29 @@ function Index() {
 
           {categoriasDisponiveis.length > 0 && (
             <div className="mt-5">
-              <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {categoriasDisponiveis.map(([categoria, quantidade]) => (
-                  <button
-                    key={categoria}
-                    type="button"
-                    aria-pressed={categorias.includes(categoria)}
-                    onClick={() => alternarCategoria(categoria)}
-                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", categorias.includes(categoria) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
-                  >
-                    {categoria} ({quantidade})
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
+                {categorias.length > 0 && (
+                  <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
+                    Limpar categorias
                   </button>
+                )}
+              </div>
+              <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de categorias">
+                {categoriasDisponiveis.map(([categoria, quantidade]) => (
+                  <label
+                    key={categoria}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={categorias.includes(categoria)}
+                      onChange={() => alternarCategoria(categoria)}
+                      className="size-4 accent-[var(--ml-blue)]"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{categoria}</span>
+                    <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
+                  </label>
                 ))}
               </div>
             </div>
