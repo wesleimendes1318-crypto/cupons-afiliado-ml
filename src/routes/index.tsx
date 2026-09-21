@@ -998,7 +998,7 @@ function Index() {
                     {escolhidos.map(({ cupom, motivo }) => (
                       <div key={cupom.id} className="flex flex-col gap-2">
                         <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
-                        <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
+                        <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
                       </div>
                     ))}
                   </div>
