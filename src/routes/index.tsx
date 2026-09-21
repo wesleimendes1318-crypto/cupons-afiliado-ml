@@ -1065,7 +1065,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
   if (!cupom) return null;
 
   const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
-  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. Máximo de desconto de ${formatarMoeda(cupom.teto)}. Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. Máximo de desconto de ${formatarTeto(cupom)}. Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
 
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && fechar()}>
@@ -1077,7 +1077,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
         <div className="space-y-5 px-5 pb-6 sm:px-6">
           <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
             <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
-            <ResumoModal rotulo="Teto de desconto" valor={formatarMoeda(cupom.teto)} destaque />
+            <ResumoModal rotulo="Teto de desconto" valor={formatarTeto(cupom)} destaque />
             <ResumoModal
               rotulo="Desconto real se a compra for de R$ 200"
               valor={formatarMoeda(descontoRealEm200(cupom))}
@@ -1095,7 +1095,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             )}
           >
             <a
-              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarMoeda(cupom.teto)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
+              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarTeto(cupom)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -1133,7 +1133,7 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
         body: JSON.stringify({
           vendedor: cupom.vendedor,
           desconto: cupom.desconto ?? "Desconto não informado",
-          teto: cupom.teto,
+          teto: tetoReal(cupom),
           compra_min: cupom.compra_min,
           canal,
           qualidade: cupom.qualidade === "armadilha" ? "armadilha" : "bom",
