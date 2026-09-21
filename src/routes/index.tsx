@@ -48,6 +48,7 @@ type Cupom = {
   busca: string | null;
   compra_min: number | null;
   teto: number | null;
+  sem_teto: boolean | null;
   qualidade: string | null;
   categoria: string | null;
   updated_at: string | null;
@@ -56,15 +57,16 @@ type Cupom = {
 type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
 type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
-type FaixaEconomia = "ate50" | "50a200" | "200a1000" | "acima1000";
+type FaixaEconomia = "semlimite" | "ate50" | "50a200" | "200a1000" | "acima1000";
 type EscolhaIa = { id: number; motivo: string };
 type Comparacao = { vencedor_id: number | null; veredito: string; observacoes: string[] };
 
-const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (teto: number | null) => boolean }> = [
-  { id: "ate50", rotulo: "até R$ 50", aceita: (teto) => teto != null && teto <= 50 },
-  { id: "50a200", rotulo: "R$ 50 a R$ 200", aceita: (teto) => teto != null && teto > 50 && teto <= 200 },
-  { id: "200a1000", rotulo: "R$ 200 a R$ 1.000", aceita: (teto) => teto != null && teto > 200 && teto <= 1000 },
-  { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (teto) => teto != null && teto > 1000 },
+const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) => boolean }> = [
+  { id: "semlimite", rotulo: "sem limite", aceita: (cupom) => semLimite(cupom) },
+  { id: "ate50", rotulo: "até R$ 50", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! <= 50 },
+  { id: "50a200", rotulo: "R$ 50 a R$ 200", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 50 && tetoReal(cupom)! <= 200 },
+  { id: "200a1000", rotulo: "R$ 200 a R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 200 && tetoReal(cupom)! <= 1000 },
+  { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000 },
 ];
 
 const PAGE_SIZE = 50;
@@ -120,9 +122,9 @@ function diasAte(data: string | null) {
 }
 
 function calcularScore(cupom: Cupom, agora: number | null) {
-  const teto = cupom.teto != null && cupom.teto >= 9_999_999 ? null : cupom.teto;
-  if (teto == null) return null;
-  let score = teto;
+  const base = semLimite(cupom) ? (cupom.valor ?? 0) * 40 : tetoReal(cupom);
+  if (base == null || base <= 0) return null;
+  let score = base;
   if (cupom.compra_min != null && cupom.compra_min <= 50) score *= 1.3;
   else if (cupom.compra_min != null && cupom.compra_min <= 150) score *= 1.15;
   if ((cupom.orcamento ?? 0) > 50_000) score *= 1.2;
@@ -140,13 +142,18 @@ function formatarMoeda(valor: number | null) {
 /** Tetos absurdos cadastrados (ex.: 99.999.999) significam "sem limite informado", não um valor real. */
 const TETO_IRREAL = 9_999_999;
 
+function semLimite(cupom: Pick<Cupom, "sem_teto">) {
+  return cupom.sem_teto === true;
+}
+
 function tetoReal(cupom: Pick<Cupom, "teto">) {
   return cupom.teto != null && cupom.teto >= TETO_IRREAL ? null : cupom.teto;
 }
 
-function formatarTeto(cupom: Pick<Cupom, "teto">) {
+function formatarTeto(cupom: Pick<Cupom, "teto" | "sem_teto">) {
+  if (semLimite(cupom)) return "sem limite de valor";
   const teto = tetoReal(cupom);
-  return teto == null ? "Sem limite informado" : brl.format(teto);
+  return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
 function linkWa(mensagem: string) {
@@ -184,7 +191,7 @@ function IconeWhatsApp({ className }: { className?: string }) {
 }
 
 function descontoRealEm200(cupom: Cupom) {
-  const teto = cupom.teto ?? Number.POSITIVE_INFINITY;
+  const teto = tetoReal(cupom) ?? Number.POSITIVE_INFINITY;
   const descontoCalculado = cupom.tipo === "%" ? 200 * ((cupom.valor ?? 0) / 100) : (cupom.valor ?? 0);
   return Math.min(descontoCalculado, teto);
 }
@@ -196,7 +203,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,qualidade,categoria,updated_at",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -293,7 +300,7 @@ function Index() {
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
       if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
-      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(tetoReal(cupom)))) return false;
+      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
       return true;
     });
 
@@ -351,7 +358,7 @@ function Index() {
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
   const contagensFaixa = useMemo(
-    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(tetoReal(cupom))).length])),
+    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
     [indexado],
   );
   const filtrosAtivos = Boolean(texto || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
@@ -986,20 +993,24 @@ function CupomCard({
   const contagem = contagemRegressiva(cupom.vence, agora);
   const encerrado = contagem.urgencia === "encerrado";
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
+  const ilimitado = semLimite(cupom);
+  const teto = tetoReal(cupom);
   const rotuloQualidade = armadilha
     ? `CUIDADO · desconto para em ${formatarTeto(cupom)}`
-    : `VALE A PENA · até ${formatarTeto(cupom)}`;
+    : ilimitado
+      ? "VALE A PENA · sem limite"
+      : `VALE A PENA · até ${formatarTeto(cupom)}`;
 
   return (
     <article
       className={cn(
-        "flex min-h-56 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
+        "flex min-h-56 min-w-0 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
         armadilha ? "border-danger" : "border-border",
         urgente && "border-t-4 border-t-urgency-danger",
         encerrado && "grayscale opacity-55 hover:translate-y-0 hover:shadow-none",
       )}
     >
-      <div className="flex min-h-10 items-start justify-between gap-3">
+      <div className="flex min-h-10 min-w-0 items-start justify-between gap-3">
         <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-secondary-ink">
           <input
             type="checkbox"
@@ -1012,7 +1023,7 @@ function CupomCard({
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
           className={cn(
-            "flex items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-secondary-ink",
+            "flex min-w-0 items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-secondary-ink",
             contagem.urgencia === "atencao" && "font-semibold text-urgency-warning",
             urgente && "animate-urgency-pulse bg-urgency-soft font-bold text-urgency-danger",
           )}
@@ -1030,38 +1041,52 @@ function CupomCard({
         </span>
       </div>
 
-      <div className="my-5 grid grid-cols-[minmax(0,1fr)_minmax(150px,190px)] items-center gap-4">
-        <div>
-          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarTeto(cupom)}</p>
-          {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
-          <p className="mt-3 text-lg font-bold text-secondary-ink">{cupom.desconto ?? "—"}</p>
-        </div>
-        <div className="min-w-0 border-l border-border pl-5">
-          <p className="text-sm text-secondary-ink">Em produtos de</p>
-          <p className="mt-0.5 break-words font-semibold">{cupom.vendedor}</p>
-          {cupom.categoria && <p className="mt-1 text-[11px] leading-4 text-secondary-ink"><span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja</p>}
-          <Button
-            asChild
-            className={cn(
-              "mt-3 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center text-xs font-bold",
-              armadilha
-                ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
-            )}
-          >
-            <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-              <IconeWhatsApp className="size-4" />
-              PEDIR MEU LINK
-            </a>
-          </Button>
-          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-            Eu confiro as condições e te digo o desconto real antes de você comprar.
+      <div className="my-5 min-w-0">
+        {ilimitado ? (
+          <>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem limite de valor</p>
+            <p className="mt-1 text-sm text-secondary-ink">o desconto é o percentual cheio sobre a compra</p>
+          </>
+        ) : teto != null ? (
+          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
+        ) : (
+          <p className="text-base font-semibold leading-tight text-secondary-ink">Limite não informado</p>
+        )}
+        {cupom.compra_min != null && (
+          <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>
+        )}
+        <p className="mt-3 text-base font-semibold text-secondary-ink">{cupom.desconto ?? "—"}</p>
+
+        <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
+          Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
+        </p>
+        {cupom.categoria && (
+          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">
+            <span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja
           </p>
-        </div>
+        )}
+
+        <Button
+          asChild
+          className={cn(
+            "mt-4 h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
+            armadilha
+              ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+              : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
+          )}
+        >
+          <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+            <IconeWhatsApp className="size-4 shrink-0" />
+            PEDIR MEU LINK
+          </a>
+        </Button>
+        <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
+          Eu confiro as condições e te digo o desconto real antes de você comprar.
+        </p>
       </div>
 
-      <div className="mt-auto border-t border-border pt-3 text-xs text-secondary-ink">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="mt-auto min-w-0 border-t border-border pt-3 text-xs text-secondary-ink">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <Button
             variant="link"
             className="h-auto p-0 text-xs font-medium text-secondary-ink"
@@ -1071,7 +1096,7 @@ function CupomCard({
             Condições do cupom <Info className="size-3.5" aria-hidden="true" />
           </Button>
           <span aria-hidden="true">|</span>
-          <span>Orçamento restante: {formatarMoeda(cupom.orcamento)}</span>
+          <span>{cupom.orcamento == null ? "Orçamento: não informado" : `Orçamento restante: ${brl.format(cupom.orcamento)}`}</span>
         </div>
         <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
       </div>
