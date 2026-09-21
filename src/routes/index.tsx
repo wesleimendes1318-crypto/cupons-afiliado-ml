@@ -1527,6 +1527,7 @@ function CupomCard({
 
 
 
+
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
           Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
         </p>
