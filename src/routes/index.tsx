@@ -192,6 +192,16 @@ function descricaoCupom(cupom: Cupom) {
 
 
 
+/** Lê a resposta do servidor sem quebrar quando ela não vem em JSON (tempo limite, página de erro). */
+async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
+  const texto = await resposta.text();
+  try {
+    return JSON.parse(texto) as Record<string, unknown>;
+  } catch {
+    return { erro: "O servidor demorou demais para responder. Tente novamente em instantes." };
+  }
+}
+
 function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
@@ -505,7 +515,7 @@ function Index() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pedido: pedidoIa, cupons: recomendadosFiltrados.map(({ id, vendedor, categoria, desconto, teto, compra_min }) => ({ id, vendedor, categoria, desconto, teto, compra_min })) }),
       });
-      const dados = (await resposta.json()) as { escolhas?: EscolhaIa[]; mensagem?: string; erro?: string };
+      const dados = (await lerJson(resposta)) as { escolhas?: EscolhaIa[]; mensagem?: string; erro?: string };
       if (!resposta.ok || !dados.escolhas || !dados.mensagem) throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
       setEscolhasIa(dados.escolhas);
       setMensagemIa(dados.mensagem);
@@ -531,7 +541,7 @@ function Index() {
           cupons: escolhidosParaComparar.map(({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade }) => ({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade })),
         }),
       });
-      const dados = (await resposta.json()) as Partial<Comparacao> & { erro?: string };
+      const dados = (await lerJson(resposta)) as Partial<Comparacao> & { erro?: string };
       if (!resposta.ok || typeof dados.veredito !== "string") throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
       setComparacao({ vencedor_id: dados.vencedor_id ?? null, veredito: dados.veredito, observacoes: dados.observacoes ?? [] });
     } catch (motivo) {
@@ -546,7 +556,7 @@ function Index() {
     setStatusClassificacao("Classificando as lojas em lotes de até 40...");
     try {
       const resposta = await fetch("/api/public/classificar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      const dados = (await resposta.json()) as { classificados?: number; total?: number; erro?: string };
+      const dados = (await lerJson(resposta)) as { classificados?: number; total?: number; erro?: string };
       if (!resposta.ok) throw new Error(dados.erro ?? "Não foi possível classificar as lojas.");
       setStatusClassificacao(`${dados.classificados ?? 0} de ${dados.total ?? 0} lojas classificadas.`);
       await refetch();
@@ -1295,7 +1305,7 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
           qualidade: cupom.qualidade === "armadilha" ? "armadilha" : "bom",
         }),
       });
-      const dados = (await resposta.json()) as { texto?: string; erro?: string };
+      const dados = (await lerJson(resposta)) as { texto?: string; erro?: string };
       if (!resposta.ok || !dados.texto) throw new Error(dados.erro ?? "Não foi possível gerar o texto.");
       setResultado(dados.texto);
     } catch (motivo) {
