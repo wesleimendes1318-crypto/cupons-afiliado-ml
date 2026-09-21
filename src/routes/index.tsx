@@ -717,16 +717,61 @@ function Index() {
             ))}
           </div>
 
-          <div className="relative mt-4">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={texto}
-              onChange={(event) => setTexto(event.target.value)}
-              inputMode="search"
-              aria-label="Buscar vendedor"
-              placeholder="Buscar vendedor (separe vários nomes por vírgula)"
-              className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
-            />
+          <div className="mt-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={texto}
+                onChange={(event) => setTexto(event.target.value)}
+                inputMode="search"
+                aria-label="Buscar loja"
+                placeholder="Buscar loja e marcar na lista abaixo"
+                className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+              />
+            </div>
+
+            {lojas.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {lojas.map((loja) => (
+                  <button
+                    key={loja}
+                    type="button"
+                    onClick={() => alternarLoja(loja)}
+                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
+                    aria-label={`Remover a loja ${loja} da seleção`}
+                  >
+                    <span className="truncate">{loja}</span>
+                    <X aria-hidden="true" className="size-3" />
+                  </button>
+                ))}
+                <button type="button" onClick={() => setLojas([])} className="text-xs font-medium text-secondary-ink underline">
+                  Limpar lojas
+                </button>
+              </div>
+            )}
+
+            <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de lojas">
+              {lojasFiltradas.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-secondary-ink">Nenhuma loja com esse nome.</p>
+              ) : (
+                lojasFiltradas.map(([loja, quantidade]) => (
+                  <label
+                    key={loja}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={lojas.includes(loja)}
+                      onChange={() => alternarLoja(loja)}
+                      className="size-4 accent-[var(--ml-blue)]"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{loja}</span>
+                    <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <p className="mt-1 text-xs text-secondary-ink">Marque uma ou mais lojas para filtrar os cupons.</p>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
