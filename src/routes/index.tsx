@@ -289,11 +289,11 @@ function Index() {
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
-      if (tMin && (cupom.teto ?? 0) < tMin) return false;
+      if (tMin && (tetoReal(cupom) ?? 0) < tMin) return false;
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
       if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
-      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom.teto))) return false;
+      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(tetoReal(cupom)))) return false;
       return true;
     });
 
@@ -335,7 +335,7 @@ function Index() {
     [indexado, selecionados],
   );
   const economiaSomada = useMemo(
-    () => cupomSelecionados.reduce((total, cupom) => total + (cupom.teto ?? 0), 0),
+    () => cupomSelecionados.reduce((total, cupom) => total + (tetoReal(cupom) ?? 0), 0),
     [cupomSelecionados],
   );
   const armadilhasDaBusca = useMemo(
@@ -351,7 +351,7 @@ function Index() {
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
   const contagensFaixa = useMemo(
-    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom.teto)).length])),
+    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(tetoReal(cupom))).length])),
     [indexado],
   );
   const filtrosAtivos = Boolean(texto || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
@@ -395,7 +395,7 @@ function Index() {
       cupom.desconto ?? "",
       cupom.vendedor,
       cupom.compra_min != null ? cupom.compra_min.toFixed(2).replace(".", ",") : "",
-      cupom.teto != null ? cupom.teto.toFixed(2).replace(".", ",") : "",
+      tetoReal(cupom) != null ? tetoReal(cupom)!.toFixed(2).replace(".", ",") : "",
       cupom.qualidade ?? "",
       cupom.orcamento != null ? cupom.orcamento.toFixed(2).replace(".", ",") : "",
       cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
