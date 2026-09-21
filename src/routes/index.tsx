@@ -145,6 +145,8 @@ function formatarMoeda(valor: number | null) {
 const TETO_IRREAL = 9_999_999;
 /** Compra necessária acima disso: o teto nunca é alcançado numa compra normal. */
 const COMPRA_INALCANCAVEL = 2_000;
+/** Quantidade máxima de cupons que podem ser comparados de uma vez. */
+const MAX_COMPARACAO = 3;
 
 type CupomLimite = Pick<Cupom, "teto" | "valor" | "tipo" | "sem_teto">;
 
@@ -176,6 +178,14 @@ function formatarTeto(cupom: CupomLimite) {
   const teto = tetoReal(cupom);
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
+
+/** Frase curta de economia, usada na curadoria e nos destaques. */
+function economiaCurta(cupom: Cupom) {
+  if (semLimite(cupom)) return "Desconto sem teto";
+  const teto = tetoUtil(cupom);
+  return teto == null ? "Limite não informado" : `Economize até ${brl.format(teto)}`;
+}
+
 
 /** "30% de desconto" quando o cupom é percentual; senão o texto cadastrado. */
 function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
@@ -469,6 +479,23 @@ function Index() {
     };
   }, [indexado]);
 
+  /** Curadoria: o melhor cupom de cada categoria, pela pontuação de oportunidade. */
+  const destaques = useMemo(() => {
+    const melhores = new Map<string, CupomIndexado>();
+    indexado
+      .filter((cupom) => cupom.qualidade === "bom" && contagemRegressiva(cupom.vence, agora).urgencia !== "encerrado")
+      .forEach((cupom) => {
+        const categoria = cupom.categoria ?? SEM_CATEGORIA;
+        const atual = melhores.get(categoria);
+        if (!atual || (cupom.score ?? -1) > (atual.score ?? -1)) melhores.set(categoria, cupom);
+      });
+    return [...melhores.entries()]
+      .filter(([categoria]) => categoria !== SEM_CATEGORIA)
+      .sort((a, b) => (b[1].score ?? 0) - (a[1].score ?? 0))
+      .slice(0, 6);
+  }, [indexado, agora]);
+
+
   const atualizado = useMemo(() => {
     const datas = cupons
       .map((cupom) => (cupom.updated_at ? new Date(cupom.updated_at).getTime() : 0))
@@ -515,7 +542,11 @@ function Index() {
   }
 
   function alternarSelecao(id: number) {
-    setSelecionados((atuais) => (atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]));
+    setSelecionados((atuais) => {
+      if (atuais.includes(id)) return atuais.filter((item) => item !== id);
+      if (atuais.length >= MAX_COMPARACAO) return atuais;
+      return [...atuais, id];
+    });
   }
 
   function alternarLoja(loja: string) {
@@ -691,6 +722,40 @@ function Index() {
             tom="armadilha"
           />
         </section>
+
+        {destaques.length > 0 && (
+          <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Melhor cupom de cada categoria">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
+              <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {destaques.map(([categoria, cupom]) => (
+                <div key={categoria} className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3">
+                  <button
+                    type="button"
+                    onClick={() => { setCategorias([categoria]); setVitrine("recomendados"); }}
+                    className="self-start rounded-full border border-ml-blue px-2.5 py-1 text-[11px] font-semibold text-ml-blue"
+                  >
+                    {categoria}
+                  </button>
+                  <p className="mt-2 text-base font-extrabold leading-tight text-success">{economiaCurta(cupom)}</p>
+                  <p className="text-xs text-secondary-ink">{percentualTexto(cupom)}</p>
+                  <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
+                    Em produtos de <span className="font-bold">{cupom.vendedor}</span>
+                  </p>
+                  <Button asChild className="mt-3 h-auto min-h-10 w-full bg-whatsapp px-3 py-2 text-sm font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                    <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+                      <IconeWhatsApp className="size-4 shrink-0" />
+                      Conferir esse cupom
+                    </a>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
 
         <section className="mt-6" aria-label="Filtros de cupons">
           <div className="flex border-b border-border" role="tablist" aria-label="Qualidade do cupom">
@@ -889,6 +954,14 @@ function Index() {
                 : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
             </p>
           )}
+          <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-secondary-ink">
+            <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
+            <ul className="mt-1 space-y-1">
+              <li><strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da compra. Acima disso o desconto não aumenta.</li>
+              <li><strong>Desconto sem teto</strong>: o percentual vale sobre o valor todo, sem limite de valor.</li>
+              <li><strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo antes de gerar para você.</li>
+            </ul>
+          </div>
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
@@ -925,7 +998,7 @@ function Index() {
                     {escolhidos.map(({ cupom, motivo }) => (
                       <div key={cupom.id} className="flex flex-col gap-2">
                         <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
-                        <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
+                        <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
                       </div>
                     ))}
                   </div>
@@ -973,7 +1046,7 @@ function Index() {
               </div>
               <div className="grid items-stretch gap-4 md:grid-cols-2">
                 {visiveis.map((cupom) => (
-                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
+                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
                 ))}
               </div>
 
@@ -1006,25 +1079,28 @@ function Index() {
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold">
-              {cupomSelecionados.length === 1 ? "1 loja selecionada" : `${cupomSelecionados.length} lojas selecionadas`} · economia estimada de até {formatarMoeda(economiaSomada)}
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">
+                {cupomSelecionados.length === 1 ? "1 cupom marcado" : `${cupomSelecionados.length} cupons marcados`} de até {MAX_COMPARACAO} · economia estimada de até {formatarMoeda(economiaSomada)}
+              </p>
+              <p className="text-xs text-secondary-ink">
+                {cupomSelecionados.length < 2
+                  ? "Marque mais 1 cupom para comparar qual rende mais."
+                  : cupomSelecionados.length === MAX_COMPARACAO
+                    ? "Limite de 3 cupons atingido. Desmarque um para trocar."
+                    : "Você pode marcar mais 1 cupom."}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
               <Button
                 className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white shadow-md hover:bg-ml-blue/90"
                 disabled={cupomSelecionados.length < 2}
-                title={
-                  cupomSelecionados.length < 2
-                    ? "Marque 2 ou 3 lojas nos cards para comparar."
-                    : cupomSelecionados.length > 3
-                      ? "A comparação usa os 3 primeiros cupons selecionados."
-                      : undefined
-                }
+                title={cupomSelecionados.length < 2 ? "Marque 2 ou 3 cupons nos cards para comparar." : undefined}
                 onClick={abrirComparador}
               >
                 <Sparkles aria-hidden="true" />
-                Comparar economia{cupomSelecionados.length < 2 ? " (marque 2 lojas)" : ""}
+                Comparar economia{cupomSelecionados.length < 2 ? " (marque mais 1)" : ""}
               </Button>
               <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
                 <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
@@ -1187,12 +1263,14 @@ function CupomCard({
   abrirCondicoes,
   selecionado,
   alternarSelecao,
+  limiteAtingido = false,
 }: {
   cupom: CupomIndexado;
   agora: number | null;
   abrirCondicoes: (cupom: CupomIndexado) => void;
   selecionado: boolean;
   alternarSelecao: (id: number) => void;
+  limiteAtingido?: boolean;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
   const contagem = contagemRegressiva(cupom.vence, agora);
@@ -1201,6 +1279,7 @@ function CupomCard({
   const ilimitado = semLimite(cupom);
   const teto = tetoUtil(cupom);
   const em200 = descontoRealEm200(cupom);
+  const compraTeto = compraParaAtingirTeto(cupom);
   const rotuloQualidade = ilimitado
     ? "Sem teto de desconto"
     : teto == null
@@ -1219,14 +1298,22 @@ function CupomCard({
       )}
     >
       <div className="flex min-h-10 min-w-0 items-start justify-between gap-3">
-        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-secondary-ink">
+        <label
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 text-xs font-medium text-secondary-ink",
+            limiteAtingido && !selecionado ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+          )}
+          title={limiteAtingido && !selecionado ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.` : "Marque para comparar (até 3)"}
+        >
           <input
             type="checkbox"
             checked={selecionado}
+            disabled={limiteAtingido && !selecionado}
             onChange={() => alternarSelecao(cupom.id)}
-            className="size-4 accent-[var(--whatsapp)]"
-            aria-label={`Selecionar a loja ${cupom.vendedor}`}
+            className="size-4 accent-[var(--ml-blue)]"
+            aria-label={`Selecionar a loja ${cupom.vendedor} para comparar`}
           />
+          Comparar
         </label>
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
@@ -1252,22 +1339,32 @@ function CupomCard({
       <div className="my-5 min-w-0">
         {ilimitado ? (
           <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">{percentualTexto(cupom)} sem teto</p>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem teto</p>
             <p className="mt-1 text-sm text-secondary-ink">
-              o desconto é o percentual cheio sobre a compra
-              {em200 > 0 ? `: numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
+              {percentualTexto(cupom)} sobre o valor todo, sem limite de valor
+              {em200 > 0 ? `. Numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
             </p>
           </>
         ) : teto != null ? (
           <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">{percentualTexto(cupom)} até esse limite</p>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economize até {brl.format(teto)}</p>
+            <p className="mt-1 text-sm text-secondary-ink">
+              {percentualTexto(cupom)}. O desconto para em {brl.format(teto)} — acima disso não aumenta.
+            </p>
+            {compraTeto != null && (
+              <p className="mt-1 text-sm text-secondary-ink">
+                Para chegar ao máximo, a compra precisa ser de cerca de {brl.format(compraTeto)}.
+              </p>
+            )}
           </>
         ) : (
-          <p className="text-base font-semibold leading-tight text-secondary-ink">{percentualTexto(cupom)}, com limite não informado</p>
+          <>
+            <p className="text-base font-semibold leading-tight text-foreground">{percentualTexto(cupom)}</p>
+            <p className="mt-1 text-sm text-secondary-ink">Limite não informado. Eu confirmo o máximo antes de gerar o cupom.</p>
+          </>
         )}
         {cupom.compra_min != null && (
-          <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>
+          <p className="mt-1 text-sm font-medium text-foreground">Compra mínima de {formatarMoeda(cupom.compra_min)}</p>
         )}
 
 
