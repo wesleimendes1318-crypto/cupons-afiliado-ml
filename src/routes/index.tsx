@@ -1178,6 +1178,18 @@ function ComparadorModal({
   comparacao: Comparacao | null;
   erro: string;
 }) {
+  const chaveCupons = cupons.map((cupom) => cupom.id).join(",");
+  const [escolhidas, setEscolhidas] = useState<number[]>(() => cupons.map((cupom) => cupom.id));
+
+  useEffect(() => {
+    setEscolhidas(chaveCupons ? chaveCupons.split(",").map(Number) : []);
+  }, [chaveCupons]);
+
+  const alternarEscolhida = (id: number) =>
+    setEscolhidas((atual) => (atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id]));
+
+  const cuponsEscolhidos = cupons.filter((cupom) => escolhidas.includes(cupom.id));
+
   return (
     <Dialog open={aberto} onOpenChange={(estado) => { if (!estado) fechar(); }}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
@@ -1227,6 +1239,42 @@ function ComparadorModal({
           </table>
         </div>
 
+        {cupons.length > 0 && (
+          <div className="rounded-md border border-border p-3">
+            <p className="text-sm font-semibold">Quais cupons você quer?</p>
+            <p className="mt-0.5 text-xs text-secondary-ink">Marque as lojas que te interessam e fale comigo sobre elas.</p>
+            <ul className="mt-2 space-y-2">
+              {cupons.map((cupom) => {
+                const marcada = escolhidas.includes(cupom.id);
+                return (
+                  <li key={cupom.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="flex min-w-0 items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-ml-blue"
+                        checked={marcada}
+                        onChange={() => alternarEscolhida(cupom.id)}
+                      />
+                      <span className="min-w-0 break-words font-semibold">{cupom.vendedor}</span>
+                    </label>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="border-whatsapp text-whatsapp hover:bg-whatsapp/10"
+                    >
+                      <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+                        <IconeWhatsApp className="size-4" />
+                        Falar só desta
+                      </a>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {carregando && <p className="text-sm text-secondary-ink" aria-live="polite">Analisando os cupons...</p>}
 
         {!carregando && erro && (
@@ -1247,13 +1295,23 @@ function ComparadorModal({
           </div>
         )}
 
-        {cupons.length > 0 && (
+        {cuponsEscolhidos[0] ? (
           <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-            <a href={linkWhatsAppLista(cupons)} target="_blank" rel="noopener noreferrer">
+            <a
+              href={cuponsEscolhidos.length === 1 ? linkWhatsApp(cuponsEscolhidos[0]!) : linkWhatsAppLista(cuponsEscolhidos)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <IconeWhatsApp className="size-5" />
-              Falar sobre essas {cupons.length} lojas
+              {cuponsEscolhidos.length === 1
+                ? `Falar sobre a ${cuponsEscolhidos[0]!.vendedor}`
+                : `Falar sobre essas ${cuponsEscolhidos.length} lojas`}
             </a>
           </Button>
+        ) : (
+          <p className="rounded-md bg-muted px-3 py-2 text-sm text-secondary-ink">
+            Marque ao menos uma loja acima para falar comigo sobre ela.
+          </p>
         )}
         <p className="text-xs text-secondary-ink">
           Comparação feita com os dados cadastrados de cada cupom. A categoria é estimada pelo nome da loja.

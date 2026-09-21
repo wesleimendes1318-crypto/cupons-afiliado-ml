@@ -59,8 +59,8 @@ export const Route = createFileRoute("/api/public/comparar")({
         const prompt = `Compare estes cupons do Mercado Livre e explique, em português do Brasil, qual oferece a melhor economia e por quê.
 Dados de cada cupom: "teto" é a economia máxima em reais, "compra_min" é a compra mínima em reais, "vence" é a data final e "qualidade" igual a "armadilha" significa cupom com teto muito baixo.
 REGRAS CRÍTICAS: use somente os dados enviados; nunca invente loja, produto, preço ou prazo; nunca prometa desconto acima do teto; a categoria é apenas uma estimativa feita pelo nome da loja; nunca diga que o cupom só funciona por um link específico, pois ele se aplica sozinho no carrinho.
-No campo "veredito", escreva de 2 a 4 frases simples dizendo qual compensa mais e por quê, citando os valores em reais no formato brasileiro (exemplo: R$ 1.250,90). Sempre se refira a cada cupom pelo nome da loja; nunca cite o número de id. Se duas lojas tiverem o mesmo nome, diferencie pelo desconto ou pela data.
-No campo "observacoes", escreva de 1 a 4 avisos curtos e úteis, como quando a resposta muda conforme o valor da compra, compra mínima alta, prazo curto ou cupom armadilha.
+No campo "veredito", escreva de 2 a 3 frases curtas e muito fáceis de entender dizendo qual loja compensa mais e por quê. NÃO cite valores em reais, não use a palavra "teto" nem fale de limite de desconto: a tabela ao lado já mostra todos os números e repetir isso confunde o cliente. Fale em termos simples, como "rende mais em compras maiores" ou "vale mais para compras pequenas". Sempre se refira a cada cupom pelo nome da loja; nunca cite o número de id. Se duas lojas tiverem o mesmo nome, diferencie pelo desconto ou pela data.
+No campo "observacoes", escreva de 1 a 3 avisos curtos e úteis, também sem citar valores em reais, como quando a resposta muda conforme o tamanho da compra, compra mínima alta, prazo curto ou cupom armadilha.
 O campo "vencedor_id" deve ser o id do cupom que compensa mais entre os enviados.
 Cupons: ${JSON.stringify(entrada.cupons)}`;
 
