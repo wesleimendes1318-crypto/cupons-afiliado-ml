@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Copy, Info, Search, ShieldAlert, Sparkles, WandSparkles, X } from "lucide-react";
+import { Check, Clock3, Copy, Info, MessageCircle, Search, ShieldAlert, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
