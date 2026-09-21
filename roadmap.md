@@ -9,3 +9,6 @@
 - [x] Adicionar seletor de canal, geração e cópia no modal
 - [x] Validar erros, responsividade e ausência de chave no navegador
 - [x] Publicar a versão com o gerador seguro
+- [ ] Adicionar contagem regressiva por hora no fuso de São Paulo
+- [ ] Direcionar todos os cupons ao contato por WhatsApp
+- [ ] Validar contadores, contato, responsividade e publicação
