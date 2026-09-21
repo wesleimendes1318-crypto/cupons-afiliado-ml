@@ -17,11 +17,13 @@ export type Database = {
       cupons: {
         Row: {
           busca: string | null
+          categoria: string | null
           compra_min: number | null
           created_at: string
           desconto: string | null
           estoque: number | null
           id: number
+          nivel: string | null
           orcamento: number | null
           qualidade: string | null
           teto: number | null
@@ -29,15 +31,18 @@ export type Database = {
           updated_at: string
           valor: number | null
           vence: string | null
+          vendas: number | null
           vendedor: string
         }
         Insert: {
           busca?: string | null
+          categoria?: string | null
           compra_min?: number | null
           created_at?: string
           desconto?: string | null
           estoque?: number | null
           id: number
+          nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
           teto?: number | null
@@ -45,15 +50,18 @@ export type Database = {
           updated_at?: string
           valor?: number | null
           vence?: string | null
+          vendas?: number | null
           vendedor: string
         }
         Update: {
           busca?: string | null
+          categoria?: string | null
           compra_min?: number | null
           created_at?: string
           desconto?: string | null
           estoque?: number | null
           id?: number
+          nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
           teto?: number | null
@@ -61,6 +69,7 @@ export type Database = {
           updated_at?: string
           valor?: number | null
           vence?: string | null
+          vendas?: number | null
           vendedor?: string
         }
         Relationships: []

@@ -12,3 +12,9 @@
 - [x] Adicionar contagem regressiva por hora no fuso de São Paulo
 - [x] Direcionar todos os cupons ao contato por WhatsApp
 - [x] Validar contadores, contato, responsividade e publicação
+- [ ] Recomendar apenas cupons bons na entrada e revelar armadilhas encontradas na busca
+- [ ] Calcular e ordenar por melhores oportunidades reais
+- [ ] Adicionar classificação estimada de categorias no servidor
+- [ ] Adicionar filtros multiescolha de categoria e economia
+- [ ] Adicionar assistente de recomendações com IA
+- [ ] Validar integrações, telas e publicar

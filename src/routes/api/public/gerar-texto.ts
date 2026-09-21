@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { excedeuLimite, json, origemPermitida, respostaOptions, textoGemini } from "@/lib/public-ai-api";
+
 const entradaSchema = z.object({
   vendedor: z.string().trim().min(1).max(160),
   desconto: z.string().trim().min(1).max(80),
@@ -10,63 +12,6 @@ const entradaSchema = z.object({
   qualidade: z.enum(["bom", "armadilha"]),
 });
 
-const LIMITE_POR_MINUTO = 8;
-const JANELA_MS = 60_000;
-const requisicoes = new Map<string, number[]>();
-
-function origemPermitida(request: Request) {
-  const origem = request.headers.get("origin");
-  if (!origem) return null;
-
-  try {
-    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-    const origemUrl = new URL(origem);
-    const mesmaOrigem = host != null && origemUrl.host === host;
-    const local = origemUrl.hostname === "localhost" || origemUrl.hostname === "127.0.0.1";
-    return mesmaOrigem || local ? origem : null;
-  } catch {
-    return null;
-  }
-}
-
-function cabecalhosCors(origem: string | null) {
-  return {
-    ...(origem ? { "Access-Control-Allow-Origin": origem } : {}),
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Max-Age": "86400",
-    "Content-Type": "application/json; charset=utf-8",
-    Vary: "Origin",
-  };
-}
-
-function json(request: Request, body: object, status = 200) {
-  return Response.json(body, { status, headers: cabecalhosCors(origemPermitida(request)) });
-}
-
-function excedeuLimite(request: Request) {
-  const identificador =
-    request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "desconhecido";
-  const agora = Date.now();
-  const recentes = (requisicoes.get(identificador) ?? []).filter((momento) => agora - momento < JANELA_MS);
-
-  if (recentes.length >= LIMITE_POR_MINUTO) {
-    requisicoes.set(identificador, recentes);
-    return true;
-  }
-
-  recentes.push(agora);
-  requisicoes.set(identificador, recentes);
-  if (requisicoes.size > 2_000) {
-    for (const [chave, momentos] of requisicoes) {
-      if (!momentos.some((momento) => agora - momento < JANELA_MS)) requisicoes.delete(chave);
-    }
-  }
-  return false;
-}
-
 function moeda(valor: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
 }
@@ -75,9 +20,7 @@ export const Route = createFileRoute("/api/public/gerar-texto")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => {
-        const origem = origemPermitida(request);
-        if (!origem) return new Response(null, { status: 403 });
-        return new Response(null, { status: 204, headers: cabecalhosCors(origem) });
+        return respostaOptions(request);
       },
       POST: async ({ request }) => {
         if (!origemPermitida(request)) {
@@ -117,8 +60,6 @@ Teto máximo de desconto: ${teto}.
 Compra mínima: ${compraMinima}.
 REGRA CRÍTICA: informe o benefício REAL, nunca destaque o percentual isoladamente e nunca prometa desconto maior que o teto. Se houver teto, diga claramente o limite, como “20% OFF com desconto de até R$ 100”. Informe a compra mínima quando existir. Não invente características de produtos, estoque, frete ou prazo de entrega. Entregue somente a mensagem final.`;
 
-        const controlador = new AbortController();
-        const timeout = setTimeout(() => controlador.abort(), 15_000);
         try {
           const resposta = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
@@ -129,24 +70,18 @@ REGRA CRÍTICA: informe o benefício REAL, nunca destaque o percentual isoladame
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: { maxOutputTokens: 180, temperature: 0.5 },
               }),
-              signal: controlador.signal,
             },
           );
           if (!resposta.ok) {
             return json(request, { erro: "Não foi possível gerar o texto agora. Tente novamente em instantes." }, 502);
           }
-          const resultado = (await resposta.json()) as {
-            candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-          };
-          const texto = resultado.candidates?.[0]?.content?.parts?.map((parte) => parte.text ?? "").join("").trim();
+          const texto = textoGemini(await resposta.json());
           if (!texto) {
             return json(request, { erro: "O gerador não retornou um texto. Tente novamente." }, 502);
           }
           return json(request, { texto, aviso: false });
         } catch {
-          return json(request, { erro: "O gerador demorou para responder. Tente novamente." }, 504);
-        } finally {
-          clearTimeout(timeout);
+          return json(request, { erro: "Não foi possível gerar o texto agora. Tente novamente em instantes." }, 502);
         }
       },
     },

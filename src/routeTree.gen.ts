@@ -10,11 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
+import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
+  id: '/api/public/classificar',
+  path: '/api/public/classificar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicGerarTextoRoute = ApiPublicGerarTextoRouteImport.update({
@@ -22,31 +29,57 @@ const ApiPublicGerarTextoRoute = ApiPublicGerarTextoRouteImport.update({
   path: '/api/public/gerar-texto',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
+  id: '/api/public/recomendar',
+  path: '/api/public/recomendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
+  '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
+  '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
+  '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/gerar-texto'
+  fullPaths:
+    | '/'
+    | '/api/public/classificar'
+    | '/api/public/gerar-texto'
+    | '/api/public/recomendar'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/gerar-texto'
-  id: '__root__' | '/' | '/api/public/gerar-texto'
+  to:
+    | '/'
+    | '/api/public/classificar'
+    | '/api/public/gerar-texto'
+    | '/api/public/recomendar'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/public/classificar'
+    | '/api/public/gerar-texto'
+    | '/api/public/recomendar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
+  ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +91,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/classificar': {
+      id: '/api/public/classificar'
+      path: '/api/public/classificar'
+      fullPath: '/api/public/classificar'
+      preLoaderRoute: typeof ApiPublicClassificarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gerar-texto': {
       id: '/api/public/gerar-texto'
       path: '/api/public/gerar-texto'
@@ -65,12 +105,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGerarTextoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/recomendar': {
+      id: '/api/public/recomendar'
+      path: '/api/public/recomendar'
+      fullPath: '/api/public/recomendar'
+      preLoaderRoute: typeof ApiPublicRecomendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
+  ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
