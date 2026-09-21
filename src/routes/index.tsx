@@ -1343,31 +1343,19 @@ function CupomCard({
       </div>
 
       <div className="my-5 min-w-0">
+        <p className="text-2xl font-extrabold leading-tight text-foreground sm:text-3xl">{percentualTexto(cupom)}</p>
         {ilimitado ? (
-          <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem teto</p>
-            <p className="mt-1 text-sm text-secondary-ink">
-              {percentualTexto(cupom)} sobre o valor todo, sem limite de valor
-              {em200 > 0 ? `. Numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
-            </p>
-          </>
+          <p className="mt-1 text-sm text-secondary-ink">
+            Vale sobre o valor todo da compra, sem limite.
+            {em200 > 0 ? ` Numa compra de R$ 200, você economiza ${brl.format(em200)}.` : ""}
+          </p>
         ) : teto != null ? (
-          <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economize até {brl.format(teto)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">
-              {percentualTexto(cupom)}. O desconto para em {brl.format(teto)} — acima disso não aumenta.
-            </p>
-            {compraTeto != null && (
-              <p className="mt-1 text-sm text-secondary-ink">
-                Para chegar ao máximo, a compra precisa ser de cerca de {brl.format(compraTeto)}.
-              </p>
-            )}
-          </>
+          <p className="mt-1 text-sm text-secondary-ink">
+            <span className="font-semibold text-success">Economize até {brl.format(teto)}</span> — acima disso o desconto não aumenta.
+            {compraTeto != null ? ` Para chegar ao máximo, a compra precisa ser de cerca de ${brl.format(compraTeto)}.` : ""}
+          </p>
         ) : (
-          <>
-            <p className="text-base font-semibold leading-tight text-foreground">{percentualTexto(cupom)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">Limite não informado. Eu confirmo o máximo antes de gerar o cupom.</p>
-          </>
+          <p className="mt-1 text-sm text-secondary-ink">O cupom não informa o limite. Eu confirmo o máximo antes de gerar o seu.</p>
         )}
         {cupom.compra_min != null && (
           <p className="mt-1 text-sm font-medium text-foreground">Compra mínima de {formatarMoeda(cupom.compra_min)}</p>
