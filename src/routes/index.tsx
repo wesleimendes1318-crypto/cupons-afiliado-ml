@@ -758,15 +758,31 @@ function Index() {
               value={pedidoIa}
               onChange={(event) => setPedidoIa(event.target.value)}
               maxLength={500}
-              placeholder="O que você está procurando? Ex: presente para minha mãe até R$ 150"
+              placeholder={`O que você está procurando? Ex: ${SUGESTOES_IA[sugestao % SUGESTOES_IA.length]}`}
               aria-label="O que você está procurando?"
-              className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+              className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 transition-colors placeholder:text-muted-foreground placeholder:transition-opacity focus:ring-2"
             />
             <Button disabled={recomendando || pedidoIa.trim().length < 3} className="min-h-12 bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">
               <Sparkles aria-hidden="true" />
               {recomendando ? "Procurando..." : "Encontrar cupons"}
             </Button>
           </form>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-secondary-ink">Experimente:</span>
+            {[0, 1, 2].map((passo) => {
+              const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
+              return (
+                <button
+                  key={texto}
+                  type="button"
+                  onClick={() => setPedidoIa(texto)}
+                  className="animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
+                >
+                  {texto}
+                </button>
+              );
+            })}
+          </div>
           <p className="mt-2 text-xs text-secondary-ink">A IA escolhe somente entre os cupons recomendados e os filtros ativos.</p>
           {erroIa && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erroIa}</p>}
         </section>
