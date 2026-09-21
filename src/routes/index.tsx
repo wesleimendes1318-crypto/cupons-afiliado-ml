@@ -1543,7 +1543,7 @@ function CupomCard({
         <Button
           asChild
           className={cn(
-            "mt-auto h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold [margin-top:auto]",
+            "mt-auto h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
             armadilha
               ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
               : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
