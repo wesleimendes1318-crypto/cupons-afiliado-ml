@@ -25,6 +25,8 @@ const saidaSchema = z.object({
   vencedor_id: z.number().int(),
   veredito: z.string().trim().min(1).max(600),
   observacoes: z.array(z.string().trim().min(1).max(240)).max(4),
+  chamada: z.string().trim().min(1).max(200),
+  urgencia: z.string().trim().max(200).nullable(),
 });
 
 const formatoSaida = {
@@ -36,8 +38,10 @@ const formatoSaida = {
       vencedor_id: { type: "integer" },
       veredito: { type: "string" },
       observacoes: { type: "array", items: { type: "string" } },
+      chamada: { type: "string" },
+      urgencia: { type: ["string", "null"] },
     },
-    required: ["vencedor_id", "veredito", "observacoes"],
+    required: ["vencedor_id", "veredito", "observacoes", "chamada", "urgencia"],
   },
 } as const;
 
