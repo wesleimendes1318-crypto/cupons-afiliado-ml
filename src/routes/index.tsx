@@ -863,13 +863,17 @@ function CupomCard({
               "mt-3 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center text-xs font-bold",
               armadilha
                 ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
             )}
           >
             <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-              {armadilha ? "VER MESMO ASSIM" : "QUERO ESTE CUPOM"}
+              <IconeWhatsApp className="size-4" />
+              PEDIR MEU LINK
             </a>
           </Button>
+          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
+            Eu confiro as condições e te digo o desconto real antes de você comprar.
+          </p>
         </div>
       </div>
 
