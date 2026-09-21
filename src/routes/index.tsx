@@ -155,7 +155,7 @@ function linkWa(mensagem: string) {
 
 function resumoCupom(cupom: Cupom) {
   const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarMoeda(cupom.teto)}${compra})`;
+  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarTeto(cupom)}${compra})`;
 }
 
 function linkWhatsApp(cupom: Cupom, extra?: string) {
@@ -168,7 +168,7 @@ function linkWhatsApp(cupom: Cupom, extra?: string) {
 
 function linkWhatsAppLista(cupons: Cupom[], introFinal?: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarMoeda(cupom.teto)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarTeto(cupom)}.`)
     .join("\n");
   const fecho = introFinal ? `\n${introFinal}` : "";
   return linkWa(`Oi! Me interessei por estas lojas:\n${itens}\nPode me mandar os links para eu escolher os produtos?${fecho}`);
