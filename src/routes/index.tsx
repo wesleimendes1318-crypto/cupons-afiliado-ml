@@ -160,25 +160,39 @@ function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
+/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de desconto". */
+function limiteNaMensagem(cupom: Cupom) {
+  if (semLimite(cupom)) return "sem limite de desconto";
+  const teto = tetoReal(cupom);
+  return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
+}
+
 function resumoCupom(cupom: Cupom) {
   const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarTeto(cupom)}${compra})`;
+  return `${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}${compra}`;
 }
 
 function linkWhatsApp(cupom: Cupom, extra?: string) {
   const mensagem =
-    `Oi! Quero comprar na loja ${cupom.vendedor}, que está com ${resumoCupom(cupom)}.\n` +
-    `Ainda vou escolher o produto. Me manda o link para eu ver os produtos dessa loja e você confere se o cupom vale para o que eu escolher?` +
-    (extra ? `\n${extra}` : "");
+    `Oi! Vi no seu site o cupom da ${cupom.vendedor} (${resumoCupom(cupom)}).\n` +
+    (extra ? `${extra}\n` : "") +
+    `Ainda não escolhi o produto. O que eu quero comprar é: `;
   return linkWa(mensagem);
 }
 
-function linkWhatsAppLista(cupons: Cupom[], introFinal?: string) {
+function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarTeto(cupom)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
     .join("\n");
-  const fecho = introFinal ? `\n${introFinal}` : "";
-  return linkWa(`Oi! Me interessei por estas lojas:\n${itens}\nPode me mandar os links para eu escolher os produtos?${fecho}`);
+  const fecho = fechoPersonalizado ?? "O que eu quero comprar é: ";
+  return linkWa(`Oi! Me interessei por estas lojas do seu site:\n${itens}\n${fecho}`);
+}
+
+function linkWhatsAppIa(cupons: Cupom[], consulta: string) {
+  const itens = cupons
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
+    .join("\n");
+  return linkWa(`Oi! Pesquisei no seu site: "${consulta}".\nAs sugestões foram:\n${itens}\nQual dessas vale mais a pena para mim?`);
 }
 
 function IconeWhatsApp({ className }: { className?: string }) {
