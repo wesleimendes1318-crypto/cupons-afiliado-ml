@@ -210,7 +210,7 @@ function linkWhatsApp(cupom: Cupom, extra?: string) {
 
 function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}.`)
     .join("\n");
   const fecho = fechoPersonalizado ?? "O que eu quero comprar é: ";
   return linkWa(`Oi! Me interessei por estas lojas do seu site:\n${itens}\n${fecho}`);
@@ -218,7 +218,7 @@ function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
 
 function linkWhatsAppIa(cupons: Cupom[], consulta: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}.`)
     .join("\n");
   return linkWa(`Oi! Pesquisei no seu site: "${consulta}".\nAs sugestões foram:\n${itens}\nQual dessas vale mais a pena para mim?`);
 }
