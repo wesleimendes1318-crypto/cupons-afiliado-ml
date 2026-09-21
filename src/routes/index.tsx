@@ -743,9 +743,27 @@ function Index() {
             <Aviso
               titulo="Nenhum resultado para esses filtros"
               texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
-            />
+            >
+              <Button asChild className="mt-4 h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                <a href={linkWa("Oi! Busquei um cupom no seu site e não encontrei. Pode me ajudar?")} target="_blank" rel="noopener noreferrer">
+                  <IconeWhatsApp className="size-5" />
+                  Pedir ajuda no WhatsApp
+                </a>
+              </Button>
+            </Aviso>
           ) : (
             <>
+              <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-whatsapp/40 bg-whatsapp/10 p-4 sm:flex-row sm:items-center">
+                <p className="text-sm font-medium">
+                  Não achou o que procura? Me chama que eu procuro um cupom para o produto que você quer.
+                </p>
+                <Button asChild className="h-auto min-h-11 shrink-0 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                  <a href={linkWa("Oi! Não achei no site o cupom que eu queria. Pode me ajudar a encontrar?")} target="_blank" rel="noopener noreferrer">
+                    <IconeWhatsApp className="size-5" />
+                    Pedir ajuda no WhatsApp
+                  </a>
+                </Button>
+              </div>
               <div className="grid items-stretch gap-4 md:grid-cols-2">
                 {visiveis.map((cupom) => (
                   <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
@@ -1274,11 +1292,12 @@ function InputNumero({ valor, aoMudar }: { valor: string; aoMudar: (valor: strin
   );
 }
 
-function Aviso({ titulo, texto }: { titulo: string; texto: string }) {
+function Aviso({ titulo, texto, children }: { titulo: string; texto: string; children?: ReactNode }) {
   return (
     <div className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center">
       <p className="text-base font-semibold">{titulo}</p>
       <p className="mx-auto mt-1 max-w-md text-sm text-secondary-ink">{texto}</p>
+      {children}
     </div>
   );
 }
