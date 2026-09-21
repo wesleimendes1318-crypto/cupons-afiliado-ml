@@ -196,6 +196,8 @@
   --urgency-danger: oklch(0.72 0.18 27);
   --urgency-soft: oklch(0.28 0.07 27);
   --secondary-ink: oklch(0.72 0 0);
+  --whatsapp: #25d366;
+  --whatsapp-foreground: oklch(0.16 0.02 150);
   --shadow-card: 0 4px 14px oklch(0 0 0 / 24%);
   --shadow-modal: 0 16px 48px oklch(0 0 0 / 45%);
   --primary: oklch(0.68 0.17 255);
