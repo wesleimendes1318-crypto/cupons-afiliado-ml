@@ -861,7 +861,7 @@ function Index() {
               <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
                 <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
                   <IconeWhatsApp className="size-5" />
-                  PEDIR OS LINKS
+                  Falar sobre {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja" : "lojas"}
                 </a>
               </Button>
             </div>
@@ -873,14 +873,14 @@ function Index() {
         href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Falar no WhatsApp"
+        aria-label="Falar comigo no WhatsApp"
         className={cn(
           "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
           cupomSelecionados.length > 0 ? "bottom-24" : "bottom-4",
         )}
       >
         <IconeWhatsApp className="size-7 sm:size-5" />
-        <span className="hidden sm:inline">Falar no WhatsApp</span>
+        <span className="hidden sm:inline">Falar comigo</span>
       </a>
 
 
