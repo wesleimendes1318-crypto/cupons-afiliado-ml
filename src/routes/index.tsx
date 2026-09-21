@@ -1072,7 +1072,7 @@ function CupomCard({
         </p>
         <span
           className={cn(
-            "max-w-[58%] rounded-sm px-2 py-1 text-right text-[10px] font-bold uppercase leading-4 sm:text-xs",
+            "max-w-[58%] rounded-sm px-2 py-1 text-right text-xs font-semibold leading-4",
             armadilha ? "bg-danger-soft text-danger" : "bg-success-soft text-success",
           )}
         >
