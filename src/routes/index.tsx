@@ -473,11 +473,13 @@ function Index() {
     const vendedores = new Set(indexado.map((cupom) => cupom.vendedor));
     return {
       total: indexado.length,
+      analisados: cupons.length,
+      repetidos: Math.max(0, cupons.length - indexado.length),
       vendedores: vendedores.size,
       bons: indexado.filter((cupom) => cupom.qualidade === "bom").length,
       armadilhas: indexado.filter((cupom) => cupom.qualidade === "armadilha").length,
     };
-  }, [indexado]);
+  }, [indexado, cupons]);
 
   /** Curadoria: o melhor cupom de cada categoria, pela pontuação de oportunidade. */
   const destaques = useMemo(() => {
