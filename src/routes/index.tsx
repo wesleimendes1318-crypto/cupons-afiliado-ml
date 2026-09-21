@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Clock3, Copy, Info, MessageCircle, Search, ShieldAlert, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
+import BuscaPorLink from "@/components/BuscaPorLink";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,7 +83,7 @@ const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, 
   { id: "termina24", rotulo: "Termina em 24h", aceita: (cupom, agora) => dentroDe(cupom, agora, 24) },
   { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
   { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
-  { id: "economiaalta", rotulo: "Economia acima de R$ 200", aceita: (cupom) => (tetoUtil(cupom) ?? 0) > 200 },
+  { id: "economiaalta", rotulo: "Economia acima de R$ 200", aceita: (cupom) => semLimite(cupom) || (tetoUtil(cupom) ?? 0) > 200 },
   { id: "comprabaixa", rotulo: "Compra até R$ 50", aceita: (cupom) => cupom.compra_min != null && cupom.compra_min <= 50 },
   { id: "semcompramin", rotulo: "Sem compra mínima", aceita: (cupom) => cupom.compra_min == null || cupom.compra_min === 0 },
 ];
@@ -200,21 +201,43 @@ function compraParaAtingirTeto(cupom: CupomLimite) {
   return (teto * 100) / cupom.valor;
 }
 
-/** Sem limite na prática: marcado no banco, sem teto informado ou teto inalcançável numa compra normal. */
+/** Sem limite de verdade: só quando o banco marcou assim ou não existe teto informado.
+ *  Um teto alto continua sendo um teto — dizer "sem limite" quando existe limite de
+ *  R$ 1.000 é impreciso, e é exatamente o tipo de meia verdade que este site combate. */
 function semLimite(cupom: CupomLimite) {
   if (cupom.sem_teto === true) return true;
+  // Desconto em reais já é o próprio limite: "R$ 30 OFF" desconta R$ 30, nunca mais.
+  if (cupom.tipo !== "%") return false;
+  return tetoReal(cupom) == null;
+}
+
+/** Existe teto, mas só se alcança numa compra grande. Continua sendo informado. */
+function tetoFolgado(cupom: CupomLimite) {
+  if (semLimite(cupom)) return false;
   const compra = compraParaAtingirTeto(cupom);
   return compra != null && compra > COMPRA_INALCANCAVEL;
 }
 
-/** Teto que vale a pena anunciar: só quando é alcançável numa compra realista. */
+/** O teto real, sempre que existir. Um limite folgado ainda é um limite.
+ *  Em cupom de valor fixo, o próprio desconto é o teto. */
 function tetoUtil(cupom: CupomLimite) {
-  return semLimite(cupom) ? null : tetoReal(cupom);
+  const teto = tetoReal(cupom);
+  if (teto != null) return teto;
+  if (cupom.tipo !== "%" && cupom.valor != null) return cupom.valor;
+  return null;
+}
+
+/** Quanto a pessoa realmente economiza numa compra normal.
+ *  Somar o teto quando ele só é alcançável numa compra enorme infla o número,
+ *  e número inflado é exatamente o que este site existe para denunciar. */
+function economiaRealista(cupom: Cupom) {
+  if (semLimite(cupom) || tetoFolgado(cupom)) return descontoRealEm200(cupom);
+  return tetoUtil(cupom) ?? descontoRealEm200(cupom);
 }
 
 function formatarTeto(cupom: CupomLimite) {
   if (semLimite(cupom)) return "sem limite de valor";
-  const teto = tetoReal(cupom);
+  const teto = tetoUtil(cupom);
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
@@ -475,7 +498,7 @@ function Index() {
     [indexado, selecionados],
   );
   const economiaSomada = useMemo(
-    () => cupomSelecionados.reduce((total, cupom) => total + (tetoUtil(cupom) ?? descontoRealEm200(cupom)), 0),
+    () => cupomSelecionados.reduce((total, cupom) => total + economiaRealista(cupom), 0),
     [cupomSelecionados],
   );
   const armadilhasDaBusca = useMemo(
@@ -523,13 +546,19 @@ function Index() {
 
   const indicadores = useMemo(() => {
     const vendedores = new Set(indexado.map((cupom) => cupom.vendedor));
+    const bons = indexado.filter((cupom) => cupom.qualidade === "bom").length;
+    const armadilhas = indexado.filter((cupom) => cupom.qualidade === "armadilha").length;
+    const conferidos = bons + armadilhas;
     return {
       total: indexado.length,
       analisados: cupons.length,
       repetidos: Math.max(0, cupons.length - indexado.length),
       vendedores: vendedores.size,
-      bons: indexado.filter((cupom) => cupom.qualidade === "bom").length,
-      armadilhas: indexado.filter((cupom) => cupom.qualidade === "armadilha").length,
+      bons,
+      armadilhas,
+      conferidos,
+      naFila: Math.max(0, indexado.length - conferidos),
+      aproveitamento: conferidos > 0 ? Math.round((bons / conferidos) * 100) : null,
     };
   }, [indexado, cupons]);
 
@@ -802,18 +831,32 @@ function Index() {
           {erroIa && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erroIa}</p>}
         </section>
 
+        <BuscaPorLink />
+
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo dos cupons">
           <Indicador
-            titulo="Cupons"
-            valor={indicadores.total.toLocaleString("pt-BR")}
-            detalhe={`${indicadores.analisados.toLocaleString("pt-BR")} analisados${indicadores.repetidos > 0 ? ` · ${indicadores.repetidos.toLocaleString("pt-BR")} repetidos removidos` : ""}`}
+            titulo="Cupons conferidos"
+            valor={indicadores.conferidos.toLocaleString("pt-BR")}
+            detalhe={`de ${indicadores.total.toLocaleString("pt-BR")} cupons de ${indicadores.vendedores.toLocaleString("pt-BR")} lojas`}
           />
-          <Indicador titulo="Vendedores" valor={indicadores.vendedores.toLocaleString("pt-BR")} />
-          <Indicador titulo="Vale a pena" valor={indicadores.bons.toLocaleString("pt-BR")} tom="bom" />
+          <Indicador
+            titulo="Valem a pena"
+            valor={indicadores.bons.toLocaleString("pt-BR")}
+            tom="bom"
+            {...(indicadores.aproveitamento != null
+              ? { detalhe: `${indicadores.aproveitamento}% dos que eu conferi` }
+              : {})}
+          />
           <Indicador
             titulo="Armadilhas"
             valor={indicadores.armadilhas.toLocaleString("pt-BR")}
             tom="armadilha"
+            detalhe="anunciam muito e descontam pouco"
+          />
+          <Indicador
+            titulo="Ainda na fila"
+            valor={indicadores.naFila.toLocaleString("pt-BR")}
+            detalhe="condições não conferidas ainda"
           />
         </section>
 
@@ -1634,10 +1677,17 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
           <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
             <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
             <ResumoModal rotulo="Teto de desconto" valor={formatarTeto(cupom)} destaque />
-            {compraParaTeto != null && (
+            {compraParaTeto != null && !semLimite(cupom) && (
               <ResumoModal
-                rotulo="Compra necessária para atingir o teto"
+                rotulo="Você só chega nesse teto gastando"
                 valor={brl.format(compraParaTeto)}
+              />
+            )}
+            {tetoFolgado(cupom) && (
+              <ResumoModal
+                rotulo="Na prática"
+                valor="o teto é alto: numa compra normal você recebe o desconto cheio"
+                destaque
               />
             )}
             <ResumoModal
