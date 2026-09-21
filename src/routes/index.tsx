@@ -293,8 +293,12 @@ function linkWa(mensagem: string) {
 /** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de valor". */
 function limiteNaMensagem(cupom: Cupom) {
   if (semLimite(cupom)) return "sem limite de valor";
-  const teto = tetoReal(cupom);
-  return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
+  const teto = tetoUtil(cupom);
+  if (teto == null) return "limite não informado";
+  // Mesma linguagem do card: um teto que so se alcanca numa compra absurda
+  // nao e informacao util disfarcada de numero grande.
+  if (tetoFolgado(cupom)) return `sem teto na prática, o limite é ${brl.format(teto)}`;
+  return `desconta até ${brl.format(teto)}`;
 }
 
 function resumoCupom(cupom: Cupom) {
