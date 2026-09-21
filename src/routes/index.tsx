@@ -1299,7 +1299,7 @@ function CupomCard({
           </a>
         </Button>
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Me diz o que você procura e eu confirmo se o cupom vale para esse produto.
+          Me diz o que você procura e eu gero o cupom para esse produto.
         </p>
       </div>
 
