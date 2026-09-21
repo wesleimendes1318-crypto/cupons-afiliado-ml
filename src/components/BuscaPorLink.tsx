@@ -291,14 +291,16 @@ function Resultado({
         </div>
       )}
 
-      <a
-        href={zap}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 block w-full rounded-md border border-success py-2.5 text-center text-sm font-bold text-success"
-      >
-        Falar comigo no WhatsApp
-      </a>
+      {a?.temCupom && (
+        <a
+          href={zap}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 block w-full rounded-md border border-success py-2.5 text-center text-sm font-bold text-success"
+        >
+          Me chamar para garantir esse cupom
+        </a>
+      )}
 
       <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
         A compra é feita direto no Mercado Livre, com a mesma segurança, o mesmo preço e a mesma
