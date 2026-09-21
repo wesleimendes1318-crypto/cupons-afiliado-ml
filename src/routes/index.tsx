@@ -376,7 +376,7 @@ function Index() {
     [indexado, selecionados],
   );
   const economiaSomada = useMemo(
-    () => cupomSelecionados.reduce((total, cupom) => total + (tetoReal(cupom) ?? 0), 0),
+    () => cupomSelecionados.reduce((total, cupom) => total + (tetoUtil(cupom) ?? descontoRealEm200(cupom)), 0),
     [cupomSelecionados],
   );
   const armadilhasDaBusca = useMemo(
