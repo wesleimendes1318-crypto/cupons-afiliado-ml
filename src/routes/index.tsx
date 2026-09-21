@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock3, Info, Search, ShieldAlert } from "lucide-react";
+import { Check, Clock3, Copy, Info, Search, ShieldAlert, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -521,9 +521,100 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             />
           </div>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
+          <GeradorTexto cupom={cupom} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
+  const [canal, setCanal] = useState<"WhatsApp" | "Instagram">("WhatsApp");
+  const [resultado, setResultado] = useState("");
+  const [erro, setErro] = useState("");
+  const [gerando, setGerando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
+  async function gerar() {
+    setGerando(true);
+    setErro("");
+    setResultado("");
+    setCopiado(false);
+    try {
+      const resposta = await fetch("/api/public/gerar-texto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vendedor: cupom.vendedor,
+          desconto: cupom.desconto ?? "Desconto não informado",
+          teto: cupom.teto,
+          compra_min: cupom.compra_min,
+          canal,
+          qualidade: cupom.qualidade === "armadilha" ? "armadilha" : "bom",
+        }),
+      });
+      const dados = (await resposta.json()) as { texto?: string; erro?: string };
+      if (!resposta.ok || !dados.texto) throw new Error(dados.erro ?? "Não foi possível gerar o texto.");
+      setResultado(dados.texto);
+    } catch (motivo) {
+      setErro(motivo instanceof Error ? motivo.message : "Não foi possível gerar o texto.");
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(resultado);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2_000);
+    } catch {
+      setErro("Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.");
+    }
+  }
+
+  return (
+    <section className="border-t border-border pt-5" aria-label="Gerador de texto de venda">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <Campo rotulo="Canal da mensagem">
+          <select
+            value={canal}
+            onChange={(event) => {
+              setCanal(event.target.value as typeof canal);
+              setResultado("");
+              setErro("");
+            }}
+            className="campo-filtro sm:min-w-44"
+            aria-label="Canal da mensagem"
+          >
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Instagram">Instagram</option>
+          </select>
+        </Campo>
+        <Button
+          type="button"
+          onClick={gerar}
+          disabled={gerando}
+          className="bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90 sm:mb-0 sm:w-auto"
+        >
+          <Sparkles aria-hidden="true" />
+          {gerando ? "Gerando..." : "Gerar texto de venda"}
+        </Button>
+      </div>
+
+      {erro && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erro}</p>}
+      {resultado && (
+        <div className="mt-3 rounded-lg border border-border bg-muted/50 p-4">
+          <p className="whitespace-pre-line text-sm leading-6">{resultado}</p>
+          <div className="mt-3 flex justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={copiar}>
+              {copiado ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+              {copiado ? "Copiado" : "Copiar"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
