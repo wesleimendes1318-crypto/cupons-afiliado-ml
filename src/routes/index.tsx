@@ -312,6 +312,14 @@ function Index() {
     () => escolhasIa.map((escolha) => ({ cupom: indexado.find((item) => item.id === escolha.id), motivo: escolha.motivo })).filter((item): item is { cupom: CupomIndexado; motivo: string } => Boolean(item.cupom)),
     [escolhasIa, indexado],
   );
+  const cupomSelecionados = useMemo(
+    () => indexado.filter((cupom) => selecionados.includes(cupom.id)),
+    [indexado, selecionados],
+  );
+  const economiaSomada = useMemo(
+    () => cupomSelecionados.reduce((total, cupom) => total + (cupom.teto ?? 0), 0),
+    [cupomSelecionados],
+  );
   const armadilhasDaBusca = useMemo(
     () => (termos.length ? filtrados.filter((cupom) => cupom.qualidade === "armadilha") : []),
     [filtrados, termos.length],
