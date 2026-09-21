@@ -331,16 +331,22 @@ function Index() {
     setPagina(1);
   }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas]);
 
-  const indexado = useMemo(
-    () =>
-      cupons.map((c) => ({
-        ...c,
-        chave: normalizar(c.busca ?? c.vendedor ?? ""),
-        dias: diasAte(c.vence),
-        score: calcularScore(c, agora),
-      })),
-    [cupons, agora],
-  );
+  const indexado = useMemo(() => {
+    const preparados = cupons.map((c) => ({
+      ...c,
+      chave: normalizar(c.busca ?? c.vendedor ?? ""),
+      dias: diasAte(c.vence),
+      score: calcularScore(c, agora),
+    }));
+    // Remove cupons duplicados (mesma loja + mesmo desconto), ficando com o de melhor score
+    const unicos = new Map<string, (typeof preparados)[number]>();
+    for (const cupom of preparados) {
+      const chaveUnica = `${cupom.chave}|${normalizar(cupom.desconto ?? "")}`;
+      const existente = unicos.get(chaveUnica);
+      if (!existente || (cupom.score ?? -1) > (existente.score ?? -1)) unicos.set(chaveUnica, cupom);
+    }
+    return [...unicos.values()];
+  }, [cupons, agora]);
 
   const termos = useMemo(
     () =>
@@ -591,9 +597,9 @@ function Index() {
                 Muito cupom anuncia 40% e desconta R$ 2. Eu confiro o limite real antes de indicar.
               </p>
               <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
-                <a href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")} target="_blank" rel="noopener noreferrer">
+                <a href={linkWa("Oi! Vi seu site de cupons e quero garantir um cupom.")} target="_blank" rel="noopener noreferrer">
                   <IconeWhatsApp className="size-5 text-whatsapp" />
-                  Falar comigo
+                  Garantir meu cupom
                 </a>
               </Button>
               <p className="mt-2 text-xs text-secondary-ink">
@@ -922,17 +928,22 @@ function Index() {
             <p className="text-sm font-semibold">
               {cupomSelecionados.length === 1 ? "1 loja selecionada" : `${cupomSelecionados.length} lojas selecionadas`} · economia estimada de até {formatarMoeda(economiaSomada)}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
               <Button
-                variant="outline"
-                className="h-auto min-h-11 font-semibold"
+                className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white shadow-md hover:bg-ml-blue/90"
                 disabled={cupomSelecionados.length < 2}
-                title={cupomSelecionados.length > 3 ? "A comparação usa os 3 primeiros cupons selecionados." : undefined}
+                title={
+                  cupomSelecionados.length < 2
+                    ? "Marque 2 ou 3 lojas nos cards para comparar."
+                    : cupomSelecionados.length > 3
+                      ? "A comparação usa os 3 primeiros cupons selecionados."
+                      : undefined
+                }
                 onClick={abrirComparador}
               >
                 <Sparkles aria-hidden="true" />
-                Comparar economia
+                Comparar economia{cupomSelecionados.length < 2 ? " (marque 2 lojas)" : ""}
               </Button>
               <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
                 <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
@@ -946,17 +957,17 @@ function Index() {
       )}
 
       <a
-        href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")}
+        href={linkWa("Oi! Vi seu site de cupons e quero garantir um cupom.")}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Falar comigo no WhatsApp"
+        aria-label="Garantir meu cupom pelo WhatsApp"
         className={cn(
           "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
           cupomSelecionados.length > 0 ? "bottom-24" : "bottom-4",
         )}
       >
         <IconeWhatsApp className="size-7 sm:size-5" />
-        <span className="hidden sm:inline">Falar comigo</span>
+        <span className="hidden sm:inline">Garantir meu cupom</span>
       </a>
 
 
