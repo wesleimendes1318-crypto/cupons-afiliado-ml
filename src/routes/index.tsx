@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Copy, Info, MessageCircle, Search, ShieldAlert, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
+import { Check, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AFILIADO, WHATSAPP } from "@/config";
+import { AFILIADO } from "@/config";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -286,56 +286,16 @@ async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
   }
 }
 
-function linkWa(mensagem: string) {
-  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
-}
-
-/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de valor". */
-function limiteNaMensagem(cupom: Cupom) {
-  if (semLimite(cupom)) return "sem limite de valor";
-  const teto = tetoUtil(cupom);
-  if (teto == null) return "limite não informado";
-  // Mesma linguagem do card: um teto que so se alcanca numa compra absurda
-  // nao e informacao util disfarcada de numero grande.
-  if (tetoFolgado(cupom)) return 'sem limite prático';
-  return `desconta até ${brl.format(teto)}`;
-}
-
-function resumoCupom(cupom: Cupom) {
-  const compra = cupom.compra_min != null ? `, compra mínima de ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}${compra}`;
-}
-
-function linkWhatsApp(cupom: Cupom, extra?: string) {
-  const mensagem =
-    `Oi! Vi no seu site o cupom da ${cupom.vendedor} (${resumoCupom(cupom)}).\n` +
-    (extra ? `${extra}\n` : "") +
-    `Ainda não escolhi o produto. O que eu quero comprar é: `;
-  return linkWa(mensagem);
-}
-
-function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
-  const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}.`)
-    .join("\n");
-  const fecho = fechoPersonalizado ?? "O que eu quero comprar é: ";
-  return linkWa(`Oi! Me interessei por estas lojas do seu site:\n${itens}\n${fecho}`);
-}
-
-function linkWhatsAppIa(cupons: Cupom[], consulta: string) {
-  const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}.`)
-    .join("\n");
-  return linkWa(`Oi! Pesquisei no seu site: "${consulta}".\nAs sugestões foram:\n${itens}\nQual dessas vale mais a pena para mim?`);
-}
-
-function IconeWhatsApp({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className ?? "size-5"}>
-      <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.48-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35Z" />
-      <path d="M12.04 2C6.6 2 2.18 6.42 2.18 11.86c0 1.74.46 3.44 1.32 4.94L2 22l5.35-1.4a9.82 9.82 0 0 0 4.69 1.19h.01c5.43 0 9.85-4.42 9.85-9.86 0-2.63-1.02-5.1-2.88-6.96A9.78 9.78 0 0 0 12.04 2Zm0 17.98h-.01a8.2 8.2 0 0 1-4.16-1.14l-.3-.18-3.1.81.83-3.02-.2-.31a8.14 8.14 0 0 1-1.25-4.34c0-4.52 3.68-8.2 8.2-8.2 2.19 0 4.25.86 5.8 2.41a8.14 8.14 0 0 1 2.4 5.8c0 4.52-3.68 8.17-8.21 8.17Z" />
-    </svg>
-  );
+/* Sem WhatsApp no site: quem quer o cupom resolve sozinho.
+   Todo botao que antes abria a conversa agora leva ao campo de colar o link,
+   que e o unico caminho que gera o link de afiliado de verdade. */
+function irParaColarLink() {
+  if (typeof document === "undefined") return;
+  document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.setTimeout(() => {
+    const campo = document.getElementById("campo-link-produto");
+    if (campo instanceof HTMLTextAreaElement || campo instanceof HTMLInputElement) campo.focus();
+  }, 450);
 }
 
 function descontoRealEm200(cupom: Cupom) {
@@ -759,11 +719,9 @@ function Index() {
               <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
                 Aqui você sempre sabe quanto economiza antes de comprar. E pode voltar sempre: acompanho os cupons novos e aviso quando aparecer um que valha a pena para você.
               </p>
-              <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
-                <a href={linkWa("Oi! Vi seu site de cupons e quero garantir um cupom.")} target="_blank" rel="noopener noreferrer">
-                  <IconeWhatsApp className="size-5 text-whatsapp" />
-                  Garantir meu cupom
-                </a>
+              <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
+                <Link2 className="size-5 text-ml-blue" aria-hidden="true" />
+                Colar o link do produto
               </Button>
               <p className="mt-2 text-xs text-secondary-ink">
                 {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
@@ -777,9 +735,9 @@ function Index() {
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4">
           <ol className="grid gap-3 text-sm sm:grid-cols-3">
             {[
-              { icone: Search, texto: "Você escolhe uma loja por aqui" },
-              { icone: MessageCircle, texto: "Me chama no WhatsApp e diz o que quer comprar" },
-              { icone: ShieldCheck, texto: "Eu gero e disponibilizo o meu cupom personalizado" },
+              { icone: Link2, texto: "Você cola aqui o link do anúncio que quer comprar" },
+              { icone: Search, texto: "O site confere na hora se a loja tem cupom de verdade" },
+              { icone: ShieldCheck, texto: "Você recebe o link pronto para comprar, sem falar com ninguém" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
@@ -887,11 +845,9 @@ function Index() {
             </div>
             {escolhidos.length > 0 && (
               <>
-                <Button asChild size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                  <a href={linkWhatsAppIa(escolhidos.map(({ cupom }) => cupom), pedidoIa)} target="_blank" rel="noopener noreferrer">
-                    <IconeWhatsApp className="size-5" />
-                    Falar sobre essas opções
-                  </a>
+                <Button onClick={irParaColarLink} size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90">
+                  <Link2 className="size-5" aria-hidden="true" />
+                  Escolheu um produto? Cole o link e eu confiro o cupom
                 </Button>
                 <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {escolhidos.map(({ cupom, motivo }) => (
@@ -927,11 +883,9 @@ function Index() {
                   <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
                     Em produtos de <span className="font-bold">{cupom.vendedor}</span>
                   </p>
-                  <Button asChild className="mt-3 h-auto min-h-10 w-full bg-whatsapp px-3 py-2 text-sm font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                    <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-                      <IconeWhatsApp className="size-4 shrink-0" />
-                      Conferir esse cupom
-                    </a>
+                  <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 w-full bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90">
+                    <Link2 className="size-4 shrink-0" aria-hidden="true" />
+                    Conferir esse cupom
                   </Button>
                 </div>
               ))}
@@ -1198,24 +1152,21 @@ function Index() {
               titulo="Nenhum resultado para esses filtros"
               texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
             >
-              <Button asChild className="mt-4 h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                <a href={linkWa("Oi! Busquei um cupom no seu site e não encontrei. Pode me ajudar?")} target="_blank" rel="noopener noreferrer">
-                  <IconeWhatsApp className="size-5" />
-                  Pedir ajuda no WhatsApp
-                </a>
+              <Button onClick={irParaColarLink} className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90">
+                <Link2 className="size-5" aria-hidden="true" />
+                Colar o link do produto
               </Button>
             </Aviso>
           ) : (
             <>
-              <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-whatsapp/40 bg-whatsapp/10 p-4 sm:flex-row sm:items-center">
+              <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-ml-blue/40 bg-ml-blue/10 p-4 sm:flex-row sm:items-center">
                 <p className="text-sm font-medium">
-                  Não achou o que procura? Me chama que eu procuro um cupom para o produto que você quer.
+                  Não achou a loja aqui? Cole o link do anúncio que você quer: eu confiro o cupom
+                  daquele vendedor na hora.
                 </p>
-                <Button asChild className="h-auto min-h-11 shrink-0 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                  <a href={linkWa("Oi! Não achei no site o cupom que eu queria. Pode me ajudar a encontrar?")} target="_blank" rel="noopener noreferrer">
-                    <IconeWhatsApp className="size-5" />
-                    Pedir ajuda no WhatsApp
-                  </a>
+                <Button onClick={irParaColarLink} className="h-auto min-h-11 shrink-0 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90">
+                  <Link2 className="size-5" aria-hidden="true" />
+                  Colar o link do produto
                 </Button>
               </div>
               <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -1276,30 +1227,27 @@ function Index() {
                 <Sparkles aria-hidden="true" />
                 Comparar economia{cupomSelecionados.length < 2 ? " (marque mais 1)" : ""}
               </Button>
-              <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
-                  <IconeWhatsApp className="size-5" />
-                  Falar sobre {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja" : "lojas"}
-                </a>
+              <Button onClick={irParaColarLink} className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90">
+                <Link2 className="size-5" aria-hidden="true" />
+                Colar o link do produto
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      <a
-        href={linkWa("Oi! Vi seu site de cupons e quero garantir um cupom.")}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Garantir meu cupom pelo WhatsApp"
+      <button
+        type="button"
+        onClick={irParaColarLink}
+        aria-label="Ir para o campo de colar o link do produto"
         className={cn(
-          "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
+          "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-ml-blue font-bold text-white shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
           cupomSelecionados.length > 0 ? "bottom-40" : "bottom-20",
         )}
       >
-        <IconeWhatsApp className="size-7 sm:size-5" />
-        <span className="hidden sm:inline">Garantir meu cupom</span>
-      </a>
+        <Link2 className="size-7 sm:size-5" aria-hidden="true" />
+        <span className="hidden sm:inline">Colar link do produto</span>
+      </button>
 
 
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
@@ -1371,7 +1319,6 @@ function ComparadorModal({
   const alternarEscolhida = (id: number) =>
     setEscolhidas((atual) => (atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id]));
 
-  const cuponsEscolhidos = cupons.filter((cupom) => escolhidas.includes(cupom.id));
 
   return (
     <Dialog open={aberto} onOpenChange={(estado) => { if (!estado) fechar(); }}>
@@ -1441,15 +1388,13 @@ function ComparadorModal({
                       <span className="min-w-0 break-words font-semibold">{cupom.vendedor}</span>
                     </label>
                     <Button
-                      asChild
                       variant="outline"
                       size="sm"
-                      className="border-whatsapp text-whatsapp hover:bg-whatsapp/10"
+                      className="border-ml-blue text-ml-blue hover:bg-ml-blue/10"
+                      onClick={irParaColarLink}
                     >
-                      <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-                        <IconeWhatsApp className="size-4" />
-                        Falar só desta
-                      </a>
+                      <Link2 className="size-4" aria-hidden="true" />
+                      Colar link
                     </Button>
                   </li>
                 );
@@ -1486,24 +1431,10 @@ function ComparadorModal({
           </div>
         )}
 
-        {cuponsEscolhidos[0] ? (
-          <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-            <a
-              href={cuponsEscolhidos.length === 1 ? linkWhatsApp(cuponsEscolhidos[0]!) : linkWhatsAppLista(cuponsEscolhidos)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <IconeWhatsApp className="size-5" />
-              {cuponsEscolhidos.length === 1
-                ? `Falar sobre a ${cuponsEscolhidos[0]!.vendedor}`
-                : `Falar sobre essas ${cuponsEscolhidos.length} lojas`}
-            </a>
-          </Button>
-        ) : (
-          <p className="rounded-md bg-muted px-3 py-2 text-sm text-secondary-ink">
-            Marque ao menos uma loja acima para falar comigo sobre ela.
-          </p>
-        )}
+        <Button onClick={irParaColarLink} className="h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90">
+          <Link2 className="size-5" aria-hidden="true" />
+          Colar o link do produto e conferir o cupom
+        </Button>
         <p className="text-xs text-secondary-ink">
           Comparação feita com os dados cadastrados de cada cupom. A categoria é estimada pelo nome da loja.
         </p>
@@ -1635,21 +1566,19 @@ function CupomCard({
         )}
 
         <Button
-          asChild
+          onClick={irParaColarLink}
           className={cn(
             "mt-auto h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
             armadilha
               ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-              : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
+              : "bg-ml-blue text-white hover:bg-ml-blue/90",
           )}
         >
-          <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-            <IconeWhatsApp className="size-4 shrink-0" />
-            Conferir esse cupom
-          </a>
+          <Link2 className="size-4 shrink-0" aria-hidden="true" />
+          Conferir esse cupom
         </Button>
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Me diz o que você procura e eu disponibilizo o meu cupom personalizado para esse produto.
+          Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora.
         </p>
       </div>
 
@@ -1672,7 +1601,7 @@ function CupomCard({
                 : "Orçamento ainda disponível"}
           </span>
         </div>
-        <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
+        <p className="mt-2 text-[11px]">O link de compra sai na hora, aqui mesmo no site</p>
       </div>
     </article>
   );
@@ -1715,26 +1644,20 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             />
           </div>
           <Button
-            asChild
             size="lg"
+            onClick={() => { fechar(); irParaColarLink(); }}
             className={cn(
               "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
               cupom.qualidade === "armadilha"
                 ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
+                : "bg-ml-blue text-white hover:bg-ml-blue/90",
             )}
           >
-            <a
-              href={linkWhatsApp(cupom)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <IconeWhatsApp className="size-5" />
-              Conferir esse cupom
-            </a>
+            <Link2 className="size-5" aria-hidden="true" />
+            Conferir esse cupom
           </Button>
           <p className="-mt-3 text-xs text-secondary-ink">
-            Me diz o que você procura e eu disponibilizo o meu cupom personalizado para esse produto.
+            Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora.
           </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
