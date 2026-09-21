@@ -650,7 +650,7 @@ function Index() {
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">Cupons Afiliado ML</h1>
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
-                Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero o cupom com o limite real e te mando o link da loja.
+                Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado.
               </p>
               <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <a href={linkWa("Oi! Vi seu site de cupons e quero garantir um cupom.")} target="_blank" rel="noopener noreferrer">
@@ -672,7 +672,7 @@ function Index() {
             {[
               { icone: Search, texto: "Você escolhe uma loja por aqui" },
               { icone: MessageCircle, texto: "Me chama no WhatsApp e diz o que quer comprar" },
-              { icone: ShieldCheck, texto: "Eu gero o cupom e mando o link da loja" },
+              { icone: ShieldCheck, texto: "Eu gero e disponibilizo o meu cupom personalizado" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
@@ -1396,7 +1396,7 @@ function CupomCard({
           </a>
         </Button>
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Me diz o que você procura e eu gero o cupom para esse produto.
+          Me diz o que você procura e eu disponibilizo o meu cupom personalizado para esse produto.
         </p>
       </div>
 
@@ -1474,7 +1474,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             </a>
           </Button>
           <p className="-mt-3 text-xs text-secondary-ink">
-            Me diz o que você procura e eu gero o cupom para esse produto.
+            Me diz o que você procura e eu disponibilizo o meu cupom personalizado para esse produto.
           </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
