@@ -52,6 +52,11 @@ type Cupom = {
   qualidade: string | null;
   categoria: string | null;
   updated_at: string | null;
+  /* A etiqueta do cupom: o codigo gerado no hub de afiliados, com o prefixo
+     do Weslei (#WSLMENDES...). E a prova que a pessoa leva para o carrinho:
+     ela cola, ve o desconto cair e sabe de onde veio. Null enquanto esse
+     cupom nao tem etiqueta gerada. */
+  codigo_cupom: string | null;
   /* Link de afiliado da vitrine do cupom: a lista exata de produtos que aquele
      cupom cobre, ja com a etiqueta do Weslei. Gerado pela extensao uma vez por
      cupom e guardado no banco, entao chega pronto aqui. Null enquanto a fila
@@ -297,6 +302,55 @@ async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
    Sem link_afiliado (cupom novo, ainda na fila), ele leva ao campo de colar,
    que e o outro caminho que gera o link de afiliado. Nunca manda a pessoa
    para o Mercado Livre por fora, que seria perder a comissao. */
+/* A etiqueta do cupom, com botao de copiar.
+
+   Por que ela importa: o link da vitrine sozinho aplica o desconto no
+   carrinho automaticamente, mas a pessoa nao ve de onde ele veio. Com a
+   etiqueta ela cola o codigo, ve o valor cair na hora e fica com a certeza
+   de que usou o cupom do Weslei. E prova, nao decoracao. */
+function EtiquetaDoCupom({ codigo }: { codigo: string }) {
+  const [copiado, setCopiado] = useState(false);
+
+  function copiar() {
+    const guardar = () => { setCopiado(true); window.setTimeout(() => setCopiado(false), 1800); };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(codigo).then(guardar).catch(() => undefined);
+      return;
+    }
+    // Navegador antigo ou sem permissao: seleciona para a pessoa copiar a mao.
+    try {
+      const campo = document.createElement("textarea");
+      campo.value = codigo;
+      campo.style.position = "fixed";
+      campo.style.opacity = "0";
+      document.body.appendChild(campo);
+      campo.select();
+      document.execCommand("copy");
+      document.body.removeChild(campo);
+      guardar();
+    } catch { /* deixa a pessoa selecionar na mao */ }
+  }
+
+  return (
+    <div className="mt-3 rounded-md border border-dashed border-ml-blue/50 bg-ml-blue/5 p-2.5">
+      <p className="text-[11px] font-semibold text-secondary-ink">Etiqueta deste cupom</p>
+      <div className="mt-1 flex items-center gap-2">
+        <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1 text-xs font-bold tracking-wide text-ml-blue">
+          {codigo}
+        </code>
+        <button
+          type="button"
+          onClick={copiar}
+          aria-label={`Copiar a etiqueta ${codigo}`}
+          className="shrink-0 rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue"
+        >
+          {copiado ? "copiado" : "copiar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AcaoDoCupom({
   cupom,
   className,
@@ -347,7 +401,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,codigo_cupom",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -1580,6 +1634,7 @@ function CupomCard({
             ? "Abre no Mercado Livre só o que esse cupom cobre. O desconto entra sozinho no carrinho."
             : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
         </p>
+        {cupom.codigo_cupom && <EtiquetaDoCupom codigo={cupom.codigo_cupom} />}
       </div>
 
       <div className="mt-auto min-w-0 border-t border-border pt-3 text-xs text-secondary-ink">
@@ -1676,9 +1731,19 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
           )}
           <p className="-mt-3 text-xs text-secondary-ink">
             {cupom.link_afiliado
-              ? "Abre no Mercado Livre só o que esse cupom cobre. O desconto entra sozinho no carrinho, sem precisar digitar código."
+              ? "Abre no Mercado Livre só o que esse cupom cobre."
               : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
           </p>
+          {cupom.codigo_cupom && (
+            <div className="-mt-2">
+              <EtiquetaDoCupom codigo={cupom.codigo_cupom} />
+              <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+                Cole essa etiqueta no carrinho do Mercado Livre para ver o desconto entrar. Pelo
+                link acima ele já entra sozinho, mas a etiqueta é a sua prova de que o desconto
+                veio deste cupom.
+              </p>
+            </div>
+          )}
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
         </div>
