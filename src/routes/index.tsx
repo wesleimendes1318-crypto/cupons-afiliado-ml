@@ -779,12 +779,17 @@ function Index() {
             <span className="text-xs text-secondary-ink">Experimente:</span>
             {[0, 1, 2].map((passo) => {
               const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
+              const atual = passo === 0;
               return (
                 <button
                   key={texto}
                   type="button"
                   onClick={() => setPedidoIa(texto)}
-                  className="animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
+                  className={
+                    atual
+                      ? "animate-sugestao rounded-full border border-ml-blue bg-ml-blue/10 px-3 py-1.5 text-xs font-medium text-ml-blue transition-colors hover:bg-ml-blue/20"
+                      : "animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
+                  }
                 >
                   {texto}
                 </button>
