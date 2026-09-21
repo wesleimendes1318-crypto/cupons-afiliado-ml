@@ -457,8 +457,14 @@ function Index() {
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
                 Percentual alto não garante desconto alto. Confira o teto antes de comprar.
               </p>
-              <p className="mt-2 max-w-2xl text-sm font-semibold sm:text-base">
-                Fale comigo e eu envio o link com o cupom já aplicado.
+              <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
+                <a href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")} target="_blank" rel="noopener noreferrer">
+                  <IconeWhatsApp className="size-5 text-whatsapp" />
+                  Falar comigo no WhatsApp
+                </a>
+              </Button>
+              <p className="mt-2 max-w-2xl text-xs sm:text-sm">
+                Muito cupom promete 40% e desconta R$ 2. Eu confiro o limite real de cada um e te mando o link do produto certo.
               </p>
               <p className="mt-2 text-xs text-secondary-ink">
                 {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
