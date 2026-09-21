@@ -59,7 +59,13 @@ type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
 type FaixaEconomia = "semlimite" | "ate50" | "50a200" | "200a1000" | "acima1000";
 type EscolhaIa = { id: number; motivo: string };
-type Comparacao = { vencedor_id: number | null; veredito: string; observacoes: string[] };
+type Comparacao = {
+  vencedor_id: number | null;
+  veredito: string;
+  observacoes: string[];
+  chamada: string;
+  urgencia: string | null;
+};
 
 const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) => boolean }> = [
   { id: "semlimite", rotulo: "sem limite", aceita: (cupom) => semLimite(cupom) },
@@ -619,7 +625,13 @@ function Index() {
       });
       const dados = (await lerJson(resposta)) as Partial<Comparacao> & { erro?: string };
       if (!resposta.ok || typeof dados.veredito !== "string") throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
-      setComparacao({ vencedor_id: dados.vencedor_id ?? null, veredito: dados.veredito, observacoes: dados.observacoes ?? [] });
+      setComparacao({
+        vencedor_id: dados.vencedor_id ?? null,
+        veredito: dados.veredito,
+        observacoes: dados.observacoes ?? [],
+        chamada: dados.chamada ?? "",
+        urgencia: dados.urgencia ?? null,
+      });
     } catch (motivo) {
       setErroComparacao(motivo instanceof Error ? motivo.message : "Não foi possível comparar os cupons.");
     } finally {
@@ -1291,6 +1303,14 @@ function ComparadorModal({
                   <li key={observacao}>{observacao}</li>
                 ))}
               </ul>
+            )}
+            {comparacao.urgencia && (
+              <p className="mt-2 rounded-md bg-urgency-soft px-2 py-1 text-sm font-semibold text-urgency-warning">
+                {comparacao.urgencia}
+              </p>
+            )}
+            {comparacao.chamada && (
+              <p className="mt-2 border-t border-border pt-2 text-sm font-semibold text-success">{comparacao.chamada}</p>
             )}
           </div>
         )}

@@ -25,6 +25,8 @@ const saidaSchema = z.object({
   vencedor_id: z.number().int(),
   veredito: z.string().trim().min(1).max(600),
   observacoes: z.array(z.string().trim().min(1).max(240)).max(4),
+  chamada: z.string().trim().min(1).max(200),
+  urgencia: z.string().trim().max(200).nullable(),
 });
 
 const formatoSaida = {
@@ -36,8 +38,10 @@ const formatoSaida = {
       vencedor_id: { type: "integer" },
       veredito: { type: "string" },
       observacoes: { type: "array", items: { type: "string" } },
+      chamada: { type: "string" },
+      urgencia: { type: ["string", "null"] },
     },
-    required: ["vencedor_id", "veredito", "observacoes"],
+    required: ["vencedor_id", "veredito", "observacoes", "chamada", "urgencia"],
   },
 } as const;
 
@@ -56,12 +60,16 @@ export const Route = createFileRoute("/api/public/comparar")({
           return json(request, { erro: "Selecione de 2 a 3 cupons para comparar." }, 400);
         }
 
-        const prompt = `Compare estes cupons do Mercado Livre e explique, em português do Brasil, qual oferece a melhor economia e por quê.
+        const hoje = new Date().toISOString().slice(0, 10);
+        const prompt = `Você é um especialista em marketing de afiliados e vendas, com tom consultivo, confiante e honesto. Compare estes cupons do Mercado Livre e explique, em português do Brasil, qual oferece a melhor economia e por quê, ajudando o cliente a decidir agora.
+Hoje é ${hoje}.
 Dados de cada cupom: "teto" é a economia máxima em reais, "compra_min" é a compra mínima em reais, "vence" é a data final e "qualidade" igual a "armadilha" significa cupom com teto muito baixo.
 REGRAS CRÍTICAS: use somente os dados enviados; nunca invente loja, produto, preço ou prazo; nunca prometa desconto acima do teto; a categoria é apenas uma estimativa feita pelo nome da loja; nunca diga que o cupom só funciona por um link específico, pois ele se aplica sozinho no carrinho.
 No campo "veredito", escreva de 2 a 3 frases curtas e muito fáceis de entender dizendo qual loja compensa mais e por quê. NÃO cite valores em reais, não use a palavra "teto" nem fale de limite de desconto: a tabela ao lado já mostra todos os números e repetir isso confunde o cliente. Fale em termos simples, como "rende mais em compras maiores" ou "vale mais para compras pequenas". Sempre se refira a cada cupom pelo nome da loja; nunca cite o número de id. Se duas lojas tiverem o mesmo nome, diferencie pelo desconto ou pela data.
 No campo "observacoes", escreva de 1 a 3 avisos curtos e úteis, também sem citar valores em reais, como quando a resposta muda conforme o tamanho da compra, compra mínima alta, prazo curto ou cupom armadilha.
 O campo "vencedor_id" deve ser o id do cupom que compensa mais entre os enviados.
+No campo "chamada", escreva UMA frase curta de estímulo à ação, em tom de especialista em vendas de afiliados, indicando a melhor escolha e convidando o cliente a garantir o cupom agora (exemplo de tom: "Entre as três, a loja X é a escolha mais inteligente — garanta esse cupom antes que a campanha acabe."). Sem exagero, sem promessa falsa, sem caixa alta, no máximo 1 emoji e apenas se combinar.
+No campo "urgencia", escreva UMA frase curta sobre prazo somente quando algum cupom enviado vencer em até 7 dias a partir de hoje, citando a loja e quantos dias faltam (exemplo: "O cupom da loja X vence em 3 dias."). Se nenhum vencer nesse prazo, devolva null. Nunca invente prazos.
 Cupons: ${JSON.stringify(entrada.cupons)}`;
 
         const resultado = await chamarIa(prompt, { formato: formatoSaida, esforco: "low" });
