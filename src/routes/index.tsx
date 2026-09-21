@@ -889,7 +889,7 @@ function ComparadorModal({
                   <td className="py-2 pr-3 font-semibold">
                     {cupom.vendedor}
                     {comparacao?.vencedor_id === cupom.id && (
-                      <span className="ml-2 rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-success-foreground">MELHOR</span>
+                      <span className="ml-2 rounded border border-success px-1.5 py-0.5 text-[10px] font-bold text-success">MELHOR</span>
                     )}
                   </td>
                   <td className="py-2 pr-3">{cupom.desconto ?? "Não informado"}</td>
