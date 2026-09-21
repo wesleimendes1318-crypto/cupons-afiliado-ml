@@ -620,6 +620,7 @@ function Index() {
     setCategorias([]);
     setLojas([]);
     setFaixas([]);
+    setEtiquetas([]);
     setOrdem("score");
   }
 
