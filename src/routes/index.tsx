@@ -107,6 +107,13 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
+/** Verdadeiro quando o cupom ainda vale e termina dentro das próximas `horas`. */
+function dentroDe(cupom: Cupom, agora: number | null, horas: number) {
+  if (agora == null || !cupom.vence) return false;
+  const restante = fimDoDiaEmSaoPaulo(cupom.vence) - agora;
+  return restante > 0 && restante <= horas * 3_600_000;
+}
+
 function normalizar(texto: string) {
   return texto
     .toLowerCase()
