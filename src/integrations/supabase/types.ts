@@ -26,6 +26,7 @@ export type Database = {
           nivel: string | null
           orcamento: number | null
           qualidade: string | null
+          sem_teto: boolean
           teto: number | null
           tipo: string | null
           updated_at: string
@@ -45,6 +46,7 @@ export type Database = {
           nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
+          sem_teto?: boolean
           teto?: number | null
           tipo?: string | null
           updated_at?: string
@@ -64,6 +66,7 @@ export type Database = {
           nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
+          sem_teto?: boolean
           teto?: number | null
           tipo?: string | null
           updated_at?: string
