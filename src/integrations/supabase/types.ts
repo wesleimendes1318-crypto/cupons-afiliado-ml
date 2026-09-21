@@ -17,10 +17,14 @@ export type Database = {
       cupons: {
         Row: {
           busca: string | null
+          compra_min: number | null
           created_at: string
           desconto: string | null
+          estoque: number | null
           id: number
           orcamento: number | null
+          qualidade: string | null
+          teto: number | null
           tipo: string | null
           updated_at: string
           valor: number | null
@@ -29,10 +33,14 @@ export type Database = {
         }
         Insert: {
           busca?: string | null
+          compra_min?: number | null
           created_at?: string
           desconto?: string | null
+          estoque?: number | null
           id: number
           orcamento?: number | null
+          qualidade?: string | null
+          teto?: number | null
           tipo?: string | null
           updated_at?: string
           valor?: number | null
@@ -41,10 +49,14 @@ export type Database = {
         }
         Update: {
           busca?: string | null
+          compra_min?: number | null
           created_at?: string
           desconto?: string | null
+          estoque?: number | null
           id?: number
           orcamento?: number | null
+          qualidade?: string | null
+          teto?: number | null
           tipo?: string | null
           updated_at?: string
           valor?: number | null
