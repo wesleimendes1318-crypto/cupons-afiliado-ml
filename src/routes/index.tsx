@@ -75,11 +75,44 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
   { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000 },
 ];
 
+type EtiquetaId = "termina24" | "termina48" | "semlimite" | "comprabaixa" | "economiaalta" | "semcompramin";
+
+/** Etiquetas inteligentes: recortes prontos que respondem a intenções comuns. */
+const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, agora: number | null) => boolean }> = [
+  { id: "termina24", rotulo: "Termina em 24h", aceita: (cupom, agora) => dentroDe(cupom, agora, 24) },
+  { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
+  { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
+  { id: "economiaalta", rotulo: "Economia acima de R$ 200", aceita: (cupom) => (tetoUtil(cupom) ?? 0) > 200 },
+  { id: "comprabaixa", rotulo: "Compra até R$ 50", aceita: (cupom) => cupom.compra_min != null && cupom.compra_min <= 50 },
+  { id: "semcompramin", rotulo: "Sem compra mínima", aceita: (cupom) => cupom.compra_min == null || cupom.compra_min === 0 },
+];
+
+/** Sugestões que giram no campo da IA, para mostrar o que dá para pedir. */
+const SUGESTOES_IA = [
+  "presente para minha mãe até R$ 150",
+  "fone de ouvido bom e barato",
+  "itens de casa com desconto alto",
+  "ração e petiscos para cachorro",
+  "tênis para corrida até R$ 300",
+  "ferramentas para reforma",
+  "maquiagem e perfume",
+  "suplemento de whey protein",
+  "cadeira de escritório confortável",
+  "brinquedo para criança de 5 anos",
+];
+
 const PAGE_SIZE = 50;
 const SEM_CATEGORIA = "Sem categoria";
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
+
+/** Verdadeiro quando o cupom ainda vale e termina dentro das próximas `horas`. */
+function dentroDe(cupom: Cupom, agora: number | null, horas: number) {
+  if (agora == null || !cupom.vence) return false;
+  const restante = fimDoDiaEmSaoPaulo(cupom.vence) - agora;
+  return restante > 0 && restante <= horas * 3_600_000;
+}
 
 function normalizar(texto: string) {
   return texto
@@ -318,6 +351,8 @@ function Index() {
   const [categorias, setCategorias] = useState<string[]>([]);
   const [lojas, setLojas] = useState<string[]>([]);
   const [faixas, setFaixas] = useState<FaixaEconomia[]>([]);
+  const [etiquetas, setEtiquetas] = useState<EtiquetaId[]>([]);
+  const [sugestao, setSugestao] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
   const [agora, setAgora] = useState<number | null>(null);
@@ -342,6 +377,11 @@ function Index() {
   useEffect(() => {
     setAgora(Date.now());
     const intervalo = window.setInterval(() => setAgora(Date.now()), 60_000);
+    return () => window.clearInterval(intervalo);
+  }, []);
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => setSugestao((atual) => (atual + 1) % SUGESTOES_IA.length), 4_000);
     return () => window.clearInterval(intervalo);
   }, []);
 
@@ -392,6 +432,7 @@ function Index() {
       if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
       if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
+      if (etiquetas.length && !ETIQUETAS.some((etiqueta) => etiquetas.includes(etiqueta.id) && etiqueta.aceita(cupom, agora))) return false;
       return true;
     });
 
@@ -418,7 +459,7 @@ function Index() {
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, lojas]);
+  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, etiquetas, lojas]);
 
   const recomendadosFiltrados = useMemo(
     () => filtrados.filter((cupom) => cupom.qualidade === "bom"),
@@ -469,7 +510,11 @@ function Index() {
     () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
     [indexado],
   );
-  const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
+  const contagensEtiqueta = useMemo(
+    () => new Map(ETIQUETAS.map((etiqueta) => [etiqueta.id, indexado.filter((cupom) => etiqueta.aceita(cupom, agora)).length])),
+    [indexado, agora],
+  );
+  const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || etiquetas.length || vitrine !== "recomendados" || ordem !== "score");
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -569,6 +614,10 @@ function Index() {
     setFaixas((atuais) => atuais.includes(faixa) ? atuais.filter((item) => item !== faixa) : [...atuais, faixa]);
   }
 
+  function alternarEtiqueta(id: EtiquetaId) {
+    setEtiquetas((atuais) => atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]);
+  }
+
   function limparFiltros() {
     setTexto("");
     setTermo("");
@@ -581,6 +630,7 @@ function Index() {
     setCategorias([]);
     setLojas([]);
     setFaixas([]);
+    setEtiquetas([]);
     setOrdem("score");
   }
 
@@ -713,15 +763,31 @@ function Index() {
               value={pedidoIa}
               onChange={(event) => setPedidoIa(event.target.value)}
               maxLength={500}
-              placeholder="O que você está procurando? Ex: presente para minha mãe até R$ 150"
+              placeholder={`O que você está procurando? Ex: ${SUGESTOES_IA[sugestao % SUGESTOES_IA.length]}`}
               aria-label="O que você está procurando?"
-              className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+              className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 transition-colors placeholder:text-muted-foreground placeholder:transition-opacity focus:ring-2"
             />
             <Button disabled={recomendando || pedidoIa.trim().length < 3} className="min-h-12 bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">
               <Sparkles aria-hidden="true" />
               {recomendando ? "Procurando..." : "Encontrar cupons"}
             </Button>
           </form>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-secondary-ink">Experimente:</span>
+            {[0, 1, 2].map((passo) => {
+              const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
+              return (
+                <button
+                  key={texto}
+                  type="button"
+                  onClick={() => setPedidoIa(texto)}
+                  className="animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
+                >
+                  {texto}
+                </button>
+              );
+            })}
+          </div>
           <p className="mt-2 text-xs text-secondary-ink">A IA escolhe somente entre os cupons recomendados e os filtros ativos.</p>
           {erroIa && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erroIa}</p>}
         </section>
@@ -939,6 +1005,23 @@ function Index() {
                   className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", faixas.includes(faixa.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
                 >
                   {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-secondary-ink">Atalhos rápidos</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ETIQUETAS.filter((etiqueta) => (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 || etiquetas.includes(etiqueta.id)).map((etiqueta) => (
+                <button
+                  key={etiqueta.id}
+                  type="button"
+                  aria-pressed={etiquetas.includes(etiqueta.id)}
+                  onClick={() => alternarEtiqueta(etiqueta.id)}
+                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", etiquetas.includes(etiqueta.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
+                >
+                  {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
                 </button>
               ))}
             </div>

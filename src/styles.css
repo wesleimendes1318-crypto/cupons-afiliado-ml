@@ -233,3 +233,16 @@
     animation: none;
   }
 }
+
+@keyframes sugestao-entrada {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@utility animate-sugestao {
+  animation: sugestao-entrada 0.35s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
