@@ -179,6 +179,14 @@ function formatarTeto(cupom: CupomLimite) {
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
+/** Frase curta de economia, usada na curadoria e nos destaques. */
+function economiaCurta(cupom: Cupom) {
+  if (semLimite(cupom)) return "Desconto sem teto";
+  const teto = tetoUtil(cupom);
+  return teto == null ? "Limite não informado" : `Economize até ${brl.format(teto)}`;
+}
+
+
 /** "30% de desconto" quando o cupom é percentual; senão o texto cadastrado. */
 function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
   if (cupom.tipo === "%" && cupom.valor) {
