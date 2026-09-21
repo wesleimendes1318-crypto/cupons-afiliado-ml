@@ -75,6 +75,32 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
   { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000 },
 ];
 
+type EtiquetaId = "termina24" | "termina48" | "semlimite" | "comprabaixa" | "economiaalta" | "semcompramin";
+
+/** Etiquetas inteligentes: recortes prontos que respondem a intenções comuns. */
+const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, agora: number | null) => boolean }> = [
+  { id: "termina24", rotulo: "Termina em 24h", aceita: (cupom, agora) => dentroDe(cupom, agora, 24) },
+  { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
+  { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
+  { id: "economiaalta", rotulo: "Economia acima de R$ 200", aceita: (cupom) => (tetoUtil(cupom) ?? 0) > 200 },
+  { id: "comprabaixa", rotulo: "Compra até R$ 50", aceita: (cupom) => cupom.compra_min != null && cupom.compra_min <= 50 },
+  { id: "semcompramin", rotulo: "Sem compra mínima", aceita: (cupom) => cupom.compra_min == null || cupom.compra_min === 0 },
+];
+
+/** Sugestões que giram no campo da IA, para mostrar o que dá para pedir. */
+const SUGESTOES_IA = [
+  "presente para minha mãe até R$ 150",
+  "fone de ouvido bom e barato",
+  "itens de casa com desconto alto",
+  "ração e petiscos para cachorro",
+  "tênis para corrida até R$ 300",
+  "ferramentas para reforma",
+  "maquiagem e perfume",
+  "suplemento de whey protein",
+  "cadeira de escritório confortável",
+  "brinquedo para criança de 5 anos",
+];
+
 const PAGE_SIZE = 50;
 const SEM_CATEGORIA = "Sem categoria";
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
