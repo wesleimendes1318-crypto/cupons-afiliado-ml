@@ -1116,11 +1116,11 @@ function CupomCard({
         >
           <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
             <IconeWhatsApp className="size-4 shrink-0" />
-            PEDIR MEU LINK
+            Conferir esse cupom
           </a>
         </Button>
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Eu confiro as condições e te digo o desconto real antes de você comprar.
+          Me diz o que você procura e eu confirmo se o cupom vale para esse produto.
         </p>
       </div>
 
