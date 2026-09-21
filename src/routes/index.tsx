@@ -357,6 +357,7 @@ function Index() {
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
   const [agora, setAgora] = useState<number | null>(null);
   const [pedidoIa, setPedidoIa] = useState("");
+  const [consultaIa, setConsultaIa] = useState("");
   const [escolhasIa, setEscolhasIa] = useState<EscolhaIa[]>([]);
   const [mensagemIa, setMensagemIa] = useState("");
   const [erroIa, setErroIa] = useState("");
