@@ -62,9 +62,9 @@ Cupons: ${JSON.stringify(entrada.cupons)}`;
         if (!resultado.ok) return json(request, { erro: resultado.erro }, resultado.status);
         const texto = resultado.texto;
         try {
-          const resultado = saidaSchema.parse(JSON.parse(limparJson(texto)));
+          const saida = saidaSchema.parse(JSON.parse(limparJson(texto)));
           const idsPermitidos = new Set(entrada.cupons.map((cupom) => cupom.id));
-          return json(request, { ...resultado, escolhas: resultado.escolhas.filter((item) => idsPermitidos.has(item.id)).slice(0, 5) });
+          return json(request, { ...saida, escolhas: saida.escolhas.filter((item) => idsPermitidos.has(item.id)).slice(0, 5) });
         } catch {
           return json(request, { erro: "O assistente retornou um formato inválido. Tente novamente." }, 502);
         }
