@@ -1032,11 +1032,13 @@ function CupomCard({
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const ilimitado = semLimite(cupom);
   const teto = tetoReal(cupom);
-  const rotuloQualidade = armadilha
-    ? `CUIDADO · desconto para em ${formatarTeto(cupom)}`
-    : ilimitado
-      ? "VALE A PENA · sem limite"
-      : `VALE A PENA · até ${formatarTeto(cupom)}`;
+  const rotuloQualidade = ilimitado
+    ? "Desconta sem limite"
+    : teto == null
+      ? "Limite não informado"
+      : armadilha
+        ? `Desconta só ${brlCurto.format(teto)}`
+        : `Desconta até ${brlCurto.format(teto)}`;
 
   return (
     <article
