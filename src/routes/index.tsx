@@ -1079,25 +1079,28 @@ function Index() {
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold">
-              {cupomSelecionados.length === 1 ? "1 loja selecionada" : `${cupomSelecionados.length} lojas selecionadas`} · economia estimada de até {formatarMoeda(economiaSomada)}
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">
+                {cupomSelecionados.length === 1 ? "1 cupom marcado" : `${cupomSelecionados.length} cupons marcados`} de até {MAX_COMPARACAO} · economia estimada de até {formatarMoeda(economiaSomada)}
+              </p>
+              <p className="text-xs text-secondary-ink">
+                {cupomSelecionados.length < 2
+                  ? "Marque mais 1 cupom para comparar qual rende mais."
+                  : cupomSelecionados.length === MAX_COMPARACAO
+                    ? "Limite de 3 cupons atingido. Desmarque um para trocar."
+                    : "Você pode marcar mais 1 cupom."}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
               <Button
                 className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white shadow-md hover:bg-ml-blue/90"
                 disabled={cupomSelecionados.length < 2}
-                title={
-                  cupomSelecionados.length < 2
-                    ? "Marque 2 ou 3 lojas nos cards para comparar."
-                    : cupomSelecionados.length > 3
-                      ? "A comparação usa os 3 primeiros cupons selecionados."
-                      : undefined
-                }
+                title={cupomSelecionados.length < 2 ? "Marque 2 ou 3 cupons nos cards para comparar." : undefined}
                 onClick={abrirComparador}
               >
                 <Sparkles aria-hidden="true" />
-                Comparar economia{cupomSelecionados.length < 2 ? " (marque 2 lojas)" : ""}
+                Comparar economia{cupomSelecionados.length < 2 ? " (marque mais 1)" : ""}
               </Button>
               <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
                 <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
