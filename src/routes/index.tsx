@@ -385,6 +385,10 @@ function Index() {
     URL.revokeObjectURL(url);
   }
 
+  function alternarSelecao(id: number) {
+    setSelecionados((atuais) => (atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]));
+  }
+
   function alternarCategoria(categoria: string) {
     setCategorias((atuais) => atuais.includes(categoria) ? atuais.filter((item) => item !== categoria) : [...atuais, categoria]);
   }
