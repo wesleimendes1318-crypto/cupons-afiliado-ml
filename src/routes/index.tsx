@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WHATSAPP } from "@/config";
+import { AFILIADO, WHATSAPP } from "@/config";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -191,6 +191,12 @@ function descricaoCupom(cupom: Cupom) {
 }
 
 
+
+/** Perfil da loja no Mercado Livre com o identificador de afiliado do dono do site. */
+function linkAfiliadoLoja(vendedor: string) {
+  const perfil = `https://www.mercadolivre.com.br/perfil/${encodeURIComponent(vendedor.trim())}`;
+  return `${perfil}?matt_tool=cupons-afiliado-ml&matt_word=${encodeURIComponent(AFILIADO)}`;
+}
 
 /** Lê a resposta do servidor sem quebrar quando ela não vem em JSON (tempo limite, página de erro). */
 async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
