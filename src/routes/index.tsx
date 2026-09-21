@@ -1295,13 +1295,23 @@ function ComparadorModal({
           </div>
         )}
 
-        {cupons.length > 0 && (
+        {cuponsEscolhidos.length > 0 ? (
           <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-            <a href={linkWhatsAppLista(cupons)} target="_blank" rel="noopener noreferrer">
+            <a
+              href={cuponsEscolhidos.length === 1 ? linkWhatsApp(cuponsEscolhidos[0]) : linkWhatsAppLista(cuponsEscolhidos)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <IconeWhatsApp className="size-5" />
-              Falar sobre essas {cupons.length} lojas
+              {cuponsEscolhidos.length === 1
+                ? `Falar sobre a ${cuponsEscolhidos[0].vendedor}`
+                : `Falar sobre essas ${cuponsEscolhidos.length} lojas`}
             </a>
           </Button>
+        ) : (
+          <p className="rounded-md bg-muted px-3 py-2 text-sm text-secondary-ink">
+            Marque ao menos uma loja acima para falar comigo sobre ela.
+          </p>
         )}
         <p className="text-xs text-secondary-ink">
           Comparação feita com os dados cadastrados de cada cupom. A categoria é estimada pelo nome da loja.
