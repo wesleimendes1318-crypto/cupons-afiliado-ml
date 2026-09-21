@@ -203,7 +203,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,qualidade,categoria,updated_at",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -300,7 +300,7 @@ function Index() {
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
       if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
-      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(tetoReal(cupom)))) return false;
+      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
       return true;
     });
 
@@ -358,7 +358,7 @@ function Index() {
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
   const contagensFaixa = useMemo(
-    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(tetoReal(cupom))).length])),
+    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
     [indexado],
   );
   const filtrosAtivos = Boolean(texto || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
