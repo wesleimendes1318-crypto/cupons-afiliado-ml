@@ -246,3 +246,59 @@
     animation: none;
   }
 }
+
+/* Movimento que ajuda, nao que pressiona
+   =====================================
+   Tres regras aqui: a entrada do card orienta o olho de cima para baixo, o
+   painel de filtros mostra que abriu e fechou, e a contagem pisca uma vez
+   quando muda para a pessoa perceber que o filtro funcionou. Nada em laco
+   infinito perto de botao de compra, que seria pressa fabricada.
+   Tudo desliga com prefers-reduced-motion. */
+
+@keyframes cartao-entrada {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@utility animate-cartao {
+  animation: cartao-entrada 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes contagem-muda {
+  0%   { background-color: color-mix(in oklab, var(--ml-blue) 18%, transparent); }
+  100% { background-color: transparent; }
+}
+
+@utility animate-contagem {
+  animation: contagem-muda 0.9s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Abre e fecha sem medir altura no javascript: a linha do grid vai de 0fr a
+   1fr e o navegador anima sozinho, funcionando com conteudo de qualquer
+   tamanho. */
+@utility gaveta {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+
+  & > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+@utility gaveta-aberta {
+  grid-template-rows: 1fr;
+}
