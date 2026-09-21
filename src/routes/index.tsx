@@ -723,6 +723,40 @@ function Index() {
         </section>
       </main>
 
+      {cupomSelecionados.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold">
+              {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja selecionada" : "lojas selecionadas"} · economia somada de até {formatarMoeda(economiaSomada)}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
+              <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
+                  <IconeWhatsApp className="size-5" />
+                  PEDIR OS LINKS
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <a
+        href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar no WhatsApp"
+        className={cn(
+          "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
+          cupomSelecionados.length > 0 ? "bottom-24" : "bottom-4",
+        )}
+      >
+        <IconeWhatsApp className="size-7 sm:size-5" />
+        <span className="hidden sm:inline">Falar no WhatsApp</span>
+      </a>
+
+
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
 
       <footer className="mt-8 border-t border-border py-6">
