@@ -1335,22 +1335,32 @@ function CupomCard({
       <div className="my-5 min-w-0">
         {ilimitado ? (
           <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">{percentualTexto(cupom)} sem teto</p>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem teto</p>
             <p className="mt-1 text-sm text-secondary-ink">
-              o desconto é o percentual cheio sobre a compra
-              {em200 > 0 ? `: numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
+              {percentualTexto(cupom)} sobre o valor todo, sem limite de valor
+              {em200 > 0 ? `. Numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
             </p>
           </>
         ) : teto != null ? (
           <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">{percentualTexto(cupom)} até esse limite</p>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economize até {brl.format(teto)}</p>
+            <p className="mt-1 text-sm text-secondary-ink">
+              {percentualTexto(cupom)}. O desconto para em {brl.format(teto)} — acima disso não aumenta.
+            </p>
+            {compraTeto != null && (
+              <p className="mt-1 text-sm text-secondary-ink">
+                Para chegar ao máximo, a compra precisa ser de cerca de {brl.format(compraTeto)}.
+              </p>
+            )}
           </>
         ) : (
-          <p className="text-base font-semibold leading-tight text-secondary-ink">{percentualTexto(cupom)}, com limite não informado</p>
+          <>
+            <p className="text-base font-semibold leading-tight text-foreground">{percentualTexto(cupom)}</p>
+            <p className="mt-1 text-sm text-secondary-ink">Limite não informado. Eu confirmo o máximo antes de gerar o cupom.</p>
+          </>
         )}
         {cupom.compra_min != null && (
-          <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>
+          <p className="mt-1 text-sm font-medium text-foreground">Compra mínima de {formatarMoeda(cupom.compra_min)}</p>
         )}
 
 
