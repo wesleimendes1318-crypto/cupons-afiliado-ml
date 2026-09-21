@@ -473,11 +473,13 @@ function Index() {
     const vendedores = new Set(indexado.map((cupom) => cupom.vendedor));
     return {
       total: indexado.length,
+      analisados: cupons.length,
+      repetidos: Math.max(0, cupons.length - indexado.length),
       vendedores: vendedores.size,
       bons: indexado.filter((cupom) => cupom.qualidade === "bom").length,
       armadilhas: indexado.filter((cupom) => cupom.qualidade === "armadilha").length,
     };
-  }, [indexado]);
+  }, [indexado, cupons]);
 
   /** Curadoria: o melhor cupom de cada categoria, pela pontuação de oportunidade. */
   const destaques = useMemo(() => {
@@ -713,7 +715,11 @@ function Index() {
         </section>
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo dos cupons">
-          <Indicador titulo="Cupons" valor={indicadores.total.toLocaleString("pt-BR")} />
+          <Indicador
+            titulo="Cupons"
+            valor={indicadores.total.toLocaleString("pt-BR")}
+            detalhe={`${indicadores.analisados.toLocaleString("pt-BR")} analisados${indicadores.repetidos > 0 ? ` · ${indicadores.repetidos.toLocaleString("pt-BR")} repetidos removidos` : ""}`}
+          />
           <Indicador titulo="Vendedores" valor={indicadores.vendedores.toLocaleString("pt-BR")} />
           <Indicador titulo="Vale a pena" valor={indicadores.bons.toLocaleString("pt-BR")} tom="bom" />
           <Indicador
@@ -1606,10 +1612,12 @@ function Indicador({
   titulo,
   valor,
   tom,
+  detalhe,
 }: {
   titulo: string;
   valor: string;
   tom?: Qualidade;
+  detalhe?: string;
 }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
@@ -1617,6 +1625,7 @@ function Indicador({
       <p className={cn("mt-1 text-xl font-bold tabular-nums sm:text-2xl", tom === "bom" && "text-success", tom === "armadilha" && "text-danger")}>
         {valor}
       </p>
+      {detalhe && <p className="mt-1 text-xs text-secondary-ink">{detalhe}</p>}
     </div>
   );
 }
