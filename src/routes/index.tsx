@@ -651,7 +651,24 @@ function Index() {
                 <div><h2 className="font-semibold text-ml-blue">Escolhidos para você</h2><p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p></div>
                 <Button variant="ghost" size="icon" aria-label="Fechar recomendações" onClick={() => { setEscolhasIa([]); setMensagemIa(""); }}><X aria-hidden="true" /></Button>
               </div>
-              {escolhidos.length > 0 && <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">{escolhidos.map(({ cupom, motivo }) => <div key={cupom.id} className="flex flex-col gap-2"><p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p><CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} /></div>)}</div>}
+              {escolhidos.length > 0 && (
+                <>
+                  <Button asChild size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                    <a href={linkWhatsAppLista(escolhidos.map(({ cupom }) => cupom), "A IA sugeriu estas para mim, pode me mandar os links?")} target="_blank" rel="noopener noreferrer">
+                      <IconeWhatsApp className="size-5" />
+                      PEDIR OS LINKS DESSES {escolhidos.length}
+                    </a>
+                  </Button>
+                  <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
+                    {escolhidos.map(({ cupom, motivo }) => (
+                      <div key={cupom.id} className="flex flex-col gap-2">
+                        <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
+                        <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
           {error ? (
