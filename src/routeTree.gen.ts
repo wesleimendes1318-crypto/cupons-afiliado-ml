@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
+import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
   id: '/api/public/classificar',
   path: '/api/public/classificar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCompararRoute = ApiPublicCompararRouteImport.update({
+  id: '/api/public/comparar',
+  path: '/api/public/comparar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicGerarTextoRoute = ApiPublicGerarTextoRouteImport.update({
@@ -38,12 +44,14 @@ const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
+  '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
+  '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
@@ -51,6 +59,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
+  '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
@@ -59,18 +68,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/public/classificar'
+    | '/api/public/comparar'
     | '/api/public/gerar-texto'
     | '/api/public/recomendar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/public/classificar'
+    | '/api/public/comparar'
     | '/api/public/gerar-texto'
     | '/api/public/recomendar'
   id:
     | '__root__'
     | '/'
     | '/api/public/classificar'
+    | '/api/public/comparar'
     | '/api/public/gerar-texto'
     | '/api/public/recomendar'
   fileRoutesById: FileRoutesById
@@ -78,6 +90,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
+  ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
 }
@@ -96,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/classificar'
       fullPath: '/api/public/classificar'
       preLoaderRoute: typeof ApiPublicClassificarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/comparar': {
+      id: '/api/public/comparar'
+      path: '/api/public/comparar'
+      fullPath: '/api/public/comparar'
+      preLoaderRoute: typeof ApiPublicCompararRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/gerar-texto': {
@@ -118,6 +138,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
+  ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
 }
