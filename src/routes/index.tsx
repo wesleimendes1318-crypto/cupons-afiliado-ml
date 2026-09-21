@@ -890,7 +890,7 @@ function CupomCard({
           <span aria-hidden="true">|</span>
           <span>Orçamento restante: {formatarMoeda(cupom.orcamento)}</span>
         </div>
-        <p className="mt-2 text-[11px]">O link de compra é enviado por WhatsApp</p>
+        <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
       </div>
     </article>
   );
