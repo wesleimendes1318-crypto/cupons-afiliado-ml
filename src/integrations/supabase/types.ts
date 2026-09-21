@@ -23,6 +23,9 @@ export type Database = {
           desconto: string | null
           estoque: number | null
           id: number
+          link_afiliado: string | null
+          link_em: string | null
+          link_tentativas: number
           nivel: string | null
           orcamento: number | null
           qualidade: string | null
@@ -43,6 +46,9 @@ export type Database = {
           desconto?: string | null
           estoque?: number | null
           id: number
+          link_afiliado?: string | null
+          link_em?: string | null
+          link_tentativas?: number
           nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
@@ -63,6 +69,9 @@ export type Database = {
           desconto?: string | null
           estoque?: number | null
           id?: number
+          link_afiliado?: string | null
+          link_em?: string | null
+          link_tentativas?: number
           nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
