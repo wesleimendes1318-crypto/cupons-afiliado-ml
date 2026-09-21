@@ -85,10 +85,13 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
   { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000 },
 ];
 
-type EtiquetaId = "termina24" | "termina48" | "semlimite" | "comprabaixa" | "economiaalta" | "semcompramin";
+type EtiquetaId = "cometiqueta" | "termina24" | "termina48" | "semlimite" | "comprabaixa" | "economiaalta" | "semcompramin";
 
 /** Etiquetas inteligentes: recortes prontos que respondem a intenções comuns. */
 const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, agora: number | null) => boolean }> = [
+  // Primeiro da fila de proposito: e o unico atalho que muda o que a pessoa
+  // leva embora, e nao so quais cupons ela ve.
+  { id: "cometiqueta", rotulo: "Com etiqueta pronta", aceita: (cupom) => Boolean(cupom.codigo_cupom) },
   { id: "termina24", rotulo: "Termina em 24h", aceita: (cupom, agora) => dentroDe(cupom, agora, 24) },
   { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
   { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
@@ -1061,7 +1064,9 @@ function Index() {
                     "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                     etiquetas.includes(etiqueta.id)
                       ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
-                      : "border-border bg-card hover:border-ml-blue",
+                      : etiqueta.id === "cometiqueta"
+                        ? "border-success bg-success/10 font-bold text-success hover:bg-success/20"
+                        : "border-border bg-card hover:border-ml-blue",
                   )}
                 >
                   {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
