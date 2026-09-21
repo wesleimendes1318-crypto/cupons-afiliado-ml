@@ -926,13 +926,21 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
               cupom.qualidade === "armadilha"
                 ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
             )}
           >
-            <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-              {cupom.qualidade === "armadilha" ? "VER MESMO ASSIM" : "QUERO ESTE CUPOM"}
+            <a
+              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarMoeda(cupom.teto)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <IconeWhatsApp className="size-5" />
+              PEDIR MEU LINK
             </a>
           </Button>
+          <p className="-mt-3 text-xs text-secondary-ink">
+            Eu confiro as condições e te digo o desconto real antes de você comprar.
+          </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
         </div>
