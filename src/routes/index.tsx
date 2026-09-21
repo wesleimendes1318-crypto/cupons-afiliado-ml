@@ -790,6 +790,8 @@ function CupomCard({
   cupom,
   agora,
   abrirCondicoes,
+  selecionado,
+  alternarSelecao,
 }: {
   cupom: CupomIndexado;
   agora: number | null;
