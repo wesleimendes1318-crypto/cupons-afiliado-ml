@@ -145,6 +145,8 @@ function formatarMoeda(valor: number | null) {
 const TETO_IRREAL = 9_999_999;
 /** Compra necessária acima disso: o teto nunca é alcançado numa compra normal. */
 const COMPRA_INALCANCAVEL = 2_000;
+/** Quantidade máxima de cupons que podem ser comparados de uma vez. */
+const MAX_COMPARACAO = 3;
 
 type CupomLimite = Pick<Cupom, "teto" | "valor" | "tipo" | "sem_teto">;
 
