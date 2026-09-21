@@ -59,7 +59,13 @@ type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
 type FaixaEconomia = "semlimite" | "ate50" | "50a200" | "200a1000" | "acima1000";
 type EscolhaIa = { id: number; motivo: string };
-type Comparacao = { vencedor_id: number | null; veredito: string; observacoes: string[] };
+type Comparacao = {
+  vencedor_id: number | null;
+  veredito: string;
+  observacoes: string[];
+  chamada: string;
+  urgencia: string | null;
+};
 
 const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) => boolean }> = [
   { id: "semlimite", rotulo: "sem limite", aceita: (cupom) => semLimite(cupom) },
