@@ -13,12 +13,14 @@
    (consultar_pedido).
 
    Regra inegociável: em nenhuma hipótese mostramos a URL original como botão
-   de compra. Se o link não sair, a pessoa é convidada a chamar no WhatsApp.
-   Mostrar a URL crua faria o Weslei perder a comissão.
+   de compra. Mostrar a URL crua faria o Weslei perder a comissão. Se o link
+   não sair, a pessoa tenta de novo em alguns minutos — nunca compra por fora.
+
+   Não há WhatsApp aqui de propósito: o visitante resolve tudo sozinho, sem
+   depender de o Weslei estar online para responder.
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WHATSAPP } from "@/config";
 import { supabase } from "@/integrations/supabase/client";
 const INTERVALO_MS = 3000;
 const LIMITE_MS = 90000;
@@ -166,7 +168,7 @@ export default function BuscaPorLink() {
   const carregando = fase === "limpando" || fase === "procurando" || fase === "gerando";
 
   return (
-    <section className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
+    <section id="colar-link" className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
       <div className="mb-1 flex items-center gap-2">
         <span aria-hidden="true" className="text-lg">🔗</span>
         <h2 className="font-semibold">Já sabe o produto? Cole o link</h2>
@@ -178,6 +180,7 @@ export default function BuscaPorLink() {
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <textarea
+          id="campo-link-produto"
           rows={2}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -219,7 +222,7 @@ export default function BuscaPorLink() {
         <Resultado pedido={pedido} copiar={copiar} copiado={copiado} />
       )}
 
-      {fase === "offline" && !erro && <Offline url={url} />}
+      {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} />}
     </section>
   );
 }
@@ -236,19 +239,7 @@ function Resultado({
   copiado: string | null;
 }) {
   const a = pedido.analise;
-  const c = a?.cupom ?? null;
   const link = pedido.link as string;
-
-  const linhasZap = [
-    "Oi Weslei! Vi este produto no seu site:",
-    a?.titulo ?? "",
-    link,
-    a?.temCupom && c?.titulo
-      ? `Cupom: ${c.titulo}${a.vendedor ? ` na ${a.vendedor}` : ""}.`
-      : "Você disse que não tem cupom pra essa loja.",
-    "Pode me ajudar?",
-  ].filter(Boolean);
-  const zap = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(linhasZap.join("\n"))}`;
 
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
@@ -291,17 +282,6 @@ function Resultado({
         </div>
       )}
 
-      {a?.temCupom && (
-        <a
-          href={zap}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 block w-full rounded-md border border-success py-2.5 text-center text-sm font-bold text-success"
-        >
-          Me chamar para garantir esse cupom
-        </a>
-      )}
-
       <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
         A compra é feita direto no Mercado Livre, com a mesma segurança, o mesmo preço e a mesma
         garantia de sempre. Usando meu link eu recebo uma comissão paga pelo vendedor, não sai nada
@@ -309,8 +289,8 @@ function Resultado({
       </p>
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink/80">
         Sou o Weslei. Estou desempregado e essa comissão tem sido minha fonte de renda. Se este site
-        te ajudou, usar meu link já é uma forma de retribuir. E se quiser uma busca mais
-        personalizada, ou tiver sugestão para melhorar o site, me chama no WhatsApp.
+        te ajudou, usar meu link já é uma forma de retribuir. Pode colar outro link aqui em cima
+        quantas vezes quiser, a qualquer hora.
       </p>
     </div>
   );
@@ -402,27 +382,24 @@ function Linha({
 /* ------------------------------------------------------------------ offline
 
    Nunca oferecer a URL original como botão de compra: a pessoa compraria e o
-   Weslei não receberia nada. O caminho aqui é a conversa.
+   Weslei não receberia nada. Sem WhatsApp: o caminho é tentar de novo.
 */
 
-function Offline({ url }: { url: string }) {
-  const zap = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-    `Oi Weslei! Tentei pelo site mas o link não gerou. O produto é este: ${url.trim()}`,
-  )}`;
+function Offline({ tentar }: { tentar: () => void }) {
   return (
     <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
-      <p className="text-sm leading-relaxed">
-        Não consegui gerar o link agora. Me chama no WhatsApp que eu te mando em alguns minutos,
-        junto com o cupom se existir.
+      <p className="text-sm font-medium">A geração automática está fora do ar neste momento.</p>
+      <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+        Isso costuma durar poucos minutos. Seu link continua aí no campo: é só tentar de novo.
+        Enquanto isso, você pode procurar a loja pelo nome na busca logo abaixo.
       </p>
-      <a
-        href={zap}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white"
+      <button
+        type="button"
+        onClick={tentar}
+        className="mt-3 w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
       >
-        Falar comigo no WhatsApp
-      </a>
+        Tentar de novo
+      </button>
     </div>
   );
 }
