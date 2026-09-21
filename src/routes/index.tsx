@@ -1304,7 +1304,7 @@ function ComparadorModal({
             >
               <IconeWhatsApp className="size-5" />
               {cuponsEscolhidos.length === 1
-                ? `Falar sobre a ${cuponsEscolhidos[0].vendedor}`
+                ? `Falar sobre a ${cuponsEscolhidos[0]!.vendedor}`
                 : `Falar sobre essas ${cuponsEscolhidos.length} lojas`}
             </a>
           </Button>
