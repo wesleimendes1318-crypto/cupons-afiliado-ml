@@ -1608,10 +1608,12 @@ function Indicador({
   titulo,
   valor,
   tom,
+  detalhe,
 }: {
   titulo: string;
   valor: string;
   tom?: Qualidade;
+  detalhe?: string;
 }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
@@ -1619,6 +1621,7 @@ function Indicador({
       <p className={cn("mt-1 text-xl font-bold tabular-nums sm:text-2xl", tom === "bom" && "text-success", tom === "armadilha" && "text-danger")}>
         {valor}
       </p>
+      {detalhe && <p className="mt-1 text-xs text-secondary-ink">{detalhe}</p>}
     </div>
   );
 }
