@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
+import { Check, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, ShoppingBag, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -52,6 +52,11 @@ type Cupom = {
   qualidade: string | null;
   categoria: string | null;
   updated_at: string | null;
+  /* Link de afiliado da vitrine do cupom: a lista exata de produtos que aquele
+     cupom cobre, ja com a etiqueta do Weslei. Gerado pela extensao uma vez por
+     cupom e guardado no banco, entao chega pronto aqui. Null enquanto a fila
+     nao chegou nesse cupom. */
+  link_afiliado: string | null;
 };
 
 type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
@@ -282,6 +287,44 @@ async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
 /* Sem WhatsApp no site: quem quer o cupom resolve sozinho.
    Todo botao que antes abria a conversa agora leva ao campo de colar o link,
    que e o unico caminho que gera o link de afiliado de verdade. */
+/* O botao do card tem dois destinos, e a diferenca importa:
+
+   Com link_afiliado, ele abre a vitrine daquele cupom no Mercado Livre - a
+   lista exata dos produtos que o cupom cobre - ja pela etiqueta do Weslei.
+   E o caminho certo para quem chegou pelo nome da loja e ainda nao escolheu
+   produto: nao precisa falar com ninguem e a comissao continua sendo dele.
+
+   Sem link_afiliado (cupom novo, ainda na fila), ele leva ao campo de colar,
+   que e o outro caminho que gera o link de afiliado. Nunca manda a pessoa
+   para o Mercado Livre por fora, que seria perder a comissao. */
+function AcaoDoCupom({
+  cupom,
+  className,
+  iconeClassName,
+}: {
+  cupom: Cupom;
+  className?: string;
+  iconeClassName?: string;
+}) {
+  const vitrine = cupom.link_afiliado;
+  if (vitrine) {
+    return (
+      <Button asChild className={className}>
+        <a href={vitrine} target="_blank" rel="noopener noreferrer">
+          <ShoppingBag className={iconeClassName ?? "size-4 shrink-0"} aria-hidden="true" />
+          Ver os produtos deste cupom
+        </a>
+      </Button>
+    );
+  }
+  return (
+    <Button onClick={irParaColarLink} className={className}>
+      <Link2 className={iconeClassName ?? "size-4 shrink-0"} aria-hidden="true" />
+      Colar o link do produto
+    </Button>
+  );
+}
+
 function irParaColarLink() {
   if (typeof document === "undefined") return;
   document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -304,7 +347,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -842,10 +885,10 @@ function Index() {
                   <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
                     Em produtos de <span className="font-bold">{cupom.vendedor}</span>
                   </p>
-                  <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 w-full bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90">
-                    <Link2 className="size-4 shrink-0" aria-hidden="true" />
-                    Conferir esse cupom
-                  </Button>
+                  <AcaoDoCupom
+                    cupom={cupom}
+                    className="mt-3 h-auto min-h-10 w-full whitespace-normal bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90"
+                  />
                 </div>
               ))}
             </div>
@@ -1523,20 +1566,19 @@ function CupomCard({
           <p className="mt-1 text-[11px] leading-4 text-secondary-ink">categoria estimada pelo nome da loja</p>
         )}
 
-        <Button
-          onClick={irParaColarLink}
+        <AcaoDoCupom
+          cupom={cupom}
           className={cn(
-            "mt-auto h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
+            "mt-auto h-auto min-h-11 w-full min-w-0 whitespace-normal px-3 py-2 text-center text-sm font-bold",
             armadilha
               ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
               : "bg-ml-blue text-white hover:bg-ml-blue/90",
           )}
-        >
-          <Link2 className="size-4 shrink-0" aria-hidden="true" />
-          Conferir esse cupom
-        </Button>
+        />
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora.
+          {cupom.link_afiliado
+            ? "Abre no Mercado Livre só o que esse cupom cobre. O desconto entra sozinho no carrinho."
+            : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
         </p>
       </div>
 
@@ -1601,21 +1643,41 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               destaque
             />
           </div>
-          <Button
-            size="lg"
-            onClick={() => { fechar(); irParaColarLink(); }}
-            className={cn(
-              "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
-              cupom.qualidade === "armadilha"
-                ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-ml-blue text-white hover:bg-ml-blue/90",
-            )}
-          >
-            <Link2 className="size-5" aria-hidden="true" />
-            Conferir esse cupom
-          </Button>
+          {cupom.link_afiliado ? (
+            <Button
+              asChild
+              size="lg"
+              className={cn(
+                "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
+                cupom.qualidade === "armadilha"
+                  ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+                  : "bg-ml-blue text-white hover:bg-ml-blue/90",
+              )}
+            >
+              <a href={cupom.link_afiliado} target="_blank" rel="noopener noreferrer">
+                <ShoppingBag className="size-5" aria-hidden="true" />
+                Ver os produtos deste cupom
+              </a>
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={() => { fechar(); irParaColarLink(); }}
+              className={cn(
+                "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
+                cupom.qualidade === "armadilha"
+                  ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+                  : "bg-ml-blue text-white hover:bg-ml-blue/90",
+              )}
+            >
+              <Link2 className="size-5" aria-hidden="true" />
+              Colar o link do produto
+            </Button>
+          )}
           <p className="-mt-3 text-xs text-secondary-ink">
-            Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora.
+            {cupom.link_afiliado
+              ? "Abre no Mercado Livre só o que esse cupom cobre. O desconto entra sozinho no carrinho, sem precisar digitar código."
+              : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
           </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
