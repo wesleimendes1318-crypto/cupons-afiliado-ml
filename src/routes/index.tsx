@@ -58,6 +58,7 @@ type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
 type FaixaEconomia = "ate50" | "50a200" | "200a1000" | "acima1000";
 type EscolhaIa = { id: number; motivo: string };
+type Comparacao = { vencedor_id: number | null; veredito: string; observacoes: string[] };
 
 const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (teto: number | null) => boolean }> = [
   { id: "ate50", rotulo: "até R$ 50", aceita: (teto) => teto != null && teto <= 50 },
@@ -224,6 +225,10 @@ function Index() {
   const [classificando, setClassificando] = useState(false);
   const [selecionados, setSelecionados] = useState<number[]>([]);
   const [statusClassificacao, setStatusClassificacao] = useState("");
+  const [comparadorAberto, setComparadorAberto] = useState(false);
+  const [comparando, setComparando] = useState(false);
+  const [comparacao, setComparacao] = useState<Comparacao | null>(null);
+  const [erroComparacao, setErroComparacao] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setTermo(texto), 150);
@@ -440,6 +445,31 @@ function Index() {
       setErroIa(motivo instanceof Error ? motivo.message : "Não foi possível buscar recomendações.");
     } finally {
       setRecomendando(false);
+    }
+  }
+
+  async function abrirComparador() {
+    const escolhidosParaComparar = cupomSelecionados.slice(0, 3);
+    if (escolhidosParaComparar.length < 2) return;
+    setComparadorAberto(true);
+    setComparando(true);
+    setComparacao(null);
+    setErroComparacao("");
+    try {
+      const resposta = await fetch("/api/public/comparar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cupons: escolhidosParaComparar.map(({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade }) => ({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade })),
+        }),
+      });
+      const dados = (await resposta.json()) as Partial<Comparacao> & { erro?: string };
+      if (!resposta.ok || typeof dados.veredito !== "string") throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
+      setComparacao({ vencedor_id: dados.vencedor_id ?? null, veredito: dados.veredito, observacoes: dados.observacoes ?? [] });
+    } catch (motivo) {
+      setErroComparacao(motivo instanceof Error ? motivo.message : "Não foi possível comparar os cupons.");
+    } finally {
+      setComparando(false);
     }
   }
 
@@ -743,6 +773,16 @@ function Index() {
             </p>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
+              <Button
+                variant="outline"
+                className="h-auto min-h-11 font-semibold"
+                disabled={cupomSelecionados.length < 2}
+                title={cupomSelecionados.length > 3 ? "A comparação usa os 3 primeiros cupons selecionados." : undefined}
+                onClick={abrirComparador}
+              >
+                <Sparkles aria-hidden="true" />
+                Comparar economia
+              </Button>
               <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
                 <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
                   <IconeWhatsApp className="size-5" />
@@ -771,6 +811,16 @@ function Index() {
 
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
 
+      <ComparadorModal
+        aberto={comparadorAberto}
+        fechar={() => setComparadorAberto(false)}
+        cupons={cupomSelecionados.slice(0, 3)}
+        excedeu={cupomSelecionados.length > 3}
+        carregando={comparando}
+        comparacao={comparacao}
+        erro={erroComparacao}
+      />
+
       <footer className="mt-8 border-t border-border py-6">
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
@@ -783,6 +833,108 @@ function Index() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function ComparadorModal({
+  aberto,
+  fechar,
+  cupons,
+  excedeu,
+  carregando,
+  comparacao,
+  erro,
+}: {
+  aberto: boolean;
+  fechar: () => void;
+  cupons: CupomIndexado[];
+  excedeu: boolean;
+  carregando: boolean;
+  comparacao: Comparacao | null;
+  erro: string;
+}) {
+  return (
+    <Dialog open={aberto} onOpenChange={(estado) => { if (!estado) fechar(); }}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Qual compensa mais</DialogTitle>
+          <DialogDescription>
+            Comparação entre {cupons.length} cupons selecionados, com os valores reais de cada um.
+          </DialogDescription>
+        </DialogHeader>
+
+        {excedeu && (
+          <p className="rounded-md bg-muted px-3 py-2 text-xs text-secondary-ink">
+            A comparação usa no máximo 3 cupons. Estamos comparando os 3 primeiros que você marcou.
+          </p>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs uppercase text-secondary-ink">
+              <tr>
+                <th className="py-2 pr-3 font-semibold">Loja</th>
+                <th className="py-2 pr-3 font-semibold">Desconto</th>
+                <th className="py-2 pr-3 font-semibold">Economia máxima</th>
+                <th className="py-2 pr-3 font-semibold">Compra mínima</th>
+                <th className="py-2 font-semibold">Vence em</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cupons.map((cupom) => (
+                <tr
+                  key={cupom.id}
+                  className={cn("border-t border-border align-top", comparacao?.vencedor_id === cupom.id && "bg-success-soft")}
+                >
+                  <td className="py-2 pr-3 font-semibold">
+                    {cupom.vendedor}
+                    {comparacao?.vencedor_id === cupom.id && (
+                      <span className="ml-2 rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-success-foreground">MELHOR</span>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3">{cupom.desconto ?? "Não informado"}</td>
+                  <td className="py-2 pr-3 font-semibold text-success">{formatarMoeda(cupom.teto)}</td>
+                  <td className="py-2 pr-3">{formatarMoeda(cupom.compra_min)}</td>
+                  <td className="py-2">{cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "Sem data"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {carregando && <p className="text-sm text-secondary-ink" aria-live="polite">Analisando os cupons...</p>}
+
+        {!carregando && erro && (
+          <p className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{erro}</p>
+        )}
+
+        {!carregando && comparacao && (
+          <div className="rounded-md border border-border bg-muted/40 p-3">
+            <p className="text-sm font-semibold text-ml-blue">Veredito</p>
+            <p className="mt-1 whitespace-pre-line text-sm">{comparacao.veredito}</p>
+            {comparacao.observacoes.length > 0 && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-secondary-ink">
+                {comparacao.observacoes.map((observacao) => (
+                  <li key={observacao}>{observacao}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {cupons.length > 0 && (
+          <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+            <a href={linkWhatsAppLista(cupons)} target="_blank" rel="noopener noreferrer">
+              <IconeWhatsApp className="size-5" />
+              PEDIR OS LINKS DESSES {cupons.length}
+            </a>
+          </Button>
+        )}
+        <p className="text-xs text-secondary-ink">
+          Comparação feita com os dados cadastrados de cada cupom. A categoria é estimada pelo nome da loja.
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 }
 
