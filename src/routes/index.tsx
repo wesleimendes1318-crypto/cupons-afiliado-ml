@@ -122,9 +122,9 @@ function diasAte(data: string | null) {
 }
 
 function calcularScore(cupom: Cupom, agora: number | null) {
-  const teto = cupom.teto != null && cupom.teto >= 9_999_999 ? null : cupom.teto;
-  if (teto == null) return null;
-  let score = teto;
+  const base = semLimite(cupom) ? (cupom.valor ?? 0) * 40 : tetoReal(cupom);
+  if (base == null || base <= 0) return null;
+  let score = base;
   if (cupom.compra_min != null && cupom.compra_min <= 50) score *= 1.3;
   else if (cupom.compra_min != null && cupom.compra_min <= 150) score *= 1.15;
   if ((cupom.orcamento ?? 0) > 50_000) score *= 1.2;
@@ -142,13 +142,18 @@ function formatarMoeda(valor: number | null) {
 /** Tetos absurdos cadastrados (ex.: 99.999.999) significam "sem limite informado", não um valor real. */
 const TETO_IRREAL = 9_999_999;
 
+function semLimite(cupom: Pick<Cupom, "sem_teto">) {
+  return cupom.sem_teto === true;
+}
+
 function tetoReal(cupom: Pick<Cupom, "teto">) {
   return cupom.teto != null && cupom.teto >= TETO_IRREAL ? null : cupom.teto;
 }
 
-function formatarTeto(cupom: Pick<Cupom, "teto">) {
+function formatarTeto(cupom: Pick<Cupom, "teto" | "sem_teto">) {
+  if (semLimite(cupom)) return "sem limite de valor";
   const teto = tetoReal(cupom);
-  return teto == null ? "Sem limite informado" : brl.format(teto);
+  return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
 function linkWa(mensagem: string) {
