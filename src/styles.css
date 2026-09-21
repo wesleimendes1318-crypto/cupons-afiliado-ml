@@ -31,6 +31,8 @@
   --color-urgency-danger: var(--urgency-danger);
   --color-urgency-soft: var(--urgency-soft);
   --color-secondary-ink: var(--secondary-ink);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-foreground: var(--whatsapp-foreground);
   --shadow-card: var(--shadow-card);
   --shadow-modal: var(--shadow-modal);
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -172,6 +174,8 @@
   --urgency-danger: oklch(0.48 0.2 27);
   --urgency-soft: oklch(0.96 0.03 27);
   --secondary-ink: oklch(0.51 0 0);
+  --whatsapp: #25d366;
+  --whatsapp-foreground: oklch(0.18 0.02 150);
   --shadow-card: 0 4px 14px color-mix(in oklab, var(--foreground) 10%, transparent);
   --shadow-modal: 0 16px 48px color-mix(in oklab, var(--foreground) 28%, transparent);
   --primary: oklch(0.6 0.19 255);
@@ -192,6 +196,8 @@
   --urgency-danger: oklch(0.72 0.18 27);
   --urgency-soft: oklch(0.28 0.07 27);
   --secondary-ink: oklch(0.72 0 0);
+  --whatsapp: #25d366;
+  --whatsapp-foreground: oklch(0.16 0.02 150);
   --shadow-card: 0 4px 14px oklch(0 0 0 / 24%);
   --shadow-modal: 0 16px 48px oklch(0 0 0 / 45%);
   --primary: oklch(0.68 0.17 255);

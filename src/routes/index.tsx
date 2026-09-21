@@ -135,9 +135,38 @@ function formatarMoeda(valor: number | null) {
   return valor == null ? "Não informado" : brl.format(valor);
 }
 
-function linkWhatsApp(cupom: Cupom) {
-  const mensagem = `Oi! Vi no site o cupom de ${cupom.desconto ?? "desconto não informado"} da loja ${cupom.vendedor} (até ${formatarMoeda(cupom.teto)} de desconto, compra mínima ${formatarMoeda(cupom.compra_min)}). Quero aproveitar, me manda o link?`;
+function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
+}
+
+function resumoCupom(cupom: Cupom) {
+  const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
+  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarMoeda(cupom.teto)}${compra})`;
+}
+
+function linkWhatsApp(cupom: Cupom, extra?: string) {
+  const mensagem =
+    `Oi! Quero comprar na loja ${cupom.vendedor}, que está com ${resumoCupom(cupom)}.\n` +
+    `Ainda vou escolher o produto. Me manda o link para eu ver os produtos dessa loja e você confere se o cupom vale para o que eu escolher?` +
+    (extra ? `\n${extra}` : "");
+  return linkWa(mensagem);
+}
+
+function linkWhatsAppLista(cupons: Cupom[], introFinal?: string) {
+  const itens = cupons
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarMoeda(cupom.teto)}.`)
+    .join("\n");
+  const fecho = introFinal ? `\n${introFinal}` : "";
+  return linkWa(`Oi! Me interessei por estas lojas:\n${itens}\nPode me mandar os links para eu escolher os produtos?${fecho}`);
+}
+
+function IconeWhatsApp({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className ?? "size-5"}>
+      <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.48-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35Z" />
+      <path d="M12.04 2C6.6 2 2.18 6.42 2.18 11.86c0 1.74.46 3.44 1.32 4.94L2 22l5.35-1.4a9.82 9.82 0 0 0 4.69 1.19h.01c5.43 0 9.85-4.42 9.85-9.86 0-2.63-1.02-5.1-2.88-6.96A9.78 9.78 0 0 0 12.04 2Zm0 17.98h-.01a8.2 8.2 0 0 1-4.16-1.14l-.3-.18-3.1.81.83-3.02-.2-.31a8.14 8.14 0 0 1-1.25-4.34c0-4.52 3.68-8.2 8.2-8.2 2.19 0 4.25.86 5.8 2.41a8.14 8.14 0 0 1 2.4 5.8c0 4.52-3.68 8.17-8.21 8.17Z" />
+    </svg>
+  );
 }
 
 function descontoRealEm200(cupom: Cupom) {
@@ -193,6 +222,7 @@ function Index() {
   const [erroIa, setErroIa] = useState("");
   const [recomendando, setRecomendando] = useState(false);
   const [classificando, setClassificando] = useState(false);
+  const [selecionados, setSelecionados] = useState<number[]>([]);
   const [statusClassificacao, setStatusClassificacao] = useState("");
 
   useEffect(() => {
@@ -282,6 +312,14 @@ function Index() {
     () => escolhasIa.map((escolha) => ({ cupom: indexado.find((item) => item.id === escolha.id), motivo: escolha.motivo })).filter((item): item is { cupom: CupomIndexado; motivo: string } => Boolean(item.cupom)),
     [escolhasIa, indexado],
   );
+  const cupomSelecionados = useMemo(
+    () => indexado.filter((cupom) => selecionados.includes(cupom.id)),
+    [indexado, selecionados],
+  );
+  const economiaSomada = useMemo(
+    () => cupomSelecionados.reduce((total, cupom) => total + (cupom.teto ?? 0), 0),
+    [cupomSelecionados],
+  );
   const armadilhasDaBusca = useMemo(
     () => (termos.length ? filtrados.filter((cupom) => cupom.qualidade === "armadilha") : []),
     [filtrados, termos.length],
@@ -353,6 +391,10 @@ function Index() {
     link.download = "cupons-afiliado-ml.csv";
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  function alternarSelecao(id: number) {
+    setSelecionados((atuais) => (atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]));
   }
 
   function alternarCategoria(categoria: string) {
@@ -428,8 +470,14 @@ function Index() {
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
                 Percentual alto não garante desconto alto. Confira o teto antes de comprar.
               </p>
-              <p className="mt-2 max-w-2xl text-sm font-semibold sm:text-base">
-                Fale comigo e eu envio o link com o cupom já aplicado.
+              <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
+                <a href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")} target="_blank" rel="noopener noreferrer">
+                  <IconeWhatsApp className="size-5 text-whatsapp" />
+                  Falar comigo no WhatsApp
+                </a>
+              </Button>
+              <p className="mt-2 max-w-2xl text-xs sm:text-sm">
+                Muito cupom promete 40% e desconta R$ 2. Eu confiro o limite real de cada um e te mando o link do produto certo.
               </p>
               <p className="mt-2 text-xs text-secondary-ink">
                 {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
@@ -615,7 +663,24 @@ function Index() {
                 <div><h2 className="font-semibold text-ml-blue">Escolhidos para você</h2><p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p></div>
                 <Button variant="ghost" size="icon" aria-label="Fechar recomendações" onClick={() => { setEscolhasIa([]); setMensagemIa(""); }}><X aria-hidden="true" /></Button>
               </div>
-              {escolhidos.length > 0 && <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">{escolhidos.map(({ cupom, motivo }) => <div key={cupom.id} className="flex flex-col gap-2"><p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p><CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} /></div>)}</div>}
+              {escolhidos.length > 0 && (
+                <>
+                  <Button asChild size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                    <a href={linkWhatsAppLista(escolhidos.map(({ cupom }) => cupom), "A IA sugeriu estas para mim, pode me mandar os links?")} target="_blank" rel="noopener noreferrer">
+                      <IconeWhatsApp className="size-5" />
+                      PEDIR OS LINKS DESSES {escolhidos.length}
+                    </a>
+                  </Button>
+                  <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
+                    {escolhidos.map(({ cupom, motivo }) => (
+                      <div key={cupom.id} className="flex flex-col gap-2">
+                        <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
+                        <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
           {error ? (
@@ -640,7 +705,7 @@ function Index() {
             <>
               <div className="grid items-stretch gap-4 md:grid-cols-2">
                 {visiveis.map((cupom) => (
-                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} />
+                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
                 ))}
               </div>
 
@@ -670,6 +735,40 @@ function Index() {
         </section>
       </main>
 
+      {cupomSelecionados.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold">
+              {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja selecionada" : "lojas selecionadas"} · economia somada de até {formatarMoeda(economiaSomada)}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
+              <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
+                  <IconeWhatsApp className="size-5" />
+                  PEDIR OS LINKS
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <a
+        href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar no WhatsApp"
+        className={cn(
+          "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
+          cupomSelecionados.length > 0 ? "bottom-24" : "bottom-4",
+        )}
+      >
+        <IconeWhatsApp className="size-7 sm:size-5" />
+        <span className="hidden sm:inline">Falar no WhatsApp</span>
+      </a>
+
+
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
 
       <footer className="mt-8 border-t border-border py-6">
@@ -691,10 +790,14 @@ function CupomCard({
   cupom,
   agora,
   abrirCondicoes,
+  selecionado,
+  alternarSelecao,
 }: {
   cupom: CupomIndexado;
   agora: number | null;
   abrirCondicoes: (cupom: CupomIndexado) => void;
+  selecionado: boolean;
+  alternarSelecao: (id: number) => void;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
   const contagem = contagemRegressiva(cupom.vence, agora);
@@ -714,6 +817,15 @@ function CupomCard({
       )}
     >
       <div className="flex min-h-10 items-start justify-between gap-3">
+        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-secondary-ink">
+          <input
+            type="checkbox"
+            checked={selecionado}
+            onChange={() => alternarSelecao(cupom.id)}
+            className="size-4 accent-[var(--whatsapp)]"
+            aria-label={`Selecionar a loja ${cupom.vendedor}`}
+          />
+        </label>
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
           className={cn(
@@ -735,7 +847,7 @@ function CupomCard({
         </span>
       </div>
 
-      <div className="my-5 grid grid-cols-[minmax(110px,auto)_1fr] items-center gap-5">
+      <div className="my-5 grid grid-cols-[minmax(0,1fr)_minmax(150px,190px)] items-center gap-4">
         <div>
           <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarMoeda(cupom.teto)}</p>
           {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
@@ -751,13 +863,17 @@ function CupomCard({
               "mt-3 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center text-xs font-bold",
               armadilha
                 ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
             )}
           >
             <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-              {armadilha ? "VER MESMO ASSIM" : "QUERO ESTE CUPOM"}
+              <IconeWhatsApp className="size-4" />
+              PEDIR MEU LINK
             </a>
           </Button>
+          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
+            Eu confiro as condições e te digo o desconto real antes de você comprar.
+          </p>
         </div>
       </div>
 
@@ -774,7 +890,7 @@ function CupomCard({
           <span aria-hidden="true">|</span>
           <span>Orçamento restante: {formatarMoeda(cupom.orcamento)}</span>
         </div>
-        <p className="mt-2 text-[11px]">O link de compra é enviado por WhatsApp</p>
+        <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
       </div>
     </article>
   );
@@ -810,13 +926,21 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
               cupom.qualidade === "armadilha"
                 ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
             )}
           >
-            <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-              {cupom.qualidade === "armadilha" ? "VER MESMO ASSIM" : "QUERO ESTE CUPOM"}
+            <a
+              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarMoeda(cupom.teto)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <IconeWhatsApp className="size-5" />
+              PEDIR MEU LINK
             </a>
           </Button>
+          <p className="-mt-3 text-xs text-secondary-ink">
+            Eu confiro as condições e te digo o desconto real antes de você comprar.
+          </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
         </div>
