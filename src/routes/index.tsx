@@ -714,7 +714,10 @@ function Index() {
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">Cupons Afiliado ML</h1>
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
-                Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas.
+                Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
+              </p>
+              <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
+                Aqui você sempre sabe quanto economiza antes de comprar. E pode voltar sempre: acompanho os cupons novos e aviso quando aparecer um que valha a pena para você.
               </p>
               <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <a href={linkWa("Oi! Vi seu site de cupons e quero garantir um cupom.")} target="_blank" rel="noopener noreferrer">
