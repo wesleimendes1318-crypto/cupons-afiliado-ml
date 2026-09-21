@@ -614,9 +614,9 @@ function Index() {
         <div className="mx-auto max-w-6xl px-4 py-4">
           <ol className="grid gap-3 text-sm sm:grid-cols-3">
             {[
-              { icone: Search, texto: "Você escolhe uma loja aqui" },
-              { icone: MessageCircle, texto: "Me chama e diz o que quer comprar" },
-              { icone: ShieldCheck, texto: "Confiro as condições e te mando o link certo" },
+              { icone: Search, texto: "Você escolhe uma loja por aqui" },
+              { icone: MessageCircle, texto: "Me chama no WhatsApp e diz o que quer comprar" },
+              { icone: ShieldCheck, texto: "Eu confiro as condições e mando o link certo" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
@@ -627,7 +627,7 @@ function Index() {
             ))}
           </ol>
           <p className="mt-3 text-xs text-secondary-ink">
-            Sem custo para você. Eu recebo comissão do Mercado Livre, não de quem compra.
+            Sem custo para você. Recebo comissão do Mercado Livre — não de quem compra.
           </p>
         </div>
       </section>
