@@ -299,6 +299,7 @@ function Index() {
   const [compraMax, setCompraMax] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("score");
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [lojas, setLojas] = useState<string[]>([]);
   const [faixas, setFaixas] = useState<FaixaEconomia[]>([]);
   const [pagina, setPagina] = useState(1);
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
@@ -329,7 +330,7 @@ function Index() {
 
   useEffect(() => {
     setPagina(1);
-  }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas]);
+  }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas, lojas]);
 
   const indexado = useMemo(() => {
     const preparados = cupons.map((c) => ({
@@ -363,15 +364,16 @@ function Index() {
     const tMin = Number(tetoMin) || 0;
     const cMax = compraMax === "" ? null : Number(compraMax);
     const lista = indexado.filter((cupom) => {
-      const buscaAtiva = termos.length > 0;
+      const buscaAtiva = termos.length > 0 || lojas.length > 0;
+      if (lojas.length && !lojas.includes(cupom.vendedor)) return false;
       if (!buscaAtiva && vitrine === "recomendados" && cupom.qualidade !== "bom") return false;
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
       if (tMin && (tetoReal(cupom) ?? 0) < tMin) return false;
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
-      if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
-      if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
+      if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
+      if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
       if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
       return true;
     });
@@ -399,7 +401,7 @@ function Index() {
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas]);
+  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, lojas]);
 
   const recomendadosFiltrados = useMemo(
     () => filtrados.filter((cupom) => cupom.qualidade === "bom"),
