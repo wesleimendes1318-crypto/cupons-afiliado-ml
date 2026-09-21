@@ -1050,9 +1050,10 @@ function CupomCard({
   const encerrado = contagem.urgencia === "encerrado";
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const ilimitado = semLimite(cupom);
-  const teto = tetoReal(cupom);
+  const teto = tetoUtil(cupom);
+  const em200 = descontoRealEm200(cupom);
   const rotuloQualidade = ilimitado
-    ? "Desconta sem limite"
+    ? `Desconta ${cupom.desconto ?? "o percentual cheio"}`
     : teto == null
       ? "Limite não informado"
       : armadilha
