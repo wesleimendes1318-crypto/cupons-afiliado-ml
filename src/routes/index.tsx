@@ -1244,8 +1244,23 @@ function Index() {
         erro={erroComparacao}
       />
 
-      <footer className="mt-8 border-t border-border py-6">
-        <div className="mx-auto flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mt-10 border-t border-border py-8">
+        <div className="mx-auto grid max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-bold">Limite real sempre informado</p>
+            <p className="mt-1 text-xs text-secondary-ink">Mostro quanto cada cupom desconta de verdade, inclusive quando o desconto é pequeno.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-bold">Sem custo para você</p>
+            <p className="mt-1 text-xs text-secondary-ink">Recebo comissão do Mercado Livre, nunca de quem compra. O preço é o mesmo.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-bold">Dados vindos dos cupons oficiais</p>
+            <p className="mt-1 text-xs text-secondary-ink">Nada é inventado: cada condição vem do texto oficial da campanha do vendedor.</p>
+          </div>
+        </div>
+        <div className="mx-auto mt-6 flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:px-6 lg:px-8 sm:flex-row sm:items-center sm:justify-between">
+
           <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
           <div className="text-left sm:text-right">
             <Button type="button" variant="ghost" size="sm" disabled={classificando} onClick={classificar} className="px-2 text-xs text-secondary-ink">
