@@ -441,10 +441,10 @@ function Index() {
       const nome = cupom.categoria ?? SEM_CATEGORIA;
       contagens.set(nome, (contagens.get(nome) ?? 0) + 1);
     });
-    return [...contagens.entries()].sort(([a], [b]) => {
+    return [...contagens.entries()].sort(([a, qa], [b, qb]) => {
       if (a === SEM_CATEGORIA) return 1;
       if (b === SEM_CATEGORIA) return -1;
-      return a.localeCompare(b, "pt-BR");
+      return qb - qa || a.localeCompare(b, "pt-BR");
     });
   }, [indexado]);
 
