@@ -1046,7 +1046,7 @@ function Index() {
               </div>
               <div className="grid items-stretch gap-4 md:grid-cols-2">
                 {visiveis.map((cupom) => (
-                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
+                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
                 ))}
               </div>
 
