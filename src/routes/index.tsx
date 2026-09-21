@@ -70,6 +70,7 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
 ];
 
 const PAGE_SIZE = 50;
+const SEM_CATEGORIA = "Sem categoria";
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
@@ -517,6 +518,10 @@ function Index() {
     setSelecionados((atuais) => (atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]));
   }
 
+  function alternarLoja(loja: string) {
+    setLojas((atuais) => (atuais.includes(loja) ? atuais.filter((item) => item !== loja) : [...atuais, loja]));
+  }
+
   function alternarCategoria(categoria: string) {
     setCategorias((atuais) => atuais.includes(categoria) ? atuais.filter((item) => item !== categoria) : [...atuais, categoria]);
   }
@@ -535,6 +540,7 @@ function Index() {
     setTetoMin("");
     setCompraMax("");
     setCategorias([]);
+    setLojas([]);
     setFaixas([]);
     setOrdem("score");
   }
