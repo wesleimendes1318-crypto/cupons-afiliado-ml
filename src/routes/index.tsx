@@ -604,6 +604,10 @@ function Index() {
     setFaixas((atuais) => atuais.includes(faixa) ? atuais.filter((item) => item !== faixa) : [...atuais, faixa]);
   }
 
+  function alternarEtiqueta(id: EtiquetaId) {
+    setEtiquetas((atuais) => atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]);
+  }
+
   function limparFiltros() {
     setTexto("");
     setTermo("");
