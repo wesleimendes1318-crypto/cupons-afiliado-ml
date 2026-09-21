@@ -107,6 +107,9 @@ export async function chamarIa(
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.2,
+      // Sem "pensamento" nas tarefas simples: a resposta sai em poucos segundos,
+      // evitando o tempo limite do servidor.
+      ...(opcoes?.esforco === "high" ? {} : { thinkingConfig: { thinkingBudget: 0 } }),
       ...(opcoes?.formato
         ? { responseMimeType: "application/json", responseSchema: esquemaGemini(opcoes.formato.schema) }
         : {}),
