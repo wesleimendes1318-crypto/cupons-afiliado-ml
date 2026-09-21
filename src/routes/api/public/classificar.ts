@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { excedeuLimite, json, limparJson, origemPermitida, respostaOptions, textoGemini } from "@/lib/public-ai-api";
+import { chamarIa, excedeuLimite, json, limparJson, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 export const CATEGORIAS = [
   "Autopeças e Acessórios",
@@ -20,7 +20,30 @@ export const CATEGORIAS = [
   "Variedades",
 ] as const;
 
-const saidaSchema = z.array(z.object({ vendedor: z.string(), categoria: z.enum(CATEGORIAS) }));
+const formatoSaida = {
+  nome: "categorias_lojas",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      itens: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            vendedor: { type: "string" },
+            categoria: { type: "string", enum: [...CATEGORIAS] },
+          },
+          required: ["vendedor", "categoria"],
+        },
+      },
+    },
+    required: ["itens"],
+  },
+} as const;
+
+const saidaSchema = z.object({ itens: z.array(z.object({ vendedor: z.string(), categoria: z.enum(CATEGORIAS) })) });
 
 export const Route = createFileRoute("/api/public/classificar")({
   server: {
@@ -29,9 +52,6 @@ export const Route = createFileRoute("/api/public/classificar")({
       POST: async ({ request }) => {
         if (!origemPermitida(request)) return json(request, { erro: "Origem da solicitação não permitida." }, 403);
         if (excedeuLimite(request)) return json(request, { erro: "Muitas solicitações. Aguarde um minuto e tente novamente." }, 429);
-        const apiKey = process.env['GEMINI_API_KEY'];
-        if (!apiKey) return json(request, { erro: "A classificação ainda não foi configurada pelo responsável do site." }, 503);
-
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data, error } = await supabaseAdmin.from("cupons").select("vendedor").is("categoria", null);
         if (error) return json(request, { erro: "Não foi possível consultar as lojas sem categoria." }, 500);
@@ -44,21 +64,14 @@ export const Route = createFileRoute("/api/public/classificar")({
           const prompt = `Classifique cada nome de loja em exatamente uma categoria permitida.
 Use apenas o nome da loja como pista. Se o nome não der pista clara e forte, como “Bb20250428120426”, use “Variedades”. Não invente informações.
 Categorias permitidas: ${CATEGORIAS.join("; ")}.
-Responda somente JSON, como uma lista de objetos {"vendedor":"nome exato","categoria":"categoria exata"}.
+Devolva um item para cada loja enviada, com o nome exato da loja e a categoria exata.
 Lojas: ${JSON.stringify(lote)}`;
-          const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json", temperature: 0 },
-            }),
-          });
-          if (!resposta.ok) return json(request, { erro: "Não foi possível classificar as lojas agora. Tente novamente em instantes." }, 502);
-          const texto = textoGemini(await resposta.json());
-          let categorias: z.infer<typeof saidaSchema>;
+          const resultado = await chamarIa(prompt, { formato: formatoSaida, esforco: "low" });
+          if (!resultado.ok) return json(request, { erro: resultado.erro }, resultado.status);
+          const texto = resultado.texto;
+          let categorias: z.infer<typeof saidaSchema>["itens"];
           try {
-            categorias = saidaSchema.parse(JSON.parse(limparJson(texto)));
+            categorias = saidaSchema.parse(JSON.parse(limparJson(texto))).itens;
           } catch {
             return json(request, { erro: "A classificação retornou um formato inválido. Tente novamente." }, 502);
           }
