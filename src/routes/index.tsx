@@ -777,9 +777,19 @@ function Index() {
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
-              {armadilhasDaBusca.map((cupom, indice) => (
-                <span key={cupom.id}>{indice > 0 ? " · " : ""}{cupom.vendedor}: este cupom desconta no máximo {formatarTeto(cupom)}. Não recomendo usar como argumento de venda.</span>
-              ))}
+              {armadilhasDaBusca.map((cupom, indice) => {
+                const limite = tetoUtil(cupom);
+                return (
+                  <span key={cupom.id}>
+                    {indice > 0 ? " · " : ""}
+                    {cupom.vendedor}:{" "}
+                    {limite != null
+                      ? `este cupom desconta no máximo ${brl.format(limite)}.`
+                      : "este cupom não informa o limite real de desconto."}{" "}
+                    Não recomendo usá-lo como argumento de venda.
+                  </span>
+                );
+              })}
             </div>
           )}
           {(mensagemIa || escolhidos.length > 0) && (
