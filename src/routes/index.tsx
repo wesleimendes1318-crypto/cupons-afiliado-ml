@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Copy, Info, Search, ShieldAlert, Sparkles, WandSparkles, X } from "lucide-react";
+import { Check, Clock3, Copy, Info, MessageCircle, Search, ShieldAlert, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
 
 const PAGE_SIZE = 50;
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 function normalizar(texto: string) {
@@ -160,25 +161,39 @@ function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
+/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de desconto". */
+function limiteNaMensagem(cupom: Cupom) {
+  if (semLimite(cupom)) return "sem limite de desconto";
+  const teto = tetoReal(cupom);
+  return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
+}
+
 function resumoCupom(cupom: Cupom) {
   const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarTeto(cupom)}${compra})`;
+  return `${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}${compra}`;
 }
 
 function linkWhatsApp(cupom: Cupom, extra?: string) {
   const mensagem =
-    `Oi! Quero comprar na loja ${cupom.vendedor}, que está com ${resumoCupom(cupom)}.\n` +
-    `Ainda vou escolher o produto. Me manda o link para eu ver os produtos dessa loja e você confere se o cupom vale para o que eu escolher?` +
-    (extra ? `\n${extra}` : "");
+    `Oi! Vi no seu site o cupom da ${cupom.vendedor} (${resumoCupom(cupom)}).\n` +
+    (extra ? `${extra}\n` : "") +
+    `Ainda não escolhi o produto. O que eu quero comprar é: `;
   return linkWa(mensagem);
 }
 
-function linkWhatsAppLista(cupons: Cupom[], introFinal?: string) {
+function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarTeto(cupom)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
     .join("\n");
-  const fecho = introFinal ? `\n${introFinal}` : "";
-  return linkWa(`Oi! Me interessei por estas lojas:\n${itens}\nPode me mandar os links para eu escolher os produtos?${fecho}`);
+  const fecho = fechoPersonalizado ?? "O que eu quero comprar é: ";
+  return linkWa(`Oi! Me interessei por estas lojas do seu site:\n${itens}\n${fecho}`);
+}
+
+function linkWhatsAppIa(cupons: Cupom[], consulta: string) {
+  const itens = cupons
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
+    .join("\n");
+  return linkWa(`Oi! Pesquisei no seu site: "${consulta}".\nAs sugestões foram:\n${itens}\nQual dessas vale mais a pena para mim?`);
 }
 
 function IconeWhatsApp({ className }: { className?: string }) {
@@ -518,17 +533,14 @@ function Index() {
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">Cupons Afiliado ML</h1>
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
-                Percentual alto não garante desconto alto. Confira o teto antes de comprar.
+                Muito cupom anuncia 40% e desconta R$ 2. Eu confiro o limite real antes de indicar.
               </p>
               <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <a href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")} target="_blank" rel="noopener noreferrer">
                   <IconeWhatsApp className="size-5 text-whatsapp" />
-                  Falar comigo no WhatsApp
+                  Falar comigo
                 </a>
               </Button>
-              <p className="mt-2 max-w-2xl text-xs sm:text-sm">
-                Muito cupom promete 40% e desconta R$ 2. Eu confiro o limite real de cada um e te mando o link do produto certo.
-              </p>
               <p className="mt-2 text-xs text-secondary-ink">
                 {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
               </p>
@@ -536,6 +548,28 @@ function Index() {
           </div>
         </div>
       </header>
+
+      <section className="border-b border-border bg-card" aria-label="Como funciona">
+        <div className="mx-auto max-w-6xl px-4 py-4">
+          <ol className="grid gap-3 text-sm sm:grid-cols-3">
+            {[
+              { icone: Search, texto: "Você escolhe uma loja aqui" },
+              { icone: MessageCircle, texto: "Me chama e diz o que quer comprar" },
+              { icone: ShieldCheck, texto: "Confiro as condições e te mando o link certo" },
+            ].map((passo, indice) => (
+              <li key={passo.texto} className="flex min-w-0 items-start gap-2">
+                <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
+                <span className="min-w-0 break-words">
+                  <span className="font-semibold">{indice + 1}.</span> {passo.texto}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 text-xs text-secondary-ink">
+            Sem custo para você. Eu recebo comissão do Mercado Livre, não de quem compra.
+          </p>
+        </div>
+      </section>
 
       <main className="mx-auto max-w-6xl px-4 py-6">
         <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
@@ -699,6 +733,9 @@ function Index() {
         </section>
 
         <section className="mt-4" aria-label="Cupons encontrados">
+          <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
+            Analisei 361 cupons. 49 descontam menos de R$ 20. Os 312 aqui embaixo passaram no teste.
+          </p>
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
@@ -716,9 +753,9 @@ function Index() {
               {escolhidos.length > 0 && (
                 <>
                   <Button asChild size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                    <a href={linkWhatsAppLista(escolhidos.map(({ cupom }) => cupom), "A IA sugeriu estas para mim, pode me mandar os links?")} target="_blank" rel="noopener noreferrer">
+                    <a href={linkWhatsAppIa(escolhidos.map(({ cupom }) => cupom), pedidoIa)} target="_blank" rel="noopener noreferrer">
                       <IconeWhatsApp className="size-5" />
-                      PEDIR OS LINKS DESSES {escolhidos.length}
+                      Falar sobre essas opções
                     </a>
                   </Button>
                   <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
@@ -824,7 +861,7 @@ function Index() {
               <Button asChild className="h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
                 <a href={linkWhatsAppLista(cupomSelecionados)} target="_blank" rel="noopener noreferrer">
                   <IconeWhatsApp className="size-5" />
-                  PEDIR OS LINKS
+                  Falar sobre {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja" : "lojas"}
                 </a>
               </Button>
             </div>
@@ -836,14 +873,14 @@ function Index() {
         href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Falar no WhatsApp"
+        aria-label="Falar comigo no WhatsApp"
         className={cn(
           "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
           cupomSelecionados.length > 0 ? "bottom-24" : "bottom-4",
         )}
       >
         <IconeWhatsApp className="size-7 sm:size-5" />
-        <span className="hidden sm:inline">Falar no WhatsApp</span>
+        <span className="hidden sm:inline">Falar comigo</span>
       </a>
 
 
@@ -909,7 +946,7 @@ function ComparadorModal({
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-secondary-ink">
+            <thead className="text-xs font-semibold text-secondary-ink">
               <tr>
                 <th className="py-2 pr-3 font-semibold">Loja</th>
                 <th className="py-2 pr-3 font-semibold">Desconto</th>
@@ -964,7 +1001,7 @@ function ComparadorModal({
           <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
             <a href={linkWhatsAppLista(cupons)} target="_blank" rel="noopener noreferrer">
               <IconeWhatsApp className="size-5" />
-              PEDIR OS LINKS DESSES {cupons.length}
+              Falar sobre essas {cupons.length} lojas
             </a>
           </Button>
         )}
@@ -995,11 +1032,13 @@ function CupomCard({
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const ilimitado = semLimite(cupom);
   const teto = tetoReal(cupom);
-  const rotuloQualidade = armadilha
-    ? `CUIDADO · desconto para em ${formatarTeto(cupom)}`
-    : ilimitado
-      ? "VALE A PENA · sem limite"
-      : `VALE A PENA · até ${formatarTeto(cupom)}`;
+  const rotuloQualidade = ilimitado
+    ? "Desconta sem limite"
+    : teto == null
+      ? "Limite não informado"
+      : armadilha
+        ? `Desconta só ${brlCurto.format(teto)}`
+        : `Desconta até ${brlCurto.format(teto)}`;
 
   return (
     <article
@@ -1033,7 +1072,7 @@ function CupomCard({
         </p>
         <span
           className={cn(
-            "max-w-[58%] rounded-sm px-2 py-1 text-right text-[10px] font-bold uppercase leading-4 sm:text-xs",
+            "max-w-[58%] rounded-sm px-2 py-1 text-right text-xs font-semibold leading-4",
             armadilha ? "bg-danger-soft text-danger" : "bg-success-soft text-success",
           )}
         >
@@ -1077,11 +1116,11 @@ function CupomCard({
         >
           <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
             <IconeWhatsApp className="size-4 shrink-0" />
-            PEDIR MEU LINK
+            Conferir esse cupom
           </a>
         </Button>
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Eu confiro as condições e te digo o desconto real antes de você comprar.
+          Me diz o que você procura e eu confirmo se o cupom vale para esse produto.
         </p>
       </div>
 
@@ -1138,16 +1177,16 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             )}
           >
             <a
-              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarTeto(cupom)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
+              href={linkWhatsApp(cupom)}
               target="_blank"
               rel="noopener noreferrer"
             >
               <IconeWhatsApp className="size-5" />
-              PEDIR MEU LINK
+              Conferir esse cupom
             </a>
           </Button>
           <p className="-mt-3 text-xs text-secondary-ink">
-            Eu confiro as condições e te digo o desconto real antes de você comprar.
+            Me diz o que você procura e eu confirmo se o cupom vale para esse produto.
           </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
