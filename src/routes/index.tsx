@@ -176,6 +176,14 @@ function formatarTeto(cupom: CupomLimite) {
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
+/** "30% de desconto" quando o cupom é percentual; senão o texto cadastrado. */
+function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
+  if (cupom.tipo === "%" && cupom.valor) {
+    return `${cupom.valor.toLocaleString("pt-BR")}% de desconto`;
+  }
+  return cupom.desconto ?? "desconto não informado";
+}
+
 function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
@@ -188,8 +196,8 @@ function limiteNaMensagem(cupom: Cupom) {
 }
 
 function resumoCupom(cupom: Cupom) {
-  const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}${compra}`;
+  const compra = cupom.compra_min != null ? `, compra mínima de ${formatarMoeda(cupom.compra_min)}` : "";
+  return `${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}${compra}`;
 }
 
 function linkWhatsApp(cupom: Cupom, extra?: string) {
