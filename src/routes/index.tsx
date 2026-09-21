@@ -241,11 +241,16 @@ function formatarTeto(cupom: CupomLimite) {
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
-/** Frase curta de economia, usada na curadoria e nos destaques. */
+/** Frase curta de economia, usada na curadoria e nos destaques.
+ *  Teto de R$ 50.000 é verdade, mas anunciar isso parece defeito e não ajuda
+ *  ninguém. Quando o teto só se alcança numa compra absurda, a gente diz isso
+ *  com todas as letras e mantém o número à vista. */
 function economiaCurta(cupom: Cupom) {
   if (semLimite(cupom)) return "Desconto sem limite de valor";
   const teto = tetoUtil(cupom);
-  return teto == null ? "Limite não informado" : `Economize até ${brl.format(teto)}`;
+  if (teto == null) return "Limite não informado";
+  if (tetoFolgado(cupom)) return `Sem teto na prática (limite de ${brlCurto.format(teto)})`;
+  return `Economize até ${brl.format(teto)}`;
 }
 
 
@@ -1526,13 +1531,16 @@ function CupomCard({
   const teto = tetoUtil(cupom);
   const em200 = descontoRealEm200(cupom);
   const compraTeto = compraParaAtingirTeto(cupom);
+  const folgado = tetoFolgado(cupom);
   const rotuloQualidade = ilimitado
     ? "Sem limite de valor"
     : teto == null
       ? "Limite não informado"
       : armadilha
         ? `Desconta só ${brlCurto.format(teto)}`
-        : `Desconta até ${brlCurto.format(teto)}`;
+        : folgado
+          ? "Sem teto na prática"
+          : `Desconta até ${brlCurto.format(teto)}`;
 
   return (
     <article
