@@ -453,6 +453,7 @@ function Index() {
     const linhas = filtrados.map((cupom) => ({
       Desconto: cupom.desconto ?? "",
       Vendedor: cupom.vendedor,
+      "Perfil da loja (seu link de afiliado)": linkAfiliadoLoja(cupom.vendedor),
       "Compra mínima": cupom.compra_min ?? "",
       "Teto de desconto": tetoReal(cupom) ?? "",
       Qualidade: cupom.qualidade ?? "",
@@ -461,9 +462,14 @@ function Index() {
       Descrição: descricaoCupom(cupom),
     }));
     const planilha = XLSX.utils.json_to_sheet(linhas);
+    linhas.forEach((linha, indice) => {
+      const celula = planilha[XLSX.utils.encode_cell({ r: indice + 1, c: 2 })];
+      if (celula) celula.l = { Target: linha["Perfil da loja (seu link de afiliado)"], Tooltip: "Abrir o perfil da loja com seu link de afiliado" };
+    });
     planilha["!cols"] = [
       { wch: 16 },
       { wch: 28 },
+      { wch: 52 },
       { wch: 14 },
       { wch: 16 },
       { wch: 12 },
