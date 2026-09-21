@@ -750,7 +750,9 @@ function Index() {
             <p className="text-sm text-secondary-ink" aria-live="polite">
               {isLoading
                 ? "Carregando cupons..."
-                : `${filtrados.length.toLocaleString("pt-BR")} cupom(ns) encontrados`}
+                : filtrados.length === 1
+                  ? "1 cupom encontrado"
+                  : `${filtrados.length.toLocaleString("pt-BR")} cupons encontrados`}
             </p>
             <div className="flex flex-wrap gap-2">
               {filtrosAtivos && <Button variant="outline" onClick={limparFiltros}><X aria-hidden="true" />Limpar filtros</Button>}
