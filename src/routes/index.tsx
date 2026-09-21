@@ -1260,12 +1260,14 @@ function CupomCard({
   abrirCondicoes,
   selecionado,
   alternarSelecao,
+  limiteAtingido = false,
 }: {
   cupom: CupomIndexado;
   agora: number | null;
   abrirCondicoes: (cupom: CupomIndexado) => void;
   selecionado: boolean;
   alternarSelecao: (id: number) => void;
+  limiteAtingido?: boolean;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
   const contagem = contagemRegressiva(cupom.vence, agora);
