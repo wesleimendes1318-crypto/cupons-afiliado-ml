@@ -946,7 +946,7 @@ function ComparadorModal({
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-secondary-ink">
+            <thead className="text-xs font-semibold text-secondary-ink">
               <tr>
                 <th className="py-2 pr-3 font-semibold">Loja</th>
                 <th className="py-2 pr-3 font-semibold">Desconto</th>
