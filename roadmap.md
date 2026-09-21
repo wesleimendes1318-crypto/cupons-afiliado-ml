@@ -21,3 +21,6 @@
 - [x] Migrar as rotas de IA para o AI Gateway do Lovable (fim do 503)
 - [x] Criar comparador de até 3 cupons com veredito da IA
 - [x] Salvar o secret GEMINI_API_KEY pelo formulário seguro
+- [ ] Tratar tetos irreais (ex.: 99.999.999) como "sem limite informado" em cards, modal, score e mensagens
+- [ ] Deixar o contato WhatsApp mais estratégico (CTA perto dos resultados e no estado vazio)
+- [ ] Ligar as rotas de IA à GEMINI_API_KEY (Gemini) e validar
