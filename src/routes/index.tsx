@@ -430,34 +430,32 @@ function Index() {
     });
   }, [cupons]);
 
-  function exportarCsv() {
-    const cabecalho = [
-      "Desconto",
-      "Vendedor",
-      "Compra mínima",
-      "Teto de desconto",
-      "Qualidade",
-      "Orçamento restante",
-      "Vence em",
+  async function exportarExcel() {
+    const XLSX = await import("xlsx");
+    const linhas = filtrados.map((cupom) => ({
+      Desconto: cupom.desconto ?? "",
+      Vendedor: cupom.vendedor,
+      "Compra mínima": cupom.compra_min ?? "",
+      "Teto de desconto": tetoReal(cupom) ?? "",
+      Qualidade: cupom.qualidade ?? "",
+      "Orçamento restante": cupom.orcamento ?? "",
+      "Vence em": cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
+      Descrição: descricaoCupom(cupom),
+    }));
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    planilha["!cols"] = [
+      { wch: 16 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 12 },
+      { wch: 80 },
     ];
-    const linhas = filtrados.map((cupom) => [
-      cupom.desconto ?? "",
-      cupom.vendedor,
-      cupom.compra_min != null ? cupom.compra_min.toFixed(2).replace(".", ",") : "",
-      tetoReal(cupom) != null ? tetoReal(cupom)!.toFixed(2).replace(".", ",") : "",
-      cupom.qualidade ?? "",
-      cupom.orcamento != null ? cupom.orcamento.toFixed(2).replace(".", ",") : "",
-      cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
-    ]);
-    const escapar = (valor: string) => `"${valor.replace(/"/g, '""')}"`;
-    const csv = [cabecalho, ...linhas].map((linha) => linha.map(escapar).join(";")).join("\r\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "cupons-afiliado-ml.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    const pasta = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(pasta, planilha, "Cupons");
+    XLSX.writeFile(pasta, "cupons-afiliado-ml.xlsx");
   }
 
   function alternarSelecao(id: number) {
