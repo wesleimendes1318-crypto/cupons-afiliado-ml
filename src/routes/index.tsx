@@ -174,7 +174,7 @@ function tetoUtil(cupom: CupomLimite) {
 }
 
 function formatarTeto(cupom: CupomLimite) {
-  if (semLimite(cupom)) return "sem limite prático";
+  if (semLimite(cupom)) return "sem limite de valor";
   const teto = tetoReal(cupom);
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
@@ -223,9 +223,9 @@ function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
-/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite prático de desconto". */
+/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de valor". */
 function limiteNaMensagem(cupom: Cupom) {
-  if (semLimite(cupom)) return "sem limite prático de desconto";
+  if (semLimite(cupom)) return "sem limite de valor";
   const teto = tetoReal(cupom);
   return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
 }
