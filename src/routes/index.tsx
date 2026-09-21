@@ -723,6 +723,40 @@ function Index() {
           />
         </section>
 
+        {destaques.length > 0 && (
+          <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Melhor cupom de cada categoria">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
+              <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {destaques.map(([categoria, cupom]) => (
+                <div key={categoria} className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3">
+                  <button
+                    type="button"
+                    onClick={() => { setCategorias([categoria]); setVitrine("recomendados"); }}
+                    className="self-start rounded-full border border-ml-blue px-2.5 py-1 text-[11px] font-semibold text-ml-blue"
+                  >
+                    {categoria}
+                  </button>
+                  <p className="mt-2 text-base font-extrabold leading-tight text-success">{economiaCurta(cupom)}</p>
+                  <p className="text-xs text-secondary-ink">{percentualTexto(cupom)}</p>
+                  <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
+                    Em produtos de <span className="font-bold">{cupom.vendedor}</span>
+                  </p>
+                  <Button asChild className="mt-3 h-auto min-h-10 w-full bg-whatsapp px-3 py-2 text-sm font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                    <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+                      <IconeWhatsApp className="size-4 shrink-0" />
+                      Conferir esse cupom
+                    </a>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+
         <section className="mt-6" aria-label="Filtros de cupons">
           <div className="flex border-b border-border" role="tablist" aria-label="Qualidade do cupom">
             {([
