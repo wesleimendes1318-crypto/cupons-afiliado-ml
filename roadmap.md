@@ -8,3 +8,4 @@
 - [ ] Criar endpoint seguro gerar-texto com Gemini
 - [ ] Adicionar seletor de canal, geração e cópia no modal
 - [ ] Validar erros, responsividade e ausência de chave no navegador
+- [ ] Publicar a versão com o gerador seguro
