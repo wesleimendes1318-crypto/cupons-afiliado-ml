@@ -174,14 +174,14 @@ function tetoUtil(cupom: CupomLimite) {
 }
 
 function formatarTeto(cupom: CupomLimite) {
-  if (semLimite(cupom)) return "sem limite prático";
+  if (semLimite(cupom)) return "sem limite de valor";
   const teto = tetoReal(cupom);
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
 
 /** Frase curta de economia, usada na curadoria e nos destaques. */
 function economiaCurta(cupom: Cupom) {
-  if (semLimite(cupom)) return "Desconto sem teto";
+  if (semLimite(cupom)) return "Desconto sem limite de valor";
   const teto = tetoUtil(cupom);
   return teto == null ? "Limite não informado" : `Economize até ${brl.format(teto)}`;
 }
@@ -223,9 +223,9 @@ function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
-/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite prático de desconto". */
+/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de valor". */
 function limiteNaMensagem(cupom: Cupom) {
-  if (semLimite(cupom)) return "sem limite prático de desconto";
+  if (semLimite(cupom)) return "sem limite de valor";
   const teto = tetoReal(cupom);
   return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
 }
@@ -745,8 +745,8 @@ function Index() {
                   >
                     {categoria}
                   </button>
-                  <p className="mt-2 text-base font-extrabold leading-tight text-success">{economiaCurta(cupom)}</p>
-                  <p className="text-xs text-secondary-ink">{percentualTexto(cupom)}</p>
+                  <p className="mt-2 text-base font-extrabold leading-tight">{percentualTexto(cupom)}</p>
+                  <p className="text-xs font-semibold text-success">{economiaCurta(cupom)}</p>
                   <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
                     Em produtos de <span className="font-bold">{cupom.vendedor}</span>
                   </p>
@@ -964,7 +964,7 @@ function Index() {
             <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
             <ul className="mt-1 space-y-1">
               <li><strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da compra. Acima disso o desconto não aumenta.</li>
-              <li><strong>Desconto sem teto</strong>: o percentual vale sobre o valor todo, sem limite de valor.</li>
+              <li><strong>Sem limite de valor</strong>: o percentual vale sobre o valor todo da compra.</li>
               <li><strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo antes de gerar para você.</li>
             </ul>
           </div>
@@ -1287,7 +1287,7 @@ function CupomCard({
   const em200 = descontoRealEm200(cupom);
   const compraTeto = compraParaAtingirTeto(cupom);
   const rotuloQualidade = ilimitado
-    ? "Sem teto de desconto"
+    ? "Sem limite de valor"
     : teto == null
       ? "Limite não informado"
       : armadilha
@@ -1343,31 +1343,19 @@ function CupomCard({
       </div>
 
       <div className="my-5 min-w-0">
+        <p className="text-2xl font-extrabold leading-tight text-foreground sm:text-3xl">{percentualTexto(cupom)}</p>
         {ilimitado ? (
-          <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem teto</p>
-            <p className="mt-1 text-sm text-secondary-ink">
-              {percentualTexto(cupom)} sobre o valor todo, sem limite de valor
-              {em200 > 0 ? `. Numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
-            </p>
-          </>
+          <p className="mt-1 text-sm text-secondary-ink">
+            Vale sobre o valor todo da compra, sem limite.
+            {em200 > 0 ? ` Numa compra de R$ 200, você economiza ${brl.format(em200)}.` : ""}
+          </p>
         ) : teto != null ? (
-          <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economize até {brl.format(teto)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">
-              {percentualTexto(cupom)}. O desconto para em {brl.format(teto)} — acima disso não aumenta.
-            </p>
-            {compraTeto != null && (
-              <p className="mt-1 text-sm text-secondary-ink">
-                Para chegar ao máximo, a compra precisa ser de cerca de {brl.format(compraTeto)}.
-              </p>
-            )}
-          </>
+          <p className="mt-1 text-sm text-secondary-ink">
+            <span className="font-semibold text-success">Economize até {brl.format(teto)}</span> — acima disso o desconto não aumenta.
+            {compraTeto != null ? ` Para chegar ao máximo, a compra precisa ser de cerca de ${brl.format(compraTeto)}.` : ""}
+          </p>
         ) : (
-          <>
-            <p className="text-base font-semibold leading-tight text-foreground">{percentualTexto(cupom)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">Limite não informado. Eu confirmo o máximo antes de gerar o cupom.</p>
-          </>
+          <p className="mt-1 text-sm text-secondary-ink">O cupom não informa o limite. Eu confirmo o máximo antes de gerar o seu.</p>
         )}
         {cupom.compra_min != null && (
           <p className="mt-1 text-sm font-medium text-foreground">Compra mínima de {formatarMoeda(cupom.compra_min)}</p>
