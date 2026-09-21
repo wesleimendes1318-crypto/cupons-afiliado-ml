@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WHATSAPP } from "@/config";
+import { AFILIADO, WHATSAPP } from "@/config";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -191,6 +191,22 @@ function descricaoCupom(cupom: Cupom) {
 }
 
 
+
+/** Perfil da loja no Mercado Livre com o identificador de afiliado do dono do site. */
+function linkAfiliadoLoja(vendedor: string) {
+  const perfil = `https://www.mercadolivre.com.br/perfil/${encodeURIComponent(vendedor.trim())}`;
+  return `${perfil}?matt_tool=cupons-afiliado-ml&matt_word=${encodeURIComponent(AFILIADO)}`;
+}
+
+/** Lê a resposta do servidor sem quebrar quando ela não vem em JSON (tempo limite, página de erro). */
+async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
+  const texto = await resposta.text();
+  try {
+    return JSON.parse(texto) as Record<string, unknown>;
+  } catch {
+    return { erro: "O servidor demorou demais para responder. Tente novamente em instantes." };
+  }
+}
 
 function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
@@ -443,6 +459,7 @@ function Index() {
     const linhas = filtrados.map((cupom) => ({
       Desconto: cupom.desconto ?? "",
       Vendedor: cupom.vendedor,
+      "Perfil da loja (seu link de afiliado)": linkAfiliadoLoja(cupom.vendedor),
       "Compra mínima": cupom.compra_min ?? "",
       "Teto de desconto": tetoReal(cupom) ?? "",
       Qualidade: cupom.qualidade ?? "",
@@ -451,9 +468,14 @@ function Index() {
       Descrição: descricaoCupom(cupom),
     }));
     const planilha = XLSX.utils.json_to_sheet(linhas);
+    linhas.forEach((linha, indice) => {
+      const celula = planilha[XLSX.utils.encode_cell({ r: indice + 1, c: 2 })];
+      if (celula) celula.l = { Target: linha["Perfil da loja (seu link de afiliado)"], Tooltip: "Abrir o perfil da loja com seu link de afiliado" };
+    });
     planilha["!cols"] = [
       { wch: 16 },
       { wch: 28 },
+      { wch: 52 },
       { wch: 14 },
       { wch: 16 },
       { wch: 12 },
@@ -505,7 +527,7 @@ function Index() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pedido: pedidoIa, cupons: recomendadosFiltrados.map(({ id, vendedor, categoria, desconto, teto, compra_min }) => ({ id, vendedor, categoria, desconto, teto, compra_min })) }),
       });
-      const dados = (await resposta.json()) as { escolhas?: EscolhaIa[]; mensagem?: string; erro?: string };
+      const dados = (await lerJson(resposta)) as { escolhas?: EscolhaIa[]; mensagem?: string; erro?: string };
       if (!resposta.ok || !dados.escolhas || !dados.mensagem) throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
       setEscolhasIa(dados.escolhas);
       setMensagemIa(dados.mensagem);
@@ -531,7 +553,7 @@ function Index() {
           cupons: escolhidosParaComparar.map(({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade }) => ({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade })),
         }),
       });
-      const dados = (await resposta.json()) as Partial<Comparacao> & { erro?: string };
+      const dados = (await lerJson(resposta)) as Partial<Comparacao> & { erro?: string };
       if (!resposta.ok || typeof dados.veredito !== "string") throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
       setComparacao({ vencedor_id: dados.vencedor_id ?? null, veredito: dados.veredito, observacoes: dados.observacoes ?? [] });
     } catch (motivo) {
@@ -546,7 +568,7 @@ function Index() {
     setStatusClassificacao("Classificando as lojas em lotes de até 40...");
     try {
       const resposta = await fetch("/api/public/classificar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      const dados = (await resposta.json()) as { classificados?: number; total?: number; erro?: string };
+      const dados = (await lerJson(resposta)) as { classificados?: number; total?: number; erro?: string };
       if (!resposta.ok) throw new Error(dados.erro ?? "Não foi possível classificar as lojas.");
       setStatusClassificacao(`${dados.classificados ?? 0} de ${dados.total ?? 0} lojas classificadas.`);
       await refetch();
@@ -1295,7 +1317,7 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
           qualidade: cupom.qualidade === "armadilha" ? "armadilha" : "bom",
         }),
       });
-      const dados = (await resposta.json()) as { texto?: string; erro?: string };
+      const dados = (await lerJson(resposta)) as { texto?: string; erro?: string };
       if (!resposta.ok || !dados.texto) throw new Error(dados.erro ?? "Não foi possível gerar o texto.");
       setResultado(dados.texto);
     } catch (motivo) {

@@ -26,3 +26,6 @@
 - [x] Ligar as rotas de IA à GEMINI_API_KEY (Gemini) e validar
 
 - [x] Revisar concordância e regras de português (pt-BR) em todos os textos da interface
+- [x] Trocar exportação CSV por Excel (.xlsx) com a descrição do cupom
+- [x] Corrigir o comparador (resposta em HTML / lentidão): reserva no serviço de IA da plataforma
+- [x] Incluir na planilha o perfil da loja com o link de afiliado (config AFILIADO)
