@@ -515,7 +515,11 @@ function Index() {
   }
 
   function alternarSelecao(id: number) {
-    setSelecionados((atuais) => (atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]));
+    setSelecionados((atuais) => {
+      if (atuais.includes(id)) return atuais.filter((item) => item !== id);
+      if (atuais.length >= MAX_COMPARACAO) return atuais;
+      return [...atuais, id];
+    });
   }
 
   function alternarLoja(loja: string) {
