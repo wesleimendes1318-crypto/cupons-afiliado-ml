@@ -847,7 +847,7 @@ function CupomCard({
         </span>
       </div>
 
-      <div className="my-5 grid grid-cols-[minmax(110px,auto)_1fr] items-center gap-5">
+      <div className="my-5 grid grid-cols-[minmax(0,1fr)_minmax(150px,190px)] items-center gap-4">
         <div>
           <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarMoeda(cupom.teto)}</p>
           {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
