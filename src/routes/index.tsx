@@ -1001,7 +1001,7 @@ function ComparadorModal({
           <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
             <a href={linkWhatsAppLista(cupons)} target="_blank" rel="noopener noreferrer">
               <IconeWhatsApp className="size-5" />
-              PEDIR OS LINKS DESSES {cupons.length}
+              Falar sobre essas {cupons.length} lojas
             </a>
           </Button>
         )}
