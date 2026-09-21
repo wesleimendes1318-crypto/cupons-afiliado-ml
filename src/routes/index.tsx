@@ -1178,6 +1178,18 @@ function ComparadorModal({
   comparacao: Comparacao | null;
   erro: string;
 }) {
+  const chaveCupons = cupons.map((cupom) => cupom.id).join(",");
+  const [escolhidas, setEscolhidas] = useState<number[]>(() => cupons.map((cupom) => cupom.id));
+
+  useEffect(() => {
+    setEscolhidas(chaveCupons ? chaveCupons.split(",").map(Number) : []);
+  }, [chaveCupons]);
+
+  const alternarEscolhida = (id: number) =>
+    setEscolhidas((atual) => (atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id]));
+
+  const cuponsEscolhidos = cupons.filter((cupom) => escolhidas.includes(cupom.id));
+
   return (
     <Dialog open={aberto} onOpenChange={(estado) => { if (!estado) fechar(); }}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
