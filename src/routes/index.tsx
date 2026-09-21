@@ -1182,11 +1182,11 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               rel="noopener noreferrer"
             >
               <IconeWhatsApp className="size-5" />
-              PEDIR MEU LINK
+              Conferir esse cupom
             </a>
           </Button>
           <p className="-mt-3 text-xs text-secondary-ink">
-            Eu confiro as condições e te digo o desconto real antes de você comprar.
+            Me diz o que você procura e eu confirmo se o cupom vale para esse produto.
           </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
