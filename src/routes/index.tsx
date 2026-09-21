@@ -381,6 +381,11 @@ function Index() {
   }, []);
 
   useEffect(() => {
+    const intervalo = window.setInterval(() => setSugestao((atual) => (atual + 1) % SUGESTOES_IA.length), 4_000);
+    return () => window.clearInterval(intervalo);
+  }, []);
+
+  useEffect(() => {
     setPagina(1);
   }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas, lojas]);
 
