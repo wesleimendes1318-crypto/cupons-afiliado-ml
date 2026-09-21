@@ -733,6 +733,9 @@ function Index() {
         </section>
 
         <section className="mt-4" aria-label="Cupons encontrados">
+          <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
+            Analisei 361 cupons. 49 descontam menos de R$ 20. Os 312 aqui embaixo passaram no teste.
+          </p>
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
@@ -750,9 +753,9 @@ function Index() {
               {escolhidos.length > 0 && (
                 <>
                   <Button asChild size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
-                    <a href={linkWhatsAppLista(escolhidos.map(({ cupom }) => cupom), "A IA sugeriu estas para mim, pode me mandar os links?")} target="_blank" rel="noopener noreferrer">
+                    <a href={linkWhatsAppIa(escolhidos.map(({ cupom }) => cupom), pedidoIa)} target="_blank" rel="noopener noreferrer">
                       <IconeWhatsApp className="size-5" />
-                      PEDIR OS LINKS DESSES {escolhidos.length}
+                      Falar sobre essas opções
                     </a>
                   </Button>
                   <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
