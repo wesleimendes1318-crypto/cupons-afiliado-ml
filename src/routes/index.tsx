@@ -817,6 +817,15 @@ function CupomCard({
       )}
     >
       <div className="flex min-h-10 items-start justify-between gap-3">
+        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-secondary-ink">
+          <input
+            type="checkbox"
+            checked={selecionado}
+            onChange={() => alternarSelecao(cupom.id)}
+            className="size-4 accent-[var(--whatsapp)]"
+            aria-label={`Selecionar a loja ${cupom.vendedor}`}
+          />
+        </label>
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
           className={cn(
