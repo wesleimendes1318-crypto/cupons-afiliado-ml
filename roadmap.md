@@ -7,5 +7,5 @@
 - [x] Validar desktop, celular e os 187 registros
 - [x] Criar endpoint seguro gerar-texto com Gemini
 - [x] Adicionar seletor de canal, geração e cópia no modal
-- [ ] Validar erros, responsividade e ausência de chave no navegador
-- [ ] Publicar a versão com o gerador seguro
+- [x] Validar erros, responsividade e ausência de chave no navegador
+- [x] Publicar a versão com o gerador seguro
