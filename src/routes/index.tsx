@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AFILIADO } from "@/config";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -269,12 +268,6 @@ function descricaoCupom(cupom: Cupom) {
 }
 
 
-
-/** Página da loja no Mercado Livre com o identificador de afiliado do dono do site. */
-function linkAfiliadoLoja(vendedor: string) {
-  const loja = `https://lista.mercadolivre.com.br/pagina/${encodeURIComponent(vendedor.trim())}/`;
-  return `${loja}?matt_tool=cupons-afiliado-ml&matt_word=${encodeURIComponent(AFILIADO)}`;
-}
 
 /** Lê a resposta do servidor sem quebrar quando ela não vem em JSON (tempo limite, página de erro). */
 async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
@@ -558,40 +551,6 @@ function Index() {
       timeStyle: "short",
     });
   }, [cupons]);
-
-  async function exportarExcel() {
-    const XLSX = await import("xlsx");
-    const linhas = filtrados.map((cupom) => ({
-      Desconto: cupom.desconto ?? "",
-      Vendedor: cupom.vendedor,
-      "Link da loja (seu link de afiliado)": linkAfiliadoLoja(cupom.vendedor),
-      "Compra mínima": cupom.compra_min ?? "",
-      "Teto de desconto": tetoReal(cupom) ?? "",
-      Qualidade: cupom.qualidade ?? "",
-      "Orçamento restante": cupom.orcamento ?? "",
-      "Vence em": cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
-      Descrição: descricaoCupom(cupom),
-    }));
-    const planilha = XLSX.utils.json_to_sheet(linhas);
-    linhas.forEach((linha, indice) => {
-      const celula = planilha[XLSX.utils.encode_cell({ r: indice + 1, c: 2 })];
-      if (celula) celula.l = { Target: linha["Link da loja (seu link de afiliado)"], Tooltip: "Abrir a página da loja com seu link de afiliado" };
-    });
-    planilha["!cols"] = [
-      { wch: 16 },
-      { wch: 28 },
-      { wch: 52 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 12 },
-      { wch: 18 },
-      { wch: 12 },
-      { wch: 80 },
-    ];
-    const pasta = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(pasta, planilha, "Cupons");
-    XLSX.writeFile(pasta, "cupons-afiliado-ml.xlsx");
-  }
 
   function alternarSelecao(id: number) {
     setSelecionados((atuais) => {
@@ -1090,7 +1049,6 @@ function Index() {
             </p>
             <div className="flex flex-wrap gap-2">
               {filtrosAtivos && <Button variant="outline" onClick={limparFiltros}><X aria-hidden="true" />Limpar filtros</Button>}
-              <Button onClick={exportarExcel} disabled={!filtrados.length} className="bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">Exportar Excel</Button>
             </div>
           </div>
         </section>
