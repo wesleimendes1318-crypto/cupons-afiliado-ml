@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, ShoppingBag, Sparkles, WandSparkles, X } from "lucide-react";
+import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, ShoppingBag, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -424,6 +424,7 @@ function Index() {
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
   const [vitrine, setVitrine] = useState<"recomendados" | "todos">("recomendados");
+  const [painelAberto, setPainelAberto] = useState(false);
   const [tipo, setTipo] = useState<"todos" | "%" | "R$">("todos");
   const [descontoMin, setDescontoMin] = useState("");
   const [orcamentoMin, setOrcamentoMin] = useState("");
@@ -599,6 +600,14 @@ function Index() {
   );
   const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || etiquetas.length || vitrine !== "recomendados" || ordem !== "score");
 
+  /* Quantos filtros a pessoa ligou. Vira o numerinho no botao "Filtros", que e
+     o que faz ela lembrar que a lista esta cortada — o problema classico de
+     esconder filtro atras de um botao. */
+  const quantosFiltros =
+    (texto ? 1 : 0) + lojas.length + (tipo !== "todos" ? 1 : 0) +
+    (descontoMin ? 1 : 0) + (orcamentoMin ? 1 : 0) + (tetoMin ? 1 : 0) +
+    (compraMax ? 1 : 0) + categorias.length + faixas.length + etiquetas.length;
+
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
   const visiveis = filtrados.slice((paginaAtual - 1) * PAGE_SIZE, paginaAtual * PAGE_SIZE);
@@ -772,8 +781,8 @@ function Index() {
               <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
                 Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
               </p>
-              <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
-                Aqui você sempre sabe quanto economiza antes de comprar. E pode voltar sempre: acompanho os cupons novos e aviso quando aparecer um que valha a pena para você.
+              <p className="mt-1 max-w-4xl text-sm">
+                Aqui você sempre sabe quanto economiza antes de comprar.
               </p>
               <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <Link2 className="size-5 text-ml-blue" aria-hidden="true" />
@@ -951,201 +960,258 @@ function Index() {
 
 
         <section className="mt-6" aria-label="Filtros de cupons">
-          <div className="flex border-b border-border" role="tablist" aria-label="Qualidade do cupom">
-            {([
-              ["recomendados", "Recomendados"],
-              ["todos", "Ver todos"],
-            ] as const).map(([valor, rotulo]) => (
-              <Button
-                key={valor}
-                type="button"
-                variant="ghost"
-                role="tab"
-                aria-selected={vitrine === valor}
-                onClick={() => setVitrine(valor)}
-                className={cn(
-                  "h-11 rounded-none border-b-2 px-3 sm:px-5",
-                  vitrine === valor
-                    ? "border-ml-blue text-ml-blue"
-                    : "border-transparent text-secondary-ink",
-                )}
-              >
-                {rotulo}
-              </Button>
-            ))}
-          </div>
+          {/* Barra de controle
+              ================
+              Antes eram 871px de filtros entre a pessoa e o primeiro cupom: busca
+              de loja, lista rolavel, cinco campos numericos, lista de categorias e
+              duas fileiras de chips, tudo aberto. Isso e painel de controle, nao
+              ajuda para quem so quer um desconto.
 
-          <div className="mt-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={texto}
-                onChange={(event) => setTexto(event.target.value)}
-                inputMode="search"
-                aria-label="Buscar loja"
-                placeholder="Buscar loja e marcar na lista abaixo"
-                className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
-              />
-            </div>
-
-            {lojas.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {lojas.map((loja) => (
-                  <button
-                    key={loja}
+              Agora fica visivel so o que um comprador usa de verdade — as abas, a
+              contagem, a ordem e os atalhos — e o resto mora na gaveta. A barra
+              gruda no topo porque a lista tem quase 9.000px: sem isso, refinar a
+              busca obriga a rolar tudo de volta. */}
+          <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="flex" role="tablist" aria-label="Qualidade do cupom">
+                {([
+                  ["recomendados", "Recomendados"],
+                  ["todos", "Ver todos"],
+                ] as const).map(([valor, rotulo]) => (
+                  <Button
+                    key={valor}
                     type="button"
-                    onClick={() => alternarLoja(loja)}
-                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
-                    aria-label={`Remover a loja ${loja} da seleção`}
+                    variant="ghost"
+                    role="tab"
+                    aria-selected={vitrine === valor}
+                    onClick={() => setVitrine(valor)}
+                    className={cn(
+                      "h-10 rounded-none border-b-2 px-2 text-sm sm:px-4",
+                      vitrine === valor
+                        ? "border-ml-blue text-ml-blue"
+                        : "border-transparent text-secondary-ink",
+                    )}
                   >
-                    <span className="truncate">{loja}</span>
-                    <X aria-hidden="true" className="size-3" />
-                  </button>
-                ))}
-                <button type="button" onClick={() => setLojas([])} className="text-xs font-medium text-secondary-ink underline">
-                  Limpar lojas
-                </button>
-              </div>
-            )}
-
-            <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de lojas">
-              {lojasFiltradas.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-secondary-ink">Nenhuma loja com esse nome.</p>
-              ) : (
-                lojasFiltradas.map(([loja, quantidade]) => (
-                  <label
-                    key={loja}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={lojas.includes(loja)}
-                      onChange={() => alternarLoja(loja)}
-                      className="size-4 accent-[var(--ml-blue)]"
-                    />
-                    <span className="min-w-0 flex-1 truncate">{loja}</span>
-                    <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
-                  </label>
-                ))
-              )}
-            </div>
-            <p className="mt-1 text-xs text-secondary-ink">Marque uma ou mais lojas para filtrar os cupons.</p>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            <Campo rotulo="Tipo">
-              <select
-                value={tipo}
-                onChange={(event) => setTipo(event.target.value as typeof tipo)}
-                className="campo-filtro"
-              >
-                <option value="todos">Todos</option>
-                <option value="%">Só %</option>
-                <option value="R$">Só R$</option>
-              </select>
-            </Campo>
-            <Campo rotulo="Desconto mínimo">
-              <InputNumero valor={descontoMin} aoMudar={setDescontoMin} />
-            </Campo>
-            <Campo rotulo="Orçamento mínimo (R$)">
-              <InputNumero valor={orcamentoMin} aoMudar={setOrcamentoMin} />
-            </Campo>
-            <Campo rotulo="Teto mínimo (R$)">
-              <InputNumero valor={tetoMin} aoMudar={setTetoMin} />
-            </Campo>
-            <Campo rotulo="Compra máxima que aceito (R$)">
-              <InputNumero valor={compraMax} aoMudar={setCompraMax} />
-            </Campo>
-            <Campo rotulo="Ordenar por">
-              <select
-                value={ordem}
-                onChange={(event) => setOrdem(event.target.value as typeof ordem)}
-                className="campo-filtro"
-              >
-                <option value="score">Melhores oportunidades</option>
-                <option value="desconto">Maior desconto</option>
-                <option value="teto">Maior teto de desconto</option>
-                <option value="orcamento">Maior orçamento</option>
-                <option value="termina">Termina primeiro</option>
-                <option value="vendedor">Vendedor A-Z</option>
-              </select>
-            </Campo>
-          </div>
-
-          {categoriasDisponiveis.length > 0 && (
-            <div className="mt-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
-                {categorias.length > 0 && (
-                  <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
-                    Limpar categorias
-                  </button>
-                )}
-              </div>
-              <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de categorias">
-                {categoriasDisponiveis.map(([categoria, quantidade]) => (
-                  <label
-                    key={categoria}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={categorias.includes(categoria)}
-                      onChange={() => alternarCategoria(categoria)}
-                      className="size-4 accent-[var(--ml-blue)]"
-                    />
-                    <span className="min-w-0 flex-1 truncate">{categoria}</span>
-                    <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
-                  </label>
+                    {rotulo}
+                  </Button>
                 ))}
               </div>
-            </div>
-          )}
 
-          <div className="mt-5">
-            <p className="text-xs font-semibold text-secondary-ink">Faixa de economia real</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {FAIXAS.filter((faixa) => (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id)).map((faixa) => (
-                <button
-                  key={faixa.id}
-                  type="button"
-                  aria-pressed={faixas.includes(faixa.id)}
-                  onClick={() => alternarFaixa(faixa.id)}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", faixas.includes(faixa.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
+              <p
+                key={filtrados.length}
+                aria-live="polite"
+                className="animate-contagem rounded px-1.5 py-0.5 text-sm font-semibold"
+              >
+                {isLoading
+                  ? "Carregando..."
+                  : filtrados.length === 1
+                    ? "1 cupom"
+                    : `${filtrados.length.toLocaleString("pt-BR")} cupons`}
+              </p>
+
+              <div className="ml-auto flex items-center gap-2">
+                <label className="sr-only" htmlFor="ordenar-cupons">Ordenar por</label>
+                <select
+                  id="ordenar-cupons"
+                  value={ordem}
+                  onChange={(event) => setOrdem(event.target.value as typeof ordem)}
+                  className="h-10 rounded-lg border border-border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
                 >
-                  {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
-                </button>
-              ))}
-            </div>
-          </div>
+                  <option value="score">Melhores oportunidades</option>
+                  <option value="desconto">Maior desconto</option>
+                  <option value="teto">Maior teto de desconto</option>
+                  <option value="orcamento">Maior orçamento</option>
+                  <option value="termina">Termina primeiro</option>
+                  <option value="vendedor">Vendedor A-Z</option>
+                </select>
 
-          <div className="mt-5">
-            <p className="text-xs font-semibold text-secondary-ink">Atalhos rápidos</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-expanded={painelAberto}
+                  aria-controls="painel-filtros"
+                  onClick={() => setPainelAberto((aberto) => !aberto)}
+                  className="h-10 gap-1.5"
+                >
+                  <SlidersHorizontal aria-hidden="true" className="size-4" />
+                  Filtros
+                  {quantosFiltros > 0 && (
+                    <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-ml-blue px-1.5 text-xs font-bold text-white">
+                      {quantosFiltros}
+                    </span>
+                  )}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn("size-4 transition-transform duration-300", painelAberto && "rotate-180")}
+                  />
+                </Button>
+              </div>
+            </div>
+
+            {/* Atalhos: e o que um comprador de verdade usa. Ficam de fora da
+                gaveta, em uma tira que rola de lado no celular. */}
+            <div className="-mx-1 mt-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {ETIQUETAS.filter((etiqueta) => (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 || etiquetas.includes(etiqueta.id)).map((etiqueta) => (
                 <button
                   key={etiqueta.id}
                   type="button"
                   aria-pressed={etiquetas.includes(etiqueta.id)}
                   onClick={() => alternarEtiqueta(etiqueta.id)}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", etiquetas.includes(etiqueta.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    etiquetas.includes(etiqueta.id)
+                      ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                      : "border-border bg-card hover:border-ml-blue",
+                  )}
                 >
                   {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
                 </button>
               ))}
+              {filtrosAtivos && (
+                <button
+                  type="button"
+                  onClick={limparFiltros}
+                  className="shrink-0 rounded-full border border-danger px-3 py-1 text-xs font-medium text-danger"
+                >
+                  Limpar tudo
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-secondary-ink" aria-live="polite">
-              {isLoading
-                ? "Carregando cupons..."
-                : filtrados.length === 1
-                  ? "1 cupom encontrado"
-                  : `${filtrados.length.toLocaleString("pt-BR")} cupons encontrados`}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {filtrosAtivos && <Button variant="outline" onClick={limparFiltros}><X aria-hidden="true" />Limpar filtros</Button>}
+          {/* A gaveta: aberta so quando a pessoa pede */}
+          <div id="painel-filtros" className={cn("gaveta", painelAberto && "gaveta-aberta")}>
+            <div>
+              <div className="pb-1 pt-3">
+              <div className="mt-4">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={texto}
+                    onChange={(event) => setTexto(event.target.value)}
+                    inputMode="search"
+                    aria-label="Buscar loja"
+                    placeholder="Buscar loja e marcar na lista abaixo"
+                    className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+                  />
+                </div>
+
+                {lojas.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {lojas.map((loja) => (
+                      <button
+                        key={loja}
+                        type="button"
+                        onClick={() => alternarLoja(loja)}
+                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
+                        aria-label={`Remover a loja ${loja} da seleção`}
+                      >
+                        <span className="truncate">{loja}</span>
+                        <X aria-hidden="true" className="size-3" />
+                      </button>
+                    ))}
+                    <button type="button" onClick={() => setLojas([])} className="text-xs font-medium text-secondary-ink underline">
+                      Limpar lojas
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de lojas">
+                  {lojasFiltradas.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-secondary-ink">Nenhuma loja com esse nome.</p>
+                  ) : (
+                    lojasFiltradas.map(([loja, quantidade]) => (
+                      <label
+                        key={loja}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={lojas.includes(loja)}
+                          onChange={() => alternarLoja(loja)}
+                          className="size-4 accent-[var(--ml-blue)]"
+                        />
+                        <span className="min-w-0 flex-1 truncate">{loja}</span>
+                        <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-secondary-ink">Marque uma ou mais lojas para filtrar os cupons.</p>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+                <Campo rotulo="Tipo">
+                  <select
+                    value={tipo}
+                    onChange={(event) => setTipo(event.target.value as typeof tipo)}
+                    className="campo-filtro"
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="%">Só %</option>
+                    <option value="R$">Só R$</option>
+                  </select>
+                </Campo>
+                <Campo rotulo="Desconto mínimo">
+                  <InputNumero valor={descontoMin} aoMudar={setDescontoMin} />
+                </Campo>
+                <Campo rotulo="Orçamento mínimo (R$)">
+                  <InputNumero valor={orcamentoMin} aoMudar={setOrcamentoMin} />
+                </Campo>
+                <Campo rotulo="Teto mínimo (R$)">
+                  <InputNumero valor={tetoMin} aoMudar={setTetoMin} />
+                </Campo>
+                <Campo rotulo="Compra máxima que aceito (R$)">
+                  <InputNumero valor={compraMax} aoMudar={setCompraMax} />
+                </Campo>
+              </div>
+
+              {categoriasDisponiveis.length > 0 && (
+                <div className="mt-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
+                    {categorias.length > 0 && (
+                      <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
+                        Limpar categorias
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de categorias">
+                    {categoriasDisponiveis.map(([categoria, quantidade]) => (
+                      <label
+                        key={categoria}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={categorias.includes(categoria)}
+                          onChange={() => alternarCategoria(categoria)}
+                          className="size-4 accent-[var(--ml-blue)]"
+                        />
+                        <span className="min-w-0 flex-1 truncate">{categoria}</span>
+                        <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="mt-5">
+                <p className="text-xs font-semibold text-secondary-ink">Faixa de economia real</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {FAIXAS.filter((faixa) => (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id)).map((faixa) => (
+                    <button
+                      key={faixa.id}
+                      type="button"
+                      aria-pressed={faixas.includes(faixa.id)}
+                      onClick={() => alternarFaixa(faixa.id)}
+                      className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", faixas.includes(faixa.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
+                    >
+                      {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
+                    </button>
+                  ))}
+                </div>
+              </div>
+              </div>
             </div>
           </div>
         </section>
@@ -1224,9 +1290,15 @@ function Index() {
                   Colar o link do produto
                 </Button>
               </div>
-              <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {visiveis.map((cupom) => (
-                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
+              <div key={`${paginaAtual}-${filtrados.length}`} className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {visiveis.map((cupom, indice) => (
+                  <div
+                    key={cupom.id}
+                    className="animate-cartao h-full"
+                    style={{ animationDelay: `${Math.min(indice, 11) * 35}ms` }}
+                  >
+                    <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
+                  </div>
                 ))}
               </div>
 
@@ -1535,7 +1607,7 @@ function CupomCard({
   return (
     <article
       className={cn(
-        "flex min-h-56 min-w-0 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
+        "flex h-full min-h-56 min-w-0 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
         armadilha ? "border-danger" : "border-border",
         urgente && "border-t-4 border-t-urgency-danger",
         encerrado && "grayscale opacity-55 hover:translate-y-0 hover:shadow-none",
