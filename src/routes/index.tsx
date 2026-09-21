@@ -184,6 +184,14 @@ function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
   return cupom.desconto ?? "desconto não informado";
 }
 
+function descricaoCupom(cupom: Cupom) {
+  const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
+  const tetoCadastrado = tetoReal(cupom);
+  return `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. ${tetoCadastrado != null ? `Máximo de desconto de ${brl.format(tetoCadastrado)}. ` : ""}Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+}
+
+
+
 function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
@@ -430,34 +438,32 @@ function Index() {
     });
   }, [cupons]);
 
-  function exportarCsv() {
-    const cabecalho = [
-      "Desconto",
-      "Vendedor",
-      "Compra mínima",
-      "Teto de desconto",
-      "Qualidade",
-      "Orçamento restante",
-      "Vence em",
+  async function exportarExcel() {
+    const XLSX = await import("xlsx");
+    const linhas = filtrados.map((cupom) => ({
+      Desconto: cupom.desconto ?? "",
+      Vendedor: cupom.vendedor,
+      "Compra mínima": cupom.compra_min ?? "",
+      "Teto de desconto": tetoReal(cupom) ?? "",
+      Qualidade: cupom.qualidade ?? "",
+      "Orçamento restante": cupom.orcamento ?? "",
+      "Vence em": cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
+      Descrição: descricaoCupom(cupom),
+    }));
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    planilha["!cols"] = [
+      { wch: 16 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 12 },
+      { wch: 80 },
     ];
-    const linhas = filtrados.map((cupom) => [
-      cupom.desconto ?? "",
-      cupom.vendedor,
-      cupom.compra_min != null ? cupom.compra_min.toFixed(2).replace(".", ",") : "",
-      tetoReal(cupom) != null ? tetoReal(cupom)!.toFixed(2).replace(".", ",") : "",
-      cupom.qualidade ?? "",
-      cupom.orcamento != null ? cupom.orcamento.toFixed(2).replace(".", ",") : "",
-      cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
-    ]);
-    const escapar = (valor: string) => `"${valor.replace(/"/g, '""')}"`;
-    const csv = [cabecalho, ...linhas].map((linha) => linha.map(escapar).join(";")).join("\r\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "cupons-afiliado-ml.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    const pasta = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(pasta, planilha, "Cupons");
+    XLSX.writeFile(pasta, "cupons-afiliado-ml.xlsx");
   }
 
   function alternarSelecao(id: number) {
@@ -756,7 +762,7 @@ function Index() {
             </p>
             <div className="flex flex-wrap gap-2">
               {filtrosAtivos && <Button variant="outline" onClick={limparFiltros}><X aria-hidden="true" />Limpar filtros</Button>}
-              <Button onClick={exportarCsv} disabled={!filtrados.length} className="bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">Exportar CSV</Button>
+              <Button onClick={exportarExcel} disabled={!filtrados.length} className="bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">Exportar Excel</Button>
             </div>
           </div>
         </section>
@@ -1208,10 +1214,8 @@ function CupomCard({
 function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
   if (!cupom) return null;
 
-  const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
-  const tetoCadastrado = tetoReal(cupom);
   const compraParaTeto = compraParaAtingirTeto(cupom);
-  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. ${tetoCadastrado != null ? `Máximo de desconto de ${brl.format(tetoCadastrado)}. ` : ""}Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+  const texto = descricaoCupom(cupom);
 
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && fechar()}>
