@@ -1276,6 +1276,7 @@ function CupomCard({
   const ilimitado = semLimite(cupom);
   const teto = tetoUtil(cupom);
   const em200 = descontoRealEm200(cupom);
+  const compraTeto = compraParaAtingirTeto(cupom);
   const rotuloQualidade = ilimitado
     ? "Sem teto de desconto"
     : teto == null
