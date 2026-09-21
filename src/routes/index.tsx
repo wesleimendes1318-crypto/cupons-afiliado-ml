@@ -533,17 +533,14 @@ function Index() {
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">Cupons Afiliado ML</h1>
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
-                Percentual alto não garante desconto alto. Confira o teto antes de comprar.
+                Muito cupom anuncia 40% e desconta R$ 2. Eu confiro o limite real antes de indicar.
               </p>
               <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <a href={linkWa("Oi! Vi seu site de cupons e quero ajuda para escolher.")} target="_blank" rel="noopener noreferrer">
                   <IconeWhatsApp className="size-5 text-whatsapp" />
-                  Falar comigo no WhatsApp
+                  Falar comigo
                 </a>
               </Button>
-              <p className="mt-2 max-w-2xl text-xs sm:text-sm">
-                Muito cupom promete 40% e desconta R$ 2. Eu confiro o limite real de cada um e te mando o link do produto certo.
-              </p>
               <p className="mt-2 text-xs text-secondary-ink">
                 {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
               </p>
@@ -551,6 +548,28 @@ function Index() {
           </div>
         </div>
       </header>
+
+      <section className="border-b border-border bg-card" aria-label="Como funciona">
+        <div className="mx-auto max-w-6xl px-4 py-4">
+          <ol className="grid gap-3 text-sm sm:grid-cols-3">
+            {[
+              { icone: Search, texto: "Você escolhe uma loja aqui" },
+              { icone: MessageCircle, texto: "Me chama e diz o que quer comprar" },
+              { icone: ShieldCheck, texto: "Confiro as condições e te mando o link certo" },
+            ].map((passo, indice) => (
+              <li key={passo.texto} className="flex min-w-0 items-start gap-2">
+                <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
+                <span className="min-w-0 break-words">
+                  <span className="font-semibold">{indice + 1}.</span> {passo.texto}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 text-xs text-secondary-ink">
+            Sem custo para você. Eu recebo comissão do Mercado Livre, não de quem compra.
+          </p>
+        </div>
+      </section>
 
       <main className="mx-auto max-w-6xl px-4 py-6">
         <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
