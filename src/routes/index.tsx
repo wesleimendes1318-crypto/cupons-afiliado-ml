@@ -1474,7 +1474,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             </a>
           </Button>
           <p className="-mt-3 text-xs text-secondary-ink">
-            Me diz o que você procura e eu gero o cupom para esse produto.
+            Me diz o que você procura e eu disponibilizo o meu cupom personalizado para esse produto.
           </p>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
