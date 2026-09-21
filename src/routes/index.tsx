@@ -184,7 +184,7 @@ function formatarMoeda(valor: number | null) {
 /** Tetos absurdos cadastrados (ex.: 99.999.999) significam "sem limite informado", não um valor real. */
 const TETO_IRREAL = 9_999_999;
 /** Compra necessária acima disso: o teto nunca é alcançado numa compra normal. */
-const COMPRA_INALCANCAVEL = 2_000;
+const COMPRA_INALCANCAVEL = 1_500;
 /** Quantidade máxima de cupons que podem ser comparados de uma vez. */
 const MAX_COMPARACAO = 3;
 
@@ -249,7 +249,7 @@ function economiaCurta(cupom: Cupom) {
   if (semLimite(cupom)) return "Desconto sem limite de valor";
   const teto = tetoUtil(cupom);
   if (teto == null) return "Limite não informado";
-  if (tetoFolgado(cupom)) return `Sem teto na prática (limite de ${brlCurto.format(teto)})`;
+  if (tetoFolgado(cupom)) return 'Desconto sem limite prático';
   return `Economize até ${brl.format(teto)}`;
 }
 
@@ -297,7 +297,7 @@ function limiteNaMensagem(cupom: Cupom) {
   if (teto == null) return "limite não informado";
   // Mesma linguagem do card: um teto que so se alcanca numa compra absurda
   // nao e informacao util disfarcada de numero grande.
-  if (tetoFolgado(cupom)) return `sem teto na prática, o limite é ${brl.format(teto)}`;
+  if (tetoFolgado(cupom)) return 'sem limite prático';
   return `desconta até ${brl.format(teto)}`;
 }
 
@@ -1601,10 +1601,16 @@ function CupomCard({
             Vale sobre o valor todo da compra, sem limite.
             {em200 > 0 ? ` Numa compra de R$ 200, você economiza ${brl.format(em200)}.` : ""}
           </p>
+        ) : folgado ? (
+          <p className="mt-1 text-sm text-secondary-ink">
+            <span className="font-semibold text-success">Sem limite prático</span> — o teto só seria
+            atingido numa compra muito acima do normal.
+            {em200 > 0 ? ` Numa compra de R$ 200, você economiza ${brl.format(em200)}.` : ""}
+          </p>
         ) : teto != null ? (
           <p className="mt-1 text-sm text-secondary-ink">
             <span className="font-semibold text-success">Economize até {brl.format(teto)}</span> — acima disso o desconto não aumenta.
-            {compraTeto != null ? ` Para chegar ao máximo, a compra precisa ser de cerca de ${brl.format(compraTeto)}.` : ""}
+            {em200 > 0 ? ` Numa compra de R$ 200, você economiza ${brl.format(em200)}.` : ""}
           </p>
         ) : (
           <p className="mt-1 text-sm text-secondary-ink">O cupom não informa o limite. Eu confirmo o máximo antes de gerar o seu.</p>
