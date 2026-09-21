@@ -817,6 +817,43 @@ function Index() {
           />
         </section>
 
+        {(mensagemIa || escolhidos.length > 0) && (
+          <section className="mt-6 rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5" aria-label="Resultado da busca com IA">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-ml-blue">Busca realizada: “{consultaIa}”</h2>
+                <p className="mt-1 text-sm font-medium">
+                  {escolhidos.length === 0
+                    ? "Nenhum cupom encontrado para essa busca."
+                    : escolhidos.length === 1
+                      ? "1 cupom encontrado para essa busca."
+                      : `${escolhidos.length} cupons encontrados para essa busca.`}
+                </p>
+                <p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p>
+              </div>
+              <Button variant="ghost" size="icon" aria-label="Fechar resultado da busca" onClick={() => { setEscolhasIa([]); setMensagemIa(""); setConsultaIa(""); }}><X aria-hidden="true" /></Button>
+            </div>
+            {escolhidos.length > 0 && (
+              <>
+                <Button asChild size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                  <a href={linkWhatsAppIa(escolhidos.map(({ cupom }) => cupom), pedidoIa)} target="_blank" rel="noopener noreferrer">
+                    <IconeWhatsApp className="size-5" />
+                    Falar sobre essas opções
+                  </a>
+                </Button>
+                <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {escolhidos.map(({ cupom, motivo }) => (
+                    <div key={cupom.id} className="flex flex-col gap-2">
+                      <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
+                      <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         {destaques.length > 0 && (
           <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Melhor cupom de cada categoria">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
