@@ -25,4 +25,4 @@
 - [x] Deixar o contato WhatsApp mais estratégico (CTA perto dos resultados e no estado vazio)
 - [x] Ligar as rotas de IA à GEMINI_API_KEY (Gemini) e validar
 
-- [ ] Revisar concordância e regras de português (pt-BR) em todos os textos da interface
+- [x] Revisar concordância e regras de português (pt-BR) em todos os textos da interface
