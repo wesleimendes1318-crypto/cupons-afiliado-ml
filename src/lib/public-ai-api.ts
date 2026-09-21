@@ -69,91 +69,57 @@ export function limparJson(texto: string) {
 
 type ResultadoIa = { ok: true; texto: string } | { ok: false; status: number; erro: string };
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/responses";
-const MODELO_IA = "openai/gpt-6-astra";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
 function erroPorStatus(status: number): string {
   if (status === 429) return "Muitas solicitações à IA agora. Aguarde alguns instantes e tente novamente.";
-  if (status === 402) return "Os créditos de IA do site acabaram. Avise o responsável pelo site.";
-  if (status === 403) return "A IA não está disponível para este site no momento.";
+  if (status === 400 || status === 403) return "A chave da IA parece inválida. Avise o responsável pelo site.";
   return "Não foi possível falar com a IA agora. Tente novamente em instantes.";
 }
 
-async function lerSse(resposta: Response) {
-  const leitor = resposta.body?.getReader();
-  if (!leitor) return "";
-  const decodificador = new TextDecoder();
-  let restante = "";
-  let texto = "";
-  while (true) {
-    const { done, value } = await leitor.read();
-    if (done) break;
-    restante += decodificador.decode(value, { stream: true });
-    const linhas = restante.split("\n");
-    restante = linhas.pop() ?? "";
-    for (const linha of linhas) {
-      if (!linha.startsWith("data:")) continue;
-      const bruto = linha.slice(5).trim();
-      if (!bruto || bruto === "[DONE]") continue;
-      try {
-        const evento = JSON.parse(bruto) as {
-          type?: string;
-          delta?: string;
-          response?: { output_text?: string };
-        };
-        if (evento.type === "response.output_text.delta" && typeof evento.delta === "string") {
-          texto += evento.delta;
-        } else if (evento.type === "response.completed" && typeof evento.response?.output_text === "string" && !texto) {
-          texto = evento.response.output_text;
-        }
-      } catch {
-        // evento incompleto ou desconhecido: segue o fluxo
-      }
+/** Remove chaves que o Gemini não aceita no responseSchema (ex.: additionalProperties). */
+function esquemaGemini(valor: unknown): unknown {
+  if (Array.isArray(valor)) return valor.map(esquemaGemini);
+  if (valor && typeof valor === "object") {
+    const saida: Record<string, unknown> = {};
+    for (const [chave, item] of Object.entries(valor as Record<string, unknown>)) {
+      if (chave === "additionalProperties") continue;
+      saida[chave] = esquemaGemini(item);
     }
+    return saida;
   }
-  return texto.trim();
+  return valor;
 }
 
 /**
- * Chama o Lovable AI Gateway (streaming consumido no servidor).
- * A credencial é gerenciada pela plataforma; nunca chega ao navegador.
+ * Chama o Gemini com a chave GEMINI_API_KEY, que fica somente no servidor
+ * (Cloud → Secrets) e nunca chega ao navegador.
  * `formato` deve ser um JSON Schema estrito quando se espera JSON.
  */
 export async function chamarIa(
   prompt: string,
   opcoes?: { formato?: { nome: string; schema: object }; esforco?: "low" | "medium" | "high" },
 ): Promise<ResultadoIa> {
-  const apiKey = process.env['LOVABLE_API_KEY'];
-  if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está disponível agora." };
+  const apiKey = process.env['GEMINI_API_KEY'];
+  if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está configurado. Avise o responsável pelo site." };
 
   const corpo: Record<string, unknown> = {
-    model: MODELO_IA,
-    input: prompt,
-    stream: true,
-    reasoning: { effort: opcoes?.esforco ?? "low" },
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.2,
+      ...(opcoes?.formato
+        ? { responseMimeType: "application/json", responseSchema: esquemaGemini(opcoes.formato.schema) }
+        : {}),
+    },
   };
-  if (opcoes?.formato) {
-    corpo['text'] = {
-      format: {
-        type: "json_schema",
-        name: opcoes.formato.nome,
-        strict: true,
-        schema: opcoes.formato.schema,
-      },
-    };
-  }
 
   let ultimoStatus = 502;
   for (let tentativa = 0; tentativa < 3; tentativa += 1) {
     let resposta: Response;
     try {
-      resposta = await fetch(GATEWAY_URL, {
+      resposta = await fetch(GEMINI_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Lovable-API-Key": apiKey,
-          "X-Lovable-AIG-SDK": "fetch",
-        },
+        headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
         body: JSON.stringify(corpo),
       });
     } catch {
@@ -164,7 +130,7 @@ export async function chamarIa(
     }
 
     if (resposta.ok) {
-      const texto = await lerSse(resposta);
+      const texto = textoGemini(await resposta.json());
       if (!texto) return { ok: false, status: 502, erro: "A IA não retornou uma resposta. Tente novamente." };
       return { ok: true, texto };
     }
