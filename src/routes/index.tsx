@@ -142,17 +142,36 @@ function formatarMoeda(valor: number | null) {
 
 /** Tetos absurdos cadastrados (ex.: 99.999.999) significam "sem limite informado", não um valor real. */
 const TETO_IRREAL = 9_999_999;
+/** Compra necessária acima disso: o teto nunca é alcançado numa compra normal. */
+const COMPRA_INALCANCAVEL = 2_000;
 
-function semLimite(cupom: Pick<Cupom, "sem_teto">) {
-  return cupom.sem_teto === true;
-}
+type CupomLimite = Pick<Cupom, "teto" | "valor" | "tipo" | "sem_teto">;
 
 function tetoReal(cupom: Pick<Cupom, "teto">) {
   return cupom.teto != null && cupom.teto >= TETO_IRREAL ? null : cupom.teto;
 }
 
-function formatarTeto(cupom: Pick<Cupom, "teto" | "sem_teto">) {
-  if (semLimite(cupom)) return "sem limite de valor";
+/** Quanto a pessoa precisaria gastar para chegar ao teto do cupom. */
+function compraParaAtingirTeto(cupom: CupomLimite) {
+  const teto = tetoReal(cupom);
+  if (teto == null || cupom.tipo !== "%" || !cupom.valor) return null;
+  return (teto * 100) / cupom.valor;
+}
+
+/** Sem limite na prática: marcado no banco, sem teto informado ou teto inalcançável numa compra normal. */
+function semLimite(cupom: CupomLimite) {
+  if (cupom.sem_teto === true) return true;
+  const compra = compraParaAtingirTeto(cupom);
+  return compra != null && compra > COMPRA_INALCANCAVEL;
+}
+
+/** Teto que vale a pena anunciar: só quando é alcançável numa compra realista. */
+function tetoUtil(cupom: CupomLimite) {
+  return semLimite(cupom) ? null : tetoReal(cupom);
+}
+
+function formatarTeto(cupom: CupomLimite) {
+  if (semLimite(cupom)) return "sem limite prático";
   const teto = tetoReal(cupom);
   return teto == null ? "Limite não informado" : brl.format(teto);
 }
@@ -161,9 +180,9 @@ function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
-/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de desconto". */
+/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite prático de desconto". */
 function limiteNaMensagem(cupom: Cupom) {
-  if (semLimite(cupom)) return "sem limite de desconto";
+  if (semLimite(cupom)) return "sem limite prático de desconto";
   const teto = tetoReal(cupom);
   return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
 }
