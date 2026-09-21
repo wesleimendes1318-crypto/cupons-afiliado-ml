@@ -1177,7 +1177,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             )}
           >
             <a
-              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarTeto(cupom)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
+              href={linkWhatsApp(cupom)}
               target="_blank"
               rel="noopener noreferrer"
             >
