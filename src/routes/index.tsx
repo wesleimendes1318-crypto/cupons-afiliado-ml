@@ -672,7 +672,7 @@ function Index() {
             {[
               { icone: Search, texto: "Você escolhe uma loja por aqui" },
               { icone: MessageCircle, texto: "Me chama no WhatsApp e diz o que quer comprar" },
-              { icone: ShieldCheck, texto: "Eu gero o cupom e mando o link da loja" },
+              { icone: ShieldCheck, texto: "Eu gero e disponibilizo o meu cupom personalizado" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
