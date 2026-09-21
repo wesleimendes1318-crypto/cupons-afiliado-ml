@@ -18,6 +18,6 @@
 - [ ] Adicionar filtros multiescolha de categoria e economia
 - [ ] Adicionar assistente de recomendações com IA
 - [ ] Validar integrações, telas e publicar
-- [ ] Migrar as rotas de IA para o AI Gateway do Lovable (fim do 503)
-- [ ] Criar comparador de até 3 cupons com veredito da IA
+- [x] Migrar as rotas de IA para o AI Gateway do Lovable (fim do 503)
+- [x] Criar comparador de até 3 cupons com veredito da IA
 - [x] Salvar o secret GEMINI_API_KEY pelo formulário seguro
