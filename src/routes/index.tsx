@@ -100,7 +100,7 @@ function contagemRegressiva(vence: string | null, agora: number | null) {
   const horasRestantes = minutosRestantes / 60;
   if (horasRestantes > 48) {
     const dias = Math.ceil(horasRestantes / 24);
-    return { texto: `Faltam ${dias} ${dias === 1 ? "dia" : "dias"}`, urgencia: "normal" as Urgencia };
+    return { texto: dias === 1 ? "Falta 1 dia" : `Faltam ${dias} dias`, urgencia: "normal" as Urgencia };
   }
   if (horasRestantes >= 24) {
     return { texto: `Faltam ${Math.ceil(horasRestantes)} horas`, urgencia: "atencao" as Urgencia };
@@ -142,35 +142,62 @@ function formatarMoeda(valor: number | null) {
 
 /** Tetos absurdos cadastrados (ex.: 99.999.999) significam "sem limite informado", não um valor real. */
 const TETO_IRREAL = 9_999_999;
+/** Compra necessária acima disso: o teto nunca é alcançado numa compra normal. */
+const COMPRA_INALCANCAVEL = 2_000;
 
-function semLimite(cupom: Pick<Cupom, "sem_teto">) {
-  return cupom.sem_teto === true;
-}
+type CupomLimite = Pick<Cupom, "teto" | "valor" | "tipo" | "sem_teto">;
 
 function tetoReal(cupom: Pick<Cupom, "teto">) {
   return cupom.teto != null && cupom.teto >= TETO_IRREAL ? null : cupom.teto;
 }
 
-function formatarTeto(cupom: Pick<Cupom, "teto" | "sem_teto">) {
-  if (semLimite(cupom)) return "sem limite de valor";
+/** Quanto a pessoa precisaria gastar para chegar ao teto do cupom. */
+function compraParaAtingirTeto(cupom: CupomLimite) {
+  const teto = tetoReal(cupom);
+  if (teto == null || cupom.tipo !== "%" || !cupom.valor) return null;
+  return (teto * 100) / cupom.valor;
+}
+
+/** Sem limite na prática: marcado no banco, sem teto informado ou teto inalcançável numa compra normal. */
+function semLimite(cupom: CupomLimite) {
+  if (cupom.sem_teto === true) return true;
+  const compra = compraParaAtingirTeto(cupom);
+  return compra != null && compra > COMPRA_INALCANCAVEL;
+}
+
+/** Teto que vale a pena anunciar: só quando é alcançável numa compra realista. */
+function tetoUtil(cupom: CupomLimite) {
+  return semLimite(cupom) ? null : tetoReal(cupom);
+}
+
+function formatarTeto(cupom: CupomLimite) {
+  if (semLimite(cupom)) return "sem limite prático";
   const teto = tetoReal(cupom);
   return teto == null ? "Limite não informado" : brl.format(teto);
+}
+
+/** "30% de desconto" quando o cupom é percentual; senão o texto cadastrado. */
+function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
+  if (cupom.tipo === "%" && cupom.valor) {
+    return `${cupom.valor.toLocaleString("pt-BR")}% de desconto`;
+  }
+  return cupom.desconto ?? "desconto não informado";
 }
 
 function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
-/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite de desconto". */
+/** Texto do limite dentro das mensagens: "desconta até R$ 50" ou "sem limite prático de desconto". */
 function limiteNaMensagem(cupom: Cupom) {
-  if (semLimite(cupom)) return "sem limite de desconto";
+  if (semLimite(cupom)) return "sem limite prático de desconto";
   const teto = tetoReal(cupom);
   return teto == null ? "limite não informado" : `desconta até ${brl.format(teto)}`;
 }
 
 function resumoCupom(cupom: Cupom) {
-  const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}${compra}`;
+  const compra = cupom.compra_min != null ? `, compra mínima de ${formatarMoeda(cupom.compra_min)}` : "";
+  return `${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}${compra}`;
 }
 
 function linkWhatsApp(cupom: Cupom, extra?: string) {
@@ -183,7 +210,7 @@ function linkWhatsApp(cupom: Cupom, extra?: string) {
 
 function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}.`)
     .join("\n");
   const fecho = fechoPersonalizado ?? "O que eu quero comprar é: ";
   return linkWa(`Oi! Me interessei por estas lojas do seu site:\n${itens}\n${fecho}`);
@@ -191,7 +218,7 @@ function linkWhatsAppLista(cupons: Cupom[], fechoPersonalizado?: string) {
 
 function linkWhatsAppIa(cupons: Cupom[], consulta: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, ${limiteNaMensagem(cupom)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${percentualTexto(cupom)}, ${limiteNaMensagem(cupom)}.`)
     .join("\n");
   return linkWa(`Oi! Pesquisei no seu site: "${consulta}".\nAs sugestões foram:\n${itens}\nQual dessas vale mais a pena para mim?`);
 }
@@ -357,7 +384,7 @@ function Index() {
     [indexado, selecionados],
   );
   const economiaSomada = useMemo(
-    () => cupomSelecionados.reduce((total, cupom) => total + (tetoReal(cupom) ?? 0), 0),
+    () => cupomSelecionados.reduce((total, cupom) => total + (tetoUtil(cupom) ?? descontoRealEm200(cupom)), 0),
     [cupomSelecionados],
   );
   const armadilhasDaBusca = useMemo(
@@ -723,7 +750,9 @@ function Index() {
             <p className="text-sm text-secondary-ink" aria-live="polite">
               {isLoading
                 ? "Carregando cupons..."
-                : `${filtrados.length.toLocaleString("pt-BR")} cupom(ns) encontrados`}
+                : filtrados.length === 1
+                  ? "1 cupom encontrado"
+                  : `${filtrados.length.toLocaleString("pt-BR")} cupons encontrados`}
             </p>
             <div className="flex flex-wrap gap-2">
               {filtrosAtivos && <Button variant="outline" onClick={limparFiltros}><X aria-hidden="true" />Limpar filtros</Button>}
@@ -733,15 +762,34 @@ function Index() {
         </section>
 
         <section className="mt-4" aria-label="Cupons encontrados">
-          <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
-            Analisei 361 cupons. 49 descontam menos de R$ 20. Os 312 aqui embaixo passaram no teste.
-          </p>
+          {indicadores.total > 0 && (
+            <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
+              Analisei {indicadores.total.toLocaleString("pt-BR")}{" "}
+              {indicadores.total === 1 ? "cupom" : "cupons"}.{" "}
+              {indicadores.armadilhas === 1
+                ? "1 desconta pouco demais para valer a pena."
+                : `${indicadores.armadilhas.toLocaleString("pt-BR")} descontam pouco demais para valer a pena.`}{" "}
+              {indicadores.bons === 1
+                ? "O que passou no teste está aqui embaixo."
+                : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
+            </p>
+          )}
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
-              {armadilhasDaBusca.map((cupom, indice) => (
-                <span key={cupom.id}>{indice > 0 ? " · " : ""}{cupom.vendedor}: este cupom desconta no máximo {formatarTeto(cupom)}. Não recomendo usar como argumento de venda.</span>
-              ))}
+              {armadilhasDaBusca.map((cupom, indice) => {
+                const limite = tetoUtil(cupom);
+                return (
+                  <span key={cupom.id}>
+                    {indice > 0 ? " · " : ""}
+                    {cupom.vendedor}:{" "}
+                    {limite != null
+                      ? `este cupom desconta no máximo ${brl.format(limite)}.`
+                      : "este cupom não informa o limite real de desconto."}{" "}
+                    Não recomendo usá-lo como argumento de venda.
+                  </span>
+                );
+              })}
             </div>
           )}
           {(mensagemIa || escolhidos.length > 0) && (
@@ -844,7 +892,7 @@ function Index() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold">
-              {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja selecionada" : "lojas selecionadas"} · economia somada de até {formatarMoeda(economiaSomada)}
+              {cupomSelecionados.length === 1 ? "1 loja selecionada" : `${cupomSelecionados.length} lojas selecionadas`} · economia estimada de até {formatarMoeda(economiaSomada)}
             </p>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
@@ -1031,9 +1079,10 @@ function CupomCard({
   const encerrado = contagem.urgencia === "encerrado";
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const ilimitado = semLimite(cupom);
-  const teto = tetoReal(cupom);
+  const teto = tetoUtil(cupom);
+  const em200 = descontoRealEm200(cupom);
   const rotuloQualidade = ilimitado
-    ? "Desconta sem limite"
+    ? "Sem teto de desconto"
     : teto == null
       ? "Limite não informado"
       : armadilha
@@ -1083,18 +1132,25 @@ function CupomCard({
       <div className="my-5 min-w-0">
         {ilimitado ? (
           <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem limite de valor</p>
-            <p className="mt-1 text-sm text-secondary-ink">o desconto é o percentual cheio sobre a compra</p>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">{percentualTexto(cupom)} sem teto</p>
+            <p className="mt-1 text-sm text-secondary-ink">
+              o desconto é o percentual cheio sobre a compra
+              {em200 > 0 ? `: numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
+            </p>
           </>
         ) : teto != null ? (
-          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
+          <>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
+            <p className="mt-1 text-sm text-secondary-ink">{percentualTexto(cupom)} até esse limite</p>
+          </>
         ) : (
-          <p className="text-base font-semibold leading-tight text-secondary-ink">Limite não informado</p>
+          <p className="text-base font-semibold leading-tight text-secondary-ink">{percentualTexto(cupom)}, com limite não informado</p>
         )}
         {cupom.compra_min != null && (
           <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>
         )}
-        <p className="mt-3 text-base font-semibold text-secondary-ink">{cupom.desconto ?? "—"}</p>
+
+
 
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
           Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
@@ -1135,7 +1191,13 @@ function CupomCard({
             Condições do cupom <Info className="size-3.5" aria-hidden="true" />
           </Button>
           <span aria-hidden="true">|</span>
-          <span>{cupom.orcamento == null ? "Orçamento: não informado" : `Orçamento restante: ${brl.format(cupom.orcamento)}`}</span>
+          <span>
+            {cupom.orcamento == null
+              ? "Orçamento: não informado"
+              : cupom.orcamento < 1_000
+                ? `Orçamento quase no fim: ${brl.format(cupom.orcamento)}`
+                : "Orçamento ainda disponível"}
+          </span>
         </div>
         <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
       </div>
@@ -1147,7 +1209,9 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
   if (!cupom) return null;
 
   const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
-  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. Máximo de desconto de ${formatarTeto(cupom)}. Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+  const tetoCadastrado = tetoReal(cupom);
+  const compraParaTeto = compraParaAtingirTeto(cupom);
+  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. ${tetoCadastrado != null ? `Máximo de desconto de ${brl.format(tetoCadastrado)}. ` : ""}Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
 
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && fechar()}>
@@ -1160,6 +1224,12 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
           <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
             <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
             <ResumoModal rotulo="Teto de desconto" valor={formatarTeto(cupom)} destaque />
+            {compraParaTeto != null && (
+              <ResumoModal
+                rotulo="Compra necessária para atingir o teto"
+                valor={brl.format(compraParaTeto)}
+              />
+            )}
             <ResumoModal
               rotulo="Desconto real se a compra for de R$ 200"
               valor={formatarMoeda(descontoRealEm200(cupom))}

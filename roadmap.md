@@ -24,3 +24,5 @@
 - [x] Tratar tetos irreais (ex.: 99.999.999) como "sem limite informado" em cards, modal, score e mensagens
 - [x] Deixar o contato WhatsApp mais estratégico (CTA perto dos resultados e no estado vazio)
 - [x] Ligar as rotas de IA à GEMINI_API_KEY (Gemini) e validar
+
+- [x] Revisar concordância e regras de português (pt-BR) em todos os textos da interface
