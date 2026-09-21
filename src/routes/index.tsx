@@ -1160,7 +1160,13 @@ function CupomCard({
             Condições do cupom <Info className="size-3.5" aria-hidden="true" />
           </Button>
           <span aria-hidden="true">|</span>
-          <span>{cupom.orcamento == null ? "Orçamento: não informado" : `Orçamento restante: ${brl.format(cupom.orcamento)}`}</span>
+          <span>
+            {cupom.orcamento == null
+              ? "Orçamento: não informado"
+              : cupom.orcamento < 1_000
+                ? `Orçamento quase no fim: ${brl.format(cupom.orcamento)}`
+                : "Orçamento ainda disponível"}
+          </span>
         </div>
         <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
       </div>
