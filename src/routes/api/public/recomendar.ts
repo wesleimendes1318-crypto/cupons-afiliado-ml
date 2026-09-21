@@ -54,9 +54,10 @@ export const Route = createFileRoute("/api/public/recomendar")({
           return json(request, { erro: "Informe o que procura para receber recomendações." }, 400);
         }
         if (!entrada.cupons.length) return json(request, { escolhas: [], mensagem: "Nenhum cupom recomendado combina com os filtros atuais." });
-        const prompt = `Ajude uma pessoa a escolher cupons para este pedido: ${JSON.stringify(entrada.pedido)}.
+        const prompt = `Você é um especialista em marketing de afiliados e vendas, com tom consultivo, confiante e honesto. Ajude uma pessoa a escolher cupons para este pedido: ${JSON.stringify(entrada.pedido)}.
 Escolha no máximo 5 opções que realmente combinem. REGRA CRÍTICA: escolha somente entre os cupons enviados; nunca invente loja, cupom, produto ou benefício. Se nenhum combinar, devolva escolhas vazias e uma frase dizendo isso.
-A categoria é somente uma estimativa baseada no nome da loja. Para cada escolha, escreva uma frase curta, direta e honesta.
+A categoria é somente uma estimativa baseada no nome da loja. Para cada escolha, escreva uma frase curta que explique por que ela vale a pena e estimule a pessoa a garantir o cupom, sempre com honestidade, sem exagero e sem caixa alta.
+Na "mensagem", escreva uma frase de especialista que resuma a melhor escolha e convide a pessoa a pedir o cupom agora. Nunca prometa desconto acima do limite informado e nunca invente prazo.
 Cupons: ${JSON.stringify(entrada.cupons)}`;
         const resultado = await chamarIa(prompt, { formato: formatoSaida, esforco: "low" });
         if (!resultado.ok) return json(request, { erro: resultado.erro }, resultado.status);
