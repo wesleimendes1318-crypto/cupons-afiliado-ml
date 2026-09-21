@@ -70,6 +70,7 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
 ];
 
 const PAGE_SIZE = 50;
+const SEM_CATEGORIA = "Sem categoria";
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
@@ -299,6 +300,7 @@ function Index() {
   const [compraMax, setCompraMax] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("score");
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [lojas, setLojas] = useState<string[]>([]);
   const [faixas, setFaixas] = useState<FaixaEconomia[]>([]);
   const [pagina, setPagina] = useState(1);
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
@@ -329,7 +331,7 @@ function Index() {
 
   useEffect(() => {
     setPagina(1);
-  }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas]);
+  }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas, lojas]);
 
   const indexado = useMemo(() => {
     const preparados = cupons.map((c) => ({
@@ -363,15 +365,16 @@ function Index() {
     const tMin = Number(tetoMin) || 0;
     const cMax = compraMax === "" ? null : Number(compraMax);
     const lista = indexado.filter((cupom) => {
-      const buscaAtiva = termos.length > 0;
+      const buscaAtiva = termos.length > 0 || lojas.length > 0;
+      if (lojas.length && !lojas.includes(cupom.vendedor)) return false;
       if (!buscaAtiva && vitrine === "recomendados" && cupom.qualidade !== "bom") return false;
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
       if (tMin && (tetoReal(cupom) ?? 0) < tMin) return false;
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
-      if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
-      if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
+      if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
+      if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
       if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
       return true;
     });
@@ -399,7 +402,7 @@ function Index() {
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas]);
+  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, lojas]);
 
   const recomendadosFiltrados = useMemo(
     () => filtrados.filter((cupom) => cupom.qualidade === "bom"),
@@ -425,15 +428,32 @@ function Index() {
   const categoriasDisponiveis = useMemo(() => {
     const contagens = new Map<string, number>();
     indexado.forEach((cupom) => {
-      if (cupom.categoria) contagens.set(cupom.categoria, (contagens.get(cupom.categoria) ?? 0) + 1);
+      const nome = cupom.categoria ?? SEM_CATEGORIA;
+      contagens.set(nome, (contagens.get(nome) ?? 0) + 1);
     });
+    return [...contagens.entries()].sort(([a], [b]) => {
+      if (a === SEM_CATEGORIA) return 1;
+      if (b === SEM_CATEGORIA) return -1;
+      return a.localeCompare(b, "pt-BR");
+    });
+  }, [indexado]);
+
+  const lojasDisponiveis = useMemo(() => {
+    const contagens = new Map<string, number>();
+    indexado.forEach((cupom) => contagens.set(cupom.vendedor, (contagens.get(cupom.vendedor) ?? 0) + 1));
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
+
+  const lojasFiltradas = useMemo(() => {
+    const busca = normalizar(texto);
+    const lista = busca ? lojasDisponiveis.filter(([nome]) => normalizar(nome).includes(busca)) : lojasDisponiveis;
+    return lista.slice(0, 80);
+  }, [lojasDisponiveis, texto]);
   const contagensFaixa = useMemo(
     () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
     [indexado],
   );
-  const filtrosAtivos = Boolean(texto || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
+  const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -498,6 +518,10 @@ function Index() {
     setSelecionados((atuais) => (atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]));
   }
 
+  function alternarLoja(loja: string) {
+    setLojas((atuais) => (atuais.includes(loja) ? atuais.filter((item) => item !== loja) : [...atuais, loja]));
+  }
+
   function alternarCategoria(categoria: string) {
     setCategorias((atuais) => atuais.includes(categoria) ? atuais.filter((item) => item !== categoria) : [...atuais, categoria]);
   }
@@ -516,6 +540,7 @@ function Index() {
     setTetoMin("");
     setCompraMax("");
     setCategorias([]);
+    setLojas([]);
     setFaixas([]);
     setOrdem("score");
   }
@@ -692,16 +717,61 @@ function Index() {
             ))}
           </div>
 
-          <div className="relative mt-4">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={texto}
-              onChange={(event) => setTexto(event.target.value)}
-              inputMode="search"
-              aria-label="Buscar vendedor"
-              placeholder="Buscar vendedor (separe vários nomes por vírgula)"
-              className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
-            />
+          <div className="mt-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={texto}
+                onChange={(event) => setTexto(event.target.value)}
+                inputMode="search"
+                aria-label="Buscar loja"
+                placeholder="Buscar loja e marcar na lista abaixo"
+                className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+              />
+            </div>
+
+            {lojas.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {lojas.map((loja) => (
+                  <button
+                    key={loja}
+                    type="button"
+                    onClick={() => alternarLoja(loja)}
+                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
+                    aria-label={`Remover a loja ${loja} da seleção`}
+                  >
+                    <span className="truncate">{loja}</span>
+                    <X aria-hidden="true" className="size-3" />
+                  </button>
+                ))}
+                <button type="button" onClick={() => setLojas([])} className="text-xs font-medium text-secondary-ink underline">
+                  Limpar lojas
+                </button>
+              </div>
+            )}
+
+            <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de lojas">
+              {lojasFiltradas.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-secondary-ink">Nenhuma loja com esse nome.</p>
+              ) : (
+                lojasFiltradas.map(([loja, quantidade]) => (
+                  <label
+                    key={loja}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={lojas.includes(loja)}
+                      onChange={() => alternarLoja(loja)}
+                      className="size-4 accent-[var(--ml-blue)]"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{loja}</span>
+                    <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <p className="mt-1 text-xs text-secondary-ink">Marque uma ou mais lojas para filtrar os cupons.</p>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -746,18 +816,29 @@ function Index() {
 
           {categoriasDisponiveis.length > 0 && (
             <div className="mt-5">
-              <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {categoriasDisponiveis.map(([categoria, quantidade]) => (
-                  <button
-                    key={categoria}
-                    type="button"
-                    aria-pressed={categorias.includes(categoria)}
-                    onClick={() => alternarCategoria(categoria)}
-                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", categorias.includes(categoria) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
-                  >
-                    {categoria} ({quantidade})
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
+                {categorias.length > 0 && (
+                  <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
+                    Limpar categorias
                   </button>
+                )}
+              </div>
+              <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de categorias">
+                {categoriasDisponiveis.map(([categoria, quantidade]) => (
+                  <label
+                    key={categoria}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={categorias.includes(categoria)}
+                      onChange={() => alternarCategoria(categoria)}
+                      className="size-4 accent-[var(--ml-blue)]"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{categoria}</span>
+                    <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
+                  </label>
                 ))}
               </div>
             </div>
@@ -1194,10 +1275,13 @@ function CupomCard({
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
           Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="inline-flex max-w-full items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-semibold text-secondary-ink">
+            <span className="truncate">Categoria: {cupom.categoria ?? "não classificada"}</span>
+          </span>
+        </div>
         {cupom.categoria && (
-          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">
-            <span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja
-          </p>
+          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">categoria estimada pelo nome da loja</p>
         )}
 
         <Button
