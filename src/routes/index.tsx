@@ -454,7 +454,7 @@ function Index() {
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, lojas]);
+  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, etiquetas, lojas]);
 
   const recomendadosFiltrados = useMemo(
     () => filtrados.filter((cupom) => cupom.qualidade === "bom"),
