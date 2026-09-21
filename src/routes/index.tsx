@@ -1082,7 +1082,7 @@ function CupomCard({
   const teto = tetoUtil(cupom);
   const em200 = descontoRealEm200(cupom);
   const rotuloQualidade = ilimitado
-    ? `${percentualTexto(cupom)}, sem teto`
+    ? "Sem teto de desconto"
     : teto == null
       ? "Limite não informado"
       : armadilha
