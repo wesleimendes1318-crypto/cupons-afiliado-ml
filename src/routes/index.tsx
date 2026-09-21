@@ -954,6 +954,14 @@ function Index() {
                 : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
             </p>
           )}
+          <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-secondary-ink">
+            <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
+            <ul className="mt-1 space-y-1">
+              <li><strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da compra. Acima disso o desconto não aumenta.</li>
+              <li><strong>Desconto sem teto</strong>: o percentual vale sobre o valor todo, sem limite de valor.</li>
+              <li><strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo antes de gerar para você.</li>
+            </ul>
+          </div>
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
