@@ -357,6 +357,7 @@ function Index() {
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
   const [agora, setAgora] = useState<number | null>(null);
   const [pedidoIa, setPedidoIa] = useState("");
+  const [consultaIa, setConsultaIa] = useState("");
   const [escolhasIa, setEscolhasIa] = useState<EscolhaIa[]>([]);
   const [mensagemIa, setMensagemIa] = useState("");
   const [erroIa, setErroIa] = useState("");
@@ -651,6 +652,7 @@ function Index() {
       if (!resposta.ok || !dados.escolhas || !dados.mensagem) throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
       setEscolhasIa(dados.escolhas);
       setMensagemIa(dados.mensagem);
+      setConsultaIa(pedidoIa.trim());
     } catch (motivo) {
       setErroIa(motivo instanceof Error ? motivo.message : "Não foi possível buscar recomendações.");
     } finally {
@@ -1092,8 +1094,18 @@ function Index() {
           {(mensagemIa || escolhidos.length > 0) && (
             <div className="mb-6 rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
-                <div><h2 className="font-semibold text-ml-blue">Escolhidos para você</h2><p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p></div>
-                <Button variant="ghost" size="icon" aria-label="Fechar recomendações" onClick={() => { setEscolhasIa([]); setMensagemIa(""); }}><X aria-hidden="true" /></Button>
+                <div>
+                  <h2 className="font-semibold text-ml-blue">Busca realizada: “{consultaIa}”</h2>
+                  <p className="mt-1 text-sm font-medium">
+                    {escolhidos.length === 0
+                      ? "Nenhum cupom encontrado para essa busca."
+                      : escolhidos.length === 1
+                        ? "1 cupom encontrado para essa busca."
+                        : `${escolhidos.length} cupons encontrados para essa busca.`}
+                  </p>
+                  <p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p>
+                </div>
+                <Button variant="ghost" size="icon" aria-label="Fechar resultado da busca" onClick={() => { setEscolhasIa([]); setMensagemIa(""); setConsultaIa(""); }}><X aria-hidden="true" /></Button>
               </div>
               {escolhidos.length > 0 && (
                 <>
