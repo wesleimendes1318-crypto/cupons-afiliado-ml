@@ -427,6 +427,7 @@ function Index() {
       if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
       if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
+      if (etiquetas.length && !ETIQUETAS.every((etiqueta) => !etiquetas.includes(etiqueta.id) || etiqueta.aceita(cupom, agora))) return false;
       return true;
     });
 
