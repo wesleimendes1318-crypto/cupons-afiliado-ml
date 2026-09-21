@@ -652,6 +652,7 @@ function Index() {
       if (!resposta.ok || !dados.escolhas || !dados.mensagem) throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
       setEscolhasIa(dados.escolhas);
       setMensagemIa(dados.mensagem);
+      setConsultaIa(pedidoIa.trim());
     } catch (motivo) {
       setErroIa(motivo instanceof Error ? motivo.message : "Não foi possível buscar recomendações.");
     } finally {
