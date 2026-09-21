@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock3, Info, Search, ShieldAlert, X } from "lucide-react";
+import { Clock3, Info, Search, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -511,12 +510,6 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
           <DialogTitle className="text-xl font-semibold">{cupom.desconto ?? "Condições do cupom"}</DialogTitle>
           <DialogDescription>Condições e limite real do desconto</DialogDescription>
         </DialogHeader>
-        <DialogClose asChild>
-          <Button variant="ghost" size="icon" className="absolute right-3 top-3" aria-label="Fechar condições">
-            <X aria-hidden="true" />
-          </Button>
-        </DialogClose>
-
         <div className="space-y-5 px-5 pb-6 sm:px-6">
           <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
             <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
