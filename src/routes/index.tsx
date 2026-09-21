@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, ShoppingBag, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Button } from "@/components/ui/button";
@@ -91,7 +91,7 @@ type EtiquetaId = "cometiqueta" | "termina24" | "termina48" | "semlimite" | "com
 const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, agora: number | null) => boolean }> = [
   // Primeiro da fila de proposito: e o unico atalho que muda o que a pessoa
   // leva embora, e nao so quais cupons ela ve.
-  { id: "cometiqueta", rotulo: "Com etiqueta pronta", aceita: (cupom) => Boolean(cupom.codigo_cupom) },
+  { id: "cometiqueta", rotulo: "Cupom com código gerado", aceita: (cupom) => Boolean(cupom.codigo_cupom) },
   { id: "termina24", rotulo: "Termina em 24h", aceita: (cupom, agora) => dentroDe(cupom, agora, 24) },
   { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
   { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
@@ -336,7 +336,7 @@ function EtiquetaDoCupom({ codigo }: { codigo: string }) {
 
   return (
     <div className="mt-3 rounded-md border border-dashed border-ml-blue/50 bg-ml-blue/5 p-2.5">
-      <p className="text-[11px] font-semibold text-secondary-ink">Etiqueta deste cupom</p>
+      <p className="text-[11px] font-semibold text-secondary-ink">Código deste cupom</p>
       <div className="mt-1 flex items-center gap-2">
         <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1 text-xs font-bold tracking-wide text-ml-blue">
           {codigo}
@@ -344,12 +344,123 @@ function EtiquetaDoCupom({ codigo }: { codigo: string }) {
         <button
           type="button"
           onClick={copiar}
-          aria-label={`Copiar a etiqueta ${codigo}`}
+          aria-label={`Copiar o código ${codigo}`}
           className="shrink-0 rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue"
         >
           {copiado ? "copiado" : "copiar"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* Contatos vem do banco, nao do codigo: o repositorio e publico e o numero do
+   Weslei nao precisa ficar em texto aberto la. Trocar o numero nao exige novo
+   deploy do site. */
+type Contato = { canal: string; valor: string };
+
+function useContatos() {
+  const { data } = useQuery({
+    queryKey: ["contatos"],
+    staleTime: 30 * 60 * 1000,
+    queryFn: async (): Promise<Contato[]> => {
+      const { data, error } = await supabase.from("contatos").select("canal,valor");
+      if (error) throw error;
+      return (data ?? []) as Contato[];
+    },
+  });
+  const mapa = new Map((data ?? []).map((c) => [c.canal, c.valor]));
+  const whatsapp = mapa.get("whatsapp")?.trim() || null;
+  const telegram = mapa.get("telegram")?.trim() || null;
+  return { whatsapp, telegram };
+}
+
+/* Cupom sem codigo: a pessoa pede e espera aqui mesmo
+
+   A ordem importa. Primeiro o site tenta resolver sozinho: registra o pedido,
+   a extensao gera em ate um minuto e o codigo aparece na tela. So se isso nao
+   voltar a tempo — computador desligado, teto do dia batido — e que aparece o
+   contato. Falar com gente e o plano B, nao o caminho principal. */
+function PedirCodigo({ cupom }: { cupom: Cupom }) {
+  const { whatsapp, telegram } = useContatos();
+  const [fase, setFase] = useState<"parado" | "pedindo" | "pronto" | "demorou">("parado");
+  const [codigo, setCodigo] = useState<string | null>(null);
+  const relogios = useRef<number[]>([]);
+
+  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
+
+  async function pedir() {
+    setFase("pedindo");
+    try {
+      const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id });
+      const resposta = String(data ?? "");
+      if (resposta.startsWith("#")) { setCodigo(resposta); setFase("pronto"); return; }
+      if (resposta !== "pedido") { setFase("demorou"); return; }
+    } catch { setFase("demorou"); return; }
+
+    // Pergunta a cada 4s por 88s. A extensao trabalha de minuto em minuto.
+    const limite = Date.now() + 88_000;
+    const olhar = async () => {
+      try {
+        const { data } = await supabase.rpc("consultar_etiqueta", { p_cupom_id: cupom.id });
+        if (typeof data === "string" && data.startsWith("#")) { setCodigo(data); setFase("pronto"); return; }
+      } catch { /* tenta de novo */ }
+      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 4000));
+      else setFase("demorou");
+    };
+    relogios.current.push(window.setTimeout(olhar, 4000));
+  }
+
+  if (fase === "pronto" && codigo) return <EtiquetaDoCupom codigo={codigo} />;
+
+  const recado = `Oi Weslei! Quero o código do cupom de ${cupom.desconto ?? "desconto"} da loja ${cupom.vendedor}. (cupom ${cupom.id})`;
+
+  return (
+    <div className="mt-3 rounded-md border border-dashed border-border bg-muted/40 p-2.5">
+      {fase === "pedindo" ? (
+        <p className="text-[11px] leading-relaxed text-secondary-ink" aria-live="polite">
+          Gerando seu código... isso leva menos de um minuto.
+        </p>
+      ) : fase === "demorou" ? (
+        <>
+          <p className="text-[11px] leading-relaxed text-secondary-ink">
+            Não consegui gerar agora. Me chama que eu gero para você.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {telegram && (
+              <a
+                href={`https://t.me/${telegram}?text=${encodeURIComponent(recado)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded border border-ml-blue px-2.5 py-1 text-[11px] font-bold text-ml-blue"
+              >
+                Pedir no Telegram
+              </a>
+            )}
+            {whatsapp && (
+              <a
+                href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(recado)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded border border-success px-2.5 py-1 text-[11px] font-bold text-success"
+              >
+                Pedir no WhatsApp
+              </a>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-[11px] font-semibold text-secondary-ink">Este cupom ainda não tem código</p>
+          <button
+            type="button"
+            onClick={pedir}
+            className="mt-1.5 w-full rounded border border-ml-blue px-2.5 py-1.5 text-[11px] font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
+          >
+            Gerar o código deste cupom
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -1711,7 +1822,11 @@ function CupomCard({
             ? "Abre no Mercado Livre só o que esse cupom cobre. O desconto entra sozinho no carrinho."
             : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
         </p>
-        {cupom.codigo_cupom && <EtiquetaDoCupom codigo={cupom.codigo_cupom} />}
+        {cupom.codigo_cupom ? (
+          <EtiquetaDoCupom codigo={cupom.codigo_cupom} />
+        ) : (
+          <PedirCodigo cupom={cupom} />
+        )}
       </div>
 
       <div className="mt-auto min-w-0 border-t border-border pt-3 text-xs text-secondary-ink">
@@ -1815,8 +1930,8 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             <div className="-mt-2">
               <EtiquetaDoCupom codigo={cupom.codigo_cupom} />
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-                Cole essa etiqueta no carrinho do Mercado Livre para ver o desconto entrar. Pelo
-                link acima ele já entra sozinho, mas a etiqueta é a sua prova de que o desconto
+                Cole esse código no carrinho do Mercado Livre para ver o desconto entrar. Pelo
+                link acima ele já entra sozinho, mas o código é a sua prova de que o desconto
                 veio deste cupom.
               </p>
             </div>
