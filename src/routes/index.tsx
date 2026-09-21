@@ -794,6 +794,8 @@ function CupomCard({
   cupom: CupomIndexado;
   agora: number | null;
   abrirCondicoes: (cupom: CupomIndexado) => void;
+  selecionado: boolean;
+  alternarSelecao: (id: number) => void;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
   const contagem = contagemRegressiva(cupom.vence, agora);
