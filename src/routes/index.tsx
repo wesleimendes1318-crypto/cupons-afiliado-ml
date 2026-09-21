@@ -892,7 +892,7 @@ function Index() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold">
-              {cupomSelecionados.length} {cupomSelecionados.length === 1 ? "loja selecionada" : "lojas selecionadas"} · economia somada de até {formatarMoeda(economiaSomada)}
+              {cupomSelecionados.length === 1 ? "1 loja selecionada" : `${cupomSelecionados.length} lojas selecionadas`} · economia estimada de até {formatarMoeda(economiaSomada)}
             </p>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
