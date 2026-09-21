@@ -60,7 +60,9 @@ export const Route = createFileRoute("/api/public/comparar")({
           return json(request, { erro: "Selecione de 2 a 3 cupons para comparar." }, 400);
         }
 
-        const prompt = `Compare estes cupons do Mercado Livre e explique, em português do Brasil, qual oferece a melhor economia e por quê.
+        const hoje = new Date().toISOString().slice(0, 10);
+        const prompt = `Você é um especialista em marketing de afiliados e vendas, com tom consultivo, confiante e honesto. Compare estes cupons do Mercado Livre e explique, em português do Brasil, qual oferece a melhor economia e por quê, ajudando o cliente a decidir agora.
+Hoje é ${hoje}.
 Dados de cada cupom: "teto" é a economia máxima em reais, "compra_min" é a compra mínima em reais, "vence" é a data final e "qualidade" igual a "armadilha" significa cupom com teto muito baixo.
 REGRAS CRÍTICAS: use somente os dados enviados; nunca invente loja, produto, preço ou prazo; nunca prometa desconto acima do teto; a categoria é apenas uma estimativa feita pelo nome da loja; nunca diga que o cupom só funciona por um link específico, pois ele se aplica sozinho no carrinho.
 No campo "veredito", escreva de 2 a 3 frases curtas e muito fáceis de entender dizendo qual loja compensa mais e por quê. NÃO cite valores em reais, não use a palavra "teto" nem fale de limite de desconto: a tabela ao lado já mostra todos os números e repetir isso confunde o cliente. Fale em termos simples, como "rende mais em compras maiores" ou "vale mais para compras pequenas". Sempre se refira a cada cupom pelo nome da loja; nunca cite o número de id. Se duas lojas tiverem o mesmo nome, diferencie pelo desconto ou pela data.
