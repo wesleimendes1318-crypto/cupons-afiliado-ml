@@ -708,7 +708,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="w-full bg-ml-yellow text-ml-yellow-foreground">
-        <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
             <div>
@@ -734,7 +734,7 @@ function Index() {
       </header>
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
-        <div className="mx-auto max-w-[1400px] px-4 py-4">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4">
           <ol className="grid gap-3 text-sm sm:grid-cols-3">
             {[
               { icone: Search, texto: "Você escolhe uma loja por aqui" },
@@ -755,7 +755,7 @@ function Index() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-[1400px] px-4 py-6">
+      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
         <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
@@ -1506,7 +1506,7 @@ function CupomCard({
         </span>
       </div>
 
-      <div className="my-5 min-w-0">
+      <div className="mt-5 flex min-w-0 flex-1 flex-col">
         <p className="text-2xl font-extrabold leading-tight text-foreground sm:text-3xl">{percentualTexto(cupom)}</p>
         {ilimitado ? (
           <p className="mt-1 text-sm text-secondary-ink">
@@ -1542,7 +1542,7 @@ function CupomCard({
         <Button
           asChild
           className={cn(
-            "mt-4 h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
+            "mt-auto h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
             armadilha
               ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
               : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
