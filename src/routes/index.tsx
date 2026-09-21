@@ -745,8 +745,8 @@ function Index() {
                   >
                     {categoria}
                   </button>
-                  <p className="mt-2 text-base font-extrabold leading-tight text-success">{economiaCurta(cupom)}</p>
-                  <p className="text-xs text-secondary-ink">{percentualTexto(cupom)}</p>
+                  <p className="mt-2 text-base font-extrabold leading-tight">{percentualTexto(cupom)}</p>
+                  <p className="text-xs font-semibold text-success">{economiaCurta(cupom)}</p>
                   <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
                     Em produtos de <span className="font-bold">{cupom.vendedor}</span>
                   </p>
