@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Clock3, Copy, Info, Search, ShieldAlert, Sparkles, WandSparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -377,7 +377,7 @@ function Index() {
     setOrdem("score");
   }
 
-  async function recomendar(event: React.FormEvent<HTMLFormElement>) {
+  async function recomendar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pedidoIa.trim().length < 3) return;
     setRecomendando(true);
@@ -736,10 +736,15 @@ function CupomCard({
       </div>
 
       <div className="my-5 grid grid-cols-[minmax(110px,auto)_1fr] items-center gap-5">
-        <p className="max-w-48 text-3xl font-extrabold leading-none sm:text-4xl">{cupom.desconto ?? "—"}</p>
+        <div>
+          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarMoeda(cupom.teto)}</p>
+          {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
+          <p className="mt-3 text-lg font-bold text-secondary-ink">{cupom.desconto ?? "—"}</p>
+        </div>
         <div className="min-w-0 border-l border-border pl-5">
           <p className="text-sm text-secondary-ink">Em produtos de</p>
           <p className="mt-0.5 break-words font-semibold">{cupom.vendedor}</p>
+          {cupom.categoria && <p className="mt-1 text-[11px] leading-4 text-secondary-ink"><span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja</p>}
           <Button
             asChild
             className={cn(
