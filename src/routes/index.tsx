@@ -796,7 +796,9 @@ function Index() {
       </section>
 
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
-        <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
+        <BuscaPorLink />
+
+        <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
             <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
@@ -839,8 +841,6 @@ function Index() {
           <p className="mt-2 text-xs text-secondary-ink">A IA escolhe somente entre os cupons recomendados e os filtros ativos.</p>
           {erroIa && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erroIa}</p>}
         </section>
-
-        <BuscaPorLink />
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo dos cupons">
           <Indicador
