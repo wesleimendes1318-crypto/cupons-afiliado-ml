@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock3, Copy, Info, Search, ShieldAlert, Sparkles } from "lucide-react";
+import { Check, Clock3, Copy, Info, Search, ShieldAlert, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -49,12 +49,22 @@ type Cupom = {
   compra_min: number | null;
   teto: number | null;
   qualidade: string | null;
+  categoria: string | null;
   updated_at: string | null;
 };
 
-type CupomIndexado = Cupom & { chave: string; dias: number | null };
-type Ordem = "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
+type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
+type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
+type FaixaEconomia = "ate50" | "50a200" | "200a1000" | "acima1000";
+type EscolhaIa = { id: number; motivo: string };
+
+const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (teto: number | null) => boolean }> = [
+  { id: "ate50", rotulo: "até R$ 50", aceita: (teto) => teto != null && teto <= 50 },
+  { id: "50a200", rotulo: "R$ 50 a R$ 200", aceita: (teto) => teto != null && teto > 50 && teto <= 200 },
+  { id: "200a1000", rotulo: "R$ 200 a R$ 1.000", aceita: (teto) => teto != null && teto > 200 && teto <= 1000 },
+  { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (teto) => teto != null && teto > 1000 },
+];
 
 const PAGE_SIZE = 50;
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -108,6 +118,19 @@ function diasAte(data: string | null) {
   return Math.round((dataDoBanco(data).getTime() - hojeUtc) / 86400000);
 }
 
+function calcularScore(cupom: Cupom, agora: number | null) {
+  if (cupom.teto == null) return null;
+  let score = cupom.teto;
+  if (cupom.compra_min != null && cupom.compra_min <= 50) score *= 1.3;
+  else if (cupom.compra_min != null && cupom.compra_min <= 150) score *= 1.15;
+  if ((cupom.orcamento ?? 0) > 50_000) score *= 1.2;
+  if (agora != null && cupom.vence) {
+    const horas = (fimDoDiaEmSaoPaulo(cupom.vence) - agora) / 3_600_000;
+    if (horas > 0 && horas < 24) score *= 0.5;
+  }
+  return score;
+}
+
 function formatarMoeda(valor: number | null) {
   return valor == null ? "Não informado" : brl.format(valor);
 }
@@ -130,7 +153,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,qualidade,updated_at",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,qualidade,categoria,updated_at",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -143,7 +166,7 @@ async function carregarCupons(): Promise<Cupom[]> {
 }
 
 function Index() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["cupons"],
     queryFn: carregarCupons,
     staleTime: 60_000,
@@ -152,16 +175,25 @@ function Index() {
 
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
-  const [qualidade, setQualidade] = useState<"todos" | Qualidade>("todos");
+  const [vitrine, setVitrine] = useState<"recomendados" | "todos">("recomendados");
   const [tipo, setTipo] = useState<"todos" | "%" | "R$">("todos");
   const [descontoMin, setDescontoMin] = useState("");
   const [orcamentoMin, setOrcamentoMin] = useState("");
   const [tetoMin, setTetoMin] = useState("");
   const [compraMax, setCompraMax] = useState("");
-  const [ordem, setOrdem] = useState<Ordem>("desconto");
+  const [ordem, setOrdem] = useState<Ordem>("score");
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [faixas, setFaixas] = useState<FaixaEconomia[]>([]);
   const [pagina, setPagina] = useState(1);
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
   const [agora, setAgora] = useState<number | null>(null);
+  const [pedidoIa, setPedidoIa] = useState("");
+  const [escolhasIa, setEscolhasIa] = useState<EscolhaIa[]>([]);
+  const [mensagemIa, setMensagemIa] = useState("");
+  const [erroIa, setErroIa] = useState("");
+  const [recomendando, setRecomendando] = useState(false);
+  const [classificando, setClassificando] = useState(false);
+  const [statusClassificacao, setStatusClassificacao] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => setTermo(texto), 150);
@@ -176,7 +208,7 @@ function Index() {
 
   useEffect(() => {
     setPagina(1);
-  }, [termo, qualidade, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem]);
+  }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas]);
 
   const indexado = useMemo(
     () =>
@@ -184,8 +216,9 @@ function Index() {
         ...c,
         chave: normalizar(c.busca ?? c.vendedor ?? ""),
         dias: diasAte(c.vence),
+        score: calcularScore(c, agora),
       })),
-    [cupons],
+    [cupons, agora],
   );
 
   const termos = useMemo(
@@ -203,13 +236,16 @@ function Index() {
     const tMin = Number(tetoMin) || 0;
     const cMax = compraMax === "" ? null : Number(compraMax);
     const lista = indexado.filter((cupom) => {
-      if (qualidade !== "todos" && cupom.qualidade !== qualidade) return false;
+      const buscaAtiva = termos.length > 0;
+      if (!buscaAtiva && vitrine === "recomendados" && cupom.qualidade !== "bom") return false;
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
       if (tMin && (cupom.teto ?? 0) < tMin) return false;
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
       if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
+      if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
+      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom.teto))) return false;
       return true;
     });
 
@@ -228,11 +264,41 @@ function Index() {
         }
         case "vendedor":
           return a.vendedor.localeCompare(b.vendedor, "pt-BR");
+        case "score":
+          if (a.score == null) return b.score == null ? 0 : 1;
+          if (b.score == null) return -1;
+          return b.score - a.score;
         default:
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, qualidade, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora]);
+  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas]);
+
+  const recomendadosFiltrados = useMemo(
+    () => filtrados.filter((cupom) => cupom.qualidade === "bom"),
+    [filtrados],
+  );
+  const escolhidos = useMemo(
+    () => escolhasIa.map((escolha) => ({ cupom: indexado.find((item) => item.id === escolha.id), motivo: escolha.motivo })).filter((item): item is { cupom: CupomIndexado; motivo: string } => Boolean(item.cupom)),
+    [escolhasIa, indexado],
+  );
+  const armadilhasDaBusca = useMemo(
+    () => (termos.length ? filtrados.filter((cupom) => cupom.qualidade === "armadilha") : []),
+    [filtrados, termos.length],
+  );
+
+  const categoriasDisponiveis = useMemo(() => {
+    const contagens = new Map<string, number>();
+    indexado.forEach((cupom) => {
+      if (cupom.categoria) contagens.set(cupom.categoria, (contagens.get(cupom.categoria) ?? 0) + 1);
+    });
+    return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
+  }, [indexado]);
+  const contagensFaixa = useMemo(
+    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom.teto)).length])),
+    [indexado],
+  );
+  const filtrosAtivos = Boolean(texto || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -287,6 +353,68 @@ function Index() {
     link.download = "cupons-afiliado-ml.csv";
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  function alternarCategoria(categoria: string) {
+    setCategorias((atuais) => atuais.includes(categoria) ? atuais.filter((item) => item !== categoria) : [...atuais, categoria]);
+  }
+
+  function alternarFaixa(faixa: FaixaEconomia) {
+    setFaixas((atuais) => atuais.includes(faixa) ? atuais.filter((item) => item !== faixa) : [...atuais, faixa]);
+  }
+
+  function limparFiltros() {
+    setTexto("");
+    setTermo("");
+    setVitrine("recomendados");
+    setTipo("todos");
+    setDescontoMin("");
+    setOrcamentoMin("");
+    setTetoMin("");
+    setCompraMax("");
+    setCategorias([]);
+    setFaixas([]);
+    setOrdem("score");
+  }
+
+  async function recomendar(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pedidoIa.trim().length < 3) return;
+    setRecomendando(true);
+    setErroIa("");
+    setEscolhasIa([]);
+    setMensagemIa("");
+    try {
+      const resposta = await fetch("/api/public/recomendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pedido: pedidoIa, cupons: recomendadosFiltrados.map(({ id, vendedor, categoria, desconto, teto, compra_min }) => ({ id, vendedor, categoria, desconto, teto, compra_min })) }),
+      });
+      const dados = (await resposta.json()) as { escolhas?: EscolhaIa[]; mensagem?: string; erro?: string };
+      if (!resposta.ok || !dados.escolhas || !dados.mensagem) throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
+      setEscolhasIa(dados.escolhas);
+      setMensagemIa(dados.mensagem);
+    } catch (motivo) {
+      setErroIa(motivo instanceof Error ? motivo.message : "Não foi possível buscar recomendações.");
+    } finally {
+      setRecomendando(false);
+    }
+  }
+
+  async function classificar() {
+    setClassificando(true);
+    setStatusClassificacao("Classificando as lojas em lotes de até 40...");
+    try {
+      const resposta = await fetch("/api/public/classificar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const dados = (await resposta.json()) as { classificados?: number; total?: number; erro?: string };
+      if (!resposta.ok) throw new Error(dados.erro ?? "Não foi possível classificar as lojas.");
+      setStatusClassificacao(`${dados.classificados ?? 0} de ${dados.total ?? 0} lojas classificadas.`);
+      await refetch();
+    } catch (motivo) {
+      setStatusClassificacao(motivo instanceof Error ? motivo.message : "Não foi possível classificar as lojas.");
+    } finally {
+      setClassificando(false);
+    }
   }
 
   return (
