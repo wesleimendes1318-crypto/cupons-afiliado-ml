@@ -1275,10 +1275,13 @@ function CupomCard({
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
           Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="inline-flex max-w-full items-center rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-semibold text-secondary-ink">
+            <span className="truncate">Categoria: {cupom.categoria ?? "não classificada"}</span>
+          </span>
+        </div>
         {cupom.categoria && (
-          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">
-            <span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja
-          </p>
+          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">categoria estimada pelo nome da loja</p>
         )}
 
         <Button
