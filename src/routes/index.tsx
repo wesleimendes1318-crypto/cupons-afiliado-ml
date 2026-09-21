@@ -222,6 +222,7 @@ function Index() {
   const [erroIa, setErroIa] = useState("");
   const [recomendando, setRecomendando] = useState(false);
   const [classificando, setClassificando] = useState(false);
+  const [selecionados, setSelecionados] = useState<number[]>([]);
   const [statusClassificacao, setStatusClassificacao] = useState("");
 
   useEffect(() => {
