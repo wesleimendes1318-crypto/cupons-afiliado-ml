@@ -496,7 +496,7 @@ function Index() {
     const planilha = XLSX.utils.json_to_sheet(linhas);
     linhas.forEach((linha, indice) => {
       const celula = planilha[XLSX.utils.encode_cell({ r: indice + 1, c: 2 })];
-      if (celula) celula.l = { Target: linha["Perfil da loja (seu link de afiliado)"], Tooltip: "Abrir o perfil da loja com seu link de afiliado" };
+      if (celula) celula.l = { Target: linha["Link da loja (seu link de afiliado)"], Tooltip: "Abrir a página da loja com seu link de afiliado" };
     });
     planilha["!cols"] = [
       { wch: 16 },
