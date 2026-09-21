@@ -351,6 +351,8 @@ function Index() {
   const [categorias, setCategorias] = useState<string[]>([]);
   const [lojas, setLojas] = useState<string[]>([]);
   const [faixas, setFaixas] = useState<FaixaEconomia[]>([]);
+  const [etiquetas, setEtiquetas] = useState<EtiquetaId[]>([]);
+  const [sugestao, setSugestao] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
   const [agora, setAgora] = useState<number | null>(null);
