@@ -1010,6 +1010,23 @@ function Index() {
             </div>
           </div>
 
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-secondary-ink">Atalhos rápidos</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ETIQUETAS.filter((etiqueta) => (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 || etiquetas.includes(etiqueta.id)).map((etiqueta) => (
+                <button
+                  key={etiqueta.id}
+                  type="button"
+                  aria-pressed={etiquetas.includes(etiqueta.id)}
+                  onClick={() => alternarEtiqueta(etiqueta.id)}
+                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", etiquetas.includes(etiqueta.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
+                >
+                  {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-secondary-ink" aria-live="polite">
               {isLoading
