@@ -100,7 +100,7 @@ function contagemRegressiva(vence: string | null, agora: number | null) {
   const horasRestantes = minutosRestantes / 60;
   if (horasRestantes > 48) {
     const dias = Math.ceil(horasRestantes / 24);
-    return { texto: `Faltam ${dias} ${dias === 1 ? "dia" : "dias"}`, urgencia: "normal" as Urgencia };
+    return { texto: dias === 1 ? "Falta 1 dia" : `Faltam ${dias} dias`, urgencia: "normal" as Urgencia };
   }
   if (horasRestantes >= 24) {
     return { texto: `Faltam ${Math.ceil(horasRestantes)} horas`, urgencia: "atencao" as Urgencia };
