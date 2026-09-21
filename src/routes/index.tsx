@@ -918,7 +918,7 @@ function Index() {
           <div className="mt-5">
             <p className="text-xs font-semibold text-secondary-ink">Faixa de economia real</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {FAIXAS.map((faixa) => (
+              {FAIXAS.filter((faixa) => (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id)).map((faixa) => (
                 <button
                   key={faixa.id}
                   type="button"
