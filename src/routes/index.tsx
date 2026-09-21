@@ -715,7 +715,11 @@ function Index() {
         </section>
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo dos cupons">
-          <Indicador titulo="Cupons" valor={indicadores.total.toLocaleString("pt-BR")} />
+          <Indicador
+            titulo="Cupons"
+            valor={indicadores.total.toLocaleString("pt-BR")}
+            detalhe={`${indicadores.analisados.toLocaleString("pt-BR")} analisados${indicadores.repetidos > 0 ? ` · ${indicadores.repetidos.toLocaleString("pt-BR")} repetidos removidos` : ""}`}
+          />
           <Indicador titulo="Vendedores" valor={indicadores.vendedores.toLocaleString("pt-BR")} />
           <Indicador titulo="Vale a pena" valor={indicadores.bons.toLocaleString("pt-BR")} tom="bom" />
           <Indicador
