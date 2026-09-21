@@ -696,7 +696,7 @@ function Index() {
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
               {armadilhasDaBusca.map((cupom, indice) => (
-                <span key={cupom.id}>{indice > 0 ? " · " : ""}{cupom.vendedor}: este cupom desconta no máximo {formatarMoeda(cupom.teto)}. Não recomendo usar como argumento de venda.</span>
+                <span key={cupom.id}>{indice > 0 ? " · " : ""}{cupom.vendedor}: este cupom desconta no máximo {formatarTeto(cupom)}. Não recomendo usar como argumento de venda.</span>
               ))}
             </div>
           )}
@@ -906,7 +906,7 @@ function ComparadorModal({
                     )}
                   </td>
                   <td className="py-2 pr-3">{cupom.desconto ?? "Não informado"}</td>
-                  <td className="py-2 pr-3 font-semibold text-success">{formatarMoeda(cupom.teto)}</td>
+                  <td className="py-2 pr-3 font-semibold text-success">{formatarTeto(cupom)}</td>
                   <td className="py-2 pr-3">{formatarMoeda(cupom.compra_min)}</td>
                   <td className="py-2">{cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "Sem data"}</td>
                 </tr>
@@ -969,8 +969,8 @@ function CupomCard({
   const encerrado = contagem.urgencia === "encerrado";
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const rotuloQualidade = armadilha
-    ? `CUIDADO · desconto para em ${formatarMoeda(cupom.teto)}`
-    : `VALE A PENA · até ${formatarMoeda(cupom.teto)}`;
+    ? `CUIDADO · desconto para em ${formatarTeto(cupom)}`
+    : `VALE A PENA · até ${formatarTeto(cupom)}`;
 
   return (
     <article
@@ -1014,7 +1014,7 @@ function CupomCard({
 
       <div className="my-5 grid grid-cols-[minmax(0,1fr)_minmax(150px,190px)] items-center gap-4">
         <div>
-          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarMoeda(cupom.teto)}</p>
+          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarTeto(cupom)}</p>
           {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
           <p className="mt-3 text-lg font-bold text-secondary-ink">{cupom.desconto ?? "—"}</p>
         </div>
