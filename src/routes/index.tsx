@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { WHATSAPP } from "@/config";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -52,15 +53,12 @@ type Cupom = {
 };
 
 type CupomIndexado = Cupom & { chave: string; dias: number | null };
+type Ordem = "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
+type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
 
 const PAGE_SIZE = 50;
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const dataExtensa = new Intl.DateTimeFormat("pt-BR", {
-  day: "numeric",
-  month: "long",
-  timeZone: "UTC",
-});
 
 function normalizar(texto: string) {
   return texto
@@ -74,6 +72,35 @@ function dataDoBanco(data: string) {
   return new Date(`${data}T00:00:00Z`);
 }
 
+function fimDoDiaEmSaoPaulo(data: string) {
+  return new Date(`${data}T23:59:59.999-03:00`).getTime();
+}
+
+function contagemRegressiva(vence: string | null, agora: number | null) {
+  if (!vence) return { texto: "Validade não informada", urgencia: "sem-data" as Urgencia };
+  if (agora == null) return { texto: "Calculando validade...", urgencia: "normal" as Urgencia };
+
+  const minutosRestantes = Math.ceil((fimDoDiaEmSaoPaulo(vence) - agora) / 60_000);
+  if (minutosRestantes <= 0) return { texto: "Encerrado", urgencia: "encerrado" as Urgencia };
+
+  const horasRestantes = minutosRestantes / 60;
+  if (horasRestantes > 48) {
+    const dias = Math.ceil(horasRestantes / 24);
+    return { texto: `Faltam ${dias} ${dias === 1 ? "dia" : "dias"}`, urgencia: "normal" as Urgencia };
+  }
+  if (horasRestantes >= 24) {
+    return { texto: `Faltam ${Math.ceil(horasRestantes)} horas`, urgencia: "atencao" as Urgencia };
+  }
+
+  const horas = Math.floor(minutosRestantes / 60);
+  const minutos = minutosRestantes % 60;
+  const texto = `Faltam ${horas}h ${minutos}min`;
+  return {
+    texto: horasRestantes < 6 ? `ÚLTIMAS HORAS · ${texto}` : texto,
+    urgencia: horasRestantes < 6 ? ("ultimas" as Urgencia) : ("urgente" as Urgencia),
+  };
+}
+
 function diasAte(data: string | null) {
   if (!data) return null;
   const hoje = new Date();
@@ -83,6 +110,11 @@ function diasAte(data: string | null) {
 
 function formatarMoeda(valor: number | null) {
   return valor == null ? "Não informado" : brl.format(valor);
+}
+
+function linkWhatsApp(cupom: Cupom) {
+  const mensagem = `Oi! Vi no site o cupom de ${cupom.desconto ?? "desconto não informado"} da loja ${cupom.vendedor} (até ${formatarMoeda(cupom.teto)} de desconto, compra mínima ${formatarMoeda(cupom.compra_min)}). Quero aproveitar, me manda o link?`;
+  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
 function descontoRealEm200(cupom: Cupom) {
@@ -126,16 +158,21 @@ function Index() {
   const [orcamentoMin, setOrcamentoMin] = useState("");
   const [tetoMin, setTetoMin] = useState("");
   const [compraMax, setCompraMax] = useState("");
-  const [ordem, setOrdem] = useState<"desconto" | "teto" | "orcamento" | "vence" | "vendedor">(
-    "desconto",
-  );
+  const [ordem, setOrdem] = useState<Ordem>("desconto");
   const [pagina, setPagina] = useState(1);
   const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
+  const [agora, setAgora] = useState<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setTermo(texto), 150);
     return () => clearTimeout(t);
   }, [texto]);
+
+  useEffect(() => {
+    setAgora(Date.now());
+    const intervalo = window.setInterval(() => setAgora(Date.now()), 60_000);
+    return () => window.clearInterval(intervalo);
+  }, []);
 
   useEffect(() => {
     setPagina(1);
@@ -182,15 +219,20 @@ function Index() {
           return (b.teto ?? 0) - (a.teto ?? 0);
         case "orcamento":
           return (b.orcamento ?? 0) - (a.orcamento ?? 0);
-        case "vence":
-          return (a.dias ?? 99999) - (b.dias ?? 99999);
+        case "termina": {
+          const fimA = a.vence ? fimDoDiaEmSaoPaulo(a.vence) : Number.POSITIVE_INFINITY;
+          const fimB = b.vence ? fimDoDiaEmSaoPaulo(b.vence) : Number.POSITIVE_INFINITY;
+          const ordemA = agora != null && fimA <= agora ? Number.POSITIVE_INFINITY : fimA;
+          const ordemB = agora != null && fimB <= agora ? Number.POSITIVE_INFINITY : fimB;
+          return ordemA - ordemB;
+        }
         case "vendedor":
           return a.vendedor.localeCompare(b.vendedor, "pt-BR");
         default:
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, qualidade, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem]);
+  }, [indexado, termos, qualidade, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora]);
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -258,6 +300,9 @@ function Index() {
               <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
                 Percentual alto não garante desconto alto. Confira o teto antes de comprar.
               </p>
+              <p className="mt-2 max-w-2xl text-sm font-semibold sm:text-base">
+                Fale comigo e eu envio o link com o cupom já aplicado.
+              </p>
               <p className="mt-2 text-xs text-secondary-ink">
                 {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
               </p>
@@ -291,7 +336,10 @@ function Index() {
                 variant="ghost"
                 role="tab"
                 aria-selected={qualidade === valor}
-                onClick={() => setQualidade(valor)}
+                onClick={() => {
+                  setQualidade(valor);
+                  if (valor === "bom") setOrdem("termina");
+                }}
                 className={cn(
                   "h-11 rounded-none border-b-2 px-3 sm:px-5",
                   qualidade === valor
@@ -349,7 +397,7 @@ function Index() {
                 <option value="desconto">Maior desconto</option>
                 <option value="teto">Maior teto de desconto</option>
                 <option value="orcamento">Maior orçamento</option>
-                <option value="vence">Vence antes</option>
+                 <option value="termina">Termina primeiro</option>
                 <option value="vendedor">Vendedor A-Z</option>
               </select>
             </Campo>
@@ -390,7 +438,7 @@ function Index() {
             <>
               <div className="grid items-stretch gap-4 md:grid-cols-2">
                 {visiveis.map((cupom) => (
-                  <CupomCard key={cupom.id} cupom={cupom} abrirCondicoes={setCupomAberto} />
+                  <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} />
                 ))}
               </div>
 
@@ -433,12 +481,17 @@ function Index() {
 
 function CupomCard({
   cupom,
+  agora,
   abrirCondicoes,
 }: {
   cupom: CupomIndexado;
+  agora: number | null;
   abrirCondicoes: (cupom: CupomIndexado) => void;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
+  const contagem = contagemRegressiva(cupom.vence, agora);
+  const encerrado = contagem.urgencia === "encerrado";
+  const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const rotuloQualidade = armadilha
     ? `CUIDADO · desconto para em ${formatarMoeda(cupom.teto)}`
     : `VALE A PENA · até ${formatarMoeda(cupom.teto)}`;
@@ -446,14 +499,23 @@ function CupomCard({
   return (
     <article
       className={cn(
-        "flex min-h-56 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-card",
+        "flex min-h-56 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
         armadilha ? "border-danger" : "border-border",
+        urgente && "border-t-4 border-t-urgency-danger",
+        encerrado && "grayscale opacity-55 hover:translate-y-0 hover:shadow-none",
       )}
     >
       <div className="flex min-h-10 items-start justify-between gap-3">
-        <p className="flex items-center gap-1.5 pt-1 text-xs text-secondary-ink">
+        <p
+          title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
+          className={cn(
+            "flex items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-secondary-ink",
+            contagem.urgencia === "atencao" && "font-semibold text-urgency-warning",
+            urgente && "animate-urgency-pulse bg-urgency-soft font-bold text-urgency-danger",
+          )}
+        >
           <Clock3 className="size-4 shrink-0" aria-hidden="true" />
-          {cupom.vence ? `Vence em ${dataExtensa.format(dataDoBanco(cupom.vence))}` : "Validade não informada"}
+          {contagem.texto}
         </p>
         <span
           className={cn(
@@ -470,28 +532,36 @@ function CupomCard({
         <div className="min-w-0 border-l border-border pl-5">
           <p className="text-sm text-secondary-ink">Em produtos de</p>
           <p className="mt-0.5 break-words font-semibold">{cupom.vendedor}</p>
-          <a
-            href={`https://www.mercadolivre.com.br/perfil/${encodeURIComponent(cupom.vendedor)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm font-semibold text-ml-blue hover:underline"
+          <Button
+            asChild
+            className={cn(
+              "mt-3 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center text-xs font-bold",
+              armadilha
+                ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+                : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+            )}
           >
-            Ver produtos
-          </a>
+            <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+              {armadilha ? "VER MESMO ASSIM" : "QUERO ESTE CUPOM"}
+            </a>
+          </Button>
         </div>
       </div>
 
-      <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-3 text-xs text-secondary-ink">
-        <Button
-          variant="link"
-          className="h-auto p-0 text-xs font-medium text-secondary-ink"
-          onClick={() => abrirCondicoes(cupom)}
-          aria-label={`Abrir condições do cupom ${cupom.desconto ?? cupom.id}`}
-        >
-          Condições do cupom <Info className="size-3.5" aria-hidden="true" />
-        </Button>
-        <span aria-hidden="true">|</span>
-        <span>Orçamento restante: {formatarMoeda(cupom.orcamento)}</span>
+      <div className="mt-auto border-t border-border pt-3 text-xs text-secondary-ink">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Button
+            variant="link"
+            className="h-auto p-0 text-xs font-medium text-secondary-ink"
+            onClick={() => abrirCondicoes(cupom)}
+            aria-label={`Abrir condições do cupom ${cupom.desconto ?? cupom.id}`}
+          >
+            Condições do cupom <Info className="size-3.5" aria-hidden="true" />
+          </Button>
+          <span aria-hidden="true">|</span>
+          <span>Orçamento restante: {formatarMoeda(cupom.orcamento)}</span>
+        </div>
+        <p className="mt-2 text-[11px]">O link de compra é enviado por WhatsApp</p>
       </div>
     </article>
   );
@@ -520,6 +590,20 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               destaque
             />
           </div>
+          <Button
+            asChild
+            size="lg"
+            className={cn(
+              "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
+              cupom.qualidade === "armadilha"
+                ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+                : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+            )}
+          >
+            <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+              {cupom.qualidade === "armadilha" ? "VER MESMO ASSIM" : "QUERO ESTE CUPOM"}
+            </a>
+          </Button>
           <p className="text-sm leading-6 text-secondary-ink">{texto}</p>
           <GeradorTexto cupom={cupom} />
         </div>
