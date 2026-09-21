@@ -181,7 +181,7 @@ function formatarTeto(cupom: CupomLimite) {
 
 /** Frase curta de economia, usada na curadoria e nos destaques. */
 function economiaCurta(cupom: Cupom) {
-  if (semLimite(cupom)) return "Desconto sem teto";
+  if (semLimite(cupom)) return "Desconto sem limite de valor";
   const teto = tetoUtil(cupom);
   return teto == null ? "Limite não informado" : `Economize até ${brl.format(teto)}`;
 }
@@ -1287,7 +1287,7 @@ function CupomCard({
   const em200 = descontoRealEm200(cupom);
   const compraTeto = compraParaAtingirTeto(cupom);
   const rotuloQualidade = ilimitado
-    ? "Sem teto de desconto"
+    ? "Sem limite de valor"
     : teto == null
       ? "Limite não informado"
       : armadilha
