@@ -193,10 +193,10 @@ function descricaoCupom(cupom: Cupom) {
 
 
 
-/** Perfil da loja no Mercado Livre com o identificador de afiliado do dono do site. */
+/** Página da loja no Mercado Livre com o identificador de afiliado do dono do site. */
 function linkAfiliadoLoja(vendedor: string) {
-  const perfil = `https://www.mercadolivre.com.br/perfil/${encodeURIComponent(vendedor.trim())}`;
-  return `${perfil}?matt_tool=cupons-afiliado-ml&matt_word=${encodeURIComponent(AFILIADO)}`;
+  const loja = `https://lista.mercadolivre.com.br/pagina/${encodeURIComponent(vendedor.trim())}/`;
+  return `${loja}?matt_tool=cupons-afiliado-ml&matt_word=${encodeURIComponent(AFILIADO)}`;
 }
 
 /** Lê a resposta do servidor sem quebrar quando ela não vem em JSON (tempo limite, página de erro). */
