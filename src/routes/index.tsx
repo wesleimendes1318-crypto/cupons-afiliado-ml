@@ -1111,22 +1111,24 @@ function CupomCard({
       <div className="my-5 min-w-0">
         {ilimitado ? (
           <>
-            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">{cupom.desconto ?? "Desconto"} sem limite prático</p>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">{percentualTexto(cupom)} sem teto</p>
             <p className="mt-1 text-sm text-secondary-ink">
-              o desconto é o percentual cheio sobre a compra{em200 > 0 ? ` — numa compra de R$ 200, economia de ${brl.format(em200)}` : ""}
+              o desconto é o percentual cheio sobre a compra
+              {em200 > 0 ? `: numa compra de R$ 200, a economia é de ${brl.format(em200)}` : ""}
             </p>
           </>
         ) : teto != null ? (
           <>
             <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
-            <p className="mt-1 text-sm text-secondary-ink">{cupom.desconto ?? "Desconto"} até esse limite</p>
+            <p className="mt-1 text-sm text-secondary-ink">{percentualTexto(cupom)} até esse limite</p>
           </>
         ) : (
-          <p className="text-base font-semibold leading-tight text-secondary-ink">{cupom.desconto ?? "Desconto"} · limite não informado</p>
+          <p className="text-base font-semibold leading-tight text-secondary-ink">{percentualTexto(cupom)}, com limite não informado</p>
         )}
         {cupom.compra_min != null && (
           <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>
         )}
+
 
 
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
