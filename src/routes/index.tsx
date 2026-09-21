@@ -1193,6 +1193,12 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
           <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
             <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
             <ResumoModal rotulo="Teto de desconto" valor={formatarTeto(cupom)} destaque />
+            {compraParaTeto != null && (
+              <ResumoModal
+                rotulo="Compra necessária para atingir o teto"
+                valor={brl.format(compraParaTeto)}
+              />
+            )}
             <ResumoModal
               rotulo="Desconto real se a compra for de R$ 200"
               valor={formatarMoeda(descontoRealEm200(cupom))}
