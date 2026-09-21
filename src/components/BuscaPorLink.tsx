@@ -55,6 +55,42 @@ type Fase = "parado" | "limpando" | "procurando" | "gerando" | "pronto" | "offli
 const brl = (n: number | null | undefined) =>
   n == null ? null : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+/* O cupom chega com o titulo que o proprio Mercado Livre escreve: "15% OFF"
+   ou "R$ 30 OFF". Lendo esse titulo eu consigo dizer quanto o desconto vale
+   exatamente na compra minima. Se o titulo nao disser nem percentual nem
+   valor, o site mostra so o quanto falta e nao inventa numero nenhum. */
+const numeroBR = (bruto: string) => {
+  const n = Number(bruto.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
+
+function descontoNaCompraMinima(
+  titulo: string | null | undefined,
+  minimo: number,
+  teto: number | null,
+) {
+  if (!titulo) return null;
+  let desconto: number | null = null;
+
+  const emPorcento = /(\d{1,3}(?:[.,]\d{1,2})?)\s*%/.exec(titulo);
+  if (emPorcento?.[1]) {
+    const pct = numeroBR(emPorcento[1]);
+    if (pct == null || pct <= 0 || pct > 100) return null;
+    desconto = (minimo * pct) / 100;
+  } else {
+    const emReais = /R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)/.exec(titulo);
+    if (!emReais?.[1]) return null;
+    const valor = numeroBR(emReais[1]);
+    if (valor == null || valor <= 0) return null;
+    desconto = valor;
+  }
+
+  if (teto != null) desconto = Math.min(desconto, teto);
+  // Um desconto maior que a propria compra minima seria leitura errada do titulo.
+  if (desconto <= 0 || desconto > minimo) return null;
+  return desconto;
+}
+
 const dataBR = (iso: string | null | undefined) => {
   if (!iso) return null;
   const p = String(iso).slice(0, 10).split("-");
@@ -316,10 +352,41 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
   }
 
   if (c.bloqueado && c.minimo != null) {
+    const preco = analise?.preco ?? null;
+    const falta = preco != null && c.minimo > preco ? c.minimo - preco : null;
+
+    // Desconto exato na compra minima, respeitando o teto do cupom.
+    const descontoNoMinimo = descontoNaCompraMinima(c.titulo, c.minimo, c.teto);
+    const pagariaNoMinimo =
+      descontoNoMinimo != null ? c.minimo - descontoNoMinimo : null;
+
     return (
-      <div className="mt-3 rounded-md border border-danger bg-danger-soft p-3 text-sm leading-relaxed text-danger">
-        Essa loja tem cupom de {c.titulo}, mas ele só vale acima de {brl(c.minimo)}. Neste valor não
-        entra.
+      <div className="mt-3 rounded-md border border-urgency-warning bg-urgency-soft p-3">
+        <p className="text-sm font-bold text-urgency-warning">Falta pouco para o cupom valer</p>
+        <p className="mt-1 text-sm leading-relaxed">
+          O cupom de {c.titulo} desta loja só entra a partir de {brl(c.minimo)}
+          {preco != null ? `, e este produto está ${brl(preco)}` : ""}.
+        </p>
+
+        {falta != null && (
+          <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
+            Adicione mais {brl(falta)} para garantir o cupom e o desconto.
+          </p>
+        )}
+
+        {descontoNoMinimo != null && pagariaNoMinimo != null && (
+          <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+            Chegando em {brl(c.minimo)}, o desconto é de {brl(descontoNoMinimo)} e você paga{" "}
+            {brl(pagariaNoMinimo)} levando mais produto. Pode somar outros itens da mesma loja para
+            fechar esse valor.
+          </p>
+        )}
+
+        {descontoNoMinimo == null && (
+          <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+            Pode somar outros itens da mesma loja até chegar em {brl(c.minimo)} e o cupom entra.
+          </p>
+        )}
       </div>
     );
   }
