@@ -485,7 +485,7 @@ function Index() {
     const linhas = filtrados.map((cupom) => ({
       Desconto: cupom.desconto ?? "",
       Vendedor: cupom.vendedor,
-      "Perfil da loja (seu link de afiliado)": linkAfiliadoLoja(cupom.vendedor),
+      "Link da loja (seu link de afiliado)": linkAfiliadoLoja(cupom.vendedor),
       "Compra mínima": cupom.compra_min ?? "",
       "Teto de desconto": tetoReal(cupom) ?? "",
       Qualidade: cupom.qualidade ?? "",
