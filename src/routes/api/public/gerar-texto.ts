@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { excedeuLimite, json, origemPermitida, respostaOptions, textoGemini } from "@/lib/public-ai-api";
+import { chamarIa, excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 const entradaSchema = z.object({
   vendedor: z.string().trim().min(1).max(160),
@@ -45,11 +45,6 @@ export const Route = createFileRoute("/api/public/gerar-texto")({
           });
         }
 
-        const apiKey = process.env['GEMINI_API_KEY'];
-        if (!apiKey) {
-          return json(request, { erro: "O gerador ainda não foi configurado pelo responsável do site." }, 503);
-        }
-
         const teto = entrada.teto == null ? "não informado" : moeda(entrada.teto);
         const compraMinima = entrada.compra_min == null ? "não informada" : moeda(entrada.compra_min);
         const prompt = `Escreva uma mensagem curta de venda em português do Brasil para ${entrada.canal}.
@@ -60,29 +55,11 @@ Teto máximo de desconto: ${teto}.
 Compra mínima: ${compraMinima}.
 REGRA CRÍTICA: informe o benefício REAL, nunca destaque o percentual isoladamente e nunca prometa desconto maior que o teto. Se houver teto, diga claramente o limite, como “20% OFF com desconto de até R$ 100”. Informe a compra mínima quando existir. Não invente características de produtos, estoque, frete ou prazo de entrega. Entregue somente a mensagem final.`;
 
-        try {
-          const resposta = await fetch(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
-              body: JSON.stringify({
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: { maxOutputTokens: 180, temperature: 0.5 },
-              }),
-            },
-          );
-          if (!resposta.ok) {
-            return json(request, { erro: "Não foi possível gerar o texto agora. Tente novamente em instantes." }, 502);
-          }
-          const texto = textoGemini(await resposta.json());
-          if (!texto) {
-            return json(request, { erro: "O gerador não retornou um texto. Tente novamente." }, 502);
-          }
-          return json(request, { texto, aviso: false });
-        } catch {
-          return json(request, { erro: "Não foi possível gerar o texto agora. Tente novamente em instantes." }, 502);
+        const resultado = await chamarIa(prompt, { esforco: "low" });
+        if (!resultado.ok) {
+          return json(request, { erro: resultado.erro }, resultado.status);
         }
+        return json(request, { texto: resultado.texto, aviso: false });
       },
     },
   },
