@@ -427,10 +427,27 @@ function Index() {
   const categoriasDisponiveis = useMemo(() => {
     const contagens = new Map<string, number>();
     indexado.forEach((cupom) => {
-      if (cupom.categoria) contagens.set(cupom.categoria, (contagens.get(cupom.categoria) ?? 0) + 1);
+      const nome = cupom.categoria ?? SEM_CATEGORIA;
+      contagens.set(nome, (contagens.get(nome) ?? 0) + 1);
     });
+    return [...contagens.entries()].sort(([a], [b]) => {
+      if (a === SEM_CATEGORIA) return 1;
+      if (b === SEM_CATEGORIA) return -1;
+      return a.localeCompare(b, "pt-BR");
+    });
+  }, [indexado]);
+
+  const lojasDisponiveis = useMemo(() => {
+    const contagens = new Map<string, number>();
+    indexado.forEach((cupom) => contagens.set(cupom.vendedor, (contagens.get(cupom.vendedor) ?? 0) + 1));
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
+
+  const lojasFiltradas = useMemo(() => {
+    const busca = normalizar(texto);
+    const lista = busca ? lojasDisponiveis.filter(([nome]) => normalizar(nome).includes(busca)) : lojasDisponiveis;
+    return lista.slice(0, 80);
+  }, [lojasDisponiveis, texto]);
   const contagensFaixa = useMemo(
     () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
     [indexado],
