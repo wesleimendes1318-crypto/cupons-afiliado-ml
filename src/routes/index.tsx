@@ -1295,7 +1295,7 @@ function ComparadorModal({
           </div>
         )}
 
-        {cuponsEscolhidos.length > 0 ? (
+        {cuponsEscolhidos[0] ? (
           <Button asChild className="h-auto min-h-12 w-full bg-whatsapp py-3 text-base font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
             <a
               href={cuponsEscolhidos.length === 1 ? linkWhatsApp(cuponsEscolhidos[0]) : linkWhatsAppLista(cuponsEscolhidos)}
