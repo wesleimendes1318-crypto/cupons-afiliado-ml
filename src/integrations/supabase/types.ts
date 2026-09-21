@@ -14,12 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      contatos: {
+        Row: {
+          ativo: boolean
+          canal: string
+          valor: string
+        }
+        Insert: {
+          ativo?: boolean
+          canal: string
+          valor: string
+        }
+        Update: {
+          ativo?: boolean
+          canal?: string
+          valor?: string
+        }
+        Relationships: []
+      }
       cupons: {
         Row: {
           busca: string | null
           categoria: string | null
           codigo_cupom: string | null
           codigo_em: string | null
+          codigo_pedido_em: string | null
+          codigo_tentativas: number
           compra_min: number | null
           created_at: string
           desconto: string | null
@@ -45,6 +65,8 @@ export type Database = {
           categoria?: string | null
           codigo_cupom?: string | null
           codigo_em?: string | null
+          codigo_pedido_em?: string | null
+          codigo_tentativas?: number
           compra_min?: number | null
           created_at?: string
           desconto?: string | null
@@ -70,6 +92,8 @@ export type Database = {
           categoria?: string | null
           codigo_cupom?: string | null
           codigo_em?: string | null
+          codigo_pedido_em?: string | null
+          codigo_tentativas?: number
           compra_min?: number | null
           created_at?: string
           desconto?: string | null
@@ -222,6 +246,8 @@ export type Database = {
           vendedor: string
         }[]
       }
+      consultar_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
+      pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
       sincronizar_cupons: {
         Args: { p_completo?: boolean; p_cupons: Json; p_token: string }
