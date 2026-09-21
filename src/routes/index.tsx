@@ -564,19 +564,26 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
   }
 
   async function copiar() {
+    const copiarModoCompativel = () => {
+      const campo = document.createElement("textarea");
+      campo.value = resultado;
+      campo.style.position = "fixed";
+      campo.style.opacity = "0";
+      document.body.appendChild(campo);
+      campo.select();
+      const copiou = document.execCommand("copy");
+      campo.remove();
+      return copiou;
+    };
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(resultado);
+        try {
+          await navigator.clipboard.writeText(resultado);
+        } catch {
+          if (!copiarModoCompativel()) throw new Error("Falha ao copiar");
+        }
       } else {
-        const campo = document.createElement("textarea");
-        campo.value = resultado;
-        campo.style.position = "fixed";
-        campo.style.opacity = "0";
-        document.body.appendChild(campo);
-        campo.select();
-        const copiou = document.execCommand("copy");
-        campo.remove();
-        if (!copiou) throw new Error("Falha ao copiar");
+        if (!copiarModoCompativel()) throw new Error("Falha ao copiar");
       }
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2_000);
