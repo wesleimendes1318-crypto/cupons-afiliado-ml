@@ -91,59 +91,89 @@ function esquemaGemini(valor: unknown): unknown {
   return valor;
 }
 
-/**
- * Chama o Gemini com a chave GEMINI_API_KEY, que fica somente no servidor
- * (Cloud → Secrets) e nunca chega ao navegador.
- * `formato` deve ser um JSON Schema estrito quando se espera JSON.
- */
-export async function chamarIa(
-  prompt: string,
-  opcoes?: { formato?: { nome: string; schema: object }; esforco?: "low" | "medium" | "high" },
-): Promise<ResultadoIa> {
+type Opcoes = { formato?: { nome: string; schema: object }; esforco?: "low" | "medium" | "high" };
+
+/** Tenta o Gemini com a chave GEMINI_API_KEY (somente no servidor, nunca no navegador). */
+async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
   const apiKey = process.env['GEMINI_API_KEY'];
-  if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está configurado. Avise o responsável pelo site." };
+  if (!apiKey) return { ok: false, status: 503, erro: "Serviço de IA sem chave própria." };
 
   const corpo: Record<string, unknown> = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.2,
-      // Sem "pensamento" nas tarefas simples: a resposta sai em poucos segundos,
-      // evitando o tempo limite do servidor.
-      ...(opcoes?.esforco === "high" ? {} : { thinkingConfig: { thinkingBudget: 0 } }),
       ...(opcoes?.formato
         ? { responseMimeType: "application/json", responseSchema: esquemaGemini(opcoes.formato.schema) }
         : {}),
     },
   };
 
-  let ultimoStatus = 502;
-  for (let tentativa = 0; tentativa < 3; tentativa += 1) {
-    let resposta: Response;
-    try {
-      resposta = await fetch(GEMINI_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
-        body: JSON.stringify(corpo),
-      });
-    } catch {
-      ultimoStatus = 502;
-      if (tentativa === 2) break;
-      await new Promise((resolver) => setTimeout(resolver, 600 * (tentativa + 1)));
-      continue;
-    }
-
-    if (resposta.ok) {
-      const texto = textoGemini(await resposta.json());
-      if (!texto) return { ok: false, status: 502, erro: "A IA não retornou uma resposta. Tente novamente." };
-      return { ok: true, texto };
-    }
-
-    ultimoStatus = resposta.status;
-    const recuperavel = resposta.status === 429 || resposta.status >= 500;
-    if (!recuperavel || tentativa === 2) {
-      return { ok: false, status: resposta.status === 429 ? 429 : 502, erro: erroPorStatus(resposta.status) };
-    }
-    await new Promise((resolver) => setTimeout(resolver, 800 * (tentativa + 1)));
+  try {
+    const resposta = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
+      body: JSON.stringify(corpo),
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!resposta.ok) return { ok: false, status: resposta.status, erro: erroPorStatus(resposta.status) };
+    const texto = textoGemini(await resposta.json());
+    if (!texto) return { ok: false, status: 502, erro: erroPorStatus(502) };
+    return { ok: true, texto };
+  } catch {
+    return { ok: false, status: 502, erro: erroPorStatus(502) };
   }
-  return { ok: false, status: ultimoStatus === 429 ? 429 : 502, erro: erroPorStatus(ultimoStatus) };
+}
+
+/** Alternativa gerenciada pela plataforma, usada quando a chave própria falha ou está sem cota. */
+async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
+  const apiKey = process.env['LOVABLE_API_KEY'];
+  if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está configurado. Avise o responsável pelo site." };
+
+  const corpo: Record<string, unknown> = {
+    model: "google/gemini-3-flash",
+    messages: [{ role: "user", content: prompt }],
+    ...(opcoes?.formato
+      ? {
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: opcoes.formato.nome, strict: true, schema: opcoes.formato.schema },
+          },
+        }
+      : {}),
+  };
+
+  for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+    try {
+      const resposta = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(corpo),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (resposta.ok) {
+        const dados = (await resposta.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const texto = dados.choices?.[0]?.message?.content?.trim() ?? "";
+        if (texto) return { ok: true, texto };
+        return { ok: false, status: 502, erro: erroPorStatus(502) };
+      }
+      if (resposta.status !== 429 && resposta.status < 500) {
+        return { ok: false, status: 502, erro: erroPorStatus(resposta.status) };
+      }
+    } catch {
+      // tenta de novo
+    }
+    if (tentativa === 0) await new Promise((resolver) => setTimeout(resolver, 700));
+  }
+  return { ok: false, status: 502, erro: erroPorStatus(502) };
+}
+
+/**
+ * Chama a IA: primeiro com a chave própria do Gemini e, se ela falhar ou
+ * estiver sem cota, com o serviço de IA da plataforma.
+ * `formato` deve ser um JSON Schema estrito quando se espera JSON.
+ */
+export async function chamarIa(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
+  const proprio = await chamarGemini(prompt, opcoes);
+  if (proprio.ok) return proprio;
+  return chamarGateway(prompt, opcoes);
 }
