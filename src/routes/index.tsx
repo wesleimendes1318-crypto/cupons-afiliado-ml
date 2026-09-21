@@ -625,7 +625,13 @@ function Index() {
       });
       const dados = (await lerJson(resposta)) as Partial<Comparacao> & { erro?: string };
       if (!resposta.ok || typeof dados.veredito !== "string") throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
-      setComparacao({ vencedor_id: dados.vencedor_id ?? null, veredito: dados.veredito, observacoes: dados.observacoes ?? [] });
+      setComparacao({
+        vencedor_id: dados.vencedor_id ?? null,
+        veredito: dados.veredito,
+        observacoes: dados.observacoes ?? [],
+        chamada: dados.chamada ?? "",
+        urgencia: dados.urgencia ?? null,
+      });
     } catch (motivo) {
       setErroComparacao(motivo instanceof Error ? motivo.message : "Não foi possível comparar os cupons.");
     } finally {
