@@ -166,7 +166,7 @@ export default function BuscaPorLink() {
   const carregando = fase === "limpando" || fase === "procurando" || fase === "gerando";
 
   return (
-    <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5">
+    <section className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
       <div className="mb-1 flex items-center gap-2">
         <span aria-hidden="true" className="text-lg">🔗</span>
         <h2 className="font-semibold">Já sabe o produto? Cole o link</h2>
