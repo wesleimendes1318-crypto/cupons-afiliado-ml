@@ -135,9 +135,38 @@ function formatarMoeda(valor: number | null) {
   return valor == null ? "Não informado" : brl.format(valor);
 }
 
-function linkWhatsApp(cupom: Cupom) {
-  const mensagem = `Oi! Vi no site o cupom de ${cupom.desconto ?? "desconto não informado"} da loja ${cupom.vendedor} (até ${formatarMoeda(cupom.teto)} de desconto, compra mínima ${formatarMoeda(cupom.compra_min)}). Quero aproveitar, me manda o link?`;
+function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
+}
+
+function resumoCupom(cupom: Cupom) {
+  const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
+  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarMoeda(cupom.teto)}${compra})`;
+}
+
+function linkWhatsApp(cupom: Cupom, extra?: string) {
+  const mensagem =
+    `Oi! Quero comprar na loja ${cupom.vendedor}, que está com ${resumoCupom(cupom)}.\n` +
+    `Ainda vou escolher o produto. Me manda o link para eu ver os produtos dessa loja e você confere se o cupom vale para o que eu escolher?` +
+    (extra ? `\n${extra}` : "");
+  return linkWa(mensagem);
+}
+
+function linkWhatsAppLista(cupons: Cupom[], introFinal?: string) {
+  const itens = cupons
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarMoeda(cupom.teto)}.`)
+    .join("\n");
+  const fecho = introFinal ? `\n${introFinal}` : "";
+  return linkWa(`Oi! Me interessei por estas lojas:\n${itens}\nPode me mandar os links para eu escolher os produtos?${fecho}`);
+}
+
+function IconeWhatsApp({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className ?? "size-5"}>
+      <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.48-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35Z" />
+      <path d="M12.04 2C6.6 2 2.18 6.42 2.18 11.86c0 1.74.46 3.44 1.32 4.94L2 22l5.35-1.4a9.82 9.82 0 0 0 4.69 1.19h.01c5.43 0 9.85-4.42 9.85-9.86 0-2.63-1.02-5.1-2.88-6.96A9.78 9.78 0 0 0 12.04 2Zm0 17.98h-.01a8.2 8.2 0 0 1-4.16-1.14l-.3-.18-3.1.81.83-3.02-.2-.31a8.14 8.14 0 0 1-1.25-4.34c0-4.52 3.68-8.2 8.2-8.2 2.19 0 4.25.86 5.8 2.41a8.14 8.14 0 0 1 2.4 5.8c0 4.52-3.68 8.17-8.21 8.17Z" />
+    </svg>
+  );
 }
 
 function descontoRealEm200(cupom: Cupom) {
