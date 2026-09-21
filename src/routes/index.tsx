@@ -1224,7 +1224,7 @@ function Index() {
         aria-label="Garantir meu cupom pelo WhatsApp"
         className={cn(
           "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-whatsapp font-bold text-whatsapp-foreground shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
-          cupomSelecionados.length > 0 ? "bottom-24" : "bottom-4",
+          cupomSelecionados.length > 0 ? "bottom-40" : "bottom-20",
         )}
       >
         <IconeWhatsApp className="size-7 sm:size-5" />
