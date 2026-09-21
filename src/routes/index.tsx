@@ -762,7 +762,7 @@ function Index() {
             </p>
             <div className="flex flex-wrap gap-2">
               {filtrosAtivos && <Button variant="outline" onClick={limparFiltros}><X aria-hidden="true" />Limpar filtros</Button>}
-              <Button onClick={exportarCsv} disabled={!filtrados.length} className="bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">Exportar CSV</Button>
+              <Button onClick={exportarExcel} disabled={!filtrados.length} className="bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">Exportar Excel</Button>
             </div>
           </div>
         </section>
