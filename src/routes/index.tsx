@@ -471,6 +471,23 @@ function Index() {
     };
   }, [indexado]);
 
+  /** Curadoria: o melhor cupom de cada categoria, pela pontuação de oportunidade. */
+  const destaques = useMemo(() => {
+    const melhores = new Map<string, CupomIndexado>();
+    indexado
+      .filter((cupom) => cupom.qualidade === "bom" && contagemRegressiva(cupom.vence, agora).urgencia !== "encerrado")
+      .forEach((cupom) => {
+        const categoria = cupom.categoria ?? SEM_CATEGORIA;
+        const atual = melhores.get(categoria);
+        if (!atual || (cupom.score ?? -1) > (atual.score ?? -1)) melhores.set(categoria, cupom);
+      });
+    return [...melhores.entries()]
+      .filter(([categoria]) => categoria !== SEM_CATEGORIA)
+      .sort((a, b) => (b[1].score ?? 0) - (a[1].score ?? 0))
+      .slice(0, 6);
+  }, [indexado, agora]);
+
+
   const atualizado = useMemo(() => {
     const datas = cupons
       .map((cupom) => (cupom.updated_at ? new Date(cupom.updated_at).getTime() : 0))
