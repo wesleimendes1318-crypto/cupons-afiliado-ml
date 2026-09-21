@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { excedeuLimite, json, limparJson, origemPermitida, respostaOptions, textoGemini } from "@/lib/public-ai-api";
+import { chamarIa, excedeuLimite, json, limparJson, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 const entradaSchema = z.object({
   pedido: z.string().trim().min(3).max(500),
@@ -19,6 +19,27 @@ const saidaSchema = z.object({
   mensagem: z.string().trim().min(1).max(300),
 });
 
+const formatoSaida = {
+  nome: "recomendacoes_cupons",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      escolhas: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: { id: { type: "integer" }, motivo: { type: "string" } },
+          required: ["id", "motivo"],
+        },
+      },
+      mensagem: { type: "string" },
+    },
+    required: ["escolhas", "mensagem"],
+  },
+} as const;
+
 export const Route = createFileRoute("/api/public/recomendar")({
   server: {
     handlers: {
@@ -33,23 +54,13 @@ export const Route = createFileRoute("/api/public/recomendar")({
           return json(request, { erro: "Informe o que procura para receber recomendações." }, 400);
         }
         if (!entrada.cupons.length) return json(request, { escolhas: [], mensagem: "Nenhum cupom recomendado combina com os filtros atuais." });
-        const apiKey = process.env['GEMINI_API_KEY'];
-        if (!apiKey) return json(request, { erro: "O assistente ainda não foi configurado pelo responsável do site." }, 503);
         const prompt = `Ajude uma pessoa a escolher cupons para este pedido: ${JSON.stringify(entrada.pedido)}.
 Escolha no máximo 5 opções que realmente combinem. REGRA CRÍTICA: escolha somente entre os cupons enviados; nunca invente loja, cupom, produto ou benefício. Se nenhum combinar, devolva escolhas vazias e uma frase dizendo isso.
 A categoria é somente uma estimativa baseada no nome da loja. Para cada escolha, escreva uma frase curta, direta e honesta.
-Responda somente JSON no formato {"escolhas":[{"id":123,"motivo":"frase"}],"mensagem":"resumo curto"}.
 Cupons: ${JSON.stringify(entrada.cupons)}`;
-        const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-          }),
-        });
-        if (!resposta.ok) return json(request, { erro: "Não foi possível buscar recomendações agora. Tente novamente em instantes." }, 502);
-        const texto = textoGemini(await resposta.json());
+        const resultado = await chamarIa(prompt, { formato: formatoSaida, esforco: "low" });
+        if (!resultado.ok) return json(request, { erro: resultado.erro }, resultado.status);
+        const texto = resultado.texto;
         try {
           const resultado = saidaSchema.parse(JSON.parse(limparJson(texto)));
           const idsPermitidos = new Set(entrada.cupons.map((cupom) => cupom.id));
