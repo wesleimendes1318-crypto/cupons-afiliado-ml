@@ -762,9 +762,18 @@ function Index() {
         </section>
 
         <section className="mt-4" aria-label="Cupons encontrados">
-          <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
-            Analisei 361 cupons. 49 descontam menos de R$ 20. Os 312 aqui embaixo passaram no teste.
-          </p>
+          {indicadores.total > 0 && (
+            <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
+              Analisei {indicadores.total.toLocaleString("pt-BR")}{" "}
+              {indicadores.total === 1 ? "cupom" : "cupons"}.{" "}
+              {indicadores.armadilhas === 1
+                ? "1 desconta pouco demais para valer a pena."
+                : `${indicadores.armadilhas.toLocaleString("pt-BR")} descontam pouco demais para valer a pena.`}{" "}
+              {indicadores.bons === 1
+                ? "O que passou no teste está aqui embaixo."
+                : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
+            </p>
+          )}
           {armadilhasDaBusca.length > 0 && (
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
