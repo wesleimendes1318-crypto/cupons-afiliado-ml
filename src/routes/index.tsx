@@ -1227,6 +1227,42 @@ function ComparadorModal({
           </table>
         </div>
 
+        {cupons.length > 0 && (
+          <div className="rounded-md border border-border p-3">
+            <p className="text-sm font-semibold">Quais cupons você quer?</p>
+            <p className="mt-0.5 text-xs text-secondary-ink">Marque as lojas que te interessam e fale comigo sobre elas.</p>
+            <ul className="mt-2 space-y-2">
+              {cupons.map((cupom) => {
+                const marcada = escolhidas.includes(cupom.id);
+                return (
+                  <li key={cupom.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="flex min-w-0 items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-ml-blue"
+                        checked={marcada}
+                        onChange={() => alternarEscolhida(cupom.id)}
+                      />
+                      <span className="min-w-0 break-words font-semibold">{cupom.vendedor}</span>
+                    </label>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="border-whatsapp text-whatsapp hover:bg-whatsapp/10"
+                    >
+                      <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+                        <IconeWhatsApp className="size-4" />
+                        Falar só desta
+                      </a>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {carregando && <p className="text-sm text-secondary-ink" aria-live="polite">Analisando os cupons...</p>}
 
         {!carregando && erro && (
