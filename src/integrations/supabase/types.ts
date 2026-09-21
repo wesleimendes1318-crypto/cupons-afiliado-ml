@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           busca: string | null
           categoria: string | null
+          codigo_cupom: string | null
+          codigo_em: string | null
           compra_min: number | null
           created_at: string
           desconto: string | null
@@ -41,6 +43,8 @@ export type Database = {
         Insert: {
           busca?: string | null
           categoria?: string | null
+          codigo_cupom?: string | null
+          codigo_em?: string | null
           compra_min?: number | null
           created_at?: string
           desconto?: string | null
@@ -64,6 +68,8 @@ export type Database = {
         Update: {
           busca?: string | null
           categoria?: string | null
+          codigo_cupom?: string | null
+          codigo_em?: string | null
           compra_min?: number | null
           created_at?: string
           desconto?: string | null
