@@ -1292,6 +1292,14 @@ function ComparadorModal({
                 ))}
               </ul>
             )}
+            {comparacao.urgencia && (
+              <p className="mt-2 rounded-md bg-urgency-soft px-2 py-1 text-sm font-semibold text-urgency-warning">
+                {comparacao.urgencia}
+              </p>
+            )}
+            {comparacao.chamada && (
+              <p className="mt-2 border-t border-border pt-2 text-sm font-semibold text-success">{comparacao.chamada}</p>
+            )}
           </div>
         )}
 
