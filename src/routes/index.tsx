@@ -191,7 +191,7 @@ function IconeWhatsApp({ className }: { className?: string }) {
 }
 
 function descontoRealEm200(cupom: Cupom) {
-  const teto = cupom.teto ?? Number.POSITIVE_INFINITY;
+  const teto = tetoReal(cupom) ?? Number.POSITIVE_INFINITY;
   const descontoCalculado = cupom.tipo === "%" ? 200 * ((cupom.valor ?? 0) / 100) : (cupom.valor ?? 0);
   return Math.min(descontoCalculado, teto);
 }
