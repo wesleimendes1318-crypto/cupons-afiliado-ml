@@ -708,7 +708,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="w-full bg-ml-yellow text-ml-yellow-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-4 py-6">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
             <div>
@@ -734,7 +734,7 @@ function Index() {
       </header>
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
-        <div className="mx-auto max-w-6xl px-4 py-4">
+        <div className="mx-auto max-w-[1400px] px-4 py-4">
           <ol className="grid gap-3 text-sm sm:grid-cols-3">
             {[
               { icone: Search, texto: "Você escolhe uma loja por aqui" },
@@ -755,7 +755,7 @@ function Index() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-[1400px] px-4 py-6">
         <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
@@ -816,7 +816,7 @@ function Index() {
               <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
               <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {destaques.map(([categoria, cupom]) => (
                 <div key={categoria} className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3">
                   <button
@@ -1098,7 +1098,7 @@ function Index() {
                       Falar sobre essas opções
                     </a>
                   </Button>
-                  <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
+                  <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {escolhidos.map(({ cupom, motivo }) => (
                       <div key={cupom.id} className="flex flex-col gap-2">
                         <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
@@ -1113,7 +1113,7 @@ function Index() {
           {error ? (
             <Aviso titulo="Não foi possível carregar os cupons" texto="Tente atualizar a página em alguns instantes." />
           ) : isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, indice) => (
                 <div key={indice} className="h-56 animate-pulse rounded-lg bg-muted" />
               ))}
@@ -1148,7 +1148,7 @@ function Index() {
                   </a>
                 </Button>
               </div>
-              <div className="grid items-stretch gap-4 md:grid-cols-2">
+              <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {visiveis.map((cupom) => (
                   <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
                 ))}
@@ -1182,7 +1182,7 @@ function Index() {
 
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold">
                 {cupomSelecionados.length === 1 ? "1 cupom marcado" : `${cupomSelecionados.length} cupons marcados`} de até {MAX_COMPARACAO} · economia estimada de até {formatarMoeda(economiaSomada)}
@@ -1245,7 +1245,7 @@ function Index() {
       />
 
       <footer className="mt-8 border-t border-border py-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
           <div className="text-left sm:text-right">
             <Button type="button" variant="ghost" size="sm" disabled={classificando} onClick={classificar} className="px-2 text-xs text-secondary-ink">
