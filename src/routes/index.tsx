@@ -48,6 +48,7 @@ type Cupom = {
   busca: string | null;
   compra_min: number | null;
   teto: number | null;
+  sem_teto: boolean | null;
   qualidade: string | null;
   categoria: string | null;
   updated_at: string | null;
@@ -56,15 +57,16 @@ type Cupom = {
 type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
 type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
-type FaixaEconomia = "ate50" | "50a200" | "200a1000" | "acima1000";
+type FaixaEconomia = "semlimite" | "ate50" | "50a200" | "200a1000" | "acima1000";
 type EscolhaIa = { id: number; motivo: string };
 type Comparacao = { vencedor_id: number | null; veredito: string; observacoes: string[] };
 
-const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (teto: number | null) => boolean }> = [
-  { id: "ate50", rotulo: "até R$ 50", aceita: (teto) => teto != null && teto <= 50 },
-  { id: "50a200", rotulo: "R$ 50 a R$ 200", aceita: (teto) => teto != null && teto > 50 && teto <= 200 },
-  { id: "200a1000", rotulo: "R$ 200 a R$ 1.000", aceita: (teto) => teto != null && teto > 200 && teto <= 1000 },
-  { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (teto) => teto != null && teto > 1000 },
+const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) => boolean }> = [
+  { id: "semlimite", rotulo: "sem limite", aceita: (cupom) => semLimite(cupom) },
+  { id: "ate50", rotulo: "até R$ 50", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! <= 50 },
+  { id: "50a200", rotulo: "R$ 50 a R$ 200", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 50 && tetoReal(cupom)! <= 200 },
+  { id: "200a1000", rotulo: "R$ 200 a R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 200 && tetoReal(cupom)! <= 1000 },
+  { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000 },
 ];
 
 const PAGE_SIZE = 50;
