@@ -993,20 +993,24 @@ function CupomCard({
   const contagem = contagemRegressiva(cupom.vence, agora);
   const encerrado = contagem.urgencia === "encerrado";
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
+  const ilimitado = semLimite(cupom);
+  const teto = tetoReal(cupom);
   const rotuloQualidade = armadilha
     ? `CUIDADO · desconto para em ${formatarTeto(cupom)}`
-    : `VALE A PENA · até ${formatarTeto(cupom)}`;
+    : ilimitado
+      ? "VALE A PENA · sem limite"
+      : `VALE A PENA · até ${formatarTeto(cupom)}`;
 
   return (
     <article
       className={cn(
-        "flex min-h-56 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
+        "flex min-h-56 min-w-0 flex-col rounded-lg border bg-card p-5 transition-[transform,box-shadow,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-card",
         armadilha ? "border-danger" : "border-border",
         urgente && "border-t-4 border-t-urgency-danger",
         encerrado && "grayscale opacity-55 hover:translate-y-0 hover:shadow-none",
       )}
     >
-      <div className="flex min-h-10 items-start justify-between gap-3">
+      <div className="flex min-h-10 min-w-0 items-start justify-between gap-3">
         <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-secondary-ink">
           <input
             type="checkbox"
@@ -1019,7 +1023,7 @@ function CupomCard({
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
           className={cn(
-            "flex items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-secondary-ink",
+            "flex min-w-0 items-center gap-1.5 rounded-sm px-1.5 py-1 text-xs text-secondary-ink",
             contagem.urgencia === "atencao" && "font-semibold text-urgency-warning",
             urgente && "animate-urgency-pulse bg-urgency-soft font-bold text-urgency-danger",
           )}
@@ -1037,38 +1041,52 @@ function CupomCard({
         </span>
       </div>
 
-      <div className="my-5 grid grid-cols-[minmax(0,1fr)_minmax(150px,190px)] items-center gap-4">
-        <div>
-          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarTeto(cupom)}</p>
-          {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
-          <p className="mt-3 text-lg font-bold text-secondary-ink">{cupom.desconto ?? "—"}</p>
-        </div>
-        <div className="min-w-0 border-l border-border pl-5">
-          <p className="text-sm text-secondary-ink">Em produtos de</p>
-          <p className="mt-0.5 break-words font-semibold">{cupom.vendedor}</p>
-          {cupom.categoria && <p className="mt-1 text-[11px] leading-4 text-secondary-ink"><span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja</p>}
-          <Button
-            asChild
-            className={cn(
-              "mt-3 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center text-xs font-bold",
-              armadilha
-                ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
-            )}
-          >
-            <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
-              <IconeWhatsApp className="size-4" />
-              PEDIR MEU LINK
-            </a>
-          </Button>
-          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-            Eu confiro as condições e te digo o desconto real antes de você comprar.
+      <div className="my-5 min-w-0">
+        {ilimitado ? (
+          <>
+            <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Desconto sem limite de valor</p>
+            <p className="mt-1 text-sm text-secondary-ink">o desconto é o percentual cheio sobre a compra</p>
+          </>
+        ) : teto != null ? (
+          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {brl.format(teto)}</p>
+        ) : (
+          <p className="text-base font-semibold leading-tight text-secondary-ink">Limite não informado</p>
+        )}
+        {cupom.compra_min != null && (
+          <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>
+        )}
+        <p className="mt-3 text-base font-semibold text-secondary-ink">{cupom.desconto ?? "—"}</p>
+
+        <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
+          Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
+        </p>
+        {cupom.categoria && (
+          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">
+            <span className="font-medium">{cupom.categoria}</span> · categoria estimada pelo nome da loja
           </p>
-        </div>
+        )}
+
+        <Button
+          asChild
+          className={cn(
+            "mt-4 h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
+            armadilha
+              ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+              : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
+          )}
+        >
+          <a href={linkWhatsApp(cupom)} target="_blank" rel="noopener noreferrer">
+            <IconeWhatsApp className="size-4 shrink-0" />
+            PEDIR MEU LINK
+          </a>
+        </Button>
+        <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
+          Eu confiro as condições e te digo o desconto real antes de você comprar.
+        </p>
       </div>
 
-      <div className="mt-auto border-t border-border pt-3 text-xs text-secondary-ink">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="mt-auto min-w-0 border-t border-border pt-3 text-xs text-secondary-ink">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <Button
             variant="link"
             className="h-auto p-0 text-xs font-medium text-secondary-ink"
@@ -1078,7 +1096,7 @@ function CupomCard({
             Condições do cupom <Info className="size-3.5" aria-hidden="true" />
           </Button>
           <span aria-hidden="true">|</span>
-          <span>Orçamento restante: {formatarMoeda(cupom.orcamento)}</span>
+          <span>{cupom.orcamento == null ? "Orçamento: não informado" : `Orçamento restante: ${brl.format(cupom.orcamento)}`}</span>
         </div>
         <p className="mt-2 text-[11px]">O link do produto é enviado por WhatsApp</p>
       </div>
