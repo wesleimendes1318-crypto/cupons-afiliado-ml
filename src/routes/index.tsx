@@ -120,8 +120,9 @@ function diasAte(data: string | null) {
 }
 
 function calcularScore(cupom: Cupom, agora: number | null) {
-  if (cupom.teto == null) return null;
-  let score = cupom.teto;
+  const teto = cupom.teto != null && cupom.teto >= 9_999_999 ? null : cupom.teto;
+  if (teto == null) return null;
+  let score = teto;
   if (cupom.compra_min != null && cupom.compra_min <= 50) score *= 1.3;
   else if (cupom.compra_min != null && cupom.compra_min <= 150) score *= 1.15;
   if ((cupom.orcamento ?? 0) > 50_000) score *= 1.2;
@@ -136,13 +137,25 @@ function formatarMoeda(valor: number | null) {
   return valor == null ? "Não informado" : brl.format(valor);
 }
 
+/** Tetos absurdos cadastrados (ex.: 99.999.999) significam "sem limite informado", não um valor real. */
+const TETO_IRREAL = 9_999_999;
+
+function tetoReal(cupom: Pick<Cupom, "teto">) {
+  return cupom.teto != null && cupom.teto >= TETO_IRREAL ? null : cupom.teto;
+}
+
+function formatarTeto(cupom: Pick<Cupom, "teto">) {
+  const teto = tetoReal(cupom);
+  return teto == null ? "Sem limite informado" : brl.format(teto);
+}
+
 function linkWa(mensagem: string) {
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
 }
 
 function resumoCupom(cupom: Cupom) {
   const compra = cupom.compra_min != null ? `, compra mínima ${formatarMoeda(cupom.compra_min)}` : "";
-  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarMoeda(cupom.teto)}${compra})`;
+  return `${cupom.desconto ?? "desconto não informado"} (economia de até ${formatarTeto(cupom)}${compra})`;
 }
 
 function linkWhatsApp(cupom: Cupom, extra?: string) {
@@ -155,7 +168,7 @@ function linkWhatsApp(cupom: Cupom, extra?: string) {
 
 function linkWhatsAppLista(cupons: Cupom[], introFinal?: string) {
   const itens = cupons
-    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarMoeda(cupom.teto)}.`)
+    .map((cupom, indice) => `${indice + 1}) ${cupom.vendedor} — ${cupom.desconto ?? "desconto não informado"}, até ${formatarTeto(cupom)}.`)
     .join("\n");
   const fecho = introFinal ? `\n${introFinal}` : "";
   return linkWa(`Oi! Me interessei por estas lojas:\n${itens}\nPode me mandar os links para eu escolher os produtos?${fecho}`);
@@ -276,11 +289,11 @@ function Index() {
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
-      if (tMin && (cupom.teto ?? 0) < tMin) return false;
+      if (tMin && (tetoReal(cupom) ?? 0) < tMin) return false;
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
       if (termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && (!cupom.categoria || !categorias.includes(cupom.categoria))) return false;
-      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom.teto))) return false;
+      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(tetoReal(cupom)))) return false;
       return true;
     });
 
@@ -322,7 +335,7 @@ function Index() {
     [indexado, selecionados],
   );
   const economiaSomada = useMemo(
-    () => cupomSelecionados.reduce((total, cupom) => total + (cupom.teto ?? 0), 0),
+    () => cupomSelecionados.reduce((total, cupom) => total + (tetoReal(cupom) ?? 0), 0),
     [cupomSelecionados],
   );
   const armadilhasDaBusca = useMemo(
@@ -338,7 +351,7 @@ function Index() {
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
   const contagensFaixa = useMemo(
-    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom.teto)).length])),
+    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(tetoReal(cupom))).length])),
     [indexado],
   );
   const filtrosAtivos = Boolean(texto || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
@@ -382,7 +395,7 @@ function Index() {
       cupom.desconto ?? "",
       cupom.vendedor,
       cupom.compra_min != null ? cupom.compra_min.toFixed(2).replace(".", ",") : "",
-      cupom.teto != null ? cupom.teto.toFixed(2).replace(".", ",") : "",
+      tetoReal(cupom) != null ? tetoReal(cupom)!.toFixed(2).replace(".", ",") : "",
       cupom.qualidade ?? "",
       cupom.orcamento != null ? cupom.orcamento.toFixed(2).replace(".", ",") : "",
       cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "",
@@ -683,7 +696,7 @@ function Index() {
             <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
               <strong>Atenção:</strong>{" "}
               {armadilhasDaBusca.map((cupom, indice) => (
-                <span key={cupom.id}>{indice > 0 ? " · " : ""}{cupom.vendedor}: este cupom desconta no máximo {formatarMoeda(cupom.teto)}. Não recomendo usar como argumento de venda.</span>
+                <span key={cupom.id}>{indice > 0 ? " · " : ""}{cupom.vendedor}: este cupom desconta no máximo {formatarTeto(cupom)}. Não recomendo usar como argumento de venda.</span>
               ))}
             </div>
           )}
@@ -730,9 +743,27 @@ function Index() {
             <Aviso
               titulo="Nenhum resultado para esses filtros"
               texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
-            />
+            >
+              <Button asChild className="mt-4 h-auto min-h-11 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                <a href={linkWa("Oi! Busquei um cupom no seu site e não encontrei. Pode me ajudar?")} target="_blank" rel="noopener noreferrer">
+                  <IconeWhatsApp className="size-5" />
+                  Pedir ajuda no WhatsApp
+                </a>
+              </Button>
+            </Aviso>
           ) : (
             <>
+              <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-whatsapp/40 bg-whatsapp/10 p-4 sm:flex-row sm:items-center">
+                <p className="text-sm font-medium">
+                  Não achou o que procura? Me chama que eu procuro um cupom para o produto que você quer.
+                </p>
+                <Button asChild className="h-auto min-h-11 shrink-0 bg-whatsapp px-4 py-2 font-bold text-whatsapp-foreground hover:bg-whatsapp/90">
+                  <a href={linkWa("Oi! Não achei no site o cupom que eu queria. Pode me ajudar a encontrar?")} target="_blank" rel="noopener noreferrer">
+                    <IconeWhatsApp className="size-5" />
+                    Pedir ajuda no WhatsApp
+                  </a>
+                </Button>
+              </div>
               <div className="grid items-stretch gap-4 md:grid-cols-2">
                 {visiveis.map((cupom) => (
                   <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} />
@@ -893,7 +924,7 @@ function ComparadorModal({
                     )}
                   </td>
                   <td className="py-2 pr-3">{cupom.desconto ?? "Não informado"}</td>
-                  <td className="py-2 pr-3 font-semibold text-success">{formatarMoeda(cupom.teto)}</td>
+                  <td className="py-2 pr-3 font-semibold text-success">{formatarTeto(cupom)}</td>
                   <td className="py-2 pr-3">{formatarMoeda(cupom.compra_min)}</td>
                   <td className="py-2">{cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "Sem data"}</td>
                 </tr>
@@ -956,8 +987,8 @@ function CupomCard({
   const encerrado = contagem.urgencia === "encerrado";
   const urgente = contagem.urgencia === "urgente" || contagem.urgencia === "ultimas";
   const rotuloQualidade = armadilha
-    ? `CUIDADO · desconto para em ${formatarMoeda(cupom.teto)}`
-    : `VALE A PENA · até ${formatarMoeda(cupom.teto)}`;
+    ? `CUIDADO · desconto para em ${formatarTeto(cupom)}`
+    : `VALE A PENA · até ${formatarTeto(cupom)}`;
 
   return (
     <article
@@ -1001,7 +1032,7 @@ function CupomCard({
 
       <div className="my-5 grid grid-cols-[minmax(0,1fr)_minmax(150px,190px)] items-center gap-4">
         <div>
-          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarMoeda(cupom.teto)}</p>
+          <p className="text-xl font-extrabold leading-tight text-success sm:text-2xl">Economia de até {formatarTeto(cupom)}</p>
           {cupom.compra_min != null && <p className="mt-1 text-sm text-secondary-ink">a partir de {formatarMoeda(cupom.compra_min)} em compras</p>}
           <p className="mt-3 text-lg font-bold text-secondary-ink">{cupom.desconto ?? "—"}</p>
         </div>
@@ -1052,7 +1083,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
   if (!cupom) return null;
 
   const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
-  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. Máximo de desconto de ${formatarMoeda(cupom.teto)}. Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+  const texto = `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. Máximo de desconto de ${formatarTeto(cupom)}. Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
 
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && fechar()}>
@@ -1064,7 +1095,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
         <div className="space-y-5 px-5 pb-6 sm:px-6">
           <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
             <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
-            <ResumoModal rotulo="Teto de desconto" valor={formatarMoeda(cupom.teto)} destaque />
+            <ResumoModal rotulo="Teto de desconto" valor={formatarTeto(cupom)} destaque />
             <ResumoModal
               rotulo="Desconto real se a compra for de R$ 200"
               valor={formatarMoeda(descontoRealEm200(cupom))}
@@ -1082,7 +1113,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             )}
           >
             <a
-              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarMoeda(cupom.teto)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
+              href={linkWhatsApp(cupom, `Vi que o teto é ${formatarTeto(cupom)} e a compra mínima é ${formatarMoeda(cupom.compra_min)}.`)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -1120,7 +1151,7 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
         body: JSON.stringify({
           vendedor: cupom.vendedor,
           desconto: cupom.desconto ?? "Desconto não informado",
-          teto: cupom.teto,
+          teto: tetoReal(cupom),
           compra_min: cupom.compra_min,
           canal,
           qualidade: cupom.qualidade === "armadilha" ? "armadilha" : "bom",
@@ -1261,11 +1292,12 @@ function InputNumero({ valor, aoMudar }: { valor: string; aoMudar: (valor: strin
   );
 }
 
-function Aviso({ titulo, texto }: { titulo: string; texto: string }) {
+function Aviso({ titulo, texto, children }: { titulo: string; texto: string; children?: ReactNode }) {
   return (
     <div className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center">
       <p className="text-base font-semibold">{titulo}</p>
       <p className="mx-auto mt-1 max-w-md text-sm text-secondary-ink">{texto}</p>
+      {children}
     </div>
   );
 }
