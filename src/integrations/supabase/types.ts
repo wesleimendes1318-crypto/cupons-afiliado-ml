@@ -77,12 +77,141 @@ export type Database = {
         }
         Relationships: []
       }
+      pedidos_link: {
+        Row: {
+          analise: Json | null
+          atendido_em: string | null
+          codigo: string | null
+          criado_em: string
+          cupom_id: number | null
+          erro: string | null
+          id: number
+          link: string | null
+          origem: string | null
+          preco: number | null
+          status: string
+          titulo: string | null
+          url_alvo: string | null
+          vendedor: string
+        }
+        Insert: {
+          analise?: Json | null
+          atendido_em?: string | null
+          codigo?: string | null
+          criado_em?: string
+          cupom_id?: number | null
+          erro?: string | null
+          id?: number
+          link?: string | null
+          origem?: string | null
+          preco?: number | null
+          status?: string
+          titulo?: string | null
+          url_alvo?: string | null
+          vendedor: string
+        }
+        Update: {
+          analise?: Json | null
+          atendido_em?: string | null
+          codigo?: string | null
+          criado_em?: string
+          cupom_id?: number | null
+          erro?: string | null
+          id?: number
+          link?: string | null
+          origem?: string | null
+          preco?: number | null
+          status?: string
+          titulo?: string | null
+          url_alvo?: string | null
+          vendedor?: string
+        }
+        Relationships: []
+      }
+      sinc_config: {
+        Row: {
+          chave: string
+          valor: string
+        }
+        Insert: {
+          chave: string
+          valor: string
+        }
+        Update: {
+          chave?: string
+          valor?: string
+        }
+        Relationships: []
+      }
+      sinc_log: {
+        Row: {
+          id: number
+          novos: number | null
+          quando: string
+          recebidos: number | null
+          sumidos_removidos: number | null
+          vencidos_removidos: number | null
+        }
+        Insert: {
+          id?: number
+          novos?: number | null
+          quando?: string
+          recebidos?: number | null
+          sumidos_removidos?: number | null
+          vencidos_removidos?: number | null
+        }
+        Update: {
+          id?: number
+          novos?: number | null
+          quando?: string
+          recebidos?: number | null
+          sumidos_removidos?: number | null
+          vencidos_removidos?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      atender_pedido: {
+        Args: {
+          p_analise?: Json
+          p_codigo?: string
+          p_erro?: string
+          p_id: number
+          p_link: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      consultar_pedido: {
+        Args: { p_id: number }
+        Returns: {
+          analise: Json
+          codigo: string
+          erro: string
+          link: string
+          status: string
+        }[]
+      }
+      expirar_pedidos: { Args: never; Returns: undefined }
+      limpar_vencidos: { Args: never; Returns: number }
+      pedidos_pendentes: {
+        Args: { p_token: string }
+        Returns: {
+          cupom_id: number
+          id: number
+          url_alvo: string
+          vendedor: string
+        }[]
+      }
+      pedir_link: { Args: { p_url: string }; Returns: number }
+      sincronizar_cupons: {
+        Args: { p_completo?: boolean; p_cupons: Json; p_token: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
