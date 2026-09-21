@@ -71,6 +71,7 @@ const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) 
 
 const PAGE_SIZE = 50;
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 function normalizar(texto: string) {
