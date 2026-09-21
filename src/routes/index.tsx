@@ -505,7 +505,11 @@ function Index() {
     () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
     [indexado],
   );
-  const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || vitrine !== "recomendados" || ordem !== "score");
+  const contagensEtiqueta = useMemo(
+    () => new Map(ETIQUETAS.map((etiqueta) => [etiqueta.id, indexado.filter((cupom) => etiqueta.aceita(cupom, agora)).length])),
+    [indexado, agora],
+  );
+  const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || etiquetas.length || vitrine !== "recomendados" || ordem !== "score");
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
