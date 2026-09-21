@@ -708,15 +708,15 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="w-full bg-ml-yellow text-ml-yellow-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">Cupons Afiliado ML</h1>
-              <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
+              <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
                 Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
               </p>
-              <p className="mt-1 max-w-2xl text-sm font-medium sm:text-base">
+              <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
                 Aqui você sempre sabe quanto economiza antes de comprar. E pode voltar sempre: acompanho os cupons novos e aviso quando aparecer um que valha a pena para você.
               </p>
               <Button asChild className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
@@ -734,7 +734,7 @@ function Index() {
       </header>
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
-        <div className="mx-auto max-w-6xl px-4 py-4">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4">
           <ol className="grid gap-3 text-sm sm:grid-cols-3">
             {[
               { icone: Search, texto: "Você escolhe uma loja por aqui" },
@@ -755,7 +755,7 @@ function Index() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
         <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
@@ -816,7 +816,7 @@ function Index() {
               <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
               <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {destaques.map(([categoria, cupom]) => (
                 <div key={categoria} className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3">
                   <button
@@ -1098,7 +1098,7 @@ function Index() {
                       Falar sobre essas opções
                     </a>
                   </Button>
-                  <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
+                  <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {escolhidos.map(({ cupom, motivo }) => (
                       <div key={cupom.id} className="flex flex-col gap-2">
                         <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
@@ -1113,7 +1113,7 @@ function Index() {
           {error ? (
             <Aviso titulo="Não foi possível carregar os cupons" texto="Tente atualizar a página em alguns instantes." />
           ) : isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, indice) => (
                 <div key={indice} className="h-56 animate-pulse rounded-lg bg-muted" />
               ))}
@@ -1148,7 +1148,7 @@ function Index() {
                   </a>
                 </Button>
               </div>
-              <div className="grid items-stretch gap-4 md:grid-cols-2">
+              <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {visiveis.map((cupom) => (
                   <CupomCard key={cupom.id} cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
                 ))}
@@ -1182,7 +1182,7 @@ function Index() {
 
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold">
                 {cupomSelecionados.length === 1 ? "1 cupom marcado" : `${cupomSelecionados.length} cupons marcados`} de até {MAX_COMPARACAO} · economia estimada de até {formatarMoeda(economiaSomada)}
@@ -1244,8 +1244,23 @@ function Index() {
         erro={erroComparacao}
       />
 
-      <footer className="mt-8 border-t border-border py-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mt-10 border-t border-border py-8">
+        <div className="mx-auto grid max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-bold">Limite real sempre informado</p>
+            <p className="mt-1 text-xs text-secondary-ink">Mostro quanto cada cupom desconta de verdade, inclusive quando o desconto é pequeno.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-bold">Sem custo para você</p>
+            <p className="mt-1 text-xs text-secondary-ink">Recebo comissão do Mercado Livre, nunca de quem compra. O preço é o mesmo.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-bold">Dados vindos dos cupons oficiais</p>
+            <p className="mt-1 text-xs text-secondary-ink">Nada é inventado: cada condição vem do texto oficial da campanha do vendedor.</p>
+          </div>
+        </div>
+        <div className="mx-auto mt-6 flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:px-6 lg:px-8 sm:flex-row sm:items-center sm:justify-between">
+
           <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
           <div className="text-left sm:text-right">
             <Button type="button" variant="ghost" size="sm" disabled={classificando} onClick={classificar} className="px-2 text-xs text-secondary-ink">
@@ -1506,7 +1521,7 @@ function CupomCard({
         </span>
       </div>
 
-      <div className="my-5 min-w-0">
+      <div className="mt-5 flex min-w-0 flex-1 flex-col">
         <p className="text-2xl font-extrabold leading-tight text-foreground sm:text-3xl">{percentualTexto(cupom)}</p>
         {ilimitado ? (
           <p className="mt-1 text-sm text-secondary-ink">
@@ -1527,6 +1542,7 @@ function CupomCard({
 
 
 
+
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
           Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
         </p>
@@ -1542,7 +1558,7 @@ function CupomCard({
         <Button
           asChild
           className={cn(
-            "mt-4 h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
+            "mt-auto h-auto min-h-11 w-full min-w-0 px-3 py-2 text-center text-sm font-bold",
             armadilha
               ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
               : "bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90",
