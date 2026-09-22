@@ -803,6 +803,9 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
             a mais do seu bolso e me ajuda a manter o site de pé.
           </p>
         )}
+        {!achouOutra && procurou && analise?.motivoOutra && (
+          <p className="mt-1.5 text-xs text-secondary-ink/80">Motivo: {analise.motivoOutra}.</p>
+        )}
       </div>
     );
   }
