@@ -551,6 +551,9 @@ function useLinkDaLoja(cupom: Cupom) {
         if (linha?.status === "pronto" && linha.link) {
           setLink(linha.link);
           setGerando(false);
+          /* Guarda o link no cupom: quem chegar depois abre a loja na hora,
+             sem depender da extensao estar ligada naquele momento. */
+          void supabase.rpc("salvar_link_loja", { p_cupom_id: cupom.id, p_link: linha.link });
           return;
         }
         if (linha?.status === "falhou") { setGerando(false); setFalhou(true); return; }
@@ -559,7 +562,7 @@ function useLinkDaLoja(cupom: Cupom) {
       else { setGerando(false); setFalhou(true); }
     };
     relogios.current.push(window.setTimeout(olhar, 3000));
-  }, [link, gerando, cupom.vendedor]);
+  }, [link, gerando, cupom.vendedor, cupom.id]);
 
   return { link, gerando, falhou, gerar };
 }
