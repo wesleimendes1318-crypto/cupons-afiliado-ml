@@ -129,25 +129,66 @@ const dataBR = (iso: string | null | undefined) => {
 const ehLinkML = (u: string) =>
   /^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com|meli\.la)(\/|$)/i.test(u.trim());
 
-/* Tira o primeiro link de verdade de um texto colado.
+/* URL que aponta direto para um anúncio ou produto de catálogo. */
+const ehProdutoML = (u: string) => /\/p\/MLB\d+/i.test(u) || /\/MLB-?\d+/i.test(u);
 
-   Copiar do aplicativo costuma trazer sujeira: a mesma URL emendada duas
-   vezes, texto antes e depois, quebra de linha no meio. Colar isso inteiro no
-   gerador do Mercado Livre produz link quebrado — o comprador cai numa pagina
-   de erro e a venda morre ali. Entao aqui a gente pega so o primeiro endereco
-   valido e ignora o resto. */
-function primeiroLinkML(texto: string): string | null {
+/* Encurtado do próprio Mercado Livre: precisa de um salto a mais para virar
+   endereço de produto, e costuma carregar a etiqueta de quem compartilhou. */
+const ehCurtoML = (u: string) =>
+  /^https?:\/\/(meli\.la|(www\.)?mercadolivre\.com\.br\/sec)\//i.test(u);
+
+/* Parâmetros que dizem QUAL oferta a pessoa estava vendo. Valem manter: é o
+   anúncio daquele vendedor específico dentro da página de catálogo.
+   Todo o resto é rastreamento de quem compartilhou (matt_tool, matt_word, ua,
+   sid, action, tracking_id) e vai fora. Manter matt_word seria pior que
+   inútil: seria entregar a venda com a etiqueta de outro afiliado. */
+const PARAMS_UTEIS = new Set(["pdp_filters", "wid", "variation", "quantity"]);
+
+function limparLinkML(bruto: string): string {
+  try {
+    const u = new URL(bruto);
+    u.hash = "";
+    for (const chave of [...u.searchParams.keys()]) {
+      if (!PARAMS_UTEIS.has(chave)) u.searchParams.delete(chave);
+    }
+    return u.toString();
+  } catch {
+    // Sem parse possível: pelo menos tira a âncora de rastreio.
+    return bruto.split("#")[0] ?? bruto;
+  }
+}
+
+/* Escolhe O link certo de um texto colado.
+
+   O texto que o aplicativo do Mercado Livre gera ao compartilhar traz DOIS
+   endereços do mesmo produto: o encurtado (meli.la) e o completo. Pegar o
+   primeiro, como eu fazia, pegava o encurtado — que exige um salto a mais e
+   carrega a etiqueta de quem compartilhou.
+
+   Então a escolha é por qualidade, não por ordem:
+     1. endereço de produto ou de catálogo, que é direto e sem ambiguidade;
+     2. encurtado do Mercado Livre, se não houver nada melhor;
+     3. qualquer endereço do Mercado Livre.
+
+   Também resolve a sujeira antiga: mesma URL emendada duas vezes sem espaço,
+   texto em volta, quebra de linha no meio. */
+function melhorLinkML(texto: string): string | null {
   const limpo = String(texto || "").replace(/\s+/g, " ").trim();
   if (!limpo) return null;
 
-  const achados = limpo.match(/https?:\/\/[^\s"'<>]+/gi) || [];
-  for (const bruto of achados) {
+  const candidatos: string[] = [];
+  for (const bruto of limpo.match(/https?:\/\/[^\s"'<>]+/gi) || []) {
     // Duas URLs coladas sem espaco: corta na segunda ocorrencia de "http".
     const corte = bruto.slice(8).search(/https?:\/\//i);
     const candidato = corte >= 0 ? bruto.slice(0, corte + 8) : bruto;
-    if (ehLinkML(candidato)) return candidato;
+    if (ehLinkML(candidato)) candidatos.push(candidato);
   }
-  return null;
+  if (!candidatos.length) return null;
+
+  const escolhido =
+    candidatos.find(ehProdutoML) ?? candidatos.find(ehCurtoML) ?? candidatos[0];
+
+  return escolhido ? limparLinkML(escolhido) : null;
 }
 
 /* As tres etapas sao de verdade:
@@ -198,7 +239,7 @@ export default function BuscaPorLink() {
       setDemorando(false);
       setMotivo(null);
 
-      const limpo = primeiroLinkML(alvo);
+      const limpo = melhorLinkML(alvo);
       if (!limpo) {
         setFase("parado");
         setErro("Esse link não é do Mercado Livre. Cole o endereço do anúncio.");
