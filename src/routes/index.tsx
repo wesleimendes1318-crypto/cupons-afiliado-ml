@@ -2192,8 +2192,8 @@ function CupomCard({
         />
         {!(cupom.vitrine_ok === true && cupom.link_afiliado) && (
           <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span> no Mercado
-            Livre, cole o link aqui e eu confiro o cupom e gero seu link de compra.
+            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span>, cole o
+            link aqui e eu confiro o cupom e gero seu link de compra.
           </p>
         )}
         {cupom.codigo_cupom ? (
