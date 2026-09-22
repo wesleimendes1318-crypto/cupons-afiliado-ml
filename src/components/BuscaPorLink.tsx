@@ -38,6 +38,9 @@ const LIMITE_MS = 90000;
 const AVISO_MS = 25000;
 
 type Cupom = {
+  /* id do cupom no banco. Com ele o site pede o código na hora, mesmo quando o
+     cupom não estava na lista já conferida da home. */
+  id?: number | null;
   titulo: string | null;
   vence: string | null;
   teto: number | null;
