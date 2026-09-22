@@ -367,35 +367,12 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
   );
 }
 
-/* Contatos vem do banco, nao do codigo: o repositorio e publico e o numero do
-   Weslei nao precisa ficar em texto aberto la. Trocar o numero nao exige novo
-   deploy do site. */
-type Contato = { canal: string; valor: string };
-
-function useContatos() {
-  const { data } = useQuery({
-    queryKey: ["contatos"],
-    staleTime: 30 * 60 * 1000,
-    queryFn: async (): Promise<Contato[]> => {
-      const { data, error } = await supabase.from("contatos").select("canal,valor");
-      if (error) throw error;
-      return (data ?? []) as Contato[];
-    },
-  });
-  const mapa = new Map((data ?? []).map((c) => [c.canal, c.valor]));
-  const whatsapp = mapa.get("whatsapp")?.trim() || null;
-  const telegram = mapa.get("telegram")?.trim() || null;
-  return { whatsapp, telegram };
-}
-
 /* Cupom sem codigo: a pessoa pede e espera aqui mesmo
 
-   A ordem importa. Primeiro o site tenta resolver sozinho: registra o pedido,
-   a extensao gera em ate um minuto e o codigo aparece na tela. So se isso nao
-   voltar a tempo — computador desligado, teto do dia batido — e que aparece o
-   contato. Falar com gente e o plano B, nao o caminho principal. */
+   A ordem importa: o site resolve sozinho. Registra o pedido, a extensao gera
+   em ate um minuto e o codigo aparece na tela. Se nao voltar a tempo, a pessoa
+   tenta de novo aqui mesmo — nao existe contato como plano B. */
 function PedirCodigo({ cupom }: { cupom: Cupom }) {
-  const { whatsapp, telegram } = useContatos();
   const [fase, setFase] = useState<"parado" | "pedindo" | "pronto" | "demorou">("parado");
   const [codigo, setCodigo] = useState<string | null>(null);
   const relogios = useRef<number[]>([]);
@@ -426,8 +403,6 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
 
   if (fase === "pronto" && codigo) return <EtiquetaDoCupom codigo={codigo} vendedor={cupom.vendedor} />;
 
-  const recado = `Oi Weslei! Quero o código do cupom de ${cupom.desconto ?? "desconto"} da loja ${cupom.vendedor}. (cupom ${cupom.id})`;
-
   return (
     <div className="mt-3 rounded-md border border-dashed border-border bg-muted/40 p-2.5">
       {fase === "pedindo" ? (
@@ -437,30 +412,16 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
       ) : fase === "demorou" ? (
         <>
           <p className="text-[11px] leading-relaxed text-secondary-ink">
-            Não consegui gerar agora. Me chama que eu gero para você.
+            O código não ficou pronto agora. Tente de novo em instantes — normalmente sai na
+            segunda tentativa. O desconto também entra sozinho no carrinho pelo botão acima.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {telegram && (
-              <a
-                href={`https://t.me/${telegram}?text=${encodeURIComponent(recado)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded border border-ml-blue px-2.5 py-1 text-[11px] font-bold text-ml-blue"
-              >
-                Pedir no Telegram
-              </a>
-            )}
-            {whatsapp && (
-              <a
-                href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(recado)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded border border-success px-2.5 py-1 text-[11px] font-bold text-success"
-              >
-                Pedir no WhatsApp
-              </a>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => void pedir()}
+            className="mt-2 w-full rounded border border-ml-blue px-2.5 py-1.5 text-[11px] font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
+          >
+            Tentar de novo
+          </button>
         </>
       ) : (
         <>
@@ -626,7 +587,6 @@ function AcaoDoCupom({
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
-  const { whatsapp } = useContatos();
   const [copiou, setCopiou] = useState(false);
   const [naoAbriu, setNaoAbriu] = useState(false);
   /* A loja é sempre aberta pelo link de indicação do Weslei. Quando o link
@@ -676,8 +636,9 @@ function AcaoDoCupom({
   }, [link]);
 
   /* Deu errado: a aba NÃO é fechada. Fechar sozinha parece erro do site — a
-     pessoa vê a aba sumir em segundos e não entende. Em vez disso, a aba
-     explica o que houve e oferece o WhatsApp. */
+     pessoa vê a aba sumir em segundos e não entende. A aba explica o que
+     houve e diz o que fazer, tudo resolvido aqui mesmo, sem falar com
+     ninguém. */
   useEffect(() => {
     if (!loja.falhou && !falhou) return;
     const aba = abaRef.current;
@@ -689,20 +650,13 @@ function AcaoDoCupom({
         '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
           "<title>Não consegui abrir a loja</title></head>" +
           '<body style="font-family:system-ui;padding:24px;color:#222;line-height:1.5">' +
-          "<p><strong>Não consegui preparar o link da loja agora.</strong></p>" +
-          "<p>Pode fechar esta aba. Me chama no WhatsApp que eu mando o link com o cupom em minutos.</p>" +
-          (whatsapp
-            ? '<p><a style="color:#0a7c3f;font-weight:700" href="https://wa.me/' +
-              whatsapp +
-              "?text=" +
-              encodeURIComponent("Oi! Tentei pegar um cupom no site e o link não abriu. Pode me mandar?") +
-              '">Falar no WhatsApp</a></p>'
-            : "") +
+          "<p><strong>Não consegui preparar a loja agora.</strong></p>" +
+          "<p>Pode fechar esta aba e clicar de novo no botão do cupom: quase sempre funciona na segunda tentativa.</p>" +
           "</body></html>",
       );
       aba.document.close();
     } catch { /* aba de outra origem: deixa como está, sem fechar */ }
-  }, [loja.falhou, falhou, whatsapp]);
+  }, [loja.falhou, falhou]);
 
   useEffect(() => {
     if (!aguardando || !link || gerando) return;
