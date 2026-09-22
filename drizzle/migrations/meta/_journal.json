@@ -15,6 +15,13 @@
       "when": 1790110986622,
       "tag": "0001_restrict_sync_logs_and_scope_coupon_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790118249082,
+      "tag": "0002_salvar_link_loja",
+      "breakpoints": true
     }
   ]
 }
