@@ -18,13 +18,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Cupons do Weslei — descubra o desconto real" },
+      { title: "Cupons de Lojas Afiliadas — descubra o desconto real" },
       {
         name: "description",
         content:
           "Consulte o limite real, a compra mínima e as condições de cada cupom de afiliado.",
       },
-      { property: "og:title", content: "Cupons do Weslei — descubra o desconto real" },
+      { property: "og:title", content: "Cupons de Lojas Afiliadas — descubra o desconto real" },
       {
         property: "og:description",
         content: "Compare o percentual anunciado com o teto real de desconto de cada cupom.",
@@ -1237,7 +1237,7 @@ function Index() {
             <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">
-                Cupons do Weslei - POR{" "}
+                Cupons de Lojas Afiliadas - POR{" "}
                 <a
                   href="https://www.instagram.com/wslmendes/"
                   target="_blank"
