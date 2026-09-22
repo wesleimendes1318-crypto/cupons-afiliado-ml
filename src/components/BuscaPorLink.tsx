@@ -69,6 +69,9 @@ type Analise = {
   temCupom: boolean;
   cupom: Cupom | null;
   outraLoja: OutraLoja | null;
+  /* true quando a busca por outra loja com cupom chegou a acontecer. Serve
+     para separar "não procurei" de "procurei e não achou". */
+  procurouOutra?: boolean | null;
 };
 
 type Pedido = {
@@ -493,6 +496,12 @@ function Resultado({
   const a = pedido.analise;
   const link = pedido.link as string;
 
+  /* A loja do anúncio não tem cupom que preste, mas outra loja vende o MESMO
+     produto de catálogo com cupom valendo para este preço. Nesse caso a troca
+     vira a recomendação principal: é ela que põe dinheiro no bolso da pessoa.
+     O anúncio original continua disponível, só que como segunda opção. */
+  const trocar = a?.temCupom !== true && !!a?.outraLoja;
+
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
       {a?.titulo && (
@@ -503,7 +512,9 @@ function Resultado({
       )}
       {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
 
-      {a?.outraLoja && <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} />}
+      {a?.outraLoja && (
+        <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} principal={trocar} />
+      )}
 
       <CondicoesDoCupom analise={a} />
 
@@ -511,10 +522,15 @@ function Resultado({
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+        className={
+          trocar
+            ? "mt-4 block w-full rounded-md border-2 border-ml-blue py-2.5 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
+            : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+        }
       >
-        Comprar no Mercado Livre
+        {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar no Mercado Livre"}
       </a>
+
 
       {pedido.codigo && (
         <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
@@ -564,18 +580,28 @@ function Resultado({
 function OutraLojaComCupom({
   oferta,
   precoAqui,
+  principal,
 }: {
   oferta: OutraLoja;
   precoAqui: number | null;
+  principal?: boolean;
 }) {
   const diferenca =
     precoAqui != null && oferta.final != null ? precoAqui - oferta.final : null;
 
   return (
     <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
+      {principal && (
+        <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
+          Minha recomendação
+        </p>
+      )}
       <p className="text-sm font-bold text-success">
-        Este mesmo produto está mais barato em outra loja, com cupom
+        {principal
+          ? "A loja do anúncio não tem cupom, mas achei o mesmo produto em uma loja que tem"
+          : "Este mesmo produto está mais barato em outra loja, com cupom"}
       </p>
+
 
       <dl className="mt-2 divide-y divide-success/20 text-sm">
         {oferta.vendedor && <Linha rotulo="Loja" valor={oferta.vendedor} />}
@@ -627,15 +653,28 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
   const c = analise?.cupom ?? null;
 
   if (!c) {
+    const achouOutra = !!analise?.outraLoja;
+    const procurou = analise?.procurouOutra === true;
+
     return (
       <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
         <p className="text-sm font-semibold">Hoje essa loja não tem cupom.</p>
-        <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-          Prefiro te dizer isso a inventar um desconto que não existe. Mas o botão de comprar aqui
-          embaixo continua valendo a pena para nós dois: o preço é o mesmo do Mercado Livre, e por
-          ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo a mais do seu bolso e me
-          ajuda a manter o site de pé.
-        </p>
+        {achouOutra ? (
+          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+            Por isso procurei o mesmo produto em outras lojas e a opção com cupom está logo acima.
+            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço do
+            Mercado Livre, e a comissão que eu recebo é paga pelo vendedor.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+            {procurou
+              ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
+              : "Prefiro te dizer isso a inventar um desconto que não existe. "}
+            O botão de comprar aqui embaixo continua valendo a pena para nós dois: o preço é o mesmo
+            do Mercado Livre, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
+            a mais do seu bolso e me ajuda a manter o site de pé.
+          </p>
+        )}
       </div>
     );
   }

@@ -1130,14 +1130,24 @@ async function atenderPedidos() {
           // 3. o SEU link sai sempre, com ou sem cupom
           const r = await gerarNaAba(tabId, url, TAG_PADRAO);
 
-          /* Se a loja do link nao tem cupom que preste, procura o MESMO
-             produto de catalogo numa loja que tenha, gera o link de afiliado
-             DAQUELA oferta e devolve as duas coisas. O site mostra a troca
-             com o preco final dos dois lados, para a pessoa decidir. */
+          /* PRIORIDADE: se a loja do link nao tem cupom que preste, procurar o
+             MESMO produto de catalogo numa loja que tenha cupom valendo para
+             ESTE preco (compra minima atendida e desconto de verdade), gerar o
+             link de afiliado DAQUELA oferta e devolver as duas coisas. O site
+             mostra a troca com o preco final dos dois lados.
+
+             procurouOutra registra que a busca aconteceu: sem isso o site nao
+             sabe diferenciar "nao procurei" de "procurei e nao achou", e a
+             honestidade do texto depende dessa diferenca. */
           let outra = null;
+          let procurouOutra = false;
           if (!(cupom && aval && aval.vale)) {
+            procurouOutra = true;
             try {
-              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, null);
+              const itemAtual =
+                (/item_id(?:%3A|:)(MLB\d+)/i.exec(url) || [])[1] ||
+                (/MLB-?(\d{6,})/i.exec(url) ? 'MLB' + /MLB-?(\d{6,})/i.exec(url)[1] : null);
+              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, itemAtual);
               if (alt) {
                 const la = await gerarNaAba(tabId, alt.url);
                 outra = {
@@ -1163,6 +1173,7 @@ async function atenderPedidos() {
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,
+            procurouOutra,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
               titulo: cupom.desconto, vence: cupom.vence,
