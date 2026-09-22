@@ -550,11 +550,15 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
     abaRef.current = aba;
   }, []);
 
-  const fecharReserva = useCallback(() => {
+  /* O código não veio: a aba NÃO é fechada. Fechar sozinha parece erro do
+     site. Ela segue para a loja do mesmo jeito — o link de indicação já é
+     válido, só falta o código, que pode ser pedido no WhatsApp. */
+  const seguirSemCodigo = useCallback(() => {
     const aba = abaRef.current;
     abaRef.current = null;
-    try { if (aba && !aba.closed) aba.close(); } catch { /* ja fechada */ }
-  }, []);
+    if (!aba || aba.closed) return;
+    try { aba.location.replace(destino); aba.focus?.(); } catch { /* segue aberta */ }
+  }, [destino]);
 
   const abrir = useCallback(() => {
     const reservada = abaRef.current;
@@ -574,9 +578,9 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
       const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { pronto(resposta); return; }
-      if (resposta !== "pedido") { fecharReserva(); setFase("falhou"); return; }
+      if (resposta !== "pedido") { seguirSemCodigo(); setFase("falhou"); return; }
     } catch {
-      fecharReserva();
+      seguirSemCodigo();
       setFase("falhou");
       return;
     }
@@ -588,7 +592,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         if (typeof data === "string" && data.startsWith("#")) { pronto(data); return; }
       } catch { /* tenta de novo */ }
       if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else { fecharReserva(); setFase("falhou"); }
+      else { seguirSemCodigo(); setFase("falhou"); }
     };
     relogios.current.push(window.setTimeout(olhar, 3000));
   }
