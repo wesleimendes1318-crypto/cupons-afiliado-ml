@@ -38,6 +38,9 @@ const LIMITE_MS = 90000;
 const AVISO_MS = 25000;
 
 type Cupom = {
+  /* id do cupom no banco. Com ele o site pede o código na hora, mesmo quando o
+     cupom não estava na lista já conferida da home. */
+  id?: number | null;
   titulo: string | null;
   vence: string | null;
   teto: number | null;
@@ -72,6 +75,9 @@ type Analise = {
   /* true quando a busca por outra loja com cupom chegou a acontecer. Serve
      para separar "não procurei" de "procurei e não achou". */
   procurouOutra?: boolean | null;
+  /* Em uma frase, por que a troca de loja não rolou. Só aparece quando a busca
+     aconteceu e não achou nada. */
+  motivoOutra?: string | null;
 };
 
 type Pedido = {
@@ -482,6 +488,123 @@ function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
   );
 }
 
+/* ------------------------------------------------- codigo do cupom na hora
+
+   O cupom pode existir entre os milhares da conta do Weslei sem nunca ter
+   passado pela lista conferida da home. Quando o anúncio colado cai numa loja
+   assim, o site pede o código aqui mesmo: a extensão cria em segundos e o
+   botão então copia o código e abre o produto pelo link de afiliado.
+
+   A cópia acontece dentro do clique sempre que dá; quando o código chega
+   depois da espera, o site copia assim mesmo e avisa o que foi copiado, para
+   ninguém chegar na loja de mãos vazias. */
+
+function copiarAgora(texto: string): boolean {
+  try {
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch { /* plano B */ }
+  try {
+    const campo = document.createElement("textarea");
+    campo.value = texto;
+    campo.style.position = "fixed";
+    campo.style.opacity = "0";
+    document.body.appendChild(campo);
+    campo.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(campo);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }) {
+  const [codigo, setCodigo] = useState<string | null>(null);
+  const [fase, setFase] = useState<"parado" | "gerando" | "falhou">("parado");
+  const [copiou, setCopiou] = useState(false);
+  const relogios = useRef<number[]>([]);
+
+  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
+
+  const abrir = useCallback(() => {
+    window.open(destino, "_blank", "noopener,noreferrer");
+  }, [destino]);
+
+  async function pedir() {
+    setFase("gerando");
+    try {
+      const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
+      const resposta = String(data ?? "");
+      if (resposta.startsWith("#")) { pronto(resposta); return; }
+      if (resposta !== "pedido") { setFase("falhou"); return; }
+    } catch {
+      setFase("falhou");
+      return;
+    }
+
+    const limite = Date.now() + 88_000;
+    const olhar = async () => {
+      try {
+        const { data } = await supabase.rpc("consultar_etiqueta", { p_cupom_id: cupomId });
+        if (typeof data === "string" && data.startsWith("#")) { pronto(data); return; }
+      } catch { /* tenta de novo */ }
+      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
+      else setFase("falhou");
+    };
+    relogios.current.push(window.setTimeout(olhar, 3000));
+  }
+
+  function pronto(valor: string) {
+    setCodigo(valor);
+    setFase("parado");
+    setCopiou(copiarAgora(valor));
+    window.open(destino, "_blank", "noopener,noreferrer");
+  }
+
+  if (codigo) {
+    return (
+      <div className="mt-3 rounded-md border-2 border-success/50 bg-success/10 p-3">
+        <p className="text-sm font-bold text-success">
+          {copiou ? `Código ${codigo} copiado.` : `Seu código é ${codigo}.`}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-secondary-ink">
+          Cole no carrinho do Mercado Livre para o desconto entrar.
+        </p>
+        <button
+          type="button"
+          onClick={() => { setCopiou(copiarAgora(codigo)); abrir(); }}
+          className="mt-2 w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95"
+        >
+          Copiar de novo e abrir o produto
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={pedir}
+        disabled={fase === "gerando"}
+        className="w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:opacity-70"
+      >
+        {fase === "gerando" ? "Criando seu código..." : "Usar este cupom"}
+      </button>
+      <p className="mt-1.5 text-xs leading-relaxed text-secondary-ink" aria-live="polite">
+        {fase === "gerando"
+          ? "Assim que ficar pronto eu copio o código para você e abro o produto."
+          : fase === "falhou"
+            ? "Não consegui criar o código agora. O botão de comprar continua valendo: o desconto do cupom entra no carrinho."
+            : "Cria o código deste cupom, copia para você e abre o produto no Mercado Livre."}
+      </p>
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- resultado */
 
 function Resultado({
@@ -517,6 +640,11 @@ function Resultado({
       )}
 
       <CondicoesDoCupom analise={a} />
+
+      {a?.temCupom && a.cupom?.id != null && !trocar && (
+        <CodigoNaHora cupomId={a.cupom.id} destino={link} />
+      )}
+
 
       <a
         href={link}
@@ -674,6 +802,9 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
             do Mercado Livre, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
             a mais do seu bolso e me ajuda a manter o site de pé.
           </p>
+        )}
+        {!achouOutra && procurou && analise?.motivoOutra && (
+          <p className="mt-1.5 text-xs text-secondary-ink/80">Motivo: {analise.motivoOutra}.</p>
         )}
       </div>
     );

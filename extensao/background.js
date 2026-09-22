@@ -923,7 +923,13 @@ function urlDaOferta(catalogo, item) {
    vendedor tem cupom que preste, ou a alternativa nao sai mais barata que o
    que a pessoa ja estava vendo. Nesse ultimo caso mandar a pessoa trocar de
    loja seria dar trabalho a ela para economizar nada. */
+/* Por que a troca de loja nao aconteceu. Sem isso "nao achei" e uma caixa
+   preta: nao da para saber se o anuncio nao era de catalogo, se so tinha um
+   vendedor, ou se nenhum vendedor tinha cupom que prestasse. */
+let motivoOutra = null;
+
 async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
+  motivoOutra = null;
   let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
   let html = null;
 
@@ -932,7 +938,7 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
     const can = /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
     cat = (RE_CATALOGO.exec(can ? can[1] : '') || [])[1]
        || (RE_CATALOGO.exec(html) || [])[1] || null;
-    if (!cat) return null;
+    if (!cat) { motivoOutra = 'anuncio fora do catalogo'; return null; }
     // O html que temos e o do anuncio, nao o do catalogo: busca o certo.
     if (!html.includes('"buy_box_offers":{')) html = null;
   }
@@ -940,11 +946,12 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
   if (!html) html = await lerCatalogo(`https://www.mercadolivre.com.br/p/${cat}`);
 
   const ofertas = ofertasDoCatalogo(html);
-  if (ofertas.length < 2) return null;
+  if (ofertas.length < 2) { motivoOutra = 'so uma loja vende este produto'; return null; }
 
   const indice = await obterIndice();
   const chaves = Object.keys(indice.mapa);
 
+  let comCupom = 0;
   const achados = [];
   for (const o of ofertas) {
     if (itemAtual && o.item === itemAtual) continue;
@@ -954,6 +961,7 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
     try { nomes = await resolverVendedor(o.item, url); } catch (e) { nomes = []; }
     const cupom = acharCupom(indice.mapa, chaves, nomes);
     if (!cupom) { await sleep(400); continue; }
+    comCupom++;
 
     let cond = null;
     try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
@@ -974,13 +982,21 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
     });
   }
 
-  if (!achados.length) return null;
+  if (!achados.length) {
+    motivoOutra = comCupom
+      ? 'as outras lojas tem cupom, mas nenhum vale para este preco'
+      : 'nenhuma outra loja deste produto tem cupom';
+    return null;
+  }
 
   achados.sort((a, b) =>
     (a.final == null ? Infinity : a.final) - (b.final == null ? Infinity : b.final));
   const melhor = achados[0];
 
-  if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) return null;
+  if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) {
+    motivoOutra = 'a outra loja com cupom nao sai mais barata';
+    return null;
+  }
   return melhor;
 }
 
@@ -1174,8 +1190,10 @@ async function atenderPedidos() {
             vendedor: vendedor ?? null,
             outraLoja: outra,
             procurouOutra,
+            motivoOutra: procurouOutra ? motivoOutra : null,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
+              id: cupom.id,
               titulo: cupom.desconto, vence: cupom.vence,
               teto: aval ? aval.teto : null, minimo: aval ? aval.minimo : null,
               economia: aval ? aval.economia : null,
