@@ -1378,6 +1378,100 @@ async function atenderPedidos() {
   }
 }
 
+/* ------------------------------------------- atendimento avancado no popup
+
+   O popup usava um caminho antigo, mais fraco do que o do site: nao varria o
+   catalogo atras da mesma peca numa loja com cupom, nao dizia o motivo de nao
+   achar e nao criava o codigo do cupom. Aqui ele passa a usar o MESMO motor do
+   site, com o que so a extensao tem: sessao logada, leitura do anuncio de
+   dentro da pagina e criacao do codigo na hora. */
+
+async function atenderPro(urlBruta, opcoes = {}) {
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  const url = limparUrl(urlBruta);
+  const buscarOutra = opcoes.alternativas !== false;
+  const criarCodigo = opcoes.codigo !== false;
+
+  return comAbaML(async (tabId) => {
+    const [saida] = await chrome.scripting.executeScript({
+      target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
+    });
+    const a = (saida && saida.result) || { ok: false, falha: 'a pagina nao respondeu' };
+
+    let cupom = null, vendedor = null;
+    for (const nome of (a.nomes || [])) {
+      if (!vendedor) vendedor = nome;
+      try {
+        const c = sincToken ? await melhorCupom(sincToken, nome) : null;
+        if (c) { cupom = c; vendedor = c.vendedor; break; }
+      } catch (e) { /* segue tentando o proximo nome */ }
+    }
+
+    const aval = avaliarCupom(cupom, a.preco ?? null);
+    const vale = !!(cupom && aval && aval.vale);
+
+    const r = await gerarNaAba(tabId, url, opcoes.tag || TAG_PADRAO);
+
+    /* Codigo do cupom criado na hora: e o que o cliente cola no carrinho.
+       So para cupom que presta, para nao queimar codigo permanente a toa. */
+    let codigoCupom = null;
+    if (criarCodigo && vale && cupom && cupom.id) {
+      try {
+        const [e] = await chrome.scripting.executeScript({
+          target: { tabId }, world: 'MAIN', func: etiquetaNaPagina,
+          args: [cupom.id, sufixoDaEtiqueta(cupom.id, cupom.desconto)]
+        });
+        const res = e && e.result;
+        if (res && res.alias) {
+          codigoCupom = res.alias;
+          if (sincToken) salvarEtiquetas(sincToken, [{ id: cupom.id, codigo: res.alias }]).catch(() => {});
+        }
+      } catch (e) { console.warn('[etiqueta popup]', e.message); }
+    }
+
+    let outra = null, procurouOutra = false;
+    if (buscarOutra && !vale) {
+      procurouOutra = true;
+      try {
+        const itemAtual =
+          (/item_id(?:%3A|:)(MLB\d+)/i.exec(url) || [])[1] ||
+          (/MLB-?(\d{6,})/i.exec(url) ? 'MLB' + /MLB-?(\d{6,})/i.exec(url)[1] : null);
+        const alt = await mesmoProdutoComCupom(url, a.preco ?? null, itemAtual, a.titulo ?? null);
+        if (alt) {
+          const la = await gerarNaAba(tabId, alt.url);
+          outra = {
+            vendedor: alt.vendedor, preco: alt.preco, economia: alt.economia,
+            minimo: alt.minimo, teto: alt.teto, final: alt.final,
+            cupomTitulo: alt.cupom.titulo, vence: alt.cupom.vence,
+            link: la.link, codigo: la.codigo
+          };
+        }
+      } catch (e) { console.warn('[mesmo produto]', e.message); }
+    }
+
+    return {
+      titulo: a.titulo ?? null,
+      preco: a.preco ?? null,
+      vendedor: vendedor ?? null,
+      id: a.id ?? null,
+      link: r.link,
+      codigo: r.codigo,
+      temCupom: vale,
+      codigoCupom,
+      cupom: cupom ? {
+        id: cupom.id, titulo: cupom.desconto, vence: cupom.vence,
+        teto: aval ? aval.teto : null, minimo: aval ? aval.minimo : null,
+        economia: aval ? aval.economia : null, bloqueado: aval ? aval.bloqueado : null
+      } : null,
+      outraLoja: outra,
+      procurouOutra,
+      motivoOutra: procurouOutra ? motivoOutra : null,
+      varredura: procurouOutra ? diagOutra : null,
+      diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
+    };
+  });
+}
+
 /* ------------------------------------------------------------ mensagens */
 
 chrome.runtime.onMessage.addListener((msg, _s, responder) => {
@@ -1402,7 +1496,13 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
       } else if (msg.tipo === 'texto') {
         responder({ ok: true, texto: await gerarTexto(msg.titulo, msg.preco, msg.cupom, msg.canal) });
       } else if (msg.tipo === 'atender') {
-        responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
+        /* O popup agora usa o motor do site (atenderPro). Se algo falhar nele,
+           cai no caminho antigo para nunca deixar o Weslei sem link. */
+        try {
+          responder({ ok: true, dados: await atenderPro(msg.url, { tag: msg.tag, alternativas: msg.alternativas !== false, codigo: msg.codigo !== false }) });
+        } catch (e) {
+          responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
+        }
       } else if (msg.tipo === 'linkDe') {
         responder({ ok: true, link: await gerarLinkAvulso(msg.url, msg.tag) });
       } else if (msg.tipo === 'sincronizar') {

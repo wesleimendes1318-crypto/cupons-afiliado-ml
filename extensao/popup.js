@@ -243,61 +243,102 @@ function copiarPara(botao, texto, rotulo) {
   }).catch(() => { botao.textContent = 'falhou'; });
 }
 
+/* Mesma leitura do site: o cupom so e "bom" quando desconta de verdade neste
+   preco. O resto e dito com todas as letras, sem enfeite. */
 function blocoAvaliacao(d) {
-  const a = d.avaliacao;
-  if (!d.cupom) return { classe: 'neutro', txt: 'Esta loja não tem cupom de afiliado ativo agora. O link é seu do mesmo jeito.' };
-  if (!a) return { classe: 'neutro', txt: `Loja com cupom de ${d.cupom.titulo}. Não consegui conferir as condições.` };
-  if (a.bloqueado) return { classe: 'ruim', txt: `Cupom de ${d.cupom.titulo} só vale acima de ${brl(a.minimo)}. Neste preço não entra.` };
-  if (!a.vale && a.teto != null) return { classe: 'ruim', txt: `Cupom de ${d.cupom.titulo}, mas o desconto trava em ${brl(a.teto)}. Não vale destacar.` };
-  if (!a.vale) return { classe: 'neutro', txt: `Cupom de ${d.cupom.titulo}, benefício pequeno neste item.` };
-  return { classe: 'bom', txt: `Cupom de ${d.cupom.titulo} vale a pena: cerca de ${brl(a.economia)} de desconto.`
-    + (a.minimo ? ` Mínimo de ${brl(a.minimo)}.` : '') };
+  const c = d.cupom;
+  if (!c) return { classe: 'neutro', txt: 'Hoje essa loja não tem cupom ativo. O link é seu do mesmo jeito.' };
+  if (c.bloqueado) return { classe: 'ruim', txt: `Cupom de ${c.titulo} só vale acima de ${brl(c.minimo)}. Neste preço não entra.` };
+  if (!d.temCupom && c.teto != null) return { classe: 'ruim', txt: `Cupom de ${c.titulo}, mas o desconto trava em ${brl(c.teto)}. Não vale destacar.` };
+  if (!d.temCupom) return { classe: 'neutro', txt: `Cupom de ${c.titulo}, benefício pequeno neste item.` };
+  return {
+    classe: 'bom',
+    txt: `Cupom de ${c.titulo} vale a pena: cerca de ${brl(c.economia)} de desconto.`
+      + (c.minimo ? ` Mínimo de ${brl(c.minimo)}.` : '')
+      + (c.teto != null ? ` Limite de ${brl(c.teto)}.` : '')
+  };
+}
+
+/* Mensagem pronta para o cliente, com o link de afiliado e o codigo do cupom
+   quando ele existe. Nunca leva a URL original: seria comissao perdida. */
+function mensagemPronta(d) {
+  const linhas = [];
+  if (d.titulo) linhas.push(d.titulo);
+  linhas.push(d.link);
+  if (d.temCupom && d.cupom) {
+    linhas.push('');
+    linhas.push(d.codigoCupom
+      ? `Cupom ${d.cupom.titulo}: cole o código ${d.codigoCupom} no carrinho.`
+      : `A loja tem cupom de ${d.cupom.titulo}.`);
+    if (d.cupom.minimo) linhas.push(`Vale em compras a partir de ${brl(d.cupom.minimo)}.`);
+    if (d.cupom.teto != null) linhas.push(`O desconto vai até ${brl(d.cupom.teto)}.`);
+  } else {
+    linhas.push('');
+    linhas.push('Hoje essa loja não tem cupom. Prefiro te dizer isso a inventar desconto.');
+  }
+  if (d.codigo) {
+    linhas.push('');
+    linhas.push(`Se o link não abrir no aplicativo, cole este código na busca: ${d.codigo}`);
+  }
+  return linhas.join('\n');
 }
 
 function mostrarAtendimento(d) {
   const box = escapar;
   const av = blocoAvaliacao(d);
+  const msg = mensagemPronta(d);
   const el = document.createElement('div');
   el.className = 'res';
   el.innerHTML = `
-    <div class="tit">${box(d.titulo || 'Anúncio do Mercado Livre')}</div>
+    <div class="tit">${box(d.titulo || 'Anúncio sem título lido')}</div>
     ${d.preco != null ? `<div class="pre">${brl(d.preco)}</div>` : ''}
     <div class="meta">${box(d.vendedor || 'vendedor não identificado')}${d.id ? ' · ' + box(d.id) : ''}</div>
     <div class="aval ${av.classe}">${box(av.txt)}</div>
+    ${d.codigoCupom ? `<div class="caixa-link">
+      <input type="text" readonly value="${box(d.codigoCupom)}">
+      <button class="pri" data-c="cupom">copiar código</button>
+    </div>` : ''}
     <div class="caixa-link">
       <input type="text" readonly value="${box(d.link)}">
-      <button class="pri" data-c="link">copiar</button>
+      <button class="pri" data-c="link">copiar link</button>
     </div>
     ${d.codigo ? `<div class="meta" style="margin-top:7px">código de busca: <b>${box(d.codigo)}</b></div>` : ''}
-    <div class="msg">${box(d.mensagem)}</div>
+    <div class="msg">${box(msg)}</div>
     <button data-c="msg" style="margin-top:8px">copiar mensagem pronta</button>
+    ${d.diagnostico ? `<div class="meta" style="margin-top:7px">leitura do anúncio: ${box(d.diagnostico)}</div>` : ''}
   `;
   el.querySelector('[data-c="link"]').addEventListener('click', e => copiarPara(e.target, d.link));
-  el.querySelector('[data-c="msg"]').addEventListener('click', e => copiarPara(e.target, d.mensagem));
+  el.querySelector('[data-c="msg"]').addEventListener('click', e => copiarPara(e.target, msg));
+  const bc = el.querySelector('[data-c="cupom"]');
+  if (bc) bc.addEventListener('click', e => copiarPara(e.target, d.codigoCupom));
 
-  if (d.alternativas && d.alternativas.length) {
+  /* Mesma peca numa loja com cupom: é a recomendação principal quando a loja
+     do anúncio não tem nada que preste. */
+  const o = d.outraLoja;
+  if (o) {
     const alt = document.createElement('div');
     alt.className = 'alt';
-    alt.innerHTML = `<div class="meta">Mesmo produto em loja com cupom:</div>`;
-    d.alternativas.forEach(a => {
-      const linha = document.createElement('div');
-      linha.style.marginTop = '7px';
-      linha.innerHTML = `<a href="${box(a.link)}" target="_blank" rel="noopener">${box(tituloDoLink(a.link))}</a>
-        <div class="meta"><span class="cup">${box(a.cupom.titulo)}</span> ${box(a.vendedor)}</div>`;
-      const b = document.createElement('button');
-      b.textContent = 'gerar meu link desta';
-      b.style.marginTop = '5px';
-      b.addEventListener('click', async () => {
-        b.disabled = true; b.textContent = 'gerando...';
-        const r = await pedir({ tipo: 'linkDe', url: a.link });
-        b.disabled = false;
-        if (r.ok) { b.textContent = 'copiar ' + r.link; b.onclick = () => copiarPara(b, r.link); }
-        else b.textContent = 'erro: ' + r.erro;
-      });
-      linha.append(b);
-      alt.append(linha);
-    });
+    const economia = o.economia != null ? ` · economia de ${brl(o.economia)}` : '';
+    const final = o.final != null ? ` · sai por ${brl(o.final)}` : '';
+    alt.innerHTML = `
+      <div class="meta"><b>Mesmo produto, loja com cupom de verdade:</b></div>
+      <div class="meta" style="margin-top:4px">
+        <span class="cup">${box(o.cupomTitulo || 'cupom')}</span> ${box(o.vendedor || '')}
+        ${o.preco != null ? ' · ' + brl(o.preco) : ''}${economia}${final}
+      </div>
+      <div class="caixa-link">
+        <input type="text" readonly value="${box(o.link)}">
+        <button class="pri" data-c="alt">copiar</button>
+      </div>`;
+    alt.querySelector('[data-c="alt"]').addEventListener('click', e => copiarPara(e.target, o.link));
     el.append(alt);
+  } else if (d.procurouOutra) {
+    const nada = document.createElement('div');
+    nada.className = 'alt';
+    nada.innerHTML = `<div class="meta">Procurei o mesmo produto em outras lojas e nenhuma tem cupom que compense.${
+      d.motivoOutra ? ' Motivo: ' + box(d.motivoOutra) + '.' : ''
+    }${d.varredura ? ` (${box(JSON.stringify(d.varredura))})` : ''}</div>`;
+    el.append(nada);
   }
 
   const saida = $('saidaa');
@@ -310,7 +351,7 @@ async function atender() {
   if (!url) return;
   const bt = $('btatender');
   bt.disabled = true; bt.textContent = 'gerando...';
-  $('infoa').textContent = 'limpando o link, identificando a loja e gerando o seu link...';
+  $('infoa').textContent = 'lendo o anúncio, conferindo o cupom real, criando o código e gerando o seu link...';
   $('saidaa').textContent = '';
 
   const t0 = performance.now();
