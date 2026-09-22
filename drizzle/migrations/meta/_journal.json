@@ -8,6 +8,13 @@
       "when": 1789948098929,
       "tag": "0000_create_cupons",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790110986622,
+      "tag": "0001_restrict_sync_logs_and_scope_coupon_reads",
+      "breakpoints": true
     }
   ]
 }
