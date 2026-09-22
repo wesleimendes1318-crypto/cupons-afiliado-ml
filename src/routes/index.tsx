@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Button } from "@/components/ui/button";
@@ -478,6 +478,88 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
   );
 }
 
+/* Copia um texto e diz se conseguiu.
+
+   Precisa rodar DENTRO do clique. Fora do gesto da pessoa o navegador bloqueia
+   a área de transferência, e o código sairia "copiado" sem ter sido copiado. */
+function copiarTexto(texto: string): boolean {
+  try {
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch { /* cai no plano B */ }
+  try {
+    const campo = document.createElement("textarea");
+    campo.value = texto;
+    campo.style.position = "fixed";
+    campo.style.opacity = "0";
+    document.body.appendChild(campo);
+    campo.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(campo);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/* Gera (ou recupera) o código do cupom. O site registra o pedido e a extensão
+   do Weslei cria o código no Mercado Livre em segundos. */
+function useCodigoDoCupom(cupom: Cupom) {
+  const [codigo, setCodigo] = useState<string | null>(cupom.codigo_cupom ?? null);
+  const [gerando, setGerando] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  const relogios = useRef<number[]>([]);
+
+  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
+
+  const gerar = useCallback(async () => {
+    if (codigo || gerando) return;
+    setGerando(true);
+    setFalhou(false);
+    try {
+      const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id });
+      const resposta = String(data ?? "");
+      if (resposta.startsWith("#")) { setCodigo(resposta); setGerando(false); return; }
+      if (resposta !== "pedido") { setGerando(false); setFalhou(true); return; }
+    } catch {
+      setGerando(false);
+      setFalhou(true);
+      return;
+    }
+
+    const limite = Date.now() + 88_000;
+    const olhar = async () => {
+      try {
+        const { data } = await supabase.rpc("consultar_etiqueta", { p_cupom_id: cupom.id });
+        if (typeof data === "string" && data.startsWith("#")) {
+          setCodigo(data);
+          setGerando(false);
+          return;
+        }
+      } catch { /* tenta de novo */ }
+      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
+      else { setGerando(false); setFalhou(true); }
+    };
+    relogios.current.push(window.setTimeout(olhar, 3000));
+  }, [codigo, gerando, cupom.id]);
+
+  return { codigo, gerando, falhou, gerar };
+}
+
+/* "Usar este cupom" faz as três coisas de uma vez: copia o código para a área
+   de transferência e abre a loja no Mercado Livre, para a pessoa só colar.
+
+   Por que copiar ANTES de abrir a aba: a cópia só é permitida durante o
+   clique. Se a gente abrisse a aba primeiro, ou esperasse qualquer resposta de
+   servidor no meio, o navegador cancelaria a cópia e a pessoa chegaria na loja
+   sem o código.
+
+   Quando o cupom ainda não tem código, o primeiro clique cria o código (isso
+   leva segundos e não cabe dentro do gesto) e o botão então passa a fazer tudo
+   de uma vez. O texto embaixo do botão sempre diz o que vai acontecer, para
+   ninguém clicar às cegas. */
 function AcaoDoCupom({
   cupom,
   className,
@@ -487,11 +569,79 @@ function AcaoDoCupom({
   className?: string;
   iconeClassName?: string;
 }) {
+  const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
+  const [copiou, setCopiou] = useState(false);
+  /* Só abre a loja quando a vitrine foi conferida DESLOGADA e tem produto no
+     ar. Com vitrine_ok ainda em branco a gente não sabe, e mandar a pessoa
+     para uma lista vazia com um código na mão é pior do que não oferecer o
+     atalho: ela clica, não acha nada e não volta. */
+  const link = cupom.vitrine_ok === true ? (cupom.link_afiliado ?? null) : null;
+  const icone = iconeClassName ?? "size-4 shrink-0";
+
+  // Sem link da loja não há para onde levar: o caminho é colar o link do produto.
+  if (!link) {
+    return (
+      <Button onClick={irParaColarLink} className={className}>
+        <Link2 className={icone} aria-hidden="true" />
+        Usar este cupom
+      </Button>
+    );
+  }
+
+  const abrirLoja = () => window.open(link, "_blank", "noopener,noreferrer");
+
+  if (codigo) {
+    return (
+      <>
+        <Button
+          onClick={() => { setCopiou(copiarTexto(codigo)); abrirLoja(); }}
+          className={className}
+        >
+          <Link2 className={icone} aria-hidden="true" />
+          Copiar código e abrir a loja
+        </Button>
+        <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
+          {copiou ? (
+            <>
+              <span className="font-bold text-success">Código {codigo} copiado.</span> É só colar no
+              carrinho do Mercado Livre e ver o valor cair.
+            </>
+          ) : (
+            <>
+              Copia o código <span className="font-bold">{codigo}</span> e abre a loja. Você só cola
+              no carrinho.
+            </>
+          )}
+        </p>
+      </>
+    );
+  }
+
   return (
-    <Button onClick={irParaColarLink} className={className}>
-      <Link2 className={iconeClassName ?? "size-4 shrink-0"} aria-hidden="true" />
-      Usar este cupom
-    </Button>
+    <>
+      <Button onClick={gerar} disabled={gerando} className={className}>
+        <Link2 className={icone} aria-hidden="true" />
+        {gerando ? "Criando seu código..." : "Usar este cupom"}
+      </Button>
+      <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
+        {gerando ? (
+          "Estou criando um código só seu. Quando ficar pronto, o botão copia o código e abre a loja."
+        ) : falhou ? (
+          "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto do cupom entra no carrinho."
+        ) : (
+          "Cria o código do cupom, copia para você e abre a loja no Mercado Livre."
+        )}
+      </p>
+      {falhou && (
+        <button
+          type="button"
+          onClick={abrirLoja}
+          className="mt-1.5 text-left text-[11px] font-bold text-ml-blue underline"
+        >
+          Abrir a loja mesmo assim
+        </button>
+      )}
+    </>
   );
 }
 
@@ -1835,10 +1985,12 @@ function CupomCard({
               : "bg-ml-blue text-white hover:bg-ml-blue/90",
           )}
         />
-        <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Procure um produto de <span className="font-semibold">{cupom.vendedor}</span> no Mercado
-          Livre, cole o link aqui e eu confiro o cupom e gero seu link de compra.
-        </p>
+        {!(cupom.vitrine_ok === true && cupom.link_afiliado) && (
+          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
+            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span> no Mercado
+            Livre, cole o link aqui e eu confiro o cupom e gero seu link de compra.
+          </p>
+        )}
         {cupom.codigo_cupom ? (
           <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
         ) : (
