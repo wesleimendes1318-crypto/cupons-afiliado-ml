@@ -580,18 +580,28 @@ function Resultado({
 function OutraLojaComCupom({
   oferta,
   precoAqui,
+  principal,
 }: {
   oferta: OutraLoja;
   precoAqui: number | null;
+  principal?: boolean;
 }) {
   const diferenca =
     precoAqui != null && oferta.final != null ? precoAqui - oferta.final : null;
 
   return (
     <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
+      {principal && (
+        <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
+          Minha recomendação
+        </p>
+      )}
       <p className="text-sm font-bold text-success">
-        Este mesmo produto está mais barato em outra loja, com cupom
+        {principal
+          ? "A loja do anúncio não tem cupom, mas achei o mesmo produto em uma loja que tem"
+          : "Este mesmo produto está mais barato em outra loja, com cupom"}
       </p>
+
 
       <dl className="mt-2 divide-y divide-success/20 text-sm">
         {oferta.vendedor && <Linha rotulo="Loja" valor={oferta.vendedor} />}
