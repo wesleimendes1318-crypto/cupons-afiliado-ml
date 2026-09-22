@@ -120,9 +120,16 @@ export function lerResposta(txt) {
       const c = t.match(/buscador do Mercado Livre:\s*([A-Z0-9][A-Z0-9-]{4,})/i);
       if (c) codigo = c[1];
     }
-  } catch (e) {
-    const m = txt.match(/https?:\/\/meli\.la\/[A-Za-z0-9]+/);
+  } catch (e) { /* resposta nao e JSON: cai no resgate abaixo */ }
+  /* Resgate: o gerador as vezes muda o formato da resposta. Em vez de falhar
+     (e derrubar a comissao), procura o link curto e o codigo no texto cru. */
+  if (!curto) {
+    const m = String(txt).match(/https?:\/\/meli\.la\/[A-Za-z0-9]+/);
     if (m) curto = m[0];
+  }
+  if (!codigo) {
+    const c = String(txt).match(/buscador do Mercado Livre:\s*([A-Z0-9][A-Z0-9-]{4,})/i);
+    if (c) codigo = c[1];
   }
   return { curto, codigo };
 }

@@ -345,6 +345,10 @@ export type Database = {
         Args: { p_lista: Json; p_token: string }
         Returns: Json
       }
+      salvar_link_loja: {
+        Args: { p_cupom_id: number; p_link: string }
+        Returns: undefined
+      }
       salvar_links: { Args: { p_links: Json; p_token: string }; Returns: Json }
       salvar_vitrines: {
         Args: { p_lista: Json; p_token: string }

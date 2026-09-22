@@ -564,7 +564,18 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
     if (r.falha) throw new Error('A chamada falhou na pagina: ' + r.falha);
     if (r.status >= 400)
       throw new Error(`O gerador de links respondeu HTTP ${r.status}. ${String(r.txt || '').slice(0, 160)}`);
-    const { curto, codigo } = lerResposta(r.txt || '');
+    let { curto, codigo } = lerResposta(r.txt || '');
+    /* Tentar de novo antes de desistir: metade das falhas era resposta vazia
+       ou truncada do gerador. Desistir na primeira custa a comissao. */
+    for (let tentativa = 0; !curto && tentativa < 2; tentativa++) {
+      await new Promise(r2 => setTimeout(r2, 1200 * (tentativa + 1)));
+      const [outra] = await chrome.scripting.executeScript({
+        target: { tabId }, world: 'MAIN', func: chamadaNaPagina, args: [ROTA_CRIAR, url, tag]
+      });
+      const rr = outra && outra.result;
+      if (!rr || rr.falha || rr.status >= 400) continue;
+      ({ curto, codigo } = lerResposta(rr.txt || ''));
+    }
     if (!curto) throw new Error('O link foi criado mas nao consegui ler a resposta.');
     return { link: curto, codigo };
   }
