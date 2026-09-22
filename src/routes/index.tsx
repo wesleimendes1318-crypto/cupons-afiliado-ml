@@ -857,6 +857,10 @@ function Index() {
     queryKey: ["cupons"],
     queryFn: carregarCupons,
     staleTime: 60_000,
+    /* Tenta sem desistir: melhor a lista demorar do que a pessoa ver um erro. */
+    retry: 10,
+    retryDelay: (tentativa) => Math.min(1000 * 2 ** tentativa, 15_000),
+    refetchInterval: (consulta) => (consulta.state.error ? 10_000 : false),
   });
   const cupons = useMemo(() => data ?? [], [data]);
 
@@ -1730,8 +1734,18 @@ function Index() {
               })}
             </div>
           )}
-          {error ? (
-            <Aviso titulo="Não foi possível carregar os cupons" texto="Tente atualizar a página em alguns instantes." />
+          {error && !cupons.length ? (
+            <Aviso
+              titulo="Carregando os cupons"
+              texto="A conexão falhou e estou tentando de novo sozinho. Deixe esta página aberta: assim que voltar, a lista aparece."
+            >
+              <Button
+                onClick={() => void refetch()}
+                className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+              >
+                Tentar agora
+              </Button>
+            </Aviso>
           ) : isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, indice) => (
