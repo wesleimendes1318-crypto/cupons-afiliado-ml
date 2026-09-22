@@ -717,8 +717,8 @@ function Resultado({
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
-        <span className="font-semibold text-foreground">Compre por este botão.</span> É o site do
-        Mercado Livre, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
+        <span className="font-semibold text-foreground">Compre por este botão.</span> É a mesma loja
+        oficial do anúncio, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
         vendedor me paga uma comissão, e não sai um centavo a mais do seu bolso.
       </p>
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink/80">
@@ -826,8 +826,8 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
         {achouOutra ? (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
             Por isso procurei o mesmo produto em outras lojas e a opção com cupom está logo acima.
-            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço do
-            Mercado Livre, e a comissão que eu recebo é paga pelo vendedor.
+            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço da
+            loja, e a comissão que eu recebo é paga pelo vendedor.
           </p>
         ) : (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
@@ -835,7 +835,7 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
               ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
               : "Prefiro te dizer isso a inventar um desconto que não existe. "}
             O botão de comprar aqui embaixo continua valendo a pena para nós dois: o preço é o mesmo
-            do Mercado Livre, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
+            da loja, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
             a mais do seu bolso e me ajuda a manter o site de pé.
           </p>
         )}
