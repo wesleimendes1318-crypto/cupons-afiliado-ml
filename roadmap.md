@@ -36,4 +36,4 @@
 - [x] Busca por link: gerar na hora o código do cupom encontrado nos 9k
 - [x] Garantir que a busca de outra loja com cupom para o mesmo produto funcione
 - [x] Varredura ponta a ponta do produto contra todos os cupons do hub (extensao 1.21.0)
-- [ ] Corrigir "Usar este cupom" que parou de gerar a etiqueta
+- [x] Corrigir "Usar este cupom": o codigo aparece mesmo se a vitrine demorar
