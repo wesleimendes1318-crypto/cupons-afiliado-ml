@@ -550,6 +550,12 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
     abaRef.current = aba;
   }, []);
 
+  const fecharReserva = useCallback(() => {
+    const aba = abaRef.current;
+    abaRef.current = null;
+    try { if (aba && !aba.closed) aba.close(); } catch { /* ja fechada */ }
+  }, []);
+
   const abrir = useCallback(() => {
     const reservada = abaRef.current;
     if (reservada && !reservada.closed) {
@@ -568,8 +574,9 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
       const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { pronto(resposta); return; }
-      if (resposta !== "pedido") { setFase("falhou"); return; }
+      if (resposta !== "pedido") { fecharReserva(); setFase("falhou"); return; }
     } catch {
+      fecharReserva();
       setFase("falhou");
       return;
     }
@@ -581,7 +588,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         if (typeof data === "string" && data.startsWith("#")) { pronto(data); return; }
       } catch { /* tenta de novo */ }
       if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else setFase("falhou");
+      else { fecharReserva(); setFase("falhou"); }
     };
     relogios.current.push(window.setTimeout(olhar, 3000));
   }
