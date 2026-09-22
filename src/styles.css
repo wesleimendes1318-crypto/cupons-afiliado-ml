@@ -302,3 +302,74 @@
 @utility gaveta-aberta {
   grid-template-rows: 1fr;
 }
+
+/* Espera que parece curta sem mentir
+   =================================
+   A tentacao aqui e desenhar uma barra que anda sozinha ate 90% e finge que
+   falta pouco. Isso funciona uma vez e depois a pessoa aprende que o site
+   mente. O que a gente faz em vez disso:
+
+     - a etapa acesa e a etapa REAL, vinda do banco (pendente, processando,
+       pronto), nao um temporizador;
+     - o esqueleto tem a forma exata do resultado, entao o olho ja sabe onde a
+       resposta vai aparecer e a espera parece menor;
+     - o brilho que atravessa o esqueleto mantem a sensacao de atividade sem
+       prometer prazo nenhum.
+   Tudo desliga com prefers-reduced-motion. */
+
+@keyframes brilho-espera {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+@utility esqueleto {
+  position: relative;
+  overflow: hidden;
+  background-color: color-mix(in oklab, var(--muted) 80%, transparent);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--ml-blue) 12%, transparent),
+      transparent
+    );
+    animation: brilho-espera 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after { animation: none; }
+  }
+}
+
+@keyframes etapa-acende {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@utility etapa-feita {
+  animation: etapa-acende 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* O ponto da etapa em andamento respira devagar. Nao e contagem regressiva
+   nem pressa: e sinal de que a coisa esta viva. */
+@keyframes etapa-viva {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+
+@utility etapa-andando {
+  animation: etapa-viva 1.6s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
