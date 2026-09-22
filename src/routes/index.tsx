@@ -591,9 +591,17 @@ function AcaoDoCupom({
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
   const [copiou, setCopiou] = useState(false);
-  const [naoAbriu, setNaoAbriu] = useState(false);
   const [esperando, setEsperando] = useState(false);
+  const [redirecionando, setRedirecionando] = useState(false);
+  const redirecionamento = useRef<number | null>(null);
   const icone = iconeClassName ?? "size-4 shrink-0";
+
+  useEffect(
+    () => () => {
+      if (redirecionamento.current) window.clearTimeout(redirecionamento.current);
+    },
+    [],
+  );
 
   /* Para onde a loja abre
 
@@ -607,10 +615,15 @@ function AcaoDoCupom({
 
   const abrir = useCallback(
     (codigoPronto?: string | null) => {
-      if (codigoPronto) setCopiou(copiarTexto(codigoPronto));
       if (!destino) return;
-      const aba = window.open(destino, "_blank", "noopener,noreferrer");
-      setNaoAbriu(!aba);
+      if (codigoPronto) setCopiou(copiarTexto(codigoPronto));
+      setRedirecionando(true);
+      /* A pequena pausa mantém a confirmação visível e preserva a animação do
+         cartão. A navegação na própria aba não é bloqueada pelo navegador e
+         também permite que o endereço abra no aplicativo quando disponível. */
+      redirecionamento.current = window.setTimeout(() => {
+        window.location.assign(destino);
+      }, 700);
     },
     [destino],
   );
@@ -640,19 +653,23 @@ function AcaoDoCupom({
              próximas pessoas. Ninguém fica esperando por ele. */
           void loja.gerar();
         }}
-        disabled={gerando}
+        disabled={gerando || redirecionando}
         className={className}
       >
         <Link2 className={icone} aria-hidden="true" />
-        {jaTem ? "Copiar o cupom e abrir a loja" : gerando ? "Criando seu código..." : "Usar este cupom"}
+        {redirecionando
+          ? "Copiado! Abrindo a loja..."
+          : gerando
+            ? "Criando seu código..."
+            : "Usar este cupom"}
       </Button>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
         {gerando ? (
           "Estou criando seu código. Em segundos eu copio e abro a loja para você."
-        ) : copiou && codigo ? (
+        ) : redirecionando && codigo ? (
           <>
-            <span className="font-bold text-success">Código {codigo} copiado.</span> A loja abriu em
-            outra aba: é só colar no carrinho e ver o valor cair.
+            <span className="font-bold text-success">Código {codigo} copiado.</span> Abrindo a loja:
+            depois é só colar no carrinho.
           </>
         ) : codigo ? (
           <>
@@ -674,15 +691,18 @@ function AcaoDoCupom({
           Copiar o código {codigo}
         </button>
       )}
-      {naoAbriu && destino && (
-        <a
-          href={destino}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1.5 block text-[11px] font-bold text-ml-blue underline"
-        >
-          Abrir a loja (o navegador bloqueou a aba)
-        </a>
+      {codigo && copiou && (
+        <div className="mt-2 animate-scale-in rounded-md border border-dashed border-ml-blue/50 bg-ml-blue/5 p-2.5">
+          <p className="text-[11px] font-semibold text-secondary-ink">Código deste cupom</p>
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1 text-xs font-bold tracking-wide text-ml-blue">
+              {codigo}
+            </code>
+            <span className="shrink-0 rounded border border-success px-2 py-1 text-[11px] font-bold text-success">
+              copiado
+            </span>
+          </div>
+        </div>
       )}
     </>
   );
