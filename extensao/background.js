@@ -1176,6 +1176,7 @@ async function atenderPedidos() {
             procurouOutra,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
+              id: cupom.id,
               titulo: cupom.desconto, vence: cupom.vence,
               teto: aval ? aval.teto : null, minimo: aval ? aval.minimo : null,
               economia: aval ? aval.economia : null,
