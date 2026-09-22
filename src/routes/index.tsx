@@ -571,12 +571,26 @@ function AcaoDoCupom({
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const [copiou, setCopiou] = useState(false);
-  /* Só abre a loja quando a vitrine foi conferida DESLOGADA e tem produto no
-     ar. Com vitrine_ok ainda em branco a gente não sabe, e mandar a pessoa
-     para uma lista vazia com um código na mão é pior do que não oferecer o
-     atalho: ela clica, não acha nada e não volta. */
-  const link = cupom.vitrine_ok === true ? (cupom.link_afiliado ?? null) : null;
+  /* A loja é sempre aberta pelo link de indicação do Weslei. Só fica de fora
+     quando a vitrine foi conferida e estava vazia (vitrine_ok === false):
+     mandar alguém para uma lista sem produto é pior que não oferecer o atalho.
+     Com a conferência ainda em branco o link vale — ele é o caminho normal. */
+  const link = cupom.vitrine_ok === false ? null : (cupom.link_afiliado ?? null);
   const icone = iconeClassName ?? "size-4 shrink-0";
+  /* Pedido feito no clique: quando o código ficar pronto, o site mesmo copia e
+     abre a loja, sem exigir um segundo clique. */
+  const [aguardando, setAguardando] = useState(false);
+
+  const abrirLoja = useCallback(() => {
+    if (link) window.open(link, "_blank", "noopener,noreferrer");
+  }, [link]);
+
+  useEffect(() => {
+    if (!aguardando || !codigo) return;
+    setAguardando(false);
+    setCopiou(copiarTexto(codigo));
+    abrirLoja();
+  }, [aguardando, codigo, abrirLoja]);
 
   // Sem link da loja não há para onde levar: o caminho é colar o link do produto.
   if (!link) {
@@ -588,8 +602,6 @@ function AcaoDoCupom({
     );
   }
 
-  const abrirLoja = () => window.open(link, "_blank", "noopener,noreferrer");
-
   if (codigo) {
     return (
       <>
@@ -598,13 +610,13 @@ function AcaoDoCupom({
           className={className}
         >
           <Link2 className={icone} aria-hidden="true" />
-          Copiar código e abrir a loja
+          Usar este cupom
         </Button>
         <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
           {copiou ? (
             <>
-              <span className="font-bold text-success">Código {codigo} copiado.</span> É só colar no
-              carrinho do Mercado Livre e ver o valor cair.
+              <span className="font-bold text-success">Código {codigo} copiado.</span> A loja abriu
+              em outra aba: é só colar no carrinho e ver o valor cair.
             </>
           ) : (
             <>
@@ -619,13 +631,17 @@ function AcaoDoCupom({
 
   return (
     <>
-      <Button onClick={gerar} disabled={gerando} className={className}>
+      <Button
+        onClick={() => { setAguardando(true); void gerar(); }}
+        disabled={gerando}
+        className={className}
+      >
         <Link2 className={icone} aria-hidden="true" />
         {gerando ? "Criando seu código..." : "Usar este cupom"}
       </Button>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
         {gerando ? (
-          "Estou criando um código só seu. Quando ficar pronto, o botão copia o código e abre a loja."
+          "Estou criando um código só seu. Assim que ficar pronto eu copio para você e abro a loja."
         ) : falhou ? (
           "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto do cupom entra no carrinho."
         ) : (
