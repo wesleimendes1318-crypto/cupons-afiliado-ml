@@ -653,15 +653,28 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
   const c = analise?.cupom ?? null;
 
   if (!c) {
+    const achouOutra = !!analise?.outraLoja;
+    const procurou = analise?.procurouOutra === true;
+
     return (
       <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
         <p className="text-sm font-semibold">Hoje essa loja não tem cupom.</p>
-        <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-          Prefiro te dizer isso a inventar um desconto que não existe. Mas o botão de comprar aqui
-          embaixo continua valendo a pena para nós dois: o preço é o mesmo do Mercado Livre, e por
-          ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo a mais do seu bolso e me
-          ajuda a manter o site de pé.
-        </p>
+        {achouOutra ? (
+          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+            Por isso procurei o mesmo produto em outras lojas e a opção com cupom está logo acima.
+            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço do
+            Mercado Livre, e a comissão que eu recebo é paga pelo vendedor.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+            {procurou
+              ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
+              : "Prefiro te dizer isso a inventar um desconto que não existe. "}
+            O botão de comprar aqui embaixo continua valendo a pena para nós dois: o preço é o mesmo
+            do Mercado Livre, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
+            a mais do seu bolso e me ajuda a manter o site de pé.
+          </p>
+        )}
       </div>
     );
   }
