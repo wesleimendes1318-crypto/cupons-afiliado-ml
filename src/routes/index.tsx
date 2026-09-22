@@ -635,9 +635,41 @@ function AcaoDoCupom({
   /* Pedido feito no clique: quando código e link ficarem prontos, o site mesmo
      copia e abre a loja, sem exigir um segundo clique. */
   const [aguardando, setAguardando] = useState(false);
+  /* A aba é aberta DENTRO do clique, mesmo antes do link existir. O navegador
+     só permite abrir aba durante o gesto da pessoa; se esperássemos a resposta
+     do servidor, ele bloquearia a janela. A aba nasce em branco, mostrando um
+     aviso, e recebe o endereço da loja assim que o link chega. */
+  const abaRef = useRef<Window | null>(null);
+
+  const reservarAba = useCallback(() => {
+    if (abaRef.current && !abaRef.current.closed) return;
+    const aba = window.open("", "_blank");
+    if (!aba) { setNaoAbriu(true); return; }
+    try {
+      aba.opener = null;
+      aba.document.write(
+        '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
+          "<title>Abrindo a loja...</title></head>" +
+          '<body style="font-family:system-ui;padding:24px;color:#333">' +
+          "<p>Preparando a loja no Mercado Livre. Esta aba abre sozinha em instantes.</p>" +
+          "</body></html>",
+      );
+      aba.document.close();
+    } catch { /* algumas versões bloqueiam o write; a aba segue válida */ }
+    abaRef.current = aba;
+    setNaoAbriu(false);
+  }, []);
 
   const abrirLoja = useCallback(() => {
     if (!link) return;
+    const reservada = abaRef.current;
+    if (reservada && !reservada.closed) {
+      reservada.location.replace(link);
+      reservada.focus?.();
+      abaRef.current = null;
+      setNaoAbriu(false);
+      return;
+    }
     const aba = window.open(link, "_blank", "noopener,noreferrer");
     setNaoAbriu(!aba);
   }, [link]);
@@ -662,6 +694,7 @@ function AcaoDoCupom({
       <>
         <Button
           onClick={() => {
+            reservarAba();
             setAguardando(true);
             if (codigo) setCopiou(copiarTexto(codigo));
             void loja.gerar();
