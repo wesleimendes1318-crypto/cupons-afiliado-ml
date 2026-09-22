@@ -22,8 +22,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-const INTERVALO_MS = 3000;
+/* Ritmo da consulta: rapido no comeco, calmo depois.
+
+   Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
+   nos primeiros segundos. Perguntar de 3 em 3 segundos o tempo todo faria o
+   resultado ficar pronto no banco e a tela so mostrar dois ou tres segundos
+   depois - espera inventada, do pior tipo. Entao: 1,2s nas primeiras voltas,
+   3s dai em diante, para nao martelar o banco numa espera longa. */
+const RITMO_RAPIDO_MS = 1200;
+const VOLTAS_RAPIDAS = 15;
+const RITMO_CALMO_MS = 3000;
 const LIMITE_MS = 90000;
+/* Depois disso a espera deixou de ser normal. Nao desiste: troca o texto por um
+   aviso honesto e da uma saida util para a pessoa nao abandonar a pagina. */
+const AVISO_MS = 25000;
 
 type Cupom = {
   titulo: string | null;
@@ -34,23 +46,40 @@ type Cupom = {
   bloqueado: boolean | null;
 };
 
+/* A mesma coisa que a pessoa quer comprar, vendida por OUTRA loja que tem
+   cupom. Só chega aqui quando é o mesmo produto de catálogo do Mercado Livre,
+   nunca um parecido, e só quando sai mais barato que o anúncio colado. */
+type OutraLoja = {
+  vendedor: string | null;
+  preco: number | null;
+  economia: number | null;
+  minimo: number | null;
+  teto: number | null;
+  final: number | null;
+  cupomTitulo: string | null;
+  vence: string | null;
+  link: string;
+  codigo: string | null;
+};
+
 type Analise = {
   titulo: string | null;
   preco: number | null;
   vendedor: string | null;
   temCupom: boolean;
   cupom: Cupom | null;
+  outraLoja: OutraLoja | null;
 };
 
 type Pedido = {
-  status: "pendente" | "pronto" | "falhou";
+  status: "pendente" | "processando" | "pronto" | "falhou";
   link: string | null;
   codigo: string | null;
   erro: string | null;
   analise: Analise | null;
 };
 
-type Fase = "parado" | "limpando" | "procurando" | "gerando" | "pronto" | "offline";
+type Fase = "parado" | "enviando" | "na-fila" | "lendo" | "pronto" | "offline";
 
 const brl = (n: number | null | undefined) =>
   n == null ? null : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -121,14 +150,17 @@ function primeiroLinkML(texto: string): string | null {
   return null;
 }
 
-const TEXTO_FASE: Record<Fase, string> = {
-  parado: "",
-  limpando: "Limpando o link...",
-  procurando: "Procurando cupom real para essa loja...",
-  gerando: "Gerando o link seguro...",
-  pronto: "",
-  offline: "",
-};
+/* As tres etapas sao de verdade:
+     enviando  - o site esta registrando o pedido
+     na-fila   - registrado, esperando a extensao pegar
+     lendo     - a extensao pegou (status 'processando' no banco) e esta
+                 lendo o anuncio, procurando o cupom e gerando o link
+   Nada aqui e temporizador fingindo progresso. */
+const ETAPAS: Array<{ id: Fase; rotulo: string }> = [
+  { id: "enviando", rotulo: "Enviando o link" },
+  { id: "na-fila", rotulo: "Procurando o cupom da loja" },
+  { id: "lendo", rotulo: "Gerando seu link de compra" },
+];
 
 export default function BuscaPorLink() {
   const [url, setUrl] = useState("");
@@ -136,18 +168,20 @@ export default function BuscaPorLink() {
   const [erro, setErro] = useState<string | null>(null);
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [demorando, setDemorando] = useState(false);
+  const [motivo, setMotivo] = useState<string | null>(null);
 
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const faseTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const aviso = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const limparTimers = useCallback(() => {
-    if (timer.current) clearInterval(timer.current);
+    if (timer.current) clearTimeout(timer.current);
     if (prazo.current) clearTimeout(prazo.current);
-    faseTimers.current.forEach(clearTimeout);
+    if (aviso.current) clearTimeout(aviso.current);
     timer.current = null;
     prazo.current = null;
-    faseTimers.current = [];
+    aviso.current = null;
   }, []);
 
   useEffect(() => limparTimers, [limparTimers]);
@@ -161,6 +195,8 @@ export default function BuscaPorLink() {
       setErro(null);
       setPedido(null);
       setCopiado(null);
+      setDemorando(false);
+      setMotivo(null);
 
       const limpo = primeiroLinkML(alvo);
       if (!limpo) {
@@ -169,9 +205,7 @@ export default function BuscaPorLink() {
         return;
       }
 
-      setFase("limpando");
-      faseTimers.current.push(setTimeout(() => setFase("procurando"), 1200));
-      faseTimers.current.push(setTimeout(() => setFase("gerando"), 5000));
+      setFase("enviando");
 
       const { data: id, error } = await supabase.rpc("pedir_link", { p_url: limpo });
 
@@ -186,25 +220,55 @@ export default function BuscaPorLink() {
         return;
       }
 
+      setFase("na-fila");
+      /* Cutuca a extensao na hora. Sem isso o pedido espera o alarme do Chrome,
+         que nao roda em menos de 1 minuto: era esse o tempo morto da espera. */
+      try {
+        window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id }, window.location.origin);
+      } catch { /* sem extensao: o alarme cobre */ }
+
+      let voltas = 0;
+      let parou = false;
+
       const consultar = async () => {
         const { data } = await supabase.rpc("consultar_pedido", { p_id: id });
         // O tipo gerado do RPC devolve status como string solta; aqui a gente
         // sabe o formato porque a funcao no banco e nossa.
         const bruto = Array.isArray(data) ? data[0] : data;
-        if (!bruto) return;
-        const linha = bruto as unknown as Pedido;
-        if (linha.status === "pronto" && linha.link) {
+        const linha = bruto ? (bruto as unknown as Pedido) : null;
+
+        if (linha?.status === "processando") setFase("lendo");
+
+        if (linha?.status === "pronto" && linha.link) {
+          parou = true;
           limparTimers();
           setPedido(linha);
           setFase("pronto");
-        } else if (linha.status === "falhou") {
+          return;
+        }
+        if (linha?.status === "falhou") {
+          parou = true;
           limparTimers();
+          /* Guarda o motivo real. Sem isso a pessoa (e o Weslei) so via "fora
+             do ar" e nao dava para saber se era sessao caida, link errado ou
+             erro nosso. */
+          setMotivo(linha.erro ?? null);
           setFase("offline");
+          return;
+        }
+
+        if (!parou) {
+          voltas += 1;
+          timer.current = setTimeout(
+            consultar,
+            voltas < VOLTAS_RAPIDAS ? RITMO_RAPIDO_MS : RITMO_CALMO_MS,
+          );
         }
       };
 
-      timer.current = setInterval(consultar, INTERVALO_MS);
+      aviso.current = setTimeout(() => setDemorando(true), AVISO_MS);
       prazo.current = setTimeout(() => {
+        parou = true;
         limparTimers();
         setFase((f) => (f === "pronto" ? f : "offline"));
       }, LIMITE_MS);
@@ -223,7 +287,7 @@ export default function BuscaPorLink() {
       .catch(() => undefined);
   };
 
-  const carregando = fase === "limpando" || fase === "procurando" || fase === "gerando";
+  const carregando = fase === "enviando" || fase === "na-fila" || fase === "lendo";
 
   return (
     <section id="colar-link" className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
@@ -265,23 +329,112 @@ export default function BuscaPorLink() {
 
       {erro && <p className="mt-3 text-sm font-medium text-danger">{erro}</p>}
 
-      {carregando && (
-        <div className="mt-4">
-          <p className="mb-2 text-xs text-secondary-ink" aria-live="polite">{TEXTO_FASE[fase]}</p>
-          <div className="space-y-2">
-            <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
-            <div className="h-5 w-1/3 animate-pulse rounded bg-muted" />
-            <div className="h-16 w-full animate-pulse rounded bg-muted" />
-          </div>
-        </div>
-      )}
+      {carregando && <Espera fase={fase} demorando={demorando} />}
 
       {fase === "pronto" && pedido?.link && (
         <Resultado pedido={pedido} copiar={copiar} copiado={copiado} />
       )}
 
-      {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} />}
+      {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} motivo={motivo} />}
     </section>
+  );
+}
+
+/* ------------------------------------------------------------------- espera
+
+   Tres coisas trabalham juntas para a espera parecer curta:
+
+   1. As etapas sao o estado REAL do pedido no banco. Quando a extensao pega o
+      pedido, o status vira 'processando' e a terceira etapa acende sozinha.
+      Nao existe barra andando ate 90% por conta propria — isso engana uma vez
+      e depois a pessoa aprende que o site mente.
+   2. O esqueleto tem a forma exata do resultado. O olho ja sabe onde o preco e
+      o botao vao aparecer, entao a troca do esqueleto pela resposta parece
+      instantanea.
+   3. O brilho atravessando o esqueleto mostra atividade sem prometer prazo.
+*/
+
+function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
+  const atual = ETAPAS.findIndex((e) => e.id === fase);
+
+  return (
+    <div className="mt-4" aria-busy="true">
+      <p className="sr-only" aria-live="polite">
+        {atual >= 0 ? ETAPAS[atual]?.rotulo : "Conferindo"}
+      </p>
+
+      <ol className="mb-3 space-y-2">
+        {ETAPAS.map((etapa, i) => {
+          const feita = atual > i;
+          const andando = atual === i;
+          return (
+            <li key={etapa.id} className="flex items-center gap-2.5 text-sm">
+              <span
+                className={
+                  "flex size-5 shrink-0 items-center justify-center rounded-full border-2 " +
+                  (feita
+                    ? "etapa-feita border-success bg-success text-white"
+                    : andando
+                      ? "etapa-andando border-ml-blue"
+                      : "border-border")
+                }
+              >
+                {feita ? (
+                  <svg viewBox="0 0 20 20" fill="none" className="size-3" aria-hidden="true">
+                    <path
+                      d="M4 10.5 8 14.5 16 6"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <span
+                    className={
+                      "size-1.5 rounded-full " + (andando ? "bg-ml-blue" : "bg-border")
+                    }
+                  />
+                )}
+              </span>
+              <span
+                className={
+                  feita
+                    ? "text-secondary-ink"
+                    : andando
+                      ? "font-semibold text-foreground"
+                      : "text-secondary-ink/60"
+                }
+              >
+                {etapa.rotulo}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      {/* Esqueleto com a forma do resultado: titulo, preco, vendedor, caixa do
+          cupom e botao de comprar. */}
+      <div className="rounded-lg border border-border p-4">
+        <div className="esqueleto h-4 w-4/5 rounded" />
+        <div className="esqueleto mt-2 h-4 w-2/5 rounded" />
+        <div className="esqueleto mt-3 h-7 w-1/3 rounded" />
+        <div className="esqueleto mt-2 h-3 w-1/2 rounded" />
+        <div className="esqueleto mt-4 h-20 w-full rounded-md" />
+        <div className="esqueleto mt-4 h-11 w-full rounded-md" />
+      </div>
+
+      {demorando ? (
+        <p className="mt-2 text-center text-xs leading-relaxed text-secondary-ink">
+          Está demorando mais que o normal, mas eu continuo tentando. Deixe a página
+          aberta: o resultado aparece aqui sozinho.
+        </p>
+      ) : (
+        <p className="mt-2 text-center text-xs text-secondary-ink">
+          Pode deixar esta página aberta. O resultado aparece aqui mesmo.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -308,6 +461,8 @@ function Resultado({
         <p className="mt-1 text-2xl font-bold tabular-nums">{brl(a.preco)}</p>
       )}
       {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
+
+      {a?.outraLoja && <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} />}
 
       <CondicoesDoCupom analise={a} />
 
@@ -349,6 +504,72 @@ function Resultado({
         Sou o Weslei. Estou desempregado e essa comissão tem sido minha fonte de renda. Se este site
         te ajudou, usar meu link já é uma forma de retribuir. Pode colar outro link aqui em cima
         quantas vezes quiser, a qualquer hora.
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------ mesmo produto, outra loja
+
+   Esta é a parte que faz o site valer o clique: o produto é o MESMO, o que
+   muda é a loja e o cupom. O Mercado Livre trata isso como um só produto de
+   catálogo, com vários vendedores, então não há risco de mandar a pessoa para
+   um item parecido.
+
+   Só aparece quando o preço final com cupom fica abaixo do anúncio colado.
+   Se não economiza, não vale pedir para a pessoa trocar de loja.
+*/
+
+function OutraLojaComCupom({
+  oferta,
+  precoAqui,
+}: {
+  oferta: OutraLoja;
+  precoAqui: number | null;
+}) {
+  const diferenca =
+    precoAqui != null && oferta.final != null ? precoAqui - oferta.final : null;
+
+  return (
+    <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
+      <p className="text-sm font-bold text-success">
+        Este mesmo produto está mais barato em outra loja, com cupom
+      </p>
+
+      <dl className="mt-2 divide-y divide-success/20 text-sm">
+        {oferta.vendedor && <Linha rotulo="Loja" valor={oferta.vendedor} />}
+        <Linha rotulo="Preço lá" valor={brl(oferta.preco)} />
+        {oferta.cupomTitulo && <Linha rotulo="Cupom" valor={oferta.cupomTitulo} />}
+        {oferta.economia != null && (
+          <Linha rotulo="Desconto do cupom" valor={brl(oferta.economia)} />
+        )}
+        {oferta.final != null && (
+          <Linha rotulo="Você paga" valor={brl(oferta.final)} destaque />
+        )}
+        {oferta.minimo != null && (
+          <Linha rotulo="Compra mínima" valor={brl(oferta.minimo)} />
+        )}
+        {oferta.vence && <Linha rotulo="Cupom vale até" valor={dataBR(oferta.vence)} />}
+      </dl>
+
+      {diferenca != null && diferenca > 0 && (
+        <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
+          São {brl(diferenca)} a menos que o anúncio que você colou.
+        </p>
+      )}
+
+      <a
+        href={oferta.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+      >
+        Comprar na loja com cupom
+      </a>
+
+      <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+        É o mesmo produto, na mesma página de catálogo do Mercado Livre, só que
+        no anúncio desta loja. O desconto do cupom aparece no carrinho.
       </p>
     </div>
   );
@@ -484,7 +705,7 @@ function Linha({
    Weslei não receberia nada. Sem WhatsApp: o caminho é tentar de novo.
 */
 
-function Offline({ tentar }: { tentar: () => void }) {
+function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | null }) {
   return (
     <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
       <p className="text-sm font-medium">A geração automática está fora do ar neste momento.</p>
@@ -492,6 +713,11 @@ function Offline({ tentar }: { tentar: () => void }) {
         Isso costuma durar poucos minutos. Seu link continua aí no campo: é só tentar de novo.
         Enquanto isso, você pode procurar a loja pelo nome na busca logo abaixo.
       </p>
+      {motivo && (
+        <p className="mt-2 rounded border border-border bg-card px-2 py-1 text-xs text-secondary-ink/80">
+          Detalhe técnico: {motivo}
+        </p>
+      )}
       <button
         type="button"
         onClick={tentar}
