@@ -525,62 +525,28 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
   const [codigo, setCodigo] = useState<string | null>(null);
   const [fase, setFase] = useState<"parado" | "gerando" | "falhou">("parado");
   const [copiou, setCopiou] = useState(false);
+  const [redirecionando, setRedirecionando] = useState(false);
   const relogios = useRef<number[]>([]);
-  /* A aba precisa nascer dentro do clique: aberta depois da resposta do
-     servidor, o navegador entende como janela automática e bloqueia. */
-  const abaRef = useRef<Window | null>(null);
+  const redirecionamento = useRef<number | null>(null);
 
-  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
-
-  const reservarAba = useCallback(() => {
-    if (abaRef.current && !abaRef.current.closed) return;
-    const aba = window.open("", "_blank");
-    if (!aba) return;
-    try {
-      aba.opener = null;
-      aba.document.write(
-        '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
-          "<title>Abrindo a loja...</title></head>" +
-          '<body style="font-family:system-ui;padding:24px;color:#333">' +
-          "<p>Gerando seu código. Esta aba abre sozinha em instantes.</p>" +
-          "</body></html>",
-      );
-      aba.document.close();
-    } catch { /* algumas versões bloqueiam o write; a aba segue válida */ }
-    abaRef.current = aba;
+  useEffect(() => () => {
+    relogios.current.forEach((t) => window.clearTimeout(t));
+    if (redirecionamento.current) window.clearTimeout(redirecionamento.current);
   }, []);
 
-  /* O código não veio: a aba NÃO é fechada. Fechar sozinha parece erro do
-     site. Ela segue para a loja do mesmo jeito — o link de indicação já é
-     válido, só falta o código, que pode ser pedido no WhatsApp. */
-  const seguirSemCodigo = useCallback(() => {
-    const aba = abaRef.current;
-    abaRef.current = null;
-    if (!aba || aba.closed) return;
-    try { aba.location.replace(destino); aba.focus?.(); } catch { /* segue aberta */ }
-  }, [destino]);
-
   const abrir = useCallback(() => {
-    const reservada = abaRef.current;
-    if (reservada && !reservada.closed) {
-      reservada.location.replace(destino);
-      reservada.focus?.();
-      abaRef.current = null;
-      return;
-    }
-    window.open(destino, "_blank", "noopener,noreferrer");
+    setRedirecionando(true);
+    redirecionamento.current = window.setTimeout(() => window.location.assign(destino), 700);
   }, [destino]);
 
   async function pedir() {
-    reservarAba();
     setFase("gerando");
     try {
       const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { pronto(resposta); return; }
-      if (resposta !== "pedido") { seguirSemCodigo(); setFase("falhou"); return; }
+      if (resposta !== "pedido") { setFase("falhou"); return; }
     } catch {
-      seguirSemCodigo();
       setFase("falhou");
       return;
     }
@@ -592,7 +558,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         if (typeof data === "string" && data.startsWith("#")) { pronto(data); return; }
       } catch { /* tenta de novo */ }
       if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else { seguirSemCodigo(); setFase("falhou"); }
+      else { setFase("falhou"); }
     };
     relogios.current.push(window.setTimeout(olhar, 3000));
   }
@@ -606,9 +572,13 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
 
   if (codigo) {
     return (
-      <div className="mt-3 rounded-md border-2 border-success/50 bg-success/10 p-3">
+      <div className="mt-3 animate-scale-in rounded-md border-2 border-success/50 bg-success/10 p-3">
         <p className="text-sm font-bold text-success">
-          {copiou ? `Código ${codigo} copiado.` : `Seu código é ${codigo}.`}
+          {redirecionando
+            ? `Código ${codigo} copiado. Abrindo o produto...`
+            : copiou
+              ? `Código ${codigo} copiado.`
+              : `Seu código é ${codigo}.`}
         </p>
         <p className="mt-1 text-xs leading-relaxed text-secondary-ink">
           Cole no carrinho da loja para o desconto entrar.
@@ -616,9 +586,10 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         <button
           type="button"
           onClick={() => { setCopiou(copiarAgora(codigo)); abrir(); }}
+          disabled={redirecionando}
           className="mt-2 w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95"
         >
-          Copiar de novo e abrir o produto
+          {redirecionando ? "Copiado! Abrindo o produto..." : "Copiar e abrir o produto"}
         </button>
       </div>
     );
