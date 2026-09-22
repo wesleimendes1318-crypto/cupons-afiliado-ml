@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, ShoppingBag, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
+import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -301,16 +301,19 @@ async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
 /* Sem WhatsApp no site: quem quer o cupom resolve sozinho.
    Todo botao que antes abria a conversa agora leva ao campo de colar o link,
    que e o unico caminho que gera o link de afiliado de verdade. */
-/* O botao do card tem dois destinos, e a diferenca importa:
+/* Por que aqui NAO existe um botao "ver os produtos deste cupom"
 
-   Com link_afiliado, ele abre a vitrine daquele cupom no Mercado Livre - a
-   lista exata dos produtos que o cupom cobre - ja pela etiqueta do Weslei.
-   E o caminho certo para quem chegou pelo nome da loja e ainda nao escolheu
-   produto: nao precisa falar com ninguem e a comissao continua sendo dele.
+   Eu tentei e nao funciona. O gerador de links de afiliado do Mercado Livre
+   so preserva URL de PRODUTO. Se voce entrega a ele uma URL de listagem (a
+   vitrine do cupom, a pagina da loja), ele aceita, devolve um meli.la, e esse
+   link joga a pessoa no perfil social do afiliado com recomendacoes
+   aleatorias de varias lojas - nao nos produtos daquele cupom. Testado em
+   varios cupons: as vezes cai numa lista vazia, as vezes num feed generico.
 
-   Sem link_afiliado (cupom novo, ainda na fila), ele leva ao campo de colar,
-   que e o outro caminho que gera o link de afiliado. Nunca manda a pessoa
-   para o Mercado Livre por fora, que seria perder a comissao. */
+   Ou seja: nao ha link de loja que ao mesmo tempo mostre os produtos certos e
+   pague comissao. Entao o card nao promete isso. Ele manda a pessoa para o
+   unico caminho que comprovadamente funciona: colar o link do produto que ela
+   quer, que vira link de afiliado de verdade, com o cupom conferido. */
 /* A etiqueta do cupom, com botao de copiar.
 
    Por que ela importa: o link da vitrine sozinho aplica o desconto no
@@ -484,22 +487,10 @@ function AcaoDoCupom({
   className?: string;
   iconeClassName?: string;
 }) {
-  // Sem link, ou com vitrine sabidamente vazia, o botao nao promete produto.
-  const vitrine = cupom.vitrine_ok === false ? null : cupom.link_afiliado;
-  if (vitrine) {
-    return (
-      <Button asChild className={className}>
-        <a href={vitrine} target="_blank" rel="noopener noreferrer">
-          <ShoppingBag className={iconeClassName ?? "size-4 shrink-0"} aria-hidden="true" />
-          Ver os produtos deste cupom
-        </a>
-      </Button>
-    );
-  }
   return (
     <Button onClick={irParaColarLink} className={className}>
       <Link2 className={iconeClassName ?? "size-4 shrink-0"} aria-hidden="true" />
-      Colar o link do produto
+      Usar este cupom
     </Button>
   );
 }
@@ -1833,9 +1824,8 @@ function CupomCard({
           )}
         />
         <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          {cupom.link_afiliado
-            ? "Abre no Mercado Livre só o que esse cupom cobre. O desconto entra sozinho no carrinho."
-            : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
+          Procure um produto de <span className="font-semibold">{cupom.vendedor}</span> no Mercado
+          Livre, cole o link aqui e eu confiro o cupom e gero seu link de compra.
         </p>
         {cupom.codigo_cupom ? (
           <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
@@ -1905,41 +1895,22 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               destaque
             />
           </div>
-          {cupom.link_afiliado ? (
-            <Button
-              asChild
-              size="lg"
-              className={cn(
-                "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
-                cupom.qualidade === "armadilha"
-                  ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                  : "bg-ml-blue text-white hover:bg-ml-blue/90",
-              )}
-            >
-              <a href={cupom.link_afiliado} target="_blank" rel="noopener noreferrer">
-                <ShoppingBag className="size-5" aria-hidden="true" />
-                Ver os produtos deste cupom
-              </a>
-            </Button>
-          ) : (
-            <Button
-              size="lg"
-              onClick={() => { fechar(); irParaColarLink(); }}
-              className={cn(
-                "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
-                cupom.qualidade === "armadilha"
-                  ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-                  : "bg-ml-blue text-white hover:bg-ml-blue/90",
-              )}
-            >
-              <Link2 className="size-5" aria-hidden="true" />
-              Colar o link do produto
-            </Button>
-          )}
-          <p className="-mt-3 text-xs text-secondary-ink">
-            {cupom.link_afiliado
-              ? "Abre no Mercado Livre só o que esse cupom cobre."
-              : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
+          <Button
+            size="lg"
+            onClick={() => { fechar(); irParaColarLink(); }}
+            className={cn(
+              "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
+              cupom.qualidade === "armadilha"
+                ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+                : "bg-ml-blue text-white hover:bg-ml-blue/90",
+            )}
+          >
+            <Link2 className="size-5" aria-hidden="true" />
+            Usar este cupom
+          </Button>
+          <p className="-mt-3 text-xs leading-relaxed text-secondary-ink">
+            Procure no Mercado Livre um produto de <span className="font-semibold">{cupom.vendedor}</span>,
+            cole o link aqui no site e eu confiro se este cupom pega nele e gero o seu link de compra.
           </p>
           {cupom.codigo_cupom && (
             <div className="-mt-2">
