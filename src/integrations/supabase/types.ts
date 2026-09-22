@@ -58,6 +58,8 @@ export type Database = {
           valor: number | null
           vence: string | null
           vendas: number | null
+          vitrine_conferida_em: string | null
+          vitrine_ok: boolean | null
           vendedor: string
         }
         Insert: {
@@ -85,6 +87,8 @@ export type Database = {
           valor?: number | null
           vence?: string | null
           vendas?: number | null
+          vitrine_conferida_em?: string | null
+          vitrine_ok?: boolean | null
           vendedor: string
         }
         Update: {
@@ -112,6 +116,8 @@ export type Database = {
           valor?: number | null
           vence?: string | null
           vendas?: number | null
+          vitrine_conferida_em?: string | null
+          vitrine_ok?: boolean | null
           vendedor?: string
         }
         Relationships: []
