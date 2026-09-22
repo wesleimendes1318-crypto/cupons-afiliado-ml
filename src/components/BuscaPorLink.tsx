@@ -100,6 +100,27 @@ const dataBR = (iso: string | null | undefined) => {
 const ehLinkML = (u: string) =>
   /^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com|meli\.la)(\/|$)/i.test(u.trim());
 
+/* Tira o primeiro link de verdade de um texto colado.
+
+   Copiar do aplicativo costuma trazer sujeira: a mesma URL emendada duas
+   vezes, texto antes e depois, quebra de linha no meio. Colar isso inteiro no
+   gerador do Mercado Livre produz link quebrado — o comprador cai numa pagina
+   de erro e a venda morre ali. Entao aqui a gente pega so o primeiro endereco
+   valido e ignora o resto. */
+function primeiroLinkML(texto: string): string | null {
+  const limpo = String(texto || "").replace(/\s+/g, " ").trim();
+  if (!limpo) return null;
+
+  const achados = limpo.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+  for (const bruto of achados) {
+    // Duas URLs coladas sem espaco: corta na segunda ocorrencia de "http".
+    const corte = bruto.slice(8).search(/https?:\/\//i);
+    const candidato = corte >= 0 ? bruto.slice(0, corte + 8) : bruto;
+    if (ehLinkML(candidato)) return candidato;
+  }
+  return null;
+}
+
 const TEXTO_FASE: Record<Fase, string> = {
   parado: "",
   limpando: "Limpando o link...",
@@ -141,7 +162,8 @@ export default function BuscaPorLink() {
       setPedido(null);
       setCopiado(null);
 
-      if (!ehLinkML(alvo)) {
+      const limpo = primeiroLinkML(alvo);
+      if (!limpo) {
         setFase("parado");
         setErro("Esse link não é do Mercado Livre. Cole o endereço do anúncio.");
         return;
@@ -151,7 +173,7 @@ export default function BuscaPorLink() {
       faseTimers.current.push(setTimeout(() => setFase("procurando"), 1200));
       faseTimers.current.push(setTimeout(() => setFase("gerando"), 5000));
 
-      const { data: id, error } = await supabase.rpc("pedir_link", { p_url: alvo });
+      const { data: id, error } = await supabase.rpc("pedir_link", { p_url: limpo });
 
       if (error || id == null) {
         limparTimers();
@@ -319,9 +341,9 @@ function Resultado({
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
-        A compra é feita direto no Mercado Livre, com a mesma segurança, o mesmo preço e a mesma
-        garantia de sempre. Usando meu link eu recebo uma comissão paga pelo vendedor, não sai nada
-        do seu bolso.
+        <span className="font-semibold text-foreground">Compre por este botão.</span> É o site do
+        Mercado Livre, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
+        vendedor me paga uma comissão, e não sai um centavo a mais do seu bolso.
       </p>
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink/80">
         Sou o Weslei. Estou desempregado e essa comissão tem sido minha fonte de renda. Se este site
@@ -344,9 +366,14 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
 
   if (!c) {
     return (
-      <div className="mt-3 rounded-md border border-border bg-muted/50 p-3 text-sm leading-relaxed text-secondary-ink">
-        Não há cupom ativo para essa loja hoje. Prefiro te dizer isso a te empurrar um desconto que
-        não existe.
+      <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
+        <p className="text-sm font-semibold">Hoje essa loja não tem cupom.</p>
+        <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+          Prefiro te dizer isso a inventar um desconto que não existe. Mas o botão de comprar aqui
+          embaixo continua valendo a pena para nós dois: o preço é o mesmo do Mercado Livre, e por
+          ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo a mais do seu bolso e me
+          ajuda a manter o site de pé.
+        </p>
       </div>
     );
   }
@@ -409,7 +436,9 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
       >
         {valeAPena
           ? `Cupom de ${c.titulo}${c.economia != null ? ` — cerca de ${brl(c.economia)} de desconto` : ""}`
-          : `Cupom de ${c.titulo}, mas o desconto trava em ${brl(c.teto)}. Na prática não muda quase nada.`}
+          : c.economia != null
+            ? `Cupom de ${c.titulo}: neste produto dá ${brl(c.economia)} de desconto.`
+            : `Cupom de ${c.titulo} nesta loja.`}
       </p>
 
       <dl className="mt-2 divide-y divide-border text-sm">
@@ -419,6 +448,9 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
           valor={c.teto == null ? "sem limite de valor" : brl(c.teto)}
           destaque={c.teto == null}
         />
+        {c.economia != null && (
+          <Linha rotulo="Desconto neste produto" valor={brl(c.economia)} destaque />
+        )}
         {c.minimo != null && <Linha rotulo="Compra mínima" valor={brl(c.minimo)} />}
         {c.vence && <Linha rotulo="Válido até" valor={dataBR(c.vence)} />}
       </dl>
