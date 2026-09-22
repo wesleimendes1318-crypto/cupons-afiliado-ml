@@ -367,33 +367,11 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
   );
 }
 
-/* Contatos vem do banco, nao do codigo: o repositorio e publico e o numero do
-   Weslei nao precisa ficar em texto aberto la. Trocar o numero nao exige novo
-   deploy do site. */
-type Contato = { canal: string; valor: string };
-
-function useContatos() {
-  const { data } = useQuery({
-    queryKey: ["contatos"],
-    staleTime: 30 * 60 * 1000,
-    queryFn: async (): Promise<Contato[]> => {
-      const { data, error } = await supabase.from("contatos").select("canal,valor");
-      if (error) throw error;
-      return (data ?? []) as Contato[];
-    },
-  });
-  const mapa = new Map((data ?? []).map((c) => [c.canal, c.valor]));
-  const whatsapp = mapa.get("whatsapp")?.trim() || null;
-  const telegram = mapa.get("telegram")?.trim() || null;
-  return { whatsapp, telegram };
-}
-
 /* Cupom sem codigo: a pessoa pede e espera aqui mesmo
 
-   A ordem importa. Primeiro o site tenta resolver sozinho: registra o pedido,
-   a extensao gera em ate um minuto e o codigo aparece na tela. So se isso nao
-   voltar a tempo — computador desligado, teto do dia batido — e que aparece o
-   contato. Falar com gente e o plano B, nao o caminho principal. */
+   A ordem importa: o site resolve sozinho. Registra o pedido, a extensao gera
+   em ate um minuto e o codigo aparece na tela. Se nao voltar a tempo, a pessoa
+   tenta de novo aqui mesmo — nao existe contato como plano B. */
 function PedirCodigo({ cupom }: { cupom: Cupom }) {
   const [fase, setFase] = useState<"parado" | "pedindo" | "pronto" | "demorou">("parado");
   const [codigo, setCodigo] = useState<string | null>(null);
