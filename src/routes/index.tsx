@@ -651,24 +651,49 @@ function AcaoDoCupom({
 
   const preparando = loja.gerando || gerando;
 
-  // Link da loja ainda não existe: pede na hora e abre assim que ficar pronto.
+  /* Link da loja ainda não existe: pede na hora e abre assim que ficar pronto.
+
+     O código do cupom NÃO fica refém disso. Antes, quando a vitrine demorava,
+     a tela ficava em "Preparando a loja..." e o código — que já tinha sido
+     gerado — nunca aparecia. Agora, assim que o código existe, ele é mostrado
+     com botão de copiar, e a loja abre sozinha quando o link chegar. */
   if (!link) {
     return (
       <>
         <Button
-          onClick={() => { setAguardando(true); void loja.gerar(); void gerar(); }}
-          disabled={preparando}
+          onClick={() => {
+            setAguardando(true);
+            if (codigo) setCopiou(copiarTexto(codigo));
+            void loja.gerar();
+            void gerar();
+          }}
+          disabled={gerando && !codigo}
           className={className}
         >
           <Link2 className={icone} aria-hidden="true" />
-          {preparando ? "Preparando a loja..." : "Usar este cupom"}
+          {codigo ? "Copiar o código" : gerando ? "Criando seu código..." : "Usar este cupom"}
         </Button>
         <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-          {preparando
-            ? "Estou preparando o link da loja e o código do cupom. Em segundos eu copio o código e abro a loja para você."
-            : loja.falhou
-              ? "Não consegui abrir a loja agora. Cole o link do produto aqui embaixo que eu confiro na hora."
-              : "Copia o código do cupom e abre a loja no Mercado Livre."}
+          {codigo ? (
+            <>
+              {copiou ? (
+                <span className="font-bold text-success">Código {codigo} copiado.</span>
+              ) : (
+                <>
+                  Seu código é <span className="font-bold">{codigo}</span>.
+                </>
+              )}{" "}
+              {loja.gerando
+                ? "Estou abrindo a loja em instantes."
+                : "Cole no carrinho do Mercado Livre para o desconto entrar."}
+            </>
+          ) : preparando ? (
+            "Estou criando seu código e preparando a loja. Em segundos eu copio o código e abro a loja para você."
+          ) : loja.falhou ? (
+            "Não consegui abrir a loja agora. Cole o link do produto aqui embaixo que eu confiro na hora."
+          ) : (
+            "Cria o código do cupom, copia para você e abre a loja no Mercado Livre."
+          )}
         </p>
         {loja.falhou && (
           <button
