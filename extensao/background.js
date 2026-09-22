@@ -1264,7 +1264,7 @@ async function atenderPedidos() {
               const itemAtual =
                 (/item_id(?:%3A|:)(MLB\d+)/i.exec(url) || [])[1] ||
                 (/MLB-?(\d{6,})/i.exec(url) ? 'MLB' + /MLB-?(\d{6,})/i.exec(url)[1] : null);
-              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, itemAtual);
+              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, itemAtual, a.titulo ?? null);
               if (alt) {
                 const la = await gerarNaAba(tabId, alt.url);
                 outra = {
