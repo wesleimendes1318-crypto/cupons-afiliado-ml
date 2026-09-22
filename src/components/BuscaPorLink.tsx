@@ -69,6 +69,9 @@ type Analise = {
   temCupom: boolean;
   cupom: Cupom | null;
   outraLoja: OutraLoja | null;
+  /* true quando a busca por outra loja com cupom chegou a acontecer. Serve
+     para separar "não procurei" de "procurei e não achou". */
+  procurouOutra?: boolean | null;
 };
 
 type Pedido = {
