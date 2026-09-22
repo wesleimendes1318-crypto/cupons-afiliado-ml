@@ -526,21 +526,57 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
   const [fase, setFase] = useState<"parado" | "gerando" | "falhou">("parado");
   const [copiou, setCopiou] = useState(false);
   const relogios = useRef<number[]>([]);
+  /* A aba precisa nascer dentro do clique: aberta depois da resposta do
+     servidor, o navegador entende como janela automática e bloqueia. */
+  const abaRef = useRef<Window | null>(null);
 
   useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
 
+  const reservarAba = useCallback(() => {
+    if (abaRef.current && !abaRef.current.closed) return;
+    const aba = window.open("", "_blank");
+    if (!aba) return;
+    try {
+      aba.opener = null;
+      aba.document.write(
+        '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
+          "<title>Abrindo o Mercado Livre...</title></head>" +
+          '<body style="font-family:system-ui;padding:24px;color:#333">' +
+          "<p>Gerando seu código. Esta aba abre sozinha em instantes.</p>" +
+          "</body></html>",
+      );
+      aba.document.close();
+    } catch { /* algumas versões bloqueiam o write; a aba segue válida */ }
+    abaRef.current = aba;
+  }, []);
+
+  const fecharReserva = useCallback(() => {
+    const aba = abaRef.current;
+    abaRef.current = null;
+    try { if (aba && !aba.closed) aba.close(); } catch { /* ja fechada */ }
+  }, []);
+
   const abrir = useCallback(() => {
+    const reservada = abaRef.current;
+    if (reservada && !reservada.closed) {
+      reservada.location.replace(destino);
+      reservada.focus?.();
+      abaRef.current = null;
+      return;
+    }
     window.open(destino, "_blank", "noopener,noreferrer");
   }, [destino]);
 
   async function pedir() {
+    reservarAba();
     setFase("gerando");
     try {
       const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { pronto(resposta); return; }
-      if (resposta !== "pedido") { setFase("falhou"); return; }
+      if (resposta !== "pedido") { fecharReserva(); setFase("falhou"); return; }
     } catch {
+      fecharReserva();
       setFase("falhou");
       return;
     }
@@ -552,7 +588,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         if (typeof data === "string" && data.startsWith("#")) { pronto(data); return; }
       } catch { /* tenta de novo */ }
       if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else setFase("falhou");
+      else { fecharReserva(); setFase("falhou"); }
     };
     relogios.current.push(window.setTimeout(olhar, 3000));
   }
@@ -561,7 +597,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
     setCodigo(valor);
     setFase("parado");
     setCopiou(copiarAgora(valor));
-    window.open(destino, "_blank", "noopener,noreferrer");
+    abrir();
   }
 
   if (codigo) {
