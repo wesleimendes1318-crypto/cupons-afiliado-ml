@@ -251,7 +251,7 @@ export default function BuscaPorLink() {
       const limpo = melhorLinkML(alvo);
       if (!limpo) {
         setFase("parado");
-        setErro("Esse link não é do Mercado Livre. Cole o endereço do anúncio.");
+        setErro("Esse link não é de um anúncio válido. Cole o endereço do produto.");
         return;
       }
 
@@ -264,7 +264,7 @@ export default function BuscaPorLink() {
         setFase("offline");
         setErro(
           /link invalido/i.test(error?.message ?? "")
-            ? "Esse link não é do Mercado Livre. Cole o endereço do anúncio."
+            ? "Esse link não é de um anúncio válido. Cole o endereço do produto."
             : null,
         );
         return;
@@ -363,8 +363,8 @@ export default function BuscaPorLink() {
               setTimeout(() => buscar(colado), 0);
             }
           }}
-          placeholder="Cole aqui o link do anúncio do Mercado Livre"
-          aria-label="Link do anúncio do Mercado Livre"
+          placeholder="Cole aqui o link do anúncio do produto"
+          aria-label="Link do anúncio do produto"
           className="min-w-0 flex-1 resize-y rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue"
         />
         <button
@@ -540,7 +540,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
       aba.opener = null;
       aba.document.write(
         '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
-          "<title>Abrindo o Mercado Livre...</title></head>" +
+          "<title>Abrindo a loja...</title></head>" +
           '<body style="font-family:system-ui;padding:24px;color:#333">' +
           "<p>Gerando seu código. Esta aba abre sozinha em instantes.</p>" +
           "</body></html>",
@@ -607,7 +607,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
           {copiou ? `Código ${codigo} copiado.` : `Seu código é ${codigo}.`}
         </p>
         <p className="mt-1 text-xs leading-relaxed text-secondary-ink">
-          Cole no carrinho do Mercado Livre para o desconto entrar.
+          Cole no carrinho da loja para o desconto entrar.
         </p>
         <button
           type="button"
@@ -635,7 +635,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
           ? "Assim que ficar pronto eu copio o código para você e abro o produto."
           : fase === "falhou"
             ? "Não consegui criar o código agora. O botão de comprar continua valendo: o desconto do cupom entra no carrinho."
-            : "Cria o código deste cupom, copia para você e abre o produto no Mercado Livre."}
+            : "Cria o código deste cupom, copia para você e abre o produto na loja."}
       </p>
     </div>
   );
@@ -692,14 +692,14 @@ function Resultado({
             : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
         }
       >
-        {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar no Mercado Livre"}
+        {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar agora"}
       </a>
 
 
       {pedido.codigo && (
         <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
           <p className="text-xs leading-relaxed text-secondary-ink">
-            Se o link não abrir no aplicativo, cole este código na busca do Mercado Livre:
+            Se o link não abrir no aplicativo, cole este código na busca da loja:
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
@@ -717,8 +717,8 @@ function Resultado({
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
-        <span className="font-semibold text-foreground">Compre por este botão.</span> É o site do
-        Mercado Livre, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
+        <span className="font-semibold text-foreground">Compre por este botão.</span> É a mesma loja
+        oficial do anúncio, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
         vendedor me paga uma comissão, e não sai um centavo a mais do seu bolso.
       </p>
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink/80">
@@ -799,7 +799,7 @@ function OutraLojaComCupom({
       </a>
 
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-        É o mesmo produto, na mesma página de catálogo do Mercado Livre, só que
+        É o mesmo produto, na mesma página de catálogo, só que
         no anúncio desta loja. O desconto do cupom aparece no carrinho.
       </p>
     </div>
@@ -826,8 +826,8 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
         {achouOutra ? (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
             Por isso procurei o mesmo produto em outras lojas e a opção com cupom está logo acima.
-            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço do
-            Mercado Livre, e a comissão que eu recebo é paga pelo vendedor.
+            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço da
+            loja, e a comissão que eu recebo é paga pelo vendedor.
           </p>
         ) : (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
@@ -835,7 +835,7 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
               ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
               : "Prefiro te dizer isso a inventar um desconto que não existe. "}
             O botão de comprar aqui embaixo continua valendo a pena para nós dois: o preço é o mesmo
-            do Mercado Livre, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
+            da loja, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
             a mais do seu bolso e me ajuda a manter o site de pé.
           </p>
         )}
