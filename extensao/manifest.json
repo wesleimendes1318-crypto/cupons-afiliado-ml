@@ -1,8 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Cupons Afiliado ML",
-  "version": "1.17.0",
-  "description": "Acha quais vendedores tem cupom de afiliado, caca produtos dentro das lojas parceiras e mostra tudo direto no Mercado Livre.",
+  "name": "Conferidor de Cupons",
+  "version": "1.18.0",
+  "description": "Confere o desconto real dos cupons de afiliado: teto, compra minima e validade, direto na pagina do anuncio.",
+  "author": "Weslei Mendes",
+  "icons": {
+    "16": "icones/icone16.png",
+    "32": "icones/icone32.png",
+    "48": "icones/icone48.png",
+    "128": "icones/icone128.png"
+  },
   "permissions": [
     "storage",
     "alarms",
@@ -21,7 +28,13 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Cupons Afiliado ML"
+    "default_title": "Conferidor de Cupons",
+    "default_icon": {
+      "16": "icones/icone16.png",
+      "32": "icones/icone32.png",
+      "48": "icones/icone48.png",
+      "128": "icones/icone128.png"
+    }
   },
   "content_scripts": [
     {
