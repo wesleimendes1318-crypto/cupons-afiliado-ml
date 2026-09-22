@@ -1496,7 +1496,13 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
       } else if (msg.tipo === 'texto') {
         responder({ ok: true, texto: await gerarTexto(msg.titulo, msg.preco, msg.cupom, msg.canal) });
       } else if (msg.tipo === 'atender') {
-        responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
+        /* O popup agora usa o motor do site (atenderPro). Se algo falhar nele,
+           cai no caminho antigo para nunca deixar o Weslei sem link. */
+        try {
+          responder({ ok: true, dados: await atenderPro(msg.url, { tag: msg.tag, alternativas: msg.alternativas !== false, codigo: msg.codigo !== false }) });
+        } catch (e) {
+          responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
+        }
       } else if (msg.tipo === 'linkDe') {
         responder({ ok: true, link: await gerarLinkAvulso(msg.url, msg.tag) });
       } else if (msg.tipo === 'sincronizar') {
