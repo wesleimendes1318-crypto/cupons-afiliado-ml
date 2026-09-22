@@ -603,15 +603,10 @@ function AcaoDoCupom({
     [],
   );
 
-  /* Para onde a loja abre
-
-     Se o cupom já tem link de indicação salvo, é ele. Se não tem, a pessoa vai
-     direto para a página da loja — o que importa é o código do cupom: é ele
-     que carrega a etiqueta do Weslei e marca a venda. Esperar por um link que
-     pode nem sair só faria a pessoa desistir. */
-  const vendedor = String(cupom.vendedor ?? "").trim();
-  const destino =
-    loja.link ?? (vendedor ? `https://lista.mercadolivre.com.br/pagina/${encodeURIComponent(vendedor)}/` : null);
+  /* Só abre um endereço que a extensão realmente gerou e validou. Montar uma
+     vitrine usando o nome exibido da loja leva a páginas inexistentes quando o
+     nome público não é o slug usado no endereço. */
+  const destino = loja.link;
 
   const abrir = useCallback(
     (codigoPronto?: string | null) => {
@@ -628,13 +623,15 @@ function AcaoDoCupom({
     [destino],
   );
 
-  /* O código ficou pronto depois do clique: copia e abre sozinho. */
+  /* Depois do clique, espera código E link validados. O código permanece
+     visível enquanto a navegação acontece, sem mandar a pessoa para uma página
+     de loja deduzida pelo nome. */
   useEffect(() => {
-    if (!esperando || gerando) return;
-    if (!codigo && !falhou) return;
+    if (!esperando || gerando || loja.gerando) return;
+    if (!codigo || !destino) return;
     setEsperando(false);
     abrir(codigo);
-  }, [esperando, gerando, codigo, falhou, abrir]);
+  }, [esperando, gerando, loja.gerando, codigo, destino, abrir]);
 
   const jaTem = Boolean(codigo);
 
@@ -642,30 +639,30 @@ function AcaoDoCupom({
     <>
       <Button
         onClick={() => {
-          if (jaTem) {
-            /* Já tem etiqueta: copia e abre a loja no mesmo clique. */
+          if (jaTem && destino) {
+            /* Código e link prontos: copia e abre no mesmo clique. */
             abrir(codigo);
             return;
           }
           setEsperando(true);
-          void gerar();
-          /* Em paralelo, tenta salvar o link de indicação da loja para as
-             próximas pessoas. Ninguém fica esperando por ele. */
-          void loja.gerar();
+          if (!jaTem) void gerar();
+          if (!destino) void loja.gerar();
         }}
-        disabled={gerando || redirecionando}
+        disabled={gerando || loja.gerando || redirecionando}
         className={className}
       >
         <Link2 className={icone} aria-hidden="true" />
         {redirecionando
           ? "Copiado! Abrindo a loja..."
-          : gerando
-            ? "Criando seu código..."
+          : gerando || loja.gerando
+            ? codigo ? "Preparando a loja..." : "Criando seu código..."
             : "Usar este cupom"}
       </Button>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-        {gerando ? (
-          "Estou criando seu código. Em segundos eu copio e abro a loja para você."
+        {gerando || loja.gerando ? (
+          codigo
+            ? "Seu código já está pronto. Estou localizando a página correta da loja para abrir sem erro."
+            : "Estou criando seu código e localizando a página correta da loja."
         ) : redirecionando && codigo ? (
           <>
             <span className="font-bold text-success">Código {codigo} copiado.</span> Abrindo a loja:
@@ -676,7 +673,7 @@ function AcaoDoCupom({
             Copia o código <span className="font-bold">{codigo}</span> e abre a loja. Você só cola no
             carrinho.
           </>
-        ) : falhou ? (
+        ) : falhou || loja.falhou ? (
           "O código não saiu desta vez. Clique de novo: quase sempre funciona na segunda tentativa."
         ) : (
           "Cria o código do cupom, copia para você e abre a loja."
