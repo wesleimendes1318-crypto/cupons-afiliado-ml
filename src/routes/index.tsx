@@ -18,13 +18,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Cupons Afiliado ML — descubra o desconto real" },
+      { title: "Cupons do Weslei — descubra o desconto real" },
       {
         name: "description",
         content:
-          "Consulte o teto real, a compra mínima e as condições dos cupons de afiliado do Mercado Livre.",
+          "Consulte o limite real, a compra mínima e as condições de cada cupom de afiliado.",
       },
-      { property: "og:title", content: "Cupons Afiliado ML — descubra o desconto real" },
+      { property: "og:title", content: "Cupons do Weslei — descubra o desconto real" },
       {
         property: "og:description",
         content: "Compare o percentual anunciado com o teto real de desconto de cada cupom.",
@@ -283,7 +283,7 @@ function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
 function descricaoCupom(cupom: Cupom) {
   const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
   const tetoCadastrado = tetoReal(cupom);
-  return `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo Mercado Livre. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. ${tetoCadastrado != null ? `Máximo de desconto de ${brl.format(tetoCadastrado)}. ` : ""}Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+  return `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo da plataforma. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. ${tetoCadastrado != null ? `Máximo de desconto de ${brl.format(tetoCadastrado)}. ` : ""}Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
 }
 
 
@@ -361,7 +361,7 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
       </div>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
         Só funciona nos produtos {vendedor ? <>de <span className="font-bold">{vendedor}</span></> : "desta loja"}{" "}
-        que estão no botão acima. Em produto de outra loja o Mercado Livre recusa.
+        que estão no botão acima. Em produto de outra loja a plataforma recusa.
       </p>
     </div>
   );
@@ -651,7 +651,7 @@ function AcaoDoCupom({
         '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
           "<title>Abrindo a loja...</title></head>" +
           '<body style="font-family:system-ui;padding:24px;color:#333">' +
-          "<p>Preparando a loja no Mercado Livre. Esta aba abre sozinha em instantes.</p>" +
+          "<p>Preparando a loja. Esta aba abre sozinha em instantes.</p>" +
           "</body></html>",
       );
       aba.document.close();
@@ -726,14 +726,14 @@ function AcaoDoCupom({
               )}{" "}
               {loja.gerando
                 ? "Estou abrindo a loja em instantes."
-                : "Cole no carrinho do Mercado Livre para o desconto entrar."}
+                : "Cole no carrinho da loja para o desconto entrar."}
             </>
           ) : preparando ? (
             "Estou criando seu código e preparando a loja. Em segundos eu copio o código e abro a loja para você."
           ) : loja.falhou ? (
             "Não consegui abrir a loja agora. Cole o link do produto aqui embaixo que eu confiro na hora."
           ) : (
-            "Cria o código do cupom, copia para você e abre a loja no Mercado Livre."
+            "Cria o código do cupom, copia para você e abre a loja."
           )}
         </p>
         {loja.falhou && (
@@ -802,7 +802,7 @@ function AcaoDoCupom({
         ) : falhou ? (
           "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto do cupom entra no carrinho."
         ) : (
-          "Cria o código do cupom, copia para você e abre a loja no Mercado Livre."
+          "Cria o código do cupom, copia para você e abre a loja."
         )}
       </p>
       {falhou && (
@@ -1233,7 +1233,7 @@ function Index() {
             <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
             <div>
               <h1 className="text-2xl font-extrabold sm:text-3xl">
-                Cupons Afiliado MELI - POR{" "}
+                Cupons do Weslei - POR{" "}
                 <a
                   href="https://www.instagram.com/wslmendes/"
                   target="_blank"
@@ -1278,7 +1278,7 @@ function Index() {
             ))}
           </ol>
           <p className="mt-3 text-xs text-secondary-ink">
-            Sem custo para você. Recebo comissão do Mercado Livre — não de quem compra.
+            Sem custo para você. Recebo comissão do vendedor — não de quem compra.
           </p>
         </div>
       </section>
@@ -1872,7 +1872,7 @@ function Index() {
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Sem custo para você</p>
-            <p className="mt-1 text-xs text-secondary-ink">Recebo comissão do Mercado Livre, nunca de quem compra. O preço é o mesmo.</p>
+            <p className="mt-1 text-xs text-secondary-ink">Recebo comissão do vendedor, nunca de quem compra. O preço é o mesmo.</p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Dados vindos dos cupons oficiais</p>
@@ -2264,7 +2264,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
             Usar este cupom
           </Button>
           <p className="-mt-3 text-xs leading-relaxed text-secondary-ink">
-            Procure no Mercado Livre um produto de <span className="font-semibold">{cupom.vendedor}</span>,
+            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span>,
             cole o link aqui no site e eu confiro se este cupom pega nele e gero o seu link de compra.
           </p>
           {cupom.codigo_cupom && (
@@ -2273,7 +2273,7 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
                 Abra primeiro o botão acima, escolha um produto de lá e só então cole o código
                 no carrinho. O desconto entra sozinho pelo link, e o código é a sua prova de
-                que ele veio deste cupom. Colado num produto de outra loja, o Mercado Livre
+                que ele veio deste cupom. Colado num produto de outra loja, a plataforma
                 responde que o cupom está incorreto — não está, é o produto que não participa.
               </p>
             </div>
