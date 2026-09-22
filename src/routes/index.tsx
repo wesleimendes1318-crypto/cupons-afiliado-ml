@@ -589,109 +589,54 @@ function AcaoDoCupom({
   const loja = useLinkDaLoja(cupom);
   const [copiou, setCopiou] = useState(false);
   const [naoAbriu, setNaoAbriu] = useState(false);
+  const [pediu, setPediu] = useState(false);
   /* A loja é sempre aberta pelo link de indicação do Weslei. Quando o link
      ainda não existe, ele é pedido na hora (useLinkDaLoja). */
   const link = loja.link;
   const icone = iconeClassName ?? "size-4 shrink-0";
-  /* Pedido feito no clique: quando código e link ficarem prontos, o site mesmo
-     copia e abre a loja, sem exigir um segundo clique. */
-  const [aguardando, setAguardando] = useState(false);
-  /* A aba é aberta DENTRO do clique, mesmo antes do link existir. O navegador
-     só permite abrir aba durante o gesto da pessoa; se esperássemos a resposta
-     do servidor, ele bloquearia a janela. A aba nasce em branco, mostrando um
-     aviso, e recebe o endereço da loja assim que o link chega. */
-  const abaRef = useRef<Window | null>(null);
 
-  const reservarAba = useCallback(() => {
-    if (abaRef.current && !abaRef.current.closed) return;
-    const aba = window.open("", "_blank");
-    if (!aba) { setNaoAbriu(true); return; }
-    try {
-      aba.opener = null;
-      aba.document.write(
-        '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
-          "<title>Abrindo a loja...</title></head>" +
-          '<body style="font-family:system-ui;padding:24px;color:#333">' +
-          "<p>Preparando a loja. Esta aba abre sozinha em instantes.</p>" +
-          "</body></html>",
-      );
-      aba.document.close();
-    } catch { /* algumas versões bloqueiam o write; a aba segue válida */ }
-    abaRef.current = aba;
-    setNaoAbriu(false);
-  }, []);
+  /* Por que NÃO existe mais aba reservada em branco
 
-  const abrirLoja = useCallback(() => {
-    if (!link) return;
-    const reservada = abaRef.current;
-    if (reservada && !reservada.closed) {
-      reservada.location.replace(link);
-      reservada.focus?.();
-      abaRef.current = null;
-      setNaoAbriu(false);
-      return;
-    }
-    const aba = window.open(link, "_blank", "noopener,noreferrer");
-    setNaoAbriu(!aba);
-  }, [link]);
-
-  /* Deu errado: a aba NÃO é fechada. Fechar sozinha parece erro do site — a
-     pessoa vê a aba sumir em segundos e não entende. A aba explica o que
-     houve e diz o que fazer, tudo resolvido aqui mesmo, sem falar com
-     ninguém. */
-  useEffect(() => {
-    if (!loja.falhou && !falhou) return;
-    const aba = abaRef.current;
-    abaRef.current = null;
-    if (!aba || aba.closed) return;
-    try {
-      aba.document.open();
-      aba.document.write(
-        '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
-          "<title>Não consegui abrir a loja</title></head>" +
-          '<body style="font-family:system-ui;padding:24px;color:#222;line-height:1.5">' +
-          "<p><strong>Não consegui preparar a loja agora.</strong></p>" +
-          "<p>Pode fechar esta aba e clicar de novo no botão do cupom: quase sempre funciona na segunda tentativa.</p>" +
-          "</body></html>",
-      );
-      aba.document.close();
-    } catch { /* aba de outra origem: deixa como está, sem fechar */ }
-  }, [loja.falhou, falhou]);
-
-  useEffect(() => {
-    if (!aguardando || !link || gerando) return;
-    setAguardando(false);
-    if (codigo) setCopiou(copiarTexto(codigo));
-    abrirLoja();
-  }, [aguardando, link, codigo, gerando, abrirLoja]);
+     Antes o clique abria uma aba com "Preparando a loja..." e só depois
+     buscava o link de indicação. Quando o link demorava ou falhava, a pessoa
+     ficava com uma aba morta: ela fechava, ia comprar por fora e a comissão se
+     perdia. Agora a aba só nasce quando existe um endereço de verdade para
+     ela. Enquanto o link é preparado, tudo acontece à vista, no próprio card,
+     e o botão vira "Abrir a loja" assim que estiver pronto. */
+  const abrirLoja = useCallback(
+    (destino?: string) => {
+      const alvo = destino ?? link;
+      if (!alvo) return;
+      const aba = window.open(alvo, "_blank", "noopener,noreferrer");
+      setNaoAbriu(!aba);
+    },
+    [link],
+  );
 
   const preparando = loja.gerando || gerando;
 
-  /* Link da loja ainda não existe: pede na hora e abre assim que ficar pronto.
-
-     O código do cupom NÃO fica refém disso. Antes, quando a vitrine demorava,
-     a tela ficava em "Preparando a loja..." e o código — que já tinha sido
-     gerado — nunca aparecia. Agora, assim que o código existe, ele é mostrado
-     com botão de copiar, e a loja abre sozinha quando o link chegar. */
+  /* Sem link ainda: o primeiro clique prepara tudo (código + loja) e a pessoa
+     acompanha aqui mesmo. Nenhuma aba é aberta às cegas. */
   if (!link) {
     return (
       <>
         <Button
           onClick={() => {
-            reservarAba();
-            setAguardando(true);
+            setPediu(true);
             if (codigo) setCopiou(copiarTexto(codigo));
             void loja.gerar();
             void gerar();
           }}
-          disabled={gerando && !codigo}
+          disabled={preparando}
           className={className}
         >
           <Link2 className={icone} aria-hidden="true" />
-          {codigo ? "Copiar o código" : gerando ? "Criando seu código..." : "Usar este cupom"}
+          {preparando ? "Preparando seu cupom..." : pediu ? "Preparar de novo" : "Usar este cupom"}
         </Button>
         <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-          {codigo ? (
+          {preparando ? (
+            "Estou criando seu código e preparando a loja. Fique nesta página: em segundos aparece o botão para abrir."
+          ) : codigo ? (
             <>
               {copiou ? (
                 <span className="font-bold text-success">Código {codigo} copiado.</span>
@@ -700,95 +645,87 @@ function AcaoDoCupom({
                   Seu código é <span className="font-bold">{codigo}</span>.
                 </>
               )}{" "}
-              {loja.gerando
-                ? "Estou abrindo a loja em instantes."
-                : "Cole no carrinho da loja para o desconto entrar."}
+              {loja.falhou
+                ? "A loja não ficou pronta agora. Clique em preparar de novo, costuma sair na segunda vez."
+                : "Guarde o código: ele entra no carrinho da loja."}
             </>
-          ) : preparando ? (
-            "Estou criando seu código e preparando a loja. Em segundos eu copio o código e abro a loja para você."
-          ) : loja.falhou ? (
-            "Não consegui abrir a loja agora. Cole o link do produto aqui embaixo que eu confiro na hora."
+          ) : loja.falhou || falhou ? (
+            "Não consegui preparar agora. Clique em preparar de novo — quase sempre funciona na segunda tentativa."
           ) : (
             "Cria o código do cupom, copia para você e abre a loja."
           )}
         </p>
-        {loja.falhou && (
+        {codigo && !copiou && (
           <button
             type="button"
-            onClick={irParaColarLink}
+            onClick={() => setCopiou(copiarTexto(codigo))}
             className="mt-1.5 text-left text-[11px] font-bold text-ml-blue underline"
           >
-            Colar o link do produto
+            Copiar o código
           </button>
         )}
       </>
     );
   }
 
-  if (codigo) {
-    return (
-      <>
-        <Button
-          onClick={() => { setCopiou(copiarTexto(codigo)); abrirLoja(); }}
-          className={className}
-        >
-          <Link2 className={icone} aria-hidden="true" />
-          Usar este cupom
-        </Button>
-        <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-          {copiou ? (
-            <>
-              <span className="font-bold text-success">Código {codigo} copiado.</span> A loja abriu
-              em outra aba: é só colar no carrinho e ver o valor cair.
-            </>
-          ) : (
-            <>
-              Copia o código <span className="font-bold">{codigo}</span> e abre a loja. Você só cola
-              no carrinho.
-            </>
-          )}
-        </p>
-        {naoAbriu && (
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1.5 block text-[11px] font-bold text-ml-blue underline"
-          >
-            Abrir a loja (o navegador bloqueou a aba)
-          </a>
-        )}
-      </>
-    );
-  }
-
+  /* Link pronto: o clique copia o código e abre a loja no mesmo gesto. */
   return (
     <>
       <Button
-        onClick={() => { setAguardando(true); void gerar(); }}
-        disabled={gerando}
+        onClick={() => {
+          if (codigo) {
+            setCopiou(copiarTexto(codigo));
+            abrirLoja();
+            return;
+          }
+          /* Sem código ainda: a loja abre já, pelo link de indicação, e o
+             código continua sendo criado aqui atrás. O desconto do cupom
+             entra no carrinho de qualquer forma. */
+          abrirLoja();
+          void gerar();
+        }}
         className={className}
       >
         <Link2 className={icone} aria-hidden="true" />
-        {gerando ? "Criando seu código..." : "Usar este cupom"}
+        Usar este cupom
       </Button>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-        {gerando ? (
-          "Estou criando um código só seu. Assim que ficar pronto eu copio para você e abro a loja."
+        {copiou && codigo ? (
+          <>
+            <span className="font-bold text-success">Código {codigo} copiado.</span> A loja abriu em
+            outra aba: é só colar no carrinho e ver o valor cair.
+          </>
+        ) : codigo ? (
+          <>
+            Copia o código <span className="font-bold">{codigo}</span> e abre a loja. Você só cola no
+            carrinho.
+          </>
+        ) : gerando ? (
+          "Abri a loja e estou criando seu código. Ele aparece aqui em instantes."
         ) : falhou ? (
-          "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto do cupom entra no carrinho."
+          "Abre a loja com o cupom aplicado no carrinho. O código extra não saiu desta vez."
         ) : (
-          "Cria o código do cupom, copia para você e abre a loja."
+          "Abre a loja com o desconto do cupom já valendo no carrinho."
         )}
       </p>
-      {falhou && (
+      {codigo && !copiou && (
         <button
           type="button"
-          onClick={abrirLoja}
+          onClick={() => setCopiou(copiarTexto(codigo))}
           className="mt-1.5 text-left text-[11px] font-bold text-ml-blue underline"
         >
-          Abrir a loja mesmo assim
+          Copiar o código {codigo}
         </button>
+      )}
+      {naoAbriu && (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 block text-[11px] font-bold text-ml-blue underline"
+        >
+          Abrir a loja (o navegador bloqueou a aba)
+        </a>
       )}
     </>
   );
