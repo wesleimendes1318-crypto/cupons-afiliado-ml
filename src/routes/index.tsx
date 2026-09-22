@@ -625,35 +625,61 @@ function AcaoDoCupom({
   iconeClassName?: string;
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
+  const loja = useLinkDaLoja(cupom);
   const [copiou, setCopiou] = useState(false);
-  /* A loja é sempre aberta pelo link de indicação do Weslei. Só fica de fora
-     quando a vitrine foi conferida e estava vazia (vitrine_ok === false):
-     mandar alguém para uma lista sem produto é pior que não oferecer o atalho.
-     Com a conferência ainda em branco o link vale — ele é o caminho normal. */
-  const link = cupom.vitrine_ok === false ? null : (cupom.link_afiliado ?? null);
+  const [naoAbriu, setNaoAbriu] = useState(false);
+  /* A loja é sempre aberta pelo link de indicação do Weslei. Quando o link
+     ainda não existe, ele é pedido na hora (useLinkDaLoja). */
+  const link = loja.link;
   const icone = iconeClassName ?? "size-4 shrink-0";
-  /* Pedido feito no clique: quando o código ficar pronto, o site mesmo copia e
-     abre a loja, sem exigir um segundo clique. */
+  /* Pedido feito no clique: quando código e link ficarem prontos, o site mesmo
+     copia e abre a loja, sem exigir um segundo clique. */
   const [aguardando, setAguardando] = useState(false);
 
   const abrirLoja = useCallback(() => {
-    if (link) window.open(link, "_blank", "noopener,noreferrer");
+    if (!link) return;
+    const aba = window.open(link, "_blank", "noopener,noreferrer");
+    setNaoAbriu(!aba);
   }, [link]);
 
   useEffect(() => {
-    if (!aguardando || !codigo) return;
+    if (!aguardando || !link || gerando) return;
     setAguardando(false);
-    setCopiou(copiarTexto(codigo));
+    if (codigo) setCopiou(copiarTexto(codigo));
     abrirLoja();
-  }, [aguardando, codigo, abrirLoja]);
+  }, [aguardando, link, codigo, gerando, abrirLoja]);
 
-  // Sem link da loja não há para onde levar: o caminho é colar o link do produto.
+  const preparando = loja.gerando || gerando;
+
+  // Link da loja ainda não existe: pede na hora e abre assim que ficar pronto.
   if (!link) {
     return (
-      <Button onClick={irParaColarLink} className={className}>
-        <Link2 className={icone} aria-hidden="true" />
-        Usar este cupom
-      </Button>
+      <>
+        <Button
+          onClick={() => { setAguardando(true); void loja.gerar(); void gerar(); }}
+          disabled={preparando}
+          className={className}
+        >
+          <Link2 className={icone} aria-hidden="true" />
+          {preparando ? "Preparando a loja..." : "Usar este cupom"}
+        </Button>
+        <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
+          {preparando
+            ? "Estou preparando o link da loja e o código do cupom. Em segundos eu copio o código e abro a loja para você."
+            : loja.falhou
+              ? "Não consegui abrir a loja agora. Cole o link do produto aqui embaixo que eu confiro na hora."
+              : "Copia o código do cupom e abre a loja no Mercado Livre."}
+        </p>
+        {loja.falhou && (
+          <button
+            type="button"
+            onClick={irParaColarLink}
+            className="mt-1.5 text-left text-[11px] font-bold text-ml-blue underline"
+          >
+            Colar o link do produto
+          </button>
+        )}
+      </>
     );
   }
 
