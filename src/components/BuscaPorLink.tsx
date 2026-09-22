@@ -521,6 +521,11 @@ function Resultado({
 
       <CondicoesDoCupom analise={a} />
 
+      {a?.temCupom && a.cupom?.id != null && !trocar && (
+        <CodigoNaHora cupomId={a.cupom.id} destino={link} />
+      )}
+
+
       <a
         href={link}
         target="_blank"
