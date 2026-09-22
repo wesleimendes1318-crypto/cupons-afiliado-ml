@@ -936,11 +936,9 @@ function tituloDoHtml(html) {
 }
 
 function palavras(t) {
-  return norm(String(t || '').replace(/[^\p{L}\p{N}]+/gu, ' '))
-    ? String(t || '').toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .split(/[^a-z0-9]+/).filter(p => p.length > 2)
-    : [];
+  return String(t || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/).filter(p => p.length > 2);
 }
 
 /* O candidato so conta como "o mesmo produto" quando a maior parte das
