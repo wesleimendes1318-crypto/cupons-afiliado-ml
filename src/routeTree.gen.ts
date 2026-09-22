@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
@@ -18,6 +19,11 @@ import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/rec
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
@@ -43,6 +49,7 @@ const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
@@ -67,6 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/privacidade'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
@@ -74,6 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/privacidade'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
@@ -81,6 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/privacidade'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
@@ -89,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
@@ -102,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/classificar': {
@@ -137,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
