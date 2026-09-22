@@ -674,12 +674,29 @@ function AcaoDoCupom({
     setNaoAbriu(!aba);
   }, [link]);
 
-  // Deu errado: a aba de espera não pode ficar aberta em branco.
+  /* Deu errado: a aba NÃO é fechada. Fechar sozinha parece erro do site — a
+     pessoa vê a aba sumir em segundos e não entende. Em vez disso, a aba
+     explica o que houve e oferece o WhatsApp. */
   useEffect(() => {
     if (!loja.falhou && !falhou) return;
     const aba = abaRef.current;
     abaRef.current = null;
-    try { if (aba && !aba.closed) aba.close(); } catch { /* ja fechada */ }
+    if (!aba || aba.closed) return;
+    try {
+      aba.document.open();
+      aba.document.write(
+        '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
+          "<title>Não consegui abrir a loja</title></head>" +
+          '<body style="font-family:system-ui;padding:24px;color:#222;line-height:1.5">' +
+          "<p><strong>Não consegui preparar o link da loja agora.</strong></p>" +
+          "<p>Pode fechar esta aba. Me chama no WhatsApp que eu mando o link com o cupom em minutos.</p>" +
+          '<p><a style="color:#0a7c3f;font-weight:700" href="' +
+          linkWa("Oi! Tentei pegar um cupom no site e o link não abriu. Pode me mandar?") +
+          '">Falar no WhatsApp</a></p>' +
+          "</body></html>",
+      );
+      aba.document.close();
+    } catch { /* aba de outra origem: deixa como está, sem fechar */ }
   }, [loja.falhou, falhou]);
 
   useEffect(() => {
