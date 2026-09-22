@@ -351,7 +351,7 @@ async function atender() {
   if (!url) return;
   const bt = $('btatender');
   bt.disabled = true; bt.textContent = 'gerando...';
-  $('infoa').textContent = 'limpando o link, identificando a loja e gerando o seu link...';
+  $('infoa').textContent = 'lendo o anúncio, conferindo o cupom real, criando o código e gerando o seu link...';
   $('saidaa').textContent = '';
 
   const t0 = performance.now();
