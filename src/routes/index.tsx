@@ -626,6 +626,7 @@ function AcaoDoCupom({
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
+  const { whatsapp } = useContatos();
   const [copiou, setCopiou] = useState(false);
   const [naoAbriu, setNaoAbriu] = useState(false);
   /* A loja é sempre aberta pelo link de indicação do Weslei. Quando o link
@@ -690,14 +691,18 @@ function AcaoDoCupom({
           '<body style="font-family:system-ui;padding:24px;color:#222;line-height:1.5">' +
           "<p><strong>Não consegui preparar o link da loja agora.</strong></p>" +
           "<p>Pode fechar esta aba. Me chama no WhatsApp que eu mando o link com o cupom em minutos.</p>" +
-          '<p><a style="color:#0a7c3f;font-weight:700" href="' +
-          linkWa("Oi! Tentei pegar um cupom no site e o link não abriu. Pode me mandar?") +
-          '">Falar no WhatsApp</a></p>' +
+          (whatsapp
+            ? '<p><a style="color:#0a7c3f;font-weight:700" href="https://wa.me/' +
+              whatsapp +
+              "?text=" +
+              encodeURIComponent("Oi! Tentei pegar um cupom no site e o link não abriu. Pode me mandar?") +
+              '">Falar no WhatsApp</a></p>'
+            : "") +
           "</body></html>",
       );
       aba.document.close();
     } catch { /* aba de outra origem: deixa como está, sem fechar */ }
-  }, [loja.falhou, falhou]);
+  }, [loja.falhou, falhou, whatsapp]);
 
   useEffect(() => {
     if (!aguardando || !link || gerando) return;
