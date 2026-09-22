@@ -674,6 +674,14 @@ function AcaoDoCupom({
     setNaoAbriu(!aba);
   }, [link]);
 
+  // Deu errado: a aba de espera não pode ficar aberta em branco.
+  useEffect(() => {
+    if (!loja.falhou && !falhou) return;
+    const aba = abaRef.current;
+    abaRef.current = null;
+    try { if (aba && !aba.closed) aba.close(); } catch { /* ja fechada */ }
+  }, [loja.falhou, falhou]);
+
   useEffect(() => {
     if (!aguardando || !link || gerando) return;
     setAguardando(false);
