@@ -687,7 +687,7 @@ function AcaoDoCupom({
         className={className}
       >
         <Link2 className={icone} aria-hidden="true" />
-        Usar este cupom
+        {pediu ? "Pronto: abrir a loja" : "Usar este cupom"}
       </Button>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
         {copiou && codigo ? (
