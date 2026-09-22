@@ -923,7 +923,13 @@ function urlDaOferta(catalogo, item) {
    vendedor tem cupom que preste, ou a alternativa nao sai mais barata que o
    que a pessoa ja estava vendo. Nesse ultimo caso mandar a pessoa trocar de
    loja seria dar trabalho a ela para economizar nada. */
+/* Por que a troca de loja nao aconteceu. Sem isso "nao achei" e uma caixa
+   preta: nao da para saber se o anuncio nao era de catalogo, se so tinha um
+   vendedor, ou se nenhum vendedor tinha cupom que prestasse. */
+let motivoOutra = null;
+
 async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
+  motivoOutra = null;
   let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
   let html = null;
 
