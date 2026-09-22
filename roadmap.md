@@ -29,6 +29,6 @@
 - [x] Trocar exportação CSV por Excel (.xlsx) com a descrição do cupom
 - [x] Corrigir o comparador (resposta em HTML / lentidão): reserva no serviço de IA da plataforma
 - [x] Incluir na planilha o perfil da loja com o link de afiliado (config AFILIADO)
-- [ ] Adicionar calculadora de desconto em tempo real aos cards
-- [ ] Adicionar cópia do cupom e abertura segura do link de afiliado
-- [ ] Validar microinterações e layout da calculadora no celular
+- [x] Adicionar calculadora de desconto em tempo real aos cards
+- [x] Adicionar cópia do cupom e abertura segura do link de afiliado
+- [x] Validar microinterações e layout da calculadora no celular
