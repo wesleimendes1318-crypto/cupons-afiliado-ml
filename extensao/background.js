@@ -964,80 +964,127 @@ const RE_UP = /\/up\/(MLBU?\d+)/i;
    preta. */
 let motivoOutra = null;
 
-/* Avalia uma lista de candidatos [{item, url, preco?}] e devolve os que tem
-   cupom valendo para aquele preco. */
+/* Diagnostico da varredura: quantos anuncios do mesmo produto foram lidos,
+   quantas lojas diferentes apareceram e quantas dessas lojas tem cupom no hub
+   de afiliados. Sem isso "nao achei" e uma caixa preta. */
+let diagOutra = null;
+
+/* Avalia uma lista de candidatos [{item, url, preco?}] contra o indice
+   COMPLETO de cupons de afiliado (todos os cupons do hub, nao uma amostra).
+
+   Fase 1, em paralelo: le cada anuncio, tira loja, preco e titulo.
+   Fase 2, em serie: para cada loja que casou com um cupom do hub, busca as
+   condicoes reais (teto e compra minima) e ve se vale para aquele preco. */
 async function avaliarCandidatos(candidatos, itemAtual, tituloOriginal) {
   const indice = await obterIndice();
   const chaves = Object.keys(indice.mapa);
 
-  let comCupom = 0;
-  const achados = [];
+  const lidos = [];
+  const lojas = new Set();
+  let mesmos = 0;
 
-  for (const o of candidatos) {
-    if (itemAtual && o.item === itemAtual) continue;
+  const fila = candidatos.filter(o => !(itemAtual && o.item === itemAtual));
 
-    let html = null;
-    let nomes = [];
-    let preco = o.preco ?? null;
-
-    if (preco == null || tituloOriginal) {
+  for (let i = 0; i < fila.length; i += CONC_VEND) {
+    const lote = fila.slice(i, i + CONC_VEND);
+    await Promise.all(lote.map(async o => {
+      let html = null;
       try { html = await lerParcial(o.url); } catch (e) { html = null; }
-      if (preco == null) preco = precoDoHtml(html);
-      if (tituloOriginal && !mesmoTitulo(tituloOriginal, tituloDoHtml(html))) { await sleep(300); continue; }
-      nomes = nomesDoHtml(html || '');
-    }
-    if (!nomes.length) {
-      try { nomes = await resolverVendedor(o.item, o.url); } catch (e) { nomes = []; }
-    }
 
-    const cupom = acharCupom(indice.mapa, chaves, nomes);
-    if (!cupom) { await sleep(400); continue; }
-    comCupom++;
+      const preco = o.preco != null ? o.preco : precoDoHtml(html);
+      if (tituloOriginal && !mesmoTitulo(tituloOriginal, tituloDoHtml(html))) return;
+      mesmos++;
 
+      let nomes = nomesDoHtml(html || '');
+      if (!nomes.length) {
+        try { nomes = await resolverVendedor(o.item, o.url); } catch (e) { nomes = []; }
+      }
+      if (nomes[0]) lojas.add(norm(nomes[0]));
+
+      const cupom = acharCupom(indice.mapa, chaves, nomes);
+      if (!cupom) return;
+      lidos.push({ ...o, preco, nomes, cupom });
+    }));
+    await sleep(250);
+  }
+
+  // Uma loja pode aparecer em varios anuncios: confere o cupom uma vez so.
+  const porLoja = new Map();
+  for (const c of lidos) {
+    const k = String(c.cupom.i);
+    const atual = porLoja.get(k);
+    if (!atual || (c.preco != null && (atual.preco == null || c.preco < atual.preco))) porLoja.set(k, c);
+  }
+
+  const achados = [];
+  for (const c of porLoja.values()) {
     let cond = null;
-    try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
-    const aval = avaliar(cupom, cond, preco);
-    await sleep(400);
+    try { cond = await condicoesDe(c.cupom.i); } catch (e) { cond = null; }
+    const aval = avaliar(c.cupom, cond, c.preco);
+    await sleep(250);
     if (!aval || !aval.vale) continue;
 
     achados.push({
-      item: o.item,
-      url: o.url,
-      preco,
-      vendedor: nomes[0] || null,
-      cupom: { id: cupom.i, titulo: cupom.t, vence: cupom.x },
+      item: c.item,
+      url: c.url,
+      preco: c.preco,
+      vendedor: c.nomes[0] || null,
+      cupom: { id: c.cupom.i, titulo: c.cupom.t, vence: c.cupom.x },
       economia: aval.economia,
       minimo: aval.minimo,
       teto: aval.teto,
-      final: preco != null && aval.economia != null ? preco - aval.economia : null
+      final: c.preco != null && aval.economia != null ? c.preco - aval.economia : null
     });
   }
 
-  return { achados, comCupom };
+  return {
+    achados,
+    comCupom: porLoja.size,
+    conferidos: fila.length,
+    mesmos,
+    lojas: lojas.size,
+    cuponsNoHub: chaves.length
+  };
 }
 
-/* Fallback para anuncio que nao e de catalogo: procura o mesmo titulo na
-   busca do Mercado Livre e testa os primeiros resultados. */
+/* Procura o mesmo produto na busca do Mercado Livre, varrendo varias paginas
+   para nao parar nos primeiros resultados. */
+const PAGINAS_BUSCA = 3;
+const POR_PAGINA = 50;
+
 async function candidatosPorBusca(titulo) {
   const termo = palavras(titulo).slice(0, 8).join(' ');
   if (!termo) return [];
-  const url = BUSCA(termo).replace('_Frete_Full_FullFilter_True_NoIndex_True', '_NoIndex_True');
-  let html = '';
-  try {
-    const r = await fetch(url, { credentials: 'include' });
-    if (!r.ok) return [];
-    html = await r.text();
-  } catch (e) { return []; }
 
-  return linksDaBusca(html).slice(0, 10).map(link => ({
-    item: (/MLB-?\d+/.exec(link) || [''])[0].replace('-', ''),
-    url: link,
-    preco: null
-  })).filter(c => c.item);
+  const base = BUSCA(termo).replace('_Frete_Full_FullFilter_True_NoIndex_True', '_NoIndex_True');
+  const links = [];
+
+  for (let p = 0; p < PAGINAS_BUSCA; p++) {
+    const url = p === 0 ? base : `${base}_Desde_${p * POR_PAGINA + 1}`;
+    try {
+      const r = await fetch(url, { credentials: 'include' });
+      if (!r.ok) break;
+      const achados = linksDaBusca(await r.text());
+      if (!achados.length) break;
+      links.push(...achados);
+    } catch (e) { break; }
+    await sleep(300);
+  }
+
+  const vistos = new Set();
+  const saida = [];
+  for (const link of links) {
+    const item = (/MLB-?\d+/.exec(link) || [''])[0].replace('-', '');
+    if (!item || vistos.has(item)) continue;
+    vistos.add(item);
+    saida.push({ item, url: link, preco: null });
+  }
+  return saida;
 }
 
 async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual, titulo) {
   motivoOutra = null;
+  diagOutra = null;
 
   let pagina = null;
   let html = null;
@@ -1064,35 +1111,42 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual, titulo) {
     ofertas = html ? ofertasDoCatalogo(html) : [];
   }
 
-  let resultado = { achados: [], comCupom: 0 };
+  let r1 = { achados: [], comCupom: 0, conferidos: 0, mesmos: 0, lojas: 0, cuponsNoHub: 0 };
   if (ofertas.length >= 2) {
-    resultado = await avaliarCandidatos(
+    r1 = await avaliarCandidatos(
       ofertas.map(o => ({ item: o.item, url: urlDaOferta(pagina, o.item), preco: o.preco })),
       itemAtual, null);
   }
 
-  // Sem outras ofertas na pagina do produto: tenta achar o mesmo item na busca.
-  if (!resultado.achados.length && titulo) {
+  /* Mesmo com ofertas no catalogo a busca roda quando nada valeu: o catalogo
+     mostra so a buy box, e a loja parceira com cupom pode estar fora dela. */
+  let r2 = { achados: [], comCupom: 0, conferidos: 0, mesmos: 0, lojas: 0, cuponsNoHub: 0 };
+  if (!r1.achados.length && titulo) {
     const busca = await candidatosPorBusca(titulo);
-    if (busca.length) {
-      const r2 = await avaliarCandidatos(busca, itemAtual, titulo);
-      resultado = { achados: resultado.achados.concat(r2.achados),
-                    comCupom: resultado.comCupom + r2.comCupom };
-    }
+    if (busca.length) r2 = await avaliarCandidatos(busca, itemAtual, titulo);
   }
 
-  if (!resultado.achados.length) {
-    motivoOutra = resultado.comCupom
-      ? 'as outras lojas tem cupom, mas nenhum vale para este preco'
-      : (ofertas.length >= 2
-          ? 'nenhuma outra loja deste produto tem cupom'
-          : 'nao achei este mesmo produto em outra loja com cupom');
+  const achados = r1.achados.concat(r2.achados);
+  diagOutra = {
+    conferidos: r1.conferidos + r2.conferidos,
+    mesmoProduto: (r1.conferidos ? r1.conferidos : 0) + r2.mesmos,
+    lojas: r1.lojas + r2.lojas,
+    lojasComCupom: r1.comCupom + r2.comCupom,
+    cuponsNoHub: Math.max(r1.cuponsNoHub, r2.cuponsNoHub)
+  };
+
+  if (!achados.length) {
+    motivoOutra = diagOutra.lojasComCupom
+      ? `conferi ${diagOutra.lojasComCupom} loja(s) com cupom para este produto e nenhum vale para este preco`
+      : (diagOutra.conferidos
+          ? `conferi ${diagOutra.conferidos} anuncio(s) do mesmo produto contra ${diagOutra.cuponsNoHub} lojas com cupom e nenhuma bateu`
+          : 'nao achei este mesmo produto em outra loja');
     return null;
   }
 
-  resultado.achados.sort((a, b) =>
+  achados.sort((a, b) =>
     (a.final == null ? Infinity : a.final) - (b.final == null ? Infinity : b.final));
-  const melhor = resultado.achados[0];
+  const melhor = achados[0];
 
   if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) {
     motivoOutra = 'a outra loja com cupom nao sai mais barata';
