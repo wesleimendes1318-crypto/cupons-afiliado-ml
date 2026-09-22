@@ -897,7 +897,17 @@ function Index() {
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
             <div>
-              <h1 className="text-2xl font-extrabold sm:text-3xl">Cupons Afiliado MELI - POR @WSLMENDES</h1>
+             <h1 className="text-2xl font-extrabold sm:text-3xl">
+               Cupons Afiliado MELI - POR{" "}
+               <a
+                 href="https://www.instagram.com/wslmendes"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="inline-block text-[var(--ml-blue)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ml-blue)] rounded-sm"
+               >
+                 @WSLMENDES
+               </a>
+             </h1>
               <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
                 Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
               </p>
