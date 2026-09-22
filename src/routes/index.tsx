@@ -706,6 +706,16 @@ function AcaoDoCupom({
             </>
           )}
         </p>
+        {naoAbriu && (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 block text-[11px] font-bold text-ml-blue underline"
+          >
+            Abrir a loja (o navegador bloqueou a aba)
+          </a>
+        )}
       </>
     );
   }
