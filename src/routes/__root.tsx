@@ -77,12 +77,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Cupons do Weslei — o desconto real de cada cupom" },
+      { title: "Cupons de Lojas Afiliadas — o desconto real de cada cupom" },
       {
         name: "description",
         content: "Consulta rápida de cupons de afiliado, com o limite real de desconto.",
       },
-      { property: "og:title", content: "Cupons do Weslei — o desconto real de cada cupom" },
+      { property: "og:title", content: "Cupons de Lojas Afiliadas — o desconto real de cada cupom" },
       {
         property: "og:description",
         content: "Consulta rápida de cupons de afiliado, com o limite real de desconto.",
