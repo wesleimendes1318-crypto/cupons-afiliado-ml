@@ -395,7 +395,6 @@ function useContatos() {
    voltar a tempo — computador desligado, teto do dia batido — e que aparece o
    contato. Falar com gente e o plano B, nao o caminho principal. */
 function PedirCodigo({ cupom }: { cupom: Cupom }) {
-  const { whatsapp, telegram } = useContatos();
   const [fase, setFase] = useState<"parado" | "pedindo" | "pronto" | "demorou">("parado");
   const [codigo, setCodigo] = useState<string | null>(null);
   const relogios = useRef<number[]>([]);
@@ -426,8 +425,6 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
 
   if (fase === "pronto" && codigo) return <EtiquetaDoCupom codigo={codigo} vendedor={cupom.vendedor} />;
 
-  const recado = `Oi Weslei! Quero o código do cupom de ${cupom.desconto ?? "desconto"} da loja ${cupom.vendedor}. (cupom ${cupom.id})`;
-
   return (
     <div className="mt-3 rounded-md border border-dashed border-border bg-muted/40 p-2.5">
       {fase === "pedindo" ? (
@@ -437,30 +434,16 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
       ) : fase === "demorou" ? (
         <>
           <p className="text-[11px] leading-relaxed text-secondary-ink">
-            Não consegui gerar agora. Me chama que eu gero para você.
+            O código não ficou pronto agora. Tente de novo em instantes — normalmente sai na
+            segunda tentativa. O desconto também entra sozinho no carrinho pelo botão acima.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {telegram && (
-              <a
-                href={`https://t.me/${telegram}?text=${encodeURIComponent(recado)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded border border-ml-blue px-2.5 py-1 text-[11px] font-bold text-ml-blue"
-              >
-                Pedir no Telegram
-              </a>
-            )}
-            {whatsapp && (
-              <a
-                href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(recado)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded border border-success px-2.5 py-1 text-[11px] font-bold text-success"
-              >
-                Pedir no WhatsApp
-              </a>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => void pedir()}
+            className="mt-2 w-full rounded border border-ml-blue px-2.5 py-1.5 text-[11px] font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
+          >
+            Tentar de novo
+          </button>
         </>
       ) : (
         <>
@@ -626,7 +609,6 @@ function AcaoDoCupom({
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
-  const { whatsapp } = useContatos();
   const [copiou, setCopiou] = useState(false);
   const [naoAbriu, setNaoAbriu] = useState(false);
   /* A loja é sempre aberta pelo link de indicação do Weslei. Quando o link
@@ -702,7 +684,7 @@ function AcaoDoCupom({
       );
       aba.document.close();
     } catch { /* aba de outra origem: deixa como está, sem fechar */ }
-  }, [loja.falhou, falhou, whatsapp]);
+  }, [loja.falhou, falhou]);
 
   useEffect(() => {
     if (!aguardando || !link || gerando) return;
