@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Cupons Afiliado ML",
+  "version": "1.17.0",
+  "description": "Acha quais vendedores tem cupom de afiliado, caca produtos dentro das lojas parceiras e mostra tudo direto no Mercado Livre.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.mercadolivre.com.br/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://cupons-afiliado-ml.lovable.app/*",
+    "https://rjevaqtnlldhnwsidbbn.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Cupons Afiliado ML"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.mercadolivre.com.br/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://cupons-afiliado-ml.lovable.app/*"
+      ],
+      "js": [
+        "ponte.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "options_page": "options.html"
+}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cupons Afiliado ML — opções</title>
+<style>
+  :root{color-scheme:light dark}
+  body{max-width:620px;margin:40px auto;padding:0 20px;
+       font:14px/1.6 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  h1{font-size:19px;margin:0 0 4px}
+  p.sub{color:#777;margin:0 0 26px;font-size:13px}
+  label{display:block;font-weight:600;margin:18px 0 6px;font-size:13px}
+  input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;
+               font:inherit;background:transparent;color:inherit}
+  button{margin-top:18px;padding:10px 18px;border:0;border-radius:8px;
+         background:#3483fa;color:#fff;font:600 14px inherit;cursor:pointer}
+  .aviso{margin-top:24px;padding:12px 14px;border-radius:8px;
+         background:rgba(193,18,31,.08);border:1px solid rgba(193,18,31,.25);font-size:12.5px}
+  .ok{margin-top:14px;color:#0f7b3f;font-weight:600;font-size:13px;min-height:20px}
+  .dica{font-size:12px;color:#777;margin-top:5px}
+</style>
+</head>
+<body>
+  <h1>Opções</h1>
+  <p class="sub">A extensão funciona inteira sem nada aqui. Isto é só para o gerador de texto de venda.</p>
+
+  <label for="key">Chave da API do Gemini</label>
+  <input type="password" id="key" placeholder="cole aqui e salve uma vez só" autocomplete="off">
+  <div class="dica">Fica salva no armazenamento local do seu Chrome, neste computador. Não vai para lugar nenhum além da própria Google quando você pedir um texto.</div>
+
+  <label for="modelo">Modelo</label>
+  <select id="modelo">
+    <option value="gemini-flash-latest">gemini-flash-latest (rápido e barato)</option>
+    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+    <option value="gemini-2.5-pro">gemini-2.5-pro (mais caro)</option>
+  </select>
+
+  <label for="sinc">Token de sincronia com o site</label>
+  <input type="password" id="sinc" placeholder="cole o token gerado para o seu banco" autocomplete="off">
+  <div class="dica">Com ele preenchido, toda atualizacao do indice sobe sozinha para o site. Sem ele, a extensao funciona normalmente, so nao alimenta o site.</div>
+
+  <label class="chk" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:12px">
+    <input type="checkbox" id="sincauto" checked style="width:auto"> sincronizar automaticamente a cada atualizacao
+  </label>
+
+  <button id="salvar">Salvar</button>
+  <div class="ok" id="ok"></div>
+
+  <div class="aviso">
+    <b>Sobre segurança:</b> qualquer chave que você cole em um chat, e-mail ou documento
+    deve ser considerada exposta. Gere uma nova no Google AI Studio e cole só aqui.
+    Se a chave vazar, quem tiver ela gasta na sua conta.
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

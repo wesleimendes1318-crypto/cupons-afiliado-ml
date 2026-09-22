@@ -1,0 +1,47 @@
+/* Cupons Afiliado ML - estilos injetados nas paginas do Mercado Livre */
+
+.caml-barra {
+  position: fixed; left: 16px; bottom: 16px; z-index: 2147483000;
+  padding: 8px 13px; border-radius: 999px;
+  font: 600 12.5px/1.3 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #1f2937; color: #fff; box-shadow: 0 6px 22px rgba(0,0,0,.3);
+  pointer-events: none;
+}
+.caml-barra[data-estado="ok"]      { background: #0f7b3f; }
+.caml-barra[data-estado="vazio"]   { background: #6b7280; }
+.caml-barra[data-estado="erro"]    { background: #b3261e; }
+
+.caml-tag {
+  margin: 0 0 6px; padding: 6px 9px; border-radius: 7px;
+  background: #e8f6ed; color: #0f5132; border: 1px solid #b7e0c6;
+  font: 12px/1.35 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+.caml-tag b { font-size: 13px; }
+.caml-tag span { display: block; opacity: .8; font-size: 11px; margin-top: 1px; }
+
+li.caml-hit, div.caml-hit { outline: 2px solid #17a04f; outline-offset: 2px; border-radius: 8px; }
+li.caml-miss, div.caml-miss { opacity: .62; }
+
+.caml-selo {
+  position: fixed; right: 16px; bottom: 16px; z-index: 2147483000;
+  max-width: 340px; padding: 11px 14px; border-radius: 10px; cursor: pointer;
+  font: 12.5px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25); transition: all .25s;
+}
+.caml-selo b { display: block; font-size: 13px; letter-spacing: .02em; }
+.caml-selo span { display: block; margin-top: 3px; opacity: .85; font-size: 11.5px; }
+.caml-selo a { display: inline-block; margin-top: 6px; color: inherit; font-weight: 700; }
+.caml-sim { background: #0f7b3f; color: #fff; }
+.caml-nao { background: #374151; color: #fff; }
+.caml-selo.caml-min { max-width: 44px; height: 30px; overflow: hidden; padding: 6px 9px; opacity: .55; }
+.caml-selo.caml-min b { font-size: 0; }
+.caml-selo.caml-min b::before { content: "cupom"; font-size: 10px; }
+.caml-selo.caml-min span, .caml-selo.caml-min a { display: none; }
+
+/* v1.1 - barra com botao parar */
+.caml-barra { display: flex; align-items: center; gap: 9px; pointer-events: auto; }
+.caml-barra .caml-stop {
+  border: 0; background: rgba(255,255,255,.18); color: #fff; cursor: pointer;
+  font: 600 11px/1 inherit; padding: 4px 8px; border-radius: 999px;
+}
+.caml-barra .caml-stop:hover { background: rgba(255,255,255,.3); }
