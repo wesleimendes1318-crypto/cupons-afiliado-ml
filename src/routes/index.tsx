@@ -57,6 +57,12 @@ type Cupom = {
      ela cola, ve o desconto cair e sabe de onde veio. Null enquanto esse
      cupom nao tem etiqueta gerada. */
   codigo_cupom: string | null;
+  /* false = a vitrine desse cupom esta sem nenhum produto no ar. O cupom
+     existe e tem orcamento, mas nao ha item participante, entao o link cai
+     numa lista vazia e o codigo nao aplica em nada. Cupom assim nao entra na
+     vitrine do site: prometer desconto que nao da para usar e pior do que
+     nao mostrar nada. null = ainda nao conferido. */
+  vitrine_ok: boolean | null;
   /* Link de afiliado da vitrine do cupom: a lista exata de produtos que aquele
      cupom cobre, ja com a etiqueta do Weslei. Gerado pela extensao uma vez por
      cupom e guardado no banco, entao chega pronto aqui. Null enquanto a fila
@@ -311,7 +317,7 @@ async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
    carrinho automaticamente, mas a pessoa nao ve de onde ele veio. Com a
    etiqueta ela cola o codigo, ve o valor cair na hora e fica com a certeza
    de que usou o cupom do Weslei. E prova, nao decoracao. */
-function EtiquetaDoCupom({ codigo }: { codigo: string }) {
+function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: string | null }) {
   const [copiado, setCopiado] = useState(false);
 
   function copiar() {
@@ -350,6 +356,10 @@ function EtiquetaDoCupom({ codigo }: { codigo: string }) {
           {copiado ? "copiado" : "copiar"}
         </button>
       </div>
+      <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
+        Só funciona nos produtos {vendedor ? <>de <span className="font-bold">{vendedor}</span></> : "desta loja"}{" "}
+        que estão no botão acima. Em produto de outra loja o Mercado Livre recusa.
+      </p>
     </div>
   );
 }
@@ -411,7 +421,7 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
     relogios.current.push(window.setTimeout(olhar, 4000));
   }
 
-  if (fase === "pronto" && codigo) return <EtiquetaDoCupom codigo={codigo} />;
+  if (fase === "pronto" && codigo) return <EtiquetaDoCupom codigo={codigo} vendedor={cupom.vendedor} />;
 
   const recado = `Oi Weslei! Quero o código do cupom de ${cupom.desconto ?? "desconto"} da loja ${cupom.vendedor}. (cupom ${cupom.id})`;
 
@@ -474,7 +484,8 @@ function AcaoDoCupom({
   className?: string;
   iconeClassName?: string;
 }) {
-  const vitrine = cupom.link_afiliado;
+  // Sem link, ou com vitrine sabidamente vazia, o botao nao promete produto.
+  const vitrine = cupom.vitrine_ok === false ? null : cupom.link_afiliado;
   if (vitrine) {
     return (
       <Button asChild className={className}>
@@ -515,7 +526,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,codigo_cupom",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,codigo_cupom,vitrine_ok",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -622,6 +633,10 @@ function Index() {
       const buscaAtiva = termos.length > 0 || lojas.length > 0;
       if (lojas.length && !lojas.includes(cupom.vendedor)) return false;
       if (!buscaAtiva && vitrine === "recomendados" && cupom.qualidade !== "bom") return false;
+      // Vitrine vazia: o cupom existe mas nao ha produto participante no ar.
+      // O link cai numa lista vazia e o codigo nao aplica em nada. Fica fora
+      // dos recomendados, e some de vez quando a pessoa nao esta buscando.
+      if (cupom.vitrine_ok === false && !buscaAtiva) return false;
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
@@ -1823,7 +1838,7 @@ function CupomCard({
             : "Cole o link do anúncio que você quer e eu confiro o cupom dessa loja na hora."}
         </p>
         {cupom.codigo_cupom ? (
-          <EtiquetaDoCupom codigo={cupom.codigo_cupom} />
+          <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
         ) : (
           <PedirCodigo cupom={cupom} />
         )}
@@ -1928,11 +1943,12 @@ function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar
           </p>
           {cupom.codigo_cupom && (
             <div className="-mt-2">
-              <EtiquetaDoCupom codigo={cupom.codigo_cupom} />
+              <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-                Cole esse código no carrinho do Mercado Livre para ver o desconto entrar. Pelo
-                link acima ele já entra sozinho, mas o código é a sua prova de que o desconto
-                veio deste cupom.
+                Abra primeiro o botão acima, escolha um produto de lá e só então cole o código
+                no carrinho. O desconto entra sozinho pelo link, e o código é a sua prova de
+                que ele veio deste cupom. Colado num produto de outra loja, o Mercado Livre
+                responde que o cupom está incorreto — não está, é o produto que não participa.
               </p>
             </div>
           )}
