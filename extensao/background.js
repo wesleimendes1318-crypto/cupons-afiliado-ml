@@ -1346,6 +1346,7 @@ async function atenderPedidos() {
             outraLoja: outra,
             procurouOutra,
             motivoOutra: procurouOutra ? motivoOutra : null,
+            varreduraOutra: procurouOutra ? diagOutra : null,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
               id: cupom.id,
