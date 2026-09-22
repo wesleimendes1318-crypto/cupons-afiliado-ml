@@ -75,6 +75,9 @@ type Analise = {
   /* true quando a busca por outra loja com cupom chegou a acontecer. Serve
      para separar "não procurei" de "procurei e não achou". */
   procurouOutra?: boolean | null;
+  /* Em uma frase, por que a troca de loja não rolou. Só aparece quando a busca
+     aconteceu e não achou nada. */
+  motivoOutra?: string | null;
 };
 
 type Pedido = {
