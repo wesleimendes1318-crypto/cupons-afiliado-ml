@@ -1190,6 +1190,7 @@ async function atenderPedidos() {
             vendedor: vendedor ?? null,
             outraLoja: outra,
             procurouOutra,
+            motivoOutra: procurouOutra ? motivoOutra : null,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
               id: cupom.id,
