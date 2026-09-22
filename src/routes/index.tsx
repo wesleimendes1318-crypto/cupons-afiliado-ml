@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
+import { Calculator, Check, ChevronDown, Clock3, Copy, ExternalLink, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -508,6 +508,30 @@ function descontoRealEm200(cupom: Cupom) {
   const teto = tetoReal(cupom) ?? Number.POSITIVE_INFINITY;
   const descontoCalculado = cupom.tipo === "%" ? 200 * ((cupom.valor ?? 0) / 100) : (cupom.valor ?? 0);
   return Math.min(descontoCalculado, teto);
+}
+
+function calcularDesconto(cupom: Cupom, valorProduto: number) {
+  if (!Number.isFinite(valorProduto) || valorProduto <= 0) return 0;
+  if (cupom.compra_min != null && valorProduto < cupom.compra_min) return 0;
+
+  const bruto = cupom.tipo === "%"
+    ? valorProduto * ((cupom.valor ?? 0) / 100)
+    : (cupom.valor ?? 0);
+  const limite = tetoReal(cupom);
+  return Math.max(0, Math.min(valorProduto, limite == null ? bruto : Math.min(bruto, limite)));
+}
+
+function linkAfiliadoSeguro(link: string | null) {
+  if (!link) return null;
+  try {
+    const url = new URL(link);
+    const host = url.hostname.toLowerCase();
+    return host === "meli.la" || host === "mercadolivre.com.br" || host.endsWith(".mercadolivre.com.br")
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 async function carregarCupons(): Promise<Cupom[]> {
@@ -1824,19 +1848,7 @@ function CupomCard({
           <p className="mt-1 text-[11px] leading-4 text-secondary-ink">categoria estimada pelo nome da loja</p>
         )}
 
-        <AcaoDoCupom
-          cupom={cupom}
-          className={cn(
-            "mt-auto h-auto min-h-11 w-full min-w-0 whitespace-normal px-3 py-2 text-center text-sm font-bold",
-            armadilha
-              ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
-              : "bg-ml-blue text-white hover:bg-ml-blue/90",
-          )}
-        />
-        <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-          Procure um produto de <span className="font-semibold">{cupom.vendedor}</span> no Mercado
-          Livre, cole o link aqui e eu confiro o cupom e gero seu link de compra.
-        </p>
+        <CalculadoraCupom cupom={cupom} armadilha={armadilha} />
         {cupom.codigo_cupom ? (
           <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
         ) : (
@@ -1866,6 +1878,144 @@ function CupomCard({
         <p className="mt-2 text-[11px]">O link de compra sai na hora, aqui mesmo no site</p>
       </div>
     </article>
+  );
+}
+
+function CalculadoraCupom({ cupom, armadilha }: { cupom: CupomIndexado; armadilha: boolean }) {
+  const [aberta, setAberta] = useState(false);
+  const [valor, setValor] = useState("");
+  const [codigo, setCodigo] = useState(cupom.codigo_cupom ?? "");
+  const [redirecionando, setRedirecionando] = useState(false);
+  const valorNumerico = Number(valor.replace(",", "."));
+  const desconto = calcularDesconto(cupom, valorNumerico);
+  const valorFinal = Math.max(0, valorNumerico - desconto);
+  const abaixoDoMinimo = valorNumerico > 0 && cupom.compra_min != null && valorNumerico < cupom.compra_min;
+  const link = linkAfiliadoSeguro(cupom.link_afiliado);
+
+  function copiarCodigo() {
+    const texto = codigo.trim();
+    if (!texto) return Promise.resolve();
+    if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(texto).catch(() => undefined);
+    const campo = document.createElement("textarea");
+    campo.value = texto;
+    campo.style.position = "fixed";
+    campo.style.opacity = "0";
+    document.body.appendChild(campo);
+    campo.select();
+    document.execCommand("copy");
+    campo.remove();
+    return Promise.resolve();
+  }
+
+  async function copiarEIr() {
+    if (redirecionando) return;
+    const novaAba = link ? window.open("about:blank", "_blank") : null;
+    if (novaAba) novaAba.opener = null;
+    setRedirecionando(true);
+    await copiarCodigo();
+    window.setTimeout(() => {
+      if (novaAba && link) novaAba.location.href = link;
+      else if (link) window.open(link, "_blank", "noopener,noreferrer");
+      else irParaColarLink();
+      setRedirecionando(false);
+    }, 700);
+  }
+
+  return (
+    <div className="mt-auto pt-4">
+      {!aberta ? (
+        <Button
+          type="button"
+          onClick={() => setAberta(true)}
+          className={cn(
+            "min-h-11 w-full min-w-0 whitespace-normal px-3 py-2 text-center text-sm font-bold",
+            armadilha
+              ? "bg-muted text-secondary-ink shadow-none hover:bg-muted/80"
+              : "bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90",
+          )}
+        >
+          <Calculator aria-hidden="true" />
+          Calcular meu desconto
+        </Button>
+      ) : (
+        <section className="animate-fade-in rounded-lg border border-ml-blue/30 bg-ml-blue/5 p-3" aria-label={`Calculadora do cupom de ${cupom.vendedor}`}>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-bold">Seu desconto neste produto</p>
+            <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => setAberta(false)} aria-label="Fechar calculadora">
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+          <div className="mt-2 grid min-w-0 gap-2 sm:grid-cols-2">
+            <label className="min-w-0 text-xs font-medium text-secondary-ink">
+              Valor do produto
+              <div className="mt-1 flex min-h-11 items-center rounded-md border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring/40">
+                <span className="mr-2 text-sm">R$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={valor}
+                  onChange={(event) => setValor(event.target.value)}
+                  placeholder="1.000,00"
+                  className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none"
+                />
+              </div>
+            </label>
+            <label className="min-w-0 text-xs font-medium text-secondary-ink">
+              Cupom
+              <input
+                value={codigo}
+                onChange={(event) => setCodigo(event.target.value)}
+                placeholder="Cole ou digite o cupom"
+                className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring/40"
+              />
+            </label>
+          </div>
+
+          {valorNumerico > 0 ? (
+            <div className="mt-3 space-y-1.5 rounded-md border border-border bg-card p-3 tabular-nums" aria-live="polite">
+              <div className="flex items-center justify-between gap-3 text-sm text-secondary-ink">
+                <span>Valor original</span>
+                <del>{brl.format(valorNumerico)}</del>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm font-semibold text-success">
+                <span>Desconto</span>
+                <span>− {brl.format(desconto)}</span>
+              </div>
+              <div className="flex items-end justify-between gap-3 border-t border-border pt-2">
+                <span className="text-sm font-semibold">Valor final</span>
+                <strong className="text-xl text-foreground">{brl.format(valorFinal)}</strong>
+              </div>
+              {abaixoDoMinimo && (
+                <p className="pt-1 text-xs font-medium text-urgency-warning">
+                  Este cupom só começa a valer em compras a partir de {brl.format(cupom.compra_min ?? 0)}.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-secondary-ink">Digite o valor do produto para ver o desconto e o total na hora.</p>
+          )}
+
+          <Button
+            type="button"
+            onClick={copiarEIr}
+            disabled={!codigo.trim() || redirecionando}
+            className="mt-3 min-h-11 w-full whitespace-normal bg-ml-blue px-3 py-2 font-bold text-ml-blue-foreground hover:bg-ml-blue/90"
+          >
+            {redirecionando ? <Check aria-hidden="true" /> : link ? <ExternalLink aria-hidden="true" /> : <Copy aria-hidden="true" />}
+            {redirecionando
+              ? "Copiado! Redirecionando..."
+              : link
+                ? "Copiar e ir para a loja"
+                : "Copiar cupom e gerar link seguro"}
+          </Button>
+          {!cupom.codigo_cupom && (
+            <p className="mt-2 text-[11px] leading-4 text-secondary-ink">Digite o código que você recebeu para copiar e calcular com as condições deste cupom.</p>
+          )}
+        </section>
+      )}
+    </div>
   );
 }
 
