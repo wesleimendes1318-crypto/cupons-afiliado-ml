@@ -548,6 +548,61 @@ function useCodigoDoCupom(cupom: Cupom) {
   return { codigo, gerando, falhou, gerar };
 }
 
+/* Nem todo cupom já tem o link da loja pronto. Quando falta, o site registra o
+   pedido (pedir_link) e a extensão gera o link de indicação em segundos — o
+   mesmo caminho do "colar link do produto", só que apontando para a vitrine da
+   loja. Assim o botão sempre leva a pessoa para a loja, nunca só rola a tela. */
+function useLinkDaLoja(cupom: Cupom) {
+  const pronto = cupom.vitrine_ok === false ? null : (cupom.link_afiliado ?? null);
+  const [link, setLink] = useState<string | null>(pronto);
+  const [gerando, setGerando] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  const relogios = useRef<number[]>([]);
+
+  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
+
+  const gerar = useCallback(async () => {
+    if (link || gerando) return;
+    const loja = String(cupom.vendedor ?? "").trim();
+    if (!loja) { setFalhou(true); return; }
+    setGerando(true);
+    setFalhou(false);
+    let id: number | null = null;
+    try {
+      const { data, error } = await supabase.rpc("pedir_link", {
+        p_url: `https://lista.mercadolivre.com.br/pagina/${encodeURIComponent(loja)}/`,
+      });
+      if (error) throw error;
+      id = Number(data);
+    } catch {
+      setGerando(false);
+      setFalhou(true);
+      return;
+    }
+
+    const limite = Date.now() + 88_000;
+    const olhar = async () => {
+      try {
+        const { data } = await supabase.rpc("consultar_pedido", { p_id: id });
+        const linha = (Array.isArray(data) ? data[0] : data) as
+          | { status?: string; link?: string | null }
+          | null;
+        if (linha?.status === "pronto" && linha.link) {
+          setLink(linha.link);
+          setGerando(false);
+          return;
+        }
+        if (linha?.status === "falhou") { setGerando(false); setFalhou(true); return; }
+      } catch { /* tenta de novo */ }
+      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
+      else { setGerando(false); setFalhou(true); }
+    };
+    relogios.current.push(window.setTimeout(olhar, 3000));
+  }, [link, gerando, cupom.vendedor]);
+
+  return { link, gerando, falhou, gerar };
+}
+
 /* "Usar este cupom" faz as três coisas de uma vez: copia o código para a área
    de transferência e abre a loja no Mercado Livre, para a pessoa só colar.
 
