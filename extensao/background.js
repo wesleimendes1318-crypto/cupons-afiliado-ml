@@ -913,85 +913,188 @@ function ofertasDoCatalogo(html) {
   return saida;
 }
 
-function urlDaOferta(catalogo, item) {
-  return `https://www.mercadolivre.com.br/p/${catalogo}?pdp_filters=item_id%3A${item}`;
+function urlDaOferta(pagina, item) {
+  return `${pagina}?pdp_filters=item_id%3A${item}`;
 }
+
+/* Preco e titulo direto do html do anuncio, para os candidatos que vem da
+   busca (a busca nao traz preco confiavel ligado a cada link). */
+function precoDoHtml(html) {
+  if (!html) return null;
+  const m = /"price"\s*:\s*([\d.]+)/.exec(html)
+         || /itemprop="price"[^>]*content="([\d.]+)"/.exec(html);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return n > 0 && n < 1e7 ? n : null;
+}
+
+function tituloDoHtml(html) {
+  if (!html) return '';
+  const m = /<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i.exec(html)
+         || /<title>([^<]+)<\/title>/i.exec(html);
+  return m ? m[1] : '';
+}
+
+function palavras(t) {
+  return norm(String(t || '').replace(/[^\p{L}\p{N}]+/gu, ' '))
+    ? String(t || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .split(/[^a-z0-9]+/).filter(p => p.length > 2)
+    : [];
+}
+
+/* O candidato so conta como "o mesmo produto" quando a maior parte das
+   palavras do titulo original aparece nele. Sem essa trava a busca devolve
+   acessorio parecido e o site indicaria outra coisa. */
+function mesmoTitulo(original, candidato) {
+  const a = palavras(original);
+  const b = new Set(palavras(candidato));
+  if (a.length < 3) return false;
+  const iguais = a.filter(p => b.has(p)).length;
+  return iguais / a.length >= 0.6;
+}
+
+const RE_UP = /\/up\/(MLBU?\d+)/i;
 
 /* Devolve a melhor oferta do MESMO produto numa loja com cupom, ou null.
 
-   Null quando: nao e produto de catalogo, so existe um vendedor, nenhum
-   vendedor tem cupom que preste, ou a alternativa nao sai mais barata que o
-   que a pessoa ja estava vendo. Nesse ultimo caso mandar a pessoa trocar de
-   loja seria dar trabalho a ela para economizar nada. */
+   Null quando: nao achamos o produto em outra loja, nenhum vendedor tem cupom
+   que preste, ou a alternativa nao sai mais barata que o que a pessoa ja
+   estava vendo. Nesse ultimo caso mandar a pessoa trocar de loja seria dar
+   trabalho a ela para economizar nada. */
 /* Por que a troca de loja nao aconteceu. Sem isso "nao achei" e uma caixa
-   preta: nao da para saber se o anuncio nao era de catalogo, se so tinha um
-   vendedor, ou se nenhum vendedor tinha cupom que prestasse. */
+   preta. */
 let motivoOutra = null;
 
-async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
-  motivoOutra = null;
-  let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
-  let html = null;
-
-  if (!cat) {
-    html = await lerCatalogo(urlProduto);
-    const can = /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
-    cat = (RE_CATALOGO.exec(can ? can[1] : '') || [])[1]
-       || (RE_CATALOGO.exec(html) || [])[1] || null;
-    if (!cat) { motivoOutra = 'anuncio fora do catalogo'; return null; }
-    // O html que temos e o do anuncio, nao o do catalogo: busca o certo.
-    if (!html.includes('"buy_box_offers":{')) html = null;
-  }
-
-  if (!html) html = await lerCatalogo(`https://www.mercadolivre.com.br/p/${cat}`);
-
-  const ofertas = ofertasDoCatalogo(html);
-  if (ofertas.length < 2) { motivoOutra = 'so uma loja vende este produto'; return null; }
-
+/* Avalia uma lista de candidatos [{item, url, preco?}] e devolve os que tem
+   cupom valendo para aquele preco. */
+async function avaliarCandidatos(candidatos, itemAtual, tituloOriginal) {
   const indice = await obterIndice();
   const chaves = Object.keys(indice.mapa);
 
   let comCupom = 0;
   const achados = [];
-  for (const o of ofertas) {
-    if (itemAtual && o.item === itemAtual) continue;
-    const url = urlDaOferta(cat, o.item);
 
+  for (const o of candidatos) {
+    if (itemAtual && o.item === itemAtual) continue;
+
+    let html = null;
     let nomes = [];
-    try { nomes = await resolverVendedor(o.item, url); } catch (e) { nomes = []; }
+    let preco = o.preco ?? null;
+
+    if (preco == null || tituloOriginal) {
+      try { html = await lerParcial(o.url); } catch (e) { html = null; }
+      if (preco == null) preco = precoDoHtml(html);
+      if (tituloOriginal && !mesmoTitulo(tituloOriginal, tituloDoHtml(html))) { await sleep(300); continue; }
+      nomes = nomesDoHtml(html || '');
+    }
+    if (!nomes.length) {
+      try { nomes = await resolverVendedor(o.item, o.url); } catch (e) { nomes = []; }
+    }
+
     const cupom = acharCupom(indice.mapa, chaves, nomes);
     if (!cupom) { await sleep(400); continue; }
     comCupom++;
 
     let cond = null;
     try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
-    const aval = avaliar(cupom, cond, o.preco);
+    const aval = avaliar(cupom, cond, preco);
     await sleep(400);
     if (!aval || !aval.vale) continue;
 
     achados.push({
       item: o.item,
-      url,
-      preco: o.preco,
+      url: o.url,
+      preco,
       vendedor: nomes[0] || null,
       cupom: { id: cupom.i, titulo: cupom.t, vence: cupom.x },
       economia: aval.economia,
       minimo: aval.minimo,
       teto: aval.teto,
-      final: o.preco != null && aval.economia != null ? o.preco - aval.economia : null
+      final: preco != null && aval.economia != null ? preco - aval.economia : null
     });
   }
 
-  if (!achados.length) {
-    motivoOutra = comCupom
+  return { achados, comCupom };
+}
+
+/* Fallback para anuncio que nao e de catalogo: procura o mesmo titulo na
+   busca do Mercado Livre e testa os primeiros resultados. */
+async function candidatosPorBusca(titulo) {
+  const termo = palavras(titulo).slice(0, 8).join(' ');
+  if (!termo) return [];
+  const url = BUSCA(termo).replace('_Frete_Full_FullFilter_True_NoIndex_True', '_NoIndex_True');
+  let html = '';
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (!r.ok) return [];
+    html = await r.text();
+  } catch (e) { return []; }
+
+  return linksDaBusca(html).slice(0, 10).map(link => ({
+    item: (/MLB-?\d+/.exec(link) || [''])[0].replace('-', ''),
+    url: link,
+    preco: null
+  })).filter(c => c.item);
+}
+
+async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual, titulo) {
+  motivoOutra = null;
+
+  let pagina = null;
+  let html = null;
+
+  const mc = RE_CATALOGO.exec(urlProduto);
+  const mu = RE_UP.exec(urlProduto);
+  if (mc) pagina = `https://www.mercadolivre.com.br/p/${mc[1]}`;
+  else if (mu) pagina = `https://www.mercadolivre.com.br/up/${mu[1]}`;
+
+  if (!pagina) {
+    try { html = await lerCatalogo(urlProduto); } catch (e) { html = null; }
+    const can = html && /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
+    const alvo = can ? can[1] : '';
+    const c2 = RE_CATALOGO.exec(alvo) || (html ? RE_CATALOGO.exec(html) : null);
+    const u2 = RE_UP.exec(alvo) || (html ? RE_UP.exec(html) : null);
+    if (c2) pagina = `https://www.mercadolivre.com.br/p/${c2[1]}`;
+    else if (u2) pagina = `https://www.mercadolivre.com.br/up/${u2[1]}`;
+    if (html && !html.includes('"buy_box_offers":{')) html = null;
+  }
+
+  let ofertas = [];
+  if (pagina) {
+    if (!html) { try { html = await lerCatalogo(pagina); } catch (e) { html = null; } }
+    ofertas = html ? ofertasDoCatalogo(html) : [];
+  }
+
+  let resultado = { achados: [], comCupom: 0 };
+  if (ofertas.length >= 2) {
+    resultado = await avaliarCandidatos(
+      ofertas.map(o => ({ item: o.item, url: urlDaOferta(pagina, o.item), preco: o.preco })),
+      itemAtual, null);
+  }
+
+  // Sem outras ofertas na pagina do produto: tenta achar o mesmo item na busca.
+  if (!resultado.achados.length && titulo) {
+    const busca = await candidatosPorBusca(titulo);
+    if (busca.length) {
+      const r2 = await avaliarCandidatos(busca, itemAtual, titulo);
+      resultado = { achados: resultado.achados.concat(r2.achados),
+                    comCupom: resultado.comCupom + r2.comCupom };
+    }
+  }
+
+  if (!resultado.achados.length) {
+    motivoOutra = resultado.comCupom
       ? 'as outras lojas tem cupom, mas nenhum vale para este preco'
-      : 'nenhuma outra loja deste produto tem cupom';
+      : (ofertas.length >= 2
+          ? 'nenhuma outra loja deste produto tem cupom'
+          : 'nao achei este mesmo produto em outra loja com cupom');
     return null;
   }
 
-  achados.sort((a, b) =>
+  resultado.achados.sort((a, b) =>
     (a.final == null ? Infinity : a.final) - (b.final == null ? Infinity : b.final));
-  const melhor = achados[0];
+  const melhor = resultado.achados[0];
 
   if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) {
     motivoOutra = 'a outra loja com cupom nao sai mais barata';
