@@ -1167,10 +1167,18 @@ function Index() {
             tom="armadilha"
             detalhe="anunciam muito e descontam pouco"
           />
+          {/* "Ainda na fila" era vocabulário interno: dizia respeito ao meu
+              sistema, não à compra de quem está lendo. Trocado pelo número que
+              importa para a pessoa: quantos cupons são bons E têm produto à
+              venda na loja agora. */}
           <Indicador
-            titulo="Ainda na fila"
-            valor={indicadores.naFila.toLocaleString("pt-BR")}
-            detalhe="condições não conferidas ainda"
+            titulo="Com produto no ar"
+            valor={indicadores.comProduto.toLocaleString("pt-BR")}
+            detalhe={
+              indicadores.vitrineNaFila > 0
+                ? `mais ${indicadores.vitrineNaFila.toLocaleString("pt-BR")} lojas sendo conferidas`
+                : "loja conferida: o cupom tem onde ser usado"
+            }
           />
         </section>
 
