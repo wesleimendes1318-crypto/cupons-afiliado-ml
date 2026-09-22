@@ -493,6 +493,12 @@ function Resultado({
   const a = pedido.analise;
   const link = pedido.link as string;
 
+  /* A loja do anúncio não tem cupom que preste, mas outra loja vende o MESMO
+     produto de catálogo com cupom valendo para este preço. Nesse caso a troca
+     vira a recomendação principal: é ela que põe dinheiro no bolso da pessoa.
+     O anúncio original continua disponível, só que como segunda opção. */
+  const trocar = a?.temCupom !== true && !!a?.outraLoja;
+
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
       {a?.titulo && (
@@ -503,7 +509,9 @@ function Resultado({
       )}
       {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
 
-      {a?.outraLoja && <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} />}
+      {a?.outraLoja && (
+        <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} principal={trocar} />
+      )}
 
       <CondicoesDoCupom analise={a} />
 
@@ -511,10 +519,15 @@ function Resultado({
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+        className={
+          trocar
+            ? "mt-4 block w-full rounded-md border-2 border-ml-blue py-2.5 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
+            : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+        }
       >
-        Comprar no Mercado Livre
+        {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar no Mercado Livre"}
       </a>
+
 
       {pedido.codigo && (
         <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
