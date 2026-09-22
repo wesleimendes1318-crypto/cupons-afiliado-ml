@@ -658,8 +658,9 @@ function AcaoDoCupom({
   }, [link]);
 
   /* Deu errado: a aba NÃO é fechada. Fechar sozinha parece erro do site — a
-     pessoa vê a aba sumir em segundos e não entende. Em vez disso, a aba
-     explica o que houve e oferece o WhatsApp. */
+     pessoa vê a aba sumir em segundos e não entende. A aba explica o que
+     houve e diz o que fazer, tudo resolvido aqui mesmo, sem falar com
+     ninguém. */
   useEffect(() => {
     if (!loja.falhou && !falhou) return;
     const aba = abaRef.current;
@@ -671,15 +672,8 @@ function AcaoDoCupom({
         '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
           "<title>Não consegui abrir a loja</title></head>" +
           '<body style="font-family:system-ui;padding:24px;color:#222;line-height:1.5">' +
-          "<p><strong>Não consegui preparar o link da loja agora.</strong></p>" +
-          "<p>Pode fechar esta aba. Me chama no WhatsApp que eu mando o link com o cupom em minutos.</p>" +
-          (whatsapp
-            ? '<p><a style="color:#0a7c3f;font-weight:700" href="https://wa.me/' +
-              whatsapp +
-              "?text=" +
-              encodeURIComponent("Oi! Tentei pegar um cupom no site e o link não abriu. Pode me mandar?") +
-              '">Falar no WhatsApp</a></p>'
-            : "") +
+          "<p><strong>Não consegui preparar a loja agora.</strong></p>" +
+          "<p>Pode fechar esta aba e clicar de novo no botão do cupom: quase sempre funciona na segunda tentativa.</p>" +
           "</body></html>",
       );
       aba.document.close();
