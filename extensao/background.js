@@ -523,6 +523,18 @@ async function lerAnuncioNoWorker(url) {
       if (bytes > MAX_ANUNCIO) { try { ctrl.abort(); } catch (e) {} break; }
     }
     if (!buf) return { ok: false, falha: 'pagina veio vazia' };
+
+    /* Alguns links curtos de compartilhamento nao levam a um produto: caem no
+       PERFIL SOCIAL do afiliado, com varios produtos. Foi o caso do
+       meli.la/2tKW17F, que termina em /social/wesleimendes. Dali dava para
+       arrancar o titulo e o preco do primeiro item, e era o que acontecia: o
+       site mostrava produto e preco de um anuncio que ninguem escolheu, sem
+       loja nenhuma. Melhor dizer a verdade e pedir o link do produto. */
+    if (/\/social\/[^/?#]+/i.test(r.url)) {
+      return { ok: false, perfilSocial: true,
+               falha: 'esse link abre um perfil do Mercado Livre, nao um produto' };
+    }
+
     return extrairAnuncio(buf, r.url, r.status);
   } catch (e) {
     return { ok: false, falha: String((e && e.message) || e) };
@@ -1411,8 +1423,15 @@ async function atenderPedidos() {
 
           const aval = avaliarCupom(cupom, a.preco ?? null);
 
-          // 3. o SEU link sai sempre, com ou sem cupom
-          const r = await gerarNaAba(tabId, url, TAG_PADRAO);
+          /* 3. o SEU link sai sempre, com ou sem cupom.
+
+             Gerado a partir da URL CANONICA lida na propria pagina, nao do que
+             a pessoa colou. A canonica ja era extraida para isso e nunca era
+             usada: link curto colado virava pedido de link de afiliado em cima
+             de um meli.la, que nao e endereco de produto. Ordem: canonica, url
+             final depois dos redirecionamentos, e por ultimo o que foi colado. */
+          const alvoDoLink = a.canonica || a.finalUrl || url;
+          const r = await gerarNaAba(tabId, alvoDoLink, TAG_PADRAO);
 
           /* Procura o MESMO produto de catalogo em outra loja e compara PRECO
              FINAL com o da loja do link.
