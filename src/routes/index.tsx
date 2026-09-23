@@ -30,7 +30,23 @@ export const Route = createFileRoute("/")({
         content: "Compare o percentual anunciado com o teto real de desconto de cada cupom.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://cupons-afiliado-ml.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [{ rel: "canonical", href: "https://cupons-afiliado-ml.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Cupons de Lojas Afiliadas",
+          url: "https://cupons-afiliado-ml.lovable.app/",
+          inLanguage: "pt-BR",
+          description:
+            "Ferramenta independente para descobrir o desconto real de cupons, com teto e compra mínima informados.",
+        }),
+      },
     ],
   }),
   component: Index,
