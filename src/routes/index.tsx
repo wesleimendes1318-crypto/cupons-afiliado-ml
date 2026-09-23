@@ -93,7 +93,7 @@ export type Cupom = {
   link_origem: string | null;
 };
 
-type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
+export type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
 type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
 type FaixaEconomia = "semlimite" | "ate50" | "50a200" | "200a1000" | "acima1000";
@@ -197,14 +197,14 @@ function contagemRegressiva(vence: string | null, agora: number | null) {
   };
 }
 
-function diasAte(data: string | null) {
+export function diasAte(data: string | null) {
   if (!data) return null;
   const hoje = new Date();
   const hojeUtc = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   return Math.round((dataDoBanco(data).getTime() - hojeUtc) / 86400000);
 }
 
-function calcularScore(cupom: Cupom, agora: number | null) {
+export function calcularScore(cupom: Cupom, agora: number | null) {
   const base = semLimite(cupom) ? (cupom.valor ?? 0) * 40 : tetoReal(cupom);
   if (base == null || base <= 0) return null;
   let score = base;
@@ -2222,7 +2222,7 @@ export function CupomCard({
   );
 }
 
-function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
+export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
   if (!cupom) return null;
 
   const compraParaTeto = compraParaAtingirTeto(cupom);
