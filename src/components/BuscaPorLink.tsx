@@ -115,6 +115,10 @@ type Analise = {
   /* Em uma frase, por que a troca de loja não rolou. Só aparece quando a busca
      aconteceu e não achou nada. */
   motivoOutra?: string | null;
+  /* Por que a busca por outra loja NÃO aconteceu. Fila cheia, busca do Mercado
+     Livre fora do ar. Sem isto o site calava e o cliente achava que tinha sido
+     comparado. */
+  motivoNaoProcurou?: string | null;
   /* false quando a extensão não conseguiu sequer LER o anúncio. Sem isto o
      site tratava falha de leitura como "esta loja não tem cupom", que é dizer
      ao cliente uma coisa que não foi verificada. */
@@ -1027,8 +1031,8 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
         ) : (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
             {procurou
-              ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
-              : "Prefiro te dizer isso a inventar um desconto que não existe. "}
+              ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom nem preço que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
+              : "Não cheguei a comparar com outras lojas desta vez. Prefiro te dizer isso a deixar você achar que comparei. "}
             O botão de comprar aqui embaixo continua valendo a pena para nós dois: o preço é o mesmo
             da loja, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
             a mais do seu bolso e me ajuda a manter o site de pé.
@@ -1036,6 +1040,11 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
         )}
         {!achouOutra && procurou && analise?.motivoOutra && (
           <p className="mt-1.5 text-xs text-secondary-ink/80">Motivo: {analise.motivoOutra}.</p>
+        )}
+        {!procurou && analise?.motivoNaoProcurou && (
+          <p className="mt-1.5 text-xs text-secondary-ink/80">
+            Por que não comparei: {analise.motivoNaoProcurou}.
+          </p>
         )}
       </div>
     );
