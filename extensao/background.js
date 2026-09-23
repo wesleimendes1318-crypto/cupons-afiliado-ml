@@ -574,7 +574,7 @@ async function lerAnuncioNoWorker(url) {
        tenta contornar o desafio de jeito nenhum. Quem resolve captcha e o
        Weslei, na mao, no navegador dele. */
     if (/\/captcha\/wall/i.test(r.url) || /Por seguran.a, complete esta etapa/i.test(buf.slice(0, 20000))) {
-      await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler um anuncio', 'leitura');
+      await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler um anuncio', 'leitura', r.url);
       return { ok: false, captcha: true,
                falha: 'o Mercado Livre pediu uma verificacao de seguranca nesta sessao' };
     }
@@ -742,7 +742,8 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
          investigacao. Agora ele carrega a prova junto. */
       const bruto = String(r.txt || '');
       if (/captcha\/wall/i.test(bruto)) {
-        await puxarFreio('o Mercado Livre pediu verificacao de seguranca no gerador de links', 'link');
+        await puxarFreio('o Mercado Livre pediu verificacao de seguranca no gerador de links', 'link',
+          ((/https:[^"\s]*captcha\/wall[^"\s]*/.exec(bruto) || [])[0] || '').replace(/\\u0026/g, '&'));
         throw new Error('o Mercado Livre pediu uma verificacao de seguranca nesta sessao');
       }
       const amostra = bruto.replace(/\s+/g, ' ').slice(0, 180);
@@ -970,7 +971,7 @@ async function lerVitrine(url) {
 
   /* O Mercado Livre pediu verificacao de seguranca. Freia e sai: insistir
      depois desse sinal e o que leva a conta a bloqueio. */
-  if (/\/captcha\/wall/.test(finalUrl)) { await puxarFreio('verificacao de seguranca ao abrir a vitrine de uma loja', 'leitura'); return { freio: true }; }
+  if (/\/captcha\/wall/.test(finalUrl)) { await puxarFreio('verificacao de seguranca ao abrir a vitrine de uma loja', 'leitura', finalUrl); return { freio: true }; }
 
   const t = await r.text();
 
@@ -1261,7 +1262,12 @@ const PAUSAS_MS = [5 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000];
 
 function chaveFreio(area) { return 'freio_' + (area || 'leitura'); }
 
-async function puxarFreio(motivo, area = 'leitura') {
+async function puxarFreio(motivo, area = 'leitura', urlVerificacao = null) {
+  /* Guarda a pagina exata do desafio: e ela que o botao "Resolver
+     verificacao" do popup abre para o Weslei resolver na mao. */
+  if (urlVerificacao && /captcha/i.test(urlVerificacao)) {
+    await chrome.storage.local.set({ freioUrl: String(urlVerificacao) });
+  }
   const k = chaveFreio(area);
   const hoje = diaSP();
   const st = await chrome.storage.local.get(k);
@@ -1310,6 +1316,65 @@ async function avisarQueEstouLivre(area) {
     await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
   } catch (e) { /* silencioso de proposito */ }
 }
+
+/* ------------------------------------------- verificacao feita pelo Weslei
+
+   O freio espera sozinho (5, 15, 60 min). Mas quem resolve o captcha na mao
+   nao precisa esperar: o popup abre a pagina do desafio, e assim que ela sai
+   do captcha (ou o botao "Ja resolvi" e clicado) as pausas somem e a fila
+   anda na hora. A extensao continua sem tentar resolver captcha sozinha. */
+const AREAS_FREIO = ['leitura', 'etiqueta', 'link'];
+
+async function estadoDoFreio() {
+  const chaves = AREAS_FREIO.map(chaveFreio);
+  const st = await chrome.storage.local.get([...chaves, 'freioUrl']);
+  const ativos = [];
+  for (const a of AREAS_FREIO) {
+    const f = st[chaveFreio(a)];
+    if (f && f.ate && Date.now() < f.ate) {
+      ativos.push({ area: a, motivo: f.motivo || '', min: Math.max(1, Math.ceil((f.ate - Date.now()) / 60000)) });
+    }
+  }
+  return { ativos, url: st.freioUrl || null };
+}
+
+async function liberarFreio() {
+  await chrome.storage.local.remove([...AREAS_FREIO.map(chaveFreio), 'freioUrl']);
+  avisouLivre = {};
+  try {
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    await anotarEstadoRobo(sincToken, 'freio_motivo', '');
+    await anotarEstadoRobo(sincToken, 'freio_ate', '');
+    await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
+  } catch (e) { /* o freio ja saiu localmente */ }
+  /* Quem estava esperando na tela do site e atendido agora. */
+  atenderPedidos().catch(() => {});
+  atenderPedidosDeEtiqueta().catch(() => {});
+  atenderPedidosDeLoja().catch(() => {});
+  return estadoDoFreio();
+}
+
+let abaVerificacao = null;
+
+async function abrirVerificacao() {
+  const { freioUrl } = await chrome.storage.local.get('freioUrl');
+  const url = freioUrl && /^https:\/\/([a-z0-9-]+\.)*mercadolivre\.com\.br\//i.test(freioUrl)
+    ? freioUrl : 'https://www.mercadolivre.com.br/afiliados/linkbuilder';
+  const aba = await chrome.tabs.create({ url, active: true });
+  abaVerificacao = aba.id;
+  return { aberta: true };
+}
+
+/* A aba da verificacao saiu do captcha e caiu numa pagina normal do Mercado
+   Livre: o desafio foi resolvido. Libera sozinho. */
+chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+  if (tabId !== abaVerificacao || info.status !== 'complete') return;
+  const url = (tab && tab.url) || '';
+  if (/^https:\/\/([a-z0-9-]+\.)*mercadolivre\.com\.br\//i.test(url) && !/captcha/i.test(url)) {
+    abaVerificacao = null;
+    liberarFreio().then(() => console.log('[freio] liberado apos verificacao manual')).catch(() => {});
+  }
+});
 
 /* O estado antigo podia deixar a maquina parada ate a virada do dia. Some com
    ele assim que esta versao carrega, senao atualizar nao destrava nada. */
@@ -1484,7 +1549,7 @@ async function lerCatalogo(url) {
   } catch (e) { /* abort gera excecao, esperado */ }
 
   if (ehCaptcha(buf, r.url)) {
-    await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao comparar lojas', 'leitura');
+    await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao comparar lojas', 'leitura', r.url);
     throw new Error('o Mercado Livre pediu uma verificacao de seguranca');
   }
   return buf;
@@ -2070,6 +2135,12 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
         atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
         responder({ ok: true });
+      } else if (msg.tipo === 'estadoFreio') {
+        responder({ ok: true, dados: await estadoDoFreio() });
+      } else if (msg.tipo === 'liberarFreio') {
+        responder({ ok: true, dados: await liberarFreio() });
+      } else if (msg.tipo === 'abrirVerificacao') {
+        responder({ ok: true, dados: await abrirVerificacao() });
       } else if (msg.tipo === 'andarFila') {
         responder({ ok: true, res: await andarFila() });
       } else if (msg.tipo === 'gastoDoDia') {

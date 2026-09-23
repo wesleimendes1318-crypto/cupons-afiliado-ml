@@ -174,3 +174,10 @@ Precisa do token de sincronia preenchido nas opcoes da extensao.
   `comparador.js`, com testes (`node --test extensao/testes/comparador.test.mjs`).
   Agora devolve ate 2 lojas (mais barata, ou com cupom quando a loja do cliente
   nao tem), cada uma com link de afiliado.
+
+### v1.40.0 - resolver a verificacao na mao
+
+Quando o Mercado Livre pede captcha, o popup mostra a pausa e dois botoes:
+**1. Resolver verificacao** abre a pagina exata do desafio; assim que ela sai do
+captcha a pausa cai sozinha e a fila anda na hora. **2. Ja resolvi, liberar**
+solta a pausa manualmente. A extensao continua sem tentar resolver captcha.

@@ -683,6 +683,11 @@ function usePreparoDoCupom(cupom: Cupom) {
           if ((linha?.freio_motivo ?? "").trim() && Number.isFinite(ate) && ate > Date.now()) {
             const min = Math.max(1, Math.ceil((ate - Date.now()) / 60_000));
             setPausa(`O Mercado Livre pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
+            /* Não prende a tela girando: libera o botão para tentar de novo
+               assim que a verificação for resolvida. */
+            ocupado.current = false;
+            setFase("demorou");
+            return;
           }
         } catch { /* sem resposta: segue esperando */ }
       }
@@ -780,7 +785,7 @@ export function AcaoDoCupom({
 
       {p.pausa && !pronto && (
         <p className="mt-2 rounded-md border border-amber-400/60 bg-amber-50 p-2.5 text-[12px] leading-4 text-foreground dark:bg-amber-950/30">
-          {p.pausa} Nada com você: tente de novo daqui a pouco.
+          {p.pausa} Nada com você: assim que a verificação for resolvida, é só tocar em “Tentar de novo”.
         </p>
       )}
 

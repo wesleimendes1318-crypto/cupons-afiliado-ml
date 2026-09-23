@@ -373,3 +373,35 @@ $('urlcli').addEventListener('keydown', e => {
 $('urlcli').addEventListener('paste', () => setTimeout(() => {
   if ($('urlcli').value.trim().length > 20) atender();
 }, 60));
+
+/* ------------------------------------------------ pausa de seguranca
+
+   Quando o Mercado Livre pede captcha, a extensao pausa sozinha (5, 15, 60
+   min). Daqui o Weslei resolve na mao e libera na hora: o botao 1 abre a
+   pagina do desafio; ao sair do captcha a pausa cai sozinha, e o botao 2
+   libera manualmente se precisar. */
+async function mostrarFreio() {
+  const r = await pedir({ tipo: 'estadoFreio' });
+  const ativos = (r && r.ok && r.dados && r.dados.ativos) || [];
+  $('freio').hidden = !ativos.length;
+  if (!ativos.length) return;
+  const nomes = { leitura: 'leitura de anúncios', etiqueta: 'criação de etiquetas', link: 'gerador de links' };
+  $('freiotxt').textContent = ativos
+    .map(a => `${nomes[a.area] || a.area}: volta em ${a.min} min (${a.motivo})`)
+    .join(' · ');
+}
+
+$('btverif').addEventListener('click', async () => {
+  $('btverif').textContent = 'Abrindo…';
+  await pedir({ tipo: 'abrirVerificacao' });
+  $('btverif').textContent = '1. Resolver verificação';
+});
+
+$('btliberar').addEventListener('click', async () => {
+  $('btliberar').textContent = 'Liberando…';
+  await pedir({ tipo: 'liberarFreio' });
+  $('btliberar').textContent = 'Liberado';
+  await mostrarFreio();
+});
+
+mostrarFreio();
