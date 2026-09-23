@@ -732,6 +732,14 @@ export function AcaoDoCupom({
 
   const pronto = Boolean(p.loja) && (Boolean(p.codigo) || p.semCodigo);
   const preparando = p.fase === "preparando";
+  /* Plano B, só quando a página da loja não saiu (pausa de segurança do
+     Mercado Livre, por exemplo): a lista da campanha do cupom, que são
+     exatamente os produtos em que ele vale. Não é o destino principal — o
+     Weslei quer a loja inteira —, mas é melhor que deixar o cliente sem
+     caminho e perder a venda. O código vai copiado no mesmo clique. */
+  const listaDaCampanha = /_Container_/i.test(cupom.link_origem ?? "")
+    ? ((cupom.link_origem ?? "").split("?")[0] ?? null)
+    : null;
 
   const irParaLoja = useCallback(() => {
     if (!p.loja) return;
@@ -814,6 +822,20 @@ export function AcaoDoCupom({
           className="mt-1.5 text-[11px] font-semibold text-ml-blue underline-offset-2 hover:underline"
         >
           Ver os produtos da loja sem o código
+        </button>
+      )}
+
+      {p.fase === "demorou" && !p.loja && listaDaCampanha && (
+        <button
+          type="button"
+          onClick={() => {
+            if (p.codigo) setCopiou(copiarTexto(p.codigo));
+            marcarConsultado(cupom.id);
+            abrirLoja(listaDaCampanha);
+          }}
+          className="mt-2 w-full rounded-md border border-ml-blue px-3 py-2 text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
+        >
+          {p.codigo ? "Copiar cupom e ver os produtos em que ele vale" : "Ver os produtos em que este cupom vale"}
         </button>
       )}
 

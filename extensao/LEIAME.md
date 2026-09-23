@@ -189,3 +189,12 @@ solta a pausa manualmente. A extensao continua sem tentar resolver captcha.
 - opcional, no celular: app gratuito **ntfy**. Assine um topico com nome dificil
   de adivinhar e cole o mesmo nome em Opcoes > "Aviso no celular".
 Resolvida a verificacao, a pausa cai sozinha e o aviso some.
+
+### v1.42.0 - menos leitura automatica, menos captcha
+
+O captcha de 23/09 travou etiqueta, pagina da loja e comparacao por horas. A
+leitura que mais provoca isso e a marcacao de cupons numa busca do Mercado
+Livre: eram 14 anuncios lidos em paralelo, sem pausa. Agora sao 3 por vez com
+pausa, e nada e lido enquanto a leitura estiver em pausa de seguranca. Os tetos
+diarios de fundo cairam (vitrines 250 -> 100, lojas 200 -> 60): tarefa de fundo
+e melhoria, cliente esperando na tela e venda.

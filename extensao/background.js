@@ -28,7 +28,11 @@ import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
 const API   = 'https://www.mercadolivre.com.br/affiliate-program/api/affiliates/coupons';
 const PER   = 14;
 const CONC  = 12;    // paginas do indice de cupons em paralelo
-const CONC_VEND = 14; // anuncios em paralelo
+/* Era 14. Navegar numa busca do Mercado Livre disparava ~48 leituras de
+   anuncio em tres rajadas, que e o padrao que faz o site pedir captcha - e o
+   captcha trava etiqueta, loja e comparacao para os clientes. Agora 3 por vez
+   com pausa entre os lotes: a marcacao demora mais, a conta fica protegida. */
+const CONC_VEND = 3; // anuncios em paralelo
 const MAX_BYTES = 420000;
 const TTL_MS   = 6 * 60 * 60 * 1000;
 const TTL_VEND = 7 * 24 * 60 * 60 * 1000;
@@ -253,6 +257,9 @@ function acharCupom(mapa, chaves, nomes) {
 
 /* itens: [{id, url}] -> {id: {cupom|null, nome}} */
 async function casarItens(itens) {
+  /* Com a leitura em pausa de seguranca, nao marca nada: cada leitura a mais
+     depois de um captcha e o que prolonga o bloqueio. */
+  if (await freioLigado('leitura')) return {};
   const indice = await obterIndice();
   const mapa = indice.mapa;
   const chaves = Object.keys(mapa);
@@ -265,6 +272,8 @@ async function casarItens(itens) {
       const achado = acharCupom(mapa, chaves, nomes);
       saida[id] = { cupom: achado, nome: nomes[0] || null };
     }));
+    await sleep(700 + Math.floor(Math.random() * 600));
+    if (await freioLigado('leitura')) break;
   }
   return saida;
 }
@@ -1727,7 +1736,10 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
        condicao tem milhares e engoliria todas as rodadas. */
 
 const TETO_DIA_CONDICOES = 600;
-const TETO_DIA_VITRINES = 250;
+/* Tetos de leitura de pagina publica reduzidos em 23/09 (eram 250 e 200):
+   o captcha do dia travou o atendimento dos clientes por horas. Tarefa de
+   fundo e melhoria; cliente esperando na tela e venda. */
+const TETO_DIA_VITRINES = 100;
 /* Link de vitrine e criacao permanente no Mercado Livre, igual a etiqueta.
    Teto mais baixo de proposito. */
 const TETO_DIA_LINKS = 120;
@@ -1738,7 +1750,7 @@ const LOTE_LINKS = 10;
    o resultado vale para todos os cupons dela. Mesmo assim vai devagar, porque
    e leitura de pagina publica do Mercado Livre e o que derruba a conta e
    rajada, nao volume espalhado. */
-const TETO_DIA_LOJAS = 200;
+const TETO_DIA_LOJAS = 60;
 const LOTE_LOJAS = 8;
 
 function diaSP() {
