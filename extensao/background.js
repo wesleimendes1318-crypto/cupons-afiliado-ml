@@ -839,8 +839,32 @@ async function atenderPedidosDeEtiqueta() {
 
 let gerandoEtiquetas = false;
 
+/* ------------------------------------------------------- freio de seguranca
+
+   Se o Mercado Livre responder 403 ou 429 a um pedido de codigo, ele esta
+   dizendo para parar. Antes, o codigo apenas interrompia aquele lote e voltava
+   a insistir na janela seguinte, poucas horas depois. Insistir depois de levar
+   um nao e exatamente o comportamento que faz uma conta ser marcada.
+
+   Agora o freio vale para o resto do dia. O Weslei vai estar na Espanha, sem
+   acesso ao servidor, entao o padrao tem que ser o conservador: perder um dia
+   de etiquetas custa pouco, perder a conta de afiliado custa tudo. */
+async function puxarFreio(motivo) {
+  const fim = diaSP();
+  await chrome.storage.local.set({ freioDia: fim, freioMotivo: String(motivo) });
+  console.warn('[freio] parando de gerar etiquetas hoje:', motivo);
+}
+
+async function freioLigado() {
+  const { freioDia, freioMotivo } = await chrome.storage.local.get(['freioDia', 'freioMotivo']);
+  if (freioDia === diaSP()) return freioMotivo || 'sem motivo registrado';
+  return null;
+}
+
 async function gerarEtiquetas(limite = 20, filaPronta = null) {
   if (gerandoEtiquetas) return { pulou: true };
+  const travado = await freioLigado();
+  if (travado) return { freio: travado };
   const { sincToken } = await chrome.storage.local.get('sincToken');
   if (!sincToken) return { semToken: true };
 
@@ -861,8 +885,9 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
           const res = r && r.result;
           if (res && res.alias) codigo = res.alias;
           else if (res && (res.st === 403 || res.st === 429)) {
-            console.warn('[etiquetas] o Mercado Livre pediu para parar:', res.st);
-            break;                       // nao insiste: para o lote inteiro
+            /* Para o lote E o dia. Ver puxarFreio acima. */
+            await puxarFreio('HTTP ' + res.st + ' ao criar codigo');
+            break;
           }
         } catch (e) {
           console.warn('[etiquetas]', linha.id, e.message);
