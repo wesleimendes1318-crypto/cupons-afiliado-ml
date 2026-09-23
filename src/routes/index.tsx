@@ -433,11 +433,11 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
         </button>
       </div>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
-        Você quase nunca vai precisar dele: chegando pelo botão acima, o desconto entra sozinho no
-        carrinho e o Mercado Livre aceita um cupom de loja por compra. Se a vaga já estiver ocupada
-        por esse mesmo desconto, colar o código dá erro, e está tudo certo: o desconto já é seu.
-        Guarde o código só para o caso de o carrinho não mostrar desconto nenhum
-        {vendedor ? <> em produtos de <span className="font-bold">{vendedor}</span></> : ""}.
+        No carrinho, o Mercado Livre aceita <span className="font-bold">um cupom de loja por
+        compra</span>. Se ele já tiver aplicado o cupom da própria loja, remova aquele e cole este
+        no lugar: o desconto para você é o mesmo, e assim ele fica registrado por aqui. Se o
+        carrinho não aceitar a troca, fique com o que já está aplicado, porque o valor final não
+        muda{vendedor ? <> em produtos de <span className="font-bold">{vendedor}</span></> : ""}.
       </p>
     </div>
   );
@@ -685,9 +685,60 @@ function useLinkDaLoja(cupom: Cupom) {
      Sem link de afiliado guardado, o botão não abre loja nenhuma. É melhor não
      ter botão do que ter um que não paga o Weslei. O caminho nesse caso é
      colar o link do produto, que gera link de afiliado de verdade. */
-  const link = (cupom.link_afiliado ?? "").trim() || null;
-  const gerar = useCallback(async () => {}, []);
-  return { link, gerando: false, falhou: false, gerar };
+  const guardado = (cupom.link_afiliado ?? "").trim() || null;
+  const origem = (cupom.link_origem ?? "").trim();
+
+  /* Origem que o gerador do Mercado Livre preserva. O banco recusa as outras
+     em pedir_link, entao nem adianta oferecer o botao para elas. */
+  const podeGerar = /_Container_/i.test(origem);
+
+  const [link, setLink] = useState<string | null>(guardado);
+  const [gerando, setGerando] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  const relogios = useRef<number[]>([]);
+
+  useEffect(() => setLink((cupom.link_afiliado ?? "").trim() || null), [cupom.link_afiliado]);
+  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
+
+  /* AQUI ESTAVA UMA FUNCAO VAZIA.
+
+     O botao "Usar este cupom" chamava isto quando o cupom nao tinha link
+     guardado, e isto nao fazia nada: nenhuma loja abria, nenhum erro aparecia.
+     Agora pede a geracao na hora, igual ja acontecia com o codigo do cupom: o
+     site registra o pedido, a extensao gera em ate um minuto e o link chega. */
+  const gerar = useCallback(async () => {
+    if (!podeGerar || gerando) return;
+    setGerando(true);
+    setFalhou(false);
+    try {
+      const { data, error } = await supabase.rpc("pedir_link", { p_url: origem });
+      if (error || data == null) { setGerando(false); setFalhou(true); return; }
+      const id = Number(data);
+
+      const limite = Date.now() + 88_000;
+      const olhar = async () => {
+        try {
+          const { data: bruto } = await supabase.rpc("consultar_pedido", { p_id: id });
+          const linha = (Array.isArray(bruto) ? bruto[0] : bruto) as
+            { status?: string; link?: string | null } | null;
+          if (linha?.status === "pronto" && linha.link) {
+            setLink(linha.link);
+            setGerando(false);
+            return;
+          }
+          if (linha?.status === "falhou") { setGerando(false); setFalhou(true); return; }
+        } catch { /* tenta de novo */ }
+        if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 4000));
+        else { setGerando(false); setFalhou(true); }
+      };
+      relogios.current.push(window.setTimeout(olhar, 4000));
+    } catch {
+      setGerando(false);
+      setFalhou(true);
+    }
+  }, [origem, podeGerar, gerando]);
+
+  return { link, gerando, falhou, gerar, podeGerar };
 }
 
 /* "Usar este cupom" faz as três coisas de uma vez: copia o código para a área
@@ -777,7 +828,7 @@ export function AcaoDoCupom({
      Sem link, o caminho que funciona de verdade e colar o link do produto: dali
      sai link de afiliado valido e o cupom e conferido naquele anuncio. Entao e
      isso que o cartao oferece, com o texto dizendo a verdade. */
-  if (!destino) {
+  if (!destino && !loja.podeGerar) {
     return (
       <Button
         type="button"
@@ -1645,10 +1696,43 @@ function Index() {
                   <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
                     Em produtos de <span className="font-bold">{cupom.vendedor}</span>
                   </p>
+
+                  {/* CONDICOES SEMPRE A VISTA.
+
+                      Estes cartoes mostravam so o desconto e o vendedor. Sem
+                      compra minima e sem validade, um "R$ 140 OFF" parece
+                      valer para qualquer compra, quando na verdade so entra a
+                      partir de R$ 175. Prometer desconto e esconder a regra e
+                      exatamente o que este site existe para denunciar, entao a
+                      regra anda junto com a promessa, aqui como em todo lugar. */}
+                  <dl className="mt-2 space-y-0.5 text-xs text-secondary-ink">
+                    <div className="flex justify-between gap-2">
+                      <dt>Compra mínima</dt>
+                      <dd className="font-semibold text-foreground">
+                        {cupom.compra_min != null ? brl.format(cupom.compra_min) : "não tem"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Validade</dt>
+                      <dd className="font-semibold text-foreground">
+                        {contagemRegressiva(cupom.vence, agora).texto}
+                      </dd>
+                    </div>
+                  </dl>
+
                   <AcaoDoCupom
                     cupom={cupom}
                     className="mt-3 h-auto min-h-10 w-full whitespace-normal bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90"
                   />
+
+                  <button
+                    type="button"
+                    onClick={() => setCupomAberto(cupom)}
+                    className="mt-2 inline-flex items-center gap-1 self-start text-xs font-medium text-secondary-ink underline-offset-2 hover:underline"
+                  >
+                    <Info className="size-3.5" aria-hidden="true" />
+                    Condições do cupom
+                  </button>
                 </div>
               ))}
             </div>
@@ -2694,11 +2778,11 @@ export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null;
             <div className="-mt-2">
               <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-                Chegando pelo botão acima, o desconto entra sozinho no carrinho e você não
-                precisa digitar nada. O Mercado Livre aceita um cupom de loja por compra, então
-                se essa vaga já estiver ocupada por esse mesmo desconto, colar o código dá erro,
-                e está tudo certo: o desconto já é seu. Guarde o código só para o caso de o
-                carrinho não mostrar desconto nenhum.
+                No carrinho, o Mercado Livre aceita <span className="font-semibold">um cupom de
+                loja por compra</span>. Se ele já tiver aplicado o cupom da própria loja, remova
+                aquele e cole este no lugar: o desconto para você é o mesmo, e assim ele fica
+                registrado por aqui. Se o carrinho não aceitar a troca, fique com o que já está
+                aplicado, porque o valor final não muda.
               </p>
             </div>
           )}
