@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CATEGORIAS } from "@/content/categorias";
+import { GUIAS } from "@/content/guias";
 import { supabase } from "@/integrations/supabase/client";
+import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -1751,6 +1754,51 @@ function Index() {
           )}
         </section>
       </main>
+
+      <section aria-label="Guias de compra" className="border-y border-border bg-card">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-secondary-ink">
+                <BookOpen className="size-4 text-ml-blue" aria-hidden="true" />
+                Guias de compra
+              </p>
+              <h2 className="mt-1 text-xl font-extrabold sm:text-2xl">
+                Entenda o desconto antes de comprar
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-secondary-ink">
+                Textos curtos, com as contas feitas, sobre teto, compra mínima e o que separa um bom cupom de uma armadilha.
+              </p>
+            </div>
+            <Link to="/guias" className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ml-blue hover:underline">
+              Ver todos os guias
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {GUIAS.slice(0, 3).map((guia, indice) => (
+              <Link
+                key={guia.slug}
+                to="/guias/$slug"
+                params={{ slug: guia.slug }}
+                className="cartao-conteudo animate-conteudo group flex flex-col gap-2 p-4"
+                style={{ animationDelay: `${indice * 60}ms` }}
+              >
+                <span className="text-xs font-bold uppercase tracking-wide text-secondary-ink">
+                  {guia.tempo}
+                </span>
+                <span className="text-base font-extrabold leading-snug">{guia.titulo}</span>
+                <span className="text-sm text-secondary-ink">{guia.resumo}</span>
+                <span className="mt-auto inline-flex items-center gap-1 pt-2 text-sm font-bold text-ml-blue">
+                  Ler o guia
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
