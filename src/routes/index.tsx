@@ -84,6 +84,7 @@ export type Cupom = {
      vitrine do site: prometer desconto que nao da para usar e pior do que
      nao mostrar nada. null = ainda nao conferido. */
   vitrine_ok: boolean | null;
+  vitrine_motivo: string | null;
   /* Link de afiliado da vitrine do cupom: a lista exata de produtos que aquele
      cupom cobre, ja com a etiqueta do Weslei. Gerado pela extensao uma vez por
      cupom e guardado no banco, entao chega pronto aqui. Null enquanto a fila
@@ -205,13 +206,42 @@ export function diasAte(data: string | null) {
   return Math.round((dataDoBanco(data).getTime() - hojeUtc) / 86400000);
 }
 
+/* Ordem dos melhores cupons.
+
+   A versao anterior ranqueava pelo TETO anunciado: um cupom com "teto de
+   R$ 50.000" ficava na frente de tudo mesmo descontando 2% com compra minima
+   de R$ 10.000. Ou seja, a lista colocava em primeiro lugar exatamente o tipo
+   de cupom que este site existe para denunciar.
+
+   Agora o que manda e o desconto que a pessoa REALMENTE leva, medido na menor
+   compra em que o cupom ja vale, e o quanto isso representa da compra. Dinheiro
+   que ela e obrigada a gastar antes de ganhar qualquer coisa conta contra. */
 export function calcularScore(cupom: Cupom, agora: number | null) {
-  const base = semLimite(cupom) ? (cupom.valor ?? 0) * 40 : tetoReal(cupom);
-  if (base == null || base <= 0) return null;
-  let score = base;
-  if (cupom.compra_min != null && cupom.compra_min <= 50) score *= 1.3;
-  else if (cupom.compra_min != null && cupom.compra_min <= 150) score *= 1.15;
-  if ((cupom.orcamento ?? 0) > 50_000) score *= 1.2;
+  const minimo = cupom.compra_min ?? 0;
+  /* Cesta de referencia: a menor compra em que este cupom funciona. Sem compra
+     minima, R$ 200, que e um ticket comum. */
+  const cesta = Math.max(minimo, 200);
+  const desconto = descontoEm(cupom, cesta);
+  if (!(desconto > 0)) return null;
+
+  /* Quanto da compra volta para o cliente. E isso que faz um cupom ser bom. */
+  const eficiencia = desconto / cesta;
+  let score = eficiencia * 1000;
+
+  /* Empurrao pelo valor absoluto, saturado: R$ 300 de desconto vale mais que
+     R$ 30, mas nao trinta vezes mais. */
+  score *= 1 + Math.min(desconto, 500) / 1000;
+
+  /* Compra minima alta e barreira real, nao detalhe. */
+  if (minimo > 200) score *= Math.max(0.35, 200 / minimo);
+
+  /* Ja tem codigo gerado: da para usar agora, sem esperar nada. */
+  if (cupom.codigo_cupom) score *= 1.25;
+  /* Vitrine conferida com produto no ar. */
+  if (cupom.vitrine_ok === true) score *= 1.15;
+  /* Orcamento gordo: menos risco de acabar no meio do caminho. */
+  if ((cupom.orcamento ?? 0) > 50_000) score *= 1.1;
+  /* Vence hoje: pouco util para quem ainda vai escolher o produto. */
   if (agora != null && cupom.vence) {
     const horas = (fimDoDiaEmSaoPaulo(cupom.vence) - agora) / 3_600_000;
     if (horas > 0 && horas < 24) score *= 0.5;
@@ -831,18 +861,14 @@ export function AcaoDoCupom({
           Copiar o código {codigo}
         </button>
       )}
+      {/* Aqui existia uma segunda caixa "Codigo deste cupom", identica a que o
+          card ja mostra logo abaixo. O cliente via o mesmo codigo duas vezes na
+          mesma tela e ficava sem saber qual valia. Uma confirmacao de uma linha
+          basta: a caixa de verdade e a de baixo, com o botao de copiar. */}
       {codigo && copiou && (
-        <div className="mt-2 animate-scale-in rounded-md border border-dashed border-ml-blue/50 bg-ml-blue/5 p-2.5">
-          <p className="text-[11px] font-semibold text-secondary-ink">Código deste cupom</p>
-          <div className="mt-1 flex min-w-0 items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1 text-xs font-bold tracking-wide text-ml-blue">
-              {codigo}
-            </code>
-            <span className="shrink-0 rounded border border-success px-2 py-1 text-[11px] font-bold text-success">
-              copiado
-            </span>
-          </div>
-        </div>
+        <p className="mt-1.5 animate-scale-in text-[11px] font-bold text-success">
+          Código copiado.
+        </p>
       )}
     </>
   );
@@ -889,7 +915,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,link_origem,codigo_cupom,vitrine_ok",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,link_origem,codigo_cupom,vitrine_ok,vitrine_motivo",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
@@ -993,19 +1019,33 @@ function Index() {
     [termo],
   );
 
-  const filtrados = useMemo(() => {
-    const dMin = Number(descontoMin) || 0;
-    const oMin = Number(orcamentoMin) || 0;
-    const tMin = Number(tetoMin) || 0;
-    const cMax = compraMax === "" ? null : Number(compraMax);
-    const lista = indexado.filter((cupom) => {
+  /* Um unico lugar decide se um cupom entra na lista.
+
+     Existe para que a CONTAGEM dos filtros use exatamente a mesma regra da
+     lista. Antes os numerinhos nos chips eram contados sobre o catalogo
+     inteiro: o chip dizia "sem limite (4540)", a pessoa clicava e recebia
+     "Nenhum resultado para esses filtros". O numero nao estava errado por
+     pouco, estava respondendo a outra pergunta. Passando `ignorar`, o chip
+     conta quantos cupons sobrariam se aquele filtro fosse aplicado agora,
+     junto com os que ja estao ligados. */
+  const passaNosFiltros = useCallback(
+    (cupom: CupomIndexado, ignorar?: "faixas" | "etiquetas") => {
+      const dMin = Number(descontoMin) || 0;
+      const oMin = Number(orcamentoMin) || 0;
+      const tMin = Number(tetoMin) || 0;
+      const cMax = compraMax === "" ? null : Number(compraMax);
       const buscaAtiva = termos.length > 0 || lojas.length > 0;
       if (lojas.length && !lojas.includes(cupom.vendedor)) return false;
       if (!buscaAtiva && vitrine === "recomendados" && cupom.qualidade !== "bom") return false;
-      // Vitrine vazia: o cupom existe mas nao ha produto participante no ar.
-      // O link cai numa lista vazia e o codigo nao aplica em nada. Fica fora
-      // dos recomendados, e some de vez quando a pessoa nao esta buscando.
-      if (cupom.vitrine_ok === false && !buscaAtiva) return false;
+      /* Vitrine vazia: o cupom existe mas nao ha produto participante no ar, o
+         link cai numa lista vazia e o codigo nao aplica em nada.
+
+         So esconde quando existe MOTIVO gravado. Veredito sem motivo veio da
+         versao da extensao que marcava "vazia" sempre que nao conseguia
+         descobrir a URL da vitrine, e isso chegou a esconder 637 dos 978
+         cupons bons e 85 dos 86 que ja tinham etiqueta. Nao saber nao e a
+         mesma coisa que saber que esta vazia. */
+      if (cupom.vitrine_ok === false && cupom.vitrine_motivo != null && !buscaAtiva) return false;
       if (tipo !== "todos" && cupom.tipo !== tipo) return false;
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
@@ -1013,10 +1053,17 @@ function Index() {
       if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
       if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
-      if (faixas.length && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
-      if (etiquetas.length && !ETIQUETAS.some((etiqueta) => etiquetas.includes(etiqueta.id) && etiqueta.aceita(cupom, agora))) return false;
+      if (ignorar !== "faixas" && faixas.length
+        && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
+      if (ignorar !== "etiquetas" && etiquetas.length
+        && !ETIQUETAS.some((etiqueta) => etiquetas.includes(etiqueta.id) && etiqueta.aceita(cupom, agora))) return false;
       return true;
-    });
+    },
+    [termos, lojas, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, categorias, faixas, etiquetas, agora],
+  );
+
+  const filtrados = useMemo(() => {
+    const lista = indexado.filter((cupom) => passaNosFiltros(cupom));
 
     return [...lista].sort((a, b) => {
       switch (ordem) {
@@ -1041,7 +1088,7 @@ function Index() {
           return (b.valor ?? 0) - (a.valor ?? 0);
       }
     });
-  }, [indexado, termos, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, agora, categorias, faixas, etiquetas, lojas]);
+  }, [indexado, passaNosFiltros, ordem, agora]);
 
   const recomendadosFiltrados = useMemo(
     () => filtrados.filter((cupom) => cupom.qualidade === "bom"),
@@ -1094,14 +1141,17 @@ function Index() {
     const lista = busca ? lojasDisponiveis.filter(([nome]) => normalizar(nome).includes(busca)) : lojasDisponiveis;
     return lista.slice(0, 80);
   }, [lojasDisponiveis, texto]);
-  const contagensFaixa = useMemo(
-    () => new Map(FAIXAS.map((faixa) => [faixa.id, indexado.filter((cupom) => faixa.aceita(cupom)).length])),
-    [indexado],
-  );
-  const contagensEtiqueta = useMemo(
-    () => new Map(ETIQUETAS.map((etiqueta) => [etiqueta.id, indexado.filter((cupom) => etiqueta.aceita(cupom, agora)).length])),
-    [indexado, agora],
-  );
+  /* Cada numero responde: "se eu ligar este chip agora, quantos cupons sobram?" */
+  const contagensFaixa = useMemo(() => {
+    const base = indexado.filter((cupom) => passaNosFiltros(cupom, "faixas"));
+    return new Map(FAIXAS.map((faixa) => [faixa.id, base.filter((cupom) => faixa.aceita(cupom)).length]));
+  }, [indexado, passaNosFiltros]);
+  const contagensEtiqueta = useMemo(() => {
+    const base = indexado.filter((cupom) => passaNosFiltros(cupom, "etiquetas"));
+    return new Map(
+      ETIQUETAS.map((etiqueta) => [etiqueta.id, base.filter((cupom) => etiqueta.aceita(cupom, agora)).length]),
+    );
+  }, [indexado, passaNosFiltros, agora]);
   const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || etiquetas.length || vitrine !== "recomendados" || ordem !== "score");
 
   /* Quantos filtros a pessoa ligou. Vira o numerinho no botao "Filtros", que e
