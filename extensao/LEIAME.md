@@ -198,3 +198,10 @@ Livre: eram 14 anuncios lidos em paralelo, sem pausa. Agora sao 3 por vez com
 pausa, e nada e lido enquanto a leitura estiver em pausa de seguranca. Os tetos
 diarios de fundo cairam (vitrines 250 -> 100, lojas 200 -> 60): tarefa de fundo
 e melhoria, cliente esperando na tela e venda.
+
+### v1.43.0 - no maximo um download da lista a cada 3 horas
+
+O banco registrou 67 downloads completos da lista de cupons em 22/09 e 41 em
+23/09 (cada um ~665 chamadas ao hub). Agora: 2 paginas por vez com pausa, e
+nenhum download novo antes de 3 horas do ultimo - nem ao recarregar a
+extensao, nem clicando Atualizar/Sincronizar.

@@ -27,7 +27,13 @@ import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
 
 const API   = 'https://www.mercadolivre.com.br/affiliate-program/api/affiliates/coupons';
 const PER   = 14;
-const CONC  = 12;    // paginas do indice de cupons em paralelo
+/* Era 12 em paralelo. O banco registrou 67 downloads completos da lista no dia
+   22/09 e 41 no dia 23 - cada um sao ~665 chamadas ao hub de afiliados. Esse
+   volume e o suspeito mais forte dos captchas, do 403 ao criar codigo e do
+   sumico do menu de cupons. Agora 2 paginas por vez, com pausa, e no maximo
+   um download completo a cada 3 horas (ver INTERVALO_INDICE). */
+const CONC  = 2;     // paginas do indice de cupons em paralelo
+const INTERVALO_INDICE = 3 * 60 * 60 * 1000;
 /* Era 14. Navegar numa busca do Mercado Livre disparava ~48 leituras de
    anuncio em tres rajadas, que e o padrao que faz o site pedir captcha - e o
    captcha trava etiqueta, loja e comparacao para os clientes. Agora 3 por vez
@@ -74,6 +80,7 @@ async function baixarIndice() {
     (await Promise.all(lote)).forEach(j => {
       if (j && j.coupons) cupons.push(...j.coupons); else falhas++;
     });
+    await sleep(350 + Math.floor(Math.random() * 300));
   }
 
   const mapa = {};
@@ -124,6 +131,13 @@ let MAPA_MEM = null;
 async function obterIndice(forcar = false) {
   const { indice } = await chrome.storage.local.get('indice');
   if (!forcar && indice && (Date.now() - indice.atualizadoEm) < TTL_MS) {
+    MAPA_MEM = indice.mapa;
+    return indice;
+  }
+  /* Nem o "forcar" passa por cima disto: recarregar a extensao, clicar em
+     Atualizar ou Sincronizar varias vezes nao dispara um download novo antes
+     de 3 horas do ultimo. */
+  if (indice && (Date.now() - indice.atualizadoEm) < INTERVALO_INDICE) {
     MAPA_MEM = indice.mapa;
     return indice;
   }
@@ -2252,7 +2266,8 @@ function armarAlarmes() {
 
 chrome.runtime.onInstalled.addListener(() => {
   armarAlarmes();
-  obterIndice(true).catch(() => {});
+  /* Sem forcar: cada "Recarregar" da extensao baixava a lista inteira. */
+  obterIndice().catch(() => {});
 });
 chrome.runtime.onStartup.addListener(() => {
   armarAlarmes();
