@@ -1783,7 +1783,10 @@ function Index() {
         </div>
         <div className="mx-auto mt-6 flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:px-6 lg:px-8 sm:flex-row sm:items-center sm:justify-between">
 
-          <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
+          <div className="space-y-1">
+            <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
+            <AvisoAfiliado />
+          </div>
           <div className="text-left sm:text-right">
             <Button type="button" variant="ghost" size="sm" disabled={classificando} onClick={classificar} className="px-2 text-xs text-secondary-ink">
               <WandSparkles aria-hidden="true" />{classificando ? "Classificando lojas..." : "Classificar lojas com IA"}
