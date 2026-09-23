@@ -566,9 +566,9 @@ function CodigoNaHora({
 }: {
   cupomId: number;
   destino: string;
-  titulo?: string | null;
-  vendedor?: string | null;
-  cupom?: Cupom | null;
+  titulo: string | null | undefined;
+  vendedor: string | null | undefined;
+  cupom: Cupom | null | undefined;
 }) {
   const [codigo, setCodigo] = useState<string | null>(null);
   const [fase, setFase] = useState<"parado" | "gerando" | "falhou">("parado");
