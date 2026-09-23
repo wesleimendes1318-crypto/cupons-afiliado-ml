@@ -113,6 +113,13 @@ type Analise = {
   /* Em uma frase, por que a troca de loja não rolou. Só aparece quando a busca
      aconteceu e não achou nada. */
   motivoOutra?: string | null;
+  /* false quando a extensão não conseguiu sequer LER o anúncio. Sem isto o
+     site tratava falha de leitura como "esta loja não tem cupom", que é dizer
+     ao cliente uma coisa que não foi verificada. */
+  lojaLida?: boolean | null;
+  diagnostico?: string | null;
+  /* Gravado quando existia oferta melhor mas o link de afiliado não saiu. */
+  outraFalhou?: string | null;
 };
 
 type Pedido = {
@@ -734,6 +741,12 @@ function Resultado({
      O anúncio original continua disponível, só que como segunda opção. */
   const trocar = a?.temCupom !== true && !!a?.outraLoja;
 
+  /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
+     nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
+     pessoa tiver colado o link de afiliado de outra pessoa a venda vai para
+     ela. Nesse caso o botao nao aparece. */
+  const leituraFalhou = a?.lojaLida === false;
+
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
       {a?.titulo && (
@@ -755,18 +768,20 @@ function Resultado({
       )}
 
 
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={
-          trocar
-            ? "mt-4 block w-full rounded-md border-2 border-ml-blue py-2.5 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
-            : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
-        }
-      >
-        {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar agora"}
-      </a>
+      {!leituraFalhou && (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={
+            trocar
+              ? "mt-4 block w-full rounded-md border-2 border-ml-blue py-2.5 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
+              : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+          }
+        >
+          {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar agora"}
+        </a>
+      )}
 
 
       {pedido.codigo && (
@@ -790,11 +805,15 @@ function Resultado({
         </div>
       )}
 
-      <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
-        <span className="font-semibold text-foreground">Compre por este botão.</span> É a mesma loja
-        oficial do anúncio, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
-        vendedor me paga uma comissão, e não sai um centavo a mais do seu bolso.
-      </p>
+      {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
+          feita: seria prometer comissao sobre um link que nao foi gerado. */}
+      {!leituraFalhou && (
+        <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
+          <span className="font-semibold text-foreground">Compre por este botão.</span> É a mesma loja
+          oficial do anúncio, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
+          vendedor me paga uma comissão, e não sai um centavo a mais do seu bolso.
+        </p>
+      )}
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink/80">
         Sou o Weslei. Estou desempregado e essa comissão tem sido minha fonte de renda. Se este site
         te ajudou, usar meu link já é uma forma de retribuir. Pode colar outro link aqui em cima
@@ -927,6 +946,26 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
   if (!c) {
     const achouOutra = !!analise?.outraLoja;
     const procurou = analise?.procurouOutra === true;
+
+    /* Leitura falhou: o site NAO SABE se tem cupom. Dizer "esta loja nao tem
+       cupom" aqui seria afirmar o que ninguem conferiu, e foi exatamente o que
+       aconteceu com um link curto meli.la que a extensao nao conseguiu abrir. */
+    const naoConferiu = analise?.lojaLida === false;
+    if (naoConferiu) {
+      return (
+        <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
+          <p className="text-sm font-semibold">Não consegui abrir este anúncio agora.</p>
+          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+            Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo
+            em instantes, ou cole o endereço completo do anúncio em vez do link curto de
+            compartilhamento.
+          </p>
+          {analise?.diagnostico && (
+            <p className="mt-1.5 text-xs text-secondary-ink/80">Detalhe técnico: {analise.diagnostico}.</p>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
