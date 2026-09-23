@@ -1,0 +1,5 @@
+# ads.txt — vendedores autorizados de publicidade deste site.
+# Nenhuma rede de anúncios está autorizada no momento.
+# Ao ser aprovado no Google AdSense, substitua o exemplo abaixo pela linha
+# oficial fornecida pelo próprio painel, com o seu Publisher ID real:
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

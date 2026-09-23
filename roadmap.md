@@ -38,3 +38,14 @@
 - [x] Varredura ponta a ponta do produto contra todos os cupons do hub (extensao 1.21.0)
 - [x] Corrigir "Usar este cupom": o codigo aparece mesmo se a vitrine demorar
 - [x] Renomear titulo para "Cupons de Lojas Afiliadas"
+
+## Plataforma profissional (set/2026)
+- [x] Consentimento de cookies funcional (LGPD)
+- [x] Espacos de publicidade desligados ate haver Publisher ID
+- [x] Paginas institucionais: sobre, contato, termos, privacidade, cookies, divulgacao de afiliados
+- [ ] Guias editoriais (/guias e /guias/$slug)
+- [ ] Categorias com conteudo proprio (/categorias/$slug)
+- [ ] sitemap.xml, robots.txt, ads.txt
+- [ ] Rodape institucional e aviso de afiliado na home
+- [ ] Avaliar Python: responder se ajuda ou nao neste projeto (runtime e edge)
+- [ ] Escolher tecnologias duraveis para hoje e futuro; justificar ao usuario
