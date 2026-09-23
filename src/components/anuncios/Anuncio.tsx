@@ -70,9 +70,9 @@ function Espaco({
   formato,
   className,
 }: {
-  slot?: string;
+  slot?: string | undefined;
   formato: Formato;
-  className?: string;
+  className?: string | undefined;
 }) {
   const { preferencias, pronto } = useConsentimento();
   const liberado = ADSENSE_ATIVO && Boolean(slot) && pronto && preferencias?.publicidade === true;
@@ -91,18 +91,18 @@ function Espaco({
   );
 }
 
-export function AdBanner({ slot, className }: { slot?: string; className?: string }) {
+export function AdBanner({ slot, className }: { slot?: string | undefined; className?: string | undefined }) {
   return <Espaco slot={slot} formato="banner" className={className} />;
 }
 
-export function AdInArticle({ slot, className }: { slot?: string; className?: string }) {
+export function AdInArticle({ slot, className }: { slot?: string | undefined; className?: string | undefined }) {
   return <Espaco slot={slot} formato="in-article" className={className} />;
 }
 
-export function AdResponsive({ slot, className }: { slot?: string; className?: string }) {
+export function AdResponsive({ slot, className }: { slot?: string | undefined; className?: string | undefined }) {
   return <Espaco slot={slot} formato="responsivo" className={className} />;
 }
 
-export function AdSidebar({ slot, className }: { slot?: string; className?: string }) {
+export function AdSidebar({ slot, className }: { slot?: string | undefined; className?: string | undefined }) {
   return <Espaco slot={slot} formato="lateral" className={className} />;
 }
