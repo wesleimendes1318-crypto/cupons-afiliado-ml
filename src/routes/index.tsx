@@ -1136,89 +1136,98 @@ function Index() {
   return (
     <div className="min-h-screen fundo-conteudo text-foreground">
       <header className="faixa-conteudo w-full">
-        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-conteudo">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
-                <ShieldAlert className="size-3.5" aria-hidden="true" />
-                Curadoria independente
-              </span>
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                {atualizado ? `Atualizado em ${atualizado}` : "Aguardando a primeira carga de dados"}
-              </span>
+        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+          <div className="animate-conteudo grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
+                  <ShieldAlert className="size-3.5" aria-hidden="true" />
+                  Curadoria independente
+                </span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                  {atualizado ? `Atualizado em ${atualizado}` : "Aguardando a primeira carga de dados"}
+                </span>
+              </div>
+
+              <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                Cupons de Lojas Afiliadas — por{" "}
+                <a
+                  href="https://www.instagram.com/wslmendes/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-ml-yellow decoration-2 underline-offset-4 hover:opacity-80"
+                >
+                  @WSLMENDES
+                </a>
+              </h1>
+
+              <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
+                Um cupom anuncia 40% e desconta R$ 2. A diferença está no limite, escondido nas
+                letras miúdas — e é isso que eu leio, cupom por cupom, antes de publicar qualquer
+                coisa aqui.
+              </p>
+              <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
+                {indicadores.conferidos > 0 ? (
+                  <>
+                    Já conferi {indicadores.conferidos.toLocaleString("pt-BR")} cupons um a um e
+                    reprovei {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco
+                    demais. Publico o limite real de cada um e gero o seu código na hora.
+                  </>
+                ) : (
+                  <>
+                    Confiro cada cupom um a um, reprovo os que descontam pouco demais, publico o
+                    limite real de cada um e gero o seu código na hora.
+                  </>
+                )}
+              </p>
+
+              <div className="mt-7 flex flex-wrap items-center gap-2.5">
+                <Button
+                  onClick={irParaColarLink}
+                  className="h-auto min-h-12 bg-ml-yellow px-6 py-3 text-base font-bold text-ml-yellow-foreground shadow-lg shadow-black/10 hover:bg-ml-yellow/90"
+                >
+                  <Link2 className="size-5" aria-hidden="true" />
+                  Colar o link do produto
+                </Button>
+                <nav aria-label="Conteúdo do site" className="flex flex-wrap gap-2">
+                  {[
+                    { para: "/categorias" as const, texto: "Categorias" },
+                    { para: "/guias" as const, texto: "Guias" },
+                    { para: "/sobre" as const, texto: "Sobre" },
+                  ].map((item) => (
+                    <Link
+                      key={item.para}
+                      to={item.para}
+                      className="inline-flex min-h-12 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
+                    >
+                      {item.texto}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
             </div>
 
-            <h1 className="mt-3 text-2xl font-extrabold sm:text-4xl">
-              Cupons de Lojas Afiliadas — por{" "}
-              <a
-                href="https://www.instagram.com/wslmendes/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-ml-yellow decoration-2 underline-offset-4 hover:opacity-80"
-              >
-                @WSLMENDES
-              </a>
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm font-medium text-white/90 sm:text-base">
-              Um cupom anuncia 40% e desconta R$ 2. A diferença está no limite, escondido nas
-              letras miúdas — e é isso que eu leio, cupom por cupom, antes de publicar qualquer
-              coisa aqui.
-            </p>
-            <p className="mt-1.5 max-w-3xl text-sm text-white/85 sm:text-base">
-              {indicadores.conferidos > 0 ? (
-                <>
-                  Já conferi {indicadores.conferidos.toLocaleString("pt-BR")} cupons um a um e
-                  reprovei {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco
-                  demais. Publico o limite real de cada um e gero o seu código na hora.
-                </>
-              ) : (
-                <>
-                  Confiro cada cupom um a um, reprovo os que descontam pouco demais, publico o
-                  limite real de cada um e gero o seu código na hora.
-                </>
-              )}
-            </p>
-            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-semibold text-white/90 sm:text-sm">
-              <li className="flex items-center gap-1.5">
-                <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-ml-yellow" />
-                Limite real conferido no texto oficial da campanha
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Check aria-hidden="true" className="size-4 shrink-0 text-ml-yellow" />
-                Nenhum número inventado: o que não sei, eu digo que não sei
-              </li>
-              <li className="flex items-center gap-1.5">
-                <ShieldAlert aria-hidden="true" className="size-4 shrink-0 text-ml-yellow" />
-                Mostro também os cupons ruins, para você não cair neles
-              </li>
-            </ul>
-            <p className="mt-2 max-w-3xl text-sm text-white/80">
-              Aqui você sabe quanto economiza antes de comprar — e o preço é o mesmo para você.
-            </p>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button
-                onClick={irParaColarLink}
-                className="h-auto min-h-11 bg-ml-yellow px-5 py-2.5 font-bold text-ml-yellow-foreground hover:bg-ml-yellow/90"
-              >
-                <Link2 className="size-5" aria-hidden="true" />
-                Colar o link do produto
-              </Button>
-              <nav aria-label="Conteúdo do site" className="flex flex-wrap gap-2">
-                {[
-                  { para: "/categorias" as const, texto: "Categorias" },
-                  { para: "/guias" as const, texto: "Guias" },
-                  { para: "/sobre" as const, texto: "Sobre" },
-                ].map((item) => (
-                  <Link
-                    key={item.para}
-                    to={item.para}
-                    className="inline-flex min-h-11 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
-                  >
-                    {item.texto}
-                  </Link>
-                ))}
-              </nav>
+            <div className="min-w-0 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-xs font-bold uppercase tracking-wide text-ml-yellow">
+                Meu compromisso com você
+              </p>
+              <ul className="mt-3 space-y-3 text-sm leading-relaxed text-white/90">
+                <li className="flex items-start gap-2.5">
+                  <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
+                  Limite real conferido no texto oficial da campanha
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
+                  Nenhum número inventado: o que não sei, eu digo que não sei
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
+                  Mostro também os cupons ruins, para você não cair neles
+                </li>
+              </ul>
+              <p className="mt-4 border-t border-white/20 pt-3 text-xs leading-relaxed text-white/75">
+                Aqui você sabe quanto economiza antes de comprar — e o preço é o mesmo para você.
+              </p>
             </div>
           </div>
         </div>
@@ -1257,8 +1266,8 @@ function Index() {
       </nav>
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4">
-          <ol className="grid gap-3 text-sm sm:grid-cols-3">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5">
+          <ol className="grid gap-4 text-sm sm:grid-cols-3">
             {[
               { icone: Link2, texto: "Você cola aqui o link do anúncio que quer comprar" },
               { icone: Search, texto: "O site confere na hora se a loja tem cupom de verdade" },
@@ -1278,10 +1287,10 @@ function Index() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
+      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
         <BuscaPorLink />
 
-        <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
+        <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
             <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
@@ -1396,7 +1405,7 @@ function Index() {
         )}
 
         {destaques.length > 0 && (
-          <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Melhor cupom de cada categoria">
+          <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Melhor cupom de cada categoria">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
               <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
@@ -1429,7 +1438,7 @@ function Index() {
 
         {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
         {lojasDestaque.length > 0 && (
-          <section className="mt-6 rounded-xl border border-border bg-card p-4" aria-label="Lojas parceiras">
+          <section className="mt-8 rounded-xl border border-border bg-card p-5" aria-label="Lojas parceiras">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-bold">Lojas parceiras</h2>
               <p className="text-xs text-secondary-ink">
