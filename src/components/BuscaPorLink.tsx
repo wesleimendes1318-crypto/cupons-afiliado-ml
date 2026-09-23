@@ -21,6 +21,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -413,6 +414,11 @@ function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
         {atual >= 0 ? ETAPAS[atual]?.rotulo : "Conferindo"}
       </p>
 
+      <div className="mb-3 flex items-center gap-2 rounded-md bg-ml-blue/5 px-3 py-2 text-sm font-semibold text-ml-blue">
+        <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
+        <span>{atual >= 0 ? ETAPAS[atual]?.rotulo : "Conferindo seu produto"}</span>
+      </div>
+
       <ol className="mb-3 space-y-2">
         {ETAPAS.map((etapa, i) => {
           const feita = atual > i;
@@ -603,8 +609,25 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         disabled={fase === "gerando"}
         className="w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:opacity-70"
       >
-        {fase === "gerando" ? "Criando seu código..." : "Usar este cupom"}
+        {fase === "gerando" ? (
+          <span className="flex items-center justify-center gap-2">
+            <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
+            Criando seu código…
+          </span>
+        ) : "Usar este cupom"}
       </button>
+      {fase === "gerando" && (
+        <div className="mt-2.5 overflow-hidden rounded-md border border-success/25 bg-success/10 p-3" role="status" aria-live="polite">
+          <div className="flex items-center gap-2 text-xs font-bold text-success">
+            <span className="etapa-andando size-2 shrink-0 rounded-full bg-success" aria-hidden="true" />
+            Gerando e validando sua etiqueta
+          </div>
+          <div className="esqueleto mt-2.5 h-1.5 rounded-full" aria-hidden="true" />
+          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
+            Assim que estiver pronta, o código será copiado e o produto abrirá automaticamente.
+          </p>
+        </div>
+      )}
       <p className="mt-1.5 text-xs leading-relaxed text-secondary-ink" aria-live="polite">
         {fase === "gerando"
           ? "Assim que ficar pronto eu copio o código para você e abro o produto."
