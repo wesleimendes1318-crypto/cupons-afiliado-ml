@@ -564,18 +564,7 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
     if (r.falha) throw new Error('A chamada falhou na pagina: ' + r.falha);
     if (r.status >= 400)
       throw new Error(`O gerador de links respondeu HTTP ${r.status}. ${String(r.txt || '').slice(0, 160)}`);
-    let { curto, codigo } = lerResposta(r.txt || '');
-    /* Tentar de novo antes de desistir: metade das falhas era resposta vazia
-       ou truncada do gerador. Desistir na primeira custa a comissao. */
-    for (let tentativa = 0; !curto && tentativa < 2; tentativa++) {
-      await new Promise(r2 => setTimeout(r2, 1200 * (tentativa + 1)));
-      const [outra] = await chrome.scripting.executeScript({
-        target: { tabId }, world: 'MAIN', func: chamadaNaPagina, args: [ROTA_CRIAR, url, tag]
-      });
-      const rr = outra && outra.result;
-      if (!rr || rr.falha || rr.status >= 400) continue;
-      ({ curto, codigo } = lerResposta(rr.txt || ''));
-    }
+    const { curto, codigo } = lerResposta(r.txt || '');
     if (!curto) throw new Error('O link foi criado mas nao consegui ler a resposta.');
     return { link: curto, codigo };
   }
@@ -924,245 +913,74 @@ function ofertasDoCatalogo(html) {
   return saida;
 }
 
-function urlDaOferta(pagina, item) {
-  return `${pagina}?pdp_filters=item_id%3A${item}`;
+function urlDaOferta(catalogo, item) {
+  return `https://www.mercadolivre.com.br/p/${catalogo}?pdp_filters=item_id%3A${item}`;
 }
-
-/* Preco e titulo direto do html do anuncio, para os candidatos que vem da
-   busca (a busca nao traz preco confiavel ligado a cada link). */
-function precoDoHtml(html) {
-  if (!html) return null;
-  const m = /"price"\s*:\s*([\d.]+)/.exec(html)
-         || /itemprop="price"[^>]*content="([\d.]+)"/.exec(html);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return n > 0 && n < 1e7 ? n : null;
-}
-
-function tituloDoHtml(html) {
-  if (!html) return '';
-  const m = /<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i.exec(html)
-         || /<title>([^<]+)<\/title>/i.exec(html);
-  return m ? m[1] : '';
-}
-
-function palavras(t) {
-  return String(t || '').toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .split(/[^a-z0-9]+/).filter(p => p.length > 2);
-}
-
-/* O candidato so conta como "o mesmo produto" quando a maior parte das
-   palavras do titulo original aparece nele. Sem essa trava a busca devolve
-   acessorio parecido e o site indicaria outra coisa. */
-function mesmoTitulo(original, candidato) {
-  const a = palavras(original);
-  const b = new Set(palavras(candidato));
-  if (a.length < 3) return false;
-  const iguais = a.filter(p => b.has(p)).length;
-  return iguais / a.length >= 0.6;
-}
-
-const RE_UP = /\/up\/(MLBU?\d+)/i;
 
 /* Devolve a melhor oferta do MESMO produto numa loja com cupom, ou null.
 
-   Null quando: nao achamos o produto em outra loja, nenhum vendedor tem cupom
-   que preste, ou a alternativa nao sai mais barata que o que a pessoa ja
-   estava vendo. Nesse ultimo caso mandar a pessoa trocar de loja seria dar
-   trabalho a ela para economizar nada. */
-/* Por que a troca de loja nao aconteceu. Sem isso "nao achei" e uma caixa
-   preta. */
-let motivoOutra = null;
+   Null quando: nao e produto de catalogo, so existe um vendedor, nenhum
+   vendedor tem cupom que preste, ou a alternativa nao sai mais barata que o
+   que a pessoa ja estava vendo. Nesse ultimo caso mandar a pessoa trocar de
+   loja seria dar trabalho a ela para economizar nada. */
+async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
+  let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
+  let html = null;
 
-/* Diagnostico da varredura: quantos anuncios do mesmo produto foram lidos,
-   quantas lojas diferentes apareceram e quantas dessas lojas tem cupom no hub
-   de afiliados. Sem isso "nao achei" e uma caixa preta. */
-let diagOutra = null;
+  if (!cat) {
+    html = await lerCatalogo(urlProduto);
+    const can = /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
+    cat = (RE_CATALOGO.exec(can ? can[1] : '') || [])[1]
+       || (RE_CATALOGO.exec(html) || [])[1] || null;
+    if (!cat) return null;
+    // O html que temos e o do anuncio, nao o do catalogo: busca o certo.
+    if (!html.includes('"buy_box_offers":{')) html = null;
+  }
 
-/* Avalia uma lista de candidatos [{item, url, preco?}] contra o indice
-   COMPLETO de cupons de afiliado (todos os cupons do hub, nao uma amostra).
+  if (!html) html = await lerCatalogo(`https://www.mercadolivre.com.br/p/${cat}`);
 
-   Fase 1, em paralelo: le cada anuncio, tira loja, preco e titulo.
-   Fase 2, em serie: para cada loja que casou com um cupom do hub, busca as
-   condicoes reais (teto e compra minima) e ve se vale para aquele preco. */
-async function avaliarCandidatos(candidatos, itemAtual, tituloOriginal) {
+  const ofertas = ofertasDoCatalogo(html);
+  if (ofertas.length < 2) return null;
+
   const indice = await obterIndice();
   const chaves = Object.keys(indice.mapa);
 
-  const lidos = [];
-  const lojas = new Set();
-  let mesmos = 0;
-
-  const fila = candidatos.filter(o => !(itemAtual && o.item === itemAtual));
-
-  for (let i = 0; i < fila.length; i += CONC_VEND) {
-    const lote = fila.slice(i, i + CONC_VEND);
-    await Promise.all(lote.map(async o => {
-      let html = null;
-      try { html = await lerParcial(o.url); } catch (e) { html = null; }
-
-      const preco = o.preco != null ? o.preco : precoDoHtml(html);
-      if (tituloOriginal && !mesmoTitulo(tituloOriginal, tituloDoHtml(html))) return;
-      mesmos++;
-
-      let nomes = nomesDoHtml(html || '');
-      if (!nomes.length) {
-        try { nomes = await resolverVendedor(o.item, o.url); } catch (e) { nomes = []; }
-      }
-      if (nomes[0]) lojas.add(norm(nomes[0]));
-
-      const cupom = acharCupom(indice.mapa, chaves, nomes);
-      if (!cupom) return;
-      lidos.push({ ...o, preco, nomes, cupom });
-    }));
-    await sleep(250);
-  }
-
-  // Uma loja pode aparecer em varios anuncios: confere o cupom uma vez so.
-  const porLoja = new Map();
-  for (const c of lidos) {
-    const k = String(c.cupom.i);
-    const atual = porLoja.get(k);
-    if (!atual || (c.preco != null && (atual.preco == null || c.preco < atual.preco))) porLoja.set(k, c);
-  }
-
   const achados = [];
-  for (const c of porLoja.values()) {
+  for (const o of ofertas) {
+    if (itemAtual && o.item === itemAtual) continue;
+    const url = urlDaOferta(cat, o.item);
+
+    let nomes = [];
+    try { nomes = await resolverVendedor(o.item, url); } catch (e) { nomes = []; }
+    const cupom = acharCupom(indice.mapa, chaves, nomes);
+    if (!cupom) { await sleep(400); continue; }
+
     let cond = null;
-    try { cond = await condicoesDe(c.cupom.i); } catch (e) { cond = null; }
-    const aval = avaliar(c.cupom, cond, c.preco);
-    await sleep(250);
+    try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
+    const aval = avaliar(cupom, cond, o.preco);
+    await sleep(400);
     if (!aval || !aval.vale) continue;
 
     achados.push({
-      item: c.item,
-      url: c.url,
-      preco: c.preco,
-      vendedor: c.nomes[0] || null,
-      cupom: { id: c.cupom.i, titulo: c.cupom.t, vence: c.cupom.x },
+      item: o.item,
+      url,
+      preco: o.preco,
+      vendedor: nomes[0] || null,
+      cupom: { id: cupom.i, titulo: cupom.t, vence: cupom.x },
       economia: aval.economia,
       minimo: aval.minimo,
       teto: aval.teto,
-      final: c.preco != null && aval.economia != null ? c.preco - aval.economia : null
+      final: o.preco != null && aval.economia != null ? o.preco - aval.economia : null
     });
   }
 
-  return {
-    achados,
-    comCupom: porLoja.size,
-    conferidos: fila.length,
-    mesmos,
-    lojas: lojas.size,
-    cuponsNoHub: chaves.length
-  };
-}
-
-/* Procura o mesmo produto na busca do Mercado Livre, varrendo varias paginas
-   para nao parar nos primeiros resultados. */
-const PAGINAS_BUSCA = 3;
-const POR_PAGINA = 50;
-
-async function candidatosPorBusca(titulo) {
-  const termo = palavras(titulo).slice(0, 8).join(' ');
-  if (!termo) return [];
-
-  const base = BUSCA(termo).replace('_Frete_Full_FullFilter_True_NoIndex_True', '_NoIndex_True');
-  const links = [];
-
-  for (let p = 0; p < PAGINAS_BUSCA; p++) {
-    const url = p === 0 ? base : `${base}_Desde_${p * POR_PAGINA + 1}`;
-    try {
-      const r = await fetch(url, { credentials: 'include' });
-      if (!r.ok) break;
-      const achados = linksDaBusca(await r.text());
-      if (!achados.length) break;
-      links.push(...achados);
-    } catch (e) { break; }
-    await sleep(300);
-  }
-
-  const vistos = new Set();
-  const saida = [];
-  for (const link of links) {
-    const item = (/MLB-?\d+/.exec(link) || [''])[0].replace('-', '');
-    if (!item || vistos.has(item)) continue;
-    vistos.add(item);
-    saida.push({ item, url: link, preco: null });
-  }
-  return saida;
-}
-
-async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual, titulo) {
-  motivoOutra = null;
-  diagOutra = null;
-
-  let pagina = null;
-  let html = null;
-
-  const mc = RE_CATALOGO.exec(urlProduto);
-  const mu = RE_UP.exec(urlProduto);
-  if (mc) pagina = `https://www.mercadolivre.com.br/p/${mc[1]}`;
-  else if (mu) pagina = `https://www.mercadolivre.com.br/up/${mu[1]}`;
-
-  if (!pagina) {
-    try { html = await lerCatalogo(urlProduto); } catch (e) { html = null; }
-    const can = html && /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
-    const alvo = can ? can[1] : '';
-    const c2 = RE_CATALOGO.exec(alvo) || (html ? RE_CATALOGO.exec(html) : null);
-    const u2 = RE_UP.exec(alvo) || (html ? RE_UP.exec(html) : null);
-    if (c2) pagina = `https://www.mercadolivre.com.br/p/${c2[1]}`;
-    else if (u2) pagina = `https://www.mercadolivre.com.br/up/${u2[1]}`;
-    if (html && !html.includes('"buy_box_offers":{')) html = null;
-  }
-
-  let ofertas = [];
-  if (pagina) {
-    if (!html) { try { html = await lerCatalogo(pagina); } catch (e) { html = null; } }
-    ofertas = html ? ofertasDoCatalogo(html) : [];
-  }
-
-  let r1 = { achados: [], comCupom: 0, conferidos: 0, mesmos: 0, lojas: 0, cuponsNoHub: 0 };
-  if (ofertas.length >= 2) {
-    r1 = await avaliarCandidatos(
-      ofertas.map(o => ({ item: o.item, url: urlDaOferta(pagina, o.item), preco: o.preco })),
-      itemAtual, null);
-  }
-
-  /* Mesmo com ofertas no catalogo a busca roda quando nada valeu: o catalogo
-     mostra so a buy box, e a loja parceira com cupom pode estar fora dela. */
-  let r2 = { achados: [], comCupom: 0, conferidos: 0, mesmos: 0, lojas: 0, cuponsNoHub: 0 };
-  if (!r1.achados.length && titulo) {
-    const busca = await candidatosPorBusca(titulo);
-    if (busca.length) r2 = await avaliarCandidatos(busca, itemAtual, titulo);
-  }
-
-  const achados = r1.achados.concat(r2.achados);
-  diagOutra = {
-    conferidos: r1.conferidos + r2.conferidos,
-    mesmoProduto: (r1.conferidos ? r1.conferidos : 0) + r2.mesmos,
-    lojas: r1.lojas + r2.lojas,
-    lojasComCupom: r1.comCupom + r2.comCupom,
-    cuponsNoHub: Math.max(r1.cuponsNoHub, r2.cuponsNoHub)
-  };
-
-  if (!achados.length) {
-    motivoOutra = diagOutra.lojasComCupom
-      ? `conferi ${diagOutra.lojasComCupom} loja(s) com cupom para este produto e nenhum vale para este preco`
-      : (diagOutra.conferidos
-          ? `conferi ${diagOutra.conferidos} anuncio(s) do mesmo produto contra ${diagOutra.cuponsNoHub} lojas com cupom e nenhuma bateu`
-          : 'nao achei este mesmo produto em outra loja');
-    return null;
-  }
+  if (!achados.length) return null;
 
   achados.sort((a, b) =>
     (a.final == null ? Infinity : a.final) - (b.final == null ? Infinity : b.final));
   const melhor = achados[0];
 
-  if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) {
-    motivoOutra = 'a outra loja com cupom nao sai mais barata';
-    return null;
-  }
+  if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) return null;
   return melhor;
 }
 
@@ -1280,14 +1098,25 @@ async function atenderPedidos() {
     pendentes = await pedidosPendentes(sincToken);
     if (!pendentes.length) return { atendidos: 0, pendentes: 0 };
 
+    /* Quantas pessoas estao esperando agora. Com fila curta da para fazer o
+       trabalho completo em cada pedido, incluindo a busca do mesmo produto em
+       outra loja, que custa varias leituras. Com fila cheia isso vira egoismo:
+       a quarta pessoa da fila esperaria a busca das tres anteriores. Entao,
+       sob carga, todo mundo recebe o link rapido e a busca da alternativa fica
+       para a proxima rodada, que comeca em seguida. */
+    const filaCheia = pendentes.length > 4;
+
     await comAbaML(async (tabId) => {
-      for (const p of pendentes.slice(0, 6)) {
+      for (const p of pendentes) {
         if (!p.url_alvo) {
           await marcarPedido(sincToken, p.id, null, null, 'pedido sem link');
           falhou++; continue;
         }
         try {
-          // Marca que pegou: o site troca "na fila" por "lendo o anuncio".
+          /* O banco ja reservou este pedido para esta instancia, de forma
+             atomica, na propria consulta da fila. Esta chamada continua aqui
+             so para versoes antigas do banco: onde a reserva ja aconteceu ela
+             nao faz nada. */
           iniciarPedido(sincToken, p.id).catch(() => {});
           const url = limparUrl(p.url_alvo);
 
@@ -1312,24 +1141,14 @@ async function atenderPedidos() {
           // 3. o SEU link sai sempre, com ou sem cupom
           const r = await gerarNaAba(tabId, url, TAG_PADRAO);
 
-          /* PRIORIDADE: se a loja do link nao tem cupom que preste, procurar o
-             MESMO produto de catalogo numa loja que tenha cupom valendo para
-             ESTE preco (compra minima atendida e desconto de verdade), gerar o
-             link de afiliado DAQUELA oferta e devolver as duas coisas. O site
-             mostra a troca com o preco final dos dois lados.
-
-             procurouOutra registra que a busca aconteceu: sem isso o site nao
-             sabe diferenciar "nao procurei" de "procurei e nao achou", e a
-             honestidade do texto depende dessa diferenca. */
+          /* Se a loja do link nao tem cupom que preste, procura o MESMO
+             produto de catalogo numa loja que tenha, gera o link de afiliado
+             DAQUELA oferta e devolve as duas coisas. O site mostra a troca
+             com o preco final dos dois lados, para a pessoa decidir. */
           let outra = null;
-          let procurouOutra = false;
-          if (!(cupom && aval && aval.vale)) {
-            procurouOutra = true;
+          if (!(cupom && aval && aval.vale) && !filaCheia) {
             try {
-              const itemAtual =
-                (/item_id(?:%3A|:)(MLB\d+)/i.exec(url) || [])[1] ||
-                (/MLB-?(\d{6,})/i.exec(url) ? 'MLB' + /MLB-?(\d{6,})/i.exec(url)[1] : null);
-              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, itemAtual, a.titulo ?? null);
+              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, null);
               if (alt) {
                 const la = await gerarNaAba(tabId, alt.url);
                 outra = {
@@ -1355,12 +1174,8 @@ async function atenderPedidos() {
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,
-            procurouOutra,
-            motivoOutra: procurouOutra ? motivoOutra : null,
-            varreduraOutra: procurouOutra ? diagOutra : null,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
-              id: cupom.id,
               titulo: cupom.desconto, vence: cupom.vence,
               teto: aval ? aval.teto : null, minimo: aval ? aval.minimo : null,
               economia: aval ? aval.economia : null,
@@ -1374,11 +1189,17 @@ async function atenderPedidos() {
           await marcarPedido(sincToken, p.id, null, null, e.message || String(e), null);
           falhou++;
         }
-        await sleep(600); // um pedido por vez, sem pressa
+        // Ritmo entre pedidos: calmo quando ninguem espera, apertado quando
+        // tem gente na fila. Nunca zero: rajada e o que chama atencao.
+        await sleep(filaCheia ? 250 : 600);
       }
     });
 
     if (ok || falhou) console.log(`[pedidos] ${ok} atendidos, ${falhou} falharam`);
+    /* Rodada cheia significa que provavelmente sobrou gente esperando: o banco
+       entrega no maximo 12 por vez. Emenda a proxima rodada em vez de esperar
+       o alarme de 1 minuto. */
+    if (pendentes.length >= 12) chegouPedidoNovo = true;
     return { atendidos: ok, falharam: falhou, pendentes: pendentes.length };
   } finally {
     atendendo = false;
@@ -1387,100 +1208,6 @@ async function atenderPedidos() {
       setTimeout(() => atenderPedidos().catch(() => {}), 400);
     }
   }
-}
-
-/* ------------------------------------------- atendimento avancado no popup
-
-   O popup usava um caminho antigo, mais fraco do que o do site: nao varria o
-   catalogo atras da mesma peca numa loja com cupom, nao dizia o motivo de nao
-   achar e nao criava o codigo do cupom. Aqui ele passa a usar o MESMO motor do
-   site, com o que so a extensao tem: sessao logada, leitura do anuncio de
-   dentro da pagina e criacao do codigo na hora. */
-
-async function atenderPro(urlBruta, opcoes = {}) {
-  const { sincToken } = await chrome.storage.local.get('sincToken');
-  const url = limparUrl(urlBruta);
-  const buscarOutra = opcoes.alternativas !== false;
-  const criarCodigo = opcoes.codigo !== false;
-
-  return comAbaML(async (tabId) => {
-    const [saida] = await chrome.scripting.executeScript({
-      target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
-    });
-    const a = (saida && saida.result) || { ok: false, falha: 'a pagina nao respondeu' };
-
-    let cupom = null, vendedor = null;
-    for (const nome of (a.nomes || [])) {
-      if (!vendedor) vendedor = nome;
-      try {
-        const c = sincToken ? await melhorCupom(sincToken, nome) : null;
-        if (c) { cupom = c; vendedor = c.vendedor; break; }
-      } catch (e) { /* segue tentando o proximo nome */ }
-    }
-
-    const aval = avaliarCupom(cupom, a.preco ?? null);
-    const vale = !!(cupom && aval && aval.vale);
-
-    const r = await gerarNaAba(tabId, url, opcoes.tag || TAG_PADRAO);
-
-    /* Codigo do cupom criado na hora: e o que o cliente cola no carrinho.
-       So para cupom que presta, para nao queimar codigo permanente a toa. */
-    let codigoCupom = null;
-    if (criarCodigo && vale && cupom && cupom.id) {
-      try {
-        const [e] = await chrome.scripting.executeScript({
-          target: { tabId }, world: 'MAIN', func: etiquetaNaPagina,
-          args: [cupom.id, sufixoDaEtiqueta(cupom.id, cupom.desconto)]
-        });
-        const res = e && e.result;
-        if (res && res.alias) {
-          codigoCupom = res.alias;
-          if (sincToken) salvarEtiquetas(sincToken, [{ id: cupom.id, codigo: res.alias }]).catch(() => {});
-        }
-      } catch (e) { console.warn('[etiqueta popup]', e.message); }
-    }
-
-    let outra = null, procurouOutra = false;
-    if (buscarOutra && !vale) {
-      procurouOutra = true;
-      try {
-        const itemAtual =
-          (/item_id(?:%3A|:)(MLB\d+)/i.exec(url) || [])[1] ||
-          (/MLB-?(\d{6,})/i.exec(url) ? 'MLB' + /MLB-?(\d{6,})/i.exec(url)[1] : null);
-        const alt = await mesmoProdutoComCupom(url, a.preco ?? null, itemAtual, a.titulo ?? null);
-        if (alt) {
-          const la = await gerarNaAba(tabId, alt.url);
-          outra = {
-            vendedor: alt.vendedor, preco: alt.preco, economia: alt.economia,
-            minimo: alt.minimo, teto: alt.teto, final: alt.final,
-            cupomTitulo: alt.cupom.titulo, vence: alt.cupom.vence,
-            link: la.link, codigo: la.codigo
-          };
-        }
-      } catch (e) { console.warn('[mesmo produto]', e.message); }
-    }
-
-    return {
-      titulo: a.titulo ?? null,
-      preco: a.preco ?? null,
-      vendedor: vendedor ?? null,
-      id: a.id ?? null,
-      link: r.link,
-      codigo: r.codigo,
-      temCupom: vale,
-      codigoCupom,
-      cupom: cupom ? {
-        id: cupom.id, titulo: cupom.desconto, vence: cupom.vence,
-        teto: aval ? aval.teto : null, minimo: aval ? aval.minimo : null,
-        economia: aval ? aval.economia : null, bloqueado: aval ? aval.bloqueado : null
-      } : null,
-      outraLoja: outra,
-      procurouOutra,
-      motivoOutra: procurouOutra ? motivoOutra : null,
-      varredura: procurouOutra ? diagOutra : null,
-      diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
-    };
-  });
 }
 
 /* ------------------------------------------------------------ mensagens */
@@ -1507,13 +1234,7 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
       } else if (msg.tipo === 'texto') {
         responder({ ok: true, texto: await gerarTexto(msg.titulo, msg.preco, msg.cupom, msg.canal) });
       } else if (msg.tipo === 'atender') {
-        /* O popup agora usa o motor do site (atenderPro). Se algo falhar nele,
-           cai no caminho antigo para nunca deixar o Weslei sem link. */
-        try {
-          responder({ ok: true, dados: await atenderPro(msg.url, { tag: msg.tag, alternativas: msg.alternativas !== false, codigo: msg.codigo !== false }) });
-        } catch (e) {
-          responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
-        }
+        responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
       } else if (msg.tipo === 'linkDe') {
         responder({ ok: true, link: await gerarLinkAvulso(msg.url, msg.tag) });
       } else if (msg.tipo === 'sincronizar') {
