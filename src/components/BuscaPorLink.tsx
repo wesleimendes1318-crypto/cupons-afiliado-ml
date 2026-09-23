@@ -84,6 +84,10 @@ function compartilharWhatsApp(texto: string) {
    nunca um parecido, e só quando sai mais barato que o anúncio colado. */
 type OutraLoja = {
   cupomId?: number | null;
+  /* Quanto a troca economiza de fato, ja comparando preco final com preco
+     final. Vem da extensao, que e quem conhece os dois lados. */
+  ganho?: number | null;
+  finalAtual?: number | null;
   vendedor: string | null;
   preco: number | null;
   economia: number | null;
@@ -768,7 +772,8 @@ function Resultado({
       {pedido.codigo && (
         <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
           <p className="text-xs leading-relaxed text-secondary-ink">
-            Se o link não abrir no aplicativo, cole este código na busca da loja:
+            Código de busca do anúncio. Não é o cupom: serve só para achar este
+            produto caso o link não abra no aplicativo.
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
@@ -821,8 +826,19 @@ function OutraLojaComCupom({
   titulo?: string | null;
   principal?: boolean;
 }) {
+  /* A extensao ja comparou preco final contra preco final e mandou o ganho.
+     O calculo local fica so como reserva para pedidos antigos. */
   const diferenca =
-    precoAqui != null && oferta.final != null ? precoAqui - oferta.final : null;
+    oferta.ganho != null
+      ? oferta.ganho
+      : precoAqui != null && oferta.final != null
+        ? precoAqui - oferta.final
+        : null;
+
+  /* Alternativa pode ser mais barata SEM cupom nenhum. Foi o caso do Kit Wella:
+     a loja do link tinha cupom de 15% e ainda assim saia mais cara. Dizer
+     "com cupom" ali seria mentira. */
+  const temCupomLa = Boolean(oferta.cupomTitulo);
 
   return (
     <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
@@ -832,9 +848,9 @@ function OutraLojaComCupom({
         </p>
       )}
       <p className="text-sm font-bold text-success">
-        {principal
-          ? "A loja do anúncio não tem cupom, mas achei o mesmo produto em uma loja que tem"
-          : "Este mesmo produto está mais barato em outra loja, com cupom"}
+        {temCupomLa
+          ? "Achei o mesmo produto mais barato em outra loja, e lá tem cupom"
+          : "Achei o mesmo produto mais barato em outra loja"}
       </p>
 
 
@@ -842,7 +858,7 @@ function OutraLojaComCupom({
         {oferta.vendedor && <Linha rotulo="Loja" valor={oferta.vendedor} />}
         <Linha rotulo="Preço lá" valor={brl(oferta.preco)} />
         {oferta.cupomTitulo && <Linha rotulo="Cupom" valor={oferta.cupomTitulo} />}
-        {oferta.economia != null && (
+        {oferta.economia != null && oferta.economia > 0 && (
           <Linha rotulo="Desconto do cupom" valor={brl(oferta.economia)} />
         )}
         {oferta.final != null && (
@@ -856,7 +872,9 @@ function OutraLojaComCupom({
 
       {diferenca != null && diferenca > 0 && (
         <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
-          São {brl(diferenca)} a menos que o anúncio que você colou.
+          Você economiza {brl(diferenca)} trocando de loja
+          {oferta.finalAtual != null ? <> (lá {brl(oferta.final)}, aqui {brl(oferta.finalAtual)})</> : null}.
+          {" "}Já está contando o cupom dos dois lados.
         </p>
       )}
 
@@ -866,7 +884,7 @@ function OutraLojaComCupom({
         rel="noopener noreferrer"
         className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
       >
-        Comprar na loja com cupom
+        {temCupomLa ? "Comprar na loja com cupom" : "Comprar nesta loja, mais barato"}
       </a>
 
       {oferta.cupomId != null && (
@@ -888,8 +906,9 @@ function OutraLojaComCupom({
       )}
 
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-        É o mesmo produto, na mesma página de catálogo, só que
-        no anúncio desta loja. O desconto do cupom aparece no carrinho.
+        É o mesmo produto, na mesma página de catálogo do Mercado Livre, só que no
+        anúncio desta loja.
+        {temCupomLa ? " O desconto do cupom aparece no carrinho." : " Aqui a economia vem do preço, não de cupom."}
       </p>
     </div>
   );
