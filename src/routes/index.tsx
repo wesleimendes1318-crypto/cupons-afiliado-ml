@@ -1165,11 +1165,11 @@ function Index() {
               coisa aqui.
             </p>
             <p className="mt-1.5 max-w-3xl text-sm text-white/85 sm:text-base">
-              {indicadores.total > 0 ? (
+              {indicadores.conferidos > 0 ? (
                 <>
-                  Já conferi {indicadores.total.toLocaleString("pt-BR")} cupons um a um e reprovei{" "}
-                  {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco demais.
-                  Publico o limite real de cada um e gero o seu código na hora.
+                  Já conferi {indicadores.conferidos.toLocaleString("pt-BR")} cupons um a um e
+                  reprovei {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco
+                  demais. Publico o limite real de cada um e gero o seu código na hora.
                 </>
               ) : (
                 <>
