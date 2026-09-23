@@ -616,9 +616,18 @@ async function urlDaAba(tabId) {
 }
 
 async function abaDoGerador() {
-  const abertas = await chrome.tabs.query({ url: 'https://www.mercadolivre.com.br/afiliados/*' });
+  /* SO a pagina do proprio gerador serve.
+
+     Antes servia qualquer aba em /afiliados/*, e isso quebrou de verdade: o
+     Weslei tinha uma aba do /afiliados/hub aberta mostrando a pagina de erro
+     do Mercado Livre (XMEHV37590). Aquela pagina tem csrf-token, entao a
+     chamada saia dali, voltava sem link nenhum e o pedido morria com "o link
+     foi criado mas nao consegui ler a resposta". O gerador estava bem; a aba e
+     que era a errada. */
+  const abertas = await chrome.tabs.query({ url: PAGINA_GERADOR + '*' });
   for (const aba of (abertas || [])) {
-    if (aba.status === 'complete' && HOST_OK.test(aba.url || '')) {
+    if (aba.status === 'complete' && HOST_OK.test(aba.url || '')
+        && (aba.url || '').startsWith(PAGINA_GERADOR)) {
       return { tabId: aba.id, nossa: false };
     }
   }
@@ -679,7 +688,12 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
     if (r.status >= 400)
       throw new Error(`O gerador de links respondeu HTTP ${r.status}. ${String(r.txt || '').slice(0, 160)}`);
     const { curto, codigo } = lerResposta(r.txt || '');
-    if (!curto) throw new Error('O link foi criado mas nao consegui ler a resposta.');
+    if (!curto) {
+      /* Sem o inicio da resposta, este erro nao dizia nada e custou horas de
+         investigacao. Agora ele carrega a prova junto. */
+      const amostra = String(r.txt || '').replace(/\s+/g, ' ').slice(0, 180);
+      throw new Error('O gerador respondeu sem link. Resposta: ' + (amostra || '(vazia)'));
+    }
     return { link: curto, codigo };
   }
 }
@@ -1431,7 +1445,22 @@ async function atenderPedidos() {
              de um meli.la, que nao e endereco de produto. Ordem: canonica, url
              final depois dos redirecionamentos, e por ultimo o que foi colado. */
           const alvoDoLink = a.canonica || a.finalUrl || url;
-          const r = await gerarNaAba(tabId, alvoDoLink, TAG_PADRAO);
+
+          /* A geracao do link nao pode derrubar a analise inteira.
+
+             Antes ela ficava dentro do try grande: se o gerador falhasse, o
+             catch marcava o pedido como erro e gravava analise NULA. O cliente
+             perdia tudo, inclusive produto, preco, loja e cupom que ja estavam
+             lidos e corretos. Agora o que foi conferido e salvo de qualquer
+             jeito, e a falha do link vira um aviso proprio. */
+          let r = { link: null, codigo: null };
+          let linkFalhou = null;
+          try {
+            r = await gerarNaAba(tabId, alvoDoLink, TAG_PADRAO);
+          } catch (e) {
+            linkFalhou = e.message || String(e);
+            console.warn('[link]', linkFalhou);
+          }
 
           /* Procura o MESMO produto de catalogo em outra loja e compara PRECO
              FINAL com o da loja do link.
@@ -1489,6 +1518,9 @@ async function atenderPedidos() {
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,
+            /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
+               O site usa isso para nao mostrar botao de compra sem etiqueta. */
+            linkFalhou: linkFalhou,
             /* Fica gravado quando existiu oferta melhor mas o link de afiliado
                nao saiu. Sem isto, "nao apareceu alternativa" some no meio de
                "nao existe alternativa", e sao problemas diferentes. */
