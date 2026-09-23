@@ -374,6 +374,22 @@ export type Database = {
           link_origem: string
         }[]
       }
+      estado_do_robo: {
+        Args: Record<string, never>
+        Returns: {
+          freio_motivo: string | null
+          freio_ate: string | null
+          visto_em: string | null
+        }[]
+      }
+      lojas_para_resolver: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          vendedor: string
+          seller_id: string | null
+          cupons: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
