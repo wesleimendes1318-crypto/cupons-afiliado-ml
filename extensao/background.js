@@ -5,7 +5,10 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          etiquetasPendentes, salvarEtiquetas,
          vitrinesParaConferir, salvarVitrines,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
-         anotarEstadoRobo } from './sincronia.js';
+         anotarEstadoRobo, salvarOrigemCupom, lojasPedidas } from './sincronia.js';
+import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
+         escolherAlternativas, ehCaptcha, desescapar,
+         primeiroAnuncioDaLista, lojaDoAnuncio } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -422,18 +425,45 @@ function vitrineNaPagina(id) {
 
 /* Cria a etiqueta do cupom de dentro da pagina do Mercado Livre.
    Mesma rota que o botao "Gerar codigo" do hub usa. */
+/* v1.39: POR QUE AS ETIQUETAS PARARAM EM 23/09.
+
+   A ultima etiqueta saiu as 12:26 de Brasilia, minutos depois do captcha. Dali
+   em diante nenhum pedido do site foi tentado ate o fim (codigo_tentativas
+   ficou 0 em todos), ou seja, a chamada morria antes de chegar a gravar. Tres
+   defeitos juntos:
+
+     1. a chamada saia SEM o x-csrf-token. O gerador de links ja exigia esse
+        cabecalho; depois do captcha a sessao ficou sob vigilancia e o
+        create-code passou a responder 403 para POST sem ele;
+     2. 403 puxava o freio de etiqueta e o lote parava sem gravar nada, entao
+        o banco nunca soube que houve tentativa, e o site girava 88s e desistia;
+     3. nada disso ficava registrado fora do console da extensao.
+
+   Agora vai o token do formulario (o mesmo que o gerador usa), a resposta e
+   lida com cuidado (alias com ou sem #, captcha, amostra do corpo) e o
+   resultado de cada rodada vai para o banco em 'etiqueta_ultima'. */
 function etiquetaNaPagina(id, sufixo) {
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  var cab = { accept: 'application/json', 'content-type': 'application/json' };
+  if (meta && meta.content) cab['x-csrf-token'] = meta.content;
   return fetch('/affiliate-program/api/affiliates/create-code', {
     method: 'POST',
     credentials: 'include',
-    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    headers: cab,
     body: JSON.stringify({ couponId: id, code: sufixo })
   })
-    .then(function (r) { return r.text().then(function (t) { return { st: r.status, t: t }; }); })
+    .then(function (r) { return r.text().then(function (t) { return { st: r.status, t: t, u: r.url || '' }; }); })
     .then(function (d) {
       var m = /"alias"\s*:\s*"([^"]+)"/.exec(d.t);
-      if (m) return { alias: m[1] };
-      return { falha: 'HTTP ' + d.st, st: d.st };
+      if (m) {
+        var a = String(m[1]).trim().toUpperCase();
+        return { alias: a.charAt(0) === '#' ? a : '#' + a, st: d.st };
+      }
+      var captcha = /captcha\/wall|Por seguran.a, complete/i.test(d.t) || /captcha/i.test(d.u);
+      return {
+        falha: 'HTTP ' + d.st, st: d.st, captcha: captcha, semToken: !(meta && meta.content),
+        amostra: String(d.t || '').replace(/\s+/g, ' ').slice(0, 200)
+      };
     })
     .catch(function (e) { return { falha: String((e && e.message) || e) }; });
 }
@@ -961,8 +991,13 @@ async function lerVitrine(url) {
 }
 
 /* Descobre o endereco da vitrine de UMA loja. Devolve o endereco ou null.
-   Faz no maximo duas leituras, e para na primeira que der certo. */
-async function resolverVitrineDaLoja(vendedor, sellerId) {
+
+   v1.39: terceiro caminho, o do Weslei - "acessar pelo menos 1 anuncio desse
+   vendedor e acessar a pagina dele". Para as lojas cujo cupom so tem link de
+   campanha (_Container_), abre a campanha, pega o primeiro anuncio, le o
+   endereco da loja DENTRO do anuncio e confere que a loja tem produto. O
+   anuncio e so a porta de entrada: nunca vira destino do botao. */
+async function resolverVitrineDaLoja(vendedor, sellerId, origem = null) {
   const tentativas = [];
   if (sellerId) tentativas.push('https://lista.mercadolivre.com.br/_CustId_' + sellerId);
   /* /perfil/ so faz sentido quando o nome do vendedor e mesmo um apelido:
@@ -971,20 +1006,82 @@ async function resolverVitrineDaLoja(vendedor, sellerId) {
     tentativas.push('https://www.mercadolivre.com.br/perfil/' + encodeURIComponent(vendedor.toUpperCase()));
   }
 
-  for (const url of tentativas) {
+  const vistos = new Set();
+  const testar = async (url) => {
+    if (vistos.has(url)) return null;
+    vistos.add(url);
     let r;
-    try { r = await lerVitrine(url); } catch (e) { continue; }
+    try { r = await lerVitrine(url); } catch (e) { return null; }
     if (r.freio) return { freio: true };
-    if (!r.ok) continue;
-
+    if (!r.ok) return null;
     /* Endereco proprio de loja: e o melhor destino, tem nome e marca dela. */
     if (r.ehPaginaDeLoja) return { url: r.alvo, itens: r.itens };
-
     /* Sem pagina propria, mas a lista de anuncios do vendedor tem produto:
        serve, e e exatamente "a lista de produtos daquela loja". */
     if (/_CustId_\d+/.test(url)) return { url: url, itens: r.itens };
+    return null;
+  };
+
+  for (const url of tentativas) {
+    const r = await testar(url);
+    if (r) return r;
+  }
+
+  /* Porta de entrada: um anuncio da loja, achado na lista da campanha. */
+  if (origem && /^https:\/\/lista\.mercadolivre\.com\.br\//.test(origem)) {
+    try {
+      await sleep(1500);
+      const lista = await lerCatalogo(origem.split('#')[0]);
+      const anuncio = primeiroAnuncioDaLista(lista);
+      if (anuncio) {
+        await sleep(1500);
+        const html = await lerCatalogo(anuncio.url);
+        for (const url of lojaDoAnuncio(html)) {
+          await sleep(1200);
+          const r = await testar(url);
+          if (r) return r;
+        }
+      }
+    } catch (e) {
+      if (/seguranca/i.test(e.message || '')) return { freio: true };
+      console.warn('[loja] porta de entrada falhou:', vendedor, e.message);
+    }
   }
   return { url: null };
+}
+
+/* Pedido de pessoa esperando na tela do site: "quero ver os produtos desta
+   loja". Ate 3 lojas por vez, no ritmo de quem le. Quando o cupom nem tem
+   link de campanha guardado, busca no hub (mesma aba do gerador). */
+let atendendoLojas = false;
+
+async function atenderPedidosDeLoja() {
+  if (atendendoLojas) return { pulou: true };
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return { semToken: true };
+  const travado = await freioLigado('leitura');
+  if (travado) return { freio: travado };
+
+  atendendoLojas = true;
+  try {
+    const lojas = await lojasPedidas(sincToken);
+    if (!lojas.length) return { nada: true };
+    let achadas = 0;
+    for (const loja of lojas) {
+      let origem = loja.origem || null;
+      if (!origem && !loja.seller_id && loja.cupom_id) {
+        try {
+          origem = await comAbaML(tabId => guardarVitrineDoPedido(tabId, sincToken, loja.cupom_id));
+        } catch (e) { origem = null; }
+      }
+      const r = await resolverVitrineDaLoja(loja.vendedor, loja.seller_id, origem);
+      if (r.freio) break;
+      if (r.url) { await salvarPaginaLoja(sincToken, loja.vendedor, r.url).catch(() => null); achadas++; }
+      else await marcarLojaSemPagina(sincToken, loja.vendedor).catch(() => null);
+      await sleep(1500);
+    }
+    return { achadas, lojas: lojas.length };
+  } finally { atendendoLojas = false; }
 }
 
 let resolvendoLojas = false;
@@ -1003,7 +1100,7 @@ async function resolverPaginasDeLoja(limite = LOTE_LOJAS) {
     for (const loja of lojas) {
       if (await freioLigado('leitura')) return { freio: true, achadas, vazias };
 
-      const r = await resolverVitrineDaLoja(loja.vendedor, loja.seller_id);
+      const r = await resolverVitrineDaLoja(loja.vendedor, loja.seller_id, loja.origem || null);
       if (r.freio) return { freio: true, achadas, vazias };
 
       if (r.url) {
@@ -1089,9 +1186,11 @@ const SUFIXO_MAX = 9;
 /* Sufixo legivel e unico: desconto + final do id do cupom.
    "18% OFF" no cupom 13588207 vira 18OFF8207. O id no fim garante que dois
    cupons da mesma loja com o mesmo desconto nao colidam. */
-function sufixoDaEtiqueta(id, desconto) {
+function sufixoDaEtiqueta(id, desconto, alternativo = false) {
   const num = String(desconto || '').replace(/[^\d]/g, '').slice(0, 3) || '0';
-  const base = num + 'OFF';
+  /* Alternativo: "CP" no lugar de "OFF", para quando o texto padrao ja existe
+     na conta. Continua legivel e continua terminando no id do cupom. */
+  const base = num + (alternativo ? 'CP' : 'OFF');
   const cabe = SUFIXO_MAX - base.length;
   const cauda = String(id).slice(-Math.max(cabe, 0));
   return (base + cauda).slice(0, SUFIXO_MAX).toUpperCase();
@@ -1107,6 +1206,33 @@ async function atenderPedidosDeEtiqueta() {
   const pedidos = fila.filter(x => x.pedido);
   if (!pedidos.length) return { nada: true };
   return gerarEtiquetas(3, pedidos);
+}
+
+/* Resumo da ultima rodada de etiquetas, gravado no banco. E o que permite
+   saber, sem abrir o console da extensao, se o gerador esta criando codigo,
+   recusando (e com qual resposta) ou pausado. */
+async function anotarEtiqueta(texto) {
+  try {
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    await anotarEstadoRobo(sincToken, 'etiqueta_ultima', (agora + ' - ' + texto).slice(0, 400));
+  } catch (e) { /* diagnostico nunca derruba o trabalho */ }
+}
+
+/* Quem pede a etiqueta pelo site quer ser levado para a loja do cupom. 339
+   dos 967 cupons bons nao tinham endereco nenhum de vitrine guardado, entao o
+   botao virava "Conferir num produto desta loja" e a pessoa nao tinha para
+   onde ir. A vitrine sai do mesmo hub de afiliados (nao e pagina publica), na
+   mesma aba, junto com a etiqueta: uma chamada leve por pedido. */
+async function guardarVitrineDoPedido(tabId, sincToken, id) {
+  try {
+    const url = await vitrineDoCupom(tabId, id);
+    if (url) await salvarOrigemCupom(sincToken, id, url);
+    return url;
+  } catch (e) {
+    console.warn('[etiquetas] vitrine', id, e.message);
+    return null;
+  }
 }
 
 let gerandoEtiquetas = false;
@@ -1195,7 +1321,10 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
      com criar codigo no hub de afiliados, e era isso que estava derrubando a
      geracao o dia inteiro. */
   const travado = await freioLigado('etiqueta');
-  if (travado) return { freio: travado };
+  if (travado) {
+    if (filaPronta && filaPronta.length) await anotarEtiqueta('pausado: ' + travado);
+    return { freio: travado };
+  }
   const { sincToken } = await chrome.storage.local.get('sincToken');
   if (!sincToken) return { semToken: true };
 
@@ -1204,33 +1333,92 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
     const fila = filaPronta || await etiquetasPendentes(sincToken, limite);
     if (!fila.length) return { nada: true };
 
-    const prontas = await comAbaML(async tabId => {
-      const saida = [];
-      for (const linha of fila) {
-        const sufixo = sufixoDaEtiqueta(linha.id, linha.desconto);
-        let codigo = null;
-        try {
-          const [r] = await chrome.scripting.executeScript({
-            target: { tabId }, world: 'MAIN', func: etiquetaNaPagina, args: [linha.id, sufixo]
-          });
-          const res = r && r.result;
-          if (res && res.alias) codigo = res.alias;
-          else if (res && (res.st === 403 || res.st === 429)) {
-            /* Para o lote E o dia. Ver puxarFreio acima. */
-            await puxarFreio('o Mercado Livre respondeu ' + res.st + ' ao criar o codigo', 'etiqueta');
-            break;
-          }
-        } catch (e) {
-          console.warn('[etiquetas]', linha.id, e.message);
-          if (/deslogad/i.test(e.message || '')) break;
-        }
-        saida.push({ id: linha.id, codigo });
-        await sleep(2000);
-      }
-      return saida;
-    });
+    let ultimaFalha = null;
+    let recarregou = false;
 
-    if (!prontas.length) return { nada: true };
+    const criar = async (tabId, id, sufixo) => {
+      const [r] = await chrome.scripting.executeScript({
+        target: { tabId }, world: 'MAIN', func: etiquetaNaPagina, args: [id, sufixo]
+      });
+      return (r && r.result) || { falha: 'a pagina nao respondeu' };
+    };
+
+    let prontas = [];
+    try {
+      prontas = await comAbaML(async tabId => {
+        /* A aba do gerador parada no muro de captcha nao cria nada, e cada
+           tentativa ali e mais um sinal ruim. Quem resolve e o Weslei, na mao. */
+        if (/captcha/i.test(await urlDaAba(tabId))) {
+          ultimaFalha = 'a aba do Mercado Livre esta na verificacao de seguranca: resolva o captcha no navegador';
+          await puxarFreio(ultimaFalha, 'etiqueta');
+          return [];
+        }
+
+        const saida = [];
+        for (const linha of fila) {
+          const sufixo = sufixoDaEtiqueta(linha.id, linha.desconto);
+          let codigo = null;
+          try {
+            let res = await criar(tabId, linha.id, sufixo);
+
+            /* 403 sem captcha costuma ser token do formulario vencido (a aba
+               do gerador fica aberta por horas). Recarrega a aba UMA vez por
+               rodada e tenta de novo, igual a pessoa apertando F5. */
+            if (!res.alias && res.st === 403 && !res.captcha && !recarregou) {
+              recarregou = true;
+              try { await chrome.tabs.reload(tabId); await esperarCarregar(tabId); } catch (e) {}
+              await sleep(1500);
+              res = await criar(tabId, linha.id, sufixo);
+            }
+
+            /* 400/409/422: o texto do codigo ja existe na conta (criado numa
+               rodada cuja resposta se perdeu, ou colisao de sufixo). Tenta um
+               sufixo alternativo, uma vez so: codigo e permanente. */
+            if (!res.alias && res.st >= 400 && res.st < 500 && res.st !== 403 && res.st !== 429 && !res.captcha) {
+              const alt = sufixoDaEtiqueta(linha.id, linha.desconto, true);
+              if (alt !== sufixo) { await sleep(1200); res = await criar(tabId, linha.id, alt); }
+            }
+
+            if (res.alias) codigo = res.alias;
+            else {
+              ultimaFalha = (res.falha || 'sem resposta') + (res.semToken ? ' (pagina sem csrf-token)' : '')
+                          + (res.amostra ? ': ' + res.amostra : '');
+              if (res.captcha) {
+                await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao criar o codigo', 'etiqueta');
+                break;
+              }
+              if (res.st === 403 || res.st === 429) {
+                await puxarFreio('o Mercado Livre respondeu ' + res.st + ' ao criar o codigo', 'etiqueta');
+                break;
+              }
+            }
+          } catch (e) {
+            ultimaFalha = e.message || String(e);
+            console.warn('[etiquetas]', linha.id, ultimaFalha);
+            if (/deslogad/i.test(ultimaFalha)) break;
+          }
+          saida.push({ id: linha.id, codigo });
+
+          /* Pedido de pessoa esperando na tela: aproveita a aba e guarda o
+             endereco da vitrine do cupom, para o site ter para onde levar. */
+          if (linha.pedido) await guardarVitrineDoPedido(tabId, sincToken, linha.id);
+          await sleep(2000);
+        }
+        return saida;
+      });
+    } catch (e) {
+      ultimaFalha = e.message || String(e);
+      await anotarEtiqueta('nao consegui abrir o gerador: ' + ultimaFalha);
+      throw e;
+    }
+
+    const criadas = prontas.filter(x => x.codigo).length;
+    await anotarEtiqueta(
+      'pedidas ' + fila.length + ', criadas ' + criadas
+      + (ultimaFalha ? ', ultima falha: ' + ultimaFalha : '')
+    );
+
+    if (!prontas.length) return { nada: true, falha: ultimaFalha };
     const r = await salvarEtiquetas(sincToken, prontas);
     console.log('[etiquetas]', JSON.stringify(r));
     return r;
@@ -1267,10 +1455,18 @@ const RE_CATALOGO = /\/p\/(MLB\d+)/i;
 const MAX_CATALOGO = 900000;
 
 /* O leitor normal aborta cedo, assim que acha o vendedor. Aqui a gente precisa
-   ir mais fundo, ate o bloco das ofertas, entao ele tem limite proprio. */
+   ir mais fundo, ate o bloco das ofertas, entao ele tem limite proprio.
+
+   v1.39: captcha agora e ERRO, nao pagina vazia. Antes o muro de verificacao
+   voltava como um HTML sem ofertas, a comparacao concluia "nenhuma loja
+   melhor" e o site dizia ao cliente que tinha procurado. Nao tinha. */
 async function lerCatalogo(url) {
   const ctrl = new AbortController();
-  const r = await fetch(url, { credentials: 'include', redirect: 'follow', signal: ctrl.signal });
+  const corta = setTimeout(() => ctrl.abort(), 25000);
+  let r;
+  try {
+    r = await fetch(url, { credentials: 'include', redirect: 'follow', signal: ctrl.signal });
+  } finally { clearTimeout(corta); }
   if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
 
   const leitor = r.body.getReader();
@@ -1287,152 +1483,34 @@ async function lerCatalogo(url) {
     }
   } catch (e) { /* abort gera excecao, esperado */ }
 
+  if (ehCaptcha(buf, r.url)) {
+    await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao comparar lojas', 'leitura');
+    throw new Error('o Mercado Livre pediu uma verificacao de seguranca');
+  }
   return buf;
 }
 
-function ofertasDoCatalogo(html) {
-  const i = html.indexOf('"buy_box_offers":{');
-  if (i < 0) return [];
-  const bloco = html.slice(i, i + 300000);
-
-  const RE = /"selected"\s*:\s*(?:true|false)\s*,\s*"type"\s*:\s*"([A-Z_]+)"\s*,\s*"item_id"\s*:\s*"(MLB\d+)"/g;
-  const marcas = [...bloco.matchAll(RE)];
-
-  const saida = [];
-  const vistos = new Set();
-  for (let k = 0; k < marcas.length; k++) {
-    const ini = marcas[k].index;
-    const fim = k + 1 < marcas.length ? marcas[k + 1].index : ini + 8000;
-    const jan = bloco.slice(ini, fim);
-    const p = /"price"\s*:\s*\{[^}]{0,400}?"value"\s*:\s*([\d.]+)/.exec(jan);
-    const item = marcas[k][2];
-    if (vistos.has(item)) continue;
-    vistos.add(item);
-    saida.push({ item, preco: p ? Number(p[1]) : null });
-  }
-  return saida;
+function tituloDaPagina(html) {
+  const m = /<h1[^>]*>([\s\S]{5,300}?)<\/h1>/i.exec(html)
+         || /property="og:title"\s+content="([^"]{5,200})"/i.exec(html);
+  if (!m) return null;
+  return desescapar(m[1].replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim() || null;
 }
 
-function urlDaOferta(catalogo, item) {
-  return `https://www.mercadolivre.com.br/p/${catalogo}?pdp_filters=item_id%3A${item}`;
-}
-
-/* Devolve a melhor oferta do MESMO produto, ou null.
-
-   MUDANCA IMPORTANTE, 23/09. Antes isto so aceitava loja que tivesse cupom no
-   indice do Weslei. Caso real que mostrou o erro: Kit Wella Oil Reflections,
-   R$ 428,90 na Amobeleza com cupom de 15% (final R$ 364,56), e o MESMO produto
-   a R$ 291,95 no iSalao, que nao tem cupom nenhum. A versao antiga jogava o
-   iSalao fora por nao ter cupom e nao mostrava nada, escondendo R$ 72,61 de
-   economia real do cliente. Em 107 links colados, nenhuma alternativa foi
-   devolvida uma unica vez.
-
-   Quem decide agora e o PRECO FINAL: preco da oferta menos o desconto do cupom
-   daquela loja, quando existir. Loja sem cupom entra na disputa com desconto
-   zero e ganha se ainda assim sair mais barata. O link de afiliado sai do
-   mesmo jeito nos dois casos, entao mostrar a opcao mais barata nao custa
-   comissao ao Weslei, e esconder custa a confianca do cliente.
-
-   Null quando: nao e produto de catalogo, so existe um vendedor, ou nenhuma
-   alternativa bate o que a pessoa ja estava vendo por uma margem que valha o
-   trabalho de trocar de loja. */
-/* ------------------------------- procurar o mesmo produto na busca do ML
-
-   O buy_box so existe em produto de catalogo. Anuncio solto nao tem, e ate
-   agora o site simplesmente desistia: "essa loja nao tem cupom" e ponto, sem
-   nunca olhar se o mesmo produto estava mais barato ou com cupom em outro
-   vendedor. Era metade da promessa do site nao sendo cumprida.
-
-   Aqui a extensao faz o que uma pessoa faria: abre a busca do Mercado Livre
-   pelo titulo do produto e olha os primeiros resultados.
-
-   Ritmo de gente, de proposito. Uma busca, no maximo seis candidatos, com a
-   mesma pausa entre leituras que o resto do codigo usa. Depois do captcha de
-   hoje, volume e a ultima coisa que esta operacao precisa. */
-const MAX_CANDIDATOS_BUSCA = 6;
-
-function palavrasDoTitulo(t) {
-  return norm(t || '').replace(/([a-z])(\d)/g, '$1 $2')
-    .split(/\s+/).filter(w => w.length >= 3);
-}
-
-/* Dois titulos falam do mesmo produto? Nao da para exigir igualdade: cada
-   vendedor escreve do seu jeito. Exige-se que a maior parte das palavras do
-   titulo original apareca no candidato. */
-function pareceMesmoProduto(original, candidato) {
-  const a = palavrasDoTitulo(original);
-  const b = new Set(palavrasDoTitulo(candidato));
-  if (a.length < 3) return false;
-  const iguais = a.filter(w => b.has(w)).length;
-  return iguais / a.length >= 0.6;
-}
-
-function urlDeBusca(titulo) {
-  const termo = String(titulo || '').trim().slice(0, 90);
-  return 'https://lista.mercadolivre.com.br/' + encodeURIComponent(termo).replace(/%20/g, '-');
-}
-
-/* Le os resultados da busca. Cada cartao vira { item, preco, titulo }. */
-function ofertasDaBusca(html, tituloOriginal, precoRef) {
-  const blocos = String(html).split('ui-search-layout__item');
-  const vistos = new Set();
-  const saida = [];
-
-  for (const b of blocos.slice(1)) {
-    const pedaco = b.slice(0, 4000);
-    /* O id aparece de duas formas na pagina: MLB4436662488 dentro do JSON e
-       MLB-4436662488 nos enderecos. Aceita as duas e guarda sem o hifen. */
-    const cru = (/\bMLB-?(\d{8,})\b/.exec(pedaco) || [])[1];
-    const id = cru ? 'MLB' + cru : null;
-    if (!id || vistos.has(id)) continue;
-
-    const tit = (/<h[23][^>]*>([^<]{10,200})<\/h[23]>/i.exec(pedaco)
-              || /"title"\s*:\s*"([^"]{10,200})"/.exec(pedaco) || [])[1];
-    if (!tit || !pareceMesmoProduto(tituloOriginal, tit)) continue;
-
-    const pm = /"amount"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/.exec(pedaco)
-            || /andes-money-amount__fraction[^>]*>([\d.]{1,12})</.exec(pedaco);
-    let preco = null;
-    if (pm) {
-      const n = parseFloat(String(pm[1]).replace(/\./g, ''));
-      if (n > 0 && n < 1e7) preco = n;
-    }
-    if (preco == null) continue;
-
-    /* Preco absurdo em relacao ao que a pessoa esta vendo quase sempre e outro
-       produto: acessorio, kit, unidade avulsa. Fora. */
-    if (precoRef != null && (preco < precoRef * 0.4 || preco > precoRef * 1.6)) continue;
-
-    vistos.add(id);
-    saida.push({ item: id, preco, titulo: tit });
-    if (saida.length >= MAX_CANDIDATOS_BUSCA) break;
-  }
-  return saida;
-}
-
-/* Procura o mesmo produto na busca e devolve a melhor alternativa, na mesma
-   forma que mesmoProdutoComCupom devolve. Cupom e bonus, nao requisito: loja
-   mais barata sem cupom tambem ganha, porque a comissao do Weslei sai do
-   clique no link de afiliado de qualquer jeito. */
-async function mesmoProdutoNaBusca(titulo, finalAtual, itemAtual) {
-  let html;
-  try { html = await lerCatalogo(urlDeBusca(titulo)); }
-  catch (e) { console.warn('[busca]', e.message); return null; }
-
-  const precoRef = finalAtual != null ? finalAtual : null;
-  const candidatos = ofertasDaBusca(html, titulo, precoRef);
-  if (!candidatos.length) return null;
-
+/* Le o vendedor de cada candidato e o cupom dele no indice. Cupom e BONUS,
+   nao requisito: loja sem cupom entra com desconto zero. */
+async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
   const indice = await obterIndice();
   const chaves = Object.keys(indice.mapa);
   const achados = [];
 
   for (const c of candidatos) {
     if (itemAtual && c.item === itemAtual) continue;
-    const url = 'https://produto.mercadolivre.com.br/' + c.item.replace(/^MLB/, 'MLB-');
+    /* Sem preco nao da para comparar nada, entao nao entra. */
+    if (c.preco == null) continue;
 
     let nomes = [];
-    try { nomes = await resolverVendedor(c.item, url); } catch (e) { nomes = []; }
+    try { nomes = await resolverVendedor(c.item, c.url); } catch (e) { nomes = []; }
 
     const cupom = acharCupom(indice.mapa, chaves, nomes);
     let aval = null;
@@ -1447,33 +1525,36 @@ async function mesmoProdutoNaBusca(titulo, finalAtual, itemAtual) {
     const economia = vale && aval.economia != null ? aval.economia : 0;
 
     achados.push({
-      item: c.item, url, preco: c.preco, vendedor: nomes[0] || null,
+      item: c.item, url: c.url, preco: c.preco, vendedor: nomes[0] || null,
       cupom: vale ? { id: cupom.i, titulo: cupom.t, vence: cupom.x } : null,
       economia,
       minimo: vale ? aval.minimo : null,
       teto: vale ? aval.teto : null,
-      final: c.preco - economia,
-      achadoNaBusca: true
+      final: Math.round((c.preco - economia) * 100) / 100,
+      ...extra
     });
   }
-
-  if (!achados.length) return null;
-  achados.sort((a, b) => {
-    if (a.final !== b.final) return a.final - b.final;
-    return (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0);
-  });
-
-  const melhor = achados[0];
-  if (finalAtual == null || melhor.final == null) return null;
-  const ganho = finalAtual - melhor.final;
-  if (ganho < 5 || ganho / finalAtual < 0.03) return null;
-
-  melhor.ganho = ganho;
-  melhor.finalAtual = finalAtual;
-  return melhor;
+  return achados;
 }
 
-async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
+/* Procura o mesmo produto na busca do Mercado Livre, como uma pessoa faria.
+   Ritmo de gente: uma busca, no maximo seis candidatos. */
+async function achadosNaBusca(titulo, precoRef, itemAtual) {
+  const html = await lerCatalogo(urlDeBusca(titulo));
+  const candidatos = ofertasDaBusca(html, titulo, precoRef);
+  if (!candidatos.length) return [];
+  return avaliarCandidatos(candidatos, itemAtual, { achadoNaBusca: true });
+}
+
+/* Devolve ATE TRES alternativas (ver escolherAlternativas em comparador.js).
+
+   Primeiro o catalogo: pagina /p/MLB... tem o bloco buy_box_offers, que e o
+   mesmo produto vendido por lojas diferentes. Sem catalogo, ou com um vendedor
+   so, cai na busca pelo titulo. Se o catalogo nao der nada que valha, a busca
+   ainda tenta, porque o mesmo item costuma estar anunciado fora do catalogo. */
+async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
+  const { finalAtual } = ctx;
+  const itemAtual = ctx.itemAtual || itemDoUrl(urlProduto);
   let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
   let html = null;
 
@@ -1482,90 +1563,28 @@ async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
     const can = /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
     cat = (RE_CATALOGO.exec(can ? can[1] : '') || [])[1]
        || (RE_CATALOGO.exec(html) || [])[1] || null;
-    /* Sem catalogo nao existe buy_box. Em vez de desistir, procura o mesmo
-       produto na busca do Mercado Livre, como uma pessoa faria. */
-    if (!cat) {
-      const tit = (/<h1[^>]*>([^<]{5,200})<\/h1>/i.exec(html)
-                || /property="og:title"\s+content="([^"]{5,200})"/i.exec(html) || [])[1];
-      if (!tit) return null;
-      return await mesmoProdutoNaBusca(tit, finalAtual, itemAtual);
-    }
-    // O html que temos e o do anuncio, nao o do catalogo: busca o certo.
-    if (!html.includes('"buy_box_offers":{')) html = null;
+  }
+  if (cat && !(html && html.includes('"buy_box_offers":{'))) {
+    html = await lerCatalogo(`https://www.mercadolivre.com.br/p/${cat}`);
   }
 
-  if (!html) html = await lerCatalogo(`https://www.mercadolivre.com.br/p/${cat}`);
+  const titulo = ctx.titulo || tituloDaPagina(html || '');
+  let achados = [];
 
-  const ofertas = ofertasDoCatalogo(html);
-  if (ofertas.length < 2) {
-    /* Produto de catalogo com um vendedor so: a busca ainda pode achar o mesmo
-       item anunciado fora do catalogo por outra loja. */
-    const tit = (/<h1[^>]*>([^<]{5,200})<\/h1>/i.exec(html) || [])[1];
-    return tit ? await mesmoProdutoNaBusca(tit, finalAtual, itemAtual) : null;
+  const ofertas = cat ? ofertasDoCatalogo(html) : [];
+  if (ofertas.length >= 2) {
+    achados = await avaliarCandidatos(
+      ofertas.map(o => ({ ...o, url: urlDaOferta(cat, o.item) })), itemAtual);
   }
 
-  const indice = await obterIndice();
-  const chaves = Object.keys(indice.mapa);
-
-  const achados = [];
-  for (const o of ofertas) {
-    if (itemAtual && o.item === itemAtual) continue;
-    const url = urlDaOferta(cat, o.item);
-
-    /* Sem preco nao da para comparar nada, entao nao entra. */
-    if (o.preco == null) { await sleep(200); continue; }
-
-    let nomes = [];
-    try { nomes = await resolverVendedor(o.item, url); } catch (e) { nomes = []; }
-
-    /* Cupom e um BONUS, nao um requisito. Loja sem cupom entra com zero. */
-    const cupom = acharCupom(indice.mapa, chaves, nomes);
-    let aval = null;
-    if (cupom) {
-      let cond = null;
-      try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
-      aval = avaliar(cupom, cond, o.preco);
-    }
-    await sleep(400);
-
-    const vale = Boolean(aval && aval.vale);
-    const economia = vale && aval.economia != null ? aval.economia : 0;
-
-    achados.push({
-      item: o.item,
-      url,
-      preco: o.preco,
-      vendedor: nomes[0] || null,
-      cupom: vale ? { id: cupom.i, titulo: cupom.t, vence: cupom.x } : null,
-      economia,
-      minimo: vale ? aval.minimo : null,
-      teto: vale ? aval.teto : null,
-      final: o.preco - economia
-    });
+  let escolha = escolherAlternativas(achados, { ...ctx, itemAtual });
+  if (!escolha.length && titulo) {
+    let daBusca = [];
+    try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual); }
+    catch (e) { if (!achados.length) throw e; }
+    escolha = escolherAlternativas(achados.concat(daBusca), { ...ctx, itemAtual });
   }
-
-  if (!achados.length) return null;
-
-  achados.sort((a, b) => {
-    const fa = a.final == null ? Infinity : a.final;
-    const fb = b.final == null ? Infinity : b.final;
-    if (fa !== fb) return fa - fb;
-    /* Empate no preco final: a loja COM cupom ganha. Vale mais para o cliente,
-       que leva o desconto no carrinho, e para o Weslei, que alem da comissao
-       do clique fica com a atribuicao do cupom dele. */
-    return (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0);
-  });
-  const melhor = achados[0];
-
-  /* So vale mandar a pessoa trocar de loja por uma diferenca que ela sinta.
-     Menos de R$ 5 ou menos de 3% e trabalho para nao economizar nada. */
-  if (finalAtual == null || melhor.final == null) return null;
-  const ganho = finalAtual - melhor.final;
-  if (ganho < 5 || ganho / finalAtual < 0.03) return null;
-
-  melhor.ganho = ganho;
-  melhor.finalAtual = finalAtual;
-  return melhor;
+  return escolha;
 }
 
 /* ------------------------------------------- fila continua de conferencia
@@ -1702,7 +1721,14 @@ async function andarFila() {
     const travado = await freioLigado('leitura');
     if (travado) {
       const pedidos = await atenderPedidos().catch(() => null);
-      return { freio: travado, pedidos };
+      /* A janela (lista do hub + etiquetas) so fala com o hub de afiliados,
+         nao le pagina publica. O freio de LEITURA nao tem por que segurar a
+         criacao de etiquetas: ela tem o freio proprio dela, dentro de
+         gerarEtiquetas. Antes, um captcha num anuncio as 12:25 derrubava a
+         janela das 17:30 junto. */
+      const j = janelaAgora();
+      const janela = j ? await rodadaDaJanela(j).catch(e => ({ falhou: e.message })) : null;
+      return { freio: travado, pedidos, janela };
     }
 
     /* Janela de atualizacao tem prioridade sobre a conferencia de fundo:
@@ -1865,6 +1891,7 @@ async function atenderPedidos() {
              cupom de 15% e mesmo assim saia R$ 72,61 mais cara que a mesma
              caixa em outra loja sem cupom nenhum, e o site nao dizia nada. */
           let outra = null;
+          let outras = [];
           let outraFalhou = null;
           /* O SITE PRECISA SABER SE EU PROCUREI.
 
@@ -1875,15 +1902,24 @@ async function atenderPedidos() {
              cupom", sem uma palavra sobre as outras lojas. */
           let procurouOutra = false;
           let motivoNaoProcurou = null;
+          const pausaLeitura = await freioLigado('leitura');
           if (filaCheia) motivoNaoProcurou = 'fila cheia: outros clientes esperando';
-          if (!filaCheia) {
+          else if (pausaLeitura) motivoNaoProcurou = 'pausa de seguranca do Mercado Livre: ' + pausaLeitura;
+          else if (!a.ok) motivoNaoProcurou = 'nao consegui ler o anuncio';
+          else {
             procurouOutra = true;
-            let alt = null;
+            let alts = [];
             try {
-              const economiaAqui = (cupom && aval && aval.vale && aval.economia != null)
-                ? aval.economia : 0;
+              const temCupomAqui = !!(cupom && aval && aval.vale);
+              const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
               const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
-              alt = await mesmoProdutoComCupom(url, finalAqui, null);
+              alts = await mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
+                finalAtual: finalAqui,
+                temCupomAqui,
+                vendedorAtual: vendedor,
+                titulo: a.titulo || null,
+                itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null
+              });
             } catch (e) {
               procurouOutra = false;
               motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
@@ -1893,11 +1929,14 @@ async function atenderPedidos() {
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
                falhar, o achado NAO vai para a tela: mandar o cliente para uma
                oferta mais barata por um endereco sem etiqueta seria entregar a
-               venda de graca. Melhor nao mostrar e registrar o motivo. */
-            try {
-              if (alt) {
+               venda de graca. Melhor nao mostrar e registrar o motivo.
+
+               No maximo duas alternativas ganham link: cada link e uma chamada
+               ao gerador, e o gerador ja respondeu 429 hoje. */
+            for (const alt of alts.slice(0, 2)) {
+              try {
                 const la = await gerarNaAba(tabId, alt.url);
-                outra = {
+                outras.push({
                   cupomId: alt.cupom ? alt.cupom.id : null,
                   vendedor: alt.vendedor,
                   preco: alt.preco,
@@ -1907,6 +1946,9 @@ async function atenderPedidos() {
                   final: alt.final,
                   ganho: alt.ganho,
                   finalAtual: alt.finalAtual,
+                  /* 'mais_barata' ou 'tem_cupom' (a loja do cliente nao tem
+                     cupom e esta tem, sem sair mais cara). */
+                  motivo: alt.motivo,
                   /* true quando veio da busca por titulo, nao da pagina de
                      catalogo. Catalogo e o mesmo produto por definicao; busca
                      e um palpite forte. O site precisa dizer a diferenca. */
@@ -1915,13 +1957,15 @@ async function atenderPedidos() {
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
                   codigo: la.codigo
-                };
+                });
+              } catch (e) {
+                outraFalhou = 'achei oferta melhor mas nao consegui gerar o link de afiliado: ' + e.message;
+                console.warn('[mesmo produto] link falhou:', e.message);
+                if (/429|seguranca|captcha/i.test(e.message || '')) break;
               }
-            } catch (e) {
-              outraFalhou = 'achei a oferta mais barata mas nao consegui gerar o link de afiliado: '
-                          + e.message;
-              console.warn('[mesmo produto] link falhou:', e.message);
+              await sleep(600);
             }
+            outra = outras[0] || null;
           }
 
           await marcarPedido(sincToken, p.id, r.link, r.codigo, null, {
@@ -1929,6 +1973,9 @@ async function atenderPedidos() {
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,
+            /* Ate duas lojas, a mais barata primeiro. outraLoja continua
+               existindo (e a primeira desta lista) para telas antigas. */
+            outrasLojas: outras,
             /* true = procurei o mesmo produto nas outras lojas. Com outraLoja
                null, isso quer dizer "procurei e esta e a melhor". Sem isso, a
                tela mentia por omissao. */
@@ -2018,6 +2065,10 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         // Veio da ponte no site: alguem acabou de pedir um link e esta
         // esperando na tela. Nao responde o resultado, so dispara.
         atenderPedidos().catch(e => console.warn('[pedidos]', e.message));
+        /* O mesmo aviso vale para o botao do cartao de cupom: sem isto o
+           pedido de etiqueta esperava o alarme de 1 minuto. */
+        atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
+        atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
         responder({ ok: true });
       } else if (msg.tipo === 'andarFila') {
         responder({ ok: true, res: await andarFila() });
@@ -2082,6 +2133,8 @@ chrome.alarms.onAlarm.addListener(async a => {
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.
     // Lote de 3 para nao virar porta dos fundos dos tetos diarios.
     atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
+    // "Ver os produtos da loja": pagina da loja pedida por quem esta no site.
+    atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
     return;
   }
   if (a.name === 'fila') {

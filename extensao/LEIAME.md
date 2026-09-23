@@ -156,3 +156,21 @@ de 15 minutos o proprio banco marca como nao atendido. E por isso que vale a
 pena deixar a extensao rodando num computador que fica ligado.
 
 Precisa do token de sincronia preenchido nas opcoes da extensao.
+
+### v1.39.0 - etiquetas de volta, pagina da loja e comparacao de lojas
+
+- **Etiquetas**: a criacao do codigo manda o `x-csrf-token` (sem ele o Mercado
+  Livre passou a responder 403 depois do captcha de 23/09), recarrega a aba do
+  gerador uma vez quando o token vence e tenta um sufixo alternativo se o texto
+  ja existir. O resultado de cada rodada fica no banco em `sinc_config`,
+  chave `etiqueta_ultima`. Captcha lendo anuncio nao segura mais a janela de
+  etiquetas.
+- **Pagina da loja**: o botao do cupom no site pede a pagina da loja
+  (`pedir_loja`). A extensao abre um anuncio do vendedor (pela lista da
+  campanha), le o endereco da loja, confere que tem produto e grava em
+  `link_loja`. Uma vez por loja; vale para todos os cupons dela.
+- **Mesmo produto em outra loja**: a comparacao nunca achava nada porque o
+  titulo perdia os espacos antes de ser comparado. Corrigido em
+  `comparador.js`, com testes (`node --test extensao/testes/comparador.test.mjs`).
+  Agora devolve ate 2 lojas (mais barata, ou com cupom quando a loja do cliente
+  nao tem), cada uma com link de afiliado.

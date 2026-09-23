@@ -314,3 +314,27 @@ export async function anotarEstadoRobo(token, chave, valor) {
   try { return await chamarRpc(RPC_ESTADO_ROBO, { p_token: token, p_chave: chave, p_valor: valor == null ? '' : String(valor) }); }
   catch (e) { return null; }
 }
+
+
+const RPC_ORIGEM = SUPABASE + '/rest/v1/rpc/salvar_origem_cupom';
+
+/* Endereco da vitrine de UM cupom (a lista de produtos que ele cobre), lido do
+   hub de afiliados. So preenche quando o banco ainda nao tem: nunca troca um
+   endereco que ja foi conferido. */
+export async function salvarOrigemCupom(token, id, url) {
+  if (!token || !id || !url) return null;
+  try { return await chamarRpc(RPC_ORIGEM, { p_token: token, p_id: id, p_url: url }); }
+  catch (e) { return null; }
+}
+
+const RPC_LOJAS_PEDIDAS = SUPABASE + '/rest/v1/rpc/lojas_pedidas';
+
+/* Lojas cuja pagina alguem pediu no site na ultima hora (botao "ver os
+   produtos da loja"). Poucas por vez: e gente esperando, nao varredura. */
+export async function lojasPedidas(token) {
+  if (!token) return [];
+  try {
+    const r = await chamarRpc(RPC_LOJAS_PEDIDAS, { p_token: token });
+    return Array.isArray(r) ? r : [];
+  } catch (e) { return []; }
+}
