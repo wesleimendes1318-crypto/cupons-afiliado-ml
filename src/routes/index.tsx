@@ -1397,6 +1397,55 @@ function Index() {
         )}
 
 
+        {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
+        {lojasDestaque.length > 0 && (
+          <section className="mt-6 rounded-xl border border-border bg-card p-4" aria-label="Lojas parceiras">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold">Lojas parceiras</h2>
+              <p className="text-xs text-secondary-ink">
+                {lojasDisponiveis.length.toLocaleString("pt-BR")} lojas com cupom conferido
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {lojasDestaque.map(([loja, quantidade]) => (
+                <button
+                  key={loja}
+                  type="button"
+                  aria-pressed={lojas.includes(loja)}
+                  onClick={() => alternarLoja(loja)}
+                  className={cn(
+                    "max-w-full rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    lojas.includes(loja)
+                      ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                      : "border-border bg-background hover:border-ml-blue",
+                  )}
+                >
+                  <span className="truncate">{loja}</span> ({quantidade})
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setPainelAberto(true);
+                  document.getElementById("painel-filtros")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+                className="rounded-full border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
+              >
+                Ver todas as lojas
+              </button>
+              {lojas.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setLojas([])}
+                  className="rounded-full border border-danger px-3 py-1.5 text-xs font-medium text-danger"
+                >
+                  Limpar lojas
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
         <section className="mt-6" aria-label="Filtros de cupons">
           {/* Barra de controle
               ================
