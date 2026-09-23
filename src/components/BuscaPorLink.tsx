@@ -980,18 +980,30 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
        outro lugar, entao a instrucao tem que ser essa e nao "tente de novo". */
     const ehPerfil = /perfil/i.test(analise?.diagnostico ?? "");
 
+    /* O Mercado Livre pediu verificacao de seguranca na sessao do servidor.
+       Nao e culpa do cliente nem da loja, e insistir so piora. A pessoa nao
+       precisa entender captcha: precisa saber que nao e com ela e que o
+       caminho de comprar continua aberto pelo proprio Mercado Livre. */
+    const ehCaptcha = /seguran|captcha/i.test(
+      (analise?.diagnostico ?? "") + " " + (analise?.linkFalhou ?? ""),
+    );
+
     if (naoConferiu) {
       return (
         <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
           <p className="text-sm font-semibold">
-            {ehPerfil
-              ? "Esse link abre um perfil, não um produto."
-              : "Não consegui abrir este anúncio agora."}
+            {ehCaptcha
+              ? "Estou fazendo uma verificação com o Mercado Livre."
+              : ehPerfil
+                ? "Esse link abre um perfil, não um produto."
+                : "Não consegui abrir este anúncio agora."}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-            {ehPerfil
-              ? "Ele leva a uma página com vários produtos, então não dá para saber qual você quer nem de que loja. Abra o anúncio do produto no Mercado Livre e cole o endereço dele aqui."
-              : "Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo em instantes, ou cole o endereço completo do anúncio em vez do link curto de compartilhamento."}
+            {ehCaptcha
+              ? "Não é nada com você nem com a loja: o Mercado Livre pediu uma confirmação de segurança do meu lado e eu prefiro esperar a insistir. Volte daqui a pouco. Se for comprar agora, pode ir direto pelo Mercado Livre, sem problema nenhum."
+              : ehPerfil
+                ? "Ele leva a uma página com vários produtos, então não dá para saber qual você quer nem de que loja. Abra o anúncio do produto no Mercado Livre e cole o endereço dele aqui."
+                : "Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo em instantes, ou cole o endereço completo do anúncio em vez do link curto de compartilhamento."}
           </p>
           {analise?.diagnostico && (
             <p className="mt-1.5 text-xs text-secondary-ink/80">Detalhe técnico: {analise.diagnostico}.</p>
