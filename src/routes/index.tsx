@@ -1658,7 +1658,18 @@ function Index() {
               {categoriasDisponiveis.length > 0 && (
                 <div className="mt-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
+                    <p className="text-xs font-semibold text-secondary-ink">Categorias — organizadas pela IA a partir do nome da loja</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={classificando}
+                      onClick={classificar}
+                      className="h-8 px-2 text-xs text-ml-blue"
+                    >
+                      <WandSparkles aria-hidden="true" className="size-4" />
+                      {classificando ? "Organizando..." : "Organizar categorias com IA"}
+                    </Button>
                     {categorias.length > 0 && (
                       <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
                         Limpar categorias
