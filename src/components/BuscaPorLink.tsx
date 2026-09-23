@@ -120,6 +120,8 @@ type Analise = {
   diagnostico?: string | null;
   /* Gravado quando existia oferta melhor mas o link de afiliado não saiu. */
   outraFalhou?: string | null;
+  /* Preenchido quando o produto foi lido mas o link de afiliado não saiu. */
+  linkFalhou?: string | null;
 };
 
 type Pedido = {
@@ -747,6 +749,11 @@ function Resultado({
      ela. Nesse caso o botao nao aparece. */
   const leituraFalhou = !(a?.lojaLida === true || !!a?.vendedor);
 
+  /* Sem link de afiliado nao existe botao de compra, mesmo que a leitura do
+     produto tenha dado certo. Comprar por um endereco sem etiqueta entrega a
+     venda de graca, e a frase sobre comissao viraria mentira. */
+  const semLink = !link || !!a?.linkFalhou;
+
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
       {a?.titulo && (
@@ -763,12 +770,23 @@ function Resultado({
 
       <CondicoesDoCupom analise={a} />
 
+      {!leituraFalhou && semLink && (
+        <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
+          <p className="text-sm font-semibold">Consegui conferir, mas o link de compra não saiu.</p>
+          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+            As condições acima são reais. O que faltou foi gerar o link, e sem ele eu não coloco
+            botão de compra aqui: seria mandar você comprar por um caminho que não me credita nada.
+            Tente de novo em instantes.
+          </p>
+        </div>
+      )}
+
       {a?.temCupom && a.cupom?.id != null && !trocar && (
         <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
       )}
 
 
-      {!leituraFalhou && (
+      {!leituraFalhou && !semLink && (
         <a
           href={link}
           target="_blank"
@@ -807,7 +825,7 @@ function Resultado({
 
       {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
           feita: seria prometer comissao sobre um link que nao foi gerado. */}
-      {!leituraFalhou && (
+      {!leituraFalhou && !semLink && (
         <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
           <span className="font-semibold text-foreground">Compre por este botão.</span> É a mesma loja
           oficial do anúncio, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
