@@ -707,12 +707,35 @@ export function paginaDaLoja(cupom: Cupom): string | null {
   if (guardada && ehVitrine) return guardada;
 
   const origem = (cupom.link_origem ?? "").trim();
-  const id =
-    origem.match(/_CustId_(\d{4,})/i)?.[1] ??
-    origem.match(/[?&_-]seller[-_](\d{4,})/i)?.[1] ??
-    null;
-  if (!id) return null;
-  return `https://lista.mercadolivre.com.br/_CustId_${id}`;
+  if (!origem) return null;
+
+  /* _CustId_<numero> e o vendedor de verdade. Abrir esse endereco cai na lista
+     de anuncios dele, e quando a loja tem pagina propria o Mercado Livre
+     redireciona sozinho. Conferido em 4 lojas, 4 acertos. */
+  const vendedor = origem.match(/_CustId_(\d{4,})/i)?.[1] ?? null;
+  if (vendedor) return `https://lista.mercadolivre.com.br/_CustId_${vendedor}`;
+
+  /* _Container_...-seller-<numero> NAO carrega o numero do vendedor.
+
+     Eu tinha lido esse numero como se fosse o vendedor, e estava errado. A
+     prova esta no banco: a loja Pezzia tem dois cupons, um com seller-1789655247
+     e outro com seller-1789657149. Mesma loja, numeros diferentes. Sao ids da
+     CAMPANHA, nao do vendedor. Montar /_CustId_ com eles abre pagina vazia,
+     "Nao encontramos resultados".
+
+     O endereco certo aqui e o proprio _Container_, que JA e a lista dos produtos
+     que aquele cupom cobre. Testado: o container ChaDesc-seller-1789657149 abre
+     com 1 resultado, a Chaleira Eletrica Fressa. E exatamente o unico produto
+     onde esse cupom vale.
+
+     Mandar o cliente para a loja inteira nesse caso seria pior que inutil:
+     prometeria desconto em item que o cupom nao cobre. */
+  if (/_Container_/i.test(origem)) {
+    /* Sem o parametro de campanha, que nao muda a lista e so suja a URL. */
+    return origem.split("?")[0] ?? origem;
+  }
+
+  return null;
 }
 
 /* O endereço da loja NÃO precisa ser link de afiliado.
