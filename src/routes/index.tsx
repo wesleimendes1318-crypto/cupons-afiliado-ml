@@ -363,8 +363,10 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
         </button>
       </div>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
-        Só funciona nos produtos {vendedor ? <>de <span className="font-bold">{vendedor}</span></> : "desta loja"}{" "}
-        que estão no botão acima. Em produto de outra loja a plataforma recusa.
+        Na maioria das vezes o desconto já entra sozinho no carrinho quando você chega pelo botão
+        acima, e aí o carrinho recusa este código por já ter aplicado o mesmo cupom. Ele fica aqui
+        para o caso de o desconto não aparecer. Vale só nos produtos{" "}
+        {vendedor ? <>de <span className="font-bold">{vendedor}</span></> : "desta loja"}.
       </p>
     </div>
   );
@@ -637,16 +639,16 @@ function AcaoDoCupom({
             : "Estou criando seu código e localizando a página correta da loja."
         ) : redirecionando && codigo ? (
           <>
-            <span className="font-bold text-success">Código {codigo} copiado.</span> Abrindo a loja:
-            depois é só colar no carrinho.
+            <span className="font-bold text-success">Código {codigo} copiado.</span> Abrindo a
+            loja: o desconto costuma entrar sozinho no carrinho. Se não entrar, cole o código.
           </>
         ) : codigo ? (
           <>
-            Copia o código <span className="font-bold">{codigo}</span> e abre a loja. Você só cola no
-            carrinho.
+            Abre a loja com o desconto já valendo. O código <span className="font-bold">{codigo}</span>{" "}
+            vai junto, para o caso de o carrinho pedir.
           </>
         ) : falhou || loja.falhou ? (
-          "O código não saiu desta vez. Clique de novo: quase sempre funciona na segunda tentativa."
+          "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto entra sozinho no carrinho."
         ) : (
           "Cria o código do cupom, copia para você e abre a loja."
         )}
