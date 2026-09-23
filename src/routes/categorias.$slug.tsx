@@ -73,18 +73,17 @@ function CategoriaNaoEncontrada() {
 const CAMPOS =
   "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,codigo_cupom,vitrine_ok,link_afiliado,link_origem";
 
-const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-function dataBr(iso: string | null) {
-  if (!iso) return null;
-  const data = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
-  if (Number.isNaN(data.getTime())) return null;
-  return data.toLocaleDateString("pt-BR");
-}
-
 function PaginaCategoria() {
   const { categoria } = Route.useLoaderData();
   const tom = TOM_CATEGORIA[categoria.slug] ?? "var(--ml-blue)";
+  const [agora, setAgora] = useState<number | null>(null);
+  const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
+
+  useEffect(() => {
+    setAgora(Date.now());
+    const id = window.setInterval(() => setAgora(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["cupons-categoria", categoria.slug],
@@ -112,7 +111,18 @@ function PaginaCategoria() {
     },
   });
 
-  const cupons = data ?? [];
+  /* O mesmo cartão da tela inicial: a pessoa vê contagem, economia e o botão
+     no lugar de sempre, sem precisar reaprender a ler a página. */
+  const cupons: CupomIndexado[] = useMemo(
+    () =>
+      (data ?? []).map((cupom) => ({
+        ...cupom,
+        chave: `${cupom.vendedor}|${cupom.desconto ?? ""}`,
+        dias: diasAte(cupom.vence),
+        score: calcularScore(cupom, agora),
+      })),
+    [data, agora],
+  );
 
   return (
     <LayoutConteudo
@@ -153,48 +163,20 @@ function PaginaCategoria() {
             Cada cartão mostra as condições lidas da própria campanha do vendedor. Condições mudam
             sem aviso — confirme no carrinho antes de pagar.
           </p>
-          <div className="not-prose grid gap-3 sm:grid-cols-2">
-            {cupons.map((cupom, indice) => (
-              <div
+          <div className="not-prose grid gap-4 sm:grid-cols-2">
+            {cupons.map((cupom) => (
+              <CupomCard
                 key={cupom.id}
-                className="cartao-conteudo animate-conteudo flex flex-col p-4"
-                style={{ animationDelay: `${Math.min(indice, 8) * 45}ms` }}
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-foreground [overflow-wrap:anywhere]">
-                    <Tag className="size-3.5 shrink-0" style={{ color: tom }} aria-hidden="true" />
-                    {cupom.vendedor}
-                  </p>
-                  <p
-                    className="rounded-full px-2 py-0.5 text-sm font-extrabold text-white"
-                    style={{ background: tom }}
-                  >
-                    {cupom.desconto ?? "—"}
-                  </p>
-                </div>
-                <p className="mt-1.5 text-xs text-secondary-ink">
-                  {cupom.sem_teto
-                    ? "Desconto sem limite informado"
-                    : cupom.teto != null
-                      ? `Desconta no máximo ${reais.format(Number(cupom.teto))}`
-                      : "Limite de desconto não verificado"}
-                  {cupom.compra_min != null
-                    ? ` · compra mínima de ${reais.format(Number(cupom.compra_min))}`
-                    : ""}
-                  {dataBr(cupom.vence) ? ` · válido até ${dataBr(cupom.vence)}` : ""}
-                </p>
-                <div className="mt-3">
-                  <AcaoDoCupom
-                    cupom={cupom}
-                    className="h-auto min-h-11 w-full whitespace-normal bg-ml-blue py-2.5 font-bold text-ml-blue-foreground hover:bg-ml-blue/90"
-                  />
-                </div>
-                <p className="mt-2 text-[11px] text-secondary-ink">
-                  Última atualização: {dataBr(cupom.updated_at) ?? "não informada"}
-                </p>
-              </div>
+                cupom={cupom}
+                agora={agora}
+                abrirCondicoes={setCupomAberto}
+                selecionado={false}
+                alternarSelecao={() => {}}
+                permitirComparar={false}
+              />
             ))}
           </div>
+          <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
           <p className="text-sm">
             <Link to="/" className="font-semibold text-ml-blue hover:underline">
               Ver todos os cupons e comparar economia
