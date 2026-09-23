@@ -701,7 +701,10 @@ function useCodigoDoCupom(cupom: Cupom) {
  *  vendedor não erra. */
 export function paginaDaLoja(cupom: Cupom): string | null {
   const guardada = (cupom.link_loja ?? "").trim();
-  if (guardada) return guardada;
+  /* Aceita so o formato de vitrine. Se algum dia entrar lixo nessa coluna, o
+     botao ignora em vez de levar o cliente para o lugar errado. */
+  const ehVitrine = /^https:\/\/(www|lista)\.mercadolivre\.com\.br\/(pagina\/[A-Za-z0-9._%-]{2,60}\/?|_CustId_\d{4,})$/.test(guardada);
+  if (guardada && ehVitrine) return guardada;
 
   const origem = (cupom.link_origem ?? "").trim();
   const id =
@@ -763,10 +766,41 @@ function useLinkDaLoja(cupom: Cupom) {
      produtos de lojas variadas, e quem clicou quer ESTA loja. Link de afiliado
      gerado a partir de listagem que o Mercado Livre não preserva cai
      exatamente lá, e foi por isso que esses foram apagados do banco. */
+  /* O LINK DE AFILIADO NAO SERVE MAIS DE DESTINO DESTE BOTAO.
+
+     O Weslei fotografou o resultado: clicou num cupom de loja e caiu no proprio
+     perfil dele, WSLMENDES, com uma chaleira eletrica de R$ 349,90 na tela. Nada
+     a ver com a loja do cupom.
+
+     A causa: os 113 links de afiliado guardados no banco sao TODOS encurtados
+     (meli.la/xxxx). Encurtado quer dizer opaco: daqui nao da para saber para
+     onde ele vai. Quando a geracao falhou, o Mercado Livre devolveu um meli.la
+     que aponta para o perfil social, e o filtro de /perfil/ e /social/ passa
+     batido porque a palavra nao esta na URL curta.
+
+     Conferido no banco antes de mexer: os 113 cupons com link encurtado tem, sem
+     excecao, o numero do vendedor escrito no link da campanha. Ou seja, da para
+     montar o endereco real da loja para TODOS eles. Nao se perde nada trocando.
+
+     A comissao continua: ela vem da etiqueta #WSLMENDES... que a pessoa cola no
+     carrinho, como o proprio Weslei disse. Endereco publico da loja + etiqueta
+     no checkout resolve, e nao tem como cair no perfil dele. */
   const ehPerfil = (u: string | null) => !!u && /\/social\/|\/perfil\//i.test(u);
-  const origem = ehPerfil(origemBruta) ? null : origemBruta;
+
+  /* Endereco de PRODUTO nao e vitrine. /p/MLB..., /up/MLBU..., MLB-123456789 e
+     qualquer coisa com item_id levam a um anuncio so, e quem clicou no cupom
+     queria a prateleira inteira. Foi a outra metade da reclamacao. */
+  const ehProduto = (u: string | null) =>
+    !!u && /\/p\/MLB|\/up\/MLB|\/MLB-\d{6,}|item_id/i.test(u);
+
+  /* meli.la esconde o destino. Sem saber para onde vai, nao entra. */
+  const ehEncurtado = (u: string | null) => !!u && /meli\.la\//i.test(u);
+
+  const naoServe = (u: string | null) => ehPerfil(u) || ehProduto(u) || ehEncurtado(u);
+
+  const origem = naoServe(origemBruta) ? null : origemBruta;
   const vitrineDaLoja = paginaDaLoja(cupom);
-  const destinoBase = (ehPerfil(guardado) ? null : guardado) || vitrineDaLoja || origem;
+  const destinoBase = vitrineDaLoja || origem || (naoServe(guardado) ? null : guardado);
 
   /* Origem que o gerador do Mercado Livre preserva. O banco recusa as outras
      em pedir_link, entao nem adianta pedir link novo para elas. */
