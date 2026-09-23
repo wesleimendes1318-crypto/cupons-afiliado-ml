@@ -29,6 +29,7 @@ export const Route = createFileRoute("/contato")({
 function Contato() {
   return (
     <LayoutConteudo
+      etiqueta="Fale conosco"
       titulo="Contato"
       resumo="Fale com quem mantém o site."
       atualizacao="23/09/2026"

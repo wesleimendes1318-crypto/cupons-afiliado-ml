@@ -30,6 +30,7 @@ export const Route = createFileRoute("/politica-de-privacidade")({
 function Privacidade() {
   return (
     <LayoutConteudo
+      etiqueta="LGPD"
       titulo="Política de Privacidade"
       resumo="O que fazemos com dados de quem visita este site, escrito para ser entendido."
       atualizacao="23/09/2026"

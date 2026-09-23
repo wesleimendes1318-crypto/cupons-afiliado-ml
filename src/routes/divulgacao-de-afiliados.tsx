@@ -29,6 +29,7 @@ export const Route = createFileRoute("/divulgacao-de-afiliados")({
 function Divulgacao() {
   return (
     <LayoutConteudo
+      etiqueta="Transparência"
       titulo="Divulgação de afiliados"
       resumo="A relação comercial deste site, declarada por inteiro e em português claro."
       atualizacao="23/09/2026"

@@ -29,6 +29,7 @@ export const Route = createFileRoute("/sobre")({
 function Sobre() {
   return (
     <LayoutConteudo
+      etiqueta="Quem somos"
       titulo="Sobre o site"
       resumo="Uma ferramenta independente para descobrir quanto um cupom desconta de verdade."
       atualizacao="23/09/2026"
