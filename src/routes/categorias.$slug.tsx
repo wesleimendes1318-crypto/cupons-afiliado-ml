@@ -4,7 +4,9 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { AdInArticle } from "@/components/anuncios/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { AvisoAfiliado } from "@/components/RodapeInstitucional";
+import { ArrowRight, AlertTriangle, CheckCircle2, Tag } from "lucide-react";
 import { buscarCategoria, CATEGORIAS } from "@/content/categorias";
+import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { supabase } from "@/integrations/supabase/client";
 
 const BASE = "https://cupons-afiliado-ml.lovable.app/categorias";
@@ -90,6 +92,7 @@ function dataBr(iso: string | null) {
 
 function PaginaCategoria() {
   const { categoria } = Route.useLoaderData();
+  const tom = TOM_CATEGORIA[categoria.slug] ?? "var(--ml-blue)";
 
   const { data, isLoading } = useQuery({
     queryKey: ["cupons-categoria", categoria.slug],
@@ -120,29 +123,35 @@ function PaginaCategoria() {
 
   return (
     <LayoutConteudo
+      etiqueta={categoria.nome}
       titulo={`${categoria.nome}: como avaliar ofertas e cupons`}
       resumo={categoria.resumo}
       atualizacao={categoria.atualizacao}
-    >
-      <nav aria-label="Trilha" className="!mt-0 text-xs">
-        <Link to="/categorias" className="font-semibold text-ml-blue hover:underline">
-          Categorias
+      trilha={
+        <Link to="/categorias" className="font-semibold text-white underline hover:opacity-80">
+          Todas as categorias
         </Link>
-      </nav>
-
+      }
+    >
       {categoria.introducao.map((paragrafo) => (
         <p key={paragrafo}>{paragrafo}</p>
       ))}
 
-      <h2>O que conferir antes de comprar</h2>
-      <ul>
+      <h2 className="flex items-center gap-2">
+        <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
+        O que conferir antes de comprar
+      </h2>
+      <ul className="lista-marcada !pl-0 space-y-2">
         {categoria.comoAvaliar.map((item) => (
           <li key={item}>{item}</li>
         ))}
       </ul>
 
-      <h2>Erros que custam caro</h2>
-      <ul>
+      <h2 className="flex items-center gap-2">
+        <AlertTriangle className="size-5 text-urgency-warning" aria-hidden="true" />
+        Erros que custam caro
+      </h2>
+      <ul className="lista-alerta !pl-0 space-y-2">
         {categoria.cuidados.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -170,11 +179,23 @@ function PaginaCategoria() {
             última conferência. Condições mudam sem aviso — confirme no carrinho antes de pagar.
           </p>
           <div className="not-prose space-y-2">
-            {cupons.map((cupom) => (
-              <div key={cupom.id} className="rounded-lg border border-border bg-card p-3">
+            {cupons.map((cupom, indice) => (
+              <div
+                key={cupom.id}
+                className="cartao-conteudo animate-conteudo p-3"
+                style={{ animationDelay: `${Math.min(indice, 8) * 45}ms` }}
+              >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-bold text-foreground">{cupom.vendedor}</p>
-                  <p className="text-sm font-bold text-ml-blue">{cupom.desconto ?? "—"}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                    <Tag className="size-3.5" style={{ color: tom }} aria-hidden="true" />
+                    {cupom.vendedor}
+                  </p>
+                  <p
+                    className="rounded-full px-2 py-0.5 text-sm font-extrabold text-white"
+                    style={{ background: tom }}
+                  >
+                    {cupom.desconto ?? "—"}
+                  </p>
                 </div>
                 <p className="mt-1 text-xs text-secondary-ink">
                   {cupom.sem_teto
@@ -198,31 +219,47 @@ function PaginaCategoria() {
       )}
 
       <h2>Perguntas frequentes</h2>
-      <div className="space-y-4">
+      <div className="not-prose space-y-3">
         {categoria.perguntas.map((item) => (
-          <div key={item.pergunta}>
+          <div
+            key={item.pergunta}
+            className="rounded-xl border border-border bg-card p-4 text-sm leading-relaxed text-secondary-ink"
+          >
             <p className="font-bold text-foreground">{item.pergunta}</p>
-            <p className="mt-1">{item.resposta}</p>
+            <p className="mt-1.5">{item.resposta}</p>
           </div>
         ))}
       </div>
 
       <h2>Outras categorias</h2>
-      <ul>
+      <div className="not-prose grid gap-3 sm:grid-cols-2">
         {CATEGORIAS.filter((item) => item.slug !== categoria.slug)
           .slice(0, 4)
-          .map((item) => (
-            <li key={item.slug}>
+          .map((item) => {
+            const Icone = ICONE_CATEGORIA[item.slug];
+            const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
+            return (
               <Link
+                key={item.slug}
                 to="/categorias/$slug"
                 params={{ slug: item.slug }}
-                className="font-semibold text-ml-blue hover:underline"
+                className="cartao-conteudo group flex items-center gap-3 p-3"
               >
-                {item.nome}
+                <span
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-white"
+                  style={{ background: cor }}
+                >
+                  {Icone ? <Icone className="size-4" aria-hidden="true" /> : null}
+                </span>
+                <span className="text-sm font-bold text-foreground">{item.nome}</span>
+                <ArrowRight
+                  className="ml-auto size-4 text-secondary-ink transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
               </Link>
-            </li>
-          ))}
-      </ul>
+            );
+          })}
+      </div>
     </LayoutConteudo>
   );
 }
