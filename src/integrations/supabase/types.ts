@@ -65,6 +65,7 @@ export type Database = {
           vendedor: string
           vitrine_conferida_em: string | null
           vitrine_ok: boolean | null
+          vitrine_motivo: string | null
         }
         Insert: {
           busca?: string | null
@@ -98,6 +99,7 @@ export type Database = {
           vendedor: string
           vitrine_conferida_em?: string | null
           vitrine_ok?: boolean | null
+          vitrine_motivo?: string | null
         }
         Update: {
           busca?: string | null
@@ -131,6 +133,7 @@ export type Database = {
           vendedor?: string
           vitrine_conferida_em?: string | null
           vitrine_ok?: boolean | null
+          vitrine_motivo?: string | null
         }
         Relationships: []
       }
