@@ -208,9 +208,23 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
     ? [modeloDescoberto, ...MODELOS_GEMINI.filter((m) => m !== modeloDescoberto)]
     : [...MODELOS_GEMINI];
 
+  /* MEDIDO EM PRODUCAO: 2 de cada 4 pedidos voltavam 502 porque a cota por
+     MINUTO da chave gratuita estoura e o Gemini devolve 429. Essa cota volta
+     sozinha em segundos, entao desistir na primeira negativa era jogar fora
+     metade das respostas. Agora cada modelo ganha uma segunda chance depois de
+     uma pausa curta, e so entao passa para o proximo. Duas tentativas, nao
+     mais: o visitante esta esperando na tela. */
   for (const modelo of ordem) {
-    const r = await tentar(modelo);
-    if (r) return r;
+    for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+      const r = await tentar(modelo);
+      if (r) return r;
+      /* Repete apenas quando repetir pode mudar o resultado: falta de cota
+         (429) e defeito passageiro do lado deles (5xx). Modelo inexistente
+         (404) nao melhora com espera. */
+      const vaiAdiantar = ultimo.ok === false && (ultimo.status === 429 || ultimo.status >= 500);
+      if (tentativa === 0 && vaiAdiantar) await new Promise((r2) => setTimeout(r2, 1400));
+      else break;
+    }
   }
 
   /* Nenhum nome da lista existe para esta chave. Em vez de desistir e queimar
