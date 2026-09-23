@@ -52,3 +52,4 @@
 
 - [ ] Redesign da home: header roxo + amarelo suave, barra de categorias e bloco de guias em posicoes melhores (base: layout atual + padroes de sites de cupom)
 - [ ] Unificar identidade visual (roxo + amarelo) entre home e paginas internas
+- [ ] Manter branco/azul/cinza/verde existentes; roxo apenas nas faixas de topo
