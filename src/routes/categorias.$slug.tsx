@@ -69,17 +69,8 @@ function CategoriaNaoEncontrada() {
   );
 }
 
-type CupomResumo = {
-  id: number;
-  vendedor: string;
-  desconto: string | null;
-  teto: number | null;
-  sem_teto: boolean;
-  compra_min: number | null;
-  vence: string | null;
-  categoria: string | null;
-  updated_at: string;
-};
+const CAMPOS =
+  "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,codigo_cupom,vitrine_ok,link_afiliado,link_origem";
 
 const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -99,23 +90,24 @@ function PaginaCategoria() {
     staleTime: 120_000,
     retry: 5,
     retryDelay: (tentativa) => Math.min(1000 * 2 ** tentativa, 15_000),
-    queryFn: async (): Promise<CupomResumo[]> => {
+    queryFn: async (): Promise<Cupom[]> => {
       const hoje = new Date().toISOString().slice(0, 10);
       const { data, error } = await supabase
         .from("cupons")
-        .select("id,vendedor,desconto,teto,sem_teto,compra_min,vence,categoria,updated_at")
+        .select(CAMPOS)
         .eq("qualidade", "bom")
         .or(`vence.is.null,vence.gte.${hoje}`)
         .order("teto", { ascending: false, nullsFirst: false })
-        .limit(400);
+        .limit(600);
       if (error) throw error;
       const termos = categoria.termos.map((termo) => termo.toLowerCase());
-      return ((data ?? []) as CupomResumo[])
+      return ((data ?? []) as unknown as Cupom[])
+        .filter((cupom) => cupom.vitrine_ok !== false)
         .filter((cupom) => {
           const rotulo = (cupom.categoria ?? "").toLowerCase();
           return rotulo !== "" && termos.some((termo) => rotulo.includes(termo));
         })
-        .slice(0, 12);
+        .slice(0, 24);
     },
   });
 
@@ -124,7 +116,7 @@ function PaginaCategoria() {
   return (
     <LayoutConteudo
       etiqueta={categoria.nome}
-      titulo={`${categoria.nome}: como avaliar ofertas e cupons`}
+      titulo={`Cupons de ${categoria.nome}`}
       resumo={categoria.resumo}
       atualizacao={categoria.atualizacao}
       trilha={
@@ -133,40 +125,22 @@ function PaginaCategoria() {
         </Link>
       }
     >
-      {categoria.introducao.map((paragrafo) => (
-        <p key={paragrafo}>{paragrafo}</p>
-      ))}
-
       <h2 className="flex items-center gap-2">
-        <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
-        O que conferir antes de comprar
+        <Tag className="size-5" style={{ color: tom }} aria-hidden="true" />
+        {isLoading
+          ? "Carregando os cupons desta categoria"
+          : cupons.length === 1
+            ? "1 cupom conferido nesta categoria"
+            : `${cupons.length} cupons conferidos nesta categoria`}
       </h2>
-      <ul className="lista-marcada !list-none !pl-0 space-y-2">
-        {categoria.comoAvaliar.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
 
-      <h2 className="flex items-center gap-2">
-        <AlertTriangle className="size-5 text-urgency-warning" aria-hidden="true" />
-        Erros que custam caro
-      </h2>
-      <ul className="lista-alerta !list-none !pl-0 space-y-2">
-        {categoria.cuidados.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-
-      <AdInArticle />
-
-      <h2>Cupons desta categoria conferidos por aqui</h2>
       {isLoading ? (
-        <p>Carregando os cupons desta categoria...</p>
+        <p>Buscando os cupons desta categoria...</p>
       ) : cupons.length === 0 ? (
         <p>
           Não há, neste momento, cupom confirmado para esta categoria na nossa base. Isso não
-          significa que não existam ofertas: significa apenas que nada foi verificado por aqui,
-          e preferimos dizer isso a inventar uma lista.{" "}
+          significa que não existam ofertas: significa apenas que nada foi verificado por aqui, e
+          preferimos dizer isso a inventar uma lista.{" "}
           <Link to="/" className="font-semibold text-ml-blue hover:underline">
             Ver todos os cupons conferidos
           </Link>
@@ -175,19 +149,19 @@ function PaginaCategoria() {
       ) : (
         <>
           <p>
-            Cada linha mostra as condições lidas da própria campanha do vendedor, com a data da
-            última conferência. Condições mudam sem aviso — confirme no carrinho antes de pagar.
+            Cada cartão mostra as condições lidas da própria campanha do vendedor. Condições mudam
+            sem aviso — confirme no carrinho antes de pagar.
           </p>
-          <div className="not-prose space-y-2">
+          <div className="not-prose grid gap-3 sm:grid-cols-2">
             {cupons.map((cupom, indice) => (
               <div
                 key={cupom.id}
-                className="cartao-conteudo animate-conteudo p-3"
+                className="cartao-conteudo animate-conteudo flex flex-col p-4"
                 style={{ animationDelay: `${Math.min(indice, 8) * 45}ms` }}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                    <Tag className="size-3.5" style={{ color: tom }} aria-hidden="true" />
+                  <p className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-foreground [overflow-wrap:anywhere]">
+                    <Tag className="size-3.5 shrink-0" style={{ color: tom }} aria-hidden="true" />
                     {cupom.vendedor}
                   </p>
                   <p
@@ -197,7 +171,7 @@ function PaginaCategoria() {
                     {cupom.desconto ?? "—"}
                   </p>
                 </div>
-                <p className="mt-1 text-xs text-secondary-ink">
+                <p className="mt-1.5 text-xs text-secondary-ink">
                   {cupom.sem_teto
                     ? "Desconto sem limite informado"
                     : cupom.teto != null
@@ -208,15 +182,53 @@ function PaginaCategoria() {
                     : ""}
                   {dataBr(cupom.vence) ? ` · válido até ${dataBr(cupom.vence)}` : ""}
                 </p>
-                <p className="mt-1 text-[11px] text-secondary-ink">
+                <div className="mt-3">
+                  <AcaoDoCupom
+                    cupom={cupom}
+                    className="h-auto min-h-11 w-full whitespace-normal bg-ml-blue py-2.5 font-bold text-ml-blue-foreground hover:bg-ml-blue/90"
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-secondary-ink">
                   Última atualização: {dataBr(cupom.updated_at) ?? "não informada"}
                 </p>
               </div>
             ))}
           </div>
+          <p className="text-sm">
+            <Link to="/" className="font-semibold text-ml-blue hover:underline">
+              Ver todos os cupons e comparar economia
+            </Link>
+          </p>
           <AvisoAfiliado className="mt-3 text-xs text-secondary-ink" />
         </>
       )}
+
+      <AdInArticle />
+
+      <h2>Dicas para comprar em {categoria.nome.toLowerCase()}</h2>
+      {categoria.introducao.map((paragrafo) => (
+        <p key={paragrafo}>{paragrafo}</p>
+      ))}
+
+      <h3 className="flex items-center gap-2">
+        <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
+        O que conferir antes de comprar
+      </h3>
+      <ul className="lista-marcada !list-none !pl-0 space-y-2">
+        {categoria.comoAvaliar.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+
+      <h3 className="flex items-center gap-2">
+        <AlertTriangle className="size-5 text-urgency-warning" aria-hidden="true" />
+        Erros que custam caro
+      </h3>
+      <ul className="lista-alerta !list-none !pl-0 space-y-2">
+        {categoria.cuidados.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
 
       <h2>Perguntas frequentes</h2>
       <div className="not-prose space-y-3">
