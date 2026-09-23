@@ -767,6 +767,30 @@ export function AcaoDoCupom({
 
   const jaTem = Boolean(codigo);
 
+  /* SEM LINK DE AFILIADO NAO EXISTE BOTAO.
+
+     Este era o defeito mais visivel do site. 901 dos 975 cupons bons estao sem
+     link guardado, e o botao "Usar este cupom" aparecia em todos eles. Clicar
+     chamava uma funcao vazia: nada acontecia, nenhuma loja abria, nenhum erro
+     era mostrado. Nove em cada dez cartoes tinham um botao morto.
+
+     Sem link, o caminho que funciona de verdade e colar o link do produto: dali
+     sai link de afiliado valido e o cupom e conferido naquele anuncio. Entao e
+     isso que o cartao oferece, com o texto dizendo a verdade. */
+  if (!destino) {
+    return (
+      <Button
+        type="button"
+        onClick={irParaColarLink}
+        className={className}
+        variant="outline"
+      >
+        <Link2 className={icone} aria-hidden="true" />
+        Conferir num produto desta loja
+      </Button>
+    );
+  }
+
   return (
     <>
       <Button
