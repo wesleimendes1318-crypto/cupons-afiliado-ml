@@ -637,6 +637,11 @@ function useCodigoDoCupom(cupom: Cupom) {
   const [codigo, setCodigo] = useState<string | null>(cupom.codigo_cupom ?? null);
   const [gerando, setGerando] = useState(false);
   const [falhou, setFalhou] = useState(false);
+  /* Preenchido quando a maquina que gera os codigos esta em pausa de seguranca.
+     Antes disso o botao girava 88 segundos e morria sem dizer nada, e do lado
+     de fora parecia site quebrado. Nao era: era o Mercado Livre tendo pedido
+     verificacao e o robo respeitando o pedido, que e o certo a fazer. */
+  const [emPausa, setEmPausa] = useState<string | null>(null);
   const relogios = useRef<number[]>([]);
 
   useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
@@ -650,6 +655,24 @@ function useCodigoDoCupom(cupom: Cupom) {
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { setCodigo(resposta); setGerando(false); return; }
       if (resposta !== "pedido") { setGerando(false); setFalhou(true); return; }
+
+      /* Pergunta de uma vez se a maquina esta parada. Se estiver, nao adianta
+         ficar 88 segundos olhando: o codigo nao vem hoje, e e melhor dizer. */
+      try {
+        const { data: estado } = await supabase.rpc("estado_do_robo");
+        const linha = (Array.isArray(estado) ? estado[0] : estado) as
+          { freio_motivo?: string | null; freio_ate?: string | null } | null;
+        const motivo = (linha?.freio_motivo ?? "").trim();
+        if (motivo) {
+          setEmPausa(
+            linha?.freio_ate === "amanha"
+              ? "O Mercado Livre pediu uma verificação de segurança e eu parei por hoje. Seu código sai amanhã."
+              : "O Mercado Livre pediu uma verificação de segurança e eu parei alguns minutos. Tente de novo daqui a pouco.",
+          );
+          setGerando(false);
+          return;
+        }
+      } catch { /* sem resposta aqui, segue esperando como antes */ }
     } catch {
       setGerando(false);
       setFalhou(true);
@@ -672,7 +695,7 @@ function useCodigoDoCupom(cupom: Cupom) {
     relogios.current.push(window.setTimeout(olhar, 3000));
   }, [codigo, gerando, cupom.id]);
 
-  return { codigo, gerando, falhou, gerar };
+  return { codigo, gerando, falhou, gerar, emPausa };
 }
 
 /** ENDEREÇO DA LISTA DE PRODUTOS DA LOJA.
@@ -912,7 +935,7 @@ export function AcaoDoCupom({
   className?: string;
   iconeClassName?: string;
 }) {
-  const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
+  const { codigo, gerando, falhou, gerar, emPausa } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
   const consultado = useConsultado(cupom.id);
   const [copiou, setCopiou] = useState(false);
@@ -1050,6 +1073,14 @@ export function AcaoDoCupom({
       )}
       {(gerando || loja.gerando) && (
         <EsperaDoCupom codigoPronto={Boolean(codigo)} linkPronto={Boolean(destino)} />
+      )}
+      {emPausa && !codigo && (
+        <p className="mt-2 rounded-md border border-amber-400/60 bg-amber-50 p-2.5 text-[12px] leading-4 text-foreground dark:bg-amber-950/30">
+          {emPausa}{" "}
+          {destino
+            ? "Você pode abrir a loja agora mesmo pelo botão acima e aproveitar o preço dela; o cupom eu te entrego assim que voltar."
+            : "Nada com você: é comigo mesmo."}
+        </p>
       )}
       {consultado && !redirecionando && (
         <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-success">
