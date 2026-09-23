@@ -118,6 +118,7 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
   if (!apiKey) return { ok: false, status: 503, erro: "Serviço de IA sem chave própria." };
 
   const corpo: Record<string, unknown> = {
+    systemInstruction: { role: "system", parts: [{ text: ESCOPO_IA }] },
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.2,
@@ -127,20 +128,30 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
     },
   };
 
-  try {
-    const resposta = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
-      body: JSON.stringify(corpo),
-      signal: AbortSignal.timeout(12_000),
-    });
-    if (!resposta.ok) return { ok: false, status: resposta.status, erro: erroPorStatus(resposta.status) };
-    const texto = textoGemini(await resposta.json());
-    if (!texto) return { ok: false, status: 502, erro: erroPorStatus(502) };
-    return { ok: true, texto };
-  } catch {
-    return { ok: false, status: 502, erro: erroPorStatus(502) };
+  let ultimo: ResultadoIa = { ok: false, status: 502, erro: erroPorStatus(502) };
+  for (const modelo of MODELOS_GEMINI) {
+    try {
+      const resposta = await fetch(urlGemini(modelo), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
+        body: JSON.stringify(corpo),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (resposta.ok) {
+        const texto = textoGemini(await resposta.json());
+        if (texto) return { ok: true, texto };
+        ultimo = { ok: false, status: 502, erro: erroPorStatus(502) };
+        continue;
+      }
+      ultimo = { ok: false, status: resposta.status, erro: erroPorStatus(resposta.status) };
+      /* 404 = modelo indisponivel para a chave; 429 = sem cota. Nos dois casos
+         vale tentar o proximo modelo antes de desistir. */
+      if (resposta.status !== 404 && resposta.status !== 429 && resposta.status < 500) return ultimo;
+    } catch {
+      ultimo = { ok: false, status: 502, erro: erroPorStatus(502) };
+    }
   }
+  return ultimo;
 }
 
 /** Alternativa gerenciada pela plataforma, usada quando a chave própria falha ou está sem cota. */
