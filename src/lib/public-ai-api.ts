@@ -305,12 +305,16 @@ export async function chamarIa(prompt: string, opcoes?: Opcoes): Promise<Resulta
      chave propria ausente somada a gateway da plataforma sem credito. Dizer
      "tente novamente em instantes" nesse caso e mentira, e a pessoa fica
      clicando. O texto abaixo diz a verdade sem expor nada de configuracao. */
-  const temChavePropria = Boolean(process.env['GEMINI_API_KEY']);
-  if (!temChavePropria) {
+  /* Sem chave propria, ou com a chave propria sem cota (429), nao adianta a
+     pessoa insistir: a cota do Gemini so volta no proximo periodo. Medido no
+     ar hoje: os dois caminhos caidos ao mesmo tempo, dez minutos seguidos. */
+  const semChave = !process.env['GEMINI_API_KEY'];
+  const semCota = proprio.ok === false && proprio.status === 429;
+  if (semChave || semCota) {
     return {
       ok: false,
       status: 503,
-      erro: "A busca com IA está fora do ar neste momento. Os cupons e os filtros continuam funcionando normalmente.",
+      erro: "A busca com IA está fora do ar neste momento. Os cupons, os filtros e os códigos continuam funcionando normalmente.",
     };
   }
   return gateway;
