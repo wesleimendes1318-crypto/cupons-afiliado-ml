@@ -43,9 +43,9 @@
 - [x] Consentimento de cookies funcional (LGPD)
 - [x] Espacos de publicidade desligados ate haver Publisher ID
 - [x] Paginas institucionais: sobre, contato, termos, privacidade, cookies, divulgacao de afiliados
-- [ ] Guias editoriais (/guias e /guias/$slug)
-- [ ] Categorias com conteudo proprio (/categorias/$slug)
-- [ ] sitemap.xml, robots.txt, ads.txt
-- [ ] Rodape institucional e aviso de afiliado na home
-- [ ] Avaliar Python: responder se ajuda ou nao neste projeto (runtime e edge)
-- [ ] Escolher tecnologias duraveis para hoje e futuro; justificar ao usuario
+- [x] Guias editoriais (/guias e /guias/$slug)
+- [x] Categorias com conteudo proprio (/categorias/$slug)
+- [x] sitemap.xml, robots.txt, ads.txt
+- [x] Rodape institucional e aviso de afiliado na home
+- [x] Avaliar Python: responder se ajuda ou nao neste projeto (runtime e edge)
+- [x] Escolher tecnologias duraveis para hoje e futuro; justificar ao usuario
