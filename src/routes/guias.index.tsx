@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, BookOpen } from "lucide-react";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { GUIAS } from "@/content/guias";
@@ -46,9 +47,16 @@ export const Route = createFileRoute("/guias/")({
 function Guias() {
   return (
     <LayoutConteudo
+      etiqueta="Conteúdo próprio"
       titulo="Guias"
       resumo="Como cupons funcionam de verdade: as contas, os limites e as armadilhas, explicados sem enrolação."
       atualizacao="23/09/2026"
+      trilha={
+        <span className="inline-flex items-center gap-1.5">
+          <BookOpen className="size-3.5" aria-hidden="true" />
+          {GUIAS.length} guias publicados
+        </span>
+      }
     >
       <p>
         Todo guia aqui nasceu de uma dúvida concreta de quem estava prestes a comprar. São
@@ -56,19 +64,29 @@ function Guias() {
         para ser útil.
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {GUIAS.map((guia) => (
+      <div className="not-prose grid gap-4 sm:grid-cols-2">
+        {GUIAS.map((guia, indice) => (
           <Link
             key={guia.slug}
             to="/guias/$slug"
             params={{ slug: guia.slug }}
-            className="group rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
+            className="cartao-conteudo animate-conteudo group block p-4"
+            style={{ animationDelay: `${indice * 60}ms` }}
           >
-            <h2 className="!mt-0 text-base font-bold text-foreground group-hover:text-ml-blue">
+            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-[image:var(--gradiente-conteudo)] text-sm font-extrabold text-white">
+              {indice + 1}
+            </span>
+            <h2 className="mt-3 text-base font-bold leading-snug text-foreground transition-colors group-hover:text-ml-blue">
               {guia.titulo}
             </h2>
             <p className="mt-1 text-sm text-secondary-ink">{guia.resumo}</p>
-            <p className="mt-2 text-xs text-secondary-ink">{guia.tempo}</p>
+            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ml-blue">
+              {guia.tempo}
+              <ArrowRight
+                className="size-3.5 transition-transform group-hover:translate-x-1"
+                aria-hidden="true"
+              />
+            </p>
           </Link>
         ))}
       </div>

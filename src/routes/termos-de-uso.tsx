@@ -29,6 +29,7 @@ export const Route = createFileRoute("/termos-de-uso")({
 function Termos() {
   return (
     <LayoutConteudo
+      etiqueta="Documento legal"
       titulo="Termos de Uso"
       resumo="As condições para usar este site, sem juridiquês desnecessário."
       atualizacao="23/09/2026"

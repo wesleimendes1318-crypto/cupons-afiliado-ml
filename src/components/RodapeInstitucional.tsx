@@ -28,14 +28,14 @@ export function AvisoAfiliado({ className }: { className?: string }) {
 
 export function RodapeInstitucional() {
   return (
-    <footer className="mt-12 border-t border-border bg-card/40">
+    <footer className="mt-12 border-t-2 border-[color-mix(in_oklab,var(--ml-blue)_30%,var(--border))] bg-[color-mix(in_oklab,var(--ml-blue)_5%,var(--card))]">
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         <nav aria-label="Páginas institucionais" className="flex flex-wrap gap-x-5 gap-y-2">
           {PAGINAS.map((pagina) => (
             <Link
               key={pagina.to}
               to={pagina.to}
-              className="text-xs font-semibold text-secondary-ink hover:text-ml-blue hover:underline"
+              className="rounded-full px-2.5 py-1 text-xs font-semibold text-secondary-ink transition-colors hover:bg-ml-blue hover:text-ml-blue-foreground"
             >
               {pagina.rotulo}
             </Link>
@@ -43,7 +43,7 @@ export function RodapeInstitucional() {
           <button
             type="button"
             onClick={abrirPreferencias}
-            className="text-xs font-semibold text-secondary-ink hover:text-ml-blue hover:underline"
+            className="rounded-full px-2.5 py-1 text-xs font-semibold text-secondary-ink transition-colors hover:bg-ml-blue hover:text-ml-blue-foreground"
           >
             Preferências de cookies
           </button>

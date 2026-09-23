@@ -373,3 +373,161 @@
     animation: none;
   }
 }
+
+/* Identidade das páginas de conteúdo
+   =================================
+   As páginas editoriais (guias, categorias, institucionais) tinham só preto
+   no branco. Ganham aqui uma paleta própria, derivada das duas cores da
+   marca, e movimento de entrada que orienta a leitura de cima para baixo.
+   Tudo desliga com prefers-reduced-motion. */
+
+:root {
+  --conteudo-cor-1: var(--ml-blue);
+  --conteudo-cor-2: oklch(0.62 0.16 320);
+  --conteudo-cor-3: var(--ml-yellow);
+  --gradiente-conteudo: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--conteudo-cor-1) 92%, transparent),
+    color-mix(in oklab, var(--conteudo-cor-2) 88%, transparent)
+  );
+  --gradiente-suave: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--conteudo-cor-1) 8%, var(--background)),
+    var(--background) 60%
+  );
+}
+
+.dark {
+  --conteudo-cor-2: oklch(0.68 0.15 320);
+  --gradiente-suave: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--conteudo-cor-1) 16%, var(--background)),
+    var(--background) 60%
+  );
+}
+
+@utility fundo-conteudo {
+  background: var(--gradiente-suave);
+}
+
+/* Faixa colorida do topo das páginas editoriais. */
+@utility faixa-conteudo {
+  position: relative;
+  overflow: hidden;
+  background: var(--gradiente-conteudo);
+  color: oklch(0.99 0 0);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: -40%;
+    inset-inline-end: -10%;
+    width: 22rem;
+    height: 22rem;
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--conteudo-cor-3) 55%, transparent),
+      transparent 68%
+    );
+    pointer-events: none;
+  }
+}
+
+@keyframes conteudo-sobe {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@utility animate-conteudo {
+  animation: conteudo-sobe 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cartão de conteúdo que reage ao toque e ao mouse. */
+@utility cartao-conteudo {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    height: 3px;
+    background: var(--gradiente-conteudo);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card);
+    border-color: color-mix(in oklab, var(--conteudo-cor-1) 35%, var(--border));
+  }
+
+  &:hover::before { transform: scaleX(1); }
+  &:active { transform: translateY(-1px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover { transform: none; }
+    &::before { transition: none; }
+  }
+}
+
+/* Marcador colorido nas listas editoriais. */
+@utility lista-marcada {
+  list-style: none;
+  padding-inline-start: 0;
+
+  & > li {
+    position: relative;
+    padding-inline-start: 1.6rem;
+  }
+
+  & > li::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.15rem;
+    inset-block-start: 0.55em;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--gradiente-conteudo);
+  }
+}
+
+@utility lista-alerta {
+  list-style: none;
+  padding-inline-start: 0;
+
+  & > li {
+    position: relative;
+    padding-inline-start: 1.6rem;
+  }
+
+  & > li::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.15rem;
+    inset-block-start: 0.55em;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--urgency-warning);
+  }
+}

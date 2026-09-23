@@ -30,6 +30,7 @@ export const Route = createFileRoute("/politica-de-cookies")({
 function Cookies() {
   return (
     <LayoutConteudo
+      etiqueta="Privacidade"
       titulo="Política de Cookies"
       resumo="O que fica guardado no seu navegador e como você controla isso."
       atualizacao="23/09/2026"

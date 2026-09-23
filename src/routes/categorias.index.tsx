@@ -1,9 +1,41 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Car,
+  Laptop,
+  Shirt,
+  Smartphone,
+  Sofa,
+  Sparkles,
+  Tv,
+  type LucideIcon,
+} from "lucide-react";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { CATEGORIAS } from "@/content/categorias";
 
 const URL = "https://cupons-afiliado-ml.lovable.app/categorias";
+
+export const ICONE_CATEGORIA: Record<string, LucideIcon> = {
+  eletronicos: Tv,
+  celulares: Smartphone,
+  informatica: Laptop,
+  casa: Sofa,
+  moda: Shirt,
+  beleza: Sparkles,
+  automotivo: Car,
+};
+
+/** Um tom por categoria, para a página não ser um bloco único de cor. */
+export const TOM_CATEGORIA: Record<string, string> = {
+  eletronicos: "oklch(0.58 0.16 264)",
+  celulares: "oklch(0.60 0.15 200)",
+  informatica: "oklch(0.58 0.14 175)",
+  casa: "oklch(0.62 0.14 145)",
+  moda: "oklch(0.62 0.17 350)",
+  beleza: "oklch(0.63 0.16 320)",
+  automotivo: "oklch(0.60 0.15 40)",
+};
 
 export const Route = createFileRoute("/categorias/")({
   component: Categorias,
@@ -30,9 +62,11 @@ export const Route = createFileRoute("/categorias/")({
 function Categorias() {
   return (
     <LayoutConteudo
+      etiqueta="Curadoria por tipo de produto"
       titulo="Categorias"
       resumo="O que muda na hora de avaliar uma oferta dependendo do tipo de produto."
       atualizacao="23/09/2026"
+      trilha={<span>{CATEGORIAS.length} categorias com orientação própria</span>}
     >
       <p>
         O mesmo cupom rende de formas muito diferentes conforme o que você compra. Em moda,
@@ -41,20 +75,44 @@ function Categorias() {
         conferir antes de fechar a compra.
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {CATEGORIAS.map((categoria) => (
-          <Link
-            key={categoria.slug}
-            to="/categorias/$slug"
-            params={{ slug: categoria.slug }}
-            className="group rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
-          >
-            <h2 className="!mt-0 text-base font-bold text-foreground group-hover:text-ml-blue">
-              {categoria.nome}
-            </h2>
-            <p className="mt-1 text-sm text-secondary-ink">{categoria.resumo}</p>
-          </Link>
-        ))}
+      <div className="not-prose grid gap-4 sm:grid-cols-2">
+        {CATEGORIAS.map((categoria, indice) => {
+          const Icone = ICONE_CATEGORIA[categoria.slug] ?? Sparkles;
+          const tom = TOM_CATEGORIA[categoria.slug] ?? "var(--ml-blue)";
+          return (
+            <Link
+              key={categoria.slug}
+              to="/categorias/$slug"
+              params={{ slug: categoria.slug }}
+              className="cartao-conteudo animate-conteudo group block p-4"
+              style={{ animationDelay: `${indice * 55}ms` }}
+            >
+              <span
+                className="inline-flex size-9 items-center justify-center rounded-lg text-white"
+                style={{ background: tom }}
+              >
+                <Icone className="size-5" aria-hidden="true" />
+              </span>
+              <h2
+                className="mt-3 text-base font-bold text-foreground transition-colors"
+                style={{ color: undefined }}
+              >
+                {categoria.nome}
+              </h2>
+              <p className="mt-1 text-sm text-secondary-ink">{categoria.resumo}</p>
+              <p
+                className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: tom }}
+              >
+                Ver orientações
+                <ArrowRight
+                  className="size-3.5 transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </p>
+            </Link>
+          );
+        })}
       </div>
     </LayoutConteudo>
   );
