@@ -160,8 +160,11 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
   if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está configurado. Avise o responsável pelo site." };
 
   const corpo: Record<string, unknown> = {
-    model: "google/gemini-3-flash",
-    messages: [{ role: "user", content: prompt }],
+    model: "google/gemini-3-pro",
+    messages: [
+      { role: "system", content: ESCOPO_IA },
+      { role: "user", content: prompt },
+    ],
     ...(opcoes?.formato
       ? {
           response_format: {
