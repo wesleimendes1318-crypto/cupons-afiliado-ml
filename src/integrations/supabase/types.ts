@@ -41,13 +41,11 @@ export type Database = {
           codigo_pedido_em: string | null
           codigo_tentativas: number
           compra_min: number | null
-          conferido_em: string | null
           created_at: string
           desconto: string | null
           estoque: number | null
           id: number
           link_afiliado: string | null
-          link_conferido_em: string | null
           link_em: string | null
           link_origem: string | null
           link_tentativas: number
@@ -55,16 +53,15 @@ export type Database = {
           orcamento: number | null
           qualidade: string | null
           sem_teto: boolean
-          tentativas: number
           teto: number | null
           tipo: string | null
           updated_at: string
           valor: number | null
           vence: string | null
           vendas: number | null
-          vendedor: string
           vitrine_conferida_em: string | null
           vitrine_ok: boolean | null
+          vendedor: string
         }
         Insert: {
           busca?: string | null
@@ -74,13 +71,11 @@ export type Database = {
           codigo_pedido_em?: string | null
           codigo_tentativas?: number
           compra_min?: number | null
-          conferido_em?: string | null
           created_at?: string
           desconto?: string | null
           estoque?: number | null
           id: number
           link_afiliado?: string | null
-          link_conferido_em?: string | null
           link_em?: string | null
           link_origem?: string | null
           link_tentativas?: number
@@ -88,16 +83,15 @@ export type Database = {
           orcamento?: number | null
           qualidade?: string | null
           sem_teto?: boolean
-          tentativas?: number
           teto?: number | null
           tipo?: string | null
           updated_at?: string
           valor?: number | null
           vence?: string | null
           vendas?: number | null
-          vendedor: string
           vitrine_conferida_em?: string | null
           vitrine_ok?: boolean | null
+          vendedor: string
         }
         Update: {
           busca?: string | null
@@ -107,13 +101,11 @@ export type Database = {
           codigo_pedido_em?: string | null
           codigo_tentativas?: number
           compra_min?: number | null
-          conferido_em?: string | null
           created_at?: string
           desconto?: string | null
           estoque?: number | null
           id?: number
           link_afiliado?: string | null
-          link_conferido_em?: string | null
           link_em?: string | null
           link_origem?: string | null
           link_tentativas?: number
@@ -121,31 +113,15 @@ export type Database = {
           orcamento?: number | null
           qualidade?: string | null
           sem_teto?: boolean
-          tentativas?: number
           teto?: number | null
           tipo?: string | null
           updated_at?: string
           valor?: number | null
           vence?: string | null
           vendas?: number | null
-          vendedor?: string
           vitrine_conferida_em?: string | null
           vitrine_ok?: boolean | null
-        }
-        Relationships: []
-      }
-      limites: {
-        Row: {
-          chave: string
-          valor: number
-        }
-        Insert: {
-          chave: string
-          valor: number
-        }
-        Update: {
-          chave?: string
-          valor?: number
+          vendedor?: string
         }
         Relationships: []
       }
@@ -161,7 +137,6 @@ export type Database = {
           link: string | null
           origem: string | null
           preco: number | null
-          processando_em: string | null
           status: string
           titulo: string | null
           url_alvo: string | null
@@ -178,7 +153,6 @@ export type Database = {
           link?: string | null
           origem?: string | null
           preco?: number | null
-          processando_em?: string | null
           status?: string
           titulo?: string | null
           url_alvo?: string | null
@@ -195,7 +169,6 @@ export type Database = {
           link?: string | null
           origem?: string | null
           preco?: number | null
-          processando_em?: string | null
           status?: string
           titulo?: string | null
           url_alvo?: string | null
@@ -261,17 +234,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      condicoes_pendentes: {
-        Args: { p_limite?: number; p_token: string }
-        Returns: {
-          id: number
-        }[]
-      }
-      conferir_links: {
-        Args: { p_lista: Json; p_token: string }
-        Returns: Json
-      }
-      consultar_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       consultar_pedido: {
         Args: { p_id: number }
         Returns: {
@@ -282,50 +244,8 @@ export type Database = {
           status: string
         }[]
       }
-      etiquetas_pendentes: {
-        Args: { p_limite?: number; p_token: string }
-        Returns: {
-          desconto: string
-          id: number
-          pedido: boolean
-        }[]
-      }
       expirar_pedidos: { Args: never; Returns: undefined }
-      iniciar_pedido: {
-        Args: { p_id: number; p_token: string }
-        Returns: undefined
-      }
       limpar_vencidos: { Args: never; Returns: number }
-      links_para_conferir: {
-        Args: { p_limite?: number; p_token: string }
-        Returns: {
-          id: number
-          link_origem: string
-        }[]
-      }
-      links_pendentes: {
-        Args: { p_limite?: number; p_token: string }
-        Returns: {
-          id: number
-        }[]
-      }
-      melhor_cupom: {
-        Args: { p_token: string; p_vendedor: string }
-        Returns: {
-          categoria: string
-          compra_min: number
-          desconto: string
-          id: number
-          qualidade: string
-          sem_teto: boolean
-          teto: number
-          tipo: string
-          valor: number
-          vence: string
-          vendedor: string
-        }[]
-      }
-      normalizar_nome: { Args: { p: string }; Returns: string }
       pedidos_pendentes: {
         Args: { p_token: string }
         Returns: {
@@ -335,35 +255,12 @@ export type Database = {
           vendedor: string
         }[]
       }
+      consultar_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
-      salvar_condicoes: {
-        Args: { p_cond: Json; p_token: string }
-        Returns: Json
-      }
-      salvar_etiquetas: {
-        Args: { p_lista: Json; p_token: string }
-        Returns: Json
-      }
-      salvar_link_loja: {
-        Args: { p_cupom_id: number; p_link: string }
-        Returns: undefined
-      }
-      salvar_links: { Args: { p_links: Json; p_token: string }; Returns: Json }
-      salvar_vitrines: {
-        Args: { p_lista: Json; p_token: string }
-        Returns: Json
-      }
       sincronizar_cupons: {
         Args: { p_completo?: boolean; p_cupons: Json; p_token: string }
         Returns: Json
-      }
-      vitrines_para_conferir: {
-        Args: { p_limite?: number; p_token: string }
-        Returns: {
-          id: number
-          link_origem: string
-        }[]
       }
     }
     Enums: {
