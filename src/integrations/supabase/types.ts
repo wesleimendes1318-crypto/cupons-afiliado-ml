@@ -49,7 +49,6 @@ export type Database = {
           link_afiliado: string | null
           link_conferido_em: string | null
           link_em: string | null
-          link_loja: string | null
           link_origem: string | null
           link_tentativas: number
           nivel: string | null
@@ -65,8 +64,10 @@ export type Database = {
           vendas: number | null
           vendedor: string
           vitrine_conferida_em: string | null
-          vitrine_motivo: string | null
           vitrine_ok: boolean | null
+          vitrine_motivo: string | null
+          link_loja: string | null
+          vitrine_resolvida_em: string | null
         }
         Insert: {
           busca?: string | null
@@ -84,7 +85,6 @@ export type Database = {
           link_afiliado?: string | null
           link_conferido_em?: string | null
           link_em?: string | null
-          link_loja?: string | null
           link_origem?: string | null
           link_tentativas?: number
           nivel?: string | null
@@ -100,8 +100,10 @@ export type Database = {
           vendas?: number | null
           vendedor: string
           vitrine_conferida_em?: string | null
-          vitrine_motivo?: string | null
           vitrine_ok?: boolean | null
+          vitrine_motivo?: string | null
+          link_loja?: string | null
+          vitrine_resolvida_em?: string | null
         }
         Update: {
           busca?: string | null
@@ -119,7 +121,6 @@ export type Database = {
           link_afiliado?: string | null
           link_conferido_em?: string | null
           link_em?: string | null
-          link_loja?: string | null
           link_origem?: string | null
           link_tentativas?: number
           nivel?: string | null
@@ -135,8 +136,10 @@ export type Database = {
           vendas?: number | null
           vendedor?: string
           vitrine_conferida_em?: string | null
-          vitrine_motivo?: string | null
           vitrine_ok?: boolean | null
+          vitrine_motivo?: string | null
+          link_loja?: string | null
+          vitrine_resolvida_em?: string | null
         }
         Relationships: []
       }
@@ -356,10 +359,6 @@ export type Database = {
         Returns: undefined
       }
       salvar_links: { Args: { p_links: Json; p_token: string }; Returns: Json }
-      salvar_pagina_loja: {
-        Args: { p_token: string; p_url: string; p_vendedor: string }
-        Returns: number
-      }
       salvar_vitrines: {
         Args: { p_lista: Json; p_token: string }
         Returns: Json
