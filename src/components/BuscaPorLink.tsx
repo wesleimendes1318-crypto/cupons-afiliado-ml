@@ -745,7 +745,7 @@ function Resultado({
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
      pessoa tiver colado o link de afiliado de outra pessoa a venda vai para
      ela. Nesse caso o botao nao aparece. */
-  const leituraFalhou = a?.lojaLida === false;
+  const leituraFalhou = !(a?.lojaLida === true || !!a?.vendedor);
 
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
@@ -950,7 +950,12 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
     /* Leitura falhou: o site NAO SABE se tem cupom. Dizer "esta loja nao tem
        cupom" aqui seria afirmar o que ninguem conferiu, e foi exatamente o que
        aconteceu com um link curto meli.la que a extensao nao conseguiu abrir. */
-    const naoConferiu = analise?.lojaLida === false;
+    /* Regra honesta: so da para afirmar que ESTA loja nao tem cupom quando a
+       loja foi identificada. Se nao sei de quem e o anuncio, nao sei nada
+       sobre o cupom dela. `lojaLida` vem null em registros antigos e quando a
+       analise nem chegou a acontecer, e null nao e permissao para afirmar. */
+    const identificouLoja = analise?.lojaLida === true || !!analise?.vendedor;
+    const naoConferiu = !identificouLoja;
     if (naoConferiu) {
       return (
         <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
