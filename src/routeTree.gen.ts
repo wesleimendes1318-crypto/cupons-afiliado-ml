@@ -10,7 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ContatoRouteImport } from './routes/contato'
+import { Route as DivulgacaoDeAfiliadosRouteImport } from './routes/divulgacao-de-afiliados'
+import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
+import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as SobreRouteImport } from './routes/sobre'
+import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
+import { Route as CategoriasIndexRouteImport } from './routes/categorias.index'
+import { Route as CategoriasSlugRouteImport } from './routes/categorias.$slug'
+import { Route as GuiasIndexRouteImport } from './routes/guias.index'
+import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
@@ -21,9 +31,59 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContatoRoute = ContatoRouteImport.update({
+  id: '/contato',
+  path: '/contato',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DivulgacaoDeAfiliadosRoute = DivulgacaoDeAfiliadosRouteImport.update({
+  id: '/divulgacao-de-afiliados',
+  path: '/divulgacao-de-afiliados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
+  id: '/politica-de-cookies',
+  path: '/politica-de-cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticaDePrivacidadeRoute = PoliticaDePrivacidadeRouteImport.update({
+  id: '/politica-de-privacidade',
+  path: '/politica-de-privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SobreRoute = SobreRouteImport.update({
+  id: '/sobre',
+  path: '/sobre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
+  id: '/termos-de-uso',
+  path: '/termos-de-uso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriasIndexRoute = CategoriasIndexRouteImport.update({
+  id: '/categorias/',
+  path: '/categorias/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriasSlugRoute = CategoriasSlugRouteImport.update({
+  id: '/categorias/$slug',
+  path: '/categorias/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuiasIndexRoute = GuiasIndexRouteImport.update({
+  id: '/guias/',
+  path: '/guias/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuiasSlugRoute = GuiasSlugRouteImport.update({
+  id: '/guias/$slug',
+  path: '/guias/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
@@ -49,7 +109,17 @@ const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/contato': typeof ContatoRoute
+  '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/sobre': typeof SobreRoute
+  '/termos-de-uso': typeof TermosDeUsoRoute
+  '/categorias/$slug': typeof CategoriasSlugRoute
+  '/guias/$slug': typeof GuiasSlugRoute
+  '/categorias/': typeof CategoriasIndexRoute
+  '/guias/': typeof GuiasIndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
@@ -57,7 +127,17 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contato': typeof ContatoRoute
+  '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/sobre': typeof SobreRoute
+  '/termos-de-uso': typeof TermosDeUsoRoute
+  '/categorias/$slug': typeof CategoriasSlugRoute
+  '/guias/$slug': typeof GuiasSlugRoute
+  '/categorias': typeof CategoriasIndexRoute
+  '/guias': typeof GuiasIndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
@@ -66,7 +146,17 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/contato': typeof ContatoRoute
+  '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/sobre': typeof SobreRoute
+  '/termos-de-uso': typeof TermosDeUsoRoute
+  '/categorias/$slug': typeof CategoriasSlugRoute
+  '/guias/$slug': typeof GuiasSlugRoute
+  '/categorias/': typeof CategoriasIndexRoute
+  '/guias/': typeof GuiasIndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
@@ -76,7 +166,17 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/contato'
+    | '/divulgacao-de-afiliados'
+    | '/politica-de-cookies'
+    | '/politica-de-privacidade'
     | '/privacidade'
+    | '/sobre'
+    | '/termos-de-uso'
+    | '/categorias/$slug'
+    | '/guias/$slug'
+    | '/categorias/'
+    | '/guias/'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
@@ -84,7 +184,17 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/contato'
+    | '/divulgacao-de-afiliados'
+    | '/politica-de-cookies'
+    | '/politica-de-privacidade'
     | '/privacidade'
+    | '/sobre'
+    | '/termos-de-uso'
+    | '/categorias/$slug'
+    | '/guias/$slug'
+    | '/categorias'
+    | '/guias'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
@@ -92,7 +202,17 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/contato'
+    | '/divulgacao-de-afiliados'
+    | '/politica-de-cookies'
+    | '/politica-de-privacidade'
     | '/privacidade'
+    | '/sobre'
+    | '/termos-de-uso'
+    | '/categorias/$slug'
+    | '/guias/$slug'
+    | '/categorias/'
+    | '/guias/'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
@@ -101,7 +221,17 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ContatoRoute: typeof ContatoRoute
+  DivulgacaoDeAfiliadosRoute: typeof DivulgacaoDeAfiliadosRoute
+  PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
+  PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
+  SobreRoute: typeof SobreRoute
+  TermosDeUsoRoute: typeof TermosDeUsoRoute
+  CategoriasSlugRoute: typeof CategoriasSlugRoute
+  GuiasSlugRoute: typeof GuiasSlugRoute
+  CategoriasIndexRoute: typeof CategoriasIndexRoute
+  GuiasIndexRoute: typeof GuiasIndexRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
@@ -117,11 +247,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contato': {
+      id: '/contato'
+      path: '/contato'
+      fullPath: '/contato'
+      preLoaderRoute: typeof ContatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/divulgacao-de-afiliados': {
+      id: '/divulgacao-de-afiliados'
+      path: '/divulgacao-de-afiliados'
+      fullPath: '/divulgacao-de-afiliados'
+      preLoaderRoute: typeof DivulgacaoDeAfiliadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politica-de-cookies': {
+      id: '/politica-de-cookies'
+      path: '/politica-de-cookies'
+      fullPath: '/politica-de-cookies'
+      preLoaderRoute: typeof PoliticaDeCookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politica-de-privacidade': {
+      id: '/politica-de-privacidade'
+      path: '/politica-de-privacidade'
+      fullPath: '/politica-de-privacidade'
+      preLoaderRoute: typeof PoliticaDePrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacidade': {
       id: '/privacidade'
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sobre': {
+      id: '/sobre'
+      path: '/sobre'
+      fullPath: '/sobre'
+      preLoaderRoute: typeof SobreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos-de-uso': {
+      id: '/termos-de-uso'
+      path: '/termos-de-uso'
+      fullPath: '/termos-de-uso'
+      preLoaderRoute: typeof TermosDeUsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categorias/': {
+      id: '/categorias/'
+      path: '/categorias'
+      fullPath: '/categorias/'
+      preLoaderRoute: typeof CategoriasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categorias/$slug': {
+      id: '/categorias/$slug'
+      path: '/categorias/$slug'
+      fullPath: '/categorias/$slug'
+      preLoaderRoute: typeof CategoriasSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guias/': {
+      id: '/guias/'
+      path: '/guias'
+      fullPath: '/guias/'
+      preLoaderRoute: typeof GuiasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guias/$slug': {
+      id: '/guias/$slug'
+      path: '/guias/$slug'
+      fullPath: '/guias/$slug'
+      preLoaderRoute: typeof GuiasSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/classificar': {
@@ -157,7 +357,17 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ContatoRoute: ContatoRoute,
+  DivulgacaoDeAfiliadosRoute: DivulgacaoDeAfiliadosRoute,
+  PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
+  PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,
+  SobreRoute: SobreRoute,
+  TermosDeUsoRoute: TermosDeUsoRoute,
+  CategoriasSlugRoute: CategoriasSlugRoute,
+  GuiasSlugRoute: GuiasSlugRoute,
+  CategoriasIndexRoute: CategoriasIndexRoute,
+  GuiasIndexRoute: GuiasIndexRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,

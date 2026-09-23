@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
+import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,7 +31,23 @@ export const Route = createFileRoute("/")({
         content: "Compare o percentual anunciado com o teto real de desconto de cada cupom.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://cupons-afiliado-ml.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [{ rel: "canonical", href: "https://cupons-afiliado-ml.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Cupons de Lojas Afiliadas",
+          url: "https://cupons-afiliado-ml.lovable.app/",
+          inLanguage: "pt-BR",
+          description:
+            "Ferramenta independente para descobrir o desconto real de cupons, com teto e compra mínima informados.",
+        }),
+      },
     ],
   }),
   component: Index,
@@ -1114,6 +1131,17 @@ function Index() {
               <p className="mt-1 max-w-4xl text-sm">
                 Aqui você sempre sabe quanto economiza antes de comprar.
               </p>
+              <nav aria-label="Conteúdo do site" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+                <Link to="/guias" className="text-sm font-bold underline hover:opacity-80">
+                  Guias
+                </Link>
+                <Link to="/categorias" className="text-sm font-bold underline hover:opacity-80">
+                  Categorias
+                </Link>
+                <Link to="/sobre" className="text-sm font-bold underline hover:opacity-80">
+                  Sobre
+                </Link>
+              </nav>
               <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <Link2 className="size-5 text-ml-blue" aria-hidden="true" />
                 Colar o link do produto
@@ -1756,7 +1784,10 @@ function Index() {
         </div>
         <div className="mx-auto mt-6 flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:px-6 lg:px-8 sm:flex-row sm:items-center sm:justify-between">
 
-          <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
+          <div className="space-y-1">
+            <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
+            <AvisoAfiliado />
+          </div>
           <div className="text-left sm:text-right">
             <Button type="button" variant="ghost" size="sm" disabled={classificando} onClick={classificar} className="px-2 text-xs text-secondary-ink">
               <WandSparkles aria-hidden="true" />{classificando ? "Classificando lojas..." : "Classificar lojas com IA"}
@@ -1765,6 +1796,8 @@ function Index() {
           </div>
         </div>
       </footer>
+
+      <RodapeInstitucional />
     </div>
   );
 }
