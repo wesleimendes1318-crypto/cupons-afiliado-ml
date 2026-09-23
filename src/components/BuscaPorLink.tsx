@@ -21,7 +21,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -49,6 +49,35 @@ type Cupom = {
   economia: number | null;
   bloqueado: boolean | null;
 };
+
+function mensagemProduto({
+  titulo,
+  vendedor,
+  cupom,
+  codigo,
+  link,
+}: {
+  titulo?: string | null;
+  vendedor?: string | null;
+  cupom?: Cupom | null;
+  codigo: string;
+  link: string;
+}) {
+  const linhas = ["Olha o cupom que encontrei 👀"];
+  if (titulo) linhas.push(`Produto: ${titulo}`);
+  if (vendedor) linhas.push(`Loja: ${vendedor}`);
+  if (cupom?.titulo) linhas.push(`Desconto: ${cupom.titulo}`);
+  if (cupom?.teto != null) linhas.push(`Economia máxima: ${brl(cupom.teto)}`);
+  else if (cupom) linhas.push("Limite: sem limite de valor");
+  if (cupom?.minimo != null) linhas.push(`Compra mínima: ${brl(cupom.minimo)}`);
+  if (cupom?.vence) linhas.push(`Válido até: ${dataBR(cupom.vence)}`);
+  linhas.push(`Etiqueta: ${codigo}`, `Link afiliado do produto: ${link}`);
+  return linhas.join("\n");
+}
+
+function compartilharWhatsApp(texto: string) {
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+}
 
 /* A mesma coisa que a pessoa quer comprar, vendida por OUTRA loja que tem
    cupom. Só chega aqui quando é o mesmo produto de catálogo do Mercado Livre,
@@ -527,7 +556,19 @@ function copiarAgora(texto: string): boolean {
   }
 }
 
-function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }) {
+function CodigoNaHora({
+  cupomId,
+  destino,
+  titulo,
+  vendedor,
+  cupom,
+}: {
+  cupomId: number;
+  destino: string;
+  titulo?: string | null;
+  vendedor?: string | null;
+  cupom?: Cupom | null;
+}) {
   const [codigo, setCodigo] = useState<string | null>(null);
   const [fase, setFase] = useState<"parado" | "gerando" | "falhou">("parado");
   const [copiou, setCopiou] = useState(false);
@@ -596,6 +637,14 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
           className="mt-2 w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95"
         >
           {redirecionando ? "Copiado! Abrindo o produto..." : "Copiar e abrir o produto"}
+        </button>
+        <button
+          type="button"
+          onClick={() => compartilharWhatsApp(mensagemProduto({ titulo, vendedor, cupom, codigo, link: destino }))}
+          className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-success px-3 py-2 text-sm font-bold text-success transition-colors hover:bg-success/10"
+        >
+          <Share2 className="size-4" aria-hidden="true" />
+          Compartilhar cupom no WhatsApp
         </button>
       </div>
     );
@@ -676,7 +725,7 @@ function Resultado({
       <CondicoesDoCupom analise={a} />
 
       {a?.temCupom && a.cupom?.id != null && !trocar && (
-        <CodigoNaHora cupomId={a.cupom.id} destino={link} />
+        <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
       )}
 
 

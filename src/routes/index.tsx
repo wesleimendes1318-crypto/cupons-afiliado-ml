@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, LoaderCircle, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, LoaderCircle, Search, Share2, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -308,6 +308,25 @@ function descricaoCupom(cupom: Cupom) {
   const validade = cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "não informada";
   const tetoCadastrado = tetoReal(cupom);
   return `ID ${cupom.id} - Cupom válido no Brasil, até ${validade}, incluindo ambas as datas, para compras de produtos realizadas no site e no aplicativo da plataforma. Válido apenas para os produtos selecionados e enquanto durarem os estoques. O cupom será aplicado automaticamente no carrinho elegível, sem necessidade de ativação pelo usuário. O cupom é aplicável apenas para compras mínimas de produtos selecionados cujo valor seja igual ou superior a ${formatarMoeda(cupom.compra_min)}. O cupom consiste em ${cupom.desconto ?? "desconto não informado"} sobre o valor da compra dos produtos selecionados. Não será aplicado sobre o custo de envio. O cupom é limitado a 1 (um) uso por CPF. ${tetoCadastrado != null ? `Máximo de desconto de ${brl.format(tetoCadastrado)}. ` : ""}Este cupom é de responsabilidade do vendedor dos produtos participantes.`;
+}
+
+function mensagemCompartilharCupom(cupom: Cupom, codigo: string, linkLoja: string) {
+  const linhas = [
+    "Olha o cupom que encontrei 👀",
+    `Loja: ${cupom.vendedor}`,
+    `Desconto: ${percentualTexto(cupom)}`,
+  ];
+  const limite = formatarTeto(cupom);
+  if (limite === "sem limite de valor") linhas.push("Limite: sem limite de valor");
+  else if (limite !== "Limite não informado") linhas.push(`Economia máxima: ${limite}`);
+  if (cupom.compra_min != null) linhas.push(`Compra mínima: ${brl.format(cupom.compra_min)}`);
+  if (cupom.vence) linhas.push(`Válido até: ${dataCurta.format(dataDoBanco(cupom.vence))}`);
+  linhas.push(`Etiqueta: ${codigo}`, `Ver produtos da loja: ${linkLoja}`);
+  return linhas.join("\n");
+}
+
+function abrirWhatsApp(texto: string) {
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
 }
 
 
@@ -644,6 +663,7 @@ export function AcaoDoCupom({
   const consultado = useConsultado(cupom.id);
   const [copiou, setCopiou] = useState(false);
   const [esperando, setEsperando] = useState(false);
+  const [compartilhando, setCompartilhando] = useState(false);
   const [redirecionando, setRedirecionando] = useState(false);
   const redirecionamento = useRef<number | null>(null);
   const icone = iconeClassName ?? "size-4 shrink-0";
@@ -686,6 +706,12 @@ export function AcaoDoCupom({
     abrir(codigo);
   }, [esperando, gerando, loja.gerando, codigo, destino, abrir]);
 
+  useEffect(() => {
+    if (!compartilhando || gerando || !codigo || !destino) return;
+    setCompartilhando(false);
+    abrirWhatsApp(mensagemCompartilharCupom(cupom, codigo, destino));
+  }, [compartilhando, gerando, codigo, destino, cupom]);
+
   const jaTem = Boolean(codigo);
 
   return (
@@ -720,6 +746,30 @@ export function AcaoDoCupom({
               ? "Consultado — abrir de novo"
               : "Usar este cupom"}
       </Button>
+      {destino && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            if (codigo) {
+              abrirWhatsApp(mensagemCompartilharCupom(cupom, codigo, destino));
+              return;
+            }
+            setCompartilhando(true);
+            void gerar();
+          }}
+          disabled={gerando || loja.gerando || redirecionando}
+          aria-busy={compartilhando && gerando}
+          className="mt-2 h-auto min-h-11 w-full whitespace-normal border-ml-blue/40 px-3 py-2 text-sm font-bold text-ml-blue hover:bg-ml-blue/5"
+        >
+          {compartilhando && gerando ? (
+            <LoaderCircle className="animate-giro-calmo size-4" aria-hidden="true" />
+          ) : (
+            <Share2 className="size-4" aria-hidden="true" />
+          )}
+          {compartilhando && gerando ? "Preparando para compartilhar…" : "Compartilhar cupom no WhatsApp"}
+        </Button>
+      )}
       {(gerando || loja.gerando) && (
         <EsperaDoCupom codigoPronto={Boolean(codigo)} linkPronto={Boolean(destino)} />
       )}

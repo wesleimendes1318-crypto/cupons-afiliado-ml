@@ -1191,6 +1191,7 @@ async function atenderPedidos() {
               if (alt) {
                 const la = await gerarNaAba(tabId, alt.url);
                 outra = {
+                  cupomId: alt.cupom.id,
                   vendedor: alt.vendedor,
                   preco: alt.preco,
                   economia: alt.economia,
@@ -1215,7 +1216,7 @@ async function atenderPedidos() {
             outraLoja: outra,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
-              titulo: cupom.desconto, vence: cupom.vence,
+              id: cupom.id, titulo: cupom.desconto, vence: cupom.vence,
               teto: aval ? aval.teto : null, minimo: aval ? aval.minimo : null,
               economia: aval ? aval.economia : null,
               bloqueado: aval ? aval.bloqueado : null
