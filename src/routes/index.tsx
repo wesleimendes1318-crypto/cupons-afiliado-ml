@@ -584,6 +584,7 @@ export function AcaoDoCupom({
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
+  const consultado = useConsultado(cupom.id);
   const [copiou, setCopiou] = useState(false);
   const [esperando, setEsperando] = useState(false);
   const [redirecionando, setRedirecionando] = useState(false);
@@ -606,6 +607,7 @@ export function AcaoDoCupom({
     (codigoPronto?: string | null) => {
       if (!destino) return;
       if (codigoPronto) setCopiou(copiarTexto(codigoPronto));
+      marcarConsultado(cupom.id);
       setRedirecionando(true);
       /* A pequena pausa mantém a confirmação visível e preserva a animação do
          cartão. A navegação na própria aba não é bloqueada pelo navegador e
