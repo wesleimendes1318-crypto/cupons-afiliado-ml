@@ -263,6 +263,6 @@ export async function salvarVitrines(token, lista) {
   if (!token || !lista.length) return null;
   return chamarRpc(RPC_VIT_SALVAR, {
     p_token: token,
-    p_lista: lista.map(x => ({ id: x.id, ok: !!x.ok, origem: x.origem || null }))
+    p_lista: lista.map(x => ({ id: x.id, ok: !!x.ok, origem: x.origem || null, motivo: x.motivo || null }))
   });
 }

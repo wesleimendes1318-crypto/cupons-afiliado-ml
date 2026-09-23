@@ -770,10 +770,15 @@ async function conferirVitrines(limite = 40) {
         let origem = linha.link_origem;
         try {
           if (!origem) origem = await vitrineDoCupom(tabId, linha.id);
-          if (!origem) { res.push({ id: linha.id, ok: false, origem: null }); continue; }
+          /* Nao descobrir a URL da vitrine NAO e prova de que a loja esta
+             vazia. Marcar ok:false aqui foi o que encheu o banco de "sem
+             produto no ar": o cupom saia da lista do site por uma falha de
+             leitura, nao por falta de produto. Sem URL, nao se conclui nada e
+             o cupom volta para a fila. */
+          if (!origem) continue;
           const v = await vitrineTemProduto(origem);
           // ok === null e erro de rede: nao conclui nada, tenta outro dia.
-          if (v.ok !== null) res.push({ id: linha.id, ok: !!v.ok, origem });
+          if (v.ok !== null) res.push({ id: linha.id, ok: !!v.ok, origem, motivo: v.motivo || null });
         } catch (e) {
           console.warn('[vitrines]', linha.id, e.message);
           if (/deslogad/i.test(e.message || '')) break;
@@ -1059,6 +1064,67 @@ function diaSP() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
+/* ------------------------------------------------- janelas de atualizacao
+
+   Quatro horarios de Brasilia escolhidos pelo Weslei: 01:00, 11:00, 17:30 e
+   21:00. Em cada um a extensao faz a rodada forte: recarrega a lista inteira
+   de cupons do hub e gera ate 150 etiquetas.
+
+   Por que janela e nao alarme cravado no horario: alarme de horario exato
+   morre junto com o service worker e nao volta sozinho se a maquina estiver
+   ocupada naquele minuto. Aqui o alarme curto so pergunta "ja passei por esta
+   janela hoje?". Basta o servidor estar de pe em qualquer momento dentro da
+   janela para a rodada acontecer, e se ele ficou fora do ar a proxima janela
+   recupera.
+
+   Cada janela fica marcada no storage, entao roda uma vez e nao repete a cada
+   10 minutos. */
+const JANELAS = ['01:00', '11:00', '17:30', '21:00'];
+const JANELA_DURACAO_MIN = 90;
+const ETIQUETAS_POR_JANELA = 150;
+
+function minutosAgoraSP() {
+  const hm = new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const [h, m] = hm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function janelaAgora() {
+  const agora = minutosAgoraSP();
+  for (const j of JANELAS) {
+    const [h, m] = j.split(':').map(Number);
+    const ini = h * 60 + m;
+    if (agora >= ini && agora < ini + JANELA_DURACAO_MIN) return j;
+  }
+  return null;
+}
+
+/* A rodada forte da janela: lista completa de cupons, depois etiquetas.
+
+   "Gerou cupom, gera a etiqueta": o refresh do indice entra primeiro, entao os
+   cupons novos ja estao no banco quando as etiquetas sao pedidas em seguida. */
+async function rodadaDaJanela(janela) {
+  const marca = diaSP() + ' ' + janela;
+  const { janelaFeita } = await chrome.storage.local.get('janelaFeita');
+  if (janelaFeita === marca) return { jaFeita: true };
+
+  /* Marca ANTES de comecar. Se a rodada quebrar no meio, a proxima janela
+     recupera; repetir a rodada inteira a cada 10 minutos seria pior. */
+  await chrome.storage.local.set({ janelaFeita: marca });
+
+  const saida = { janela };
+  try { await obterIndice(true); saida.indice = 'ok'; }
+  catch (e) { saida.indice = 'falhou: ' + e.message; }
+
+  try { saida.etiquetas = await gerarEtiquetas(ETIQUETAS_POR_JANELA); }
+  catch (e) { saida.etiquetas = 'falhou: ' + e.message; }
+
+  console.log('[janela]', JSON.stringify(saida));
+  return saida;
+}
+
 async function gastoDoDia() {
   const { gastoFila } = await chrome.storage.local.get('gastoFila');
   const dia = diaSP();
@@ -1082,6 +1148,14 @@ async function andarFila() {
 
   andandoFila = true;
   try {
+    /* Janela de atualizacao tem prioridade sobre a conferencia de fundo:
+       e nela que a lista cresce e as etiquetas nascem. */
+    const janela = janelaAgora();
+    if (janela) {
+      const r = await rodadaDaJanela(janela);
+      if (!r.jaFeita) return r;
+    }
+
     const g = await gastoDoDia();
 
     if (g.vitrines < TETO_DIA_VITRINES) {
@@ -1323,10 +1397,12 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
    recarregada 2x por dia e a conferencia de condicoes anda em lotes menores.
    O alarme 'pedidos' bate no Supabase dele, nao no Mercado Livre, entao pode
    continuar de minuto em minuto: e ele que faz o site responder na hora. */
+/* O 'refresh' e o 'diario' sairam: a lista completa e as etiquetas agora
+   acontecem nas quatro janelas (01:00, 11:00, 17:30 e 21:00 de Brasilia), que
+   o alarme 'fila' verifica de 10 em 10 minutos. Alarme cravado em horario nao
+   sobrevive ao service worker dormir; janela sobrevive. */
 const ALARMES = {
-  refresh: 720,   // 2x por dia: recarrega a lista completa de cupons
-  diario: 1440,   // 1x por dia: etiquetas (codigos permanentes, sem pressa)
-  fila: 10,       // conferencia continua, com teto diario
+  fila: 10,       // janelas de atualizacao + conferencia continua
   pedidos: 1,     // Supabase, nao ML: pedidos vindos do site
 };
 
@@ -1359,13 +1435,10 @@ chrome.alarms.onAlarm.addListener(async a => {
     andarFila().catch(e => console.warn('[fila]', e.message));
     return;
   }
-  if (a.name === 'refresh') {
-    obterIndice(true).catch(() => {});
-    return;
-  }
-  if (a.name === 'diario') {
-    // Etiqueta e codigo permanente: 1x por dia, depois que a fila ja separou
-    // quais cupons prestam e quais lojas tem produto no ar.
-    try { await gerarEtiquetas(20); } catch (e) { console.warn('[etiquetas]', e.message); }
+  /* 'refresh' e 'diario' nao existem mais: viraram as janelas, tratadas
+     dentro de andarFila. Alarmes antigos ainda registrados no navegador do
+     Weslei chegam aqui e sao descartados de proposito. */
+  if (a.name === 'refresh' || a.name === 'diario') {
+    try { await chrome.alarms.clear(a.name); } catch (e) {}
   }
 });
