@@ -69,13 +69,56 @@ export function limparJson(texto: string) {
 
 type ResultadoIa = { ok: true; texto: string } | { ok: false; status: number; erro: string };
 
-/* Modelo principal: Gemini na versao Pro. Se ele nao estiver disponivel para a
-   chave (ou estiver sem cota), cai para o Flash e, por ultimo, para a IA da
-   plataforma. */
-const MODELOS_GEMINI = ["gemini-pro-latest", "gemini-flash-latest"] as const;
+/* Modelos preferidos, em ordem. Mas nao se confia nesta lista: nome de modelo
+   do Gemini muda, e um apelido que existia ontem responde 404 hoje. Quando
+   todos falham por 404, o codigo pergunta para a propria chave quais modelos
+   ela tem (descobrirModelo abaixo) em vez de o site ficar sem IA porque uma
+   constante envelheceu. Foi exatamente isso que derrubou a busca com IA: a
+   chave estava certa nos secrets e os dois apelidos daqui nao existiam mais,
+   entao tudo caia no gateway da plataforma, que sem credito devolve erro. */
+const MODELOS_GEMINI = ["gemini-flash-latest", "gemini-pro-latest"] as const;
+
+/* Guardado por instancia do servidor: descobrir custa uma chamada, e o
+   resultado vale para todas as requisicoes seguintes. */
+let modeloDescoberto: string | null = null;
 
 function urlGemini(modelo: string) {
   return `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+}
+
+/** Pergunta ao Gemini quais modelos esta chave pode usar e escolhe um.
+ *  Prefere Flash: cota gratuita maior e resposta mais rapida, que e o que este
+ *  site precisa. Devolve null se nem a listagem funcionar, e ai o problema e a
+ *  chave, nao o nome do modelo. */
+async function descobrirModelo(apiKey: string): Promise<string | null> {
+  if (modeloDescoberto) return modeloDescoberto;
+  try {
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+      headers: { "X-goog-api-key": apiKey },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!r.ok) {
+      console.warn("[ia] nao consegui listar modelos do Gemini:", r.status);
+      return null;
+    }
+    const dados = (await r.json()) as {
+      models?: { name?: string; supportedGenerationMethods?: string[] }[];
+    };
+    const servem = (dados.models ?? [])
+      .filter((m) => (m.supportedGenerationMethods ?? []).includes("generateContent"))
+      .map((m) => (m.name ?? "").replace(/^models\//, ""))
+      .filter((n) => n && !/embedding|aqa|vision|image|tts|audio|native/i.test(n));
+    if (!servem.length) return null;
+    const escolhido = servem.find((n) => /flash/i.test(n)) ?? servem[0] ?? null;
+    if (escolhido) {
+      modeloDescoberto = escolhido;
+      console.warn("[ia] modelo do Gemini descoberto:", escolhido);
+    }
+    return escolhido;
+  } catch (e) {
+    console.warn("[ia] falha ao listar modelos:", (e as Error).message);
+    return null;
+  }
 }
 
 /**
@@ -129,7 +172,9 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
   };
 
   let ultimo: ResultadoIa = { ok: false, status: 502, erro: erroPorStatus(502) };
-  for (const modelo of MODELOS_GEMINI) {
+  let todosDeram404 = true;
+
+  const tentar = async (modelo: string): Promise<ResultadoIa | null> => {
     try {
       const resposta = await fetch(urlGemini(modelo), {
         method: "POST",
@@ -140,15 +185,42 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
       if (resposta.ok) {
         const texto = textoGemini(await resposta.json());
         if (texto) return { ok: true, texto };
+        todosDeram404 = false;
         ultimo = { ok: false, status: 502, erro: erroPorStatus(502) };
-        continue;
+        return null;
       }
+      if (resposta.status !== 404) todosDeram404 = false;
+      console.warn("[ia] gemini", modelo, "respondeu", resposta.status);
       ultimo = { ok: false, status: resposta.status, erro: erroPorStatus(resposta.status) };
       /* 404 = modelo indisponivel para a chave; 429 = sem cota. Nos dois casos
          vale tentar o proximo modelo antes de desistir. */
       if (resposta.status !== 404 && resposta.status !== 429 && resposta.status < 500) return ultimo;
+      return null;
     } catch {
+      todosDeram404 = false;
       ultimo = { ok: false, status: 502, erro: erroPorStatus(502) };
+      return null;
+    }
+  };
+
+  /* Primeiro o modelo ja descoberto nesta instancia, depois os preferidos. */
+  const ordem = modeloDescoberto
+    ? [modeloDescoberto, ...MODELOS_GEMINI.filter((m) => m !== modeloDescoberto)]
+    : [...MODELOS_GEMINI];
+
+  for (const modelo of ordem) {
+    const r = await tentar(modelo);
+    if (r) return r;
+  }
+
+  /* Nenhum nome da lista existe para esta chave. Em vez de desistir e queimar
+     credito no gateway, pergunta quais modelos a chave tem e tenta uma vez. */
+  if (todosDeram404) {
+    modeloDescoberto = null;
+    const achado = await descobrirModelo(apiKey);
+    if (achado) {
+      const r = await tentar(achado);
+      if (r) return r;
     }
   }
   return ultimo;
