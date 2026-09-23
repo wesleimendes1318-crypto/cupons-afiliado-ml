@@ -637,11 +637,6 @@ function useCodigoDoCupom(cupom: Cupom) {
   const [codigo, setCodigo] = useState<string | null>(cupom.codigo_cupom ?? null);
   const [gerando, setGerando] = useState(false);
   const [falhou, setFalhou] = useState(false);
-  /* Preenchido quando a maquina que gera os codigos esta em pausa de seguranca.
-     Antes disso o botao girava 88 segundos e morria sem dizer nada, e do lado
-     de fora parecia site quebrado. Nao era: era o Mercado Livre tendo pedido
-     verificacao e o robo respeitando o pedido, que e o certo a fazer. */
-  const [emPausa, setEmPausa] = useState<string | null>(null);
   const relogios = useRef<number[]>([]);
 
   useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
@@ -656,23 +651,6 @@ function useCodigoDoCupom(cupom: Cupom) {
       if (resposta.startsWith("#")) { setCodigo(resposta); setGerando(false); return; }
       if (resposta !== "pedido") { setGerando(false); setFalhou(true); return; }
 
-      /* Pergunta de uma vez se a maquina esta parada. Se estiver, nao adianta
-         ficar 88 segundos olhando: o codigo nao vem hoje, e e melhor dizer. */
-      try {
-        const { data: estado } = await supabase.rpc("estado_do_robo");
-        const linha = (Array.isArray(estado) ? estado[0] : estado) as
-          { freio_motivo?: string | null; freio_ate?: string | null } | null;
-        const motivo = (linha?.freio_motivo ?? "").trim();
-        if (motivo) {
-          setEmPausa(
-            linha?.freio_ate === "amanha"
-              ? "O Mercado Livre pediu uma verificação de segurança e eu parei por hoje. Seu código sai amanhã."
-              : "O Mercado Livre pediu uma verificação de segurança e eu parei alguns minutos. Tente de novo daqui a pouco.",
-          );
-          setGerando(false);
-          return;
-        }
-      } catch { /* sem resposta aqui, segue esperando como antes */ }
     } catch {
       setGerando(false);
       setFalhou(true);
@@ -695,7 +673,7 @@ function useCodigoDoCupom(cupom: Cupom) {
     relogios.current.push(window.setTimeout(olhar, 3000));
   }, [codigo, gerando, cupom.id]);
 
-  return { codigo, gerando, falhou, gerar, emPausa };
+  return { codigo, gerando, falhou, gerar };
 }
 
 /** ENDEREÇO DA LISTA DE PRODUTOS DA LOJA.
@@ -935,7 +913,7 @@ export function AcaoDoCupom({
   className?: string;
   iconeClassName?: string;
 }) {
-  const { codigo, gerando, falhou, gerar, emPausa } = useCodigoDoCupom(cupom);
+  const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
   const consultado = useConsultado(cupom.id);
   const [copiou, setCopiou] = useState(false);
@@ -973,15 +951,28 @@ export function AcaoDoCupom({
     [destino, cupom.id],
   );
 
-  /* Depois do clique, espera código E link validados. O código permanece
-     visível enquanto a navegação acontece, sem mandar a pessoa para uma página
-     de loja deduzida pelo nome. */
+  /* A LOJA ABRE NA HORA. O CODIGO ALCANCA A PESSOA DEPOIS.
+
+     Este era o funil vazando. O cartao esperava o codigo ficar pronto ANTES de
+     abrir a loja: ate 88 segundos parado num botao girando, e no fim das contas
+     quase sempre sem codigo, porque so 90 dos 972 cupons tem codigo guardado.
+     Quem chega no site clica, espera, desiste. Visita que nao vira nem visita a
+     loja nao vira venda nenhuma.
+
+     Trocado: o clique leva a pessoa para a prateleira da loja imediatamente, que
+     e o passo que comeca a compra. O codigo continua sendo gerado atras, e quando
+     fica pronto aparece no cartao para ela copiar antes de fechar o carrinho -
+     e ela leva minutos escolhendo produto, entao chega bem antes do checkout.
+
+     Vale a troca? O codigo carrega a atribuicao, entao esperar por ele parece
+     proteger a comissao. Mas esperar estava entregando as duas coisas zeradas:
+     sem venda e sem comissao. Loja aberta agora, codigo em seguida, e o unico
+     arranjo em que as duas ainda podem acontecer. */
   useEffect(() => {
-    if (!esperando || gerando || loja.gerando) return;
-    if (!codigo || !destino) return;
+    if (!esperando || !destino) return;
     setEsperando(false);
     abrir(codigo);
-  }, [esperando, gerando, loja.gerando, codigo, destino, abrir]);
+  }, [esperando, destino, codigo, abrir]);
 
   useEffect(() => {
     if (!compartilhando || gerando || !codigo || !destino) return;
@@ -1019,33 +1010,28 @@ export function AcaoDoCupom({
     <>
       <Button
         onClick={() => {
-          if (jaTem && destino) {
-            /* Código e link prontos: copia e abre no mesmo clique. */
-            abrir(codigo);
-            return;
-          }
-          setEsperando(true);
+          /* Com codigo pronto: copia e abre, tudo no mesmo clique.
+             Sem codigo: abre a loja do mesmo jeito e pede o codigo em paralelo.
+             O que NAO acontece mais e a pessoa ficar presa esperando. */
           if (!jaTem) void gerar();
-          if (!destino) void loja.gerar();
+          setEsperando(true);
         }}
-        disabled={gerando || loja.gerando || redirecionando}
-        aria-busy={gerando || loja.gerando || redirecionando}
+        disabled={redirecionando}
+        aria-busy={redirecionando}
         className={className}
       >
-        {gerando || loja.gerando ? (
+        {redirecionando ? (
           <LoaderCircle className={cn(icone, "animate-giro-calmo")} aria-hidden="true" />
-        ) : consultado && !redirecionando ? (
+        ) : consultado ? (
           <Check className={icone} aria-hidden="true" />
         ) : (
           <Link2 className={icone} aria-hidden="true" />
         )}
         {redirecionando
-          ? "Copiado! Abrindo a loja..."
-          : gerando || loja.gerando
-            ? codigo ? "Preparando a loja..." : "Criando seu código..."
-            : consultado
-              ? "Consultado — abrir de novo"
-              : "Usar este cupom"}
+          ? codigo ? "Copiado! Abrindo a loja..." : "Abrindo a loja..."
+          : consultado
+            ? "Ver os produtos da loja de novo"
+            : "Ver os produtos desta loja"}
       </Button>
       {destino && (
         <Button
@@ -1059,7 +1045,7 @@ export function AcaoDoCupom({
             setCompartilhando(true);
             void gerar();
           }}
-          disabled={gerando || loja.gerando || redirecionando}
+          disabled={redirecionando}
           aria-busy={compartilhando && gerando}
           className="mt-2 h-auto min-h-11 w-full whitespace-normal border-ml-blue/40 px-3 py-2 text-sm font-bold text-ml-blue hover:bg-ml-blue/5"
         >
@@ -1073,14 +1059,6 @@ export function AcaoDoCupom({
       )}
       {(gerando || loja.gerando) && (
         <EsperaDoCupom codigoPronto={Boolean(codigo)} linkPronto={Boolean(destino)} />
-      )}
-      {emPausa && !codigo && (
-        <p className="mt-2 rounded-md border border-amber-400/60 bg-amber-50 p-2.5 text-[12px] leading-4 text-foreground dark:bg-amber-950/30">
-          {emPausa}{" "}
-          {destino
-            ? "Você pode abrir a loja agora mesmo pelo botão acima e aproveitar o preço dela; o cupom eu te entrego assim que voltar."
-            : "Nada com você: é comigo mesmo."}
-        </p>
       )}
       {consultado && !redirecionando && (
         <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-success">
