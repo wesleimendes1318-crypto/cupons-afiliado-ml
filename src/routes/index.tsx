@@ -1130,6 +1130,17 @@ function Index() {
               <p className="mt-1 max-w-4xl text-sm">
                 Aqui você sempre sabe quanto economiza antes de comprar.
               </p>
+              <nav aria-label="Conteúdo do site" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+                <Link to="/guias" className="text-sm font-bold underline hover:opacity-80">
+                  Guias
+                </Link>
+                <Link to="/categorias" className="text-sm font-bold underline hover:opacity-80">
+                  Categorias
+                </Link>
+                <Link to="/sobre" className="text-sm font-bold underline hover:opacity-80">
+                  Sobre
+                </Link>
+              </nav>
               <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
                 <Link2 className="size-5 text-ml-blue" aria-hidden="true" />
                 Colar o link do produto
