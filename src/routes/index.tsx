@@ -68,6 +68,9 @@ type Cupom = {
      cupom e guardado no banco, entao chega pronto aqui. Null enquanto a fila
      nao chegou nesse cupom. */
   link_afiliado: string | null;
+  /* Endereço PÚBLICO da loja no Mercado Livre, sem etiqueta nenhuma.
+     É o que o botão abre agora. Ver o comentário do useLinkDaLoja. */
+  link_origem: string | null;
 };
 
 type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
@@ -509,62 +512,31 @@ function useCodigoDoCupom(cupom: Cupom) {
   return { codigo, gerando, falhou, gerar };
 }
 
-/* Nem todo cupom já tem o link da loja pronto. Quando falta, o site registra o
-   pedido (pedir_link) e a extensão gera o link de indicação em segundos — o
-   mesmo caminho do "colar link do produto", só que apontando para a vitrine da
-   loja. Assim o botão sempre leva a pessoa para a loja, nunca só rola a tela. */
+/* O endereço da loja NÃO precisa ser link de afiliado.
+
+   Quem paga a comissão aqui é a etiqueta: o código #WSLMENDES... que a pessoa
+   cola no carrinho. Com ele a venda já é atribuída, então o botão pode abrir a
+   loja por um endereço público comum do Mercado Livre.
+
+   Isso resolve de vez o pior bug do projeto. Antes o site tentava transformar a
+   página da loja em link de afiliado, e o gerador do Mercado Livre não preserva
+   endereço de listagem: devolvia um meli.la que jogava o comprador no perfil
+   social do Weslei, às vezes numa página de erro (XMEHV37590). Medido hoje em
+   três cupons, três vezes o mesmo desfecho.
+
+   Testado agora, sem etiqueta nenhuma na URL:
+     lista.mercadolivre.com.br/_CustId_3152110291  ->  152 resultados da loja
+
+   Então: nada de gerar, nada de esperar, nada que possa falhar. O endereço já
+   está no banco, veio do próprio hub de cupons, e é só abrir.
+
+   Quando o cupom não tem esse endereço guardado, o botão não promete loja
+   nenhuma. Chutar a URL pelo nome de exibição da loja leva a página inexistente
+   quando o nome público difere do usado no endereço. */
 function useLinkDaLoja(cupom: Cupom) {
-  const pronto = cupom.vitrine_ok === false ? null : (cupom.link_afiliado ?? null);
-  const [link, setLink] = useState<string | null>(pronto);
-  const [gerando, setGerando] = useState(false);
-  const [falhou, setFalhou] = useState(false);
-  const relogios = useRef<number[]>([]);
-
-  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
-
-  const gerar = useCallback(async () => {
-    if (link || gerando) return;
-    const loja = String(cupom.vendedor ?? "").trim();
-    if (!loja) { setFalhou(true); return; }
-    setGerando(true);
-    setFalhou(false);
-    let id: number | null = null;
-    try {
-      const { data, error } = await supabase.rpc("pedir_link", {
-        p_url: `https://lista.mercadolivre.com.br/pagina/${encodeURIComponent(loja)}/`,
-      });
-      if (error) throw error;
-      id = Number(data);
-    } catch {
-      setGerando(false);
-      setFalhou(true);
-      return;
-    }
-
-    const limite = Date.now() + 88_000;
-    const olhar = async () => {
-      try {
-        const { data } = await supabase.rpc("consultar_pedido", { p_id: id });
-        const linha = (Array.isArray(data) ? data[0] : data) as
-          | { status?: string; link?: string | null }
-          | null;
-        if (linha?.status === "pronto" && linha.link) {
-          setLink(linha.link);
-          setGerando(false);
-          /* Guarda o link no cupom: quem chegar depois abre a loja na hora,
-             sem depender da extensao estar ligada naquele momento. */
-          void supabase.rpc("salvar_link_loja", { p_cupom_id: cupom.id, p_link: linha.link });
-          return;
-        }
-        if (linha?.status === "falhou") { setGerando(false); setFalhou(true); return; }
-      } catch { /* tenta de novo */ }
-      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else { setGerando(false); setFalhou(true); }
-    };
-    relogios.current.push(window.setTimeout(olhar, 3000));
-  }, [link, gerando, cupom.vendedor, cupom.id]);
-
-  return { link, gerando, falhou, gerar };
+  const link = (cupom.link_origem ?? "").trim() || null;
+  const gerar = useCallback(async () => {}, []);
+  return { link, gerando: false, falhou: false, gerar };
 }
 
 /* "Usar este cupom" faz as três coisas de uma vez: copia o código para a área
@@ -727,7 +699,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,codigo_cupom,vitrine_ok",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,link_origem,codigo_cupom,vitrine_ok",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
