@@ -501,6 +501,20 @@ function EsperaDoCupom({
   );
 }
 
+
+/* Avisa a extensao que existe pedido novo.
+
+   O alarme do Chrome nao roda em menos de 1 minuto, entao sem este aviso quem
+   clica num botao do cartao fica ate 60 segundos esperando. O colar-link ja
+   usava a ponte e responde em 3 segundos; os botoes do cartao nao usavam, e e
+   essa a lentidao que o Weslei estava sentindo. */
+function avisarExtensao(id: number) {
+  if (typeof window === "undefined") return;
+  try {
+    window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id }, window.location.origin);
+  } catch { /* sem extensao: o alarme cobre */ }
+}
+
 /* Cupom sem codigo: a pessoa pede e espera aqui mesmo
 
    A ordem importa: o site resolve sozinho. Registra o pedido, a extensao gera
@@ -520,6 +534,7 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { setCodigo(resposta); setFase("pronto"); return; }
       if (resposta !== "pedido") { setFase("demorou"); return; }
+      avisarExtensao(cupom.id);
     } catch { setFase("demorou"); return; }
 
     // Pergunta a cada 4s por 88s. A extensao trabalha de minuto em minuto.
@@ -686,18 +701,38 @@ function useLinkDaLoja(cupom: Cupom) {
      ter botão do que ter um que não paga o Weslei. O caminho nesse caso é
      colar o link do produto, que gera link de afiliado de verdade. */
   const guardado = (cupom.link_afiliado ?? "").trim() || null;
-  const origem = (cupom.link_origem ?? "").trim();
+  const origemBruta = (cupom.link_origem ?? "").trim() || null;
+
+  /* O perfil social do Weslei NUNCA serve de destino: é uma vitrine com
+     produtos de lojas variadas, e quem clicou quer ESTA loja. Link de afiliado
+     gerado a partir de listagem que o Mercado Livre não preserva cai
+     exatamente lá, e foi por isso que esses foram apagados do banco. */
+  const ehPerfil = (u: string | null) => !!u && /\/social\/|\/perfil\//i.test(u);
+  const origem = ehPerfil(origemBruta) ? null : origemBruta;
+  const destinoBase = (ehPerfil(guardado) ? null : guardado) || origem;
 
   /* Origem que o gerador do Mercado Livre preserva. O banco recusa as outras
-     em pedir_link, entao nem adianta oferecer o botao para elas. */
-  const podeGerar = /_Container_/i.test(origem);
+     em pedir_link, entao nem adianta pedir link novo para elas. */
+  const podeGerar = /_Container_/i.test(origem ?? "");
 
-  const [link, setLink] = useState<string | null>(guardado);
+  /* EU TINHA COMPLICADO ISTO.
+
+     Eu vinha escondendo o botao quando nao havia link de afiliado, com medo de
+     entregar a venda sem comissao. O raciocinio estava errado, e o Weslei tem
+     razao: quando a comissao nao vem pelo link, vem pela ETIQUETA. O codigo do
+     cupom e a versao dele do cupom da loja, e e o codigo que carrega a
+     atribuicao no checkout.
+
+     Entao o botao sempre leva a pessoa para a loja que oferece o cupom, que e
+     o unico destino que faz sentido: link de afiliado quando existe, e a
+     propria campanha do cupom quando nao existe. Mandar alguem rolar a pagina
+     para colar um link de anuncio que ela ainda nem escolheu era absurdo. */
+  const [link, setLink] = useState<string | null>(destinoBase);
   const [gerando, setGerando] = useState(false);
   const [falhou, setFalhou] = useState(false);
   const relogios = useRef<number[]>([]);
 
-  useEffect(() => setLink((cupom.link_afiliado ?? "").trim() || null), [cupom.link_afiliado]);
+  useEffect(() => { setLink(destinoBase); }, [destinoBase]);
   useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
 
   /* AQUI ESTAVA UMA FUNCAO VAZIA.
@@ -707,13 +742,14 @@ function useLinkDaLoja(cupom: Cupom) {
      Agora pede a geracao na hora, igual ja acontecia com o codigo do cupom: o
      site registra o pedido, a extensao gera em ate um minuto e o link chega. */
   const gerar = useCallback(async () => {
-    if (!podeGerar || gerando) return;
+    if (!podeGerar || gerando || !origem) return;
     setGerando(true);
     setFalhou(false);
     try {
       const { data, error } = await supabase.rpc("pedir_link", { p_url: origem });
       if (error || data == null) { setGerando(false); setFalhou(true); return; }
       const id = Number(data);
+      avisarExtensao(id);
 
       const limite = Date.now() + 88_000;
       const olhar = async () => {
@@ -828,7 +864,7 @@ export function AcaoDoCupom({
      Sem link, o caminho que funciona de verdade e colar o link do produto: dali
      sai link de afiliado valido e o cupom e conferido naquele anuncio. Entao e
      isso que o cartao oferece, com o texto dizendo a verdade. */
-  if (!destino && !loja.podeGerar) {
+  if (!destino) {
     return (
       <Button
         type="button"
