@@ -2047,13 +2047,14 @@ function ComparadorModal({
   );
 }
 
-function CupomCard({
+export function CupomCard({
   cupom,
   agora,
   abrirCondicoes,
   selecionado,
   alternarSelecao,
   limiteAtingido = false,
+  permitirComparar = true,
 }: {
   cupom: CupomIndexado;
   agora: number | null;
@@ -2061,6 +2062,7 @@ function CupomCard({
   selecionado: boolean;
   alternarSelecao: (id: number) => void;
   limiteAtingido?: boolean;
+  permitirComparar?: boolean;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
   const contagem = contagemRegressiva(cupom.vence, agora);
