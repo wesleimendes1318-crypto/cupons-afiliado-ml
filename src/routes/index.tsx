@@ -403,10 +403,11 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
         </button>
       </div>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
-        Na maioria das vezes o desconto já entra sozinho no carrinho quando você chega pelo botão
-        acima, e aí o carrinho recusa este código por já ter aplicado o mesmo cupom. Ele fica aqui
-        para o caso de o desconto não aparecer. Vale só nos produtos{" "}
-        {vendedor ? <>de <span className="font-bold">{vendedor}</span></> : "desta loja"}.
+        Você quase nunca vai precisar dele: chegando pelo botão acima, o desconto entra sozinho no
+        carrinho e o Mercado Livre aceita um cupom de loja por compra. Se a vaga já estiver ocupada
+        por esse mesmo desconto, colar o código dá erro, e está tudo certo: o desconto já é seu.
+        Guarde o código só para o caso de o carrinho não mostrar desconto nenhum
+        {vendedor ? <> em produtos de <span className="font-bold">{vendedor}</span></> : ""}.
       </p>
     </div>
   );
@@ -632,7 +633,29 @@ function useCodigoDoCupom(cupom: Cupom) {
    nenhuma. Chutar a URL pelo nome de exibição da loja leva a página inexistente
    quando o nome público difere do usado no endereço. */
 function useLinkDaLoja(cupom: Cupom) {
-  const link = (cupom.link_origem ?? "").trim() || null;
+  /* CORREÇÃO IMPORTANTE, 22/09 à noite.
+
+     Por uma hora este botão abriu o endereço público da loja, sem etiqueta. A
+     ideia era que o código do cupom garantiria a comissão. O checkout provou
+     que não:
+
+       "Cupons (1/1 em uso)" — o cupom da própria loja entra sozinho e ocupa a
+       única vaga. O código do Weslei, que é a versão dele DO MESMO cupom, é
+       recusado com "Ocorreu um erro".
+
+     Ou seja: o cupom da loja compete com o dele. Quando entra sozinho, o
+     código não tem como ser usado, e mandar o cliente por um endereço sem
+     etiqueta seria entregar a venda de graça.
+
+     Então a atribuição volta a depender do que sempre funcionou: o clique num
+     link de afiliado. Só que o gerador do Mercado Livre não preserva qualquer
+     listagem — só a campanha _Container_ do próprio cupom. É exatamente essa
+     a origem dos links que sobraram no banco, os outros foram apagados.
+
+     Sem link de afiliado guardado, o botão não abre loja nenhuma. É melhor não
+     ter botão do que ter um que não paga o Weslei. O caminho nesse caso é
+     colar o link do produto, que gera link de afiliado de verdade. */
+  const link = (cupom.link_afiliado ?? "").trim() || null;
   const gerar = useCallback(async () => {}, []);
   return { link, gerando: false, falhou: false, gerar };
 }
@@ -786,13 +809,12 @@ export function AcaoDoCupom({
             : "Estou criando seu código e localizando a página correta da loja."
         ) : redirecionando && codigo ? (
           <>
-            <span className="font-bold text-success">Código {codigo} copiado.</span> Abrindo a
-            loja: o desconto costuma entrar sozinho no carrinho. Se não entrar, cole o código.
+            <span className="font-bold text-success">Abrindo a loja.</span> O desconto entra
+            sozinho no carrinho. O código {codigo} ficou copiado, só para emergência.
           </>
         ) : codigo ? (
           <>
-            Abre a loja com o desconto já valendo. O código <span className="font-bold">{codigo}</span>{" "}
-            vai junto, para o caso de o carrinho pedir.
+            Abre a loja com o desconto já valendo no carrinho. Você não precisa digitar nada.
           </>
         ) : falhou || loja.falhou ? (
           "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto entra sozinho no carrinho."
@@ -836,9 +858,28 @@ function irParaColarLink() {
 }
 
 function descontoRealEm200(cupom: Cupom) {
+  return descontoEm(cupom, 200);
+}
+
+/** Quanto este cupom desconta numa compra de X reais. Abaixo da compra mínima
+ *  o cupom simplesmente não entra, e dizer isso é mais útil que mostrar um
+ *  desconto que a pessoa não vai receber. */
+function descontoEm(cupom: Cupom, valor: number): number {
+  if (!Number.isFinite(valor) || valor <= 0) return 0;
+  if (cupom.compra_min != null && valor < cupom.compra_min) return 0;
   const teto = tetoReal(cupom) ?? Number.POSITIVE_INFINITY;
-  const descontoCalculado = cupom.tipo === "%" ? 200 * ((cupom.valor ?? 0) / 100) : (cupom.valor ?? 0);
-  return Math.min(descontoCalculado, teto);
+  const bruto = cupom.tipo === "%" ? valor * ((cupom.valor ?? 0) / 100) : (cupom.valor ?? 0);
+  return Math.max(0, Math.min(bruto, teto, valor));
+}
+
+/** Valor de partida da calculadora.
+ *  Nunca um número aleatório: parte da compra mínima do próprio cupom, que é a
+ *  primeira quantia em que ele passa a valer. Sem compra mínima, R$ 200, que é
+ *  um ticket comum e redondo. */
+function valorInicialDaCalculadora(cupom: Cupom): number {
+  const min = cupom.compra_min ?? null;
+  if (min != null && min > 0) return Math.max(min, 10);
+  return 200;
 }
 
 async function carregarCupons(): Promise<Cupom[]> {
@@ -2456,6 +2497,100 @@ export function CupomCard({
   );
 }
 
+/* Calculadora do cupom.
+
+   Isto substitui uma tabela que assustava mais do que ajudava. Ela mostrava
+   "Teto de desconto: R$ 50.000,00" e "Você só chega nesse teto gastando
+   R$ 172.413,79". Os dois números eram verdadeiros e os dois eram inúteis:
+   ninguém compra R$ 172 mil, e ver isso faz a pessoa desconfiar do site.
+   Mostrava ainda o desconto "numa compra de R$ 200", um valor tirado do nada,
+   que não é o produto que ela está olhando.
+
+   A pergunta real de quem chega aqui é uma só: quanto eu pago no final. Então
+   a caixa responde isso, com o valor que a própria pessoa digita, já vindo
+   preenchido para ela ver a conta antes de mexer em qualquer coisa.
+
+   O teto só é mencionado quando de fato corta o desconto naquele valor. Se não
+   corta, falar dele é encher a tela de ruído. */
+function CalculadoraDoCupom({ cupom }: { cupom: CupomIndexado }) {
+  const [valor, setValor] = useState<number>(() => valorInicialDaCalculadora(cupom));
+  const [texto, setTexto] = useState<string>(() =>
+    String(valorInicialDaCalculadora(cupom)).replace(".", ","),
+  );
+
+  const minimo = cupom.compra_min ?? null;
+  const abaixoDoMinimo = minimo != null && valor > 0 && valor < minimo;
+  const desconto = descontoEm(cupom, valor);
+  const paga = Math.max(0, valor - desconto);
+
+  const teto = tetoReal(cupom);
+  const bruto = cupom.tipo === "%" ? valor * ((cupom.valor ?? 0) / 100) : (cupom.valor ?? 0);
+  const tetoCortou = teto != null && bruto > teto && !abaixoDoMinimo;
+
+  function digitou(bruta: string) {
+    setTexto(bruta);
+    const n = Number(bruta.replace(/\./g, "").replace(",", "."));
+    setValor(Number.isFinite(n) ? n : 0);
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/50 p-4">
+      <label htmlFor="calc-valor" className="text-sm font-semibold">
+        Quanto você pretende gastar nesta loja?
+      </label>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-sm font-semibold text-secondary-ink">R$</span>
+        <input
+          id="calc-valor"
+          type="text"
+          inputMode="decimal"
+          value={texto}
+          onChange={(e) => digitou(e.target.value)}
+          className="w-32 rounded-md border border-border bg-background px-3 py-2 text-base font-bold tabular-nums outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue"
+          aria-describedby="calc-resultado"
+        />
+        <span className="text-xs text-secondary-ink">altere para o seu caso</span>
+      </div>
+
+      <div id="calc-resultado" className="mt-3 divide-y divide-border border-t border-border">
+        {abaixoDoMinimo ? (
+          <p className="pt-3 text-sm leading-relaxed">
+            Nesse valor o cupom <span className="font-bold">não entra</span>. Ele começa a valer a
+            partir de <span className="font-bold">{brl.format(minimo as number)}</span>.
+          </p>
+        ) : (
+          <>
+            <div className="flex items-baseline justify-between gap-3 py-2">
+              <span className="text-sm text-secondary-ink">Desconto do cupom</span>
+              <span className="text-sm font-bold text-success">- {brl.format(desconto)}</span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 py-2">
+              <span className="text-sm font-semibold">Você paga</span>
+              <span className="text-lg font-extrabold tabular-nums">{brl.format(paga)}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-1 text-xs leading-relaxed text-secondary-ink">
+        {minimo != null && (
+          <p>
+            Compra mínima de <span className="font-semibold">{brl.format(minimo)}</span>.
+          </p>
+        )}
+        {tetoCortou && (
+          <p>
+            Neste valor o desconto bate no limite de{" "}
+            <span className="font-semibold">{brl.format(teto as number)}</span> que a loja definiu.
+            Comprando mais, o desconto não sobe além disso.
+          </p>
+        )}
+        <p>É uma estimativa pelas regras do cupom. O valor final aparece no carrinho da loja.</p>
+      </div>
+    </div>
+  );
+}
+
 export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
   if (!cupom) return null;
 
@@ -2470,28 +2605,7 @@ export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null;
           <DialogDescription>Condições e limite real do desconto</DialogDescription>
         </DialogHeader>
         <div className="space-y-5 px-5 pb-6 sm:px-6">
-          <div className="divide-y divide-border rounded-lg border border-border bg-muted/50">
-            <ResumoModal rotulo="Compra mínima" valor={formatarMoeda(cupom.compra_min)} />
-            <ResumoModal rotulo="Teto de desconto" valor={formatarTeto(cupom)} destaque />
-            {compraParaTeto != null && !semLimite(cupom) && (
-              <ResumoModal
-                rotulo="Você só chega nesse teto gastando"
-                valor={brl.format(compraParaTeto)}
-              />
-            )}
-            {tetoFolgado(cupom) && (
-              <ResumoModal
-                rotulo="Na prática"
-                valor="o teto é alto: numa compra normal você recebe o desconto cheio"
-                destaque
-              />
-            )}
-            <ResumoModal
-              rotulo="Desconto real se a compra for de R$ 200"
-              valor={formatarMoeda(descontoRealEm200(cupom))}
-              destaque
-            />
-          </div>
+          <CalculadoraDoCupom cupom={cupom} />
           <Button
             size="lg"
             onClick={() => { fechar(); irParaColarLink(); }}
@@ -2513,10 +2627,11 @@ export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null;
             <div className="-mt-2">
               <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-                Abra primeiro o botão acima, escolha um produto de lá e só então cole o código
-                no carrinho. O desconto entra sozinho pelo link, e o código é a sua prova de
-                que ele veio deste cupom. Colado num produto de outra loja, a plataforma
-                responde que o cupom está incorreto — não está, é o produto que não participa.
+                Chegando pelo botão acima, o desconto entra sozinho no carrinho e você não
+                precisa digitar nada. O Mercado Livre aceita um cupom de loja por compra, então
+                se essa vaga já estiver ocupada por esse mesmo desconto, colar o código dá erro,
+                e está tudo certo: o desconto já é seu. Guarde o código só para o caso de o
+                carrinho não mostrar desconto nenhum.
               </p>
             </div>
           )}
