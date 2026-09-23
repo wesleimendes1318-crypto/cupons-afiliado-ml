@@ -986,13 +986,26 @@ function urlDaOferta(catalogo, item) {
   return `https://www.mercadolivre.com.br/p/${catalogo}?pdp_filters=item_id%3A${item}`;
 }
 
-/* Devolve a melhor oferta do MESMO produto numa loja com cupom, ou null.
+/* Devolve a melhor oferta do MESMO produto, ou null.
 
-   Null quando: nao e produto de catalogo, so existe um vendedor, nenhum
-   vendedor tem cupom que preste, ou a alternativa nao sai mais barata que o
-   que a pessoa ja estava vendo. Nesse ultimo caso mandar a pessoa trocar de
-   loja seria dar trabalho a ela para economizar nada. */
-async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
+   MUDANCA IMPORTANTE, 23/09. Antes isto so aceitava loja que tivesse cupom no
+   indice do Weslei. Caso real que mostrou o erro: Kit Wella Oil Reflections,
+   R$ 428,90 na Amobeleza com cupom de 15% (final R$ 364,56), e o MESMO produto
+   a R$ 291,95 no iSalao, que nao tem cupom nenhum. A versao antiga jogava o
+   iSalao fora por nao ter cupom e nao mostrava nada, escondendo R$ 72,61 de
+   economia real do cliente. Em 107 links colados, nenhuma alternativa foi
+   devolvida uma unica vez.
+
+   Quem decide agora e o PRECO FINAL: preco da oferta menos o desconto do cupom
+   daquela loja, quando existir. Loja sem cupom entra na disputa com desconto
+   zero e ganha se ainda assim sair mais barata. O link de afiliado sai do
+   mesmo jeito nos dois casos, entao mostrar a opcao mais barata nao custa
+   comissao ao Weslei, e esconder custa a confianca do cliente.
+
+   Null quando: nao e produto de catalogo, so existe um vendedor, ou nenhuma
+   alternativa bate o que a pessoa ja estava vendo por uma margem que valha o
+   trabalho de trocar de loja. */
+async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
   let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
   let html = null;
 
@@ -1019,27 +1032,35 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
     if (itemAtual && o.item === itemAtual) continue;
     const url = urlDaOferta(cat, o.item);
 
+    /* Sem preco nao da para comparar nada, entao nao entra. */
+    if (o.preco == null) { await sleep(200); continue; }
+
     let nomes = [];
     try { nomes = await resolverVendedor(o.item, url); } catch (e) { nomes = []; }
-    const cupom = acharCupom(indice.mapa, chaves, nomes);
-    if (!cupom) { await sleep(400); continue; }
 
-    let cond = null;
-    try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
-    const aval = avaliar(cupom, cond, o.preco);
+    /* Cupom e um BONUS, nao um requisito. Loja sem cupom entra com zero. */
+    const cupom = acharCupom(indice.mapa, chaves, nomes);
+    let aval = null;
+    if (cupom) {
+      let cond = null;
+      try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
+      aval = avaliar(cupom, cond, o.preco);
+    }
     await sleep(400);
-    if (!aval || !aval.vale) continue;
+
+    const vale = Boolean(aval && aval.vale);
+    const economia = vale && aval.economia != null ? aval.economia : 0;
 
     achados.push({
       item: o.item,
       url,
       preco: o.preco,
       vendedor: nomes[0] || null,
-      cupom: { id: cupom.i, titulo: cupom.t, vence: cupom.x },
-      economia: aval.economia,
-      minimo: aval.minimo,
-      teto: aval.teto,
-      final: o.preco != null && aval.economia != null ? o.preco - aval.economia : null
+      cupom: vale ? { id: cupom.i, titulo: cupom.t, vence: cupom.x } : null,
+      economia,
+      minimo: vale ? aval.minimo : null,
+      teto: vale ? aval.teto : null,
+      final: o.preco - economia
     });
   }
 
@@ -1049,7 +1070,14 @@ async function mesmoProdutoComCupom(urlProduto, precoAtual, itemAtual) {
     (a.final == null ? Infinity : a.final) - (b.final == null ? Infinity : b.final));
   const melhor = achados[0];
 
-  if (precoAtual != null && melhor.final != null && melhor.final >= precoAtual) return null;
+  /* So vale mandar a pessoa trocar de loja por uma diferenca que ela sinta.
+     Menos de R$ 5 ou menos de 3% e trabalho para nao economizar nada. */
+  if (finalAtual == null || melhor.final == null) return null;
+  const ganho = finalAtual - melhor.final;
+  if (ganho < 5 || ganho / finalAtual < 0.03) return null;
+
+  melhor.ganho = ganho;
+  melhor.finalAtual = finalAtual;
   return melhor;
 }
 
@@ -1279,26 +1307,35 @@ async function atenderPedidos() {
           // 3. o SEU link sai sempre, com ou sem cupom
           const r = await gerarNaAba(tabId, url, TAG_PADRAO);
 
-          /* Se a loja do link nao tem cupom que preste, procura o MESMO
-             produto de catalogo numa loja que tenha, gera o link de afiliado
-             DAQUELA oferta e devolve as duas coisas. O site mostra a troca
-             com o preco final dos dois lados, para a pessoa decidir. */
+          /* Procura o MESMO produto de catalogo em outra loja e compara PRECO
+             FINAL com o da loja do link.
+
+             Isto rodava so quando a loja do link nao tinha cupom, o que e a
+             pergunta errada. O cliente quer saber se existe negocio melhor,
+             tendo cupom ou nao. No caso do Kit Wella, a loja do link tinha
+             cupom de 15% e mesmo assim saia R$ 72,61 mais cara que a mesma
+             caixa em outra loja sem cupom nenhum, e o site nao dizia nada. */
           let outra = null;
-          if (!(cupom && aval && aval.vale) && !filaCheia) {
+          if (!filaCheia) {
             try {
-              const alt = await mesmoProdutoComCupom(url, a.preco ?? null, null);
+              const economiaAqui = (cupom && aval && aval.vale && aval.economia != null)
+                ? aval.economia : 0;
+              const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
+              const alt = await mesmoProdutoComCupom(url, finalAqui, null);
               if (alt) {
                 const la = await gerarNaAba(tabId, alt.url);
                 outra = {
-                  cupomId: alt.cupom.id,
+                  cupomId: alt.cupom ? alt.cupom.id : null,
                   vendedor: alt.vendedor,
                   preco: alt.preco,
                   economia: alt.economia,
                   minimo: alt.minimo,
                   teto: alt.teto,
                   final: alt.final,
-                  cupomTitulo: alt.cupom.titulo,
-                  vence: alt.cupom.vence,
+                  ganho: alt.ganho,
+                  finalAtual: alt.finalAtual,
+                  cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
+                  vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
                   codigo: la.codigo
                 };
