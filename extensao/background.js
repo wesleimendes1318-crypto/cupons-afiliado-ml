@@ -530,6 +530,23 @@ async function lerAnuncioNoWorker(url) {
        arrancar o titulo e o preco do primeiro item, e era o que acontecia: o
        site mostrava produto e preco de um anuncio que ninguem escolheu, sem
        loja nenhuma. Melhor dizer a verdade e pedir o link do produto. */
+    /* MURO DE CAPTCHA.
+
+       O Mercado Livre desafia a sessao quando acha que do outro lado tem robo.
+       Visto de verdade em 23/09: a leitura voltou com titulo "Por seguranca,
+       complete esta etapa" e o gerador respondeu com origin_url apontando para
+       /captcha/wall/logged.
+
+       Isso e a plataforma pedindo para PARAR. Insistir e o caminho curto para
+       a conta ser marcada, entao aqui se puxa o freio do dia inteiro e nao se
+       tenta contornar o desafio de jeito nenhum. Quem resolve captcha e o
+       Weslei, na mao, no navegador dele. */
+    if (/\/captcha\/wall/i.test(r.url) || /Por seguran.a, complete esta etapa/i.test(buf.slice(0, 20000))) {
+      await puxarFreio('o Mercado Livre pediu verificacao de seguranca (captcha)');
+      return { ok: false, captcha: true,
+               falha: 'o Mercado Livre pediu uma verificacao de seguranca nesta sessao' };
+    }
+
     if (/\/social\/[^/?#]+/i.test(r.url)) {
       return { ok: false, perfilSocial: true,
                falha: 'esse link abre um perfil do Mercado Livre, nao um produto' };
@@ -691,7 +708,12 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
     if (!curto) {
       /* Sem o inicio da resposta, este erro nao dizia nada e custou horas de
          investigacao. Agora ele carrega a prova junto. */
-      const amostra = String(r.txt || '').replace(/\s+/g, ' ').slice(0, 180);
+      const bruto = String(r.txt || '');
+      if (/captcha\/wall/i.test(bruto)) {
+        await puxarFreio('o Mercado Livre pediu verificacao de seguranca (captcha) no gerador');
+        throw new Error('o Mercado Livre pediu uma verificacao de seguranca nesta sessao');
+      }
+      const amostra = bruto.replace(/\s+/g, ' ').slice(0, 180);
       throw new Error('O gerador respondeu sem link. Resposta: ' + (amostra || '(vazia)'));
     }
     return { link: curto, codigo };
@@ -1325,6 +1347,16 @@ async function andarFila() {
 
   andandoFila = true;
   try {
+    /* Freio puxado hoje: nada de trabalho automatico. Os pedidos de cliente
+       continuam sendo tentados mais abaixo, porque sao poucos e no ritmo de
+       quem esta esperando na tela; o que nao pode continuar e o robo varrendo
+       o Mercado Livre depois de ele ter pedido verificacao. */
+    const travado = await freioLigado();
+    if (travado) {
+      const pedidos = await atenderPedidos().catch(() => null);
+      return { freio: travado, pedidos };
+    }
+
     /* Janela de atualizacao tem prioridade sobre a conferencia de fundo:
        e nela que a lista cresce e as etiquetas nascem. */
     const janela = janelaAgora();
