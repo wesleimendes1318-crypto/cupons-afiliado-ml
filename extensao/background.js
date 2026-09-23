@@ -1170,6 +1170,143 @@ function urlDaOferta(catalogo, item) {
    Null quando: nao e produto de catalogo, so existe um vendedor, ou nenhuma
    alternativa bate o que a pessoa ja estava vendo por uma margem que valha o
    trabalho de trocar de loja. */
+/* ------------------------------- procurar o mesmo produto na busca do ML
+
+   O buy_box so existe em produto de catalogo. Anuncio solto nao tem, e ate
+   agora o site simplesmente desistia: "essa loja nao tem cupom" e ponto, sem
+   nunca olhar se o mesmo produto estava mais barato ou com cupom em outro
+   vendedor. Era metade da promessa do site nao sendo cumprida.
+
+   Aqui a extensao faz o que uma pessoa faria: abre a busca do Mercado Livre
+   pelo titulo do produto e olha os primeiros resultados.
+
+   Ritmo de gente, de proposito. Uma busca, no maximo seis candidatos, com a
+   mesma pausa entre leituras que o resto do codigo usa. Depois do captcha de
+   hoje, volume e a ultima coisa que esta operacao precisa. */
+const MAX_CANDIDATOS_BUSCA = 6;
+
+function palavrasDoTitulo(t) {
+  return norm(t || '').replace(/([a-z])(\d)/g, '$1 $2')
+    .split(/\s+/).filter(w => w.length >= 3);
+}
+
+/* Dois titulos falam do mesmo produto? Nao da para exigir igualdade: cada
+   vendedor escreve do seu jeito. Exige-se que a maior parte das palavras do
+   titulo original apareca no candidato. */
+function pareceMesmoProduto(original, candidato) {
+  const a = palavrasDoTitulo(original);
+  const b = new Set(palavrasDoTitulo(candidato));
+  if (a.length < 3) return false;
+  const iguais = a.filter(w => b.has(w)).length;
+  return iguais / a.length >= 0.6;
+}
+
+function urlDeBusca(titulo) {
+  const termo = String(titulo || '').trim().slice(0, 90);
+  return 'https://lista.mercadolivre.com.br/' + encodeURIComponent(termo).replace(/%20/g, '-');
+}
+
+/* Le os resultados da busca. Cada cartao vira { item, preco, titulo }. */
+function ofertasDaBusca(html, tituloOriginal, precoRef) {
+  const blocos = String(html).split('ui-search-layout__item');
+  const vistos = new Set();
+  const saida = [];
+
+  for (const b of blocos.slice(1)) {
+    const pedaco = b.slice(0, 4000);
+    /* O id aparece de duas formas na pagina: MLB4436662488 dentro do JSON e
+       MLB-4436662488 nos enderecos. Aceita as duas e guarda sem o hifen. */
+    const cru = (/\bMLB-?(\d{8,})\b/.exec(pedaco) || [])[1];
+    const id = cru ? 'MLB' + cru : null;
+    if (!id || vistos.has(id)) continue;
+
+    const tit = (/<h[23][^>]*>([^<]{10,200})<\/h[23]>/i.exec(pedaco)
+              || /"title"\s*:\s*"([^"]{10,200})"/.exec(pedaco) || [])[1];
+    if (!tit || !pareceMesmoProduto(tituloOriginal, tit)) continue;
+
+    const pm = /"amount"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/.exec(pedaco)
+            || /andes-money-amount__fraction[^>]*>([\d.]{1,12})</.exec(pedaco);
+    let preco = null;
+    if (pm) {
+      const n = parseFloat(String(pm[1]).replace(/\./g, ''));
+      if (n > 0 && n < 1e7) preco = n;
+    }
+    if (preco == null) continue;
+
+    /* Preco absurdo em relacao ao que a pessoa esta vendo quase sempre e outro
+       produto: acessorio, kit, unidade avulsa. Fora. */
+    if (precoRef != null && (preco < precoRef * 0.4 || preco > precoRef * 1.6)) continue;
+
+    vistos.add(id);
+    saida.push({ item: id, preco, titulo: tit });
+    if (saida.length >= MAX_CANDIDATOS_BUSCA) break;
+  }
+  return saida;
+}
+
+/* Procura o mesmo produto na busca e devolve a melhor alternativa, na mesma
+   forma que mesmoProdutoComCupom devolve. Cupom e bonus, nao requisito: loja
+   mais barata sem cupom tambem ganha, porque a comissao do Weslei sai do
+   clique no link de afiliado de qualquer jeito. */
+async function mesmoProdutoNaBusca(titulo, finalAtual, itemAtual) {
+  let html;
+  try { html = await lerCatalogo(urlDeBusca(titulo)); }
+  catch (e) { console.warn('[busca]', e.message); return null; }
+
+  const precoRef = finalAtual != null ? finalAtual : null;
+  const candidatos = ofertasDaBusca(html, titulo, precoRef);
+  if (!candidatos.length) return null;
+
+  const indice = await obterIndice();
+  const chaves = Object.keys(indice.mapa);
+  const achados = [];
+
+  for (const c of candidatos) {
+    if (itemAtual && c.item === itemAtual) continue;
+    const url = 'https://produto.mercadolivre.com.br/' + c.item.replace(/^MLB/, 'MLB-');
+
+    let nomes = [];
+    try { nomes = await resolverVendedor(c.item, url); } catch (e) { nomes = []; }
+
+    const cupom = acharCupom(indice.mapa, chaves, nomes);
+    let aval = null;
+    if (cupom) {
+      let cond = null;
+      try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
+      aval = avaliar(cupom, cond, c.preco);
+    }
+    await sleep(400);
+
+    const vale = Boolean(aval && aval.vale);
+    const economia = vale && aval.economia != null ? aval.economia : 0;
+
+    achados.push({
+      item: c.item, url, preco: c.preco, vendedor: nomes[0] || null,
+      cupom: vale ? { id: cupom.i, titulo: cupom.t, vence: cupom.x } : null,
+      economia,
+      minimo: vale ? aval.minimo : null,
+      teto: vale ? aval.teto : null,
+      final: c.preco - economia,
+      achadoNaBusca: true
+    });
+  }
+
+  if (!achados.length) return null;
+  achados.sort((a, b) => {
+    if (a.final !== b.final) return a.final - b.final;
+    return (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0);
+  });
+
+  const melhor = achados[0];
+  if (finalAtual == null || melhor.final == null) return null;
+  const ganho = finalAtual - melhor.final;
+  if (ganho < 5 || ganho / finalAtual < 0.03) return null;
+
+  melhor.ganho = ganho;
+  melhor.finalAtual = finalAtual;
+  return melhor;
+}
+
 async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
   let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
   let html = null;
@@ -1179,7 +1316,14 @@ async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
     const can = /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(html);
     cat = (RE_CATALOGO.exec(can ? can[1] : '') || [])[1]
        || (RE_CATALOGO.exec(html) || [])[1] || null;
-    if (!cat) return null;
+    /* Sem catalogo nao existe buy_box. Em vez de desistir, procura o mesmo
+       produto na busca do Mercado Livre, como uma pessoa faria. */
+    if (!cat) {
+      const tit = (/<h1[^>]*>([^<]{5,200})<\/h1>/i.exec(html)
+                || /property="og:title"\s+content="([^"]{5,200})"/i.exec(html) || [])[1];
+      if (!tit) return null;
+      return await mesmoProdutoNaBusca(tit, finalAtual, itemAtual);
+    }
     // O html que temos e o do anuncio, nao o do catalogo: busca o certo.
     if (!html.includes('"buy_box_offers":{')) html = null;
   }
@@ -1187,7 +1331,12 @@ async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
   if (!html) html = await lerCatalogo(`https://www.mercadolivre.com.br/p/${cat}`);
 
   const ofertas = ofertasDoCatalogo(html);
-  if (ofertas.length < 2) return null;
+  if (ofertas.length < 2) {
+    /* Produto de catalogo com um vendedor so: a busca ainda pode achar o mesmo
+       item anunciado fora do catalogo por outra loja. */
+    const tit = (/<h1[^>]*>([^<]{5,200})<\/h1>/i.exec(html) || [])[1];
+    return tit ? await mesmoProdutoNaBusca(tit, finalAtual, itemAtual) : null;
+  }
 
   const indice = await obterIndice();
   const chaves = Object.keys(indice.mapa);
@@ -1558,6 +1707,10 @@ async function atenderPedidos() {
                   final: alt.final,
                   ganho: alt.ganho,
                   finalAtual: alt.finalAtual,
+                  /* true quando veio da busca por titulo, nao da pagina de
+                     catalogo. Catalogo e o mesmo produto por definicao; busca
+                     e um palpite forte. O site precisa dizer a diferenca. */
+                  achadoNaBusca: !!alt.achadoNaBusca,
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
