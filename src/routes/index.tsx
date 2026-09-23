@@ -763,7 +763,9 @@ function Index() {
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
   const [vitrine, setVitrine] = useState<"recomendados" | "todos">("recomendados");
-  const [painelAberto, setPainelAberto] = useState(false);
+  /* Os filtros nascem abertos: esconde-los fez a lista de lojas, categorias e
+     faixas de economia sumirem aos olhos de quem chega. */
+  const [painelAberto, setPainelAberto] = useState(true);
   const [tipo, setTipo] = useState<"todos" | "%" | "R$">("todos");
   const [descontoMin, setDescontoMin] = useState("");
   const [orcamentoMin, setOrcamentoMin] = useState("");
@@ -927,6 +929,12 @@ function Index() {
     indexado.forEach((cupom) => contagens.set(cupom.vendedor, (contagens.get(cupom.vendedor) ?? 0) + 1));
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
+
+  /* Lojas com mais cupons: viram atalhos visiveis, sem precisar abrir nada. */
+  const lojasDestaque = useMemo(
+    () => [...lojasDisponiveis].sort(([a, qa], [b, qb]) => qb - qa || a.localeCompare(b, "pt-BR")).slice(0, 14),
+    [lojasDisponiveis],
+  );
 
   const lojasFiltradas = useMemo(() => {
     const busca = normalizar(texto);
@@ -1389,6 +1397,55 @@ function Index() {
         )}
 
 
+        {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
+        {lojasDestaque.length > 0 && (
+          <section className="mt-6 rounded-xl border border-border bg-card p-4" aria-label="Lojas parceiras">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold">Lojas parceiras</h2>
+              <p className="text-xs text-secondary-ink">
+                {lojasDisponiveis.length.toLocaleString("pt-BR")} lojas com cupom conferido
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {lojasDestaque.map(([loja, quantidade]) => (
+                <button
+                  key={loja}
+                  type="button"
+                  aria-pressed={lojas.includes(loja)}
+                  onClick={() => alternarLoja(loja)}
+                  className={cn(
+                    "max-w-full rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    lojas.includes(loja)
+                      ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                      : "border-border bg-background hover:border-ml-blue",
+                  )}
+                >
+                  <span className="truncate">{loja}</span> ({quantidade})
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setPainelAberto(true);
+                  document.getElementById("painel-filtros")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+                className="rounded-full border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
+              >
+                Ver todas as lojas
+              </button>
+              {lojas.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setLojas([])}
+                  className="rounded-full border border-danger px-3 py-1.5 text-xs font-medium text-danger"
+                >
+                  Limpar lojas
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
         <section className="mt-6" aria-label="Filtros de cupons">
           {/* Barra de controle
               ================
@@ -1601,7 +1658,18 @@ function Index() {
               {categoriasDisponiveis.length > 0 && (
                 <div className="mt-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-secondary-ink">Categorias — categoria estimada pelo nome da loja</p>
+                    <p className="text-xs font-semibold text-secondary-ink">Categorias — organizadas pela IA a partir do nome da loja</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={classificando}
+                      onClick={classificar}
+                      className="h-8 px-2 text-xs text-ml-blue"
+                    >
+                      <WandSparkles aria-hidden="true" className="size-4" />
+                      {classificando ? "Organizando..." : "Organizar categorias com IA"}
+                    </Button>
                     {categorias.length > 0 && (
                       <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
                         Limpar categorias
