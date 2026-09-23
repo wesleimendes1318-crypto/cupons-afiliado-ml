@@ -134,7 +134,10 @@ const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, 
   { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
   { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
   { id: "economiaalta", rotulo: "Economia acima de R$ 200", aceita: (cupom) => semLimite(cupom) || (tetoUtil(cupom) ?? 0) > 200 },
-  { id: "comprabaixa", rotulo: "Compra até R$ 50", aceita: (cupom) => cupom.compra_min != null && cupom.compra_min <= 50 },
+  /* Cupom SEM compra minima passa neste filtro. Ele exigia compra_min preenchido,
+     entao os cupons sem exigencia nenhuma - os melhores desse filtro - eram os
+     unicos que ficavam de fora. */
+  { id: "comprabaixa", rotulo: "Compra até R$ 50", aceita: (cupom) => (cupom.compra_min ?? 0) <= 50 },
   { id: "semcompramin", rotulo: "Sem compra mínima", aceita: (cupom) => cupom.compra_min == null || cupom.compra_min === 0 },
 ];
 
@@ -356,9 +359,18 @@ function mensagemCompartilharCupom(cupom: Cupom, codigo: string, linkLoja: strin
   const limite = formatarTeto(cupom);
   if (limite === "sem limite de valor") linhas.push("Limite: sem limite de valor");
   else if (limite !== "Limite não informado") linhas.push(`Economia máxima: ${limite}`);
-  if (cupom.compra_min != null) linhas.push(`Compra mínima: ${brl.format(cupom.compra_min)}`);
+  /* compra_min zero e compra_min ausente sao a mesma coisa para quem le: nao ha
+     minimo. Escrever "Compra minima: R$ 0,00" so confunde. */
+  if (cupom.compra_min != null && cupom.compra_min > 0) {
+    linhas.push(`Compra mínima: ${brl.format(cupom.compra_min)}`);
+  }
   if (cupom.vence) linhas.push(`Válido até: ${dataCurta.format(dataDoBanco(cupom.vence))}`);
-  linhas.push(`Etiqueta: ${codigo}`, `Ver produtos da loja: ${linkLoja}`);
+  linhas.push(
+    `Ver produtos da loja: ${linkLoja}`,
+    "",
+    `No carrinho, use este código: ${codigo}`,
+    "Se o carrinho já vier com um cupom da própria loja, remova ele e coloque este no lugar. O desconto é o mesmo e assim o achado fica registrado para mim.",
+  );
   return linhas.join("\n");
 }
 
@@ -1199,7 +1211,8 @@ function Index() {
       if (dMin && (cupom.valor ?? 0) < dMin) return false;
       if (oMin && (cupom.orcamento ?? 0) < oMin) return false;
       if (tMin && (tetoReal(cupom) ?? 0) < tMin) return false;
-      if (cMax !== null && (cupom.compra_min == null || cupom.compra_min > cMax)) return false;
+      /* Sem compra minima = minimo zero, e zero cabe em qualquer teto. */
+      if (cMax !== null && (cupom.compra_min ?? 0) > cMax) return false;
       if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
       if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
       if (ignorar !== "faixas" && faixas.length
@@ -1790,7 +1803,7 @@ function Index() {
                     <div className="flex justify-between gap-2">
                       <dt>Compra mínima</dt>
                       <dd className="font-semibold text-foreground">
-                        {cupom.compra_min != null ? brl.format(cupom.compra_min) : "não tem"}
+                        {cupom.compra_min != null && cupom.compra_min > 0 ? brl.format(cupom.compra_min) : "não tem"}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-2">
