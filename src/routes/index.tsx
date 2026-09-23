@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { CATEGORIAS } from "@/content/categorias";
 import { GUIAS } from "@/content/guias";
+import { marcarConsultado, useConsultado } from "@/lib/cupons-consultados";
 import { supabase } from "@/integrations/supabase/client";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
@@ -584,6 +585,7 @@ export function AcaoDoCupom({
 }) {
   const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
   const loja = useLinkDaLoja(cupom);
+  const consultado = useConsultado(cupom.id);
   const [copiou, setCopiou] = useState(false);
   const [esperando, setEsperando] = useState(false);
   const [redirecionando, setRedirecionando] = useState(false);
@@ -606,6 +608,7 @@ export function AcaoDoCupom({
     (codigoPronto?: string | null) => {
       if (!destino) return;
       if (codigoPronto) setCopiou(copiarTexto(codigoPronto));
+      marcarConsultado(cupom.id);
       setRedirecionando(true);
       /* A pequena pausa mantém a confirmação visível e preserva a animação do
          cartão. A navegação na própria aba não é bloqueada pelo navegador e
@@ -614,7 +617,7 @@ export function AcaoDoCupom({
         window.location.assign(destino);
       }, 700);
     },
-    [destino],
+    [destino, cupom.id],
   );
 
   /* Depois do clique, espera código E link validados. O código permanece
@@ -645,13 +648,25 @@ export function AcaoDoCupom({
         disabled={gerando || loja.gerando || redirecionando}
         className={className}
       >
-        <Link2 className={icone} aria-hidden="true" />
+        {consultado && !gerando && !loja.gerando && !redirecionando ? (
+          <Check className={icone} aria-hidden="true" />
+        ) : (
+          <Link2 className={icone} aria-hidden="true" />
+        )}
         {redirecionando
           ? "Copiado! Abrindo a loja..."
           : gerando || loja.gerando
             ? codigo ? "Preparando a loja..." : "Criando seu código..."
-            : "Usar este cupom"}
+            : consultado
+              ? "Consultado — abrir de novo"
+              : "Usar este cupom"}
       </Button>
+      {consultado && !redirecionando && (
+        <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-success">
+          <Check className="size-3 shrink-0" aria-hidden="true" />
+          Você já abriu este cupom. Pode abrir quantas vezes quiser.
+        </p>
+      )}
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
         {gerando || loja.gerando ? (
           codigo
