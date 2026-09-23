@@ -3,7 +3,9 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          condicoesPendentes, salvarCondicoes, iniciarPedido,
          linksPendentes, salvarLinks,
          etiquetasPendentes, salvarEtiquetas,
-         vitrinesParaConferir, salvarVitrines } from './sincronia.js';
+         vitrinesParaConferir, salvarVitrines,
+         lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
+         anotarEstadoRobo } from './sincronia.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -542,7 +544,7 @@ async function lerAnuncioNoWorker(url) {
        tenta contornar o desafio de jeito nenhum. Quem resolve captcha e o
        Weslei, na mao, no navegador dele. */
     if (/\/captcha\/wall/i.test(r.url) || /Por seguran.a, complete esta etapa/i.test(buf.slice(0, 20000))) {
-      await puxarFreio('o Mercado Livre pediu verificacao de seguranca (captcha)');
+      await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler um anuncio', 'leitura');
       return { ok: false, captcha: true,
                falha: 'o Mercado Livre pediu uma verificacao de seguranca nesta sessao' };
     }
@@ -710,7 +712,7 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
          investigacao. Agora ele carrega a prova junto. */
       const bruto = String(r.txt || '');
       if (/captcha\/wall/i.test(bruto)) {
-        await puxarFreio('o Mercado Livre pediu verificacao de seguranca (captcha) no gerador');
+        await puxarFreio('o Mercado Livre pediu verificacao de seguranca no gerador de links', 'link');
         throw new Error('o Mercado Livre pediu uma verificacao de seguranca nesta sessao');
       }
       const amostra = bruto.replace(/\s+/g, ' ').slice(0, 180);
@@ -891,6 +893,137 @@ async function vitrineTemProduto(url) {
   }
 }
 
+/* --------------------------------------------- endereco da vitrine da loja */
+
+/* O QUE ESTE BLOCO RESOLVE.
+
+   O botao "Ver itens da loja" precisa cair na prateleira de quem oferece o
+   cupom. Ate agora ele so tinha para onde ir quando havia link de afiliado
+   guardado - 113 de 972 cupons. Nos outros, o site pedia para a pessoa colar o
+   link de um anuncio que ela ainda nem tinha escolhido.
+
+   NAO DA PARA ADIVINHAR O ENDERECO. Conferi em lojas reais do banco:
+
+     vendedor no banco            endereco real da vitrine
+     Augustusmobiliario     ->    /pagina/augustusmvrc/
+     Sied20240106044007     ->    /pagina/k4p5vnd2/
+     Jcarvalhoimport2_      ->    /pagina/jcarvalhoimport2_/
+     Ireplacegroup          ->    /pagina/ireplacegroup/
+
+   Metade bate com o nome, metade nao tem nada a ver. Montar o endereco a
+   partir do nome erraria em uma loja a cada duas, e o erro nao aparece como
+   erro: o Mercado Livre cai numa BUSCA por aquele texto, com produtos de
+   outras lojas no meio. O cliente clicaria achando que esta na loja do cupom.
+
+   ENTAO O ENDERECO E LIDO, NAO CHUTADO. Dois caminhos, nessa ordem:
+
+     1. /_CustId_<numero do vendedor>  - o numero ja vem escrito no link da
+        campanha do cupom, em duas formas: _CustId_2615738264 e
+        _Container_Queima-de-Estoque-seller-1789666895. O Mercado Livre
+        redireciona sozinho para a vitrine da loja.
+
+     2. /perfil/<APELIDO>  - para as lojas cujo cupom veio sem link de campanha.
+        O apelido e o proprio nome do vendedor no banco.
+
+   Em qualquer um dos dois, o que vale e o endereco FINAL depois do
+   redirecionamento, e so se a pagina tiver produto no ar. */
+
+const RE_PAGINA_LOJA = /^https:\/\/(www|lista)\.mercadolivre\.com\.br\/pagina\/[A-Za-z0-9._%-]{2,60}\/?$/;
+
+/* Le a pagina no service worker (e nao numa aba) porque aqui o fetch usa as
+   host_permissions da extensao: nao ha CORS e o redirecionamento chega inteiro
+   em r.url. Foi essa diferenca que quebrou a leitura antes, quando o codigo
+   rodava no mundo MAIN da pagina. */
+async function lerVitrine(url) {
+  const r = await fetch(url, { credentials: 'include', redirect: 'follow' });
+  const finalUrl = (r.url || url).split('#')[0];
+
+  /* O Mercado Livre pediu verificacao de seguranca. Freia e sai: insistir
+     depois desse sinal e o que leva a conta a bloqueio. */
+  if (/\/captcha\/wall/.test(finalUrl)) { await puxarFreio('verificacao de seguranca ao abrir a vitrine de uma loja', 'leitura'); return { freio: true }; }
+
+  const t = await r.text();
+
+  /* Caiu no perfil social - vitrine de varias lojas, nao serve. */
+  if (/\/social\/[^/]+/.test(finalUrl)) return { ok: false, motivo: 'perfil social' };
+
+  const canon = (t.match(/<link\s+rel="canonical"\s+href="([^"]+)"/i) || [])[1] || null;
+  const alvo = (canon && RE_PAGINA_LOJA.test(canon.split('?')[0])) ? canon.split('?')[0] : finalUrl.split('?')[0];
+
+  /* Tem produto no ar? Sem produto, o endereco existe mas a prateleira esta
+     vazia, e mandar o cliente para la e pior do que nao ter botao. */
+  const porContagem = /(\d+)\s+resultados?/i.exec(t);
+  const itens = porContagem ? Number(porContagem[1]) : (t.match(/ui-search-layout__item/g) || []).length;
+  const precos = (t.match(/"price"\s*:\s*\d/g) || []).length;
+  const temProduto = itens >= 1 || precos >= 1;
+
+  return { ok: temProduto, alvo, itens, precos, ehPaginaDeLoja: RE_PAGINA_LOJA.test(alvo), status: r.status };
+}
+
+/* Descobre o endereco da vitrine de UMA loja. Devolve o endereco ou null.
+   Faz no maximo duas leituras, e para na primeira que der certo. */
+async function resolverVitrineDaLoja(vendedor, sellerId) {
+  const tentativas = [];
+  if (sellerId) tentativas.push('https://lista.mercadolivre.com.br/_CustId_' + sellerId);
+  /* /perfil/ so faz sentido quando o nome do vendedor e mesmo um apelido:
+     nome com espaco ("Cordilheira Mix") nao e endereco. */
+  if (vendedor && !/\s/.test(vendedor)) {
+    tentativas.push('https://www.mercadolivre.com.br/perfil/' + encodeURIComponent(vendedor.toUpperCase()));
+  }
+
+  for (const url of tentativas) {
+    let r;
+    try { r = await lerVitrine(url); } catch (e) { continue; }
+    if (r.freio) return { freio: true };
+    if (!r.ok) continue;
+
+    /* Endereco proprio de loja: e o melhor destino, tem nome e marca dela. */
+    if (r.ehPaginaDeLoja) return { url: r.alvo, itens: r.itens };
+
+    /* Sem pagina propria, mas a lista de anuncios do vendedor tem produto:
+       serve, e e exatamente "a lista de produtos daquela loja". */
+    if (/_CustId_\d+/.test(url)) return { url: url, itens: r.itens };
+  }
+  return { url: null };
+}
+
+let resolvendoLojas = false;
+
+async function resolverPaginasDeLoja(limite = LOTE_LOJAS) {
+  if (resolvendoLojas) return { pulou: true };
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return { semToken: true };
+
+  resolvendoLojas = true;
+  try {
+    const lojas = await lojasParaResolver(sincToken, limite);
+    if (!lojas.length) return { nada: true };
+
+    let achadas = 0, vazias = 0, cupons = 0;
+    for (const loja of lojas) {
+      if (await freioLigado('leitura')) return { freio: true, achadas, vazias };
+
+      const r = await resolverVitrineDaLoja(loja.vendedor, loja.seller_id);
+      if (r.freio) return { freio: true, achadas, vazias };
+
+      if (r.url) {
+        const n = await salvarPaginaLoja(sincToken, loja.vendedor, r.url).catch(() => null);
+        achadas++;
+        cupons += Number(loja.cupons) || 0;
+      } else {
+        await marcarLojaSemPagina(sincToken, loja.vendedor).catch(() => null);
+        vazias++;
+      }
+
+      /* Ritmo de gente lendo, nao de robo varrendo: 6 a 11 segundos entre
+         lojas. Com 8 lojas por rodada e uma rodada por minuto, da cerca de
+         uma leitura a cada 8 segundos no pior caso - longe de rajada. */
+      await sleep(6000 + Math.floor(Math.random() * 5000));
+    }
+    return { achadas, vazias, cupons, lojas: lojas.length };
+  } finally { resolvendoLojas = false; }
+}
+
 let conferindoVitrines = false;
 
 async function conferirVitrines(limite = 40) {
@@ -978,57 +1111,90 @@ async function atenderPedidosDeEtiqueta() {
 
 let gerandoEtiquetas = false;
 
-/* ------------------------------------------------------- freio de seguranca
+/* --------------------------------------------- freio de seguranca por area
 
-   Se o Mercado Livre responder 403 ou 429 a um pedido de codigo, ele esta
-   dizendo para parar. Antes, o codigo apenas interrompia aquele lote e voltava
-   a insistir na janela seguinte, poucas horas depois. Insistir depois de levar
-   um nao e exatamente o comportamento que faz uma conta ser marcada.
+   O QUE ESTAVA ERRADO. A versao anterior parava TUDO ate a virada do dia no
+   segundo sinal. Hoje isso custou o dia: um captcha lendo um anuncio as 12:25 e
+   a maquina ficou cinco horas sem gerar uma unica etiqueta, com gente esperando
+   na tela do site. Parar de criar etiqueta por causa de um captcha numa pagina
+   de produto e fechar a loja porque a campainha tocou.
 
-   Agora o freio vale para o resto do dia. O Weslei vai estar na Espanha, sem
-   acesso ao servidor, entao o padrao tem que ser o conservador: perder um dia
-   de etiquetas custa pouco, perder a conta de afiliado custa tudo. */
-/* Freio em dois degraus.
+   DUAS CORRECOES.
 
-   A primeira versao parava o dia inteiro em qualquer sinal. Os numeros
-   mostraram que isso era caro demais: no dia 23/09 o Mercado Livre pediu
-   captcha num anuncio especifico enquanto a geracao de links seguia normal,
-   20 links em 40 minutos. Um freio de dia inteiro ali teria jogado fora horas
-   de trabalho por um desafio pontual.
+   1. O freio vale por AREA. Captcha lendo pagina publica trava a LEITURA.
+      Etiqueta so trava quando o proprio gerador de etiqueta responde 403 ou
+      429, que e o unico sinal que fala sobre etiqueta. Cada area conta sozinha.
 
-   Entao: primeiro sinal do dia para 30 minutos. Segundo sinal no mesmo dia
-   para ate a virada, porque aí nao e mais incidente isolado, e insistir depois
-   de dois avisos e o que marca uma conta. */
-const PAUSA_CURTA_MS = 30 * 60 * 1000;
+   2. A pausa CRESCE mas sempre termina: 5, 15 e 60 minutos, e fica em 60 daí em
+      diante. Nunca mais "parado ate amanha". Recuar ate uma hora ja e recuo de
+      sobra para qualquer limite de ritmo; uma hora custa uma hora, nao um dia.
 
-async function puxarFreio(motivo) {
+   O QUE NAO MUDOU: o sinal continua sendo respeitado na hora em que chega, e
+   continua sem nenhuma tentativa de resolver captcha. */
+const PAUSAS_MS = [5 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000];
+
+function chaveFreio(area) { return 'freio_' + (area || 'leitura'); }
+
+async function puxarFreio(motivo, area = 'leitura') {
+  const k = chaveFreio(area);
   const hoje = diaSP();
-  const st = await chrome.storage.local.get(['freioDia', 'freioVezes']);
-  const vezes = (st.freioDia === hoje ? (st.freioVezes || 0) : 0) + 1;
+  const st = await chrome.storage.local.get(k);
+  const atual = st[k] || {};
+  const vezes = (atual.dia === hoje ? (atual.vezes || 0) : 0) + 1;
+  const espera = PAUSAS_MS[Math.min(vezes, PAUSAS_MS.length) - 1];
+  const ate = Date.now() + espera;
 
-  const ate = vezes >= 2 ? null : Date.now() + PAUSA_CURTA_MS;
-  await chrome.storage.local.set({
-    freioDia: hoje, freioVezes: vezes, freioAte: ate, freioMotivo: String(motivo)
-  });
-  console.warn('[freio]', vezes === 1 ? 'pausa de 30 minutos:' : 'parado ate amanha:', motivo);
+  await chrome.storage.local.set({ [k]: { dia: hoje, vezes, ate, motivo: String(motivo) } });
+  console.warn('[freio:' + area + ']', Math.round(espera / 60000) + ' min:', motivo);
+
+  try {
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    await anotarEstadoRobo(sincToken, 'freio_motivo', String(motivo));
+    await anotarEstadoRobo(sincToken, 'freio_ate', new Date(ate).toISOString());
+  } catch (e) { /* o freio vale mesmo se o aviso nao sair */ }
 }
 
-async function freioLigado() {
-  const { freioDia, freioAte, freioMotivo } = await chrome.storage.local.get(
-    ['freioDia', 'freioAte', 'freioMotivo']);
-  if (freioDia !== diaSP()) return null;
-  /* freioAte null significa parado ate a virada do dia. */
-  if (freioAte == null) return (freioMotivo || 'sem motivo registrado') + ' (parado ate amanha)';
-  if (Date.now() < freioAte) {
-    const min = Math.ceil((freioAte - Date.now()) / 60000);
-    return (freioMotivo || 'sem motivo registrado') + ' (volta em ' + min + ' min)';
+/* Texto do freio quando a area esta pausada, null quando esta liberada. */
+async function freioLigado(area = 'leitura') {
+  const k = chaveFreio(area);
+  const st = await chrome.storage.local.get(k);
+  const f = st[k];
+  if (!f || !f.ate || Date.now() >= f.ate) { void avisarQueEstouLivre(area); return null; }
+  const min = Math.max(1, Math.ceil((f.ate - Date.now()) / 60000));
+  return (f.motivo || 'sem motivo registrado') + ' (volta em ' + min + ' min)';
+}
+
+let avisouLivre = {};
+
+/* Limpa o aviso no site quando NENHUMA area esta parada, para o cartao nao
+   continuar mostrando pausa que ja passou. */
+async function avisarQueEstouLivre(area) {
+  const marca = (area || 'leitura') + ':' + Math.floor(Date.now() / 600000);
+  if (avisouLivre[marca]) return;
+  for (const a of ['leitura', 'etiqueta', 'link']) {
+    const st = await chrome.storage.local.get(chaveFreio(a));
+    const f = st[chaveFreio(a)];
+    if (f && f.ate && Date.now() < f.ate) return;
   }
-  return null;
+  avisouLivre = { [marca]: true };
+  try {
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    await anotarEstadoRobo(sincToken, 'freio_motivo', '');
+    await anotarEstadoRobo(sincToken, 'freio_ate', '');
+    await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
+  } catch (e) { /* silencioso de proposito */ }
 }
+
+/* O estado antigo podia deixar a maquina parada ate a virada do dia. Some com
+   ele assim que esta versao carrega, senao atualizar nao destrava nada. */
+chrome.storage.local.remove(['freioDia', 'freioAte', 'freioVezes', 'freioMotivo']);
 
 async function gerarEtiquetas(limite = 20, filaPronta = null) {
   if (gerandoEtiquetas) return { pulou: true };
-  const travado = await freioLigado();
+  /* SO o freio de etiqueta. Captcha lendo pagina de produto nao tem nada a ver
+     com criar codigo no hub de afiliados, e era isso que estava derrubando a
+     geracao o dia inteiro. */
+  const travado = await freioLigado('etiqueta');
   if (travado) return { freio: travado };
   const { sincToken } = await chrome.storage.local.get('sincToken');
   if (!sincToken) return { semToken: true };
@@ -1051,7 +1217,7 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
           if (res && res.alias) codigo = res.alias;
           else if (res && (res.st === 403 || res.st === 429)) {
             /* Para o lote E o dia. Ver puxarFreio acima. */
-            await puxarFreio('HTTP ' + res.st + ' ao criar codigo');
+            await puxarFreio('o Mercado Livre respondeu ' + res.st + ' ao criar o codigo', 'etiqueta');
             break;
           }
         } catch (e) {
@@ -1433,6 +1599,12 @@ const TETO_DIA_LINKS = 120;
 const LOTE_CONDICOES = 40;
 const LOTE_VITRINES = 15;
 const LOTE_LINKS = 10;
+/* Endereco de vitrine e a tarefa mais barata da fila: uma leitura por LOJA, e
+   o resultado vale para todos os cupons dela. Mesmo assim vai devagar, porque
+   e leitura de pagina publica do Mercado Livre e o que derruba a conta e
+   rajada, nao volume espalhado. */
+const TETO_DIA_LOJAS = 200;
+const LOTE_LOJAS = 8;
 
 function diaSP() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -1502,8 +1674,9 @@ async function rodadaDaJanela(janela) {
 async function gastoDoDia() {
   const { gastoFila } = await chrome.storage.local.get('gastoFila');
   const dia = diaSP();
-  if (!gastoFila || gastoFila.dia !== dia) return { dia, condicoes: 0, vitrines: 0, links: 0 };
+  if (!gastoFila || gastoFila.dia !== dia) return { dia, condicoes: 0, vitrines: 0, links: 0, lojas: 0 };
   if (gastoFila.links == null) gastoFila.links = 0;
+  if (gastoFila.lojas == null) gastoFila.lojas = 0;
   return gastoFila;
 }
 
@@ -1526,7 +1699,7 @@ async function andarFila() {
        continuam sendo tentados mais abaixo, porque sao poucos e no ritmo de
        quem esta esperando na tela; o que nao pode continuar e o robo varrendo
        o Mercado Livre depois de ele ter pedido verificacao. */
-    const travado = await freioLigado();
+    const travado = await freioLigado('leitura');
     if (travado) {
       const pedidos = await atenderPedidos().catch(() => null);
       return { freio: travado, pedidos };
@@ -1569,6 +1742,20 @@ async function andarFila() {
       if (r && !r.nada && !r.pulou && !r.semToken) {
         await anotarGasto('condicoes', quanto);
         return { condicoes: r };
+      }
+    }
+
+    /* POR ULTIMO, DE PROPOSITO. Eu tinha posto isto em primeiro lugar, e estava
+       errado: sao 219 lojas a resolver, 8 por rodada, e como cada rodada
+       termina assim que faz algum trabalho, a fila ficaria semanas presa aqui
+       sem conferir condicao nem gerar link. Endereco de vitrine e melhoria;
+       condicao de cupom e o que o cliente le na tela. Melhoria vai depois. */
+    if (g.lojas < TETO_DIA_LOJAS) {
+      const quanto = Math.min(LOTE_LOJAS, TETO_DIA_LOJAS - g.lojas);
+      const r = await resolverPaginasDeLoja(quanto);
+      if (r && !r.nada && !r.pulou && !r.semToken) {
+        await anotarGasto('lojas', quanto);
+        return { lojas: r };
       }
     }
 
@@ -1679,7 +1866,18 @@ async function atenderPedidos() {
              caixa em outra loja sem cupom nenhum, e o site nao dizia nada. */
           let outra = null;
           let outraFalhou = null;
+          /* O SITE PRECISA SABER SE EU PROCUREI.
+
+             Sem este sinal, "nao achei loja melhor" e "nem cheguei a olhar"
+             chegavam iguais na tela, e o texto exibido era o de quem nao
+             procurou. Foi isso que o Weslei viu na capa da Motorola: a busca
+             tinha condicoes de rodar e a tela dizia so "esta loja nao tem
+             cupom", sem uma palavra sobre as outras lojas. */
+          let procurouOutra = false;
+          let motivoNaoProcurou = null;
+          if (filaCheia) motivoNaoProcurou = 'fila cheia: outros clientes esperando';
           if (!filaCheia) {
+            procurouOutra = true;
             let alt = null;
             try {
               const economiaAqui = (cupom && aval && aval.vale && aval.economia != null)
@@ -1687,6 +1885,8 @@ async function atenderPedidos() {
               const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
               alt = await mesmoProdutoComCupom(url, finalAqui, null);
             } catch (e) {
+              procurouOutra = false;
+              motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
               console.warn('[mesmo produto] busca falhou:', e.message);
             }
 
@@ -1729,6 +1929,11 @@ async function atenderPedidos() {
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,
+            /* true = procurei o mesmo produto nas outras lojas. Com outraLoja
+               null, isso quer dizer "procurei e esta e a melhor". Sem isso, a
+               tela mentia por omissao. */
+            procurouOutra: procurouOutra,
+            motivoNaoProcurou: motivoNaoProcurou,
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,

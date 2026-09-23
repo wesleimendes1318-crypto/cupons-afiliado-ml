@@ -244,6 +244,40 @@ export async function salvarEtiquetas(token, lista) {
 }
 
 
+/* Pagina da loja no Mercado Livre, descoberta lendo um anuncio do vendedor.
+
+   E o destino do botao do cartao quando nao existe link de afiliado: a lista
+   de produtos daquela loja, que e onde o cliente escolhe o que comprar antes
+   de aplicar o cupom. O slug do endereco nem sempre e igual ao nome de
+   exibicao, entao chutar leva a pagina inexistente: tem que ser lido. */
+const RPC_PAGINA_LOJA = SUPABASE + '/rest/v1/rpc/salvar_pagina_loja';
+
+export async function salvarPaginaLoja(token, vendedor, url) {
+  if (!token || !vendedor || !url) return null;
+  return chamarRpc(RPC_PAGINA_LOJA, { p_token: token, p_vendedor: vendedor, p_url: url });
+}
+
+const RPC_LOJAS_PEND = SUPABASE + '/rest/v1/rpc/lojas_para_resolver';
+const RPC_LOJA_SEM   = SUPABASE + '/rest/v1/rpc/marcar_loja_sem_pagina';
+
+/* Uma linha por LOJA que ainda nao tem endereco de vitrine guardado, com o
+   numero do vendedor quando ele ja aparece no link da campanha. Loja, e nao
+   cupom: o endereco vale para todos os cupons da mesma loja, entao uma visita
+   ao Mercado Livre resolve dez cartoes de uma vez. */
+export async function lojasParaResolver(token, limite = 20) {
+  if (!token) return [];
+  const r = await chamarRpc(RPC_LOJAS_PEND, { p_token: token, p_limite: limite });
+  return Array.isArray(r) ? r : [];
+}
+
+/* Tentamos e o Mercado Livre nao tem pagina para essa loja. Anota a tentativa
+   para a fila nao voltar aqui amanha. O cupom continua no ar: o codigo aplica
+   no carrinho mesmo sem vitrine para mostrar. */
+export async function marcarLojaSemPagina(token, vendedor) {
+  if (!token || !vendedor) return null;
+  return chamarRpc(RPC_LOJA_SEM, { p_token: token, p_vendedor: vendedor });
+}
+
 const RPC_VIT_PEND   = SUPABASE + '/rest/v1/rpc/vitrines_para_conferir';
 const RPC_VIT_SALVAR = SUPABASE + '/rest/v1/rpc/salvar_vitrines';
 
@@ -265,4 +299,18 @@ export async function salvarVitrines(token, lista) {
     p_token: token,
     p_lista: lista.map(x => ({ id: x.id, ok: !!x.ok, origem: x.origem || null, motivo: x.motivo || null }))
   });
+}
+
+
+const RPC_ESTADO_ROBO = SUPABASE + '/rest/v1/rpc/anotar_estado_robo';
+
+/* Conta ao site o que esta acontecendo aqui dentro.
+
+   Sem isto, freio puxado parecia site quebrado: o visitante clicava, o botao
+   girava 88 segundos e desistia sem explicar nada. Agora o site le este estado
+   e diz a verdade, que e "estou em pausa de seguranca, volto mais tarde". */
+export async function anotarEstadoRobo(token, chave, valor) {
+  if (!token || !chave) return null;
+  try { return await chamarRpc(RPC_ESTADO_ROBO, { p_token: token, p_chave: chave, p_valor: valor == null ? '' : String(valor) }); }
+  catch (e) { return null; }
 }
