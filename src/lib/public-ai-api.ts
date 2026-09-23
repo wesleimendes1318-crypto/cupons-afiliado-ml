@@ -281,5 +281,23 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
 export async function chamarIa(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
   const proprio = await chamarGemini(prompt, opcoes);
   if (proprio.ok) return proprio;
-  return chamarGateway(prompt, opcoes);
+
+  const gateway = await chamarGateway(prompt, opcoes);
+  if (gateway.ok) return gateway;
+
+  /* NAO MANDAR A PESSOA TENTAR DE NOVO QUANDO NAO HA O QUE TENTAR.
+
+     Os dois caminhos caidos ao mesmo tempo quase nunca sao instabilidade: e
+     chave propria ausente somada a gateway da plataforma sem credito. Dizer
+     "tente novamente em instantes" nesse caso e mentira, e a pessoa fica
+     clicando. O texto abaixo diz a verdade sem expor nada de configuracao. */
+  const temChavePropria = Boolean(process.env['GEMINI_API_KEY']);
+  if (!temChavePropria) {
+    return {
+      ok: false,
+      status: 503,
+      erro: "A busca com IA está fora do ar neste momento. Os cupons e os filtros continuam funcionando normalmente.",
+    };
+  }
+  return gateway;
 }
