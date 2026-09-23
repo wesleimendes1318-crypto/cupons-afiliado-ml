@@ -54,4 +54,4 @@
 - [x] Unificar identidade visual (roxo + amarelo) entre home e paginas internas
 - [x] Manter branco/azul/cinza/verde existentes; roxo apenas nas faixas de topo
 
-- [ ] Padronizar o card de cupom da home em todas as secoes (categorias etc.)
+- [x] Padronizar o card de cupom da home em todas as secoes (categorias etc.)

@@ -36,9 +36,9 @@ export const Route = createFileRoute("/categorias/$slug")({
     const url = `${BASE}/${params.slug}`;
     return {
       meta: [
-        { title: `${categoria.nome}: como avaliar ofertas e cupons` },
+        { title: `Cupons de ${categoria.nome} conferidos` },
         { name: "description", content: categoria.resumo },
-        { property: "og:title", content: `${categoria.nome}: como avaliar ofertas e cupons` },
+        { property: "og:title", content: `Cupons de ${categoria.nome} conferidos` },
         { property: "og:description", content: categoria.resumo },
         { property: "og:type", content: "article" },
         { property: "og:url", content: url },
