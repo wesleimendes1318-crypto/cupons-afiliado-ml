@@ -88,6 +88,8 @@ type OutraLoja = {
      final. Vem da extensao, que e quem conhece os dois lados. */
   ganho?: number | null;
   finalAtual?: number | null;
+  /* Veio da busca por título em vez da página de catálogo. */
+  achadoNaBusca?: boolean | null;
   vendedor: string | null;
   preco: number | null;
   economia: number | null;
@@ -943,8 +945,9 @@ function OutraLojaComCupom({
       )}
 
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-        É o mesmo produto, na mesma página de catálogo do Mercado Livre, só que no
-        anúncio desta loja.
+        {oferta.achadoNaBusca
+          ? "Achei este anúncio procurando o produto na busca do Mercado Livre. O título bate com o que você colou, mas confira a descrição antes de comprar: fora do catálogo, quem escreve o anúncio é o vendedor."
+          : "É o mesmo produto, na mesma página de catálogo do Mercado Livre, só que no anúncio desta loja."}
         {temCupomLa ? " O desconto do cupom aparece no carrinho." : " Aqui a economia vem do preço, não de cupom."}
       </p>
     </div>
