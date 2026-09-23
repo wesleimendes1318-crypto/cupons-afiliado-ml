@@ -763,7 +763,9 @@ function Index() {
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
   const [vitrine, setVitrine] = useState<"recomendados" | "todos">("recomendados");
-  const [painelAberto, setPainelAberto] = useState(false);
+  /* Os filtros nascem abertos: esconde-los fez a lista de lojas, categorias e
+     faixas de economia sumirem aos olhos de quem chega. */
+  const [painelAberto, setPainelAberto] = useState(true);
   const [tipo, setTipo] = useState<"todos" | "%" | "R$">("todos");
   const [descontoMin, setDescontoMin] = useState("");
   const [orcamentoMin, setOrcamentoMin] = useState("");
@@ -927,6 +929,12 @@ function Index() {
     indexado.forEach((cupom) => contagens.set(cupom.vendedor, (contagens.get(cupom.vendedor) ?? 0) + 1));
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
+
+  /* Lojas com mais cupons: viram atalhos visiveis, sem precisar abrir nada. */
+  const lojasDestaque = useMemo(
+    () => [...lojasDisponiveis].sort(([a, qa], [b, qb]) => qb - qa || a.localeCompare(b, "pt-BR")).slice(0, 14),
+    [lojasDisponiveis],
+  );
 
   const lojasFiltradas = useMemo(() => {
     const busca = normalizar(texto);
