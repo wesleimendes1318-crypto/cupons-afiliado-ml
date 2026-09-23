@@ -55,3 +55,5 @@
 - [x] Manter branco/azul/cinza/verde existentes; roxo apenas nas faixas de topo
 
 - [x] Padronizar o card de cupom da home em todas as secoes (categorias etc.)
+
+- [ ] Manter os cupons mais vantajosos primeiro e os menos vantajosos no final

@@ -21,7 +21,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -50,10 +50,40 @@ type Cupom = {
   bloqueado: boolean | null;
 };
 
+function mensagemProduto({
+  titulo,
+  vendedor,
+  cupom,
+  codigo,
+  link,
+}: {
+  titulo: string | null | undefined;
+  vendedor: string | null | undefined;
+  cupom: Cupom | null | undefined;
+  codigo: string;
+  link: string;
+}) {
+  const linhas = ["Olha o cupom que encontrei 👀"];
+  if (titulo) linhas.push(`Produto: ${titulo}`);
+  if (vendedor) linhas.push(`Loja: ${vendedor}`);
+  if (cupom?.titulo) linhas.push(`Desconto: ${cupom.titulo}`);
+  if (cupom?.teto != null) linhas.push(`Economia máxima: ${brl(cupom.teto)}`);
+  else if (cupom) linhas.push("Limite: sem limite de valor");
+  if (cupom?.minimo != null) linhas.push(`Compra mínima: ${brl(cupom.minimo)}`);
+  if (cupom?.vence) linhas.push(`Válido até: ${dataBR(cupom.vence)}`);
+  linhas.push(`Etiqueta: ${codigo}`, `Link afiliado do produto: ${link}`);
+  return linhas.join("\n");
+}
+
+function compartilharWhatsApp(texto: string) {
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+}
+
 /* A mesma coisa que a pessoa quer comprar, vendida por OUTRA loja que tem
    cupom. Só chega aqui quando é o mesmo produto de catálogo do Mercado Livre,
    nunca um parecido, e só quando sai mais barato que o anúncio colado. */
 type OutraLoja = {
+  cupomId?: number | null;
   vendedor: string | null;
   preco: number | null;
   economia: number | null;
@@ -527,13 +557,26 @@ function copiarAgora(texto: string): boolean {
   }
 }
 
-function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }) {
+function CodigoNaHora({
+  cupomId,
+  destino,
+  titulo,
+  vendedor,
+  cupom,
+}: {
+  cupomId: number;
+  destino: string;
+  titulo: string | null | undefined;
+  vendedor: string | null | undefined;
+  cupom: Cupom | null | undefined;
+}) {
   const [codigo, setCodigo] = useState<string | null>(null);
   const [fase, setFase] = useState<"parado" | "gerando" | "falhou">("parado");
   const [copiou, setCopiou] = useState(false);
   const [redirecionando, setRedirecionando] = useState(false);
   const relogios = useRef<number[]>([]);
   const redirecionamento = useRef<number | null>(null);
+  const acao = useRef<"abrir" | "compartilhar">("abrir");
 
   useEffect(() => () => {
     relogios.current.forEach((t) => window.clearTimeout(t));
@@ -545,7 +588,8 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
     redirecionamento.current = window.setTimeout(() => window.location.assign(destino), 700);
   }, [destino]);
 
-  async function pedir() {
+  async function pedir(proximaAcao: "abrir" | "compartilhar" = "abrir") {
+    acao.current = proximaAcao;
     setFase("gerando");
     try {
       const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
@@ -572,8 +616,12 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
   function pronto(valor: string) {
     setCodigo(valor);
     setFase("parado");
-    setCopiou(copiarAgora(valor));
-    abrir();
+    if (acao.current === "compartilhar") {
+      compartilharWhatsApp(mensagemProduto({ titulo, vendedor, cupom, codigo: valor, link: destino }));
+    } else {
+      setCopiou(copiarAgora(valor));
+      abrir();
+    }
   }
 
   if (codigo) {
@@ -597,6 +645,14 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
         >
           {redirecionando ? "Copiado! Abrindo o produto..." : "Copiar e abrir o produto"}
         </button>
+        <button
+          type="button"
+          onClick={() => compartilharWhatsApp(mensagemProduto({ titulo, vendedor, cupom, codigo, link: destino }))}
+          className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-success px-3 py-2 text-sm font-bold text-success transition-colors hover:bg-success/10"
+        >
+          <Share2 className="size-4" aria-hidden="true" />
+          Compartilhar cupom no WhatsApp
+        </button>
       </div>
     );
   }
@@ -605,7 +661,7 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
     <div className="mt-3">
       <button
         type="button"
-        onClick={pedir}
+          onClick={() => void pedir("abrir")}
         disabled={fase === "gerando"}
         className="w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:opacity-70"
       >
@@ -615,6 +671,21 @@ function CodigoNaHora({ cupomId, destino }: { cupomId: number; destino: string }
             Criando seu código…
           </span>
         ) : "Usar este cupom"}
+      </button>
+      <button
+        type="button"
+        onClick={() => void pedir("compartilhar")}
+        disabled={fase === "gerando"}
+        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-success px-3 py-2 text-sm font-bold text-success transition-colors hover:bg-success/10 disabled:opacity-60"
+      >
+        {fase === "gerando" && acao.current === "compartilhar" ? (
+          <LoaderCircle className="animate-giro-calmo size-4" aria-hidden="true" />
+        ) : (
+          <Share2 className="size-4" aria-hidden="true" />
+        )}
+        {fase === "gerando" && acao.current === "compartilhar"
+          ? "Preparando para compartilhar…"
+          : "Compartilhar cupom no WhatsApp"}
       </button>
       {fase === "gerando" && (
         <div className="mt-2.5 overflow-hidden rounded-md border border-success/25 bg-success/10 p-3" role="status" aria-live="polite">
@@ -670,13 +741,13 @@ function Resultado({
       {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
 
       {a?.outraLoja && (
-        <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} principal={trocar} />
+        <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} titulo={a.titulo} principal={trocar} />
       )}
 
       <CondicoesDoCupom analise={a} />
 
       {a?.temCupom && a.cupom?.id != null && !trocar && (
-        <CodigoNaHora cupomId={a.cupom.id} destino={link} />
+        <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
       )}
 
 
@@ -742,10 +813,12 @@ function Resultado({
 function OutraLojaComCupom({
   oferta,
   precoAqui,
+  titulo,
   principal,
 }: {
   oferta: OutraLoja;
   precoAqui: number | null;
+  titulo?: string | null;
   principal?: boolean;
 }) {
   const diferenca =
@@ -795,6 +868,24 @@ function OutraLojaComCupom({
       >
         Comprar na loja com cupom
       </a>
+
+      {oferta.cupomId != null && (
+        <CodigoNaHora
+          cupomId={oferta.cupomId}
+          destino={oferta.link}
+          titulo={titulo}
+          vendedor={oferta.vendedor}
+          cupom={{
+            id: oferta.cupomId,
+            titulo: oferta.cupomTitulo,
+            vence: oferta.vence,
+            teto: oferta.teto,
+            minimo: oferta.minimo,
+            economia: oferta.economia,
+            bloqueado: false,
+          }}
+        />
+      )}
 
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
         É o mesmo produto, na mesma página de catálogo, só que
