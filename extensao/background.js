@@ -988,15 +988,41 @@ let gerandoEtiquetas = false;
    Agora o freio vale para o resto do dia. O Weslei vai estar na Espanha, sem
    acesso ao servidor, entao o padrao tem que ser o conservador: perder um dia
    de etiquetas custa pouco, perder a conta de afiliado custa tudo. */
+/* Freio em dois degraus.
+
+   A primeira versao parava o dia inteiro em qualquer sinal. Os numeros
+   mostraram que isso era caro demais: no dia 23/09 o Mercado Livre pediu
+   captcha num anuncio especifico enquanto a geracao de links seguia normal,
+   20 links em 40 minutos. Um freio de dia inteiro ali teria jogado fora horas
+   de trabalho por um desafio pontual.
+
+   Entao: primeiro sinal do dia para 30 minutos. Segundo sinal no mesmo dia
+   para ate a virada, porque aí nao e mais incidente isolado, e insistir depois
+   de dois avisos e o que marca uma conta. */
+const PAUSA_CURTA_MS = 30 * 60 * 1000;
+
 async function puxarFreio(motivo) {
-  const fim = diaSP();
-  await chrome.storage.local.set({ freioDia: fim, freioMotivo: String(motivo) });
-  console.warn('[freio] parando de gerar etiquetas hoje:', motivo);
+  const hoje = diaSP();
+  const st = await chrome.storage.local.get(['freioDia', 'freioVezes']);
+  const vezes = (st.freioDia === hoje ? (st.freioVezes || 0) : 0) + 1;
+
+  const ate = vezes >= 2 ? null : Date.now() + PAUSA_CURTA_MS;
+  await chrome.storage.local.set({
+    freioDia: hoje, freioVezes: vezes, freioAte: ate, freioMotivo: String(motivo)
+  });
+  console.warn('[freio]', vezes === 1 ? 'pausa de 30 minutos:' : 'parado ate amanha:', motivo);
 }
 
 async function freioLigado() {
-  const { freioDia, freioMotivo } = await chrome.storage.local.get(['freioDia', 'freioMotivo']);
-  if (freioDia === diaSP()) return freioMotivo || 'sem motivo registrado';
+  const { freioDia, freioAte, freioMotivo } = await chrome.storage.local.get(
+    ['freioDia', 'freioAte', 'freioMotivo']);
+  if (freioDia !== diaSP()) return null;
+  /* freioAte null significa parado ate a virada do dia. */
+  if (freioAte == null) return (freioMotivo || 'sem motivo registrado') + ' (parado ate amanha)';
+  if (Date.now() < freioAte) {
+    const min = Math.ceil((freioAte - Date.now()) / 60000);
+    return (freioMotivo || 'sem motivo registrado') + ' (volta em ' + min + ' min)';
+  }
   return null;
 }
 
