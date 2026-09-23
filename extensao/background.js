@@ -385,7 +385,18 @@ function chamadaNaPagina(rota, url, tag) {
     method: 'POST',
     headers: { accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': meta.content },
     body: JSON.stringify({ urls: [url], tag })
-  }).then(r => r.text().then(t => ({ status: r.status, txt: t.slice(0, 1500) })))
+    /* 20000, nao 1500.
+
+       Com 1500 a resposta chegava cortada no meio do JSON, o JSON.parse
+       falhava e o link saia como "criado mas nao consegui ler a resposta".
+       Aconteceu 18 vezes em tres horas, ou seja, 18 links criados de verdade
+       no Mercado Livre e 18 pessoas sem resposta na tela.
+
+       Medido na resposta real: 1075 bytes para uma URL curta. Cada item traz
+       long_url, origin_url, regex, list_url e deeplink_list_url, entao uma URL
+       longa (as que o aplicativo gera, com pdp_filters e rastreio) multiplica
+       isso e passa fácil dos 1500. */
+  }).then(r => r.text().then(t => ({ status: r.status, txt: t.slice(0, 20000) })))
     .catch(e => ({ falha: String(e && e.message || e) }));
 }
 
@@ -691,23 +702,51 @@ async function gerarLinksDeCupons(limite = 60) {
 /* Roda no service worker, nao na aba: a vitrine mora em lista.mercadolivre.com.br
    e uma aba de www.mercadolivre.com.br nao consegue ler outra origem. Aqui o
    manifest ja autoriza o dominio inteiro e nao ha CORS. */
-/* credentials: 'omit' de proposito, e esse detalhe e o bug que eu tinha aqui.
+/* Como saber se a vitrine de um cupom tem produto de verdade.
 
-   Com a sessao do Weslei junto, o Mercado Livre devolve a pagina que ELE ve:
-   recomendacoes, historico, itens que o cliente deslogado nao recebe. A
-   vitrine era marcada como cheia e o cliente caia numa lista vazia. Foi
-   exatamente o que aconteceu com o cupom da Vertex_brasil_farmaceutica, que
-   estava marcado como ok e nao funcionou no teste em janela anonima.
+   Historico desta funcao, para nao repetir nenhum dos dois erros:
 
-   Deslogado aqui significa: conferir o que o comprador vai ver. */
+   1. A primeira versao contava ocorrencias de "price" e exigia 3 ou mais.
+      Marcava como cheia vitrine que nao estava, e marcava como vazia loja com
+      um ou dois produtos, que e vitrine legitima.
+
+   2. Eu "consertei" trocando para credentials: 'omit', achando que assim veria
+      o que o comprador deslogado ve. Resultado medido depois: 423 conferencias,
+      423 marcadas como vazias, zero cheias. Deslogado o Mercado Livre devolve
+      uma casca de 9 KB sem nenhum preco, nao a lista real. A regra virou 100%
+      falso negativo, e com isso o site parou de mostrar o botao novo e a
+      geracao de link de vitrine ficou sem fila.
+
+   Medicao real numa vitrine com 3 produtos:
+     deslogado: 9 KB,   0 precos, nenhuma contagem de resultados
+     logado:  425 KB,  30 precos, "3 resultados"
+
+   Entao: logado (e o unico jeito de ver a lista real) e a decisao sai da
+   contagem que a propria pagina publica, "N resultados". Um produto ja basta.
+
+   O teste de texto "nao encontramos" saiu: essa frase aparece tambem em
+   paginas que TEM resultado, numa secao de sugestao, e era fonte de falso
+   negativo. */
 async function vitrineTemProduto(url) {
   try {
-    const r = await fetch(url, { credentials: 'omit', redirect: 'follow' });
-    if (/\/social\/[^/]+\/lists/.test(r.url)) return { ok: false, motivo: 'lista vazia' };
+    const r = await fetch(url, { credentials: 'include', redirect: 'follow' });
+    // Caiu no perfil social: o Mercado Livre nao achou a vitrine.
+    if (/\/social\/[^/]+\/lists/.test(r.url)) return { ok: false, motivo: 'perfil social' };
+
     const t = await r.text();
-    if (/n.o encontramos|sem resultados/i.test(t)) return { ok: false, motivo: 'sem resultados' };
+
+    // Casca sem conteudo: nao da para concluir nada, tenta outro dia.
+    if (t.length < 50000) return { ok: null, motivo: 'pagina incompleta (' + t.length + ')' };
+
+    const m = /(\d+)\s+resultados?/i.exec(t);
+    if (m && m[1] != null) {
+      const n = Number(m[1]);
+      return { ok: n >= 1, motivo: n + ' resultados' };
+    }
+
+    // Sem a contagem: cai para os precos, agora com limite honesto de 1.
     const precos = (t.match(/"price"\s*:\s*\d/g) || []).length;
-    return { ok: precos >= 3, motivo: 'precos=' + precos };
+    return { ok: precos >= 1, motivo: 'precos=' + precos };
   } catch (e) {
     return { ok: null, motivo: String((e && e.message) || e) };
   }
