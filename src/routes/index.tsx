@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, LoaderCircle, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -393,6 +393,64 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
   );
 }
 
+function EsperaDoCupom({
+  codigoPronto,
+  linkPronto,
+  somenteCodigo = false,
+}: {
+  codigoPronto: boolean;
+  linkPronto: boolean;
+  somenteCodigo?: boolean;
+}) {
+  const etapas = somenteCodigo
+    ? [{ nome: "Gerando etiqueta", pronta: codigoPronto, atual: !codigoPronto }]
+    : [
+        { nome: "Gerando etiqueta", pronta: codigoPronto, atual: !codigoPronto },
+        { nome: "Validando destino", pronta: linkPronto, atual: codigoPronto && !linkPronto },
+        { nome: "Pronto para abrir", pronta: codigoPronto && linkPronto, atual: false },
+      ];
+
+  return (
+    <div
+      className="mt-2.5 overflow-hidden rounded-md border border-ml-blue/25 bg-ml-blue/5 p-3"
+      role="status"
+      aria-live="polite"
+      aria-label={codigoPronto ? "Etiqueta pronta, preparando o destino" : "Gerando a etiqueta do cupom"}
+    >
+      <div className="flex items-center gap-2 text-xs font-bold text-ml-blue">
+        <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
+        <span>{codigoPronto ? "Etiqueta pronta. Só mais um instante…" : "Preparando seu cupom…"}</span>
+      </div>
+      <div className="mt-2 flex min-w-0 items-center gap-1.5" aria-hidden="true">
+        {etapas.map((etapa, indice) => (
+          <div key={etapa.nome} className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span
+              className={cn(
+                "grid size-4 shrink-0 place-items-center rounded-full border text-[9px] font-bold",
+                etapa.pronta
+                  ? "etapa-feita border-success bg-success text-primary-foreground"
+                  : etapa.atual
+                    ? "etapa-andando border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                    : "border-border bg-card text-secondary-ink",
+              )}
+            >
+              {etapa.pronta ? <Check className="size-2.5" /> : indice + 1}
+            </span>
+            <span className={cn("min-w-0 text-[10px] leading-3", etapa.atual || etapa.pronta ? "font-semibold text-foreground" : "text-secondary-ink")}>
+              {etapa.nome}
+            </span>
+            {indice < etapas.length - 1 && <span className="h-px min-w-2 flex-1 bg-border" />}
+          </div>
+        ))}
+      </div>
+      <div className="esqueleto mt-2.5 h-1.5 rounded-full" aria-hidden="true" />
+      <p className="mt-2 text-[10px] leading-4 text-secondary-ink">
+        Pode permanecer nesta página. Assim que tudo estiver confirmado, o próximo passo aparece automaticamente.
+      </p>
+    </div>
+  );
+}
+
 /* Cupom sem codigo: a pessoa pede e espera aqui mesmo
 
    A ordem importa: o site resolve sozinho. Registra o pedido, a extensao gera
@@ -432,9 +490,7 @@ function PedirCodigo({ cupom }: { cupom: Cupom }) {
   return (
     <div className="mt-3 rounded-md border border-dashed border-border bg-muted/40 p-2.5">
       {fase === "pedindo" ? (
-        <p className="text-[11px] leading-relaxed text-secondary-ink" aria-live="polite">
-          Gerando seu código... isso leva menos de um minuto.
-        </p>
+        <EsperaDoCupom codigoPronto={false} linkPronto={false} somenteCodigo />
       ) : fase === "demorou" ? (
         <>
           <p className="text-[11px] leading-relaxed text-secondary-ink">
@@ -646,9 +702,12 @@ export function AcaoDoCupom({
           if (!destino) void loja.gerar();
         }}
         disabled={gerando || loja.gerando || redirecionando}
+        aria-busy={gerando || loja.gerando || redirecionando}
         className={className}
       >
-        {consultado && !gerando && !loja.gerando && !redirecionando ? (
+        {gerando || loja.gerando ? (
+          <LoaderCircle className={cn(icone, "animate-giro-calmo")} aria-hidden="true" />
+        ) : consultado && !redirecionando ? (
           <Check className={icone} aria-hidden="true" />
         ) : (
           <Link2 className={icone} aria-hidden="true" />
@@ -661,6 +720,9 @@ export function AcaoDoCupom({
               ? "Consultado — abrir de novo"
               : "Usar este cupom"}
       </Button>
+      {(gerando || loja.gerando) && (
+        <EsperaDoCupom codigoPronto={Boolean(codigo)} linkPronto={Boolean(destino)} />
+      )}
       {consultado && !redirecionando && (
         <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-success">
           <Check className="size-3 shrink-0" aria-hidden="true" />

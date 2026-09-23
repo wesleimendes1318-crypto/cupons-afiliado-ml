@@ -374,6 +374,18 @@
   }
 }
 
+@keyframes giro-calmo {
+  to { transform: rotate(360deg); }
+}
+
+@utility animate-giro-calmo {
+  animation: giro-calmo 1.05s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* Identidade das páginas de conteúdo
    =================================
    As páginas editoriais (guias, categorias, institucionais) tinham só preto
