@@ -440,6 +440,97 @@ function etiquetaNaPagina(id, sufixo) {
    Do service worker isso nao funciona: a origem vira chrome-extension:// e o
    site devolve outra coisa. Aqui a origem, a Referer e a sessao sao legitimas,
    e o redirecionamento do meli.la tambem e seguido. */
+/* ------------------------------------------------- leitura do anuncio
+
+   CAUSA RAIZ, encontrada em 23/09 medindo os 108 pedidos ja feitos.
+
+   A leitura do anuncio rodava DENTRO da pagina do Mercado Livre, via
+   executeScript com world MAIN. Ali nao existe privilegio de extensao: vale
+   CORS de navegador comum. Entao a aba estava em www.mercadolivre.com.br e
+   qualquer endereco de outra origem era bloqueado antes de sair:
+
+     /p/MLB...      mesma origem  -> 20 de 24 leram
+     /up/MLBU...    mesma origem  -> 25 de 40 leram
+     produto.mercadolivre.com.br  -> 0 de 4  leram  (subdominio != origem)
+     lista.mercadolivre.com.br    -> 0 de 35 leram
+     meli.la                      -> 0 de 5  leram
+
+   Todo "Failed to fetch" do banco e isso. Nao era permissao no manifest: a
+   permissao nem chegava a ser consultada, porque a requisicao nao partia da
+   extensao.
+
+   A correcao e buscar no service worker, que tem host_permissions e nao passa
+   por CORS, e so entao extrair. A extracao e texto puro e nao precisa de
+   pagina nenhuma. A leitura na pagina fica como plano B. */
+
+const MAX_ANUNCIO = 3_000_000;
+
+function extrairAnuncio(t, finalUrl, status) {
+  function limpo(x) {
+    return x == null ? null : x
+      .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#0?39;/g, "'")
+      .replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  const lab  = /"seller_link"[\s\S]{0,600}?"label"\s*:\s*\{\s*"text"\s*:\s*"([^"]{2,60})"/.exec(t);
+  const slug = /\\u002F(?:pagina|perfil)\\u002F([A-Za-z0-9._%-]{2,60})|\/(?:pagina|perfil)\/([A-Za-z0-9._%-]{2,60})/.exec(t);
+  const h1   = /<h1[^>]*>([^<]{5,200})<\/h1>/i.exec(t);
+  const og   = /property="og:title"\s+content="([^"]{5,200})"/i.exec(t);
+  const tg   = /<title[^>]*>([\s\S]{5,250}?)<\/title>/i.exec(t);
+
+  let titulo = limpo(h1 && h1[1]) || limpo(og && og[1]) || limpo(tg && tg[1]);
+  if (titulo) {
+    titulo = titulo.replace(/\s*\|\s*(Parcelamento|Mercado\s*Livre)[\s\S]*$/i, '')
+                   .replace(/\s*-\s*R\$\s*[\d.,]+\s*$/, '').trim();
+  }
+
+  let preco = null;
+  const pm = /"price"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)\s*[,}]/.exec(t);
+  if (pm) { const n = parseFloat(pm[1]); if (n > 0 && n < 1e7) preco = n; }
+
+  const nomes = [];
+  if (lab) nomes.push(lab[1]);
+  if (slug) {
+    const x = slug[1] || slug[2];
+    try { nomes.push(decodeURIComponent(x)); } catch (e) { nomes.push(x); }
+  }
+
+  let can = /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i.exec(t)
+         || /property="og:url"\s+content="([^"]+)"/i.exec(t);
+  let canonica = can ? limpo(can[1]) : null;
+  if (canonica && !/^https?:\/\//i.test(canonica)) canonica = null;
+
+  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes,
+           titulo: titulo, preco: preco, canonica: canonica };
+}
+
+/* Le o anuncio a partir do service worker. Segue redirecionamento, entao um
+   meli.la chega aqui e sai como a url final do produto. */
+async function lerAnuncioNoWorker(url) {
+  const ctrl = new AbortController();
+  const corta = setTimeout(() => ctrl.abort(), 25000);
+  try {
+    const r = await fetch(url, { credentials: 'include', redirect: 'follow', signal: ctrl.signal });
+    if (!r.ok || !r.body) return { ok: false, falha: 'HTTP ' + r.status };
+
+    const leitor = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', bytes = 0;
+    while (true) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      bytes += value.length;
+      buf += dec.decode(value, { stream: true });
+      if (bytes > MAX_ANUNCIO) { try { ctrl.abort(); } catch (e) {} break; }
+    }
+    if (!buf) return { ok: false, falha: 'pagina veio vazia' };
+    return extrairAnuncio(buf, r.url, r.status);
+  } catch (e) {
+    return { ok: false, falha: String((e && e.message) || e) };
+  } finally {
+    clearTimeout(corta);
+  }
+}
+
 function analiseNaPagina(url) {
   return fetch(url, { credentials: 'include', redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { return { u: r.url, st: r.status, t: t }; }); })
@@ -1293,11 +1384,20 @@ async function atenderPedidos() {
           iniciarPedido(sincToken, p.id).catch(() => {});
           const url = limparUrl(p.url_alvo);
 
-          // 1. le o anuncio de dentro da pagina do Mercado Livre
-          const [saida] = await chrome.scripting.executeScript({
-            target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
-          });
-          const a = (saida && saida.result) || { ok: false, falha: 'a pagina nao respondeu' };
+          /* 1. le o anuncio. Primeiro pelo service worker, que enxerga
+                qualquer subdominio e resolve link curto. Se falhar, tenta pela
+                pagina, que so funciona quando a origem bate mas as vezes ve
+                conteudo que o worker nao ve. */
+          let a = await lerAnuncioNoWorker(url);
+          if (!a.ok || !(a.nomes && a.nomes.length)) {
+            const [saida] = await chrome.scripting.executeScript({
+              target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
+            });
+            const b = (saida && saida.result) || null;
+            if (b && b.ok && b.nomes && b.nomes.length) a = b;
+            else if (!a.ok && b && b.ok) a = b;
+          }
+          if (!a) a = { ok: false, falha: 'a pagina nao respondeu' };
 
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
           let cupom = null, vendedor = null;
