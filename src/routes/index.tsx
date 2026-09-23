@@ -4,6 +4,7 @@ import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, Shi
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
+import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1795,6 +1796,8 @@ function Index() {
           </div>
         </div>
       </footer>
+
+      <RodapeInstitucional />
     </div>
   );
 }
