@@ -181,3 +181,11 @@ Quando o Mercado Livre pede captcha, o popup mostra a pausa e dois botoes:
 **1. Resolver verificacao** abre a pagina exata do desafio; assim que ela sai do
 captcha a pausa cai sozinha e a fila anda na hora. **2. Ja resolvi, liberar**
 solta a pausa manualmente. A extensao continua sem tentar resolver captcha.
+
+### v1.41.0 - aviso na hora quando o Mercado Livre pede verificacao
+
+- "!" vermelho no icone enquanto houver pausa;
+- notificacao do Chrome no computador: clicar abre a pagina da verificacao;
+- opcional, no celular: app gratuito **ntfy**. Assine um topico com nome dificil
+  de adivinhar e cole o mesmo nome em Opcoes > "Aviso no celular".
+Resolvida a verificacao, a pausa cai sozinha e o aviso some.

@@ -1278,6 +1278,7 @@ async function puxarFreio(motivo, area = 'leitura', urlVerificacao = null) {
 
   await chrome.storage.local.set({ [k]: { dia: hoje, vezes, ate, motivo: String(motivo) } });
   console.warn('[freio:' + area + ']', Math.round(espera / 60000) + ' min:', motivo);
+  avisarWeslei(motivo, Math.round(espera / 60000)).catch(() => {});
 
   try {
     const { sincToken } = await chrome.storage.local.get('sincToken');
@@ -1309,6 +1310,7 @@ async function avisarQueEstouLivre(area) {
     if (f && f.ate && Date.now() < f.ate) return;
   }
   avisouLivre = { [marca]: true };
+  limparAviso().catch(() => {});
   try {
     const { sincToken } = await chrome.storage.local.get('sincToken');
     await anotarEstadoRobo(sincToken, 'freio_motivo', '');
@@ -1316,6 +1318,54 @@ async function avisarQueEstouLivre(area) {
     await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
   } catch (e) { /* silencioso de proposito */ }
 }
+
+/* ------------------------------------------------- avisar o Weslei na hora
+
+   Pedido dele: "quando acontecer de novo, me avisar para destravar na hora".
+   Tres avisos, do mais certo ao opcional:
+     - "!" vermelho no icone da extensao, ate a pausa acabar;
+     - notificacao do Chrome no computador; clicar abre a verificacao;
+     - celular, pelo app gratuito ntfy, se houver topico nas opcoes.
+   Um aviso por pausa: o freio ja evita rajada, entao nao ha spam. */
+async function avisarWeslei(motivo, minutos) {
+  try {
+    await chrome.action.setBadgeBackgroundColor({ color: '#d93025' });
+    await chrome.action.setBadgeText({ text: '!' });
+  } catch (e) {}
+
+  const texto = 'Pausa de ' + minutos + ' min: ' + motivo + '. Clique para resolver agora.';
+  try {
+    chrome.notifications.create('freio', {
+      type: 'basic', iconUrl: 'icones/icone128.png', priority: 2, requireInteraction: true,
+      title: 'Mercado Livre pediu verificacao', message: texto,
+      buttons: [{ title: 'Resolver verificacao' }]
+    });
+  } catch (e) {}
+
+  const { ntfyTopico } = await chrome.storage.local.get('ntfyTopico');
+  if (ntfyTopico && /^[A-Za-z0-9_-]{4,64}$/.test(ntfyTopico)) {
+    try {
+      await fetch('https://ntfy.sh/' + ntfyTopico, {
+        method: 'POST',
+        headers: { Title: 'Cupons: verificacao do Mercado Livre', Priority: 'high', Tags: 'warning' },
+        body: 'Pausa de ' + minutos + ' min: ' + motivo
+            + '. No computador, clique no icone da extensao > 1. Resolver verificacao.'
+      });
+    } catch (e) { /* aviso no celular e bonus */ }
+  }
+}
+
+async function limparAviso() {
+  try { await chrome.action.setBadgeText({ text: '' }); } catch (e) {}
+  try { chrome.notifications.clear('freio'); } catch (e) {}
+}
+
+chrome.notifications.onClicked.addListener(id => {
+  if (id === 'freio') abrirVerificacao().catch(() => {});
+});
+chrome.notifications.onButtonClicked.addListener(id => {
+  if (id === 'freio') abrirVerificacao().catch(() => {});
+});
 
 /* ------------------------------------------- verificacao feita pelo Weslei
 
@@ -1341,6 +1391,7 @@ async function estadoDoFreio() {
 async function liberarFreio() {
   await chrome.storage.local.remove([...AREAS_FREIO.map(chaveFreio), 'freioUrl']);
   avisouLivre = {};
+  await limparAviso();
   try {
     const { sincToken } = await chrome.storage.local.get('sincToken');
     await anotarEstadoRobo(sincToken, 'freio_motivo', '');

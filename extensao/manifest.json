@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Conferidor de Cupons",
-  "version": "1.40.0",
+  "version": "1.41.0",
   "description": "Confere o desconto real dos cupons de afiliado: teto, compra minima e validade, direto na pagina do anuncio.",
   "author": "Weslei Mendes",
   "icons": {
@@ -14,7 +14,8 @@
     "storage",
     "alarms",
     "scripting",
-    "tabs"
+    "tabs",
+    "notifications"
   ],
   "host_permissions": [
     "*://*.mercadolivre.com.br/*",
@@ -22,7 +23,8 @@
     "*://meli.la/*",
     "https://generativelanguage.googleapis.com/*",
     "https://cupons-afiliado-ml.lovable.app/*",
-    "https://rjevaqtnlldhnwsidbbn.supabase.co/*"
+    "https://rjevaqtnlldhnwsidbbn.supabase.co/*",
+    "https://ntfy.sh/*"
   ],
   "background": {
     "service_worker": "background.js",
