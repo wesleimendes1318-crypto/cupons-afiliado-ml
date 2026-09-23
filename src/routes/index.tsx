@@ -1266,8 +1266,8 @@ function Index() {
       </nav>
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4">
-          <ol className="grid gap-3 text-sm sm:grid-cols-3">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5">
+          <ol className="grid gap-4 text-sm sm:grid-cols-3">
             {[
               { icone: Link2, texto: "Você cola aqui o link do anúncio que quer comprar" },
               { icone: Search, texto: "O site confere na hora se a loja tem cupom de verdade" },
@@ -1287,10 +1287,10 @@ function Index() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
+      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
         <BuscaPorLink />
 
-        <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Assistente de cupons">
+        <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
             <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
@@ -1405,7 +1405,7 @@ function Index() {
         )}
 
         {destaques.length > 0 && (
-          <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="Melhor cupom de cada categoria">
+          <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Melhor cupom de cada categoria">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
               <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
@@ -1438,7 +1438,7 @@ function Index() {
 
         {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
         {lojasDestaque.length > 0 && (
-          <section className="mt-6 rounded-xl border border-border bg-card p-4" aria-label="Lojas parceiras">
+          <section className="mt-8 rounded-xl border border-border bg-card p-5" aria-label="Lojas parceiras">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-bold">Lojas parceiras</h2>
               <p className="text-xs text-secondary-ink">
