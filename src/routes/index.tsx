@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CATEGORIAS } from "@/content/categorias";
+import { GUIAS } from "@/content/guias";
 import { supabase } from "@/integrations/supabase/client";
+import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -1108,51 +1111,97 @@ function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="w-full bg-ml-yellow text-ml-yellow-foreground">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-start gap-3">
-            <ShieldAlert className="mt-1 size-7 shrink-0" aria-hidden="true" />
-            <div>
-              <h1 className="text-2xl font-extrabold sm:text-3xl">
-                Cupons de Lojas Afiliadas - POR{" "}
-                <a
-                  href="https://www.instagram.com/wslmendes/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:opacity-80"
-                >
-                  @WSLMENDES
-                </a>
-              </h1>
-              <p className="mt-1 max-w-4xl text-sm font-medium sm:text-base">
-                Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
-              </p>
-              <p className="mt-1 max-w-4xl text-sm">
-                Aqui você sempre sabe quanto economiza antes de comprar.
-              </p>
-              <nav aria-label="Conteúdo do site" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-                <Link to="/guias" className="text-sm font-bold underline hover:opacity-80">
-                  Guias
-                </Link>
-                <Link to="/categorias" className="text-sm font-bold underline hover:opacity-80">
-                  Categorias
-                </Link>
-                <Link to="/sobre" className="text-sm font-bold underline hover:opacity-80">
-                  Sobre
-                </Link>
-              </nav>
-              <Button onClick={irParaColarLink} className="mt-3 h-auto min-h-10 bg-card px-4 py-2 font-bold text-foreground hover:bg-card/90">
-                <Link2 className="size-5 text-ml-blue" aria-hidden="true" />
+    <div className="min-h-screen fundo-conteudo text-foreground">
+      <header className="faixa-conteudo w-full">
+        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-conteudo">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
+                <ShieldAlert className="size-3.5" aria-hidden="true" />
+                Curadoria independente
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                {atualizado ? `Atualizado em ${atualizado}` : "Aguardando a primeira carga de dados"}
+              </span>
+            </div>
+
+            <h1 className="mt-3 text-2xl font-extrabold sm:text-4xl">
+              Cupons de Lojas Afiliadas — por{" "}
+              <a
+                href="https://www.instagram.com/wslmendes/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-ml-yellow decoration-2 underline-offset-4 hover:opacity-80"
+              >
+                @WSLMENDES
+              </a>
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm font-medium text-white/90 sm:text-base">
+              Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
+            </p>
+            <p className="mt-1 max-w-3xl text-sm text-white/80">
+              Aqui você sempre sabe quanto economiza antes de comprar.
+            </p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Button
+                onClick={irParaColarLink}
+                className="h-auto min-h-11 bg-ml-yellow px-5 py-2.5 font-bold text-ml-yellow-foreground hover:bg-ml-yellow/90"
+              >
+                <Link2 className="size-5" aria-hidden="true" />
                 Colar o link do produto
               </Button>
-              <p className="mt-2 text-xs text-secondary-ink">
-                {atualizado ? `Dados atualizados em ${atualizado}` : "Aguardando a primeira carga de dados"}
-              </p>
+              <nav aria-label="Conteúdo do site" className="flex flex-wrap gap-2">
+                {[
+                  { para: "/categorias" as const, texto: "Categorias" },
+                  { para: "/guias" as const, texto: "Guias" },
+                  { para: "/sobre" as const, texto: "Sobre" },
+                ].map((item) => (
+                  <Link
+                    key={item.para}
+                    to={item.para}
+                    className="inline-flex min-h-11 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
+                  >
+                    {item.texto}
+                  </Link>
+                ))}
+              </nav>
             </div>
           </div>
         </div>
       </header>
+
+      <nav aria-label="Categorias" className="border-b border-border bg-card">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-secondary-ink">
+              Categorias
+            </span>
+            {CATEGORIAS.map((item) => {
+              const Icone = ICONE_CATEGORIA[item.slug];
+              const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
+              return (
+                <Link
+                  key={item.slug}
+                  to="/categorias/$slug"
+                  params={{ slug: item.slug }}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold transition-colors hover:border-ml-blue hover:text-ml-blue"
+                >
+                  {Icone ? <Icone className="size-4" style={{ color: cor }} aria-hidden="true" /> : null}
+                  {item.nome}
+                </Link>
+              );
+            })}
+            <Link
+              to="/categorias"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ml-blue hover:underline"
+            >
+              Ver todas
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </nav>
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4">
@@ -1705,6 +1754,51 @@ function Index() {
           )}
         </section>
       </main>
+
+      <section aria-label="Guias de compra" className="border-y border-border bg-card">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-secondary-ink">
+                <BookOpen className="size-4 text-ml-blue" aria-hidden="true" />
+                Guias de compra
+              </p>
+              <h2 className="mt-1 text-xl font-extrabold sm:text-2xl">
+                Entenda o desconto antes de comprar
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-secondary-ink">
+                Textos curtos, com as contas feitas, sobre teto, compra mínima e o que separa um bom cupom de uma armadilha.
+              </p>
+            </div>
+            <Link to="/guias" className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ml-blue hover:underline">
+              Ver todos os guias
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {GUIAS.slice(0, 3).map((guia, indice) => (
+              <Link
+                key={guia.slug}
+                to="/guias/$slug"
+                params={{ slug: guia.slug }}
+                className="cartao-conteudo animate-conteudo group flex flex-col gap-2 p-4"
+                style={{ animationDelay: `${indice * 60}ms` }}
+              >
+                <span className="text-xs font-bold uppercase tracking-wide text-secondary-ink">
+                  {guia.tempo}
+                </span>
+                <span className="text-base font-extrabold leading-snug">{guia.titulo}</span>
+                <span className="text-sm text-secondary-ink">{guia.resumo}</span>
+                <span className="mt-auto inline-flex items-center gap-1 pt-2 text-sm font-bold text-ml-blue">
+                  Ler o guia
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
