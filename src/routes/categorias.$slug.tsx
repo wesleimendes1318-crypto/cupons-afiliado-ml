@@ -141,7 +141,7 @@ function PaginaCategoria() {
         <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
         O que conferir antes de comprar
       </h2>
-      <ul className="lista-marcada !pl-0 space-y-2">
+      <ul className="lista-marcada !list-none !pl-0 space-y-2">
         {categoria.comoAvaliar.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -151,7 +151,7 @@ function PaginaCategoria() {
         <AlertTriangle className="size-5 text-urgency-warning" aria-hidden="true" />
         Erros que custam caro
       </h2>
-      <ul className="lista-alerta !pl-0 space-y-2">
+      <ul className="lista-alerta !list-none !pl-0 space-y-2">
         {categoria.cuidados.map((item) => (
           <li key={item}>{item}</li>
         ))}

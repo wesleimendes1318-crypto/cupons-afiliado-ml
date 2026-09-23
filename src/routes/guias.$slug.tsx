@@ -78,7 +78,7 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
   if (bloco.tipo === "p") return <p>{bloco.texto}</p>;
   if (bloco.tipo === "lista")
     return (
-      <ul className="lista-marcada !pl-0 space-y-2">
+      <ul className="lista-marcada !list-none !pl-0 space-y-2">
         {bloco.itens.map((item) => (
           <li key={item}>{item}</li>
         ))}
