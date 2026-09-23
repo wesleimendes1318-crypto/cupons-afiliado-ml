@@ -57,7 +57,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Qualidade = "bom" | "armadilha";
-type Cupom = {
+export type Cupom = {
   id: number;
   vendedor: string;
   desconto: string | null;
@@ -573,7 +573,7 @@ function useLinkDaLoja(cupom: Cupom) {
    leva segundos e não cabe dentro do gesto) e o botão então passa a fazer tudo
    de uma vez. O texto embaixo do botão sempre diz o que vai acontecer, para
    ninguém clicar às cegas. */
-function AcaoDoCupom({
+export function AcaoDoCupom({
   cupom,
   className,
   iconeClassName,
