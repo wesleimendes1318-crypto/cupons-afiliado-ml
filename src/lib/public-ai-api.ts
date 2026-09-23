@@ -159,8 +159,8 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
   const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está configurado. Avise o responsável pelo site." };
 
-  const corpo: Record<string, unknown> = {
-    model: "google/gemini-3-pro",
+  const montar = (model: string): Record<string, unknown> => ({
+    model,
     messages: [
       { role: "system", content: ESCOPO_IA },
       { role: "user", content: prompt },
@@ -173,29 +173,30 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
           },
         }
       : {}),
-  };
+  });
 
-  for (let tentativa = 0; tentativa < 2; tentativa += 1) {
-    try {
-      const resposta = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify(corpo),
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (resposta.ok) {
-        const dados = (await resposta.json()) as { choices?: Array<{ message?: { content?: string } }> };
-        const texto = dados.choices?.[0]?.message?.content?.trim() ?? "";
-        if (texto) return { ok: true, texto };
-        return { ok: false, status: 502, erro: erroPorStatus(502) };
+  /* Pro primeiro (respostas melhores); Flash como rede de seguranca. */
+  for (const model of ["google/gemini-3-pro", "google/gemini-3-flash"]) {
+    for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+      try {
+        const resposta = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify(montar(model)),
+          signal: AbortSignal.timeout(25_000),
+        });
+        if (resposta.ok) {
+          const dados = (await resposta.json()) as { choices?: Array<{ message?: { content?: string } }> };
+          const texto = dados.choices?.[0]?.message?.content?.trim() ?? "";
+          if (texto) return { ok: true, texto };
+          break;
+        }
+        if (resposta.status !== 429 && resposta.status < 500) break;
+      } catch {
+        // tenta de novo
       }
-      if (resposta.status !== 429 && resposta.status < 500) {
-        return { ok: false, status: 502, erro: erroPorStatus(resposta.status) };
-      }
-    } catch {
-      // tenta de novo
+      if (tentativa === 0) await new Promise((resolver) => setTimeout(resolver, 700));
     }
-    if (tentativa === 0) await new Promise((resolver) => setTimeout(resolver, 700));
   }
   return { ok: false, status: 502, erro: erroPorStatus(502) };
 }
