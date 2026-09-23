@@ -852,19 +852,12 @@ export function AcaoDoCupom({
           "Cria o código do cupom, copia para você e abre a loja."
         )}
       </p>
-      {codigo && !copiou && (
-        <button
-          type="button"
-          onClick={() => setCopiou(copiarTexto(codigo))}
-          className="mt-1.5 text-left text-[11px] font-bold text-ml-blue underline"
-        >
-          Copiar o código {codigo}
-        </button>
-      )}
-      {/* Aqui existia uma segunda caixa "Codigo deste cupom", identica a que o
-          card ja mostra logo abaixo. O cliente via o mesmo codigo duas vezes na
-          mesma tela e ficava sem saber qual valia. Uma confirmacao de uma linha
-          basta: a caixa de verdade e a de baixo, com o botao de copiar. */}
+      {/* Aqui existiam MAIS DOIS lugares mostrando o mesmo codigo: um link
+          "Copiar o codigo #X" e uma segunda caixa identica a que o card ja
+          mostra logo abaixo. Tres copias do mesmo codigo na mesma tela, e o
+          cliente sem saber qual valia. Sobra uma so, a caixa de baixo, com o
+          botao de copiar. Aqui fica apenas a confirmacao de uma linha, quando
+          o proprio botao acima copiou. */}
       {codigo && copiou && (
         <p className="mt-1.5 animate-scale-in text-[11px] font-bold text-success">
           Código copiado.
