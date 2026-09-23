@@ -1066,8 +1066,15 @@ async function mesmoProdutoComCupom(urlProduto, finalAtual, itemAtual) {
 
   if (!achados.length) return null;
 
-  achados.sort((a, b) =>
-    (a.final == null ? Infinity : a.final) - (b.final == null ? Infinity : b.final));
+  achados.sort((a, b) => {
+    const fa = a.final == null ? Infinity : a.final;
+    const fb = b.final == null ? Infinity : b.final;
+    if (fa !== fb) return fa - fb;
+    /* Empate no preco final: a loja COM cupom ganha. Vale mais para o cliente,
+       que leva o desconto no carrinho, e para o Weslei, que alem da comissao
+       do clique fica com a atribuicao do cupom dele. */
+    return (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0);
+  });
   const melhor = achados[0];
 
   /* So vale mandar a pessoa trocar de loja por uma diferenca que ela sinta.
@@ -1316,12 +1323,23 @@ async function atenderPedidos() {
              cupom de 15% e mesmo assim saia R$ 72,61 mais cara que a mesma
              caixa em outra loja sem cupom nenhum, e o site nao dizia nada. */
           let outra = null;
+          let outraFalhou = null;
           if (!filaCheia) {
+            let alt = null;
             try {
               const economiaAqui = (cupom && aval && aval.vale && aval.economia != null)
                 ? aval.economia : 0;
               const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
-              const alt = await mesmoProdutoComCupom(url, finalAqui, null);
+              alt = await mesmoProdutoComCupom(url, finalAqui, null);
+            } catch (e) {
+              console.warn('[mesmo produto] busca falhou:', e.message);
+            }
+
+            /* O link de afiliado sai numa etapa separada de proposito. Se ele
+               falhar, o achado NAO vai para a tela: mandar o cliente para uma
+               oferta mais barata por um endereco sem etiqueta seria entregar a
+               venda de graca. Melhor nao mostrar e registrar o motivo. */
+            try {
               if (alt) {
                 const la = await gerarNaAba(tabId, alt.url);
                 outra = {
@@ -1341,7 +1359,9 @@ async function atenderPedidos() {
                 };
               }
             } catch (e) {
-              console.warn('[mesmo produto]', e.message);
+              outraFalhou = 'achei a oferta mais barata mas nao consegui gerar o link de afiliado: '
+                          + e.message;
+              console.warn('[mesmo produto] link falhou:', e.message);
             }
           }
 
@@ -1350,6 +1370,10 @@ async function atenderPedidos() {
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,
+            /* Fica gravado quando existiu oferta melhor mas o link de afiliado
+               nao saiu. Sem isto, "nao apareceu alternativa" some no meio de
+               "nao existe alternativa", e sao problemas diferentes. */
+            outraFalhou: outraFalhou,
             temCupom: !!(cupom && aval && aval.vale),
             cupom: cupom ? {
               id: cupom.id, titulo: cupom.desconto, vence: cupom.vence,
