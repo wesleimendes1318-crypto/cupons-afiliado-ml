@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { recomendarSemIa } from "@/lib/ia-reserva";
 import { chamarIa, excedeuLimite, json, limparJson, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 const entradaSchema = z.object({
@@ -60,14 +61,15 @@ A categoria é somente uma estimativa baseada no nome da loja. Para cada escolha
 Na "mensagem", escreva uma frase de especialista que resuma a melhor escolha e convide a pessoa a pedir o cupom agora. Nunca prometa desconto acima do limite informado e nunca invente prazo.
 Cupons: ${JSON.stringify(entrada.cupons)}`;
         const resultado = await chamarIa(prompt, { formato: formatoSaida, esforco: "low" });
-        if (!resultado.ok) return json(request, { erro: resultado.erro }, resultado.status);
+        /* IA fora (cota ou credito): responde com a recomendacao calculada. */
+        if (!resultado.ok) return json(request, recomendarSemIa(entrada.pedido, entrada.cupons));
         const texto = resultado.texto;
         try {
           const saida = saidaSchema.parse(JSON.parse(limparJson(texto)));
           const idsPermitidos = new Set(entrada.cupons.map((cupom) => cupom.id));
           return json(request, { ...saida, escolhas: saida.escolhas.filter((item) => idsPermitidos.has(item.id)).slice(0, 5) });
         } catch {
-          return json(request, { erro: "O assistente retornou um formato inválido. Tente novamente." }, 502);
+          return json(request, recomendarSemIa(entrada.pedido, entrada.cupons));
         }
       },
     },

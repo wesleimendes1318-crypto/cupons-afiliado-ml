@@ -91,7 +91,7 @@ export type Cupom = {
      nao chegou nesse cupom. */
   link_afiliado: string | null;
   /* Endereço PÚBLICO da loja no Mercado Livre, sem etiqueta nenhuma.
-     É o que o botão abre agora. Ver o comentário do useLinkDaLoja. */
+     Só serve ao botão quando traz _CustId_ (ver paginaDaLoja). */
   link_origem: string | null;
   /* Página oficial da loja, do jeito que o próprio Mercado Livre a publica:
      https://lista.mercadolivre.com.br/pagina/<apelido-da-loja>/
@@ -534,77 +534,6 @@ function avisarExtensao(id: number) {
   } catch { /* sem extensao: o alarme cobre */ }
 }
 
-/* Cupom sem codigo: a pessoa pede e espera aqui mesmo
-
-   A ordem importa: o site resolve sozinho. Registra o pedido, a extensao gera
-   em ate um minuto e o codigo aparece na tela. Se nao voltar a tempo, a pessoa
-   tenta de novo aqui mesmo — nao existe contato como plano B. */
-function PedirCodigo({ cupom }: { cupom: Cupom }) {
-  const [fase, setFase] = useState<"parado" | "pedindo" | "pronto" | "demorou">("parado");
-  const [codigo, setCodigo] = useState<string | null>(null);
-  const relogios = useRef<number[]>([]);
-
-  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
-
-  async function pedir() {
-    setFase("pedindo");
-    try {
-      const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id });
-      const resposta = String(data ?? "");
-      if (resposta.startsWith("#")) { setCodigo(resposta); setFase("pronto"); return; }
-      if (resposta !== "pedido") { setFase("demorou"); return; }
-      avisarExtensao(cupom.id);
-    } catch { setFase("demorou"); return; }
-
-    // Pergunta a cada 4s por 88s. A extensao trabalha de minuto em minuto.
-    const limite = Date.now() + 88_000;
-    const olhar = async () => {
-      try {
-        const { data } = await supabase.rpc("consultar_etiqueta", { p_cupom_id: cupom.id });
-        if (typeof data === "string" && data.startsWith("#")) { setCodigo(data); setFase("pronto"); return; }
-      } catch { /* tenta de novo */ }
-      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 4000));
-      else setFase("demorou");
-    };
-    relogios.current.push(window.setTimeout(olhar, 4000));
-  }
-
-  if (fase === "pronto" && codigo) return <EtiquetaDoCupom codigo={codigo} vendedor={cupom.vendedor} />;
-
-  return (
-    <div className="mt-3 rounded-md border border-dashed border-border bg-muted/40 p-2.5">
-      {fase === "pedindo" ? (
-        <EsperaDoCupom codigoPronto={false} linkPronto={false} somenteCodigo />
-      ) : fase === "demorou" ? (
-        <>
-          <p className="text-[11px] leading-relaxed text-secondary-ink">
-            O código não ficou pronto agora. Tente de novo em instantes — normalmente sai na
-            segunda tentativa. O desconto também entra sozinho no carrinho pelo botão acima.
-          </p>
-          <button
-            type="button"
-            onClick={() => void pedir()}
-            className="mt-2 w-full rounded border border-ml-blue px-2.5 py-1.5 text-[11px] font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
-          >
-            Tentar de novo
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="text-[11px] font-semibold text-secondary-ink">Este cupom ainda não tem código</p>
-          <button
-            type="button"
-            onClick={pedir}
-            className="mt-1.5 w-full rounded border border-ml-blue px-2.5 py-1.5 text-[11px] font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
-          >
-            Gerar o código deste cupom
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
-
 /* Copia um texto e diz se conseguiu.
 
    Precisa rodar DENTRO do clique. Fora do gesto da pessoa o navegador bloqueia
@@ -631,279 +560,156 @@ function copiarTexto(texto: string): boolean {
   }
 }
 
-/* Gera (ou recupera) o código do cupom. O site registra o pedido e a extensão
-   do Weslei cria o código no Mercado Livre em segundos. */
-function useCodigoDoCupom(cupom: Cupom) {
+/** PÁGINA DA LOJA — destino do botão do cartão de cupom.
+ *
+ *  Regra do Weslei (23/09): quem clica no cupom quer ver OS PRODUTOS DA LOJA.
+ *  Nunca um produto, nunca o perfil dele, e nunca a lista da campanha
+ *  (_Container_), que às vezes tem um item só e parece "um produto específico".
+ *  Foi exatamente essa a reclamação: o cupom da Pezzia abria uma chaleira.
+ *
+ *  Só dois endereços servem, os dois lidos no próprio Mercado Livre:
+ *   1. link_loja — /pagina/<apelido>/ ou /_CustId_<id>, que a extensão acha
+ *      abrindo um anúncio do vendedor e seguindo o link da loja. Vale para
+ *      todos os cupons da mesma loja e fica guardado no banco.
+ *   2. _CustId_<id> que já vem escrito no link da campanha do cupom.
+ *  Sem nenhum dos dois, o botão PEDE a página (pedir_loja) e espera.
+ *
+ *  A comissão aqui vem da etiqueta #WSLMENDES…, copiada no mesmo clique. */
+export function paginaDaLoja(cupom: Pick<Cupom, "link_loja" | "link_origem">): string | null {
+  const guardada = (cupom.link_loja ?? "").trim();
+  if (/^https:\/\/(www|lista)\.mercadolivre\.com\.br\/(pagina\/[A-Za-z0-9._%-]{2,60}\/?|_CustId_\d{4,})$/.test(guardada)) {
+    return guardada;
+  }
+  const vendedor = (cupom.link_origem ?? "").match(/_CustId_(\d{4,})/i)?.[1] ?? null;
+  return vendedor ? `https://lista.mercadolivre.com.br/_CustId_${vendedor}` : null;
+}
+
+/* Prepara o cupom para uso: etiqueta (código) + página da loja.
+
+   O site registra os pedidos no banco, a extensão do Weslei cria o código no
+   Mercado Livre e descobre a página da loja; os dois chegam na própria linha
+   do cupom, então aqui só se pergunta ao banco até aparecerem.
+
+   Antes o botão abria a loja na hora e o código "alcançava a pessoa depois" —
+   só que ela já tinha saído do site e o código nunca chegava. Agora: gera a
+   etiqueta quando falta, acha a loja quando falta e SÓ ENTÃO leva o cliente,
+   com o código já copiado. */
+type FasePreparo = "parado" | "preparando" | "pronto" | "demorou";
+
+const ESPERA_PREPARO_MS = 75_000;
+
+function usePreparoDoCupom(cupom: Cupom) {
   const [codigo, setCodigo] = useState<string | null>(cupom.codigo_cupom ?? null);
-  const [gerando, setGerando] = useState(false);
-  const [falhou, setFalhou] = useState(false);
+  const [loja, setLoja] = useState<string | null>(paginaDaLoja(cupom));
+  /* true quando este cupom não pode ganhar código (fora dos critérios do banco).
+     A loja abre do mesmo jeito; só não há etiqueta para copiar. */
+  const [semCodigo, setSemCodigo] = useState(false);
+  const [fase, setFase] = useState<FasePreparo>("parado");
+  const [pausa, setPausa] = useState<string | null>(null);
   const relogios = useRef<number[]>([]);
+  const ocupado = useRef(false);
 
   useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
+  useEffect(() => { if (cupom.codigo_cupom) setCodigo(cupom.codigo_cupom); }, [cupom.codigo_cupom]);
+  useEffect(() => {
+    const p = paginaDaLoja(cupom);
+    if (p) setLoja(p);
+  }, [cupom]);
 
-  const gerar = useCallback(async () => {
-    if (codigo || gerando) return;
-    setGerando(true);
-    setFalhou(false);
-    try {
-      const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id });
-      const resposta = String(data ?? "");
-      if (resposta.startsWith("#")) { setCodigo(resposta); setGerando(false); return; }
-      if (resposta !== "pedido") { setGerando(false); setFalhou(true); return; }
+  const preparar = useCallback(async () => {
+    if (ocupado.current) return;
+    let temCodigo = Boolean(codigo);
+    let temLoja = Boolean(loja);
+    let codigoImpossivel = semCodigo;
+    if ((temCodigo || codigoImpossivel) && temLoja) { setFase("pronto"); return; }
 
-    } catch {
-      setGerando(false);
-      setFalhou(true);
-      return;
+    ocupado.current = true;
+    setFase("preparando");
+    setPausa(null);
+
+    const [rCodigo, rLoja] = await Promise.all([
+      temCodigo || codigoImpossivel
+        ? Promise.resolve(null)
+        : supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id }).then((r) => String(r.data ?? ""), () => ""),
+      temLoja
+        ? Promise.resolve(null)
+        : supabase.rpc("pedir_loja", { p_cupom_id: cupom.id }).then((r) => String(r.data ?? ""), () => ""),
+    ]);
+
+    if (rCodigo != null) {
+      if (rCodigo.startsWith("#")) { setCodigo(rCodigo); temCodigo = true; }
+      else if (rCodigo !== "pedido") { setSemCodigo(true); codigoImpossivel = true; }
     }
+    if (rLoja != null && rLoja.startsWith("https://")) {
+      const p = paginaDaLoja({ link_loja: rLoja, link_origem: null });
+      if (p) { setLoja(p); temLoja = true; }
+    }
+    if ((temCodigo || codigoImpossivel) && temLoja) { ocupado.current = false; setFase("pronto"); return; }
 
-    const limite = Date.now() + 88_000;
+    avisarExtensao(cupom.id);
+
+    const inicio = Date.now();
+    let conferiuPausa = false;
     const olhar = async () => {
       try {
-        const { data } = await supabase.rpc("consultar_etiqueta", { p_cupom_id: cupom.id });
-        if (typeof data === "string" && data.startsWith("#")) {
-          setCodigo(data);
-          setGerando(false);
-          return;
+        const { data } = await supabase
+          .from("cupons")
+          .select("codigo_cupom,link_loja,link_origem")
+          .eq("id", cupom.id)
+          .maybeSingle();
+        if (typeof data?.codigo_cupom === "string" && data.codigo_cupom.startsWith("#")) {
+          setCodigo(data.codigo_cupom);
+          temCodigo = true;
         }
+        const p = data ? paginaDaLoja(data) : null;
+        if (p) { setLoja(p); temLoja = true; }
       } catch { /* tenta de novo */ }
-      if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else { setGerando(false); setFalhou(true); }
-    };
-    relogios.current.push(window.setTimeout(olhar, 3000));
-  }, [codigo, gerando, cupom.id]);
 
-  return { codigo, gerando, falhou, gerar };
-}
+      if ((temCodigo || codigoImpossivel) && temLoja) {
+        ocupado.current = false;
+        setFase("pronto");
+        return;
+      }
 
-/** ENDEREÇO DA LISTA DE PRODUTOS DA LOJA.
- *
- *  O botão "Ver itens da loja" tem que abrir a prateleira de quem oferece o
- *  cupom. Nunca o perfil do Weslei, nunca o campo de colar link.
- *
- *  A ordem aqui não é preferência de estilo, é confiabilidade medida:
- *
- *  1. link_loja — a página oficial da loja, descoberta pela extensão seguindo o
- *     redirecionamento do próprio Mercado Livre. É a melhor: tem nome, marca e
- *     vitrine da loja.
- *
- *  2. _CustId_<id> montado a partir do link da campanha. O número do vendedor
- *     já vem escrito na origem do cupom, em duas formas:
- *        .../_CustId_2615738264?coupon_campaign_id=...
- *        .../_Container_Queima-de-Estoque-seller-1789666895?coupon_campaign_id=...
- *     Abrir /_CustId_<id> cai na lista de anúncios daquele vendedor, e quando a
- *     loja tem página própria o Mercado Livre redireciona sozinho para ela.
- *
- *  POR QUE NÃO ADIVINHAR O APELIDO DA LOJA: testei em lojas reais do banco.
- *  "Augustusmobiliario" mora em /pagina/augustusmvrc/, e "Sied20240106044007" em
- *  /pagina/k4p5vnd2/ — nada a ver com o nome. Montar /pagina/ a partir do nome do
- *  vendedor acertaria em parte das lojas e, no resto, jogaria o cliente numa
- *  BUSCA por aquele texto, com produtos de outras lojas no meio. O número do
- *  vendedor não erra. */
-export function paginaDaLoja(cupom: Cupom): string | null {
-  const guardada = (cupom.link_loja ?? "").trim();
-  /* Aceita so o formato de vitrine. Se algum dia entrar lixo nessa coluna, o
-     botao ignora em vez de levar o cliente para o lugar errado. */
-  const ehVitrine = /^https:\/\/(www|lista)\.mercadolivre\.com\.br\/(pagina\/[A-Za-z0-9._%-]{2,60}\/?|_CustId_\d{4,})$/.test(guardada);
-  if (guardada && ehVitrine) return guardada;
-
-  const origem = (cupom.link_origem ?? "").trim();
-  if (!origem) return null;
-
-  /* _CustId_<numero> e o vendedor de verdade. Abrir esse endereco cai na lista
-     de anuncios dele, e quando a loja tem pagina propria o Mercado Livre
-     redireciona sozinho. Conferido em 4 lojas, 4 acertos. */
-  const vendedor = origem.match(/_CustId_(\d{4,})/i)?.[1] ?? null;
-  if (vendedor) return `https://lista.mercadolivre.com.br/_CustId_${vendedor}`;
-
-  /* _Container_...-seller-<numero> NAO carrega o numero do vendedor.
-
-     Eu tinha lido esse numero como se fosse o vendedor, e estava errado. A
-     prova esta no banco: a loja Pezzia tem dois cupons, um com seller-1789655247
-     e outro com seller-1789657149. Mesma loja, numeros diferentes. Sao ids da
-     CAMPANHA, nao do vendedor. Montar /_CustId_ com eles abre pagina vazia,
-     "Nao encontramos resultados".
-
-     O endereco certo aqui e o proprio _Container_, que JA e a lista dos produtos
-     que aquele cupom cobre. Testado: o container ChaDesc-seller-1789657149 abre
-     com 1 resultado, a Chaleira Eletrica Fressa. E exatamente o unico produto
-     onde esse cupom vale.
-
-     Mandar o cliente para a loja inteira nesse caso seria pior que inutil:
-     prometeria desconto em item que o cupom nao cobre. */
-  if (/_Container_/i.test(origem)) {
-    /* Sem o parametro de campanha, que nao muda a lista e so suja a URL. */
-    return origem.split("?")[0] ?? origem;
-  }
-
-  return null;
-}
-
-/* O endereço da loja NÃO precisa ser link de afiliado.
-
-   Quem paga a comissão aqui é a etiqueta: o código #WSLMENDES... que a pessoa
-   cola no carrinho. Com ele a venda já é atribuída, então o botão pode abrir a
-   loja por um endereço público comum do Mercado Livre.
-
-   Isso resolve de vez o pior bug do projeto. Antes o site tentava transformar a
-   página da loja em link de afiliado, e o gerador do Mercado Livre não preserva
-   endereço de listagem: devolvia um meli.la que jogava o comprador no perfil
-   social do Weslei, às vezes numa página de erro (XMEHV37590). Medido hoje em
-   três cupons, três vezes o mesmo desfecho.
-
-   Testado agora, sem etiqueta nenhuma na URL:
-     lista.mercadolivre.com.br/_CustId_3152110291  ->  152 resultados da loja
-
-   Então: nada de gerar, nada de esperar, nada que possa falhar. O endereço já
-   está no banco, veio do próprio hub de cupons, e é só abrir.
-
-   Quando o cupom não tem esse endereço guardado, o botão não promete loja
-   nenhuma. Chutar a URL pelo nome de exibição da loja leva a página inexistente
-   quando o nome público difere do usado no endereço. */
-function useLinkDaLoja(cupom: Cupom) {
-  /* CORREÇÃO IMPORTANTE, 22/09 à noite.
-
-     Por uma hora este botão abriu o endereço público da loja, sem etiqueta. A
-     ideia era que o código do cupom garantiria a comissão. O checkout provou
-     que não:
-
-       "Cupons (1/1 em uso)" — o cupom da própria loja entra sozinho e ocupa a
-       única vaga. O código do Weslei, que é a versão dele DO MESMO cupom, é
-       recusado com "Ocorreu um erro".
-
-     Ou seja: o cupom da loja compete com o dele. Quando entra sozinho, o
-     código não tem como ser usado, e mandar o cliente por um endereço sem
-     etiqueta seria entregar a venda de graça.
-
-     Então a atribuição volta a depender do que sempre funcionou: o clique num
-     link de afiliado. Só que o gerador do Mercado Livre não preserva qualquer
-     listagem — só a campanha _Container_ do próprio cupom. É exatamente essa
-     a origem dos links que sobraram no banco, os outros foram apagados.
-
-     Sem link de afiliado guardado, o botão não abre loja nenhuma. É melhor não
-     ter botão do que ter um que não paga o Weslei. O caminho nesse caso é
-     colar o link do produto, que gera link de afiliado de verdade. */
-  const guardado = (cupom.link_afiliado ?? "").trim() || null;
-  const origemBruta = (cupom.link_origem ?? "").trim() || null;
-
-  /* O perfil social do Weslei NUNCA serve de destino: é uma vitrine com
-     produtos de lojas variadas, e quem clicou quer ESTA loja. Link de afiliado
-     gerado a partir de listagem que o Mercado Livre não preserva cai
-     exatamente lá, e foi por isso que esses foram apagados do banco. */
-  /* O LINK DE AFILIADO NAO SERVE MAIS DE DESTINO DESTE BOTAO.
-
-     O Weslei fotografou o resultado: clicou num cupom de loja e caiu no proprio
-     perfil dele, WSLMENDES, com uma chaleira eletrica de R$ 349,90 na tela. Nada
-     a ver com a loja do cupom.
-
-     A causa: os 113 links de afiliado guardados no banco sao TODOS encurtados
-     (meli.la/xxxx). Encurtado quer dizer opaco: daqui nao da para saber para
-     onde ele vai. Quando a geracao falhou, o Mercado Livre devolveu um meli.la
-     que aponta para o perfil social, e o filtro de /perfil/ e /social/ passa
-     batido porque a palavra nao esta na URL curta.
-
-     Conferido no banco antes de mexer: os 113 cupons com link encurtado tem, sem
-     excecao, o numero do vendedor escrito no link da campanha. Ou seja, da para
-     montar o endereco real da loja para TODOS eles. Nao se perde nada trocando.
-
-     A comissao continua: ela vem da etiqueta #WSLMENDES... que a pessoa cola no
-     carrinho, como o proprio Weslei disse. Endereco publico da loja + etiqueta
-     no checkout resolve, e nao tem como cair no perfil dele. */
-  const ehPerfil = (u: string | null) => !!u && /\/social\/|\/perfil\//i.test(u);
-
-  /* Endereco de PRODUTO nao e vitrine. /p/MLB..., /up/MLBU..., MLB-123456789 e
-     qualquer coisa com item_id levam a um anuncio so, e quem clicou no cupom
-     queria a prateleira inteira. Foi a outra metade da reclamacao. */
-  const ehProduto = (u: string | null) =>
-    !!u && /\/p\/MLB|\/up\/MLB|\/MLB-\d{6,}|item_id/i.test(u);
-
-  /* meli.la esconde o destino. Sem saber para onde vai, nao entra. */
-  const ehEncurtado = (u: string | null) => !!u && /meli\.la\//i.test(u);
-
-  const naoServe = (u: string | null) => ehPerfil(u) || ehProduto(u) || ehEncurtado(u);
-
-  const origem = naoServe(origemBruta) ? null : origemBruta;
-  const vitrineDaLoja = paginaDaLoja(cupom);
-  const destinoBase = vitrineDaLoja || origem || (naoServe(guardado) ? null : guardado);
-
-  /* Origem que o gerador do Mercado Livre preserva. O banco recusa as outras
-     em pedir_link, entao nem adianta pedir link novo para elas. */
-  const podeGerar = /_Container_/i.test(origem ?? "");
-
-  /* EU TINHA COMPLICADO ISTO.
-
-     Eu vinha escondendo o botao quando nao havia link de afiliado, com medo de
-     entregar a venda sem comissao. O raciocinio estava errado, e o Weslei tem
-     razao: quando a comissao nao vem pelo link, vem pela ETIQUETA. O codigo do
-     cupom e a versao dele do cupom da loja, e e o codigo que carrega a
-     atribuicao no checkout.
-
-     Entao o botao sempre leva a pessoa para a loja que oferece o cupom, que e
-     o unico destino que faz sentido: link de afiliado quando existe, e a
-     propria campanha do cupom quando nao existe. Mandar alguem rolar a pagina
-     para colar um link de anuncio que ela ainda nem escolheu era absurdo. */
-  const [link, setLink] = useState<string | null>(destinoBase);
-  const [gerando, setGerando] = useState(false);
-  const [falhou, setFalhou] = useState(false);
-  const relogios = useRef<number[]>([]);
-
-  useEffect(() => { setLink(destinoBase); }, [destinoBase]);
-  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
-
-  /* AQUI ESTAVA UMA FUNCAO VAZIA.
-
-     O botao "Usar este cupom" chamava isto quando o cupom nao tinha link
-     guardado, e isto nao fazia nada: nenhuma loja abria, nenhum erro aparecia.
-     Agora pede a geracao na hora, igual ja acontecia com o codigo do cupom: o
-     site registra o pedido, a extensao gera em ate um minuto e o link chega. */
-  const gerar = useCallback(async () => {
-    if (!podeGerar || gerando || !origem) return;
-    setGerando(true);
-    setFalhou(false);
-    try {
-      const { data, error } = await supabase.rpc("pedir_link", { p_url: origem });
-      if (error || data == null) { setGerando(false); setFalhou(true); return; }
-      const id = Number(data);
-      avisarExtensao(id);
-
-      const limite = Date.now() + 88_000;
-      const olhar = async () => {
+      /* Passados 15s, pergunta uma vez se a máquina está em pausa de
+         segurança, para a espera dizer a verdade em vez de só girar. */
+      if (!conferiuPausa && Date.now() - inicio > 15_000) {
+        conferiuPausa = true;
         try {
-          const { data: bruto } = await supabase.rpc("consultar_pedido", { p_id: id });
-          const linha = (Array.isArray(bruto) ? bruto[0] : bruto) as
-            { status?: string; link?: string | null } | null;
-          if (linha?.status === "pronto" && linha.link) {
-            setLink(linha.link);
-            setGerando(false);
-            return;
+          const { data: estado } = await supabase.rpc("estado_do_robo");
+          const linha = (Array.isArray(estado) ? estado[0] : estado) as
+            { freio_motivo?: string | null; freio_ate?: string | null } | null;
+          const ate = Date.parse(linha?.freio_ate ?? "");
+          if ((linha?.freio_motivo ?? "").trim() && Number.isFinite(ate) && ate > Date.now()) {
+            const min = Math.max(1, Math.ceil((ate - Date.now()) / 60_000));
+            setPausa(`O Mercado Livre pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
           }
-          if (linha?.status === "falhou") { setGerando(false); setFalhou(true); return; }
-        } catch { /* tenta de novo */ }
-        if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 4000));
-        else { setGerando(false); setFalhou(true); }
-      };
-      relogios.current.push(window.setTimeout(olhar, 4000));
-    } catch {
-      setGerando(false);
-      setFalhou(true);
-    }
-  }, [origem, podeGerar, gerando]);
+        } catch { /* sem resposta: segue esperando */ }
+      }
 
-  return { link, gerando, falhou, gerar, podeGerar };
+      if (Date.now() - inicio < ESPERA_PREPARO_MS) relogios.current.push(window.setTimeout(olhar, 3000));
+      else { ocupado.current = false; setFase("demorou"); }
+    };
+    relogios.current.push(window.setTimeout(olhar, 2500));
+  }, [codigo, loja, semCodigo, cupom.id]);
+
+  return { codigo, loja, semCodigo, fase, pausa, preparar };
 }
 
-/* "Usar este cupom" faz as três coisas de uma vez: copia o código para a área
-   de transferência e abre a loja no Mercado Livre, para a pessoa só colar.
+/* Abre a página da loja numa aba nova, para o site (com o código) continuar
+   aberto atrás. Se o navegador bloquear a aba, abre nesta mesma. */
+function abrirLoja(url: string) {
+  const aba = window.open(url, "_blank");
+  if (aba) aba.opener = null;
+  else window.location.assign(url);
+}
 
-   Por que copiar ANTES de abrir a aba: a cópia só é permitida durante o
-   clique. Se a gente abrisse a aba primeiro, ou esperasse qualquer resposta de
-   servidor no meio, o navegador cancelaria a cópia e a pessoa chegaria na loja
-   sem o código.
+/* "Usar este cupom": um clique prepara (etiqueta + loja), o clique seguinte
+   copia o código e abre a loja. Quando os dois já existem, é um clique só.
 
-   Quando o cupom ainda não tem código, o primeiro clique cria o código (isso
-   leva segundos e não cabe dentro do gesto) e o botão então passa a fazer tudo
-   de uma vez. O texto embaixo do botão sempre diz o que vai acontecer, para
-   ninguém clicar às cegas. */
+   Por que não abrir sozinho quando fica pronto: o navegador só deixa copiar
+   para a área de transferência e abrir aba DENTRO de um clique da pessoa.
+   Abrir sozinho perderia o código no caminho, que era o defeito de antes. */
 export function AcaoDoCupom({
   cupom,
   className,
@@ -913,189 +719,107 @@ export function AcaoDoCupom({
   className?: string;
   iconeClassName?: string;
 }) {
-  const { codigo, gerando, falhou, gerar } = useCodigoDoCupom(cupom);
-  const loja = useLinkDaLoja(cupom);
+  const p = usePreparoDoCupom(cupom);
   const consultado = useConsultado(cupom.id);
   const [copiou, setCopiou] = useState(false);
-  const [esperando, setEsperando] = useState(false);
-  const [compartilhando, setCompartilhando] = useState(false);
-  const [redirecionando, setRedirecionando] = useState(false);
-  const redirecionamento = useRef<number | null>(null);
+  const [abrindo, setAbrindo] = useState(false);
   const icone = iconeClassName ?? "size-4 shrink-0";
 
-  useEffect(
-    () => () => {
-      if (redirecionamento.current) window.clearTimeout(redirecionamento.current);
-    },
-    [],
-  );
+  const pronto = Boolean(p.loja) && (Boolean(p.codigo) || p.semCodigo);
+  const preparando = p.fase === "preparando";
 
-  /* Só abre um endereço que a extensão realmente gerou e validou. Montar uma
-     vitrine usando o nome exibido da loja leva a páginas inexistentes quando o
-     nome público não é o slug usado no endereço. */
-  const destino = loja.link;
-
-  const abrir = useCallback(
-    (codigoPronto?: string | null) => {
-      if (!destino) return;
-      if (codigoPronto) setCopiou(copiarTexto(codigoPronto));
-      marcarConsultado(cupom.id);
-      setRedirecionando(true);
-      /* A pequena pausa mantém a confirmação visível e preserva a animação do
-         cartão. A navegação na própria aba não é bloqueada pelo navegador e
-         também permite que o endereço abra no aplicativo quando disponível. */
-      redirecionamento.current = window.setTimeout(() => {
-        window.location.assign(destino);
-      }, 700);
-    },
-    [destino, cupom.id],
-  );
-
-  /* A LOJA ABRE NA HORA. O CODIGO ALCANCA A PESSOA DEPOIS.
-
-     Este era o funil vazando. O cartao esperava o codigo ficar pronto ANTES de
-     abrir a loja: ate 88 segundos parado num botao girando, e no fim das contas
-     quase sempre sem codigo, porque so 90 dos 972 cupons tem codigo guardado.
-     Quem chega no site clica, espera, desiste. Visita que nao vira nem visita a
-     loja nao vira venda nenhuma.
-
-     Trocado: o clique leva a pessoa para a prateleira da loja imediatamente, que
-     e o passo que comeca a compra. O codigo continua sendo gerado atras, e quando
-     fica pronto aparece no cartao para ela copiar antes de fechar o carrinho -
-     e ela leva minutos escolhendo produto, entao chega bem antes do checkout.
-
-     Vale a troca? O codigo carrega a atribuicao, entao esperar por ele parece
-     proteger a comissao. Mas esperar estava entregando as duas coisas zeradas:
-     sem venda e sem comissao. Loja aberta agora, codigo em seguida, e o unico
-     arranjo em que as duas ainda podem acontecer. */
-  useEffect(() => {
-    if (!esperando || !destino) return;
-    setEsperando(false);
-    abrir(codigo);
-  }, [esperando, destino, codigo, abrir]);
-
-  useEffect(() => {
-    if (!compartilhando || gerando || !codigo || !destino) return;
-    setCompartilhando(false);
-    abrirWhatsApp(mensagemCompartilharCupom(cupom, codigo, destino));
-  }, [compartilhando, gerando, codigo, destino, cupom]);
-
-  const jaTem = Boolean(codigo);
-
-  /* SEM LINK DE AFILIADO NAO EXISTE BOTAO.
-
-     Este era o defeito mais visivel do site. 901 dos 975 cupons bons estao sem
-     link guardado, e o botao "Usar este cupom" aparecia em todos eles. Clicar
-     chamava uma funcao vazia: nada acontecia, nenhuma loja abria, nenhum erro
-     era mostrado. Nove em cada dez cartoes tinham um botao morto.
-
-     Sem link, o caminho que funciona de verdade e colar o link do produto: dali
-     sai link de afiliado valido e o cupom e conferido naquele anuncio. Entao e
-     isso que o cartao oferece, com o texto dizendo a verdade. */
-  if (!destino) {
-    return (
-      <Button
-        type="button"
-        onClick={irParaColarLink}
-        className={className}
-        variant="outline"
-      >
-        <Link2 className={icone} aria-hidden="true" />
-        Conferir num produto desta loja
-      </Button>
-    );
-  }
+  const irParaLoja = useCallback(() => {
+    if (!p.loja) return;
+    if (p.codigo) setCopiou(copiarTexto(p.codigo));
+    marcarConsultado(cupom.id);
+    setAbrindo(true);
+    abrirLoja(p.loja);
+    window.setTimeout(() => setAbrindo(false), 2500);
+  }, [p.loja, p.codigo, cupom.id]);
 
   return (
     <>
       <Button
-        onClick={() => {
-          /* Com codigo pronto: copia e abre, tudo no mesmo clique.
-             Sem codigo: abre a loja do mesmo jeito e pede o codigo em paralelo.
-             O que NAO acontece mais e a pessoa ficar presa esperando. */
-          if (!jaTem) void gerar();
-          setEsperando(true);
-        }}
-        disabled={redirecionando}
-        aria-busy={redirecionando}
+        type="button"
+        onClick={() => (pronto ? irParaLoja() : void p.preparar())}
+        disabled={preparando}
+        aria-busy={preparando}
         className={className}
       >
-        {redirecionando ? (
+        {preparando ? (
           <LoaderCircle className={cn(icone, "animate-giro-calmo")} aria-hidden="true" />
+        ) : pronto && p.codigo ? (
+          <Copy className={icone} aria-hidden="true" />
         ) : consultado ? (
           <Check className={icone} aria-hidden="true" />
         ) : (
           <Link2 className={icone} aria-hidden="true" />
         )}
-        {redirecionando
-          ? codigo ? "Copiado! Abrindo a loja..." : "Abrindo a loja..."
-          : consultado
-            ? "Ver os produtos da loja de novo"
-            : "Ver os produtos desta loja"}
+        {preparando
+          ? "Preparando cupom e loja…"
+          : abrindo
+            ? p.codigo ? "Copiado! Abrindo a loja…" : "Abrindo a loja…"
+            : pronto
+              ? p.codigo ? "Copiar cupom e ver produtos da loja" : "Ver produtos da loja"
+              : p.fase === "demorou" ? "Tentar de novo" : "Usar este cupom"}
       </Button>
-      {destino && (
+
+      {pronto && p.codigo && (
         <Button
           type="button"
           variant="outline"
-          onClick={() => {
-            if (codigo) {
-              abrirWhatsApp(mensagemCompartilharCupom(cupom, codigo, destino));
-              return;
-            }
-            setCompartilhando(true);
-            void gerar();
-          }}
-          disabled={redirecionando}
-          aria-busy={compartilhando && gerando}
+          onClick={() => abrirWhatsApp(mensagemCompartilharCupom(cupom, p.codigo as string, p.loja as string))}
           className="mt-2 h-auto min-h-11 w-full whitespace-normal border-ml-blue/40 px-3 py-2 text-sm font-bold text-ml-blue hover:bg-ml-blue/5"
         >
-          {compartilhando && gerando ? (
-            <LoaderCircle className="animate-giro-calmo size-4" aria-hidden="true" />
-          ) : (
-            <Share2 className="size-4" aria-hidden="true" />
-          )}
-          {compartilhando && gerando ? "Preparando para compartilhar…" : "Compartilhar cupom no WhatsApp"}
+          <Share2 className="size-4" aria-hidden="true" />
+          Compartilhar cupom no WhatsApp
         </Button>
       )}
-      {(gerando || loja.gerando) && (
-        <EsperaDoCupom codigoPronto={Boolean(codigo)} linkPronto={Boolean(destino)} />
+
+      {preparando && <EsperaDoCupom codigoPronto={Boolean(p.codigo) || p.semCodigo} linkPronto={Boolean(p.loja)} />}
+
+      {p.pausa && !pronto && (
+        <p className="mt-2 rounded-md border border-amber-400/60 bg-amber-50 p-2.5 text-[12px] leading-4 text-foreground dark:bg-amber-950/30">
+          {p.pausa} Nada com você: tente de novo daqui a pouco.
+        </p>
       )}
-      {consultado && !redirecionando && (
+
+      {p.codigo && !cupom.codigo_cupom && <EtiquetaDoCupom codigo={p.codigo} vendedor={cupom.vendedor} />}
+
+      <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
+        {preparando
+          ? "Gerando seu código e localizando a página desta loja no Mercado Livre. Leva alguns segundos."
+          : abrindo && p.codigo
+            ? <>O código <span className="font-bold">{p.codigo}</span> ficou copiado. Escolha os produtos e cole no carrinho.</>
+            : pronto
+              ? p.codigo
+                ? "Copia o código e abre a loja com todos os produtos. Cole o código no carrinho."
+                : "Abre a loja com todos os produtos. O desconto do cupom aparece no carrinho."
+              : p.fase === "demorou"
+                ? !p.loja
+                  ? "Ainda não consegui abrir a página desta loja. Tente de novo em instantes."
+                  : "O código ainda não saiu. Tente de novo em instantes."
+                : "Gera o seu código do cupom e abre a página da loja com os produtos."}
+      </p>
+
+      {p.fase === "demorou" && p.loja && !p.codigo && (
+        <button
+          type="button"
+          onClick={() => { marcarConsultado(cupom.id); abrirLoja(p.loja as string); }}
+          className="mt-1.5 text-[11px] font-semibold text-ml-blue underline-offset-2 hover:underline"
+        >
+          Ver os produtos da loja sem o código
+        </button>
+      )}
+
+      {consultado && !abrindo && (
         <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-success">
           <Check className="size-3 shrink-0" aria-hidden="true" />
           Você já abriu este cupom. Pode abrir quantas vezes quiser.
         </p>
       )}
-      <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-        {gerando || loja.gerando ? (
-          codigo
-            ? "Seu código já está pronto. Estou localizando a página correta da loja para abrir sem erro."
-            : "Estou criando seu código e localizando a página correta da loja."
-        ) : redirecionando && codigo ? (
-          <>
-            <span className="font-bold text-success">Abrindo a loja.</span> O desconto entra
-            sozinho no carrinho. O código {codigo} ficou copiado, só para emergência.
-          </>
-        ) : codigo ? (
-          <>
-            Abre a loja com o desconto já valendo no carrinho. Você não precisa digitar nada.
-          </>
-        ) : falhou || loja.falhou ? (
-          "Não consegui criar o código agora. Dá para abrir a loja assim mesmo: o desconto entra sozinho no carrinho."
-        ) : (
-          "Cria o código do cupom, copia para você e abre a loja."
-        )}
-      </p>
-      {/* Aqui existiam MAIS DOIS lugares mostrando o mesmo codigo: um link
-          "Copiar o codigo #X" e uma segunda caixa identica a que o card ja
-          mostra logo abaixo. Tres copias do mesmo codigo na mesma tela, e o
-          cliente sem saber qual valia. Sobra uma so, a caixa de baixo, com o
-          botao de copiar. Aqui fica apenas a confirmacao de uma linha, quando
-          o proprio botao acima copiou. */}
-      {codigo && copiou && (
-        <p className="mt-1.5 animate-scale-in text-[11px] font-bold text-success">
-          Código copiado.
-        </p>
+      {p.codigo && copiou && abrindo && (
+        <p className="mt-1.5 animate-scale-in text-[11px] font-bold text-success">Código copiado.</p>
       )}
     </>
   );
@@ -2770,16 +2494,8 @@ export function CupomCard({
               : "bg-ml-blue text-white hover:bg-ml-blue/90",
           )}
         />
-        {!(cupom.vitrine_ok === true && cupom.link_afiliado) && (
-          <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span>, cole o
-            link aqui e eu confiro o cupom e gero seu link de compra.
-          </p>
-        )}
-        {cupom.codigo_cupom ? (
+        {cupom.codigo_cupom && (
           <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
-        ) : (
-          <PedirCodigo cupom={cupom} />
         )}
       </div>
 

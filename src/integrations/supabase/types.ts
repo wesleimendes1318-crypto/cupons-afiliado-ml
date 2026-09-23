@@ -67,6 +67,7 @@ export type Database = {
           vitrine_ok: boolean | null
           vitrine_motivo: string | null
           link_loja: string | null
+          loja_pedida_em: string | null
           vitrine_resolvida_em: string | null
         }
         Insert: {
@@ -103,6 +104,7 @@ export type Database = {
           vitrine_ok?: boolean | null
           vitrine_motivo?: string | null
           link_loja?: string | null
+          loja_pedida_em?: string | null
           vitrine_resolvida_em?: string | null
         }
         Update: {
@@ -139,6 +141,7 @@ export type Database = {
           vitrine_ok?: boolean | null
           vitrine_motivo?: string | null
           link_loja?: string | null
+          loja_pedida_em?: string | null
           vitrine_resolvida_em?: string | null
         }
         Relationships: []
@@ -346,6 +349,16 @@ export type Database = {
       }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
+      pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
+      lojas_pedidas: {
+        Args: { p_token: string }
+        Returns: {
+          vendedor: string
+          seller_id: string | null
+          origem: string | null
+          cupom_id: number
+        }[]
+      }
       salvar_condicoes: {
         Args: { p_cond: Json; p_token: string }
         Returns: Json
@@ -359,6 +372,10 @@ export type Database = {
         Returns: undefined
       }
       salvar_links: { Args: { p_links: Json; p_token: string }; Returns: Json }
+      salvar_origem_cupom: {
+        Args: { p_id: number; p_token: string; p_url: string }
+        Returns: boolean
+      }
       salvar_vitrines: {
         Args: { p_lista: Json; p_token: string }
         Returns: Json
@@ -388,6 +405,7 @@ export type Database = {
           vendedor: string
           seller_id: string | null
           cupons: number
+          origem: string | null
         }[]
       }
     }

@@ -100,6 +100,9 @@ type OutraLoja = {
   vence: string | null;
   link: string;
   codigo: string | null;
+  /* 'mais_barata': o preço final lá é menor. 'tem_cupom': a loja do anúncio
+     não tem cupom e esta tem, sem sair mais cara. */
+  motivo?: "mais_barata" | "tem_cupom" | null;
 };
 
 type Analise = {
@@ -109,6 +112,9 @@ type Analise = {
   temCupom: boolean;
   cupom: Cupom | null;
   outraLoja: OutraLoja | null;
+  /* Até duas lojas com o mesmo produto, a de menor preço final primeiro.
+     outraLoja é a primeira desta lista (fica para pedidos antigos). */
+  outrasLojas?: OutraLoja[] | null;
   /* true quando a busca por outra loja com cupom chegou a acontecer. Serve
      para separar "não procurei" de "procurei e não achou". */
   procurouOutra?: boolean | null;
@@ -615,6 +621,9 @@ function CodigoNaHora({
       const resposta = String(data ?? "");
       if (resposta.startsWith("#")) { pronto(resposta); return; }
       if (resposta !== "pedido") { setFase("falhou"); return; }
+      try {
+        window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id: cupomId }, window.location.origin);
+      } catch { /* sem extensao: o alarme de 1 minuto cobre */ }
     } catch {
       setFase("falhou");
       return;
@@ -632,15 +641,12 @@ function CodigoNaHora({
     relogios.current.push(window.setTimeout(olhar, 3000));
   }
 
+  /* O código chega segundos depois do clique, e aí o navegador já não deixa
+     copiar nem abrir aba sozinho. Então ele aparece com o botão "Copiar e
+     abrir o produto", que é um clique novo da pessoa e funciona sempre. */
   function pronto(valor: string) {
     setCodigo(valor);
     setFase("parado");
-    if (acao.current === "compartilhar") {
-      compartilharWhatsApp(mensagemProduto({ titulo, vendedor, cupom, codigo: valor, link: destino }));
-    } else {
-      setCopiou(copiarAgora(valor));
-      abrir();
-    }
   }
 
   if (codigo) {
@@ -714,13 +720,13 @@ function CodigoNaHora({
           </div>
           <div className="esqueleto mt-2.5 h-1.5 rounded-full" aria-hidden="true" />
           <p className="mt-2 text-[11px] leading-4 text-secondary-ink">
-            Assim que estiver pronta, o código será copiado e o produto abrirá automaticamente.
+            Assim que estiver pronta, aparece o botão para copiar o código e abrir o produto.
           </p>
         </div>
       )}
       <p className="mt-1.5 text-xs leading-relaxed text-secondary-ink" aria-live="polite">
         {fase === "gerando"
-          ? "Assim que ficar pronto eu copio o código para você e abro o produto."
+          ? "Assim que ficar pronto, aparece o botão para copiar e abrir o produto."
           : fase === "falhou"
             ? "Não consegui criar o código agora. O botão de comprar continua valendo: o desconto do cupom entra no carrinho."
             : "Cria o código deste cupom, copia para você e abre o produto na loja."}
@@ -747,7 +753,11 @@ function Resultado({
      produto de catálogo com cupom valendo para este preço. Nesse caso a troca
      vira a recomendação principal: é ela que põe dinheiro no bolso da pessoa.
      O anúncio original continua disponível, só que como segunda opção. */
-  const trocar = a?.temCupom !== true && !!a?.outraLoja;
+  const alternativas: OutraLoja[] =
+    a?.outrasLojas && a.outrasLojas.length ? a.outrasLojas : a?.outraLoja ? [a.outraLoja] : [];
+  /* A troca vira a recomendação principal quando a melhor alternativa sai mais
+     barata, ou quando a loja do anúncio não tem cupom e a outra tem. */
+  const trocar = alternativas.length > 0 && (a?.temCupom !== true || (alternativas[0]?.ganho ?? 0) > 0);
 
   /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
@@ -770,11 +780,30 @@ function Resultado({
       )}
       {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
 
-      {a?.outraLoja && (
-        <OutraLojaComCupom oferta={a.outraLoja} precoAqui={a.preco} titulo={a.titulo} principal={trocar} />
-      )}
+      {alternativas.map((oferta, i) => (
+        <OutraLojaComCupom
+          key={`${oferta.vendedor ?? "loja"}-${i}`}
+          oferta={oferta}
+          precoAqui={a?.preco ?? null}
+          titulo={a?.titulo ?? null}
+          principal={trocar && i === 0}
+          lojaAquiTemCupom={a?.temCupom === true}
+        />
+      ))}
 
       <CondicoesDoCupom analise={a} />
+
+      {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
+          Dizer isso é o que dá confiança para comprar aqui. */}
+      {a?.temCupom === true && alternativas.length === 0 && (
+        <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+          {a.procurouOutra === true
+            ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
+            : a.motivoNaoProcurou
+              ? `Desta vez não comparei com outras lojas (${a.motivoNaoProcurou}).`
+              : null}
+        </p>
+      )}
 
       {!leituraFalhou && semLink && (
         <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
@@ -863,11 +892,13 @@ function OutraLojaComCupom({
   precoAqui,
   titulo,
   principal,
+  lojaAquiTemCupom,
 }: {
   oferta: OutraLoja;
   precoAqui: number | null;
   titulo?: string | null;
   principal?: boolean;
+  lojaAquiTemCupom?: boolean;
 }) {
   /* A extensao ja comparou preco final contra preco final e mandou o ganho.
      O calculo local fica so como reserva para pedidos antigos. */
@@ -891,9 +922,13 @@ function OutraLojaComCupom({
         </p>
       )}
       <p className="text-sm font-bold text-success">
-        {temCupomLa
-          ? "Achei o mesmo produto mais barato em outra loja, e lá tem cupom"
-          : "Achei o mesmo produto mais barato em outra loja"}
+        {temCupomLa && !lojaAquiTemCupom
+          ? `Achei o mesmo produto${oferta.vendedor ? ` na loja ${oferta.vendedor}` : " em outra loja"} com cupom!`
+          : temCupomLa
+            ? "Achei o mesmo produto mais barato em outra loja, e lá também tem cupom"
+            : !lojaAquiTemCupom && diferenca != null && diferenca > 0
+              ? `Nenhum cupom para esta loja hoje, mas ${oferta.vendedor ?? "outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
+              : "Achei o mesmo produto mais barato em outra loja"}
       </p>
 
 
@@ -912,6 +947,13 @@ function OutraLojaComCupom({
         )}
         {oferta.vence && <Linha rotulo="Cupom vale até" valor={dataBR(oferta.vence)} />}
       </dl>
+
+      {oferta.motivo === "tem_cupom" && (diferenca == null || diferenca <= 0) && (
+        <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
+          Mesmo preço final{oferta.finalAtual != null ? <> ({brl(oferta.final)})</> : null}, mas lá o
+          desconto vem de cupom, então você vê o valor cair no carrinho.
+        </p>
+      )}
 
       {diferenca != null && diferenca > 0 && (
         <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
@@ -1024,7 +1066,7 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
         <p className="text-sm font-semibold">Hoje essa loja não tem cupom.</p>
         {achouOutra ? (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-            Por isso procurei o mesmo produto em outras lojas e a opção com cupom está logo acima.
+            Por isso procurei o mesmo produto em outras lojas, e a melhor opção está logo acima.
             Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço da
             loja, e a comissão que eu recebo é paga pelo vendedor.
           </p>

@@ -76,7 +76,9 @@ type ResultadoIa = { ok: true; texto: string } | { ok: false; status: number; er
    constante envelheceu. Foi exatamente isso que derrubou a busca com IA: a
    chave estava certa nos secrets e os dois apelidos daqui nao existiam mais,
    entao tudo caia no gateway da plataforma, que sem credito devolve erro. */
-const MODELOS_GEMINI = ["gemini-flash-latest", "gemini-pro-latest"] as const;
+/* Flash-Lite primeiro: na chave gratuita e o modelo com a maior cota por
+   minuto e por dia, e 429 (cota estourada) e a falha mais comum medida aqui. */
+const MODELOS_GEMINI = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-pro-latest"] as const;
 
 /* Guardado por instancia do servidor: descobrir custa uma chamada, e o
    resultado vale para todas as requisicoes seguintes. */
@@ -109,7 +111,8 @@ async function descobrirModelo(apiKey: string): Promise<string | null> {
       .map((m) => (m.name ?? "").replace(/^models\//, ""))
       .filter((n) => n && !/embedding|aqa|vision|image|tts|audio|native/i.test(n));
     if (!servem.length) return null;
-    const escolhido = servem.find((n) => /flash/i.test(n)) ?? servem[0] ?? null;
+    const escolhido =
+      servem.find((n) => /flash-lite/i.test(n)) ?? servem.find((n) => /flash/i.test(n)) ?? servem[0] ?? null;
     if (escolhido) {
       modeloDescoberto = escolhido;
       console.warn("[ia] modelo do Gemini descoberto:", escolhido);
@@ -204,9 +207,13 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
   };
 
   /* Primeiro o modelo ja descoberto nesta instancia, depois os preferidos. */
-  const ordem = modeloDescoberto
+  /* GEMINI_MODEL (opcional, nos secrets): quem tem chave paga escolhe o
+     modelo, por exemplo "gemini-pro-latest". Vem antes de todos. */
+  const escolhido = (process.env['GEMINI_MODEL'] ?? "").trim();
+  const base = modeloDescoberto
     ? [modeloDescoberto, ...MODELOS_GEMINI.filter((m) => m !== modeloDescoberto)]
     : [...MODELOS_GEMINI];
+  const ordem: string[] = escolhido ? [escolhido, ...base.filter((m) => m !== escolhido)] : base;
 
   /* MEDIDO EM PRODUCAO: 2 de cada 4 pedidos voltavam 502 porque a cota por
      MINUTO da chave gratuita estoura e o Gemini devolve 429. Essa cota volta
@@ -240,8 +247,14 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
   return ultimo;
 }
 
+/* O gateway da plataforma responde 402 quando a conta esta sem credito. Isso
+   nao muda em segundos: depois de um 402, ele fica de fora por 10 minutos em
+   vez de somar ate 50s de espera a cada pedido. */
+let gatewaySemCreditoAte = 0;
+
 /** Alternativa gerenciada pela plataforma, usada quando a chave própria falha ou está sem cota. */
 async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
+  if (Date.now() < gatewaySemCreditoAte) return { ok: false, status: 402, erro: erroPorStatus(502) };
   const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) return { ok: false, status: 503, erro: "O serviço de IA do site não está configurado. Avise o responsável pelo site." };
 
@@ -276,6 +289,10 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
           const texto = dados.choices?.[0]?.message?.content?.trim() ?? "";
           if (texto) return { ok: true, texto };
           break;
+        }
+        if (resposta.status === 402) {
+          gatewaySemCreditoAte = Date.now() + 10 * 60_000;
+          return { ok: false, status: 402, erro: erroPorStatus(502) };
         }
         if (resposta.status !== 429 && resposta.status < 500) break;
       } catch {

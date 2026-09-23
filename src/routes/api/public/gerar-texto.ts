@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { textoSemIa } from "@/lib/ia-reserva";
 import { chamarIa, excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 const entradaSchema = z.object({
@@ -56,8 +57,9 @@ Compra mínima: ${compraMinima}.
 REGRA CRÍTICA: informe o benefício REAL, nunca destaque o percentual isoladamente e nunca prometa desconto maior que o teto. Se houver teto, diga claramente o limite, como “20% OFF com desconto de até R$ 100”. Informe a compra mínima quando existir. Não invente características de produtos, estoque, frete ou prazo de entrega. Entregue somente a mensagem final.`;
 
         const resultado = await chamarIa(prompt, { esforco: "low" });
+        /* IA fora (cota ou credito): mensagem montada com os numeros reais. */
         if (!resultado.ok) {
-          return json(request, { erro: resultado.erro }, resultado.status);
+          return json(request, { texto: textoSemIa(entrada), aviso: false, fonte: "calculo" });
         }
         return json(request, { texto: resultado.texto, aviso: false });
       },

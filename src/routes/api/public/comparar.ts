@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { compararSemIa } from "@/lib/ia-reserva";
 import { chamarIa, excedeuLimite, json, limparJson, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 const entradaSchema = z.object({
@@ -73,7 +74,8 @@ No campo "urgencia", escreva UMA frase curta sobre prazo somente quando algum cu
 Cupons: ${JSON.stringify(entrada.cupons)}`;
 
         const resultado = await chamarIa(prompt, { formato: formatoSaida, esforco: "low" });
-        if (!resultado.ok) return json(request, { erro: resultado.erro }, resultado.status);
+        /* IA fora (cota ou credito): responde com a comparacao calculada. */
+        if (!resultado.ok) return json(request, compararSemIa(entrada.cupons));
 
         try {
           const comparacao = saidaSchema.parse(JSON.parse(limparJson(resultado.texto)));
@@ -83,7 +85,7 @@ Cupons: ${JSON.stringify(entrada.cupons)}`;
             vencedor_id: idsPermitidos.has(comparacao.vencedor_id) ? comparacao.vencedor_id : null,
           });
         } catch {
-          return json(request, { erro: "A comparação retornou um formato inválido. Tente novamente." }, 502);
+          return json(request, compararSemIa(entrada.cupons));
         }
       },
     },

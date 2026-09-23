@@ -79,7 +79,7 @@ function CategoriaNaoEncontrada() {
 }
 
 const CAMPOS =
-  "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,codigo_cupom,vitrine_ok,link_afiliado,link_origem";
+  "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,codigo_cupom,vitrine_ok,link_afiliado,link_origem,link_loja";
 
 function PaginaCategoria() {
   const { categoria } = Route.useLoaderData();
