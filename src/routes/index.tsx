@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { CATEGORIAS } from "@/content/categorias";
 import { GUIAS } from "@/content/guias";
+import { marcarConsultado, useConsultado } from "@/lib/cupons-consultados";
 import { supabase } from "@/integrations/supabase/client";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
