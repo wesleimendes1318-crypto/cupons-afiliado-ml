@@ -956,14 +956,24 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
        analise nem chegou a acontecer, e null nao e permissao para afirmar. */
     const identificouLoja = analise?.lojaLida === true || !!analise?.vendedor;
     const naoConferiu = !identificouLoja;
+
+    /* Link que abre perfil em vez de produto. Acontece com alguns links curtos
+       de compartilhamento. Nao e erro do site nem da loja, e o link aponta para
+       outro lugar, entao a instrucao tem que ser essa e nao "tente de novo". */
+    const ehPerfil = /perfil/i.test(analise?.diagnostico ?? "");
+
     if (naoConferiu) {
       return (
         <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
-          <p className="text-sm font-semibold">Não consegui abrir este anúncio agora.</p>
+          <p className="text-sm font-semibold">
+            {ehPerfil
+              ? "Esse link abre um perfil, não um produto."
+              : "Não consegui abrir este anúncio agora."}
+          </p>
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-            Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo
-            em instantes, ou cole o endereço completo do anúncio em vez do link curto de
-            compartilhamento.
+            {ehPerfil
+              ? "Ele leva a uma página com vários produtos, então não dá para saber qual você quer nem de que loja. Abra o anúncio do produto no Mercado Livre e cole o endereço dele aqui."
+              : "Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo em instantes, ou cole o endereço completo do anúncio em vez do link curto de compartilhamento."}
           </p>
           {analise?.diagnostico && (
             <p className="mt-1.5 text-xs text-secondary-ink/80">Detalhe técnico: {analise.diagnostico}.</p>
