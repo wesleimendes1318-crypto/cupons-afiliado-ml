@@ -93,6 +93,13 @@ export type Cupom = {
   /* Endereço PÚBLICO da loja no Mercado Livre, sem etiqueta nenhuma.
      É o que o botão abre agora. Ver o comentário do useLinkDaLoja. */
   link_origem: string | null;
+  /* Página oficial da loja, do jeito que o próprio Mercado Livre a publica:
+     https://lista.mercadolivre.com.br/pagina/<apelido-da-loja>/
+     A extensão descobre esse endereço UMA vez por loja, seguindo o redirecionamento
+     de _CustId_, e guarda aqui. Não dá para adivinhar: "Augustusmobiliario" mora em
+     /pagina/augustusmvrc/ e "Sied20240106044007" em /pagina/k4p5vnd2/. Null enquanto
+     a extensão não passou por essa loja. */
+  link_loja: string | null;
 };
 
 export type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
@@ -656,6 +663,43 @@ function useCodigoDoCupom(cupom: Cupom) {
   return { codigo, gerando, falhou, gerar };
 }
 
+/** ENDEREÇO DA LISTA DE PRODUTOS DA LOJA.
+ *
+ *  O botão "Ver itens da loja" tem que abrir a prateleira de quem oferece o
+ *  cupom. Nunca o perfil do Weslei, nunca o campo de colar link.
+ *
+ *  A ordem aqui não é preferência de estilo, é confiabilidade medida:
+ *
+ *  1. link_loja — a página oficial da loja, descoberta pela extensão seguindo o
+ *     redirecionamento do próprio Mercado Livre. É a melhor: tem nome, marca e
+ *     vitrine da loja.
+ *
+ *  2. _CustId_<id> montado a partir do link da campanha. O número do vendedor
+ *     já vem escrito na origem do cupom, em duas formas:
+ *        .../_CustId_2615738264?coupon_campaign_id=...
+ *        .../_Container_Queima-de-Estoque-seller-1789666895?coupon_campaign_id=...
+ *     Abrir /_CustId_<id> cai na lista de anúncios daquele vendedor, e quando a
+ *     loja tem página própria o Mercado Livre redireciona sozinho para ela.
+ *
+ *  POR QUE NÃO ADIVINHAR O APELIDO DA LOJA: testei em lojas reais do banco.
+ *  "Augustusmobiliario" mora em /pagina/augustusmvrc/, e "Sied20240106044007" em
+ *  /pagina/k4p5vnd2/ — nada a ver com o nome. Montar /pagina/ a partir do nome do
+ *  vendedor acertaria em parte das lojas e, no resto, jogaria o cliente numa
+ *  BUSCA por aquele texto, com produtos de outras lojas no meio. O número do
+ *  vendedor não erra. */
+export function paginaDaLoja(cupom: Cupom): string | null {
+  const guardada = (cupom.link_loja ?? "").trim();
+  if (guardada) return guardada;
+
+  const origem = (cupom.link_origem ?? "").trim();
+  const id =
+    origem.match(/_CustId_(\d{4,})/i)?.[1] ??
+    origem.match(/[?&_-]seller[-_](\d{4,})/i)?.[1] ??
+    null;
+  if (!id) return null;
+  return `https://lista.mercadolivre.com.br/_CustId_${id}`;
+}
+
 /* O endereço da loja NÃO precisa ser link de afiliado.
 
    Quem paga a comissão aqui é a etiqueta: o código #WSLMENDES... que a pessoa
@@ -709,7 +753,8 @@ function useLinkDaLoja(cupom: Cupom) {
      exatamente lá, e foi por isso que esses foram apagados do banco. */
   const ehPerfil = (u: string | null) => !!u && /\/social\/|\/perfil\//i.test(u);
   const origem = ehPerfil(origemBruta) ? null : origemBruta;
-  const destinoBase = (ehPerfil(guardado) ? null : guardado) || origem;
+  const vitrineDaLoja = paginaDaLoja(cupom);
+  const destinoBase = (ehPerfil(guardado) ? null : guardado) || vitrineDaLoja || origem;
 
   /* Origem que o gerador do Mercado Livre preserva. O banco recusa as outras
      em pedir_link, entao nem adianta pedir link novo para elas. */
@@ -1019,7 +1064,7 @@ async function carregarCupons(): Promise<Cupom[]> {
     const { data, error } = await supabase
       .from("cupons")
       .select(
-        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,link_origem,codigo_cupom,vitrine_ok,vitrine_motivo",
+        "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,link_afiliado,link_origem,link_loja,codigo_cupom,vitrine_ok,vitrine_motivo",
       )
       .order("valor", { ascending: false })
       .range(de, de + passo - 1);
