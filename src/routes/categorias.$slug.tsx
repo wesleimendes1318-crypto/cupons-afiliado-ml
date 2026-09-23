@@ -8,7 +8,15 @@ import { ArrowRight, AlertTriangle, CheckCircle2, Tag } from "lucide-react";
 import { buscarCategoria, CATEGORIAS } from "@/content/categorias";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { supabase } from "@/integrations/supabase/client";
-import { AcaoDoCupom, type Cupom } from "@/routes/index";
+import { useEffect, useMemo, useState } from "react";
+import {
+  calcularScore,
+  CondicoesModal,
+  CupomCard,
+  diasAte,
+  type Cupom,
+  type CupomIndexado,
+} from "@/routes/index";
 
 const BASE = "https://cupons-afiliado-ml.lovable.app/categorias";
 
