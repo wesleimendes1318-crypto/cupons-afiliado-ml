@@ -57,7 +57,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Qualidade = "bom" | "armadilha";
-type Cupom = {
+export type Cupom = {
   id: number;
   vendedor: string;
   desconto: string | null;
@@ -93,7 +93,7 @@ type Cupom = {
   link_origem: string | null;
 };
 
-type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
+export type CupomIndexado = Cupom & { chave: string; dias: number | null; score: number | null };
 type Ordem = "score" | "desconto" | "teto" | "orcamento" | "termina" | "vendedor";
 type Urgencia = "normal" | "atencao" | "urgente" | "ultimas" | "encerrado" | "sem-data";
 type FaixaEconomia = "semlimite" | "ate50" | "50a200" | "200a1000" | "acima1000";
@@ -197,14 +197,14 @@ function contagemRegressiva(vence: string | null, agora: number | null) {
   };
 }
 
-function diasAte(data: string | null) {
+export function diasAte(data: string | null) {
   if (!data) return null;
   const hoje = new Date();
   const hojeUtc = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   return Math.round((dataDoBanco(data).getTime() - hojeUtc) / 86400000);
 }
 
-function calcularScore(cupom: Cupom, agora: number | null) {
+export function calcularScore(cupom: Cupom, agora: number | null) {
   const base = semLimite(cupom) ? (cupom.valor ?? 0) * 40 : tetoReal(cupom);
   if (base == null || base <= 0) return null;
   let score = base;
@@ -573,7 +573,7 @@ function useLinkDaLoja(cupom: Cupom) {
    leva segundos e não cabe dentro do gesto) e o botão então passa a fazer tudo
    de uma vez. O texto embaixo do botão sempre diz o que vai acontecer, para
    ninguém clicar às cegas. */
-function AcaoDoCupom({
+export function AcaoDoCupom({
   cupom,
   className,
   iconeClassName,
@@ -2047,13 +2047,14 @@ function ComparadorModal({
   );
 }
 
-function CupomCard({
+export function CupomCard({
   cupom,
   agora,
   abrirCondicoes,
   selecionado,
   alternarSelecao,
   limiteAtingido = false,
+  permitirComparar = true,
 }: {
   cupom: CupomIndexado;
   agora: number | null;
@@ -2061,6 +2062,7 @@ function CupomCard({
   selecionado: boolean;
   alternarSelecao: (id: number) => void;
   limiteAtingido?: boolean;
+  permitirComparar?: boolean;
 }) {
   const armadilha = cupom.qualidade === "armadilha";
   const contagem = contagemRegressiva(cupom.vence, agora);
@@ -2091,23 +2093,27 @@ function CupomCard({
       )}
     >
       <div className="flex min-h-10 min-w-0 items-start justify-between gap-3">
-        <label
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 text-xs font-medium text-secondary-ink",
-            limiteAtingido && !selecionado ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-          )}
-          title={limiteAtingido && !selecionado ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.` : "Marque para comparar (até 3)"}
-        >
-          <input
-            type="checkbox"
-            checked={selecionado}
-            disabled={limiteAtingido && !selecionado}
-            onChange={() => alternarSelecao(cupom.id)}
-            className="size-4 accent-[var(--ml-blue)]"
-            aria-label={`Selecionar a loja ${cupom.vendedor} para comparar`}
-          />
-          Comparar
-        </label>
+        {permitirComparar ? (
+          <label
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 text-xs font-medium text-secondary-ink",
+              limiteAtingido && !selecionado ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+            )}
+            title={limiteAtingido && !selecionado ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.` : "Marque para comparar (até 3)"}
+          >
+            <input
+              type="checkbox"
+              checked={selecionado}
+              disabled={limiteAtingido && !selecionado}
+              onChange={() => alternarSelecao(cupom.id)}
+              className="size-4 accent-[var(--ml-blue)]"
+              aria-label={`Selecionar a loja ${cupom.vendedor} para comparar`}
+            />
+            Comparar
+          </label>
+        ) : (
+          <span className="shrink-0" />
+        )}
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
           className={cn(
@@ -2216,7 +2222,7 @@ function CupomCard({
   );
 }
 
-function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
+export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
   if (!cupom) return null;
 
   const compraParaTeto = compraParaAtingirTeto(cupom);
