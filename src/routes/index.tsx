@@ -2093,23 +2093,27 @@ export function CupomCard({
       )}
     >
       <div className="flex min-h-10 min-w-0 items-start justify-between gap-3">
-        <label
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 text-xs font-medium text-secondary-ink",
-            limiteAtingido && !selecionado ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-          )}
-          title={limiteAtingido && !selecionado ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.` : "Marque para comparar (até 3)"}
-        >
-          <input
-            type="checkbox"
-            checked={selecionado}
-            disabled={limiteAtingido && !selecionado}
-            onChange={() => alternarSelecao(cupom.id)}
-            className="size-4 accent-[var(--ml-blue)]"
-            aria-label={`Selecionar a loja ${cupom.vendedor} para comparar`}
-          />
-          Comparar
-        </label>
+        {permitirComparar ? (
+          <label
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 text-xs font-medium text-secondary-ink",
+              limiteAtingido && !selecionado ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+            )}
+            title={limiteAtingido && !selecionado ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.` : "Marque para comparar (até 3)"}
+          >
+            <input
+              type="checkbox"
+              checked={selecionado}
+              disabled={limiteAtingido && !selecionado}
+              onChange={() => alternarSelecao(cupom.id)}
+              className="size-4 accent-[var(--ml-blue)]"
+              aria-label={`Selecionar a loja ${cupom.vendedor} para comparar`}
+            />
+            Comparar
+          </label>
+        ) : (
+          <span className="shrink-0" />
+        )}
         <p
           title={cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : undefined}
           className={cn(
