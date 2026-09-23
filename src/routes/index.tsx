@@ -1160,10 +1160,40 @@ function Index() {
               </a>
             </h1>
             <p className="mt-2 max-w-3xl text-sm font-medium text-white/90 sm:text-base">
-              Muitos cupons anunciam 40%, mas o desconto real é só R$ 2. Eu gero e disponibilizo o meu cupom personalizado, com o limite real informado e sem letras miúdas, para máxima transparência.
+              Um cupom anuncia 40% e desconta R$ 2. A diferença está no limite, escondido nas
+              letras miúdas — e é isso que eu leio, cupom por cupom, antes de publicar qualquer
+              coisa aqui.
             </p>
-            <p className="mt-1 max-w-3xl text-sm text-white/80">
-              Aqui você sempre sabe quanto economiza antes de comprar.
+            <p className="mt-1.5 max-w-3xl text-sm text-white/85 sm:text-base">
+              {indicadores.total > 0 ? (
+                <>
+                  Já conferi {indicadores.total.toLocaleString("pt-BR")} cupons um a um e reprovei{" "}
+                  {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco demais.
+                  Publico o limite real de cada um e gero o seu código na hora.
+                </>
+              ) : (
+                <>
+                  Confiro cada cupom um a um, reprovo os que descontam pouco demais, publico o
+                  limite real de cada um e gero o seu código na hora.
+                </>
+              )}
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-semibold text-white/90 sm:text-sm">
+              <li className="flex items-center gap-1.5">
+                <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-ml-yellow" />
+                Limite real conferido no texto oficial da campanha
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Check aria-hidden="true" className="size-4 shrink-0 text-ml-yellow" />
+                Nenhum número inventado: o que não sei, eu digo que não sei
+              </li>
+              <li className="flex items-center gap-1.5">
+                <ShieldAlert aria-hidden="true" className="size-4 shrink-0 text-ml-yellow" />
+                Mostro também os cupons ruins, para você não cair neles
+              </li>
+            </ul>
+            <p className="mt-2 max-w-3xl text-sm text-white/80">
+              Aqui você sabe quanto economiza antes de comprar — e o preço é o mesmo para você.
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
