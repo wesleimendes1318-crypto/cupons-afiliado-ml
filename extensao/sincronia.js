@@ -388,8 +388,13 @@ export async function concluirGeracao(token, tipo, chave, resultado, erro, meta)
 export async function compararNoServidor(token, url, dica = {}) {
   if (!token) return { procurou: false, motivo: 'sem token de sincronia', opcoes: [] };
   try {
+    /* Sem cookie do site: o navegador do Weslei guardava a versao antiga do
+       servidor presa a sessao (24/09: a versao nova ja estava no ar e a
+       extensao seguia recebendo a anterior). */
     const r = await fetch(SITE + '/api/public/mesmo-produto', {
       method: 'POST',
+      credentials: 'omit',
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json', 'x-sinc-token': token },
       body: JSON.stringify({ url, ...dica })
     });
