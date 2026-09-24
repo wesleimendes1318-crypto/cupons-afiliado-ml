@@ -168,3 +168,29 @@ test('perfil social: pagina com varios produtos nao chuta', () => {
   assert.equal(produtoDoPerfilSocial('https://www.mercadolivre.com.br/social/x', 'so o MLB1234567890 aqui'),
     'https://produto.mercadolivre.com.br/MLB-1234567890');
 });
+
+import { gtinValido, identificadoresDoAnuncio } from '../comparador.js';
+
+test('GTIN: digito verificador', () => {
+  assert.ok(gtinValido('7891000315507'));   // EAN-13 valido
+  assert.ok(gtinValido('96385074'));        // EAN-8 valido
+  assert.equal(gtinValido('7891000315508'), false);
+  assert.equal(gtinValido('0000000000000'), false);
+  assert.equal(gtinValido('12345'), false);
+});
+
+test('identidade do anuncio: GTIN, marca, modelo e catalogo', () => {
+  const html = '{"attributes":[{"id":"BRAND","name":"Marca","value_name":"Kevira"},'
+    + '{"id":"MODEL","name":"Modelo","value_name":"Banco Mesa 180"},'
+    + '{"id":"GTIN","name":"Código universal de produto","value_name":"7891000315507"}],'
+    + '"catalog_product_id":"MLB19486347"}';
+  assert.deepEqual(identificadoresDoAnuncio(html),
+    { gtin: '7891000315507', marca: 'Kevira', modelo: 'Banco Mesa 180', catalogoPagina: 'MLB19486347' });
+});
+
+test('identidade do anuncio: GTIN invalido e descartado, ficha em texto', () => {
+  const html = '<tr><th>Código universal de produto</th><td>7891000315508</td></tr>';
+  assert.equal(identificadoresDoAnuncio(html).gtin, null);
+  const ok = '<tr><th>Código universal de produto</th><td><span>7891000315507</span></td></tr>';
+  assert.equal(identificadoresDoAnuncio(ok).gtin, '7891000315507');
+});

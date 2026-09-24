@@ -10,13 +10,19 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
    x-sinc-token) ou o próprio site. Resultado guardado 6 horas por produto:
    o mesmo link colado de novo não gera nenhuma consulta nova. */
 
+/* Campos do anuncio sao opcionais e tolerantes: um valor estranho vira null
+   em vez de derrubar a comparacao inteira. */
 const entradaSchema = z.object({
   url: z.string().trim().min(10).max(2000),
-  catalogo: z.string().regex(/^MLB\d{5,}$/i).nullish(),
-  item: z.string().regex(/^MLB\d{6,}$/i).nullish(),
-  preco: z.number().positive().max(1e7).nullish(),
-  vendedor: z.string().max(160).nullish(),
-  titulo: z.string().max(300).nullish(),
+  catalogo: z.string().regex(/^MLB\d{5,}$/i).nullish().catch(null),
+  item: z.string().regex(/^MLB\d{6,}$/i).nullish().catch(null),
+  preco: z.number().positive().max(1e7).nullish().catch(null),
+  vendedor: z.string().max(160).nullish().catch(null),
+  titulo: z.string().max(300).nullish().catch(null),
+  gtin: z.string().regex(/^\d{8,14}$/).nullish().catch(null),
+  marca: z.string().max(80).nullish().catch(null),
+  modelo: z.string().max(80).nullish().catch(null),
+  catalogoPagina: z.string().regex(/^MLB\d{5,}$/i).nullish().catch(null),
 });
 const VALIDADE_MS = 6 * 60 * 60 * 1000;
 
@@ -72,6 +78,8 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
           catalogo: entrada.catalogo ?? null, item: entrada.item ?? null,
           preco: entrada.preco ?? null, vendedor: entrada.vendedor ?? null,
           titulo: entrada.titulo ?? null,
+          gtin: entrada.gtin ?? null, marca: entrada.marca ?? null,
+          modelo: entrada.modelo ?? null, catalogoPagina: entrada.catalogoPagina ?? null,
         });
         if (chave) {
           await tabela.upsert({ chave, resposta: resultado, criado_em: new Date().toISOString() } as never);

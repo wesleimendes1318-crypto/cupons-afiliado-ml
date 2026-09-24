@@ -263,3 +263,14 @@ tenta achar o produto de catalogo correspondente pela API oficial:
 pelo nome do anuncio). Achando, compara as lojas desse produto. Quando o
 catalogo foi achado pelo nome, o site avisa o cliente que e um palpite forte.
 A resposta de cada endereco fica gravada em `comparacoes.resposta.trilha`.
+
+### v1.50.0 - comparacao pela identidade do produto, qualquer que seja o link
+
+O produto e identificado pelo que ele E, nao pelo tipo de link colado. A
+extensao le na pagina do anuncio (a que o cliente pediu) o codigo de barras
+(GTIN/EAN, com digito verificador conferido), a marca, o modelo e o catalogo
+citado. O servidor procura, pela API oficial, na ordem: catalogo do link,
+catalogo ligado ao produto do vendedor, catalogo da pagina (so se a lista de
+ofertas contem o proprio anuncio), codigo de barras, marca+modelo e titulo.
+Os tres primeiros e o codigo de barras sao exatos; marca+modelo e titulo sao
+avisados ao cliente como palpite forte.

@@ -316,3 +316,48 @@ export function produtoDoPerfilSocial(urlFinal, html) {
   if (ids.size === 1) return 'https://produto.mercadolivre.com.br/MLB-' + [...ids][0];
   return null;
 }
+
+/* ------------------------------------------- identidade do produto anunciado
+
+   Para comparar o MESMO produto em outras lojas, o que importa e o que o
+   produto E, nao o tipo de link que o cliente colou. A pagina do anuncio (a
+   que o proprio cliente pediu) traz na ficha tecnica:
+     - GTIN / EAN (codigo de barras): identidade exata do produto;
+     - marca e modelo;
+     - as vezes, o produto de catalogo ao qual o anuncio esta ligado.
+   O servidor usa isso na API oficial (/products/search?product_identifier=).
+   Nada e chutado: GTIN so vale com digito verificador correto. */
+
+/** Digito verificador de GTIN-8/12/13/14 (padrao GS1). */
+export function gtinValido(codigo) {
+  const s = String(codigo || '');
+  if (!/^\d{8}$|^\d{12,14}$/.test(s)) return false;
+  if (/^0+$/.test(s)) return false;
+  const d = s.split('').map(Number);
+  const verificador = d.pop();
+  let soma = 0;
+  for (let i = d.length - 1, peso = 3; i >= 0; i--, peso = peso === 3 ? 1 : 3) soma += d[i] * peso;
+  return (10 - (soma % 10)) % 10 === verificador;
+}
+
+function atributo(t, id) {
+  const re = new RegExp('"id"\\s*:\\s*"' + id + '"[\\s\\S]{0,400}?"(?:value_name|text)"\\s*:\\s*"([^"]{1,80})"', 'i');
+  const m = re.exec(t);
+  return m ? desescapar(m[1]).trim() : null;
+}
+
+export function identificadoresDoAnuncio(html) {
+  const t = desescapar(String(html || '').slice(0, 3000000));
+  let gtin = atributo(t, 'GTIN');
+  if (!gtin) {
+    const m = /(?:C[oó]digo universal de produto|GTIN|EAN)[^0-9]{0,200}?(\d{8,14})\b/i.exec(t);
+    gtin = m ? m[1] : null;
+  }
+  gtin = gtin ? String(gtin).replace(/\D/g, '') : null;
+  if (!gtinValido(gtin)) gtin = null;
+
+  const marca = atributo(t, 'BRAND');
+  const modelo = atributo(t, 'MODEL');
+  const cat = /"catalog_product_id"\s*:\s*"(MLB\d{5,})"/i.exec(t);
+  return { gtin, marca, modelo, catalogoPagina: cat ? cat[1].toUpperCase() : null };
+}

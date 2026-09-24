@@ -9,7 +9,8 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
-         primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial } from './comparador.js';
+         primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
+         identificadoresDoAnuncio } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -555,8 +556,13 @@ function extrairAnuncio(t, finalUrl, status) {
   let canonica = can ? limpo(can[1]) : null;
   if (canonica && !/^https?:\/\//i.test(canonica)) canonica = null;
 
+  /* Identidade do produto (codigo de barras, marca, modelo, catalogo): e o
+     que permite comparar o MESMO produto em outras lojas, seja qual for o
+     tipo de link que o cliente colou. */
+  const ident = identificadoresDoAnuncio(t);
+
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes,
-           titulo: titulo, preco: preco, canonica: canonica };
+           titulo: titulo, preco: preco, canonica: canonica, ...ident };
 }
 
 /* Le o anuncio a partir do service worker. Segue redirecionamento, entao um
@@ -2142,7 +2148,11 @@ async function atenderPedidos() {
               vendedor: vendedor || null,
               /* Para achar o produto no CATALOGO oficial pelo nome, quando o
                  anuncio nao e de catalogo (/up/MLBU...). */
-              titulo: a.titulo || null
+              titulo: a.titulo || null,
+              gtin: a.gtin || null,
+              marca: a.marca || null,
+              modelo: a.modelo || null,
+              catalogoPagina: a.catalogoPagina || null
             });
             if (api && api.procurou) {
               alts = (api.opcoes || []).map(o => ({

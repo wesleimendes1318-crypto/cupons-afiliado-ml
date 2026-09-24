@@ -124,6 +124,7 @@ type Candidato = { item: string; url: string; preco: number; sellerId: number; a
 export type DicaAnuncio = {
   catalogo?: string | null; item?: string | null; preco?: number | null;
   vendedor?: string | null; titulo?: string | null;
+  gtin?: string | null; marca?: string | null; modelo?: string | null; catalogoPagina?: string | null;
 };
 
 /* O QUE A API OFICIAL PERMITE, medido com a conta do Weslei em 24/09/2026:
@@ -143,13 +144,31 @@ function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   return pareceMesmoProduto(tituloAnuncio, nomeCatalogo) || pareceMesmoProduto(nomeCatalogo, tituloAnuncio);
 }
 
-/* Anúncio fora do catálogo (/up/MLBU..., produto.mercadolivre.com.br/MLB-...):
-   dois caminhos oficiais para achar o produto de catálogo correspondente.
-     1. /user-products/{MLBU}: o próprio produto do vendedor pode apontar o
-        catálogo ao qual está ligado;
-     2. /products/search: busca no CATÁLOGO oficial pelo nome do anúncio. É
-        busca de produto de catálogo, não de anúncios (essa é 403). */
-async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, trilha: string[]) {
+type BuscaCatalogo = { results?: { id?: string; name?: string; status?: string }[] };
+
+async function ofertasDoCatalogo(catalogo: string) {
+  const r = await mlGet<{ results?: Record<string, unknown>[] }>(`/products/${catalogo}/items?limit=20`);
+  return r.results ?? [];
+}
+
+/* COMO ACHAR O MESMO PRODUTO, SEJA QUAL FOR O LINK COLADO.
+
+   O cliente não sabe se o link é de catálogo (/p/MLB...), de produto de
+   vendedor (/up/MLBU...), anúncio avulso (MLB-...) ou compartilhamento. Então
+   o produto é identificado pelo que ELE É, na ordem do mais exato ao menos:
+
+     1. catálogo no próprio link                          -> exato
+     2. catálogo ligado ao produto do vendedor (/user-products)  -> exato
+     3. catálogo citado na página do anúncio, CONFERIDO: só vale se a lista de
+        ofertas desse catálogo contém o próprio anúncio   -> exato
+     4. código de barras (GTIN/EAN, dígito verificador conferido) buscado no
+        catálogo oficial (/products/search?product_identifier=)   -> exato
+     5. marca + modelo buscados no catálogo; o modelo precisa aparecer no nome
+                                                          -> palpite forte
+     6. título do anúncio buscado no catálogo; nomes e números precisam bater
+                                                          -> palpite forte
+   Tudo pela API oficial. Nenhuma página do Mercado Livre é lida aqui. */
+async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: string | null, trilha: string[]) {
   const up = /\/up\/(MLBU\d{5,})/i.exec(url)?.[1]?.toUpperCase() ?? null;
   if (up) {
     try {
@@ -158,17 +177,55 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, trilha: string[
       if (j.catalog_product_id) return { catalogo: j.catalog_product_id.toUpperCase(), porNome: false };
     } catch (e) { trilha.push(`user-products ${statusDe(e)}`); }
   }
-  const titulo = (dica.titulo ?? "").trim();
-  if (titulo) {
-    const termo = normPalavra(titulo).split(" ").slice(0, 10).join(" ");
+
+  const daPagina = (dica.catalogoPagina ?? "").toUpperCase();
+  if (/^MLB\d{5,}$/.test(daPagina) && itemAtual) {
     try {
-      const r = await mlGet<{ results?: { id?: string; name?: string }[] }>(
-        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(termo)}&limit=10`);
-      const lista = r.results ?? [];
-      const achado = lista.find((p) => p.id && p.name && mesmoNome(titulo, p.name));
-      trilha.push(`products/search 200 resultados=${lista.length} escolhido=${achado?.id ?? "nenhum"}`);
-      if (achado?.id) return { catalogo: achado.id.toUpperCase(), porNome: true };
-    } catch (e) { trilha.push(`products/search ${statusDe(e)}`); }
+      const ofertas = await ofertasDoCatalogo(daPagina);
+      const contem = ofertas.some((o) => String(o["item_id"] ?? o["id"] ?? "").toUpperCase() === itemAtual);
+      trilha.push(`catalogo-da-pagina ${daPagina} contem-o-anuncio=${contem ? "sim" : "nao"}`);
+      if (contem) return { catalogo: daPagina, porNome: false };
+    } catch (e) { trilha.push(`catalogo-da-pagina ${statusDe(e)}`); }
+  }
+
+  const buscar = async (rotulo: string, params: string, aceitar: (nome: string) => boolean) => {
+    try {
+      const r = await mlGet<BuscaCatalogo>(`/products/search?status=active&site_id=MLB&${params}&limit=10`);
+      const lista = (r.results ?? []).filter((p) => p.id);
+      /* Entre os resultados aceitos, fica o primeiro que tem oferta de loja. */
+      for (const p of lista.filter((x) => aceitar(x.name ?? "")).slice(0, 3)) {
+        const ofertas = await ofertasDoCatalogo(p.id!).catch(() => []);
+        if (ofertas.length) {
+          trilha.push(`${rotulo} 200 resultados=${lista.length} escolhido=${p.id}`);
+          return p.id!.toUpperCase();
+        }
+      }
+      trilha.push(`${rotulo} 200 resultados=${lista.length} escolhido=nenhum`);
+    } catch (e) { trilha.push(`${rotulo} ${statusDe(e)}`); }
+    return null;
+  };
+
+  if (dica.gtin && /^\d{8,14}$/.test(dica.gtin)) {
+    const c = await buscar("gtin", `product_identifier=${dica.gtin}`, () => true);
+    if (c) return { catalogo: c, porNome: false };
+  }
+
+  const titulo = (dica.titulo ?? "").trim();
+  const modelo = (dica.modelo ?? "").trim();
+  if (modelo) {
+    const q = normPalavra(`${dica.marca ?? ""} ${modelo}`).split(" ").slice(0, 8).join(" ");
+    const tokensModelo = palavras(modelo);
+    const c = await buscar("marca-modelo", `q=${encodeURIComponent(q)}`, (nome) => {
+      const b = new Set(palavras(nome));
+      return tokensModelo.length > 0 && tokensModelo.every((w) => b.has(w)) && (!titulo || mesmoNome(titulo, nome));
+    });
+    if (c) return { catalogo: c, porNome: true };
+  }
+
+  if (titulo) {
+    const q = normPalavra(titulo).split(" ").slice(0, 10).join(" ");
+    const c = await buscar("titulo", `q=${encodeURIComponent(q)}`, (nome) => mesmoNome(titulo, nome));
+    if (c) return { catalogo: c, porNome: true };
   }
   return null;
 }
@@ -180,13 +237,13 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
   let catalogoPorNome = false;
   const itemAtual = (ids.item ?? dica.item ?? null)?.toUpperCase() ?? null;
   if (!catalogo) {
-    const achado = await catalogoDoAnuncio(url, dica, trilha);
+    const achado = await catalogoDoAnuncio(url, dica, itemAtual, trilha);
     if (achado) { catalogo = achado.catalogo; catalogoPorNome = achado.porNome; }
   }
   if (!catalogo) {
     return {
       procurou: false,
-      motivo: "não achei este produto no catálogo oficial do Mercado Livre, e é pelo catálogo que dá para comparar lojas vendendo exatamente o mesmo item",
+      motivo: "não achei o mesmo produto (mesmo código de barras, marca e modelo) sendo vendido por outras lojas no catálogo oficial do Mercado Livre",
       produto: null, opcoes: [], fonte: "api-oficial", trilha,
     };
   }
@@ -197,9 +254,8 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
     try { titulo = (await mlGet<{ name?: string }>(`/products/${catalogo}`)).name ?? null; } catch { titulo = null; }
 
     /* 2. Todas as ofertas do mesmo produto, de lojas diferentes. */
-    const r = await mlGet<{ results?: Record<string, unknown>[] }>(`/products/${catalogo}/items?limit=20`);
     const candidatos: Candidato[] = [];
-    for (const o of r.results ?? []) {
+    for (const o of await ofertasDoCatalogo(catalogo)) {
       const item = String(o["item_id"] ?? o["id"] ?? "");
       const preco = Number(o["price"]);
       const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
