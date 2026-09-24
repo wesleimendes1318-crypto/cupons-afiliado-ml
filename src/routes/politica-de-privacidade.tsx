@@ -77,7 +77,7 @@ function Privacidade() {
       <h2>Para que tratamos</h2>
       <ul>
         <li>Exibir as páginas e manter o site funcionando (interesse legítimo e execução do serviço).</li>
-        <li>Comparar o preço do produto que você colou entre lojas do Mercado Livre (execução do serviço que você pediu).</li>
+        <li>Comparar o preço do produto que você colou entre lojas (execução do serviço que você pediu).</li>
         <li>Entender quais conteúdos são úteis, de forma agregada (mediante o seu consentimento).</li>
         <li>Exibir publicidade de terceiros, caso ativada no futuro (mediante o seu consentimento).</li>
         <li>Responder a quem nos procura (consentimento ao enviar a mensagem).</li>

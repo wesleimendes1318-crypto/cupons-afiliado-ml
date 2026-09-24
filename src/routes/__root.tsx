@@ -79,15 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Comparador de preços do Mercado Livre — @WSLMENDES" },
+      { title: "Comparador de preços — @WSLMENDES" },
       {
         name: "description",
-        content: "O mesmo produto em outras lojas do Mercado Livre, do mais barato ao mais caro.",
+        content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Comparador de preços do Mercado Livre" },
+      { property: "og:title", content: "Comparador de preços — @WSLMENDES" },
       {
         property: "og:description",
-        content: "O mesmo produto em outras lojas do Mercado Livre, do mais barato ao mais caro.",
+        content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

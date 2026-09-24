@@ -98,13 +98,23 @@ function mensagemMelhorOpcao({
   link: string;
 }) {
   const linhas: string[] = [];
-  linhas.push(titulo ? `🔎 Achei o menor preço de *${titulo}* no Mercado Livre` : "🔎 Achei o menor preço deste produto no Mercado Livre");
+  linhas.push(titulo ? `🔎 Achei o menor preço de *${titulo}*` : "🔎 Achei o menor preço deste produto");
   if (preco != null) linhas.push(`💰 *${brl(preco)}*${loja ? ` na loja ${loja}` : ""}`);
   if (economia != null && economia > 0) linhas.push(`📉 ${brl(economia)} a menos que o anúncio original`);
   else if (comparadas > 0) linhas.push(`✅ Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata`);
   if (cupom) linhas.push(`🎟️ Cupom da loja: ${cupom} (o desconto aparece no carrinho)`);
   linhas.push("", `👉 Compre direto por aqui: ${link}`);
   return linhas.join("\n");
+}
+
+/* Motivos técnicos vêm da extensão e do servidor e citam o marketplace pelo
+   nome. Na tela do cliente o site não exibe marca de terceiro. */
+function semMarca(t: string | null | undefined) {
+  return String(t ?? "")
+    .replace(/\bdo Mercado Livre\b/gi, "da loja")
+    .replace(/\bno Mercado Livre\b/gi, "na loja")
+    .replace(/\bo Mercado Livre\b/gi, "a loja")
+    .replace(/Mercado ?Livre/gi, "loja");
 }
 
 function compartilharWhatsApp(texto: string) {
@@ -350,16 +360,16 @@ function useDispositivo(): Dispositivo {
 }
 
 function textoDoBotao(d: Dispositivo, base: string) {
-  return d === "celular" ? `${base} no app do Mercado Livre` : `${base} no Mercado Livre`;
+  return d === "celular" ? `${base} pelo app` : base;
 }
 
 function AvisoDoBotao({ d }: { d: Dispositivo }) {
   const texto =
     d === "celular"
-      ? "Toque no botão e o app do Mercado Livre abre direto no produto, já na sua conta. É só finalizar a compra por lá."
+      ? "Toque no botão e o app da loja abre direto no produto, já na sua conta. É só finalizar a compra por lá."
       : d === "app-interno"
-        ? "Você está no navegador de dentro de outro app. Se o Mercado Livre abrir aqui dentro, toque nos três pontinhos e em \"Abrir no navegador\" para ir ao app e finalizar a compra."
-        : "Abre o anúncio numa aba nova, no site do Mercado Livre. Se você já está logado neste navegador, é só finalizar a compra.";
+        ? "Você está no navegador de dentro de outro app. Se a loja abrir aqui dentro, toque nos três pontinhos e em \"Abrir no navegador\" para ir ao app e finalizar a compra."
+        : "Abre o anúncio numa aba nova, no site da loja. Se você já está logado neste navegador, é só finalizar a compra.";
   return <p className="mt-1.5 text-center text-xs leading-relaxed text-secondary-ink">{texto}</p>;
 }
 
@@ -508,7 +518,7 @@ export default function BuscaPorLink() {
     <section id="colar-link" className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
       <div className="mb-1 flex items-center gap-2">
         <span aria-hidden="true" className="text-lg">🔗</span>
-        <h2 className="font-semibold">Cole o link de um produto do Mercado Livre</h2>
+        <h2 className="font-semibold">Cole o link do produto</h2>
       </div>
       <p className="mb-3 text-xs text-secondary-ink">
         Eu procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Se a loja tiver
@@ -941,7 +951,7 @@ function Resultado({
           {a.procurouOutra === true
             ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
             : a.motivoNaoProcurou
-              ? `Desta vez não comparei com outras lojas (${a.motivoNaoProcurou}).`
+              ? `Desta vez não comparei com outras lojas (${semMarca(a.motivoNaoProcurou)}).`
               : null}
         </p>
       )}
@@ -1080,7 +1090,7 @@ function MelhorOpcao({
         {comparadas > 0
           ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
           : comparadas === 0
-            ? "Não encontrei este mesmo produto mais barato em outra loja do Mercado Livre."
+            ? "Não encontrei este mesmo produto mais barato em outra loja."
             : `Comparei com as outras lojas que vendem este mesmo produto e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
       </p>
       <div className="mt-2 flex items-baseline justify-between gap-3 rounded-md border border-success/30 bg-card px-3 py-2 text-sm">
@@ -1341,7 +1351,7 @@ function OutraLojaComCupom({
         className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
       >
         {oferta.vendedor
-          ? textoDoBotao(dispositivo, `Comprar na ${oferta.vendedor} por ${brl(oferta.final)}`).replace(" no app do Mercado Livre", " no app")
+          ? textoDoBotao(dispositivo, `Comprar na ${oferta.vendedor} por ${brl(oferta.final)}`).replace(" pelo app", " no app")
           : textoDoBotao(dispositivo, temCupomLa ? "Comprar na loja com cupom" : "Comprar mais barato")}
       </a>
       {oferta.mesmaPagina ? (
@@ -1376,8 +1386,8 @@ function OutraLojaComCupom({
 
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
         {oferta.achadoNaBusca
-          ? "Achei este anúncio procurando o produto na busca do Mercado Livre. O título bate com o que você colou, mas confira a descrição antes de comprar: fora do catálogo, quem escreve o anúncio é o vendedor."
-          : "É o mesmo produto, na mesma página de catálogo do Mercado Livre, só que no anúncio desta loja."}
+          ? "Achei este anúncio procurando o produto na busca da loja. O título bate com o que você colou, mas confira a descrição antes de comprar: fora do catálogo, quem escreve o anúncio é o vendedor."
+          : "É o mesmo produto, na mesma página de catálogo, só que no anúncio desta loja."}
         {temCupomLa ? " O desconto do cupom aparece no carrinho." : " Aqui a economia vem do preço, não de cupom."}
       </p>
     </div>
@@ -1426,20 +1436,20 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
         <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
           <p className="text-sm font-semibold">
             {ehCaptcha
-              ? "Estou fazendo uma verificação com o Mercado Livre."
+              ? "Estou fazendo uma verificação de segurança."
               : ehPerfil
                 ? "Esse link abre um perfil, não um produto."
                 : "Não consegui abrir este anúncio agora."}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
             {ehCaptcha
-              ? "Não é nada com você nem com a loja: o Mercado Livre pediu uma confirmação de segurança do meu lado e eu prefiro esperar a insistir. Volte daqui a pouco. Se for comprar agora, pode ir direto pelo Mercado Livre, sem problema nenhum."
+              ? "Não é nada com você nem com a loja: o site da loja pediu uma confirmação de segurança do meu lado e eu prefiro esperar a insistir. Volte daqui a pouco. Se for comprar agora, pode ir direto pelo app da loja, sem problema nenhum."
               : ehPerfil
-                ? "Ele leva a uma página com vários produtos, então não dá para saber qual você quer nem de que loja. Abra o anúncio do produto no Mercado Livre e cole o endereço dele aqui."
+                ? "Ele leva a uma página com vários produtos, então não dá para saber qual você quer nem de que loja. Abra o anúncio do produto e cole o endereço dele aqui."
                 : "Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo em instantes, ou cole o endereço completo do anúncio em vez do link curto de compartilhamento."}
           </p>
           {analise?.diagnostico && (
-            <p className="mt-1.5 text-xs text-secondary-ink/80">Detalhe técnico: {analise.diagnostico}.</p>
+            <p className="mt-1.5 text-xs text-secondary-ink/80">Detalhe técnico: {semMarca(analise.diagnostico)}.</p>
           )}
         </div>
       );
@@ -1465,11 +1475,11 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
           </p>
         )}
         {!achouOutra && procurou && analise?.motivoOutra && (
-          <p className="mt-1.5 text-xs text-secondary-ink/80">Motivo: {analise.motivoOutra}.</p>
+          <p className="mt-1.5 text-xs text-secondary-ink/80">Motivo: {semMarca(analise.motivoOutra)}.</p>
         )}
         {!procurou && analise?.motivoNaoProcurou && (
           <p className="mt-1.5 text-xs text-secondary-ink/80">
-            Por que não comparei: {analise.motivoNaoProcurou}.
+            Por que não comparei: {semMarca(analise.motivoNaoProcurou)}.
           </p>
         )}
       </div>
@@ -1592,7 +1602,7 @@ function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | nul
       </p>
       {motivo && (
         <p className="mt-2 rounded border border-border bg-card px-2 py-1 text-xs text-secondary-ink/80">
-          Detalhe técnico: {motivo}
+          Detalhe técnico: {semMarca(motivo)}
         </p>
       )}
       <button

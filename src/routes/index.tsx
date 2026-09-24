@@ -24,16 +24,16 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Comparador de preços do Mercado Livre — o mesmo produto, a loja mais barata" },
+      { title: "Comparador de preços — o mesmo produto, a loja mais barata" },
       {
         name: "description",
         content:
-          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, do mais barato ao mais caro.",
+          "Cole o link de um produto e veja o mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Comparador de preços do Mercado Livre" },
+      { property: "og:title", content: "Comparador de preços — @WSLMENDES" },
       {
         property: "og:description",
-        content: "O mesmo produto em outras lojas do Mercado Livre, com a diferença de preço de cada uma.",
+        content: "O mesmo produto em outras lojas, com a diferença de preço de cada uma.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://cupons-afiliado-ml.lovable.app/" },
@@ -46,11 +46,11 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "Comparador de preços do Mercado Livre — @WSLMENDES",
+          name: "Comparador de preços — @WSLMENDES",
           url: "https://cupons-afiliado-ml.lovable.app/",
           inLanguage: "pt-BR",
           description:
-            "Ferramenta independente que compara o preço do mesmo produto entre lojas do Mercado Livre.",
+            "Ferramenta independente que compara o preço do mesmo produto entre lojas.",
         }),
       },
     ],
@@ -453,7 +453,7 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
         </button>
       </div>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
-        No carrinho, o Mercado Livre aceita <span className="font-bold">um cupom de loja por
+        No carrinho, a loja aceita <span className="font-bold">um cupom de loja por
         compra</span>. Se ele já tiver aplicado o cupom da própria loja, remova aquele e cole este
         no lugar: o desconto para você é o mesmo, e assim ele fica registrado por aqui. Se o
         carrinho não aceitar a troca, fique com o que já está aplicado, porque o valor final não
@@ -697,8 +697,8 @@ function usePreparoDoCupom(cupom: Cupom) {
                é o Mercado Livre recusando a criação, e o texto diz isso. */
             const recusa = /403|429|criar o codigo/i.test(linha?.freio_motivo ?? "");
             setPausa(recusa
-              ? "O Mercado Livre não está liberando a criação de códigos de cupom agora."
-              : `O Mercado Livre pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
+              ? "A criação de códigos de cupom não está liberada agora."
+              : `O site da loja pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
             /* Não prende a tela girando: libera o botão para tentar de novo
                assim que a verificação for resolvida. */
             ocupado.current = false;
@@ -820,7 +820,7 @@ export function AcaoDoCupom({
 
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
         {preparando
-          ? "Gerando seu código e localizando a página desta loja no Mercado Livre. Leva alguns segundos."
+          ? "Gerando seu código e localizando a página desta loja. Leva alguns segundos."
           : abrindo && p.codigo
             ? <>O código <span className="font-bold">{p.codigo}</span> ficou copiado. Escolha os produtos e cole no carrinho.</>
             : pronto
@@ -1356,7 +1356,7 @@ function Index() {
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Comparador de preços do Mercado Livre — por{" "}
+                Comparador de preços — por{" "}
                 <a
                   href="https://www.instagram.com/wslmendes/"
                   target="_blank"
@@ -1368,7 +1368,7 @@ function Index() {
               </h1>
 
               <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
-                Cole o link do produto. Eu mostro o mesmo produto em outras lojas do Mercado Livre,
+                Cole o link do produto. Eu mostro o mesmo produto em outras lojas,
                 do mais barato ao mais caro.
               </p>
               <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
@@ -1467,7 +1467,7 @@ function Index() {
             {[
               { icone: Link2, texto: "Você cola o link do produto que quer comprar" },
               { icone: Search, texto: "O site procura o mesmo produto em outras lojas e compara os preços" },
-              { icone: ShieldCheck, texto: "Você escolhe a loja, pega o cupom (se houver) e compra no Mercado Livre" },
+              { icone: ShieldCheck, texto: "Você escolhe a loja, pega o cupom (se houver) e compra direto na loja" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
@@ -2697,7 +2697,7 @@ export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null;
             <div className="-mt-2">
               <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-                No carrinho, o Mercado Livre aceita <span className="font-semibold">um cupom de
+                No carrinho, a loja aceita <span className="font-semibold">um cupom de
                 loja por compra</span>. Se ele já tiver aplicado o cupom da própria loja, remova
                 aquele e cole este no lugar: o desconto para você é o mesmo, e assim ele fica
                 registrado por aqui. Se o carrinho não aceitar a troca, fique com o que já está

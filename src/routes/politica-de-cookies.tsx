@@ -84,11 +84,11 @@ function Cookies() {
         .
       </p>
 
-      <h2>Links para o Mercado Livre</h2>
+      <h2>Links para as lojas</h2>
       <p>
-        Os botões de compra levam ao Mercado Livre por links de afiliado. Ao clicar, você sai
-        deste site e passa a valer a política de cookies do Mercado Livre. Este site não lê nem
-        grava cookies do Mercado Livre no seu navegador.
+        Os botões de compra levam às lojas por links de afiliado. Ao clicar, você sai deste
+        site e passa a valer a política de cookies da loja. Este site não lê nem grava cookies
+        das lojas no seu navegador.
       </p>
 
       <h2>Como escolher</h2>
