@@ -2139,7 +2139,10 @@ async function atenderPedidos() {
               catalogo: catDoAnuncio ? catDoAnuncio[1].toUpperCase() : null,
               item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
               preco: a.preco != null ? Number(a.preco) : null,
-              vendedor: vendedor || null
+              vendedor: vendedor || null,
+              /* Para achar o produto no CATALOGO oficial pelo nome, quando o
+                 anuncio nao e de catalogo (/up/MLBU...). */
+              titulo: a.titulo || null
             });
             if (api && api.procurou) {
               alts = (api.opcoes || []).map(o => ({

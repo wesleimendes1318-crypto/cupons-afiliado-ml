@@ -254,3 +254,12 @@ parametro codificado) ou na pagina, SO quando ele aparece sem ambiguidade, e
 segue para o anuncio. Sem certeza, pede o link do produto. E nenhum link e
 gerado quando o anuncio nao foi lido (antes, devolvia o proprio meli.la colado,
 que podia ser de outro afiliado).
+
+### v1.49.0 - comparacao tambem para anuncio fora do catalogo
+
+Para anuncio /up/MLBU... ou produto.mercadolivre.com.br/MLB-..., o servidor
+tenta achar o produto de catalogo correspondente pela API oficial:
+`/user-products/{id}` (ligacao direta) e `/products/search` (busca no catalogo
+pelo nome do anuncio). Achando, compara as lojas desse produto. Quando o
+catalogo foi achado pelo nome, o site avisa o cliente que e um palpite forte.
+A resposta de cada endereco fica gravada em `comparacoes.resposta.trilha`.

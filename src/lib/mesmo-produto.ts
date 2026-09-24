@@ -107,6 +107,12 @@ export type Comparacao = {
   produto: { item: string | null; titulo: string | null; preco: number | null; vendedor: string | null } | null;
   opcoes: Opcao[];
   fonte: "api-oficial";
+  /* Resposta de cada endereço da API nesta comparação. Fica gravada com o
+     resultado, para dar para ver depois o que funcionou e o que não. */
+  trilha?: string[];
+  /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
+     e não por estar ligado ao anúncio. O site avisa o cliente. */
+  catalogoPorNome?: boolean;
 };
 
 type Candidato = { item: string; url: string; preco: number; sellerId: number; achadoNaBusca: boolean };
@@ -115,7 +121,10 @@ type Candidato = { item: string; url: string; preco: number; sellerId: number; a
    A API oficial não deixa ler anúncio de outra conta (403 medido em 24/09),
    então preço, loja e catálogo do anúncio original vêm daqui quando
    necessário. */
-export type DicaAnuncio = { catalogo?: string | null; item?: string | null; preco?: number | null; vendedor?: string | null };
+export type DicaAnuncio = {
+  catalogo?: string | null; item?: string | null; preco?: number | null;
+  vendedor?: string | null; titulo?: string | null;
+};
 
 /* O QUE A API OFICIAL PERMITE, medido com a conta do Weslei em 24/09/2026:
      /products/{catalogo}          200
@@ -124,15 +133,61 @@ export type DicaAnuncio = { catalogo?: string | null; item?: string | null; prec
      /sites/MLB/search             403
    Então a comparação automática vale para produto de CATÁLOGO. Anúncio fora
    do catálogo não tem comparação pela API, e o site diz isso ao cliente. */
+const statusDe = (e: unknown) => (e instanceof ErroApiMl ? String(e.status) : "falhou");
+
+/** Nome de catálogo e título do anúncio falam do mesmo produto? Vale nos dois
+ *  sentidos: nome de catálogo costuma ser mais curto que o título do anúncio
+ *  ("Banco Mesa 1,80 m 8 Lugares" dentro de "Banco Que Vira Mesa 1,80 M - 8
+ *  Lugares - Campeão De Vendas"). Números sempre precisam bater. */
+function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
+  return pareceMesmoProduto(tituloAnuncio, nomeCatalogo) || pareceMesmoProduto(nomeCatalogo, tituloAnuncio);
+}
+
+/* Anúncio fora do catálogo (/up/MLBU..., produto.mercadolivre.com.br/MLB-...):
+   dois caminhos oficiais para achar o produto de catálogo correspondente.
+     1. /user-products/{MLBU}: o próprio produto do vendedor pode apontar o
+        catálogo ao qual está ligado;
+     2. /products/search: busca no CATÁLOGO oficial pelo nome do anúncio. É
+        busca de produto de catálogo, não de anúncios (essa é 403). */
+async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, trilha: string[]) {
+  const up = /\/up\/(MLBU\d{5,})/i.exec(url)?.[1]?.toUpperCase() ?? null;
+  if (up) {
+    try {
+      const j = await mlGet<{ catalog_product_id?: string | null }>(`/user-products/${up}`);
+      trilha.push(`user-products 200 catalogo=${j.catalog_product_id ?? "nenhum"}`);
+      if (j.catalog_product_id) return { catalogo: j.catalog_product_id.toUpperCase(), porNome: false };
+    } catch (e) { trilha.push(`user-products ${statusDe(e)}`); }
+  }
+  const titulo = (dica.titulo ?? "").trim();
+  if (titulo) {
+    const termo = normPalavra(titulo).split(" ").slice(0, 10).join(" ");
+    try {
+      const r = await mlGet<{ results?: { id?: string; name?: string }[] }>(
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(termo)}&limit=10`);
+      const lista = r.results ?? [];
+      const achado = lista.find((p) => p.id && p.name && mesmoNome(titulo, p.name));
+      trilha.push(`products/search 200 resultados=${lista.length} escolhido=${achado?.id ?? "nenhum"}`);
+      if (achado?.id) return { catalogo: achado.id.toUpperCase(), porNome: true };
+    } catch (e) { trilha.push(`products/search ${statusDe(e)}`); }
+  }
+  return null;
+}
+
 export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}): Promise<Comparacao> {
   const ids = idsDoLink(url);
-  const catalogo = (ids.catalogo ?? dica.catalogo ?? null)?.toUpperCase() ?? null;
+  const trilha: string[] = [];
+  let catalogo = (ids.catalogo ?? dica.catalogo ?? null)?.toUpperCase() ?? null;
+  let catalogoPorNome = false;
   const itemAtual = (ids.item ?? dica.item ?? null)?.toUpperCase() ?? null;
+  if (!catalogo) {
+    const achado = await catalogoDoAnuncio(url, dica, trilha);
+    if (achado) { catalogo = achado.catalogo; catalogoPorNome = achado.porNome; }
+  }
   if (!catalogo) {
     return {
       procurou: false,
-      motivo: "este anúncio não faz parte do catálogo do Mercado Livre, e a comparação automática só funciona para produtos de catálogo",
-      produto: null, opcoes: [], fonte: "api-oficial",
+      motivo: "não achei este produto no catálogo oficial do Mercado Livre, e é pelo catálogo que dá para comparar lojas vendendo exatamente o mesmo item",
+      produto: null, opcoes: [], fonte: "api-oficial", trilha,
     };
   }
 
@@ -149,7 +204,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       const preco = Number(o["price"]);
       const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
       if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
-      candidatos.push({ item, url: urlDaOferta(catalogo, item), preco, sellerId, achadoNaBusca: false });
+      candidatos.push({ item, url: urlDaOferta(catalogo, item), preco, sellerId, achadoNaBusca: catalogoPorNome });
     }
 
     /* 3. A oferta que o cliente estava vendo: pela lista, ou pelo que a
@@ -178,7 +233,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       || (!!dica.vendedor && !!nomes.get(sellerId) && norm(nomes.get(sellerId)) === norm(dica.vendedor));
 
     if (finalAtual == null) {
-      return { procurou: false, motivo: "não consegui o preço do anúncio", produto, opcoes: [], fonte: "api-oficial" };
+      return { procurou: false, motivo: "não consegui o preço do anúncio", produto, opcoes: [], fonte: "api-oficial", trilha };
     }
 
     /* 4. Escolha: mais barata por pelo menos R$ 2, ou com cupom quando a loja
@@ -210,12 +265,14 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       .sort((a, b) => a.final - b.final || (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0))
       .slice(0, 3);
 
-    return { procurou: true, motivo: null, produto, opcoes, fonte: "api-oficial" };
+    trilha.push(`products/${catalogo}/items ofertas=${candidatos.length}`);
+    return { procurou: true, motivo: null, produto, opcoes, fonte: "api-oficial", trilha, catalogoPorNome };
   } catch (e) {
     const status = e instanceof ErroApiMl ? e.status : 0;
     const motivo = status === 401 || status === 403
       ? "a API oficial do Mercado Livre pediu autorização (configurar o aplicativo)"
       : status === 429 ? "limite de consultas da API oficial atingido" : "a API oficial do Mercado Livre não respondeu";
-    return { procurou: false, motivo, produto: null, opcoes: [], fonte: "api-oficial" };
+    trilha.push(`erro ${statusDe(e)}`);
+    return { procurou: false, motivo, produto: null, opcoes: [], fonte: "api-oficial", trilha };
   }
 }

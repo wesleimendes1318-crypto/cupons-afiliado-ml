@@ -16,6 +16,7 @@ const entradaSchema = z.object({
   item: z.string().regex(/^MLB\d{6,}$/i).nullish(),
   preco: z.number().positive().max(1e7).nullish(),
   vendedor: z.string().max(160).nullish(),
+  titulo: z.string().max(300).nullish(),
 });
 const VALIDADE_MS = 6 * 60 * 60 * 1000;
 
@@ -59,8 +60,10 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
             .select("resposta,criado_em")
             .eq("chave" as never, chave as never)
             .maybeSingle();
-          const linha = data as { resposta: unknown; criado_em: string } | null;
-          if (linha && Date.now() - Date.parse(linha.criado_em) < VALIDADE_MS) {
+          const linha = data as { resposta: { procurou?: boolean }; criado_em: string } | null;
+          /* So reaproveita comparacao que deu certo; a que falhou fica gravada
+             so para diagnostico e e refeita na proxima vez. */
+          if (linha?.resposta?.procurou && Date.now() - Date.parse(linha.criado_em) < VALIDADE_MS) {
             return json(request, { ...(linha.resposta as object), cache: true });
           }
         }
@@ -68,8 +71,9 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
         const resultado = await compararMesmoProduto(entrada.url, {
           catalogo: entrada.catalogo ?? null, item: entrada.item ?? null,
           preco: entrada.preco ?? null, vendedor: entrada.vendedor ?? null,
+          titulo: entrada.titulo ?? null,
         });
-        if (chave && resultado.procurou) {
+        if (chave) {
           await tabela.upsert({ chave, resposta: resultado, criado_em: new Date().toISOString() } as never);
         }
         return json(request, resultado);
