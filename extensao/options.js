@@ -17,6 +17,48 @@ const $ = id => document.getElementById(id);
    portugues, e depois de salvar a pagina LE DE VOLTA o que ficou gravado. So
    diz "Salvo" quando conferiu que salvou. */
 
+/* ABERTA COMO ARQUIVO, ESTA PAGINA NAO E A EXTENSAO.
+
+   O Weslei abriu C:/cupons-afiliado-ml/extensao/options.html com dois cliques.
+   A barra de endereco mostrava "Arquivo". Numa pagina file:// o chrome.storage
+   nao existe, entao nao havia onde salvar: clicar em Salvar nao podia dar certo
+   de jeito nenhum, e a pagina nao dizia isso.
+
+   Pior: os campos apareciam preenchidos com pontinhos, o que parecia que os
+   valores tinham carregado. Era o autopreenchimento do proprio Chrome.
+
+   Agora a pagina detecta isso antes de qualquer coisa, desliga o botao e
+   explica o caminho certo. */
+function ehPaginaDaExtensao() {
+  try {
+    return location.protocol === 'chrome-extension:'
+      && typeof chrome !== 'undefined' && !!(chrome.storage && chrome.storage.local);
+  } catch (e) { return false; }
+}
+
+function travarPorEstarSoltaNoDisco() {
+  const b = $('salvar');
+  if (b) { b.disabled = true; b.textContent = 'Abra pelo Chrome, nao pelo arquivo'; }
+  for (const id of ['key', 'sinc', 'ntfy', 'modelo', 'sincauto']) {
+    const el = $(id);
+    if (el) { el.disabled = true; el.value = ''; }
+  }
+  const el = $('ok');
+  if (el) {
+    el.style.color = '#c0392b';
+    el.style.whiteSpace = 'pre-line';
+    el.textContent =
+      'Esta pagina foi aberta como ARQUIVO do disco, e assim ela nao consegue salvar nada: '
+      + 'o armazenamento da extensao so existe quando a pagina e aberta pelo Chrome.\n\n'
+      + 'Abra deste jeito:\n'
+      + '1. Clique com o botao direito no icone da extensao, na barra do Chrome.\n'
+      + '2. Escolha "Opcoes".\n\n'
+      + 'Ou por chrome://extensions, botao Detalhes no "Conferidor de Cupons", '
+      + 'e depois "Opcoes da extensao".\n\n'
+      + 'O endereco certo comeca com chrome-extension:// e nao com C:/ nem file://.';
+  }
+}
+
 function avisar(texto, ehErro) {
   const el = $('ok');
   if (!el) return;
@@ -112,4 +154,8 @@ $('salvar').addEventListener('click', async () => {
   }
 });
 
-carregar();
+if (ehPaginaDaExtensao()) {
+  carregar();
+} else {
+  travarPorEstarSoltaNoDisco();
+}
