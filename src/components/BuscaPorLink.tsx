@@ -892,7 +892,10 @@ function Resultado({
         <p className="break-words text-sm font-medium">{a.titulo}</p>
       )}
       {a?.preco != null && (
-        <p className="mt-1 text-2xl font-bold tabular-nums">{brl(a.preco)}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums">
+          {brl(a.preco)}
+          {a.temCupom && <span className="ml-2 align-middle text-xs font-normal text-secondary-ink">preço do anúncio, sem o cupom</span>}
+        </p>
       )}
       {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
 
@@ -902,6 +905,7 @@ function Resultado({
           oferta={oferta}
           dispositivo={dispositivo}
           vendedorAqui={a?.vendedor ?? null}
+          cupomAqui={a?.temCupom ? a?.cupom?.titulo ?? null : null}
           precoAqui={a?.preco ?? null}
           titulo={a?.titulo ?? null}
           principal={trocar && i === 0}
@@ -1097,9 +1101,15 @@ function OutrasLojasMaisCaras({
       <p className="text-sm font-bold text-red-700 dark:text-red-400">
         {temAlternativa ? "Outras lojas com o mesmo produto (não compensam)" : "Outras lojas com o mesmo produto: mais caras"}
       </p>
-      <ul className="mt-2 divide-y divide-red-200 text-sm dark:divide-red-900">
+      <ul className="mt-2 overflow-hidden rounded-md border border-red-200 text-sm dark:border-red-900">
         {caras.map((r, i) => (
-          <li key={`${r.vendedor ?? "loja"}-${i}`} className="flex items-baseline justify-between gap-3 py-1.5">
+          <li
+            key={`${r.vendedor ?? "loja"}-${i}`}
+            className={
+              "flex items-baseline justify-between gap-3 px-2 py-1.5 " +
+              (i % 2 ? "bg-red-100/60 dark:bg-red-950/40" : "bg-card")
+            }
+          >
             <span className="min-w-0 break-words">
               {r.vendedor ?? "Outra loja"}
               {r.cupom ? <span className="block text-xs text-secondary-ink">com cupom {r.cupom}</span> : null}
@@ -1134,6 +1144,7 @@ function OutraLojaComCupom({
   oferta,
   dispositivo,
   vendedorAqui,
+  cupomAqui,
   precoAqui,
   titulo,
   principal,
@@ -1142,6 +1153,7 @@ function OutraLojaComCupom({
   oferta: OutraLoja;
   dispositivo: Dispositivo;
   vendedorAqui: string | null;
+  cupomAqui?: string | null;
   precoAqui: number | null;
   titulo?: string | null;
   principal?: boolean;
@@ -1162,6 +1174,8 @@ function OutraLojaComCupom({
   const temCupomLa = Boolean(oferta.cupomTitulo);
   /* Preço final de cada lado (com o cupom de cada um, quando existe). */
   const atual = oferta.finalAtual ?? precoAqui;
+  const descontoAqui =
+    precoAqui != null && atual != null ? Math.round((precoAqui - atual) * 100) / 100 : 0;
   const pct =
     diferenca != null && diferenca > 0 && atual != null && atual > 0
       ? Math.round((diferenca / atual) * 100)
@@ -1185,35 +1199,56 @@ function OutraLojaComCupom({
       </p>
 
 
-      {/* Lado a lado: o que a pessoa colou, a mesma coisa na outra loja e a
-          diferença. Cada valor aparece uma vez só. */}
+      {/* Tabela zebrada, uma coluna por loja, e a conta da economia escrita
+          por extenso. Antes o topo mostrava o preço SEM cupom (R$ 428,90) e a
+          comparação usava o preço COM cupom (R$ 364,57) sem dizer isso, e a
+          conta não fechava para quem lia (24/09). */}
       <div className="mt-3 overflow-hidden rounded-md border border-success/30 bg-card text-sm">
-        <div className="flex items-baseline justify-between gap-3 px-3 py-2">
-          <span className="min-w-0 text-secondary-ink">
-            Anúncio que você colou{vendedorAqui ? <span className="block text-xs">{vendedorAqui}</span> : null}
-          </span>
-          <span className="shrink-0 font-semibold tabular-nums text-secondary-ink line-through decoration-1">
-            {brl(atual)}
-          </span>
-        </div>
-        <div className="flex items-baseline justify-between gap-3 border-t border-success/20 px-3 py-2">
-          <span className="min-w-0">
-            Mesmo produto {oferta.vendedor ? <>na <span className="font-semibold">{oferta.vendedor}</span></> : "em outra loja"}
-            {temCupomLa && oferta.economia != null && oferta.economia > 0 ? (
-              <span className="block text-xs text-secondary-ink">
-                {brl(oferta.preco)} − cupom {oferta.cupomTitulo} ({brl(oferta.economia)})
-              </span>
-            ) : null}
-          </span>
-          <span className="shrink-0 text-base font-bold tabular-nums">{brl(oferta.final)}</span>
-        </div>
+        <table className="w-full table-fixed border-collapse">
+          <thead>
+            <tr className="bg-muted/60 text-xs">
+              <th className="w-[34%] px-2 py-2 text-left font-semibold text-secondary-ink"></th>
+              <th className="px-2 py-2 text-right font-semibold text-secondary-ink break-words">
+                Anúncio colado{vendedorAqui ? <span className="block font-normal">{vendedorAqui}</span> : null}
+              </th>
+              <th className="px-2 py-2 text-right font-bold text-success break-words">
+                {oferta.vendedor ?? "Outra loja"}
+                <span className="block font-normal">mais barata</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="tabular-nums">
+            <tr className="bg-card">
+              <td className="px-2 py-2 text-secondary-ink">Preço</td>
+              <td className="px-2 py-2 text-right">{brl(precoAqui)}</td>
+              <td className="px-2 py-2 text-right">{brl(oferta.preco)}</td>
+            </tr>
+            <tr className="bg-muted/40">
+              <td className="px-2 py-2 text-secondary-ink">Cupom</td>
+              <td className="px-2 py-2 text-right">
+                {descontoAqui > 0 ? <>−{brl(descontoAqui)}{cupomAqui ? <span className="block text-xs text-secondary-ink">{cupomAqui}</span> : null}</> : "—"}
+              </td>
+              <td className="px-2 py-2 text-right">
+                {temCupomLa && oferta.economia ? <>−{brl(oferta.economia)}<span className="block text-xs text-secondary-ink">{oferta.cupomTitulo}</span></> : "—"}
+              </td>
+            </tr>
+            <tr className="bg-card font-bold">
+              <td className="px-2 py-2">Você paga</td>
+              <td className="px-2 py-2 text-right text-secondary-ink">{brl(atual)}</td>
+              <td className="px-2 py-2 text-right text-base text-success">{brl(oferta.final)}</td>
+            </tr>
+          </tbody>
+        </table>
         {diferenca != null && diferenca > 0 && (
-          <div className="flex items-baseline justify-between gap-3 bg-success/15 px-3 py-2.5">
-            <span className="font-bold text-success">Você economiza</span>
-            <span className="shrink-0 text-lg font-extrabold tabular-nums text-success">
-              {brl(diferenca)}
-              {pct != null && <span className="ml-1 text-xs font-bold">({pct}% a menos)</span>}
-            </span>
+          <div className="border-t border-success/30 bg-success/15 px-3 py-2.5">
+            <p className="flex items-baseline justify-between gap-3">
+              <span className="font-bold text-success">Você economiza</span>
+              <span className="text-lg font-extrabold tabular-nums text-success">{brl(diferenca)}</span>
+            </p>
+            <p className="mt-0.5 text-xs tabular-nums text-secondary-ink">
+              {brl(atual)} − {brl(oferta.final)} = {brl(diferenca)}
+              {pct != null ? ` (${pct}% a menos)` : ""}
+            </p>
           </div>
         )}
       </div>
