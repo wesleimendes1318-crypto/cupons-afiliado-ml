@@ -252,7 +252,8 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
       const aceitos = lista.filter((x) => aceitar(x.name ?? ""));
       /* Entre os aceitos, ficam os que têm oferta de loja (até 8). */
       for (const p of aceitos.slice(0, 12)) {
-        const ofertas = await ofertasDoCatalogo(p.id!).catch(() => []);
+        const ofertas = await ofertasDoCatalogo(p.id!).catch((e) => { trilha.push(`products/${p.id}/items ${statusDe(e)}`); return []; });
+        if (!ofertas.length) trilha.push(`products/${p.id}/items sem-ofertas`);
         if (ofertas.length) achados.push(p.id!.toUpperCase());
         if (achados.length >= 8) break;
       }

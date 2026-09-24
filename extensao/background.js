@@ -1847,7 +1847,11 @@ const TETO_DIA_LOJAS = 60;
 /* Comparacao de lojas lendo paginas com a sessao do Weslei, so quando a API
    oficial (servidor do site) nao responde. 0 = desligada: nenhuma leitura de
    pagina para comparar. Subir para poucas unidades por dia, se precisar. */
-const LEITURA_RESERVA_POR_DIA = 0;
+/* LIGADA em 24/09 (pedido do Weslei: a comparacao e o que o cliente espera
+   sempre). So roda quando a API oficial nao achou o produto em nenhuma ficha
+   de catalogo, com teto diario e com o freio de captcha de sempre: se o
+   Mercado Livre pedir verificacao, para tudo e avisa. */
+const LEITURA_RESERVA_POR_DIA = 40;
 const LOTE_LOJAS = 8;
 
 function diaSP() {
@@ -2187,15 +2191,19 @@ async function atenderPedidos() {
               }));
             } else if (LEITURA_RESERVA_POR_DIA > 0 && !pausaLeitura && a.ok
                        && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA) {
-              /* 2. Reserva, DESLIGADA por padrao: leitura das paginas com a
-                    sessao do Weslei, poucas vezes por dia. */
+              /* 2. Reserva: a API nao achou o produto em ficha de catalogo.
+                    Le a busca do Mercado Livre como uma pessoa faria, com
+                    teto diario (LEITURA_RESERVA_POR_DIA). */
               await anotarGasto('comparacoes', 1);
               try {
                 const temCupomAqui = !!(cupom && aval && aval.vale);
                 const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
                 const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
                 alts = await mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
-                  finalAtual: finalAqui, temCupomAqui, vendedorAtual: vendedor, titulo: a.titulo || null,
+                  finalAtual: finalAqui, temCupomAqui, vendedorAtual: vendedor,
+                  /* Com a variacao marcada (Edge 70, 110V...), senao a busca
+                     traz o produto de outro modelo. */
+                  titulo: [a.titulo, a.variacao].filter(Boolean).join(' ') || null,
                   itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null
                 });
               } catch (e) {
