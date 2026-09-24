@@ -958,6 +958,24 @@ function Resultado({
         <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
       )}
 
+      {/* Achei loja mais barata, mas a pessoa pode preferir a loja que ela
+          colou. Se essa loja tem cupom, o meu cupom continua disponível para
+          ela, com o valor que fica com o desconto. */}
+      {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
+        <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+          <p className="text-sm font-bold">
+            Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? Use o meu cupom
+            {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
+          </p>
+          {alternativas[0]?.finalAtual != null && a.preco != null && (
+            <p className="mt-1 text-xs tabular-nums text-secondary-ink">
+              Com o cupom, lá sai por {brl(alternativas[0].finalAtual)} (de {brl(a.preco)}).
+            </p>
+          )}
+          <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
+        </div>
+      )}
+
 
       {!leituraFalhou && !semLink && !estaEAMelhor && (
         <a
