@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
     handlers: {
       OPTIONS: async ({ request }) => respostaOptions(request),
       /* Abrir no navegador mostra qual versão da comparação está no ar. */
-      GET: async ({ request }) => json(request, { versao: "2026-09-24 12h (8 fichas, variacao do anuncio)" }),
+      GET: async ({ request }) => json(request, { versao: "2026-09-24 14h (comparador, ver na loja, consent mode)" }),
       POST: async ({ request }) => {
         const daExtensao = await tokenValido(request);
         if (!daExtensao) {

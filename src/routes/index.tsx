@@ -1372,7 +1372,7 @@ function Index() {
                 do mais barato ao mais caro.
               </p>
               <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
-                Quando a loja tem cupom, ele entra na conta. Quem oferece o cupom é a loja, não eu.
+                Se a loja tiver cupom, eu te passo o cupom junto, com quanto ele desconta.
               </p>
 
               <div className="mt-7 flex flex-wrap items-center gap-2.5">
@@ -1416,7 +1416,7 @@ function Index() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Nenhum desconto inventado: cupom quem dá é a loja
+                  Loja com cupom: o cupom vem junto com o link
                 </li>
               </ul>
               <p className="mt-4 border-t border-white/20 pt-3 text-xs leading-relaxed text-white/75">
@@ -1467,7 +1467,7 @@ function Index() {
             {[
               { icone: Link2, texto: "Você cola o link do produto que quer comprar" },
               { icone: Search, texto: "O site procura o mesmo produto em outras lojas e compara os preços" },
-              { icone: ShieldCheck, texto: "Você escolhe a loja e compra direto no Mercado Livre" },
+              { icone: ShieldCheck, texto: "Você escolhe a loja, pega o cupom (se houver) e compra no Mercado Livre" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
