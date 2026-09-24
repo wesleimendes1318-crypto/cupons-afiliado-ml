@@ -274,3 +274,12 @@ catalogo ligado ao produto do vendedor, catalogo da pagina (so se a lista de
 ofertas contem o proprio anuncio), codigo de barras, marca+modelo e titulo.
 Os tres primeiros e o codigo de barras sao exatos; marca+modelo e titulo sao
 avisados ao cliente como palpite forte.
+
+### v1.51.0 - atualizacao sem ninguem no computador
+
+`ferramentas/instalar-atualizacao-automatica.ps1` (rodar uma vez no computador
+de casa) baixa o projeto para C:\cupons-afiliado-ml e cria uma tarefa agendada
+que faz `git pull` do ramo main a cada 30 minutos. A extensao, carregada de
+C:\cupons-afiliado-ml\extensao, confere a versao do manifest.json no disco a
+cada 15 minutos e se recarrega sozinha quando ela muda (espera terminar o
+atendimento em andamento).

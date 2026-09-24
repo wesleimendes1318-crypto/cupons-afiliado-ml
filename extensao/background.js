@@ -2372,7 +2372,33 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
 const ALARMES = {
   fila: 10,       // janelas de atualizacao + conferencia continua
   pedidos: 1,     // Supabase, nao ML: pedidos vindos do site
+  versao: 15,     // arquivos novos na pasta (git pull agendado): recarrega
 };
+
+/* ATUALIZACAO SEM NINGUEM NO COMPUTADOR.
+
+   O Weslei vai estar na Espanha. No computador de casa, uma tarefa agendada
+   do Windows faz "git pull" da pasta da extensao (ferramentas/
+   instalar-atualizacao-automatica.ps1). Os arquivos novos chegam ao disco, mas
+   o Chrome continua rodando a versao antiga ate alguem clicar em Recarregar.
+
+   Aqui a extensao le o manifest.json do disco a cada 15 minutos; se a versao
+   la for diferente da que esta rodando, ela se recarrega sozinha. Nao recarrega
+   no meio de um atendimento: espera o pedido em andamento terminar. */
+async function conferirVersaoNoDisco() {
+  try {
+    const r = await fetch(chrome.runtime.getURL('manifest.json'), { cache: 'no-store' });
+    const noDisco = (await r.json()).version;
+    const rodando = chrome.runtime.getManifest().version;
+    if (!noDisco || noDisco === rodando) return { igual: rodando };
+    if (atendendo || gerandoEtiquetas || andandoFila || atendendoLojas) return { esperando: noDisco };
+    console.log('[versao] recarregando', rodando, '->', noDisco);
+    chrome.runtime.reload();
+    return { recarregou: noDisco };
+  } catch (e) {
+    return { falhou: e.message };
+  }
+}
 
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
@@ -2400,6 +2426,10 @@ chrome.alarms.onAlarm.addListener(async a => {
     atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
     // "Ver os produtos da loja": pagina da loja pedida por quem esta no site.
     atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
+    return;
+  }
+  if (a.name === 'versao') {
+    conferirVersaoNoDisco().catch(() => {});
     return;
   }
   if (a.name === 'fila') {
