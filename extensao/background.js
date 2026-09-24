@@ -1760,29 +1760,41 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
 /* Roda DENTRO da pagina de busca aberta numa aba: le os cartoes como a
    pessoa ve na tela, depois que o proprio site montou a lista. */
 function cartoesDaBuscaNaPagina() {
-  const itens = [...document.querySelectorAll('li.ui-search-layout__item, div.poly-card, div.ui-search-result__wrapper')];
+  /* Sem depender de nome de classe (o Mercado Livre troca): parte de cada
+     link de anuncio, sobe ate o bloco do cartao e le titulo e preco dali. */
+  const ehAnuncio = h => /(MLB-?\d{8,}|\/p\/MLB\d+|\/up\/MLBU\d+)/i.test(h) && !/\/pagina\/|click1\.|\/social\//i.test(h);
+  const links = [...document.querySelectorAll('a[href]')].filter(a => ehAnuncio(a.href));
   const saida = [];
   const vistos = new Set();
-  for (const el of itens) {
-    const a = el.querySelector('a.poly-component__title, a.ui-search-item__group__element, a.ui-search-link, h2 a, h3 a')
-           || el.querySelector('a[href*="MLB"]');
-    if (!a || !a.href || vistos.has(a.href)) continue;
-    vistos.add(a.href);
-    const titulo = (a.textContent || '').replace(/\s+/g, ' ').trim()
-      || ((el.querySelector('h2, h3') || {}).textContent || '').replace(/\s+/g, ' ').trim();
+  for (const a of links) {
+    let bloco = a;
+    for (let i = 0; i < 8 && bloco.parentElement; i++) {
+      bloco = bloco.parentElement;
+      if (/R\$\s*\d/.test(bloco.innerText || '') && (bloco.innerText || '').length > 20) break;
+    }
+    const chave = (a.href.match(/MLB-?\d{8,}|MLBU\d+|\/p\/MLB\d+/i) || [a.href])[0];
+    if (vistos.has(chave)) continue;
+    const titulo = ((a.getAttribute('title') || a.getAttribute('aria-label') || a.innerText || '').replace(/\s+/g, ' ').trim())
+      || ((bloco.querySelector('h2, h3') || {}).innerText || '').replace(/\s+/g, ' ').trim();
+    if (!titulo || titulo.length < 8) continue;
     let preco = null;
-    const caixa = el.querySelector('.poly-price__current .andes-money-amount')
-      || [...el.querySelectorAll('.andes-money-amount')].find(x => !x.closest('s') && !/previous/.test(x.className));
+    const caixa = [...bloco.querySelectorAll('[class*="money-amount"]')]
+      .find(x => !x.closest('s') && !/previous|original/i.test(x.className) && /fraction/.test(x.innerHTML));
     if (caixa) {
-      const fr = (caixa.querySelector('.andes-money-amount__fraction') || {}).textContent || '';
-      const ct = (caixa.querySelector('.andes-money-amount__cents') || {}).textContent || '';
+      const fr = (caixa.querySelector('[class*="fraction"]') || {}).innerText || '';
+      const ct = (caixa.querySelector('[class*="cents"]') || {}).innerText || '';
       const n = parseFloat(fr.replace(/\./g, '')) + (ct ? Number(ct) / 100 : 0);
       if (n > 0 && n < 1e7) preco = Math.round(n * 100) / 100;
     }
+    if (preco == null) {
+      const m = /R\$\s*([\d.]+)(?:,(\d{2}))?/.exec(bloco.innerText || '');
+      if (m) preco = parseFloat(m[1].replace(/\./g, '')) + (m[2] ? Number(m[2]) / 100 : 0);
+    }
+    vistos.add(chave);
     saida.push({ href: a.href, titulo, preco });
     if (saida.length >= 48) break;
   }
-  return { cartoes: saida, tituloPagina: document.title, url: location.href, itens: itens.length };
+  return { cartoes: saida, tituloPagina: document.title, url: location.href, itens: links.length };
 }
 
 /* Abre a busca numa aba de fundo, como uma pessoa abriria, espera a lista
@@ -1835,7 +1847,18 @@ async function achadosNaBusca(titulo, precoRef, itemAtual) {
     gravarDiagnostico(sincToken, 'busca-vazia', {
       titulo, url: urlDeBusca(titulo), diag,
       tituloPagina: (/<title[^>]*>([^<]{0,200})/i.exec(html) || [])[1] || null,
-      inicio: html.slice(0, 3000), trechos
+      inicio: html.slice(0, 3000), trechos,
+      /* Amostras ja com as aspas desescapadas, em volta de onde deveriam
+         estar os anuncios (polycard e titulos). */
+      amostras: (() => {
+        const limpo = html.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+        const out = [];
+        for (const marca of ['"polycard"', '"title":{"text"', '"components"', 'poly-card', 'ui-search']) {
+          const i = limpo.indexOf(marca);
+          out.push({ marca, pos: i, trecho: i >= 0 ? limpo.slice(Math.max(0, i - 800), i + 2500) : null });
+        }
+        return out;
+      })()
     }).catch(() => {});
     const vazio = []; vazio.diag = diag; return vazio;
   }

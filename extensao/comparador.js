@@ -177,17 +177,44 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
     aceitar(enderecoDoCartao(pedaco), tituloDoCartao(pedaco), precoDoCartao(pedaco));
   }
 
-  /* 2. Dados da pagina (JSON dos polycards), quando o HTML nao trouxe nada. */
+  /* 2. Dados da pagina (JSON dos polycards), quando o HTML nao trouxe nada.
+        Medido em 24/09 (travesseiro, 894 KB, 47 anuncios): os dados vem como
+        JSON DENTRO de uma string, com as aspas escapadas (\\") e as barras
+        como \\u002F. Sem desfazer isso nenhum padrao casa. */
   if (!saida.length) {
+    const limpo = texto.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+    d.bytesDados = limpo.length;
     const reCard = /"metadata"\s*:\s*\{[^{}]*?"url"\s*:\s*"([^"]+)"[\s\S]{0,4000}?"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{8,250})"[\s\S]{0,4000}?"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/g;
     let m, n = 0;
-    while ((m = reCard.exec(texto)) && n < 60) {
+    while ((m = reCard.exec(limpo)) && n < 60) {
       n++;
       let url = desescapar(m[1]);
       if (!/^https?:/i.test(url)) url = 'https://' + url.replace(/^\/+/, '');
       aceitar(enderecoDoCartao('href="' + url + '"'), desescapar(m[2]), parseFloat(m[3]));
     }
     d.cartoesJson = n;
+
+    /* 2b. Sem o bloco metadata na ordem esperada: parte de cada titulo e
+           procura o anuncio (MLB...) antes dele e o preco depois. */
+    if (!saida.length) {
+      const reTit = /"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{8,250})"/g;
+      let t, k = 0;
+      while ((t = reTit.exec(limpo)) && k < 80) {
+        k++;
+        const antes = limpo.slice(Math.max(0, t.index - 4000), t.index);
+        const depois = limpo.slice(t.index, t.index + 4000);
+        const urls = [...antes.matchAll(/"url"\s*:\s*"([^"]*mercadolivre\.com\.br[^"]*)"/g)];
+        const ids = [...antes.matchAll(/"id"\s*:\s*"(MLB\d{8,})"/g)];
+        let url = urls.length ? desescapar(urls[urls.length - 1][1]) : null;
+        if (url && !/^https?:/i.test(url)) url = 'https://' + url.replace(/^\/+/, '');
+        if (!url && ids.length) url = 'https://produto.mercadolivre.com.br/' + ids[ids.length - 1][1].replace(/^MLB/, 'MLB-');
+        const pr = /"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/.exec(depois)
+                || /"price"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/.exec(depois);
+        if (!url || !pr) continue;
+        aceitar(enderecoDoCartao('href="' + url + '"'), desescapar(t[1]), parseFloat(pr[1]));
+      }
+      d.titulosJson = k;
+    }
   }
 
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */

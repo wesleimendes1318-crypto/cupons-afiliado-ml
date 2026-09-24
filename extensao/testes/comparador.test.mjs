@@ -240,3 +240,15 @@ test('cartoes lidos na tela: mesmo produto, mais baratos primeiro', () => {
   assert.equal(r[0].item, 'MLB6666666666');
   assert.equal(diag.cartoesTela, 3);
 });
+
+test('busca: dados em JSON dentro de string (aspas escapadas, \\u002F), como a pagina real de 24/09', () => {
+  const card = '{"id":"POLYCARD","polycard":{"metadata":{"id":"MLB7608838296","url":"www.mercadolivre.com.br\\u002Ftravesseiro\\u002Fp\\u002FMLB74867031#wid=MLB7608838296"},'
+    + '"components":[{"type":"title","title":{"text":"Travesseiro Cervical Ortopédico Viscoelástico Premium"}},'
+    + '{"type":"price","price":{"current_price":{"value":74.8,"currency":"BRL"}}}]}}';
+  const html = '<script>window.__DADOS__ = "' + card.replace(/"/g, '\\"') + '";</script>';
+  const diag = {};
+  const r = ofertasDaBusca(html, 'Travesseiro Cervical Ortopédico Viscoelástico', 130.16, diag);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].item, 'MLB7608838296');
+  assert.equal(r[0].preco, 74.8);
+});
