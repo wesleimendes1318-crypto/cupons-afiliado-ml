@@ -158,7 +158,7 @@ async function ofertasDoCatalogo(catalogo: string) {
    o produto é identificado pelo que ELE É, na ordem do mais exato ao menos:
 
      1. catálogo no próprio link                          -> exato
-     2. catálogo ligado ao produto do vendedor (/user-products)  -> exato
+     2. (/user-products: 403 para produto de outra conta, medido em 24/09)
      3. catálogo citado na página do anúncio, CONFERIDO: só vale se a lista de
         ofertas desse catálogo contém o próprio anúncio   -> exato
      4. código de barras (GTIN/EAN, dígito verificador conferido) buscado no
@@ -169,14 +169,10 @@ async function ofertasDoCatalogo(catalogo: string) {
                                                           -> palpite forte
    Tudo pela API oficial. Nenhuma página do Mercado Livre é lida aqui. */
 async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: string | null, trilha: string[]) {
-  const up = /\/up\/(MLBU\d{5,})/i.exec(url)?.[1]?.toUpperCase() ?? null;
-  if (up) {
-    try {
-      const j = await mlGet<{ catalog_product_id?: string | null }>(`/user-products/${up}`);
-      trilha.push(`user-products 200 catalogo=${j.catalog_product_id ?? "nenhum"}`);
-      if (j.catalog_product_id) return { catalogo: j.catalog_product_id.toUpperCase(), porNome: false };
-    } catch (e) { trilha.push(`user-products ${statusDe(e)}`); }
-  }
+  /* /user-products/{MLBU} respondeu 403 ("caller is not allowed to access
+     this user product") no teste de 24/09 com a conta do Weslei: so o dono
+     do produto le. Por isso nao e chamado; os passos abaixo cobrem. */
+  void url;
 
   const daPagina = (dica.catalogoPagina ?? "").toUpperCase();
   if (/^MLB\d{5,}$/.test(daPagina) && itemAtual) {
