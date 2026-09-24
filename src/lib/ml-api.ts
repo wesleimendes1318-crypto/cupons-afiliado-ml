@@ -237,3 +237,47 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
 }
 
 export { gravarConfig, lerConfig };
+
+/* Teste dos enderecos que a comparacao por identidade usa (24/09/2026).
+   So leitura. Usa a propria ficha de catalogo de exemplo para obter um codigo
+   de barras real e busca-lo de volta: o teste nao depende de dado inventado. */
+export async function testarBuscaDeCatalogo(ex: { catalogo: string; up: string; termo: string }) {
+  const saida: Record<string, { status: number; detalhe: string }> = {};
+  const token = await tokenDeAcesso();
+  const get = async (nome: string, caminho: string, resumo: (j: Record<string, unknown>) => string) => {
+    try {
+      const r = await fetch(`${API}${caminho}`, {
+        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        signal: AbortSignal.timeout(10_000),
+      });
+      const t = await r.text();
+      let detalhe = t.slice(0, 140);
+      let j: Record<string, unknown> = {};
+      try { j = JSON.parse(t) as Record<string, unknown>; if (r.ok) detalhe = resumo(j); } catch { /* texto cru */ }
+      saida[nome] = { status: r.status, detalhe };
+      return r.ok ? j : null;
+    } catch (e) {
+      saida[nome] = { status: 0, detalhe: (e as Error).message };
+      return null;
+    }
+  };
+
+  const ficha = await get("ficha", `/products/${ex.catalogo}`, (j) => `nome=${String(j["name"] ?? "?").slice(0, 60)}`);
+  const attrs = (ficha?.["attributes"] as { id?: string; values?: { name?: string }[]; value_name?: string }[] | undefined) ?? [];
+  const gtinAttr = attrs.find((a) => a.id === "GTIN");
+  const gtin = (gtinAttr?.value_name ?? gtinAttr?.values?.[0]?.name ?? "").replace(/\D/g, "");
+  saida["gtin_da_ficha"] = { status: gtin ? 200 : 0, detalhe: gtin || "a ficha de exemplo nao tem codigo de barras" };
+
+  const resumoBusca = (j: Record<string, unknown>) => {
+    const res = (j["results"] as { id?: string }[] | undefined) ?? [];
+    return `resultados=${res.length} primeiro=${res[0]?.id ?? "-"}`;
+  };
+  if (gtin) await get("busca_por_codigo", `/products/search?status=active&site_id=MLB&product_identifier=${gtin}`, resumoBusca);
+  await get("busca_por_nome", `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(ex.termo)}`, resumoBusca);
+  await get("produto_do_vendedor", `/user-products/${ex.up}`, (j) => `catalogo=${String(j["catalog_product_id"] ?? "nenhum")}`);
+  await get("lojas_da_ficha", `/products/${ex.catalogo}/items?limit=5`, (j) =>
+    `lojas=${((j["results"] as unknown[] | undefined) ?? []).length}`);
+
+  await gravarConfig({ ml_teste_busca: JSON.stringify({ quando: new Date().toISOString(), comToken: Boolean(token), saida }) });
+  return saida;
+}

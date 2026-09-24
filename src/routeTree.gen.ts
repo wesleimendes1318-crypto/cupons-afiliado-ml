@@ -27,6 +27,7 @@ import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/ger
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
 import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
+import { Route as ApiPublicMlTesteRouteImport } from './routes/api/public/ml-teste'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 
 const IndexRoute = IndexRouteImport.update({
@@ -119,6 +120,11 @@ const ApiPublicMlRetornoRoute = ApiPublicMlRetornoRouteImport.update({
   path: '/api/public/ml-retorno',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMlTesteRoute = ApiPublicMlTesteRouteImport.update({
+  id: '/api/public/ml-teste',
+  path: '/api/public/ml-teste',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
   id: '/api/public/recomendar',
   path: '/api/public/recomendar',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
+  '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesByTo {
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
+  '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesById {
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
+  '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRouteTypes {
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
+    | '/api/public/ml-teste'
     | '/api/public/recomendar'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
+    | '/api/public/ml-teste'
     | '/api/public/recomendar'
   id:
     | '__root__'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
+    | '/api/public/ml-teste'
     | '/api/public/recomendar'
   fileRoutesById: FileRoutesById
 }
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
   ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
+  ApiPublicMlTesteRoute: typeof ApiPublicMlTesteRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
 }
 
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMlRetornoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ml-teste': {
+      id: '/api/public/ml-teste'
+      path: '/api/public/ml-teste'
+      fullPath: '/api/public/ml-teste'
+      preLoaderRoute: typeof ApiPublicMlTesteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/recomendar': {
       id: '/api/public/recomendar'
       path: '/api/public/recomendar'
@@ -434,6 +454,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
   ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,
+  ApiPublicMlTesteRoute: ApiPublicMlTesteRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
 }
 export const routeTree = rootRouteImport
