@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { BannerConsentimento } from "../components/BannerConsentimento";
+import { GoogleConsentimento, SCRIPT_CONSENTIMENTO_PADRAO } from "../components/GoogleConsentimento";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -78,15 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Cupons de Lojas Afiliadas — o desconto real de cada cupom" },
+      { title: "Comparador de preços do Mercado Livre — @WSLMENDES" },
       {
         name: "description",
-        content: "Consulta rápida de cupons de afiliado, com o limite real de desconto.",
+        content: "O mesmo produto em outras lojas do Mercado Livre, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Cupons de Lojas Afiliadas — o desconto real de cada cupom" },
+      { property: "og:title", content: "Comparador de preços do Mercado Livre" },
       {
         property: "og:description",
-        content: "Consulta rápida de cupons de afiliado, com o limite real de desconto.",
+        content: "O mesmo produto em outras lojas do Mercado Livre, do mais barato ao mais caro.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -104,6 +105,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
+    /* Consent Mode v2: tudo negado antes de qualquer script do Google. */
+    scripts: [{ children: SCRIPT_CONSENTIMENTO_PADRAO }],
   }),
 
   shellComponent: RootShell,
@@ -134,6 +137,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <BannerConsentimento />
+      <GoogleConsentimento />
     </QueryClientProvider>
   );
 }

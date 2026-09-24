@@ -142,7 +142,7 @@ export type Comparacao = {
   /* TODAS as outras lojas vistas com o mesmo produto (até 6), inclusive as
      mais caras, só para exibir: o cliente vê que foi comparado e quanto
      pagaria a mais em cada uma. Sem link (não são recomendação). */
-  referencias?: { vendedor: string | null; preco: number; final: number; diferenca: number; cupom: string | null }[];
+  referencias?: { vendedor: string | null; preco: number; final: number; diferenca: number; cupom: string | null; url: string }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
   catalogoPorNome?: boolean;
@@ -427,7 +427,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       const atual = refPorLoja.get(c.sellerId);
       if (atual && atual.final <= final) continue;
       refPorLoja.set(c.sellerId, {
-        vendedor: nomes.get(c.sellerId) ?? null, preco: c.preco, final,
+        vendedor: nomes.get(c.sellerId) ?? null, preco: c.preco, final, url: c.url,
         diferenca: Math.round((final - finalAtual) * 100) / 100,
         cupom: economiaDoCupom(cupom, c.preco) ? cupom?.desconto ?? null : null,
       });

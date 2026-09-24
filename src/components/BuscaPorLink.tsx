@@ -182,6 +182,9 @@ type Referencia = {
   /* final lá menos final aqui: positivo = lá sai mais caro. */
   diferenca: number | null;
   cupom: string | null;
+  /* Endereço do anúncio desta loja. O link de afiliado só é gerado se o
+     cliente pedir ("Ver na loja"). */
+  url?: string | null;
 };
 
 type Pedido = {
@@ -317,7 +320,7 @@ function melhorLinkML(texto: string): string | null {
    Nada aqui e temporizador fingindo progresso. */
 const ETAPAS: Array<{ id: Fase; rotulo: string }> = [
   { id: "enviando", rotulo: "Enviando o link" },
-  { id: "na-fila", rotulo: "Procurando cupom da loja" },
+  { id: "na-fila", rotulo: "Lendo o anúncio" },
   /* Etapa real: a extensão avisa (analise.etapa) quando começa a procurar o
      mesmo produto em outras lojas. É a parte mais demorada, e o cliente
      espera melhor sabendo que ela existe. */
@@ -505,11 +508,11 @@ export default function BuscaPorLink() {
     <section id="colar-link" className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
       <div className="mb-1 flex items-center gap-2">
         <span aria-hidden="true" className="text-lg">🔗</span>
-        <h2 className="font-semibold">Já sabe o produto? Cole o link</h2>
+        <h2 className="font-semibold">Cole o link de um produto do Mercado Livre</h2>
       </div>
       <p className="mb-3 text-xs text-secondary-ink">
-        Eu confiro se a loja tem cupom de verdade, com o limite real de desconto, e devolvo o link
-        pronto para comprar.
+        Eu procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Se a loja tiver
+        cupom, aparece também.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -535,7 +538,7 @@ export default function BuscaPorLink() {
           disabled={carregando || !url.trim()}
           className="shrink-0 rounded-md bg-ml-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 sm:self-start"
         >
-          {carregando ? "Conferindo..." : "Conferir cupom"}
+          {carregando ? "Comparando..." : "Comparar preços"}
         </button>
       </div>
 
@@ -834,8 +837,8 @@ function CodigoNaHora({
         {fase === "gerando"
           ? "Assim que ficar pronto, aparece o botão para copiar e abrir o produto."
           : fase === "falhou"
-            ? "Não consegui criar o código agora. O botão de comprar continua valendo: o desconto do cupom entra no carrinho."
-            : "Cria o código deste cupom, copia para você e abre o produto na loja."}
+            ? "O código do cupom não está disponível agora. O botão de compra continua valendo, pelo preço da loja."
+            : "Cria o código do cupom da loja, copia para você e abre o produto."}
       </p>
     </div>
   );
@@ -964,7 +967,7 @@ function Resultado({
       {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
         <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
           <p className="text-sm font-bold">
-            Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? Use o meu cupom
+            Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem cupom
             {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
           </p>
           {alternativas[0]?.finalAtual != null && a.preco != null && (
@@ -1041,18 +1044,12 @@ function Resultado({
 
       {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
           feita: seria prometer comissao sobre um link que nao foi gerado. */}
+      {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
       {!leituraFalhou && !semLink && (
-        <p className="mt-4 text-xs leading-relaxed text-secondary-ink">
-          <span className="font-semibold text-foreground">Compre por este botão.</span> É a mesma loja
-          oficial do anúncio, mesmo preço, mesma segurança, mesma garantia. A diferença é que por aqui o
-          vendedor me paga uma comissão, e não sai um centavo a mais do seu bolso.
+        <p className="mt-4 text-center text-xs text-secondary-ink">
+          Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão da loja. Obrigado!
         </p>
       )}
-      <p className="mt-2 text-xs leading-relaxed text-secondary-ink/80">
-        Sou o Weslei. Estou desempregado e essa comissão tem sido minha fonte de renda. Se este site
-        te ajudou, usar meu link já é uma forma de retribuir. Pode colar outro link aqui em cima
-        quantas vezes quiser, a qualquer hora.
-      </p>
     </div>
   );
 }
@@ -1103,6 +1100,57 @@ function MelhorOpcao({
   );
 }
 
+/* "Ver na loja": o link de afiliado da loja só é criado quando o cliente pede,
+   para ele conferir o preço lá com os próprios olhos. Nada é gerado sem clique. */
+function VerNaLoja({ url }: { url: string }) {
+  const [estado, setEstado] = useState<"parado" | "gerando" | "falhou">("parado");
+  const [link, setLink] = useState<string | null>(null);
+
+  async function gerar() {
+    setEstado("gerando");
+    try {
+      const { data: id, error } = await supabase.rpc("pedir_link_loja" as never, { p_url: url } as never);
+      if (error || id == null) throw new Error("falhou");
+      try {
+        window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id }, window.location.origin);
+      } catch { /* sem extensão: o alarme cobre */ }
+      for (let volta = 0; volta < 45; volta++) {
+        await new Promise((ok) => setTimeout(ok, volta < 10 ? 1200 : 2500));
+        const { data } = await supabase.rpc("consultar_pedido", { p_id: Number(id) });
+        const linha = (Array.isArray(data) ? data[0] : data) as { status?: string; link?: string | null } | null;
+        if (linha?.status === "pronto" && linha.link) { setLink(linha.link); return; }
+        if (linha?.status === "falhou") break;
+      }
+      setEstado("falhou");
+    } catch {
+      setEstado("falhou");
+    }
+  }
+
+  if (link) {
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1 inline-block rounded border border-red-300 bg-card px-2 py-1 text-xs font-bold text-red-700 dark:text-red-400"
+      >
+        Abrir a loja ↗
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => void gerar()}
+      disabled={estado === "gerando"}
+      className="mt-1 block w-full text-right text-xs font-semibold text-secondary-ink underline underline-offset-2 disabled:no-underline"
+    >
+      {estado === "gerando" ? "Gerando link…" : estado === "falhou" ? "Tentar de novo" : "Ver na loja"}
+    </button>
+  );
+}
+
 /* Outras lojas com o mesmo produto que NÃO compensam: em vermelho, com quanto
    sairia a mais. Mostrar isto é o que prova ao cliente que comparei. */
 function OutrasLojasMaisCaras({
@@ -1139,6 +1187,7 @@ function OutrasLojasMaisCaras({
                   {r.diferenca > 0 ? `+${brl(r.diferenca)} mais caro` : "praticamente o mesmo preço"}
                 </span>
               )}
+              {r.url && <VerNaLoja url={r.url} />}
             </span>
           </li>
         ))}

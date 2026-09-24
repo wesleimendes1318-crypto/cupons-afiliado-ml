@@ -2076,6 +2076,20 @@ async function atenderPedidos() {
           await marcarPedido(sincToken, p.id, null, null, 'pedido sem link');
           falhou++; continue;
         }
+        /* Pedido so de link: o cliente clicou em "ver na loja" numa das lojas
+           mais caras da comparacao, para conferir o preco. So gera o link de
+           afiliado, sem ler anuncio nem comparar de novo. */
+        if (p.vendedor === '(so link)') {
+          try {
+            const la = await gerarNaAba(tabId, p.url_alvo);
+            await marcarPedido(sincToken, p.id, la.link, la.codigo, null, { soLink: true, lojaLida: true });
+            ok++;
+          } catch (e) {
+            await marcarPedido(sincToken, p.id, null, null, String(e.message || e).slice(0, 200));
+            falhou++;
+          }
+          continue;
+        }
         try {
           /* O banco ja reservou este pedido para esta instancia, de forma
              atomica, na propria consulta da fila. Esta chamada continua aqui
@@ -2239,7 +2253,7 @@ async function atenderPedidos() {
                     if (t.final == null || vistos.has((t.vendedor || '').toLowerCase())) continue;
                     if (vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase()) continue;
                     vistos.add((t.vendedor || '').toLowerCase());
-                    referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final,
+                    referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final, url: t.url || null,
                       diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
                       cupom: t.cupom ? t.cupom.titulo : null });
                   }

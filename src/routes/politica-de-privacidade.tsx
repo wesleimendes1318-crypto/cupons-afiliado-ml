@@ -33,7 +33,7 @@ function Privacidade() {
       etiqueta="LGPD"
       titulo="Política de Privacidade"
       resumo="O que fazemos com dados de quem visita este site, escrito para ser entendido."
-      atualizacao="23/09/2026"
+      atualizacao="24/09/2026"
     >
       <h2>Quem é o responsável</h2>
       <p>
@@ -58,6 +58,12 @@ function Privacidade() {
           cookies e configurações da tela. Ficam no seu aparelho.
         </li>
         <li>
+          <strong>Links de produto que você cola:</strong> o endereço do anúncio do Mercado
+          Livre, para comparar o preço do mesmo produto em outras lojas. Guardamos o link, o
+          produto, os preços encontrados e o link de compra gerado, sem nada que identifique
+          você.
+        </li>
+        <li>
           <strong>Dados que você envia:</strong> apenas o que você escrever espontaneamente ao
           entrar em contato.
         </li>
@@ -71,6 +77,7 @@ function Privacidade() {
       <h2>Para que tratamos</h2>
       <ul>
         <li>Exibir as páginas e manter o site funcionando (interesse legítimo e execução do serviço).</li>
+        <li>Comparar o preço do produto que você colou entre lojas do Mercado Livre (execução do serviço que você pediu).</li>
         <li>Entender quais conteúdos são úteis, de forma agregada (mediante o seu consentimento).</li>
         <li>Exibir publicidade de terceiros, caso ativada no futuro (mediante o seu consentimento).</li>
         <li>Responder a quem nos procura (consentimento ao enviar a mensagem).</li>
@@ -101,17 +108,29 @@ function Privacidade() {
 
       <h2>Medição de audiência</h2>
       <p>
-        Caso ativada, a medição de audiência registra eventos como busca feita, cupom
-        visualizado e clique em "usar cupom", sem nome, e-mail, telefone ou qualquer dado que
-        identifique você diretamente. A finalidade é melhorar o site, não perfilar pessoas.
+        Com a sua autorização, usamos o Google Analytics 4 (Google LLC), com IP anonimizado,
+        para contar visitas e eventos como comparação feita e clique em comprar, sem nome,
+        e-mail, telefone ou qualquer dado que identifique você diretamente. Usamos o Modo de
+        Consentimento do Google: sem autorização, nada disso é gravado. A finalidade é
+        melhorar o site, não perfilar pessoas.
       </p>
 
       <h2>Publicidade</h2>
       <p>
-        No momento este site <strong>não exibe anúncios</strong>. Se e quando passarmos a
-        exibir publicidade de rede de anúncios de terceiros, ela só será carregada para quem
-        tiver autorizado cookies de publicidade, virá identificada com a etiqueta
-        "Publicidade" e esta página será atualizada com o nome do parceiro antes da ativação.
+        Quando o site exibir anúncios, eles virão do Google AdSense (Google LLC), só serão
+        carregados para quem autorizou cookies de publicidade e virão identificados com a
+        etiqueta "Publicidade". Terceiros, incluindo o Google, podem usar cookies para exibir
+        anúncios com base em visitas anteriores a este e a outros sites. Você pode desativar a
+        publicidade personalizada nas{" "}
+        <a
+          href="https://adssettings.google.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-ml-blue hover:underline"
+        >
+          configurações de anúncios do Google
+        </a>
+        .
       </p>
 
       <h2>Links de afiliado</h2>

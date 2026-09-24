@@ -24,16 +24,16 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Cupons de Lojas Afiliadas — descubra o desconto real" },
+      { title: "Comparador de preços do Mercado Livre — o mesmo produto, a loja mais barata" },
       {
         name: "description",
         content:
-          "Consulte o limite real, a compra mínima e as condições de cada cupom de afiliado.",
+          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Cupons de Lojas Afiliadas — descubra o desconto real" },
+      { property: "og:title", content: "Comparador de preços do Mercado Livre" },
       {
         property: "og:description",
-        content: "Compare o percentual anunciado com o teto real de desconto de cada cupom.",
+        content: "O mesmo produto em outras lojas do Mercado Livre, com a diferença de preço de cada uma.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://cupons-afiliado-ml.lovable.app/" },
@@ -46,11 +46,11 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "Cupons de Lojas Afiliadas",
+          name: "Comparador de preços do Mercado Livre — @WSLMENDES",
           url: "https://cupons-afiliado-ml.lovable.app/",
           inLanguage: "pt-BR",
           description:
-            "Ferramenta independente para descobrir o desconto real de cupons, com teto e compra mínima informados.",
+            "Ferramenta independente que compara o preço do mesmo produto entre lojas do Mercado Livre.",
         }),
       },
     ],
@@ -1356,7 +1356,7 @@ function Index() {
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Cupons de Lojas Afiliadas — por{" "}
+                Comparador de preços do Mercado Livre — por{" "}
                 <a
                   href="https://www.instagram.com/wslmendes/"
                   target="_blank"
@@ -1368,23 +1368,11 @@ function Index() {
               </h1>
 
               <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
-                Um cupom anuncia 40% e desconta R$ 2. A diferença está no limite, escondido nas
-                letras miúdas — e é isso que eu leio, cupom por cupom, antes de publicar qualquer
-                coisa aqui.
+                Cole o link do produto. Eu mostro o mesmo produto em outras lojas do Mercado Livre,
+                do mais barato ao mais caro.
               </p>
               <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
-                {indicadores.conferidos > 0 ? (
-                  <>
-                    Já conferi {indicadores.conferidos.toLocaleString("pt-BR")} cupons um a um e
-                    reprovei {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco
-                    demais. Publico o limite real de cada um, para você saber quanto economiza antes de comprar.
-                  </>
-                ) : (
-                  <>
-                    Confiro cada cupom um a um, reprovo os que descontam pouco demais, publico o
-                    limite real de cada um, para você saber quanto economiza antes de comprar.
-                  </>
-                )}
+                Quando a loja tem cupom, ele entra na conta. Quem oferece o cupom é a loja, não eu.
               </p>
 
               <div className="mt-7 flex flex-wrap items-center gap-2.5">
@@ -1420,19 +1408,19 @@ function Index() {
               <ul className="mt-3 space-y-3 text-sm leading-relaxed text-white/90">
                 <li className="flex items-start gap-2.5">
                   <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Limite real conferido no texto oficial da campanha
+                  O mesmo produto, não um parecido
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Nenhum número inventado: o que não sei, eu digo que não sei
+                  Mostro também as lojas mais caras, para você conferir
                 </li>
                 <li className="flex items-start gap-2.5">
                   <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Mostro também os cupons ruins, para você não cair neles
+                  Nenhum desconto inventado: cupom quem dá é a loja
                 </li>
               </ul>
               <p className="mt-4 border-t border-white/20 pt-3 text-xs leading-relaxed text-white/75">
-                Aqui você sabe quanto economiza antes de comprar — e o preço é o mesmo para você.
+                Comprando pelos meus links o preço é o mesmo para você.
               </p>
             </div>
           </div>
@@ -1477,9 +1465,9 @@ function Index() {
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5">
           <ol className="grid gap-4 text-sm sm:grid-cols-3">
             {[
-              { icone: Link2, texto: "Você cola aqui o link do anúncio que quer comprar" },
-              { icone: Search, texto: "O site confere na hora se a loja tem cupom de verdade" },
-              { icone: ShieldCheck, texto: "Você recebe o link pronto para comprar, sem falar com ninguém" },
+              { icone: Link2, texto: "Você cola o link do produto que quer comprar" },
+              { icone: Search, texto: "O site procura o mesmo produto em outras lojas e compara os preços" },
+              { icone: ShieldCheck, texto: "Você escolhe a loja e compra direto no Mercado Livre" },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
