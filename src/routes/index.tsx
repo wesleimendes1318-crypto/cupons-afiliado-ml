@@ -17,6 +17,7 @@ import { CATEGORIAS } from "@/content/categorias";
 import { GUIAS } from "@/content/guias";
 import { marcarConsultado, useConsultado } from "@/lib/cupons-consultados";
 import { supabase } from "@/integrations/supabase/client";
+import { roboAtivo } from "@/lib/robo";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
 
@@ -627,6 +628,16 @@ function usePreparoDoCupom(cupom: Cupom) {
     setFase("preparando");
     setPausa(null);
 
+    /* Extensão desligada: código e página da loja não vão sair agora. Não
+       registra pedido (evita fila acumulada que depois vira rajada no
+       Mercado Livre) e diz a verdade na hora. */
+    if (!(await roboAtivo())) {
+      ocupado.current = false;
+      setPausa("A geração automática de códigos está pausada agora.");
+      setFase("demorou");
+      return;
+    }
+
     const [rCodigo, rLoja] = await Promise.all([
       temCodigo || codigoImpossivel
         ? Promise.resolve(null)
@@ -793,7 +804,10 @@ export function AcaoDoCupom({
 
       {p.pausa && !pronto && (
         <p className="mt-2 rounded-md border border-amber-400/60 bg-amber-50 p-2.5 text-[12px] leading-4 text-foreground dark:bg-amber-950/30">
-          {p.pausa} Nada com você: assim que a verificação for resolvida, é só tocar em “Tentar de novo”.
+          {p.pausa} Nada com você.{" "}
+          {p.loja || listaDaCampanha
+            ? "Dá para ver os produtos da loja pelo botão abaixo; o desconto da loja aparece no carrinho."
+            : "Tente de novo mais tarde."}
         </p>
       )}
 
@@ -1353,12 +1367,12 @@ function Index() {
                   <>
                     Já conferi {indicadores.conferidos.toLocaleString("pt-BR")} cupons um a um e
                     reprovei {indicadores.armadilhas.toLocaleString("pt-BR")} que descontam pouco
-                    demais. Publico o limite real de cada um e gero o seu código na hora.
+                    demais. Publico o limite real de cada um, para você saber quanto economiza antes de comprar.
                   </>
                 ) : (
                   <>
                     Confiro cada cupom um a um, reprovo os que descontam pouco demais, publico o
-                    limite real de cada um e gero o seu código na hora.
+                    limite real de cada um, para você saber quanto economiza antes de comprar.
                   </>
                 )}
               </p>

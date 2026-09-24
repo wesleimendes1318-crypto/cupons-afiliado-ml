@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -312,6 +313,15 @@ export default function BuscaPorLink() {
       }
 
       setFase("enviando");
+
+      /* Extensão desligada: o pedido ficaria na fila sem ninguém atender e o
+         cliente esperaria à toa. Diz na hora. */
+      if (!(await roboAtivo())) {
+        setFase("offline");
+        setMotivo(null);
+        setErro(null);
+        return;
+      }
 
       const { data: id, error } = await supabase.rpc("pedir_link", { p_url: limpo });
 
@@ -1201,10 +1211,10 @@ function Linha({
 function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | null }) {
   return (
     <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
-      <p className="text-sm font-medium">A geração automática está fora do ar neste momento.</p>
+      <p className="text-sm font-medium">A conferência de links está pausada neste momento.</p>
       <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-        Isso costuma durar poucos minutos. Seu link continua aí no campo: é só tentar de novo.
-        Enquanto isso, você pode procurar a loja pelo nome na busca logo abaixo.
+        Não sei dizer quando volta, então prefiro não te deixar esperando. Enquanto isso, procure a
+        loja pelo nome na busca logo abaixo: os limites e condições de cada cupom continuam aí.
       </p>
       {motivo && (
         <p className="mt-2 rounded border border-border bg-card px-2 py-1 text-xs text-secondary-ink/80">
