@@ -225,3 +225,15 @@ A lista de cupons (os que entram e os que saem) carrega 1 vez por dia, a partir
 das 10:00 de Brasilia. Com o computador desligado nessa hora, carrega assim que
 ligar, ate as 21:00. Etiquetas deixam de ser criadas em lote: so quando um
 cliente pede no site.
+
+### v1.46.0 - comparacao de lojas pela API oficial, fora da sua conta
+
+A busca do mesmo produto em outras lojas agora e feita pelo SERVIDOR do site
+(`/api/public/mesmo-produto`), com a API oficial do Mercado Livre e cache de 6
+horas por produto. A extensao nao le pagina nenhuma para comparar: so gera o
+link de afiliado das ate 2 opcoes escolhidas (passando pelo cadastro).
+A leitura de paginas com a sua sessao ficou como reserva DESLIGADA
+(`LEITURA_RESERVA_POR_DIA = 0`).
+Requer, nos Secrets do Lovable, as credenciais de um aplicativo criado em
+developers.mercadolivre.com.br: `ML_CLIENT_ID`, `ML_CLIENT_SECRET` e, se
+necessario, `ML_REFRESH_TOKEN`.

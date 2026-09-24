@@ -372,3 +372,23 @@ export async function concluirGeracao(token, tipo, chave, resultado, erro, meta)
     });
   } catch (e) { return null; }
 }
+
+
+/* Comparacao "mesmo produto em outras lojas" feita pelo SERVIDOR do site, com
+   a API oficial do Mercado Livre. A sessao de afiliado nao le pagina nenhuma
+   para isso; ela so gera o link das opcoes escolhidas. */
+export async function compararNoServidor(token, url) {
+  if (!token) return { procurou: false, motivo: 'sem token de sincronia', opcoes: [] };
+  try {
+    const r = await fetch(SITE + '/api/public/mesmo-produto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-sinc-token': token },
+      body: JSON.stringify({ url })
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j) return { procurou: false, motivo: (j && j.erro) || ('servidor respondeu ' + r.status), opcoes: [] };
+    return j;
+  } catch (e) {
+    return { procurou: false, motivo: 'servidor do site fora do ar', opcoes: [] };
+  }
+}

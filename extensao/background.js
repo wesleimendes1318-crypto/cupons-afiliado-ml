@@ -6,7 +6,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrinesParaConferir, salvarVitrines,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
-         reservarGeracao, concluirGeracao } from './sincronia.js';
+         reservarGeracao, concluirGeracao, compararNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio } from './comparador.js';
@@ -1814,6 +1814,10 @@ const LOTE_LINKS = 10;
    e leitura de pagina publica do Mercado Livre e o que derruba a conta e
    rajada, nao volume espalhado. */
 const TETO_DIA_LOJAS = 60;
+/* Comparacao de lojas lendo paginas com a sessao do Weslei, so quando a API
+   oficial (servidor do site) nao responde. 0 = desligada: nenhuma leitura de
+   pagina para comparar. Subir para poucas unidades por dia, se precisar. */
+const LEITURA_RESERVA_POR_DIA = 0;
 const LOTE_LOJAS = 8;
 
 function diaSP() {
@@ -1896,7 +1900,8 @@ async function rodadaDaJanela(janela) {
 async function gastoDoDia() {
   const { gastoFila } = await chrome.storage.local.get('gastoFila');
   const dia = diaSP();
-  if (!gastoFila || gastoFila.dia !== dia) return { dia, condicoes: 0, vitrines: 0, links: 0, lojas: 0 };
+  if (!gastoFila || gastoFila.dia !== dia) return { dia, condicoes: 0, vitrines: 0, links: 0, lojas: 0, comparacoes: 0 };
+  if (gastoFila.comparacoes == null) gastoFila.comparacoes = 0;
   if (gastoFila.links == null) gastoFila.links = 0;
   if (gastoFila.lojas == null) gastoFila.lojas = 0;
   return gastoFila;
@@ -2106,27 +2111,44 @@ async function atenderPedidos() {
           let procurouOutra = false;
           let motivoNaoProcurou = null;
           const pausaLeitura = await freioLigado('leitura');
+          /* A comparacao pela API oficial nao depende da pausa de leitura nem
+             de ter lido o anuncio: ela so precisa do link. A pausa passa a
+             valer apenas para a reserva que le paginas (mais abaixo). */
           if (filaCheia) motivoNaoProcurou = 'fila cheia: outros clientes esperando';
-          else if (pausaLeitura) motivoNaoProcurou = 'pausa de seguranca do Mercado Livre: ' + pausaLeitura;
-          else if (!a.ok) motivoNaoProcurou = 'nao consegui ler o anuncio';
           else {
             procurouOutra = true;
             let alts = [];
-            try {
-              const temCupomAqui = !!(cupom && aval && aval.vale);
-              const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
-              const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
-              alts = await mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
-                finalAtual: finalAqui,
-                temCupomAqui,
-                vendedorAtual: vendedor,
-                titulo: a.titulo || null,
-                itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null
-              });
-            } catch (e) {
+            /* 1. Servidor do site, API oficial do Mercado Livre. Nao usa a
+                  sessao de afiliado para ler nada. */
+            const api = await compararNoServidor(sincToken, a.finalUrl || url);
+            if (api && api.procurou) {
+              alts = (api.opcoes || []).map(o => ({
+                item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
+                economia: o.economia, final: o.final, ganho: o.ganho, finalAtual: o.finalAtual,
+                motivo: o.motivo, achadoNaBusca: !!o.achadoNaBusca,
+                minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
+                cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
+              }));
+            } else if (LEITURA_RESERVA_POR_DIA > 0 && !pausaLeitura && a.ok
+                       && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA) {
+              /* 2. Reserva, DESLIGADA por padrao: leitura das paginas com a
+                    sessao do Weslei, poucas vezes por dia. */
+              await anotarGasto('comparacoes', 1);
+              try {
+                const temCupomAqui = !!(cupom && aval && aval.vale);
+                const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
+                const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
+                alts = await mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
+                  finalAtual: finalAqui, temCupomAqui, vendedorAtual: vendedor, titulo: a.titulo || null,
+                  itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null
+                });
+              } catch (e) {
+                procurouOutra = false;
+                motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
+              }
+            } else {
               procurouOutra = false;
-              motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
-              console.warn('[mesmo produto] busca falhou:', e.message);
+              motivoNaoProcurou = (api && api.motivo) || 'comparacao indisponivel agora';
             }
 
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
