@@ -48,8 +48,23 @@ const RPC      = SUPABASE + '/rest/v1/rpc/sincronizar_cupons';
    trocar a chave a extensao acompanha sozinha. */
 let CHAVE_CACHE = { valor: null, ts: 0 };
 
+/* Chave publicavel do banco (e publica: vai no javascript do site). Fica aqui
+   como reserva: em 24/09 o endereco do site mudou na configuracao do dominio
+   e a extensao parou de ler a fila porque dependia do site para achar a
+   chave. Com a reserva, ela nunca mais para por causa de endereco. */
+const CHAVE_RESERVA = 'sb_publishable_WYvqQiuyMhALUhvTBXR3ug_5tazN9Lm';
+
 async function chavePublicavel() {
   if (CHAVE_CACHE.valor && Date.now() - CHAVE_CACHE.ts < 6 * 3600e3) return CHAVE_CACHE.valor;
+  try {
+    return await chaveDoSite();
+  } catch (e) {
+    CHAVE_CACHE = { valor: CHAVE_RESERVA, ts: Date.now() };
+    return CHAVE_RESERVA;
+  }
+}
+
+async function chaveDoSite() {
   await siteVivo();
   const html = await (await fetch(SITE, { cache: 'no-store' })).text();
   const srcs = [...html.matchAll(/src="([^"]+\.js)"/g)].map(m =>
