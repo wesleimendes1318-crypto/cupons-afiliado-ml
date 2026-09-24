@@ -338,3 +338,37 @@ export async function lojasPedidas(token) {
     return Array.isArray(r) ? r : [];
   } catch (e) { return []; }
 }
+
+
+/* ================================================================
+   Cadastro de geracoes
+   ================================================================
+   Tudo que a extensao cria no Mercado Livre (link de afiliado, etiqueta,
+   link de vitrine) passa por aqui ANTES. O banco responde:
+     existe     -> ja foi gerado: reaproveita, nao chama o Mercado Livre
+     reservado  -> pode criar
+     bloqueado  -> pausa geral, teto do dia ou tentativa anterior sem resposta
+   Sem banco (erro de rede), a resposta e 'bloqueado': na duvida, nao cria. */
+const RPC_RESERVAR = SUPABASE + '/rest/v1/rpc/reservar_geracao';
+const RPC_CONCLUIR = SUPABASE + '/rest/v1/rpc/concluir_geracao';
+
+export async function reservarGeracao(token, tipo, chave) {
+  if (!token) return { status: 'bloqueado', motivo: 'sem token de sincronia' };
+  try {
+    const r = await chamarRpc(RPC_RESERVAR, { p_token: token, p_tipo: tipo, p_chave: String(chave) });
+    return r && r.status ? r : { status: 'bloqueado', motivo: 'resposta vazia do banco' };
+  } catch (e) {
+    return { status: 'bloqueado', motivo: 'cadastro indisponivel: ' + e.message };
+  }
+}
+
+export async function concluirGeracao(token, tipo, chave, resultado, erro, meta) {
+  if (!token) return null;
+  try {
+    return await chamarRpc(RPC_CONCLUIR, {
+      p_token: token, p_tipo: tipo, p_chave: String(chave),
+      p_resultado: resultado || null, p_erro: erro ? String(erro).slice(0, 300) : null,
+      p_meta: meta || null
+    });
+  } catch (e) { return null; }
+}

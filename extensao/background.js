@@ -5,7 +5,8 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          etiquetasPendentes, salvarEtiquetas,
          vitrinesParaConferir, salvarVitrines,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
-         anotarEstadoRobo, salvarOrigemCupom, lojasPedidas } from './sincronia.js';
+         anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
+         reservarGeracao, concluirGeracao } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio } from './comparador.js';
@@ -747,7 +748,7 @@ async function vitrineDoCupom(tabId, id) {
   return /^https:\/\/lista\.mercadolivre\.com\.br\//.test(r.url) ? r.url : null;
 }
 
-async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
+async function gerarNaAbaSemCadastro(tabId, url, tag = TAG_PADRAO) {
   const [saida] = await chrome.scripting.executeScript({
     target: { tabId }, world: 'MAIN', func: chamadaNaPagina, args: [ROTA_CRIAR, url, tag]
   });
@@ -773,6 +774,33 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO) {
       throw new Error('O gerador respondeu sem link. Resposta: ' + (amostra || '(vazia)'));
     }
     return { link: curto, codigo };
+  }
+}
+
+/* Chave do cadastro para um link de produto: a URL limpa (sem rastreio de
+   outros afiliados, sem #), para o mesmo produto sempre cair na mesma linha. */
+function chaveDoLink(url) {
+  try { return limparUrl(url).replace(/\/+$/, ''); } catch (e) { return String(url).split('#')[0]; }
+}
+
+/* TODA criacao de link passa por aqui. Consulta o cadastro antes: se o link
+   ja existe, devolve sem chamar o Mercado Livre; se o cadastro bloquear
+   (pausa geral, teto do dia, geracao em andamento), nao cria. */
+async function gerarNaAba(tabId, url, tag = TAG_PADRAO, tipo = 'link', chave = null) {
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  const k = chave || chaveDoLink(url);
+  const res = await reservarGeracao(sincToken, tipo, k);
+  if (res.status === 'existe' && res.resultado) {
+    return { link: res.resultado, codigo: (res.meta && res.meta.codigo) || null, reaproveitado: true };
+  }
+  if (res.status !== 'reservado') throw new Error('nao gerei o link: ' + (res.motivo || 'bloqueado pelo cadastro'));
+  try {
+    const r = await gerarNaAbaSemCadastro(tabId, url, tag);
+    await concluirGeracao(sincToken, tipo, k, r.link, null, { codigo: r.codigo || null, url });
+    return r;
+  } catch (e) {
+    await concluirGeracao(sincToken, tipo, k, null, e.message || String(e));
+    throw e;
   }
 }
 
@@ -868,7 +896,7 @@ async function gerarLinksDeCupons(limite = 60) {
         let link = null;
         try {
           const vitrine = await vitrineDoCupom(tabId, id);
-          if (vitrine) link = (await gerarNaAba(tabId, vitrine)).link || null;
+          if (vitrine) link = (await gerarNaAba(tabId, vitrine, TAG_PADRAO, 'link_vitrine', String(id))).link || null;
         } catch (e) {
           console.warn('[links]', id, e.message);
           // Deslogado: parar o lote inteiro em vez de queimar tentativa de todos.
@@ -1497,6 +1525,21 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
         for (const linha of fila) {
           const sufixo = sufixoDaEtiqueta(linha.id, linha.desconto);
           let codigo = null;
+
+          /* Cadastro primeiro: etiqueta ja emitida nunca e pedida de novo, e
+             tentativa anterior sem resposta nao e repetida (codigo e
+             permanente no Mercado Livre). */
+          const reserva = await reservarGeracao(sincToken, 'etiqueta', String(linha.id));
+          if (reserva.status === 'existe' && reserva.resultado) {
+            saida.push({ id: linha.id, codigo: reserva.resultado });
+            continue;
+          }
+          if (reserva.status !== 'reservado') {
+            ultimaFalha = 'cadastro: ' + (reserva.motivo || 'bloqueado');
+            if (/teto|pausa|indisponivel|token/i.test(reserva.motivo || '')) break;
+            continue;
+          }
+
           try {
             let res = await criar(tabId, linha.id, sufixo);
 
@@ -1518,8 +1561,14 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
               if (alt !== sufixo) { await sleep(1200); res = await criar(tabId, linha.id, alt); }
             }
 
-            if (res.alias) codigo = res.alias;
-            else {
+            if (res.alias) {
+              codigo = res.alias;
+              await concluirGeracao(sincToken, 'etiqueta', String(linha.id), codigo, null, { sufixo });
+            } else {
+              /* O Mercado Livre respondeu (tem status HTTP): nada foi criado,
+                 libera no cadastro. Sem status (queda de rede) a reserva fica
+                 pendente e bloqueada, para nao arriscar codigo duplicado. */
+              if (res.st) await concluirGeracao(sincToken, 'etiqueta', String(linha.id), null, res.falha || ('HTTP ' + res.st));
               ultimaFalha = (res.falha || 'sem resposta') + (res.semToken ? ' (pagina sem csrf-token)' : '')
                           + (res.amostra ? ': ' + res.amostra : '');
               if (res.captcha) {

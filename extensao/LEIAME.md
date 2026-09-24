@@ -205,3 +205,16 @@ O banco registrou 67 downloads completos da lista de cupons em 22/09 e 41 em
 23/09 (cada um ~665 chamadas ao hub). Agora: 2 paginas por vez com pausa, e
 nenhum download novo antes de 3 horas do ultimo - nem ao recarregar a
 extensao, nem clicando Atualizar/Sincronizar.
+
+### v1.44.0 - cadastro de tudo que e gerado (tabela `geracoes`)
+
+Antes de criar qualquer coisa no Mercado Livre (link de afiliado, etiqueta,
+link de vitrine), a extensao consulta o cadastro no banco:
+- ja existe: reaproveita e nao chama o Mercado Livre;
+- etiqueta com tentativa anterior sem resposta: NAO tenta de novo (codigo e
+  permanente); conferir em "Administrar etiquetas";
+- teto do dia (`limites`: gerar_link_por_dia, gerar_etiqueta_por_dia,
+  gerar_link_vitrine_por_dia) ou `pausa_geral = 1`: nao cria nada;
+- banco fora do ar: nao cria (na duvida, nao gera).
+Precisa da migracao `supabase/migrations/20260924010000_cadastro_de_geracoes.sql`
+aplicada no banco ANTES de instalar.
