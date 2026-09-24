@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      comparacoes: {
+        Row: {
+          chave: string
+          criado_em: string
+          resposta: Json
+        }
+        Insert: {
+          chave: string
+          criado_em?: string
+          resposta: Json
+        }
+        Update: {
+          chave?: string
+          criado_em?: string
+          resposta?: Json
+        }
+        Relationships: []
+      }
       contatos: {
         Row: {
           ativo: boolean
@@ -49,8 +67,10 @@ export type Database = {
           link_afiliado: string | null
           link_conferido_em: string | null
           link_em: string | null
+          link_loja: string | null
           link_origem: string | null
           link_tentativas: number
+          loja_pedida_em: string | null
           nivel: string | null
           orcamento: number | null
           qualidade: string | null
@@ -64,10 +84,8 @@ export type Database = {
           vendas: number | null
           vendedor: string
           vitrine_conferida_em: string | null
-          vitrine_ok: boolean | null
           vitrine_motivo: string | null
-          link_loja: string | null
-          loja_pedida_em: string | null
+          vitrine_ok: boolean | null
           vitrine_resolvida_em: string | null
         }
         Insert: {
@@ -86,8 +104,10 @@ export type Database = {
           link_afiliado?: string | null
           link_conferido_em?: string | null
           link_em?: string | null
+          link_loja?: string | null
           link_origem?: string | null
           link_tentativas?: number
+          loja_pedida_em?: string | null
           nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
@@ -101,10 +121,8 @@ export type Database = {
           vendas?: number | null
           vendedor: string
           vitrine_conferida_em?: string | null
-          vitrine_ok?: boolean | null
           vitrine_motivo?: string | null
-          link_loja?: string | null
-          loja_pedida_em?: string | null
+          vitrine_ok?: boolean | null
           vitrine_resolvida_em?: string | null
         }
         Update: {
@@ -123,8 +141,10 @@ export type Database = {
           link_afiliado?: string | null
           link_conferido_em?: string | null
           link_em?: string | null
+          link_loja?: string | null
           link_origem?: string | null
           link_tentativas?: number
+          loja_pedida_em?: string | null
           nivel?: string | null
           orcamento?: number | null
           qualidade?: string | null
@@ -138,11 +158,45 @@ export type Database = {
           vendas?: number | null
           vendedor?: string
           vitrine_conferida_em?: string | null
-          vitrine_ok?: boolean | null
           vitrine_motivo?: string | null
-          link_loja?: string | null
-          loja_pedida_em?: string | null
+          vitrine_ok?: boolean | null
           vitrine_resolvida_em?: string | null
+        }
+        Relationships: []
+      }
+      geracoes: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          criado_em: string
+          erro: string | null
+          meta: Json | null
+          resultado: string | null
+          status: string
+          tentativas: number
+          tipo: string
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          criado_em?: string
+          erro?: string | null
+          meta?: Json | null
+          resultado?: string | null
+          status: string
+          tentativas?: number
+          tipo: string
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          criado_em?: string
+          erro?: string | null
+          meta?: Json | null
+          resultado?: string | null
+          status?: string
+          tentativas?: number
+          tipo?: string
         }
         Relationships: []
       }
@@ -262,6 +316,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      anotar_estado_robo: {
+        Args: { p_chave: string; p_token: string; p_valor: string }
+        Returns: undefined
+      }
       atender_pedido: {
         Args: {
           p_analise?: Json
@@ -269,6 +327,17 @@ export type Database = {
           p_erro?: string
           p_id: number
           p_link: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      concluir_geracao: {
+        Args: {
+          p_chave: string
+          p_erro: string
+          p_meta?: Json
+          p_resultado: string
+          p_tipo: string
           p_token: string
         }
         Returns: undefined
@@ -292,6 +361,14 @@ export type Database = {
           erro: string
           link: string
           status: string
+        }[]
+      }
+      estado_do_robo: {
+        Args: never
+        Returns: {
+          freio_ate: string
+          freio_motivo: string
+          visto_em: string
         }[]
       }
       etiquetas_pendentes: {
@@ -321,6 +398,28 @@ export type Database = {
           id: number
         }[]
       }
+      lojas_para_resolver: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          cupons: number
+          origem: string
+          seller_id: string
+          vendedor: string
+        }[]
+      }
+      lojas_pedidas: {
+        Args: { p_token: string }
+        Returns: {
+          cupom_id: number
+          origem: string
+          seller_id: string
+          vendedor: string
+        }[]
+      }
+      marcar_loja_sem_pagina: {
+        Args: { p_token: string; p_vendedor: string }
+        Returns: number
+      }
       melhor_cupom: {
         Args: { p_token: string; p_vendedor: string }
         Returns: {
@@ -329,6 +428,22 @@ export type Database = {
           desconto: string
           id: number
           qualidade: string
+          sem_teto: boolean
+          teto: number
+          tipo: string
+          valor: number
+          vence: string
+          vendedor: string
+        }[]
+      }
+      melhores_cupons_por_nome: {
+        Args: { p_nomes: string[] }
+        Returns: {
+          codigo_cupom: string
+          compra_min: number
+          desconto: string
+          id: number
+          nome: string
           sem_teto: boolean
           teto: number
           tipo: string
@@ -350,14 +465,9 @@ export type Database = {
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
-      lojas_pedidas: {
-        Args: { p_token: string }
-        Returns: {
-          vendedor: string
-          seller_id: string | null
-          origem: string | null
-          cupom_id: number
-        }[]
+      reservar_geracao: {
+        Args: { p_chave: string; p_tipo: string; p_token: string }
+        Returns: Json
       }
       salvar_condicoes: {
         Args: { p_cond: Json; p_token: string }
@@ -376,6 +486,10 @@ export type Database = {
         Args: { p_id: number; p_token: string; p_url: string }
         Returns: boolean
       }
+      salvar_pagina_loja: {
+        Args: { p_token: string; p_url: string; p_vendedor: string }
+        Returns: number
+      }
       salvar_vitrines: {
         Args: { p_lista: Json; p_token: string }
         Returns: Json
@@ -389,23 +503,6 @@ export type Database = {
         Returns: {
           id: number
           link_origem: string
-        }[]
-      }
-      estado_do_robo: {
-        Args: Record<string, never>
-        Returns: {
-          freio_motivo: string | null
-          freio_ate: string | null
-          visto_em: string | null
-        }[]
-      }
-      lojas_para_resolver: {
-        Args: { p_limite?: number; p_token: string }
-        Returns: {
-          vendedor: string
-          seller_id: string | null
-          cupons: number
-          origem: string | null
         }[]
       }
     }
