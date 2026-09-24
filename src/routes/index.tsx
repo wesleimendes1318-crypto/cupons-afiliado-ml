@@ -693,7 +693,12 @@ function usePreparoDoCupom(cupom: Cupom) {
           const ate = Date.parse(linha?.freio_ate ?? "");
           if ((linha?.freio_motivo ?? "").trim() && Number.isFinite(ate) && ate > Date.now()) {
             const min = Math.max(1, Math.ceil((ate - Date.now()) / 60_000));
-            setPausa(`O Mercado Livre pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
+            /* O freio guarda o motivo real. 403 ao criar código não é captcha:
+               é o Mercado Livre recusando a criação, e o texto diz isso. */
+            const recusa = /403|429|criar o codigo/i.test(linha?.freio_motivo ?? "");
+            setPausa(recusa
+              ? "O Mercado Livre não está liberando a criação de códigos de cupom agora."
+              : `O Mercado Livre pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
             /* Não prende a tela girando: libera o botão para tentar de novo
                assim que a verificação for resolvida. */
             ocupado.current = false;
