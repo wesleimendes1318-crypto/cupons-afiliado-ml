@@ -141,6 +141,11 @@ const statusDe = (e: unknown) => (e instanceof ErroApiMl ? String(e.status) : "f
  *  ("Banco Mesa 1,80 m 8 Lugares" dentro de "Banco Que Vira Mesa 1,80 M - 8
  *  Lugares - Campeão De Vendas"). Números sempre precisam bater. */
 function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
+  /* Números iguais nos DOIS sentidos (tamanho, volume, modelo). Sem isso,
+     "Capa Anti Impacto Motorola" aceitava a capa do Moto E6, do Moto G54 e
+     do iPhone 14 (teste de 24/09): o título não tinha número para conferir. */
+  const nums = (t: string) => [...new Set(palavras(t).filter((w) => /^\d+$/.test(w)))].sort().join(",");
+  if (nums(tituloAnuncio) !== nums(nomeCatalogo)) return false;
   return pareceMesmoProduto(tituloAnuncio, nomeCatalogo) || pareceMesmoProduto(nomeCatalogo, tituloAnuncio);
 }
 
