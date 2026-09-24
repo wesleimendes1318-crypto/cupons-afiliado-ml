@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      apelidos_ml: {
+        Row: {
+          apelido: string | null
+          seller_id: number
+          visto_em: string
+        }
+        Insert: {
+          apelido?: string | null
+          seller_id: number
+          visto_em?: string
+        }
+        Update: {
+          apelido?: string | null
+          seller_id?: number
+          visto_em?: string
+        }
+        Relationships: []
+      }
       comparacoes: {
         Row: {
           chave: string
@@ -415,6 +433,10 @@ export type Database = {
           seller_id: string
           vendedor: string
         }[]
+      }
+      marcar_etapa: {
+        Args: { p_etapa: string; p_id: number; p_token: string }
+        Returns: boolean
       }
       marcar_loja_sem_pagina: {
         Args: { p_token: string; p_vendedor: string }
