@@ -6,7 +6,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrinesParaConferir, salvarVitrines,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
-         reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa } from './sincronia.js';
+         reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
@@ -1764,7 +1764,24 @@ async function achadosNaBusca(titulo, precoRef, itemAtual) {
      vazia de novo, da para saber onde parou (24/09: 0 anuncios lidos). */
   const diag = {};
   const candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
-  if (!candidatos.length) { const vazio = []; vazio.diag = diag; return vazio; }
+  if (!candidatos.length) {
+    /* Leitura vazia: guarda um retrato da pagina para eu ver o que o Mercado
+       Livre devolveu (tamanho, trechos com anuncios, titulo da pagina). */
+    const trechos = [];
+    const re = /MLB-?\d{8,}/g;
+    let m;
+    while ((m = re.exec(html)) && trechos.length < 6) {
+      trechos.push(html.slice(Math.max(0, m.index - 1500), m.index + 1500));
+      re.lastIndex = m.index + 20000;
+    }
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    gravarDiagnostico(sincToken, 'busca-vazia', {
+      titulo, url: urlDeBusca(titulo), diag,
+      tituloPagina: (/<title[^>]*>([^<]{0,200})/i.exec(html) || [])[1] || null,
+      inicio: html.slice(0, 3000), trechos
+    }).catch(() => {});
+    const vazio = []; vazio.diag = diag; return vazio;
+  }
   const achados = await avaliarCandidatos(candidatos, itemAtual, { achadoNaBusca: true });
   achados.diag = diag;
   return achados;

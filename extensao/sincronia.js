@@ -447,3 +447,12 @@ export async function compararNoServidor(token, url, dica = {}) {
     return { procurou: false, motivo: 'servidor do site fora do ar', opcoes: [] };
   }
 }
+
+/* Diagnostico para o desenvolvedor (tabela diagnosticos, 7 dias). Nunca
+   derruba nada: se falhar, so nao grava. */
+export async function gravarDiagnostico(token, tipo, dados) {
+  if (!token) return;
+  try {
+    await chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_diagnostico', { p_token: token, p_tipo: tipo, p_dados: dados });
+  } catch (e) { /* so diagnostico */ }
+}
