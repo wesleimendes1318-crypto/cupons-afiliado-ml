@@ -77,6 +77,36 @@ function mensagemProduto({
   return linhas.join("\n");
 }
 
+/* Mensagem de WhatsApp da MELHOR opção, sempre com o link de afiliado.
+   Curta, com o que faz a pessoa clicar: produto, preço, quanto economiza e o
+   link. Sem código técnico, sem texto de site. */
+function mensagemMelhorOpcao({
+  titulo,
+  loja,
+  preco,
+  economia,
+  cupom,
+  comparadas,
+  link,
+}: {
+  titulo: string | null | undefined;
+  loja: string | null | undefined;
+  preco: number | null | undefined;
+  economia: number | null | undefined;
+  cupom: string | null | undefined;
+  comparadas: number;
+  link: string;
+}) {
+  const linhas: string[] = [];
+  linhas.push(titulo ? `🔎 Achei o menor preço de *${titulo}* no Mercado Livre` : "🔎 Achei o menor preço deste produto no Mercado Livre");
+  if (preco != null) linhas.push(`💰 *${brl(preco)}*${loja ? ` na loja ${loja}` : ""}`);
+  if (economia != null && economia > 0) linhas.push(`📉 ${brl(economia)} a menos que o anúncio original`);
+  else if (comparadas > 0) linhas.push(`✅ Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata`);
+  if (cupom) linhas.push(`🎟️ Cupom da loja: ${cupom} (o desconto aparece no carrinho)`);
+  linhas.push("", `👉 Compre direto por aqui: ${link}`);
+  return linhas.join("\n");
+}
+
 function compartilharWhatsApp(texto: string) {
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
 }
@@ -941,6 +971,30 @@ function Resultado({
       )}
       {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
 
+
+      {!leituraFalhou && !semLink && (() => {
+        const melhor = trocar ? alternativas[0] : null;
+        const destino = melhor?.link ?? link;
+        const texto = mensagemMelhorOpcao({
+          titulo: a?.titulo,
+          loja: melhor ? melhor.vendedor : a?.vendedor,
+          preco: melhor ? melhor.final : a?.preco,
+          economia: melhor ? melhor.ganho : null,
+          cupom: melhor ? melhor.cupomTitulo : a?.temCupom ? a?.cupom?.titulo : null,
+          comparadas: a?.referencias ? referencias.length : 0,
+          link: destino,
+        });
+        return (
+          <button
+            type="button"
+            onClick={() => compartilharWhatsApp(texto)}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border-2 border-[#25D366] py-2.5 text-sm font-bold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
+          >
+            <Share2 className="size-4" aria-hidden="true" />
+            Compartilhar no WhatsApp
+          </button>
+        );
+      })()}
 
       {pedido.codigo && (
         <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
