@@ -84,13 +84,42 @@ async function cuponsPorNome(nomes: string[]) {
 
 const cacheVendedor = new Map<number, string | null>();
 
-async function apelido(sellerId: number) {
-  if (cacheVendedor.has(sellerId)) return cacheVendedor.get(sellerId) ?? null;
-  let nome: string | null = null;
-  try { nome = (await mlGet<{ nickname?: string }>(`/users/${sellerId}`)).nickname ?? null; }
-  catch { nome = null; }
-  cacheVendedor.set(sellerId, nome);
-  return nome;
+/* Nomes das lojas: memória, depois a tabela apelidos_ml, e só o que faltar
+   vai à API (no máximo 25 por comparação). Cada loja custa uma consulta, uma
+   vez na vida, em vez de uma por comparação. */
+async function apelidos(ids: number[], trilha: string[]) {
+  const nomes = new Map<number, string | null>();
+  const faltam = ids.filter((id) => {
+    if (cacheVendedor.has(id)) { nomes.set(id, cacheVendedor.get(id) ?? null); return false; }
+    return true;
+  });
+  if (!faltam.length) return nomes;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const tabela = () => supabaseAdmin.from("apelidos_ml" as never);
+  try {
+    const { data } = await tabela().select("seller_id,apelido").in("seller_id" as never, faltam as never);
+    for (const l of (data ?? []) as { seller_id: number; apelido: string | null }[]) {
+      nomes.set(Number(l.seller_id), l.apelido);
+      cacheVendedor.set(Number(l.seller_id), l.apelido);
+    }
+  } catch { /* sem tabela: segue pela API */ }
+  const novos: { seller_id: number; apelido: string | null }[] = [];
+  let naApi = 0;
+  for (const id of faltam) {
+    if (nomes.has(id)) continue;
+    if (naApi >= 25) { nomes.set(id, null); continue; }
+    naApi++;
+    let nome: string | null = null;
+    try { nome = (await mlGet<{ nickname?: string }>(`/users/${id}`)).nickname ?? null; }
+    catch (e) { trilha.push(`users/${id} ${statusDe(e)}`); nomes.set(id, null); continue; }
+    nomes.set(id, nome);
+    cacheVendedor.set(id, nome);
+    novos.push({ seller_id: id, apelido: nome });
+  }
+  if (novos.length) {
+    try { await tabela().upsert(novos as never); } catch { /* fica só na memória */ }
+  }
+  return nomes;
 }
 
 /* ------------------------------------------------------------- decisão */
@@ -140,10 +169,21 @@ const statusDe = (e: unknown) => (e instanceof ErroApiMl ? String(e.status) : "f
  *  sentidos: nome de catálogo costuma ser mais curto que o título do anúncio
  *  ("Banco Mesa 1,80 m 8 Lugares" dentro de "Banco Que Vira Mesa 1,80 M - 8
  *  Lugares - Campeão De Vendas"). Números sempre precisam bater. */
+const VARIANTES = new Set(["light", "lite", "luminous", "leve", "intense", "intenso", "intensa", "men", "masculino",
+  "feminino", "kids", "infantil", "mini", "refil", "max", "plus", "ultra", "pro", "fine", "fino", "finos", "grossos",
+  "cacheados", "cachos", "lisos", "loiros", "tonalizante", "noturno", "night", "day", "diurno", "sport", "black", "gold",
+  "rose", "blue", "red", "white", "pink", "sensitive", "extra", "forte", "suave", "matte", "gloss"]);
+
 function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   /* Números iguais nos DOIS sentidos (tamanho, volume, modelo). Sem isso,
      "Capa Anti Impacto Motorola" aceitava a capa do Moto E6, do Moto G54 e
      do iPhone 14 (teste de 24/09): o título não tinha número para conferir. */
+  /* Versão diferente do mesmo nome (Light, Luminous, Men...) não é o mesmo
+     produto: a busca do Wella Oil Reflections trouxe a versão Light 100ml,
+     que tem os mesmos números e quase as mesmas palavras. */
+  const va = new Set(palavras(tituloAnuncio).filter((w) => VARIANTES.has(w)));
+  const vb = new Set(palavras(nomeCatalogo).filter((w) => VARIANTES.has(w)));
+  if (va.size !== vb.size || [...va].some((w) => !vb.has(w))) return false;
   const nums = (t: string) => [...new Set(palavras(t).filter((w) => /^\d+$/.test(w)))].sort().join(",");
   if (nums(tituloAnuncio) !== nums(nomeCatalogo)) return false;
   return pareceMesmoProduto(tituloAnuncio, nomeCatalogo) || pareceMesmoProduto(nomeCatalogo, tituloAnuncio);
@@ -181,7 +221,7 @@ async function ofertasDoCatalogo(catalogo: string) {
      6. título do anúncio buscado no catálogo; nomes e números precisam bater
                                                           -> palpite forte
    Tudo pela API oficial. Nenhuma página do Mercado Livre é lida aqui. */
-/* Devolve ATÉ 4 produtos de catálogo. O mesmo produto físico às vezes
+/* Devolve ATÉ 8 produtos de catálogo. O mesmo produto físico às vezes
    existe em mais de uma ficha de catálogo (medido em 24/09: o Wella Oil
    Reflections 100ml da Fragranciaria não trouxe a Amobeleza, que vende o
    mesmo frasco). Por isso, nas buscas por nome, as ofertas de todas as fichas
@@ -208,11 +248,11 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
       const r = await mlGet<BuscaCatalogo>(`/products/search?status=active&site_id=MLB&${params}&limit=20`);
       const lista = (r.results ?? []).filter((p) => p.id);
       const aceitos = lista.filter((x) => aceitar(x.name ?? ""));
-      /* Entre os aceitos, ficam os que têm oferta de loja (até 4). */
-      for (const p of aceitos.slice(0, 8)) {
+      /* Entre os aceitos, ficam os que têm oferta de loja (até 8). */
+      for (const p of aceitos.slice(0, 12)) {
         const ofertas = await ofertasDoCatalogo(p.id!).catch(() => []);
         if (ofertas.length) achados.push(p.id!.toUpperCase());
-        if (achados.length >= 4) break;
+        if (achados.length >= 8) break;
       }
       trilha.push(`${rotulo} 200 resultados=${lista.length} aceitos=${aceitos.map((x) => `${x.id}:${(x.name ?? "").slice(0, 50)}`).join(" | ") || "nenhum"} escolhidos=${achados.join(",") || "nenhum"}`);
     } catch (e) { trilha.push(`${rotulo} ${statusDe(e)}`); }
@@ -242,7 +282,7 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
     const c = await buscar("titulo", `q=${encodeURIComponent(q)}`, (nome) => mesmoNome(titulo, nome));
     c.forEach((x) => juntos.add(x));
   }
-  if (juntos.size) return { catalogos: [...juntos].slice(0, 4), porNome: true };
+  if (juntos.size) return { catalogos: [...juntos].slice(0, 8), porNome: true };
   return null;
 }
 
@@ -298,11 +338,11 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
     const preco = minha?.preco ?? dica.preco ?? null;
 
     /* 4. Nome de cada loja e o cupom dela no banco. */
-    /* Nome só das 12 lojas mais baratas: cada nome é uma consulta à API, e
-       comparação com 40 consultas levou 429 (limite) em 24/09. */
-    const sellers = [...new Set([...candidatos].sort((a, b) => a.preco - b.preco).map((c) => c.sellerId))].slice(0, 12);
-    const nomes = new Map<number, string | null>();
-    for (const s of sellers) nomes.set(s, await apelido(s));
+    /* Nome de TODAS as lojas: loja mais cara com cupom pode sair mais barata
+       no final (caso da Amobeleza). Os nomes ficam guardados, então isso só
+       custa consulta na primeira vez que a loja aparece. */
+    const sellers = [...new Set([...candidatos].sort((a, b) => a.preco - b.preco).map((c) => c.sellerId))].slice(0, 60);
+    const nomes = await apelidos(sellers, trilha);
     const cupons = await cuponsPorNome([...nomes.values(), dica.vendedor].filter(Boolean) as string[]);
     const cupomDe = (sellerId: number) => {
       const n = nomes.get(sellerId);
@@ -355,7 +395,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
     trilha.push(`catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual}`);
     /* Cada loja vista e o que ela daria, para conferir depois por que uma
        loja não virou opção. */
-    for (const c of [...candidatos].sort((a, b) => a.preco - b.preco).slice(0, 20)) {
+    for (const c of [...candidatos].sort((a, b) => a.preco - b.preco).slice(0, 30)) {
       const cupom = cupomDe(c.sellerId);
       trilha.push(`loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`);
     }
