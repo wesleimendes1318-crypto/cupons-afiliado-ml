@@ -2165,6 +2165,9 @@ async function atenderPedidos() {
           let motivoNaoProcurou = null;
           /* Outras lojas vistas, inclusive as mais caras (so exibicao). */
           let referencias = [];
+          /* Registro da busca fora do catalogo, para conferir de longe. */
+          let buscaFora = { rodou: false, motivo: null, vistos: 0 };
+          let apiAchou = false;
           const pausaLeitura = await freioLigado('leitura');
           /* A comparacao pela API oficial nao depende da pausa de leitura nem
              de ter lido o anuncio: ela so precisa do link. A pausa passa a
@@ -2198,7 +2201,7 @@ async function atenderPedidos() {
             /* A reserva roda tambem quando a API olhou o catalogo e nao achou
                nada melhor: o mesmo produto costuma estar anunciado FORA da
                ficha de catalogo, mais barato. Comparacao em 100% dos links. */
-            const apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
+            apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
             if (api && Array.isArray(api.referencias)) referencias = api.referencias;
             if (apiAchou) {
               alts = (api.opcoes || []).map(o => ({
@@ -2214,6 +2217,7 @@ async function atenderPedidos() {
                     Le a busca do Mercado Livre como uma pessoa faria, com
                     teto diario (LEITURA_RESERVA_POR_DIA). */
               await anotarGasto('comparacoes', 1);
+              buscaFora.rodou = true;
               try {
                 const temCupomAqui = !!(cupom && aval && aval.vale);
                 const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
@@ -2228,6 +2232,7 @@ async function atenderPedidos() {
                      gasta leitura de pagina repetindo o que ja foi visto. */
                   soBusca: !!(api && api.procurou)
                 });
+                buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
                 if (Array.isArray(alts.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
                   for (const t of alts.todas) {
@@ -2244,6 +2249,7 @@ async function atenderPedidos() {
               } catch (e) {
                 /* Se a API ja olhou o catalogo, a comparacao aconteceu: so a
                    busca extra falhou. */
+                buscaFora.motivo = 'falhou: ' + e.message;
                 if (!(api && api.procurou)) {
                   procurouOutra = false;
                   motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
@@ -2327,6 +2333,9 @@ async function atenderPedidos() {
             /* Para saber, de longe, qual versao atendeu este cliente. */
             versaoExtensao: chrome.runtime.getManifest().version,
             referencias: referencias,
+            buscaFora: apiAchou ? { rodou: false, motivo: 'a API ja achou loja melhor', vistos: 0 }
+              : buscaFora.rodou ? buscaFora
+              : { rodou: false, vistos: 0, motivo: pausaLeitura ? 'leitura pausada (freio/captcha)' : !a.ok ? 'anuncio nao lido' : 'teto do dia atingido' },
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,
