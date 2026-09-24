@@ -1835,9 +1835,19 @@ function diaSP() {
 
    Cada janela fica marcada no storage, entao roda uma vez e nao repete a cada
    10 minutos. */
-const JANELAS = ['01:00', '11:00', '17:30', '21:00'];
-const JANELA_DURACAO_MIN = 90;
-const ETIQUETAS_POR_JANELA = 150;
+/* v1.45 (24/09): UMA carga por dia, em horario de gente.
+
+   Eram quatro janelas (01:00, 11:00, 17:30, 21:00), cada uma baixando a lista
+   inteira (~665 chamadas) e criando ate 150 etiquetas que ninguem pediu. Isso
+   e o oposto de uso humano e coincidiu com captcha, 403 e o sumico do menu de
+   cupons. Agora:
+     - a lista de cupons carrega 1 vez por dia, a partir das 10:00; se o
+       computador estava desligado, carrega assim que ligar, ate as 21:00;
+     - etiqueta so nasce quando um cliente pede no site (ETIQUETAS_POR_JANELA
+       = 0). Para voltar ao lote automatico, basta subir este numero. */
+const JANELAS = ['10:00'];
+const JANELA_DURACAO_MIN = 11 * 60;
+const ETIQUETAS_POR_JANELA = 0;
 
 function minutosAgoraSP() {
   const hm = new Date().toLocaleTimeString('en-GB', {
@@ -1874,8 +1884,10 @@ async function rodadaDaJanela(janela) {
   try { await obterIndice(true); saida.indice = 'ok'; }
   catch (e) { saida.indice = 'falhou: ' + e.message; }
 
-  try { saida.etiquetas = await gerarEtiquetas(ETIQUETAS_POR_JANELA); }
-  catch (e) { saida.etiquetas = 'falhou: ' + e.message; }
+  if (ETIQUETAS_POR_JANELA > 0) {
+    try { saida.etiquetas = await gerarEtiquetas(ETIQUETAS_POR_JANELA); }
+    catch (e) { saida.etiquetas = 'falhou: ' + e.message; }
+  }
 
   console.log('[janela]', JSON.stringify(saida));
   return saida;

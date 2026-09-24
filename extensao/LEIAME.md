@@ -218,3 +218,10 @@ link de vitrine), a extensao consulta o cadastro no banco:
 - banco fora do ar: nao cria (na duvida, nao gera).
 Precisa da migracao `supabase/migrations/20260924010000_cadastro_de_geracoes.sql`
 aplicada no banco ANTES de instalar.
+
+### v1.45.0 - uma carga de cupons por dia
+
+A lista de cupons (os que entram e os que saem) carrega 1 vez por dia, a partir
+das 10:00 de Brasilia. Com o computador desligado nessa hora, carrega assim que
+ligar, ate as 21:00. Etiquetas deixam de ser criadas em lote: so quando um
+cliente pede no site.
