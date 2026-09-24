@@ -140,30 +140,56 @@ export const MAX_CANDIDATOS_BUSCA = 4;
 
 /* Resultados da busca que parecem o MESMO produto. Cada um vira
    { item, catalogo, url, preco, titulo }. */
-export function ofertasDaBusca(html, tituloOriginal, precoRef) {
-  const blocos = String(html).split(/ui-search-layout__item/);
+export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
+  const texto = String(html || '');
   const vistos = new Set();
   const saida = [];
+  const d = diag || {};
+  d.bytes = texto.length;
+  d.cartoes = 0; d.comEndereco = 0; d.comTitulo = 0; d.comPreco = 0; d.parecidos = 0; d.naFaixa = 0;
 
-  for (const b of blocos.slice(1)) {
-    const pedaco = b.slice(0, 12000);
-    const end = enderecoDoCartao(pedaco);
-    if (!end || vistos.has(end.item)) continue;
-
-    const tit = tituloDoCartao(pedaco);
-    if (!tit || !pareceMesmoProduto(tituloOriginal, tit)) continue;
-
-    const preco = precoDoCartao(pedaco);
-    if (preco == null) continue;
-
+  const aceitar = (end, tit, preco) => {
+    if (!end || vistos.has(end.item)) return;
+    d.comEndereco++;
+    if (!tit) return;
+    d.comTitulo++;
+    if (preco == null) return;
+    d.comPreco++;
+    if (!pareceMesmoProduto(tituloOriginal, tit)) return;
+    d.parecidos++;
     /* Preco absurdo em relacao ao que a pessoa esta vendo quase sempre e outro
        produto: acessorio, kit, unidade avulsa. Fora. */
-    if (precoRef != null && (preco < precoRef * 0.4 || preco > precoRef * 1.6)) continue;
-
+    if (precoRef != null && (preco < precoRef * 0.4 || preco > precoRef * 1.6)) return;
+    d.naFaixa++;
     vistos.add(end.item);
     saida.push({ ...end, preco, titulo: tit });
+  };
+
+  /* 1. Cartoes em HTML. O Mercado Livre ja mudou o nome do bloco mais de uma
+        vez: tenta os conhecidos, do mais antigo ao atual. */
+  let blocos = texto.split(/ui-search-layout__item/);
+  if (blocos.length <= 1) blocos = texto.split(/class="[^"]*poly-card[\s"]/);
+  if (blocos.length <= 1) blocos = texto.split(/ui-search-result__wrapper/);
+  d.cartoes = Math.max(0, blocos.length - 1);
+  for (const b of blocos.slice(1)) {
     if (saida.length >= 30) break;
+    const pedaco = b.slice(0, 12000);
+    aceitar(enderecoDoCartao(pedaco), tituloDoCartao(pedaco), precoDoCartao(pedaco));
   }
+
+  /* 2. Dados da pagina (JSON dos polycards), quando o HTML nao trouxe nada. */
+  if (!saida.length) {
+    const reCard = /"metadata"\s*:\s*\{[^{}]*?"url"\s*:\s*"([^"]+)"[\s\S]{0,4000}?"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{8,250})"[\s\S]{0,4000}?"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/g;
+    let m, n = 0;
+    while ((m = reCard.exec(texto)) && n < 60) {
+      n++;
+      let url = desescapar(m[1]);
+      if (!/^https?:/i.test(url)) url = 'https://' + url.replace(/^\/+/, '');
+      aceitar(enderecoDoCartao('href="' + url + '"'), desescapar(m[2]), parseFloat(m[3]));
+    }
+    d.cartoesJson = n;
+  }
+
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
   return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_BUSCA);
 }

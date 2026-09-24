@@ -1080,7 +1080,7 @@ function MelhorOpcao({
         {comparadas > 0
           ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
           : comparadas === 0
-            ? "Procurei este mesmo produto em outras lojas e só esta vende hoje."
+            ? "Não encontrei este mesmo produto mais barato em outra loja do Mercado Livre."
             : `Comparei com as outras lojas que vendem este mesmo produto e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
       </p>
       <div className="mt-2 flex items-baseline justify-between gap-3 rounded-md border border-success/30 bg-card px-3 py-2 text-sm">

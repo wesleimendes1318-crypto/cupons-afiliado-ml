@@ -212,3 +212,15 @@ test('variacao escolhida: pelos dados da pagina', () => {
 test('variacao escolhida: anuncio sem variacao', () => {
   assert.equal(variacaoEscolhida('<h1>Óleo Wella 100ml</h1>'), null);
 });
+
+test('busca: cai para os dados da pagina quando nao ha cartao em HTML', () => {
+  const html = '<script>{"results":[{"polycard":{"metadata":{"id":"MLB5555555555","url":"produto.mercadolivre.com.br/MLB-5555555555-escorredor-_JM#wid=MLB5555555555"},'
+    + '"components":[{"type":"title","title":{"text":"Escorredor De Louça Suspenso Preto 65 Cm Em Aço Carbono"}},'
+    + '{"type":"price","price":{"current_price":{"value":139.65,"currency":"BRL"}}}]}}]}</script>';
+  const diag = {};
+  const r = ofertasDaBusca(html, 'Escorredor Louca Suspenso Preto 65 Cm Em Aço Carbono', 135, diag);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].item, 'MLB5555555555');
+  assert.equal(r[0].preco, 139.65);
+  assert.equal(diag.cartoes, 0);
+});

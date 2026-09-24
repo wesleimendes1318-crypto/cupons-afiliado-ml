@@ -1678,7 +1678,7 @@ const MAX_CATALOGO = 900000;
    v1.39: captcha agora e ERRO, nao pagina vazia. Antes o muro de verificacao
    voltava como um HTML sem ofertas, a comparacao concluia "nenhuma loja
    melhor" e o site dizia ao cliente que tinha procurado. Nao tinha. */
-async function lerCatalogo(url) {
+async function lerCatalogo(url, limite = MAX_CATALOGO) {
   const ctrl = new AbortController();
   const corta = setTimeout(() => ctrl.abort(), 25000);
   let r;
@@ -1697,7 +1697,7 @@ async function lerCatalogo(url) {
       if (done) break;
       bytes += value.length;
       buf += dec.decode(value, { stream: true });
-      if (bytes > MAX_CATALOGO) { ctrl.abort(); break; }
+      if (bytes > limite) { ctrl.abort(); break; }
     }
   } catch (e) { /* abort gera excecao, esperado */ }
 
@@ -1758,10 +1758,16 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
 /* Procura o mesmo produto na busca do Mercado Livre, como uma pessoa faria.
    Ritmo de gente: uma busca, no maximo seis candidatos. */
 async function achadosNaBusca(titulo, precoRef, itemAtual) {
-  const html = await lerCatalogo(urlDeBusca(titulo));
-  const candidatos = ofertasDaBusca(html, titulo, precoRef);
-  if (!candidatos.length) return [];
-  return avaliarCandidatos(candidatos, itemAtual, { achadoNaBusca: true });
+  /* Pagina de busca e grande (varios cartoes + dados): le ate 3 MB. */
+  const html = await lerCatalogo(urlDeBusca(titulo), 3000000);
+  /* Contagem de cada etapa da leitura, gravada no pedido: se a busca vier
+     vazia de novo, da para saber onde parou (24/09: 0 anuncios lidos). */
+  const diag = {};
+  const candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
+  if (!candidatos.length) { const vazio = []; vazio.diag = diag; return vazio; }
+  const achados = await avaliarCandidatos(candidatos, itemAtual, { achadoNaBusca: true });
+  achados.diag = diag;
+  return achados;
 }
 
 /* Devolve ATE TRES alternativas (ver escolherAlternativas em comparador.js).
@@ -1782,6 +1788,7 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
     const escolha = escolherAlternativas(daBusca, { ...ctx, itemAtual });
     /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */
     escolha.todas = daBusca;
+    escolha.diag = daBusca.diag || null;
     return escolha;
   }
 
@@ -2247,6 +2254,7 @@ async function atenderPedidos() {
                   soBusca: !!(api && api.procurou)
                 });
                 buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
+                buscaFora.leitura = alts.diag || null;
                 if (Array.isArray(alts.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
                   for (const t of alts.todas) {
