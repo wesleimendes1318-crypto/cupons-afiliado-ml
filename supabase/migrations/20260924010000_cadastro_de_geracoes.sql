@@ -31,12 +31,12 @@ CREATE TABLE IF NOT EXISTS public.geracoes (
 CREATE INDEX IF NOT EXISTS geracoes_dia ON public.geracoes (tipo, criado_em);
 ALTER TABLE public.geracoes ENABLE ROW LEVEL SECURITY;  -- so as funcoes abaixo mexem
 
-INSERT INTO public.limites (chave, valor) VALUES
-  ('pausa_geral', 0),                  -- 1 = nada novo e criado no Mercado Livre
-  ('gerar_link_por_dia', 250),
-  ('gerar_link_vitrine_por_dia', 60),
-  ('gerar_etiqueta_por_dia', 250)
-ON CONFLICT (chave) DO NOTHING;
+-- pausa_geral: 1 = nada novo e criado no Mercado Livre
+INSERT INTO public.limites (chave, valor)
+SELECT v.chave, v.valor
+  FROM (VALUES ('pausa_geral', 0), ('gerar_link_por_dia', 250),
+               ('gerar_link_vitrine_por_dia', 60), ('gerar_etiqueta_por_dia', 250)) AS v(chave, valor)
+ WHERE NOT EXISTS (SELECT 1 FROM public.limites l WHERE l.chave = v.chave);
 
 CREATE OR REPLACE FUNCTION public.reservar_geracao(p_token text, p_tipo text, p_chave text)
  RETURNS jsonb
