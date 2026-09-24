@@ -245,3 +245,12 @@ responde (outras lojas do mesmo produto); `/items/{id}` de outra conta e
 `/sites/MLB/search` respondem 403. A comparacao automatica vale para produto
 de CATALOGO. A extensao manda ao servidor o catalogo, o preco e a loja que ja
 leu na pagina colada pelo cliente.
+
+### v1.48.0 - link de compartilhamento de afiliado (meli.la que abre o perfil)
+
+O meli.la do "Compartilhar" de afiliado abre o perfil social com o produto em
+destaque. A extensao agora procura esse produto no endereco (inclusive em
+parametro codificado) ou na pagina, SO quando ele aparece sem ambiguidade, e
+segue para o anuncio. Sem certeza, pede o link do produto. E nenhum link e
+gerado quando o anuncio nao foi lido (antes, devolvia o proprio meli.la colado,
+que podia ser de outro afiliado).

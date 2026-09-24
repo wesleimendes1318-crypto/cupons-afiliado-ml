@@ -277,3 +277,42 @@ export function lojaDoAnuncio(html) {
   if (cust) saida.push('https://lista.mercadolivre.com.br/_CustId_' + cust[1]);
   return saida;
 }
+
+/* ------------------------------------ link de compartilhamento de afiliado
+
+   O "Compartilhar" do programa de afiliados gera um meli.la que, aberto, cai
+   no PERFIL SOCIAL do afiliado (/social/<apelido>?...), com o produto em
+   destaque. Colar esse link no site dava "isso e um perfil, nao um produto".
+   Aqui se tenta achar O produto compartilhado, sem chutar:
+     1. no proprio endereco (parametros, inclusive codificados em base64);
+     2. na pagina, SO se ela citar um unico anuncio (sem ambiguidade).
+   Nao achou com certeza: devolve null, e o site pede o link do produto. */
+function base64Seguro(s) {
+  try {
+    const t = String(s).replace(/-/g, '+').replace(/_/g, '/');
+    if (!/^[A-Za-z0-9+/=]{16,}$/.test(t)) return '';
+    return typeof atob === 'function' ? atob(t) : Buffer.from(t, 'base64').toString('utf8');
+  } catch (e) { return ''; }
+}
+
+function produtoNoTexto(t) {
+  const s = desescapar(decodeURIComponentSeguro(String(t || '')));
+  const cat = /\/p\/(MLB\d{5,})/i.exec(s);
+  const item = itemDoUrl(s);
+  if (cat) return urlDaOferta(cat[1].toUpperCase(), item || '').replace(/\?pdp_filters=item_id%3A$/, '');
+  if (item) return 'https://produto.mercadolivre.com.br/' + item.replace(/^MLB/, 'MLB-');
+  const solto = /\bMLB-?(\d{8,})\b/i.exec(s);
+  return solto ? 'https://produto.mercadolivre.com.br/MLB-' + solto[1] : null;
+}
+
+export function produtoDoPerfilSocial(urlFinal, html) {
+  let u;
+  try { u = new URL(urlFinal); } catch (e) { return null; }
+  for (const [, v] of u.searchParams) {
+    const achado = produtoNoTexto(v) || produtoNoTexto(base64Seguro(v));
+    if (achado) return achado;
+  }
+  const ids = new Set([...String(html || '').matchAll(/\bMLB-?(\d{8,})\b/gi)].map(m => m[1]));
+  if (ids.size === 1) return 'https://produto.mercadolivre.com.br/MLB-' + [...ids][0];
+  return null;
+}

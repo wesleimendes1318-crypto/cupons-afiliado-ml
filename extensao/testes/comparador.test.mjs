@@ -148,3 +148,23 @@ test('loja do anuncio: pagina e _CustId_', () => {
     'https://lista.mercadolivre.com.br/pagina/k4p5vnd2/',
     'https://lista.mercadolivre.com.br/_CustId_1788447429']);
 });
+
+import { produtoDoPerfilSocial } from '../comparador.js';
+
+test('perfil social: produto no parametro do endereco', () => {
+  assert.equal(produtoDoPerfilSocial(
+    'https://www.mercadolivre.com.br/social/wesleimendes?matt_tool=1&ref=https%3A%2F%2Fwww.mercadolivre.com.br%2Fp%2FMLB19486347%3Fpdp_filters%3Ditem_id%3AMLB5365421378', ''),
+    'https://www.mercadolivre.com.br/p/MLB19486347?pdp_filters=item_id%3AMLB5365421378');
+});
+
+test('perfil social: produto em base64 no endereco', () => {
+  const b = Buffer.from('https://produto.mercadolivre.com.br/MLB-4739054961-capa').toString('base64');
+  assert.equal(produtoDoPerfilSocial('https://www.mercadolivre.com.br/social/x?ref=' + encodeURIComponent(b), ''),
+    'https://produto.mercadolivre.com.br/MLB-4739054961');
+});
+
+test('perfil social: pagina com varios produtos nao chuta', () => {
+  assert.equal(produtoDoPerfilSocial('https://www.mercadolivre.com.br/social/x', 'MLB1234567890 MLB2234567890'), null);
+  assert.equal(produtoDoPerfilSocial('https://www.mercadolivre.com.br/social/x', 'so o MLB1234567890 aqui'),
+    'https://produto.mercadolivre.com.br/MLB-1234567890');
+});

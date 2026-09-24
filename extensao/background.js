@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
-         primeiroAnuncioDaLista, lojaDoAnuncio } from './comparador.js';
+         primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -561,7 +561,7 @@ function extrairAnuncio(t, finalUrl, status) {
 
 /* Le o anuncio a partir do service worker. Segue redirecionamento, entao um
    meli.la chega aqui e sai como a url final do produto. */
-async function lerAnuncioNoWorker(url) {
+async function lerAnuncioNoWorker(url, profundidade = 0) {
   const ctrl = new AbortController();
   const corta = setTimeout(() => ctrl.abort(), 25000);
   try {
@@ -604,8 +604,14 @@ async function lerAnuncioNoWorker(url) {
     }
 
     if (/\/social\/[^/?#]+/i.test(r.url)) {
+      /* Link de "Compartilhar" do programa de afiliados: cai no perfil social
+         com o produto em destaque. Se o produto aparece sem ambiguidade (no
+         endereco, ou unico na pagina), segue para ele. Uma vez so. */
+      const produto = profundidade === 0 ? produtoDoPerfilSocial(r.url, buf) : null;
+      if (produto) return lerAnuncioNoWorker(produto, 1);
       return { ok: false, perfilSocial: true,
-               falha: 'esse link abre um perfil do Mercado Livre, nao um produto' };
+               falha: 'esse link abre um perfil do Mercado Livre, nao um produto (destino: '
+                      + String(r.url).split('?')[0].slice(0, 120) + ')' };
     }
 
     return extrairAnuncio(buf, r.url, r.status);
@@ -2043,7 +2049,9 @@ async function atenderPedidos() {
                 pagina, que so funciona quando a origem bate mas as vezes ve
                 conteudo que o worker nao ve. */
           let a = await lerAnuncioNoWorker(url);
-          if (!a.ok || !(a.nomes && a.nomes.length)) {
+          /* Perfil social e captcha nao tem plano B: ler a pagina pela aba
+             pegaria um produto qualquer da vitrine, ou insistiria no muro. */
+          if (!a.perfilSocial && !a.captcha && (!a.ok || !(a.nomes && a.nomes.length))) {
             const [saida] = await chrome.scripting.executeScript({
               target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
             });
@@ -2084,6 +2092,10 @@ async function atenderPedidos() {
           let r = { link: null, codigo: null };
           let linkFalhou = null;
           try {
+            /* Sem ler o anuncio nao se gera link: o "alvo" seria o proprio
+               link colado, que pode ser de OUTRO afiliado (visto em 24/09 com
+               um meli.la de compartilhamento). */
+            if (!a.ok) throw new Error('nao gerei link: o anuncio nao foi lido');
             r = await gerarNaAba(tabId, alvoDoLink, TAG_PADRAO);
           } catch (e) {
             linkFalhou = e.message || String(e);
