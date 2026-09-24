@@ -18,7 +18,7 @@ import {
   type CupomIndexado,
 } from "@/routes/index";
 
-const BASE = "https://cupons-afiliado-ml.lovable.app/categorias";
+const BASE = "https://melhorescolha.io/categorias";
 
 export const Route = createFileRoute("/categorias/$slug")({
   loader: ({ params }) => {

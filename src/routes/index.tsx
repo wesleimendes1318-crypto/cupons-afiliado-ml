@@ -24,30 +24,30 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Comparador de preços — o mesmo produto, a loja mais barata" },
+      { title: "Melhor Escolha — o mesmo produto, na loja mais barata" },
       {
         name: "description",
         content:
           "Cole o link de um produto e veja o mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Comparador de preços — @WSLMENDES" },
+      { property: "og:title", content: "Melhor Escolha — comparador de preços e cupons" },
       {
         property: "og:description",
         content: "O mesmo produto em outras lojas, com a diferença de preço de cada uma.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://cupons-afiliado-ml.lovable.app/" },
+      { property: "og:url", content: "https://melhorescolha.io/" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://cupons-afiliado-ml.lovable.app/" }],
+    links: [{ rel: "canonical", href: "https://melhorescolha.io/" }],
     scripts: [
       {
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "Comparador de preços — @WSLMENDES",
-          url: "https://cupons-afiliado-ml.lovable.app/",
+          name: "Melhor Escolha",
+          url: "https://melhorescolha.io/",
           inLanguage: "pt-BR",
           description:
             "Ferramenta independente que compara o preço do mesmo produto entre lojas.",
@@ -1356,7 +1356,7 @@ function Index() {
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Comparador de preços — por{" "}
+                Melhor Escolha: compare preços — por{" "}
                 <a
                   href="https://www.instagram.com/wslmendes/"
                   target="_blank"

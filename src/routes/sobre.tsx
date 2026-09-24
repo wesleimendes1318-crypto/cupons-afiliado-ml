@@ -2,19 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/sobre";
+const URL = "https://melhorescolha.io/sobre";
 
 export const Route = createFileRoute("/sobre")({
   component: Sobre,
   head: () => ({
     meta: [
-      { title: "Sobre o site — Cupons de Lojas Afiliadas" },
+      { title: "Sobre o site — Melhor Escolha" },
       {
         name: "description",
         content:
           "Quem mantém o site, de onde vêm os dados dos cupons e o que prometemos (e o que não prometemos) a quem usa.",
       },
-      { property: "og:title", content: "Sobre o site — Cupons de Lojas Afiliadas" },
+      { property: "og:title", content: "Sobre o site — Melhor Escolha" },
       {
         property: "og:description",
         content: "Quem mantém o site, de onde vêm os dados dos cupons e como o site se sustenta.",

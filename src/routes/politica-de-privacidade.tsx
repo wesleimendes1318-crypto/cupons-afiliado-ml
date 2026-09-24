@@ -3,13 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { abrirPreferencias } from "@/lib/consentimento";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/politica-de-privacidade";
+const URL = "https://melhorescolha.io/politica-de-privacidade";
 
 export const Route = createFileRoute("/politica-de-privacidade")({
   component: Privacidade,
   head: () => ({
     meta: [
-      { title: "Política de Privacidade — Cupons de Lojas Afiliadas" },
+      { title: "Política de Privacidade — Melhor Escolha" },
       {
         name: "description",
         content:

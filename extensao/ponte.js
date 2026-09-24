@@ -12,11 +12,12 @@
    Nao ha dado sensivel nessa mensagem - e so um "tem pedido novo" - mas o
    filtro evita que outra aba qualquer faca a extensao trabalhar. */
 
-const SITE = 'https://cupons-afiliado-ml.lovable.app';
+/* Enderecos do site: o antigo (lovable.app) e o dominio proprio. */
+const SITES = ['https://cupons-afiliado-ml.lovable.app', 'https://melhorescolha.io', 'https://www.melhorescolha.io'];
 
 window.addEventListener('message', (evento) => {
   if (evento.source !== window) return;
-  if (evento.origin !== SITE) return;
+  if (!SITES.includes(evento.origin)) return;
   const dado = evento.data;
   if (!dado || dado.de !== 'cupons-afiliado-ml' || dado.tipo !== 'pedido-novo') return;
 
@@ -29,4 +30,6 @@ window.addEventListener('message', (evento) => {
 });
 
 // Deixa o site saber que a extensao esta viva, para ajustar o texto de espera.
-window.postMessage({ de: 'extensao-cupons-ml', tipo: 'pronta' }, SITE);
+if (SITES.includes(window.location.origin)) {
+  window.postMessage({ de: 'extensao-cupons-ml', tipo: 'pronta' }, window.location.origin);
+}

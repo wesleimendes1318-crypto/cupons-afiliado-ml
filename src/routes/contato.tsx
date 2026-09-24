@@ -2,13 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/contato";
+const URL = "https://melhorescolha.io/contato";
 
 export const Route = createFileRoute("/contato")({
   component: Contato,
   head: () => ({
     meta: [
-      { title: "Contato — Cupons de Lojas Afiliadas" },
+      { title: "Contato — Melhor Escolha" },
       {
         name: "description",
         content:

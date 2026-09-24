@@ -5,7 +5,7 @@ import { AdInArticle } from "@/components/anuncios/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { buscarGuia, GUIAS, type Bloco } from "@/content/guias";
 
-const BASE = "https://cupons-afiliado-ml.lovable.app/guias";
+const BASE = "https://melhorescolha.io/guias";
 
 export const Route = createFileRoute("/guias/$slug")({
   loader: ({ params }) => {

@@ -3,13 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { abrirPreferencias } from "@/lib/consentimento";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/politica-de-cookies";
+const URL = "https://melhorescolha.io/politica-de-cookies";
 
 export const Route = createFileRoute("/politica-de-cookies")({
   component: Cookies,
   head: () => ({
     meta: [
-      { title: "Política de Cookies — Cupons de Lojas Afiliadas" },
+      { title: "Política de Cookies — Melhor Escolha" },
       {
         name: "description",
         content:

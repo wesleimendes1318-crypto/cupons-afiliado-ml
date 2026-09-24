@@ -2,13 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/termos-de-uso";
+const URL = "https://melhorescolha.io/termos-de-uso";
 
 export const Route = createFileRoute("/termos-de-uso")({
   component: Termos,
   head: () => ({
     meta: [
-      { title: "Termos de Uso — Cupons de Lojas Afiliadas" },
+      { title: "Termos de Uso — Melhor Escolha" },
       {
         name: "description",
         content:

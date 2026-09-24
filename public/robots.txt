@@ -14,4 +14,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://cupons-afiliado-ml.lovable.app/sitemap.xml
+Sitemap: https://melhorescolha.io/sitemap.xml

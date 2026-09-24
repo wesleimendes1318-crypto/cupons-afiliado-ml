@@ -79,12 +79,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Comparador de preços — @WSLMENDES" },
+      { title: "Melhor Escolha — comparador de preços e cupons" },
       {
         name: "description",
         content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Comparador de preços — @WSLMENDES" },
+      { property: "og:title", content: "Melhor Escolha — comparador de preços e cupons" },
       {
         property: "og:description",
         content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",

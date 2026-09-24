@@ -14,7 +14,7 @@ import {
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { CATEGORIAS } from "@/content/categorias";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/categorias";
+const URL = "https://melhorescolha.io/categorias";
 
 export const ICONE_CATEGORIA: Record<string, LucideIcon> = {
   eletronicos: Tv,

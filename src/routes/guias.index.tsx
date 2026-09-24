@@ -4,13 +4,13 @@ import { ArrowRight, BookOpen } from "lucide-react";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { GUIAS } from "@/content/guias";
 
-const URL = "https://cupons-afiliado-ml.lovable.app/guias";
+const URL = "https://melhorescolha.io/guias";
 
 export const Route = createFileRoute("/guias/")({
   component: Guias,
   head: () => ({
     meta: [
-      { title: "Guias de cupons e economia real — Cupons de Lojas Afiliadas" },
+      { title: "Guias de cupons e economia real — Melhor Escolha" },
       {
         name: "description",
         content:
