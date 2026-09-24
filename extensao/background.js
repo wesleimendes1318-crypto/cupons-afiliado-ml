@@ -1775,6 +1775,12 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
   const itemAtual = ctx.itemAtual || itemDoUrl(urlProduto);
   let cat = (RE_CATALOGO.exec(urlProduto) || [])[1] || null;
   let html = null;
+  if (ctx.soBusca) {
+    const titulo = ctx.titulo;
+    if (!titulo) return [];
+    const daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual);
+    return escolherAlternativas(daBusca, { ...ctx, itemAtual });
+  }
 
   if (!cat) {
     html = await lerCatalogo(urlProduto);
@@ -1851,7 +1857,7 @@ const TETO_DIA_LOJAS = 60;
    sempre). So roda quando a API oficial nao achou o produto em nenhuma ficha
    de catalogo, com teto diario e com o freio de captcha de sempre: se o
    Mercado Livre pedir verificacao, para tudo e avisa. */
-const LEITURA_RESERVA_POR_DIA = 40;
+const LEITURA_RESERVA_POR_DIA = 120;
 const LOTE_LOJAS = 8;
 
 function diaSP() {
@@ -2181,7 +2187,11 @@ async function atenderPedidos() {
               catalogoPagina: a.catalogoPagina || null,
               variacao: a.variacao || null
             });
-            if (api && api.procurou) {
+            /* A reserva roda tambem quando a API olhou o catalogo e nao achou
+               nada melhor: o mesmo produto costuma estar anunciado FORA da
+               ficha de catalogo, mais barato. Comparacao em 100% dos links. */
+            const apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
+            if (apiAchou) {
               alts = (api.opcoes || []).map(o => ({
                 item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
                 economia: o.economia, final: o.final, ganho: o.ganho, finalAtual: o.finalAtual,
@@ -2204,13 +2214,20 @@ async function atenderPedidos() {
                   /* Com a variacao marcada (Edge 70, 110V...), senao a busca
                      traz o produto de outro modelo. */
                   titulo: [a.titulo, a.variacao].filter(Boolean).join(' ') || null,
-                  itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null
+                  itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
+                  /* A API ja olhou o catalogo: vai direto para a busca e nao
+                     gasta leitura de pagina repetindo o que ja foi visto. */
+                  soBusca: !!(api && api.procurou)
                 });
               } catch (e) {
-                procurouOutra = false;
-                motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
+                /* Se a API ja olhou o catalogo, a comparacao aconteceu: so a
+                   busca extra falhou. */
+                if (!(api && api.procurou)) {
+                  procurouOutra = false;
+                  motivoNaoProcurou = 'a busca no Mercado Livre falhou: ' + e.message;
+                }
               }
-            } else {
+            } else if (!(api && api.procurou)) {
               procurouOutra = false;
               motivoNaoProcurou = (api && api.motivo) || 'comparacao indisponivel agora';
             }

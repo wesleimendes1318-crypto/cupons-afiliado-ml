@@ -134,7 +134,9 @@ function enderecoDoCartao(pedaco) {
   return null;
 }
 
-export const MAX_CANDIDATOS_BUSCA = 6;
+/* Quantos anuncios da busca sao abertos para ler a loja: os MAIS BARATOS entre
+   os que parecem o mesmo produto (cada um e uma leitura de pagina). */
+export const MAX_CANDIDATOS_BUSCA = 4;
 
 /* Resultados da busca que parecem o MESMO produto. Cada um vira
    { item, catalogo, url, preco, titulo }. */
@@ -160,9 +162,10 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef) {
 
     vistos.add(end.item);
     saida.push({ ...end, preco, titulo: tit });
-    if (saida.length >= MAX_CANDIDATOS_BUSCA) break;
+    if (saida.length >= 30) break;
   }
-  return saida;
+  /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
+  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_BUSCA);
 }
 
 /* Ofertas do MESMO produto de catalogo (bloco buy_box_offers da pagina /p/).
