@@ -1813,14 +1813,17 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
 
   let escolha = escolherAlternativas(achados, { ...ctx, itemAtual });
   let todas = achados;
+  let diag = null;
   if (!escolha.length && titulo) {
     let daBusca = [];
     try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual); }
     catch (e) { if (!achados.length) throw e; }
+    diag = daBusca.diag || null;
     todas = achados.concat(daBusca);
     escolha = escolherAlternativas(todas, { ...ctx, itemAtual });
   }
   escolha.todas = todas;
+  escolha.diag = diag;
   return escolha;
 }
 
