@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, Lo
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
+import { Vitrine } from "@/components/Vitrine";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Button } from "@/components/ui/button";
 import {
@@ -1485,6 +1486,8 @@ function Index() {
 
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
         <BuscaPorLink />
+
+        <Vitrine />
 
         {MOSTRAR_CUPONS && (<>
         <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Assistente de cupons">

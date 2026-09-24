@@ -502,6 +502,20 @@ export default function BuscaPorLink() {
     [limparTimers],
   );
 
+  /* A vitrine pede "comparar de novo" um produto: coloca o link na caixa,
+     rola até ela e compara. */
+  useEffect(() => {
+    const ouvir = (e: Event) => {
+      const alvo = (e as CustomEvent<string>).detail;
+      if (typeof alvo !== "string" || !alvo) return;
+      setUrl(alvo);
+      document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      void buscar(alvo);
+    };
+    window.addEventListener("comparar-link", ouvir);
+    return () => window.removeEventListener("comparar-link", ouvir);
+  }, [buscar]);
+
   const copiar = (texto: string, marca: string) => {
     navigator.clipboard
       .writeText(texto)

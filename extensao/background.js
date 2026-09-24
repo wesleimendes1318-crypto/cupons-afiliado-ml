@@ -577,8 +577,19 @@ function extrairAnuncio(t, finalUrl, status) {
      tipo de link que o cliente colou. */
   const ident = identificadoresDoAnuncio(t);
 
+  /* Foto e categoria, para a vitrine de produtos ja pesquisados no site. */
+  const img = /property="og:image"\s+content="([^"]+)"/i.exec(t) || /content="([^"]+)"\s+property="og:image"/i.exec(t);
+  let imagem = img ? limpo(img[1]) : null;
+  if (imagem && !/^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(imagem)) imagem = null;
+  const categorias = [...t.matchAll(/class="andes-breadcrumb__link"[^>]*>([^<]{2,80})</g)].map(m => limpo(m[1])).filter(Boolean);
+  if (!categorias.length) {
+    const bc = /"@type"\s*:\s*"BreadcrumbList"[\s\S]{0,4000}?\]/.exec(t);
+    if (bc) for (const m of bc[0].matchAll(/"name"\s*:\s*"([^"]{2,80})"/g)) categorias.push(limpo(m[1]));
+  }
+
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes,
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
+           imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
            variacao: variacaoEscolhida(t) };
 }
@@ -2454,6 +2465,10 @@ async function atenderPedidos() {
             motivoNaoProcurou: motivoNaoProcurou,
             /* Para saber, de longe, qual versao atendeu este cliente. */
             versaoExtensao: chrome.runtime.getManifest().version,
+            /* Para a vitrine do site. */
+            imagem: a.imagem || null,
+            categoria: (a.categorias && a.categorias[0]) || null,
+            categorias: a.categorias || [],
             referencias: referencias,
             buscaFora: apiAchou ? { rodou: false, motivo: 'a API ja achou loja melhor', vistos: 0 }
               : buscaFora.rodou ? buscaFora
