@@ -924,6 +924,11 @@ async function carregarCupons(): Promise<Cupom[]> {
   return todos;
 }
 
+/* Lista de cupons, etiquetas e categorias fora do ar (pedido do Weslei, 24/09):
+   enquanto as etiquetas estão bloqueadas pelo Mercado Livre, o cliente vê só a
+   caixa de colar o link. Voltar para true quando as etiquetas funcionarem. */
+const MOSTRAR_CUPONS = false;
+
 function Index() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["cupons"],
@@ -1392,7 +1397,7 @@ function Index() {
                 </Button>
                 <nav aria-label="Conteúdo do site" className="flex flex-wrap gap-2">
                   {[
-                    { para: "/categorias" as const, texto: "Categorias" },
+                    ...(MOSTRAR_CUPONS ? [{ para: "/categorias" as const, texto: "Categorias" }] : []),
                     { para: "/guias" as const, texto: "Guias" },
                     { para: "/sobre" as const, texto: "Sobre" },
                   ].map((item) => (
@@ -1434,6 +1439,7 @@ function Index() {
         </div>
       </header>
 
+      {MOSTRAR_CUPONS && (
       <nav aria-label="Categorias" className="border-b border-border bg-card">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -1465,6 +1471,7 @@ function Index() {
           </div>
         </div>
       </nav>
+      )}
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5">
@@ -1491,6 +1498,7 @@ function Index() {
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
         <BuscaPorLink />
 
+        {MOSTRAR_CUPONS && (<>
         <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Assistente de cupons">
           <div className="flex items-center gap-2">
             <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
@@ -2109,6 +2117,7 @@ function Index() {
             </>
           )}
         </section>
+        </>)}
       </main>
 
       <section aria-label="Guias de compra" className="border-y border-border bg-card">
