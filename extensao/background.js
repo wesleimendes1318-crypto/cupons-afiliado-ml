@@ -1779,7 +1779,10 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
     const titulo = ctx.titulo;
     if (!titulo) return [];
     const daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual);
-    return escolherAlternativas(daBusca, { ...ctx, itemAtual });
+    const escolha = escolherAlternativas(daBusca, { ...ctx, itemAtual });
+    /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */
+    escolha.todas = daBusca;
+    return escolha;
   }
 
   if (!cat) {
@@ -1802,12 +1805,15 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
   }
 
   let escolha = escolherAlternativas(achados, { ...ctx, itemAtual });
+  let todas = achados;
   if (!escolha.length && titulo) {
     let daBusca = [];
     try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual); }
     catch (e) { if (!achados.length) throw e; }
-    escolha = escolherAlternativas(achados.concat(daBusca), { ...ctx, itemAtual });
+    todas = achados.concat(daBusca);
+    escolha = escolherAlternativas(todas, { ...ctx, itemAtual });
   }
+  escolha.todas = todas;
   return escolha;
 }
 
@@ -2157,6 +2163,8 @@ async function atenderPedidos() {
              cupom", sem uma palavra sobre as outras lojas. */
           let procurouOutra = false;
           let motivoNaoProcurou = null;
+          /* Outras lojas vistas, inclusive as mais caras (so exibicao). */
+          let referencias = [];
           const pausaLeitura = await freioLigado('leitura');
           /* A comparacao pela API oficial nao depende da pausa de leitura nem
              de ter lido o anuncio: ela so precisa do link. A pausa passa a
@@ -2191,6 +2199,7 @@ async function atenderPedidos() {
                nada melhor: o mesmo produto costuma estar anunciado FORA da
                ficha de catalogo, mais barato. Comparacao em 100% dos links. */
             const apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
+            if (api && Array.isArray(api.referencias)) referencias = api.referencias;
             if (apiAchou) {
               alts = (api.opcoes || []).map(o => ({
                 item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
@@ -2219,6 +2228,19 @@ async function atenderPedidos() {
                      gasta leitura de pagina repetindo o que ja foi visto. */
                   soBusca: !!(api && api.procurou)
                 });
+                if (Array.isArray(alts.todas)) {
+                  const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
+                  for (const t of alts.todas) {
+                    if (t.final == null || vistos.has((t.vendedor || '').toLowerCase())) continue;
+                    if (vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase()) continue;
+                    vistos.add((t.vendedor || '').toLowerCase());
+                    referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final,
+                      diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
+                      cupom: t.cupom ? t.cupom.titulo : null });
+                  }
+                  referencias.sort((x, y) => x.final - y.final);
+                  referencias = referencias.slice(0, 6);
+                }
               } catch (e) {
                 /* Se a API ja olhou o catalogo, a comparacao aconteceu: so a
                    busca extra falhou. */
@@ -2304,6 +2326,7 @@ async function atenderPedidos() {
             motivoNaoProcurou: motivoNaoProcurou,
             /* Para saber, de longe, qual versao atendeu este cliente. */
             versaoExtensao: chrome.runtime.getManifest().version,
+            referencias: referencias,
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,

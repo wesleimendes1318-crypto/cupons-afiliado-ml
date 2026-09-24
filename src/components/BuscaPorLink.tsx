@@ -140,6 +140,18 @@ type Analise = {
   outraFalhou?: string | null;
   /* Preenchido quando o produto foi lido mas o link de afiliado não saiu. */
   linkFalhou?: string | null;
+  /* Todas as outras lojas vistas com o mesmo produto, inclusive as mais
+     caras. Só exibição: a pessoa vê que comparei e quanto pagaria a mais. */
+  referencias?: Referencia[] | null;
+};
+
+type Referencia = {
+  vendedor: string | null;
+  preco: number | null;
+  final: number | null;
+  /* final lá menos final aqui: positivo = lá sai mais caro. */
+  diferenca: number | null;
+  cupom: string | null;
 };
 
 type Pedido = {
@@ -835,6 +847,15 @@ function Resultado({
      venda de graca, e a frase sobre comissao viraria mentira. */
   const semLink = !link || !!a?.linkFalhou;
 
+  /* Comparei e a loja do anúncio já é a melhor: ela vira o cartão principal
+     ("Melhor opção"), com o botão do link, e as outras lojas aparecem abaixo
+     em vermelho, com quanto sairia a mais em cada uma. */
+  const nomesAlternativas = new Set(alternativas.map((o) => (o.vendedor ?? "").toLowerCase()));
+  const referencias = (a?.referencias ?? []).filter(
+    (r) => r.final != null && !nomesAlternativas.has((r.vendedor ?? "").toLowerCase()),
+  );
+  const estaEAMelhor = !leituraFalhou && !semLink && alternativas.length === 0 && a?.procurouOutra === true;
+
   return (
     <div className="mt-4 rounded-lg border border-border p-4">
       {a?.titulo && (
@@ -858,7 +879,23 @@ function Resultado({
         />
       ))}
 
-      <CondicoesDoCupom analise={a} />
+      {estaEAMelhor && (
+        <MelhorOpcao
+          vendedor={a?.vendedor ?? null}
+          preco={a?.preco ?? null}
+          link={link}
+          dispositivo={dispositivo}
+          temCupom={a?.temCupom === true}
+          /* -1: pedido de versão antiga, sem a lista de lojas. */
+          comparadas={a?.referencias ? referencias.length : -1}
+        />
+      )}
+
+      {(a?.procurouOutra === true || alternativas.length > 0) && !leituraFalhou && (
+        <OutrasLojasMaisCaras referencias={referencias} temAlternativa={alternativas.length > 0} />
+      )}
+
+      {(!estaEAMelhor || a?.temCupom === true) && <CondicoesDoCupom analise={a} />}
 
       {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
           Dizer isso é o que dá confiança para comprar aqui. */}
@@ -888,7 +925,7 @@ function Resultado({
       )}
 
 
-      {!leituraFalhou && !semLink && (
+      {!leituraFalhou && !semLink && !estaEAMelhor && (
         <a
           href={link}
           target="_blank"
@@ -902,7 +939,7 @@ function Resultado({
           {trocar ? "Comprar mesmo assim na loja do anúncio" : textoDoBotao(dispositivo, "Comprar agora")}
         </a>
       )}
-      {!leituraFalhou && !semLink && !trocar && <AvisoDoBotao d={dispositivo} />}
+      {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
 
 
       {pedido.codigo && (
@@ -940,6 +977,90 @@ function Resultado({
         te ajudou, usar meu link já é uma forma de retribuir. Pode colar outro link aqui em cima
         quantas vezes quiser, a qualquer hora.
       </p>
+    </div>
+  );
+}
+
+/* ---------------------------------------- a loja do anúncio é a melhor */
+
+function MelhorOpcao({
+  vendedor,
+  preco,
+  link,
+  dispositivo,
+  temCupom,
+  comparadas,
+}: {
+  vendedor: string | null;
+  preco: number | null;
+  link: string;
+  dispositivo: Dispositivo;
+  temCupom: boolean;
+  comparadas: number;
+}) {
+  return (
+    <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
+      <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
+        Melhor opção
+      </p>
+      <p className="text-sm font-bold text-success">
+        {comparadas > 0
+          ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
+          : comparadas === 0
+            ? "Procurei este mesmo produto em outras lojas e só esta vende hoje."
+            : `Comparei com as outras lojas que vendem este mesmo produto e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
+      </p>
+      <div className="mt-2 flex items-baseline justify-between gap-3 rounded-md border border-success/30 bg-card px-3 py-2 text-sm">
+        <span className="min-w-0">{vendedor ? <span className="font-semibold">{vendedor}</span> : "Loja do anúncio"}</span>
+        <span className="shrink-0 text-base font-bold tabular-nums">{brl(preco)}</span>
+      </div>
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+      >
+        {textoDoBotao(dispositivo, vendedor ? `Comprar na ${vendedor}` : "Comprar agora")}
+      </a>
+      <AvisoDoBotao d={dispositivo} />
+    </div>
+  );
+}
+
+/* Outras lojas com o mesmo produto que NÃO compensam: em vermelho, com quanto
+   sairia a mais. Mostrar isto é o que prova ao cliente que comparei. */
+function OutrasLojasMaisCaras({
+  referencias,
+  temAlternativa,
+}: {
+  referencias: Referencia[];
+  temAlternativa: boolean;
+}) {
+  const caras = referencias.filter((r) => r.diferenca == null || r.diferenca > -2);
+  if (!caras.length) return null;
+  return (
+    <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
+      <p className="text-sm font-bold text-red-700 dark:text-red-400">
+        {temAlternativa ? "Outras lojas com o mesmo produto (não compensam)" : "Outras lojas com o mesmo produto: mais caras"}
+      </p>
+      <ul className="mt-2 divide-y divide-red-200 text-sm dark:divide-red-900">
+        {caras.map((r, i) => (
+          <li key={`${r.vendedor ?? "loja"}-${i}`} className="flex items-baseline justify-between gap-3 py-1.5">
+            <span className="min-w-0 break-words">
+              {r.vendedor ?? "Outra loja"}
+              {r.cupom ? <span className="block text-xs text-secondary-ink">com cupom {r.cupom}</span> : null}
+            </span>
+            <span className="shrink-0 text-right tabular-nums">
+              <span className="font-semibold">{brl(r.final)}</span>
+              {r.diferenca != null && (
+                <span className="block text-xs font-bold text-red-700 dark:text-red-400">
+                  {r.diferenca > 0 ? `+${brl(r.diferenca)} mais caro` : "praticamente o mesmo preço"}
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

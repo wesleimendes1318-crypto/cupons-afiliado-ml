@@ -139,6 +139,10 @@ export type Comparacao = {
   /* Resposta de cada endereço da API nesta comparação. Fica gravada com o
      resultado, para dar para ver depois o que funcionou e o que não. */
   trilha?: string[];
+  /* TODAS as outras lojas vistas com o mesmo produto (até 6), inclusive as
+     mais caras, só para exibir: o cliente vê que foi comparado e quanto
+     pagaria a mais em cada uma. Sem link (não são recomendação). */
+  referencias?: { vendedor: string | null; preco: number; final: number; diferenca: number; cupom: string | null }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
   catalogoPorNome?: boolean;
@@ -415,6 +419,21 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       .sort((a, b) => a.final - b.final || (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0))
       .slice(0, 3);
 
+    const refPorLoja = new Map<number, NonNullable<Comparacao["referencias"]>[number]>();
+    for (const c of candidatos) {
+      if (c.item === itemAtual || ehMinhaLoja(c.sellerId)) continue;
+      const cupom = cupomDe(c.sellerId);
+      const final = Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100;
+      const atual = refPorLoja.get(c.sellerId);
+      if (atual && atual.final <= final) continue;
+      refPorLoja.set(c.sellerId, {
+        vendedor: nomes.get(c.sellerId) ?? null, preco: c.preco, final,
+        diferenca: Math.round((final - finalAtual) * 100) / 100,
+        cupom: economiaDoCupom(cupom, c.preco) ? cupom?.desconto ?? null : null,
+      });
+    }
+    const referencias = [...refPorLoja.values()].sort((a, b) => a.final - b.final).slice(0, 6);
+
     trilha.push(`catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual}`);
     /* Cada loja vista e o que ela daria, para conferir depois por que uma
        loja não virou opção. */
@@ -422,7 +441,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       const cupom = cupomDe(c.sellerId);
       trilha.push(`loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`);
     }
-    return { procurou: true, motivo: null, produto, opcoes, fonte: "api-oficial", trilha, catalogoPorNome };
+    return { procurou: true, motivo: null, produto, opcoes, referencias, fonte: "api-oficial", trilha, catalogoPorNome };
   } catch (e) {
     const status = e instanceof ErroApiMl ? e.status : 0;
     const motivo = status === 401 || status === 403
