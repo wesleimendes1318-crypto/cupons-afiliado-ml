@@ -224,3 +224,19 @@ test('busca: cai para os dados da pagina quando nao ha cartao em HTML', () => {
   assert.equal(r[0].preco, 139.65);
   assert.equal(diag.cartoes, 0);
 });
+
+import { candidatosDeCartoes } from '../comparador.js';
+
+test('cartoes lidos na tela: mesmo produto, mais baratos primeiro', () => {
+  const cartoes = [
+    { href: 'https://produto.mercadolivre.com.br/MLB-5555555555-travesseiro-_JM', titulo: 'Travesseiro Cervical Ortopédico Viscoelástico Nasa', preco: 119.9 },
+    { href: 'https://www.mercadolivre.com.br/travesseiro/p/MLB22222222?pdp_filters=item_id%3AMLB6666666666', titulo: 'Travesseiro Cervical Ortopédico Viscoelástico', preco: 99.9 },
+    { href: 'https://produto.mercadolivre.com.br/MLB-7777777777-fronha-_JM', titulo: 'Fronha Para Travesseiro Cervical', preco: 29.9 },
+  ];
+  const diag = {};
+  const r = candidatosDeCartoes(cartoes, 'Travesseiro Cervical Ortopédico Viscoelástico', 130.16, diag);
+  assert.equal(r.length, 2);
+  assert.equal(r[0].preco, 99.9);
+  assert.equal(r[0].item, 'MLB6666666666');
+  assert.equal(diag.cartoesTela, 3);
+});

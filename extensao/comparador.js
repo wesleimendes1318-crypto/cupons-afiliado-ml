@@ -434,3 +434,24 @@ export function variacaoEscolhida(html) {
   }
   return achados.length ? achados.join(' ') : null;
 }
+
+/* Cartoes lidos NA TELA (aba de verdade), ja como { href, titulo, preco }.
+   Mesmas regras da leitura do HTML: mesmo produto pelo titulo, preco numa
+   faixa razoavel, os mais baratos primeiro. */
+export function candidatosDeCartoes(cartoes, tituloOriginal, precoRef, diag = null) {
+  const d = diag || {};
+  d.cartoesTela = (cartoes || []).length;
+  d.parecidosTela = 0;
+  const vistos = new Set();
+  const saida = [];
+  for (const c of cartoes || []) {
+    const end = enderecoDoCartao('href="' + String(c.href || '') + '"');
+    if (!end || vistos.has(end.item) || !c.titulo || c.preco == null) continue;
+    if (!pareceMesmoProduto(tituloOriginal, c.titulo)) continue;
+    d.parecidosTela++;
+    if (precoRef != null && (c.preco < precoRef * 0.4 || c.preco > precoRef * 1.6)) continue;
+    vistos.add(end.item);
+    saida.push({ ...end, preco: c.preco, titulo: c.titulo });
+  }
+  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_BUSCA);
+}

@@ -10,7 +10,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
-         identificadoresDoAnuncio, variacaoEscolhida } from './comparador.js';
+         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -1757,13 +1757,70 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
 
 /* Procura o mesmo produto na busca do Mercado Livre, como uma pessoa faria.
    Ritmo de gente: uma busca, no maximo seis candidatos. */
+/* Roda DENTRO da pagina de busca aberta numa aba: le os cartoes como a
+   pessoa ve na tela, depois que o proprio site montou a lista. */
+function cartoesDaBuscaNaPagina() {
+  const itens = [...document.querySelectorAll('li.ui-search-layout__item, div.poly-card, div.ui-search-result__wrapper')];
+  const saida = [];
+  const vistos = new Set();
+  for (const el of itens) {
+    const a = el.querySelector('a.poly-component__title, a.ui-search-item__group__element, a.ui-search-link, h2 a, h3 a')
+           || el.querySelector('a[href*="MLB"]');
+    if (!a || !a.href || vistos.has(a.href)) continue;
+    vistos.add(a.href);
+    const titulo = (a.textContent || '').replace(/\s+/g, ' ').trim()
+      || ((el.querySelector('h2, h3') || {}).textContent || '').replace(/\s+/g, ' ').trim();
+    let preco = null;
+    const caixa = el.querySelector('.poly-price__current .andes-money-amount')
+      || [...el.querySelectorAll('.andes-money-amount')].find(x => !x.closest('s') && !/previous/.test(x.className));
+    if (caixa) {
+      const fr = (caixa.querySelector('.andes-money-amount__fraction') || {}).textContent || '';
+      const ct = (caixa.querySelector('.andes-money-amount__cents') || {}).textContent || '';
+      const n = parseFloat(fr.replace(/\./g, '')) + (ct ? Number(ct) / 100 : 0);
+      if (n > 0 && n < 1e7) preco = Math.round(n * 100) / 100;
+    }
+    saida.push({ href: a.href, titulo, preco });
+    if (saida.length >= 48) break;
+  }
+  return { cartoes: saida, tituloPagina: document.title, url: location.href, itens: itens.length };
+}
+
+/* Abre a busca numa aba de fundo, como uma pessoa abriria, espera a lista
+   aparecer e le a tela. Usada quando a leitura "por baixo" veio vazia. */
+async function lerBuscaNaAba(url) {
+  const aba = await chrome.tabs.create({ url, active: false });
+  try {
+    await esperarCarregar(aba.id, 30000);
+    await sleep(2500);
+    const final = (await chrome.tabs.get(aba.id)).url || '';
+    if (ehCaptcha('', final)) {
+      await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao buscar outras lojas', 'leitura', final);
+      throw new Error('o Mercado Livre pediu uma verificacao de seguranca');
+    }
+    const [saida] = await chrome.scripting.executeScript({ target: { tabId: aba.id }, func: cartoesDaBuscaNaPagina });
+    return (saida && saida.result) || { cartoes: [] };
+  } finally {
+    try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ }
+  }
+}
+
 async function achadosNaBusca(titulo, precoRef, itemAtual) {
   /* Pagina de busca e grande (varios cartoes + dados): le ate 3 MB. */
   const html = await lerCatalogo(urlDeBusca(titulo), 3000000);
   /* Contagem de cada etapa da leitura, gravada no pedido: se a busca vier
      vazia de novo, da para saber onde parou (24/09: 0 anuncios lidos). */
   const diag = {};
-  const candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
+  let candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
+  if (!candidatos.length) {
+    /* 2a tentativa: a mesma busca numa aba de verdade, lida da tela. */
+    try {
+      const tela = await lerBuscaNaAba(urlDeBusca(titulo));
+      diag.aba = { itens: tela.itens || 0, titulo: tela.tituloPagina || null };
+      candidatos = candidatosDeCartoes(tela.cartoes, titulo, precoRef, diag);
+    } catch (e) {
+      diag.aba = { erro: String(e.message || e).slice(0, 120) };
+    }
+  }
   if (!candidatos.length) {
     /* Leitura vazia: guarda um retrato da pagina para eu ver o que o Mercado
        Livre devolveu (tamanho, trechos com anuncios, titulo da pagina). */
