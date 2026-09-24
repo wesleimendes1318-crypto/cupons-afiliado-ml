@@ -2245,11 +2245,17 @@ async function atenderPedidos() {
             for (const alt of alts.slice(0, 3)) {
               try {
                 const la = await gerarNaAba(tabId, alt.url);
-                /* O gerador do Mercado Livre devolve o MESMO link para ofertas
-                   diferentes da mesma ficha de catalogo (visto em 24/09: duas
-                   lojas, um meli.la so). Mostrar as duas seria prometer a
-                   loja que o link nao abre. Fica so a primeira. */
-                if (!la.link || la.link === r.link || outras.some(o => o.link === la.link)) continue;
+                /* O gerador do Mercado Livre devolve o MESMO link para todas as
+                   ofertas da mesma ficha de catalogo (medido em 24/09: Celimax
+                   e capinha). Entao:
+                     - igual a outra alternativa ja listada: fica so a primeira
+                       (a mais barata), porque o link e o mesmo;
+                     - igual ao link do proprio anuncio: a loja mais barata FICA,
+                       marcada mesmaPagina, e o site ensina o cliente a escolher
+                       a loja em "Outras opcoes de compra". Descartar escondia a
+                       economia (Celimax: R$ 8,88 a menos sumiu da tela). */
+                if (!la.link || outras.some(o => o.link === la.link)) continue;
+                const mesmaPagina = la.link === r.link;
                 outras.push({
                   cupomId: alt.cupom ? alt.cupom.id : null,
                   vendedor: alt.vendedor,
@@ -2267,6 +2273,7 @@ async function atenderPedidos() {
                      catalogo. Catalogo e o mesmo produto por definicao; busca
                      e um palpite forte. O site precisa dizer a diferenca. */
                   achadoNaBusca: !!alt.achadoNaBusca,
+                  mesmaPagina: mesmaPagina,
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,

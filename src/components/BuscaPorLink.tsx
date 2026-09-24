@@ -92,6 +92,10 @@ type OutraLoja = {
   finalAtual?: number | null;
   /* Veio da busca por título em vez da página de catálogo. */
   achadoNaBusca?: boolean | null;
+  /* O link de afiliado abre a MESMA página de catálogo do anúncio colado (o
+     gerador do Mercado Livre devolve um link só por ficha). A pessoa escolhe
+     a loja em "Outras opções de compra". */
+  mesmaPagina?: boolean | null;
   vendedor: string | null;
   preco: number | null;
   economia: number | null;
@@ -278,6 +282,41 @@ const ETAPAS: Array<{ id: Fase; rotulo: string }> = [
   { id: "outras-lojas", rotulo: "Procurando o mesmo produto em lojas mais baratas" },
   { id: "lendo", rotulo: "Gerando seus links de compra" },
 ];
+
+/* ---------------------------------------------- celular, app ou computador
+
+   O botão de compra fala com a pessoa de acordo com onde ela está:
+     celular     - o link do Mercado Livre abre o APP direto no produto;
+     app-interno - navegador de dentro do Instagram/Facebook/TikTok, que não
+                   abre outros apps: a pessoa precisa sair para o navegador;
+     computador  - abre o anúncio no site, numa aba nova.
+   Decidido só no navegador (depois de montar), nunca no servidor. */
+type Dispositivo = "celular" | "app-interno" | "computador";
+
+function useDispositivo(): Dispositivo {
+  const [d, setD] = useState<Dispositivo>("computador");
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    if (/Instagram|FBAN|FBAV|FB_IAB|TikTok|musical_ly|Line\//i.test(ua)) setD("app-interno");
+    else if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))) setD("celular");
+    else setD("computador");
+  }, []);
+  return d;
+}
+
+function textoDoBotao(d: Dispositivo, base: string) {
+  return d === "celular" ? `${base} no app do Mercado Livre` : `${base} no Mercado Livre`;
+}
+
+function AvisoDoBotao({ d }: { d: Dispositivo }) {
+  const texto =
+    d === "celular"
+      ? "Toque no botão e o app do Mercado Livre abre direto no produto, já na sua conta. É só finalizar a compra por lá."
+      : d === "app-interno"
+        ? "Você está no navegador de dentro de outro app. Se o Mercado Livre abrir aqui dentro, toque nos três pontinhos e em \"Abrir no navegador\" para ir ao app e finalizar a compra."
+        : "Abre o anúncio numa aba nova, no site do Mercado Livre. Se você já está logado neste navegador, é só finalizar a compra.";
+  return <p className="mt-1.5 text-center text-xs leading-relaxed text-secondary-ink">{texto}</p>;
+}
 
 export default function BuscaPorLink() {
   const [url, setUrl] = useState("");
@@ -773,6 +812,7 @@ function Resultado({
 }) {
   const a = pedido.analise;
   const link = pedido.link as string;
+  const dispositivo = useDispositivo();
 
   /* A loja do anúncio não tem cupom que preste, mas outra loja vende o MESMO
      produto de catálogo com cupom valendo para este preço. Nesse caso a troca
@@ -809,6 +849,8 @@ function Resultado({
         <OutraLojaComCupom
           key={`${oferta.vendedor ?? "loja"}-${i}`}
           oferta={oferta}
+          dispositivo={dispositivo}
+          vendedorAqui={a?.vendedor ?? null}
           precoAqui={a?.preco ?? null}
           titulo={a?.titulo ?? null}
           principal={trocar && i === 0}
@@ -857,9 +899,10 @@ function Resultado({
               : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
           }
         >
-          {trocar ? "Comprar mesmo assim na loja do anúncio" : "Comprar agora"}
+          {trocar ? "Comprar mesmo assim na loja do anúncio" : textoDoBotao(dispositivo, "Comprar agora")}
         </a>
       )}
+      {!leituraFalhou && !semLink && !trocar && <AvisoDoBotao d={dispositivo} />}
 
 
       {pedido.codigo && (
@@ -914,12 +957,16 @@ function Resultado({
 
 function OutraLojaComCupom({
   oferta,
+  dispositivo,
+  vendedorAqui,
   precoAqui,
   titulo,
   principal,
   lojaAquiTemCupom,
 }: {
   oferta: OutraLoja;
+  dispositivo: Dispositivo;
+  vendedorAqui: string | null;
   precoAqui: number | null;
   titulo?: string | null;
   principal?: boolean;
@@ -938,6 +985,12 @@ function OutraLojaComCupom({
      a loja do link tinha cupom de 15% e ainda assim saia mais cara. Dizer
      "com cupom" ali seria mentira. */
   const temCupomLa = Boolean(oferta.cupomTitulo);
+  /* Preço final de cada lado (com o cupom de cada um, quando existe). */
+  const atual = oferta.finalAtual ?? precoAqui;
+  const pct =
+    diferenca != null && diferenca > 0 && atual != null && atual > 0
+      ? Math.round((diferenca / atual) * 100)
+      : null;
 
   return (
     <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
@@ -957,21 +1010,44 @@ function OutraLojaComCupom({
       </p>
 
 
-      <dl className="mt-2 divide-y divide-success/20 text-sm">
-        {oferta.vendedor && <Linha rotulo="Loja" valor={oferta.vendedor} />}
-        <Linha rotulo="Preço lá" valor={brl(oferta.preco)} />
-        {oferta.cupomTitulo && <Linha rotulo="Cupom" valor={oferta.cupomTitulo} />}
-        {oferta.economia != null && oferta.economia > 0 && (
-          <Linha rotulo="Desconto do cupom" valor={brl(oferta.economia)} />
+      {/* Lado a lado: o que a pessoa colou, a mesma coisa na outra loja e a
+          diferença. Cada valor aparece uma vez só. */}
+      <div className="mt-3 overflow-hidden rounded-md border border-success/30 bg-card text-sm">
+        <div className="flex items-baseline justify-between gap-3 px-3 py-2">
+          <span className="min-w-0 text-secondary-ink">
+            Anúncio que você colou{vendedorAqui ? <span className="block text-xs">{vendedorAqui}</span> : null}
+          </span>
+          <span className="shrink-0 font-semibold tabular-nums text-secondary-ink line-through decoration-1">
+            {brl(atual)}
+          </span>
+        </div>
+        <div className="flex items-baseline justify-between gap-3 border-t border-success/20 px-3 py-2">
+          <span className="min-w-0">
+            Mesmo produto {oferta.vendedor ? <>na <span className="font-semibold">{oferta.vendedor}</span></> : "em outra loja"}
+            {temCupomLa && oferta.economia != null && oferta.economia > 0 ? (
+              <span className="block text-xs text-secondary-ink">
+                {brl(oferta.preco)} − cupom {oferta.cupomTitulo} ({brl(oferta.economia)})
+              </span>
+            ) : null}
+          </span>
+          <span className="shrink-0 text-base font-bold tabular-nums">{brl(oferta.final)}</span>
+        </div>
+        {diferenca != null && diferenca > 0 && (
+          <div className="flex items-baseline justify-between gap-3 bg-success/15 px-3 py-2.5">
+            <span className="font-bold text-success">Você economiza</span>
+            <span className="shrink-0 text-lg font-extrabold tabular-nums text-success">
+              {brl(diferenca)}
+              {pct != null && <span className="ml-1 text-xs font-bold">({pct}% a menos)</span>}
+            </span>
+          </div>
         )}
-        {oferta.final != null && (
-          <Linha rotulo="Você paga" valor={brl(oferta.final)} destaque />
-        )}
-        {oferta.minimo != null && (
-          <Linha rotulo="Compra mínima" valor={brl(oferta.minimo)} />
-        )}
-        {oferta.vence && <Linha rotulo="Cupom vale até" valor={dataBR(oferta.vence)} />}
-      </dl>
+      </div>
+      {(oferta.minimo != null || oferta.vence) && (
+        <dl className="mt-2 divide-y divide-success/20 text-sm">
+          {oferta.minimo != null && <Linha rotulo="Compra mínima do cupom" valor={brl(oferta.minimo)} />}
+          {oferta.vence && <Linha rotulo="Cupom vale até" valor={dataBR(oferta.vence)} />}
+        </dl>
+      )}
 
       {oferta.motivo === "tem_cupom" && (diferenca == null || diferenca <= 0) && (
         <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
@@ -980,13 +1056,6 @@ function OutraLojaComCupom({
         </p>
       )}
 
-      {diferenca != null && diferenca > 0 && (
-        <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
-          Você economiza {brl(diferenca)} trocando de loja
-          {oferta.finalAtual != null ? <> (lá {brl(oferta.final)}, aqui {brl(oferta.finalAtual)})</> : null}.
-          {" "}Já está contando o cupom dos dois lados.
-        </p>
-      )}
 
       <a
         href={oferta.link}
@@ -994,8 +1063,21 @@ function OutraLojaComCupom({
         rel="noopener noreferrer"
         className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
       >
-        {temCupomLa ? "Comprar na loja com cupom" : "Comprar nesta loja, mais barato"}
+        {oferta.vendedor
+          ? textoDoBotao(dispositivo, `Comprar na ${oferta.vendedor} por ${brl(oferta.final)}`).replace(" no app do Mercado Livre", " no app")
+          : textoDoBotao(dispositivo, temCupomLa ? "Comprar na loja com cupom" : "Comprar mais barato")}
       </a>
+      {oferta.mesmaPagina ? (
+        <p className="mt-1.5 rounded-md bg-card px-3 py-2 text-xs leading-relaxed">
+          <span className="font-semibold">Importante:</span> o link abre a página deste produto no Mercado
+          Livre. Se a loja em destaque não for a{" "}
+          <span className="font-semibold">{oferta.vendedor ?? "mais barata"}</span>, toque em{" "}
+          <span className="font-semibold">"Outras opções de compra"</span> e escolha{" "}
+          {oferta.vendedor ?? "essa loja"} por {brl(oferta.preco)}.
+        </p>
+      ) : (
+        principal && <AvisoDoBotao d={dispositivo} />
+      )}
 
       {oferta.cupomId != null && (
         <CodigoNaHora
