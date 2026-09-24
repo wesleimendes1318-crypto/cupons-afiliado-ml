@@ -164,6 +164,14 @@ export async function marcarPedido(token, id, link, codigo, erro, analise) {
   });
 }
 
+/* Etapa real do atendimento, que o site mostra ao cliente enquanto espera.
+   Nunca derruba o atendimento: se falhar, o cliente so ve a etapa anterior. */
+export async function marcarEtapa(token, id, etapa) {
+  try {
+    await chamarRpc(SUPABASE + '/rest/v1/rpc/marcar_etapa', { p_token: token, p_id: id, p_etapa: etapa });
+  } catch (e) { /* so visual */ }
+}
+
 const RPC_COND_PEND = SUPABASE + '/rest/v1/rpc/condicoes_pendentes';
 const RPC_COND_SALVAR = SUPABASE + '/rest/v1/rpc/salvar_condicoes';
 

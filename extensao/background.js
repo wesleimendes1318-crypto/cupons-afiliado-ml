@@ -6,7 +6,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrinesParaConferir, salvarVitrines,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
-         reservarGeracao, concluirGeracao, compararNoServidor } from './sincronia.js';
+         reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
@@ -2065,6 +2065,7 @@ async function atenderPedidos() {
              nao faz nada. */
           iniciarPedido(sincToken, p.id).catch(() => {});
           const url = limparUrl(p.url_alvo);
+          marcarEtapa(sincToken, p.id, 'cupom');
 
           /* 1. le o anuncio. Primeiro pelo service worker, que enxerga
                 qualquer subdominio e resolve link curto. Se falhar, tenta pela
@@ -2148,8 +2149,11 @@ async function atenderPedidos() {
           /* A comparacao pela API oficial nao depende da pausa de leitura nem
              de ter lido o anuncio: ela so precisa do link. A pausa passa a
              valer apenas para a reserva que le paginas (mais abaixo). */
-          if (filaCheia) motivoNaoProcurou = 'fila cheia: outros clientes esperando';
-          else {
+          /* SEMPRE procura (regra do Weslei, 24/09): antes, com mais de 4
+             pedidos na fila, a busca era pulada. A busca e do servidor, pela
+             API oficial, e nao pesa na conta de afiliado. */
+          {
+            marcarEtapa(sincToken, p.id, 'outras_lojas');
             procurouOutra = true;
             let alts = [];
             /* 1. Servidor do site, API oficial do Mercado Livre. Nao usa a
@@ -2207,7 +2211,10 @@ async function atenderPedidos() {
 
                No maximo duas alternativas ganham link: cada link e uma chamada
                ao gerador, e o gerador ja respondeu 429 hoje. */
-            for (const alt of alts.slice(0, 2)) {
+            if (alts.length) marcarEtapa(sincToken, p.id, 'links');
+            /* Ate 3 lojas mais baratas, todas com o link de afiliado do
+               Weslei. Sem link de afiliado a oferta nao vai para a tela. */
+            for (const alt of alts.slice(0, 3)) {
               try {
                 const la = await gerarNaAba(tabId, alt.url);
                 outras.push({

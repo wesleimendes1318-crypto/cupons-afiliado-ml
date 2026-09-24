@@ -34,10 +34,11 @@ import { roboAtivo } from "@/lib/robo";
 const RITMO_RAPIDO_MS = 1200;
 const VOLTAS_RAPIDAS = 15;
 const RITMO_CALMO_MS = 3000;
-const LIMITE_MS = 90000;
+/* A busca em outras lojas e os links de cada uma levam mais tempo. */
+const LIMITE_MS = 150000;
 /* Depois disso a espera deixou de ser normal. Nao desiste: troca o texto por um
    aviso honesto e da uma saida util para a pessoa nao abandonar a pagina. */
-const AVISO_MS = 25000;
+const AVISO_MS = 45000;
 
 type Cupom = {
   /* id do cupom no banco. Com ele o site pede o código na hora, mesmo quando o
@@ -145,7 +146,7 @@ type Pedido = {
   analise: Analise | null;
 };
 
-type Fase = "parado" | "enviando" | "na-fila" | "lendo" | "pronto" | "offline";
+type Fase = "parado" | "enviando" | "na-fila" | "outras-lojas" | "lendo" | "pronto" | "offline";
 
 const brl = (n: number | null | undefined) =>
   n == null ? null : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -270,8 +271,12 @@ function melhorLinkML(texto: string): string | null {
    Nada aqui e temporizador fingindo progresso. */
 const ETAPAS: Array<{ id: Fase; rotulo: string }> = [
   { id: "enviando", rotulo: "Enviando o link" },
-  { id: "na-fila", rotulo: "Procurando o cupom da loja" },
-  { id: "lendo", rotulo: "Gerando seu link de compra" },
+  { id: "na-fila", rotulo: "Procurando cupom da loja" },
+  /* Etapa real: a extensão avisa (analise.etapa) quando começa a procurar o
+     mesmo produto em outras lojas. É a parte mais demorada, e o cliente
+     espera melhor sabendo que ela existe. */
+  { id: "outras-lojas", rotulo: "Procurando o mesmo produto em lojas mais baratas" },
+  { id: "lendo", rotulo: "Gerando seus links de compra" },
 ];
 
 export default function BuscaPorLink() {
@@ -358,7 +363,12 @@ export default function BuscaPorLink() {
         const bruto = Array.isArray(data) ? data[0] : data;
         const linha = bruto ? (bruto as unknown as Pedido) : null;
 
-        if (linha?.status === "processando") setFase("lendo");
+        if (linha?.status === "processando") {
+          const etapa = (linha.analise as { etapa?: string } | null)?.etapa;
+          if (etapa === "outras_lojas") setFase("outras-lojas");
+          else if (etapa === "links") setFase("lendo");
+          else setFase("na-fila");
+        }
 
         if (linha?.status === "pronto" && linha.link) {
           parou = true;
@@ -408,7 +418,7 @@ export default function BuscaPorLink() {
       .catch(() => undefined);
   };
 
-  const carregando = fase === "enviando" || fase === "na-fila" || fase === "lendo";
+  const carregando = fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
 
   return (
     <section id="colar-link" className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
