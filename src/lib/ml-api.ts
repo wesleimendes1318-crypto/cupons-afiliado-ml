@@ -183,6 +183,27 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
       saida[nome] = { status: 0, detalhe: (e as Error).message };
     }
   }
+  /* Nome da loja de uma oferta do catalogo: e o que liga a oferta ao cupom. */
+  try {
+    const r = await fetch(`${API}/products/${exemplos.catalogo}/items?limit=1`, {
+      headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      signal: AbortSignal.timeout(8_000),
+    });
+    const j = (await r.json()) as { results?: Record<string, unknown>[] };
+    const o = j.results?.[0] ?? {};
+    const vendedorId = o["seller_id"];
+    saida["campos_oferta"] = { status: r.status, detalhe: Object.keys(o).slice(0, 15).join(",") };
+    if (vendedorId) {
+      const u = await fetch(`${API}/users/${vendedorId}`, {
+        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        signal: AbortSignal.timeout(8_000),
+      });
+      const uj = (await u.json().catch(() => ({}))) as { nickname?: string };
+      saida["nome_da_loja"] = { status: u.status, detalhe: `apelido=${uj.nickname ?? "?"}` };
+    }
+  } catch (e) {
+    saida["nome_da_loja"] = { status: 0, detalhe: (e as Error).message };
+  }
   await gravarConfig({ ml_diagnostico: JSON.stringify({ quando: new Date().toISOString(), comToken: Boolean(token), saida }) });
   return saida;
 }

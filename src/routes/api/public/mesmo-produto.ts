@@ -10,7 +10,13 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
    x-sinc-token) ou o próprio site. Resultado guardado 6 horas por produto:
    o mesmo link colado de novo não gera nenhuma consulta nova. */
 
-const entradaSchema = z.object({ url: z.string().trim().min(10).max(2000) });
+const entradaSchema = z.object({
+  url: z.string().trim().min(10).max(2000),
+  catalogo: z.string().regex(/^MLB\d{5,}$/i).nullish(),
+  item: z.string().regex(/^MLB\d{6,}$/i).nullish(),
+  preco: z.number().positive().max(1e7).nullish(),
+  vendedor: z.string().max(160).nullish(),
+});
 const VALIDADE_MS = 6 * 60 * 60 * 1000;
 
 async function tokenValido(request: Request) {
@@ -43,7 +49,7 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
         }
 
         const ids = idsDoLink(entrada.url);
-        const chave = ids.item ?? ids.catalogo;
+        const chave = (ids.item ?? entrada.item ?? ids.catalogo ?? entrada.catalogo ?? null)?.toUpperCase() ?? null;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const tabela = supabaseAdmin.from("comparacoes" as never);
 
@@ -59,7 +65,10 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
           }
         }
 
-        const resultado = await compararMesmoProduto(entrada.url);
+        const resultado = await compararMesmoProduto(entrada.url, {
+          catalogo: entrada.catalogo ?? null, item: entrada.item ?? null,
+          preco: entrada.preco ?? null, vendedor: entrada.vendedor ?? null,
+        });
         if (chave && resultado.procurou) {
           await tabela.upsert({ chave, resposta: resultado, criado_em: new Date().toISOString() } as never);
         }

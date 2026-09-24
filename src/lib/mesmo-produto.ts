@@ -81,15 +81,6 @@ async function cuponsPorNome(nomes: string[]) {
 
 /* ------------------------------------------------------------ API do ML */
 
-type ItemApi = {
-  id: string; title: string; price: number | null; seller_id: number;
-  catalog_product_id?: string | null; permalink?: string;
-};
-type OfertaCatalogo = { item_id: string; price: number | null; seller_id: number };
-type ResultadoBusca = {
-  id: string; title: string; price: number | null; seller?: { id: number };
-  catalog_product_id?: string | null; permalink?: string;
-};
 
 const cacheVendedor = new Map<number, string | null>();
 
@@ -120,59 +111,71 @@ export type Comparacao = {
 
 type Candidato = { item: string; url: string; preco: number; sellerId: number; achadoNaBusca: boolean };
 
-export async function compararMesmoProduto(url: string): Promise<Comparacao> {
+/* O que a extensão já sabe do anúncio (ela lê a página que o CLIENTE colou).
+   A API oficial não deixa ler anúncio de outra conta (403 medido em 24/09),
+   então preço, loja e catálogo do anúncio original vêm daqui quando
+   necessário. */
+export type DicaAnuncio = { catalogo?: string | null; item?: string | null; preco?: number | null; vendedor?: string | null };
+
+/* O QUE A API OFICIAL PERMITE, medido com a conta do Weslei em 24/09/2026:
+     /products/{catalogo}          200
+     /products/{catalogo}/items    200  <- outras lojas do MESMO produto
+     /items/{id} de outra conta    403
+     /sites/MLB/search             403
+   Então a comparação automática vale para produto de CATÁLOGO. Anúncio fora
+   do catálogo não tem comparação pela API, e o site diz isso ao cliente. */
+export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}): Promise<Comparacao> {
   const ids = idsDoLink(url);
-  if (!ids.item && !ids.catalogo) {
-    return { procurou: false, motivo: "o link não traz o número do anúncio", produto: null, opcoes: [], fonte: "api-oficial" };
+  const catalogo = (ids.catalogo ?? dica.catalogo ?? null)?.toUpperCase() ?? null;
+  const itemAtual = (ids.item ?? dica.item ?? null)?.toUpperCase() ?? null;
+  if (!catalogo) {
+    return {
+      procurou: false,
+      motivo: "este anúncio não faz parte do catálogo do Mercado Livre, e a comparação automática só funciona para produtos de catálogo",
+      produto: null, opcoes: [], fonte: "api-oficial",
+    };
   }
 
   try {
-    /* 1. O anúncio que o cliente colou. */
-    let item: ItemApi | null = null;
-    if (ids.item) item = await mlGet<ItemApi>(`/items/${ids.item}?attributes=id,title,price,seller_id,catalog_product_id,permalink`);
-    const catalogo = item?.catalog_product_id ?? ids.catalogo;
-    const titulo = item?.title ?? null;
-    const preco = item?.price ?? null;
+    /* 1. Nome do produto de catálogo (só para exibir). */
+    let titulo: string | null = null;
+    try { titulo = (await mlGet<{ name?: string }>(`/products/${catalogo}`)).name ?? null; } catch { titulo = null; }
 
-    /* 2. Candidatos: primeiro o catálogo (é o mesmo produto por definição),
-          depois a busca pelo título (palpite forte, o site avisa). */
+    /* 2. Todas as ofertas do mesmo produto, de lojas diferentes. */
+    const r = await mlGet<{ results?: Record<string, unknown>[] }>(`/products/${catalogo}/items?limit=20`);
     const candidatos: Candidato[] = [];
-    if (catalogo) {
-      try {
-        const r = await mlGet<{ results?: OfertaCatalogo[] }>(`/products/${catalogo}/items?limit=20`);
-        for (const o of r.results ?? []) {
-          if (o.price == null) continue;
-          candidatos.push({ item: o.item_id, url: urlDaOferta(catalogo, o.item_id), preco: o.price, sellerId: o.seller_id, achadoNaBusca: false });
-        }
-      } catch (e) { if (!(e instanceof ErroApiMl) || e.status >= 500) throw e; }
-    }
-    if (candidatos.length < 2 && titulo) {
-      const termo = normPalavra(titulo).split(" ").slice(0, 12).join(" ");
-      const r = await mlGet<{ results?: ResultadoBusca[] }>(`/sites/MLB/search?q=${encodeURIComponent(termo)}&limit=15`);
-      for (const x of r.results ?? []) {
-        if (x.price == null || !x.seller?.id || !pareceMesmoProduto(titulo, x.title)) continue;
-        if (preco != null && (x.price < preco * 0.4 || x.price > preco * 1.6)) continue;
-        const url2 = x.catalog_product_id ? urlDaOferta(x.catalog_product_id, x.id) : (x.permalink ?? "");
-        if (!url2) continue;
-        candidatos.push({ item: x.id, url: url2, preco: x.price, sellerId: x.seller.id, achadoNaBusca: true });
-      }
+    for (const o of r.results ?? []) {
+      const item = String(o["item_id"] ?? o["id"] ?? "");
+      const preco = Number(o["price"]);
+      const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
+      if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
+      candidatos.push({ item, url: urlDaOferta(catalogo, item), preco, sellerId, achadoNaBusca: false });
     }
 
-    /* 3. Nome de cada loja e o cupom dela no banco. */
-    const sellers = [...new Set([item?.seller_id, ...candidatos.map((c) => c.sellerId)].filter(Boolean) as number[])].slice(0, 12);
+    /* 3. A oferta que o cliente estava vendo: pela lista, ou pelo que a
+          extensão leu na página. */
+    const minha = candidatos.find((c) => c.item === itemAtual) ?? null;
+    const preco = minha?.preco ?? dica.preco ?? null;
+
+    /* 4. Nome de cada loja e o cupom dela no banco. */
+    const sellers = [...new Set(candidatos.map((c) => c.sellerId))].slice(0, 12);
     const nomes = new Map<number, string | null>();
     for (const s of sellers) nomes.set(s, await apelido(s));
-    const cupons = await cuponsPorNome([...nomes.values()].filter(Boolean) as string[]);
+    const cupons = await cuponsPorNome([...nomes.values(), dica.vendedor].filter(Boolean) as string[]);
     const cupomDe = (sellerId: number) => {
       const n = nomes.get(sellerId);
       return n ? cupons.get(norm(n)) ?? null : null;
     };
 
-    const vendedorAqui = item ? nomes.get(item.seller_id) ?? null : null;
-    const cupomAqui = item ? cupomDe(item.seller_id) : null;
+    const vendedorAqui = minha ? nomes.get(minha.sellerId) ?? dica.vendedor ?? null : dica.vendedor ?? null;
+    const cupomAqui = minha ? cupomDe(minha.sellerId) : (dica.vendedor ? cupons.get(norm(dica.vendedor)) ?? null : null);
     const economiaAqui = economiaDoCupom(cupomAqui, preco) ?? 0;
     const finalAtual = preco != null ? preco - economiaAqui : null;
-    const produto = { item: item?.id ?? null, titulo, preco, vendedor: vendedorAqui };
+    const produto = { item: itemAtual, titulo, preco, vendedor: vendedorAqui };
+    const item = minha ? { id: minha.item, seller_id: minha.sellerId } : null;
+    const ehMinhaLoja = (sellerId: number) =>
+      (item && sellerId === item.seller_id)
+      || (!!dica.vendedor && !!nomes.get(sellerId) && norm(nomes.get(sellerId)) === norm(dica.vendedor));
 
     if (finalAtual == null) {
       return { procurou: false, motivo: "não consegui o preço do anúncio", produto, opcoes: [], fonte: "api-oficial" };
@@ -182,7 +185,7 @@ export async function compararMesmoProduto(url: string): Promise<Comparacao> {
           do cliente não tem (sem sair mais cara). Nunca a própria loja. */
     const porLoja = new Map<number, Opcao>();
     for (const c of candidatos) {
-      if (c.item === item?.id || (item && c.sellerId === item.seller_id)) continue;
+      if (c.item === itemAtual || ehMinhaLoja(c.sellerId)) continue;
       const cupom = cupomDe(c.sellerId);
       const economia = economiaDoCupom(cupom, c.preco) ?? 0;
       const final = Math.round((c.preco - economia) * 100) / 100;

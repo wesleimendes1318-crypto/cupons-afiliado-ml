@@ -377,13 +377,13 @@ export async function concluirGeracao(token, tipo, chave, resultado, erro, meta)
 /* Comparacao "mesmo produto em outras lojas" feita pelo SERVIDOR do site, com
    a API oficial do Mercado Livre. A sessao de afiliado nao le pagina nenhuma
    para isso; ela so gera o link das opcoes escolhidas. */
-export async function compararNoServidor(token, url) {
+export async function compararNoServidor(token, url, dica = {}) {
   if (!token) return { procurou: false, motivo: 'sem token de sincronia', opcoes: [] };
   try {
     const r = await fetch(SITE + '/api/public/mesmo-produto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-sinc-token': token },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url, ...dica })
     });
     const j = await r.json().catch(() => null);
     if (!r.ok || !j) return { procurou: false, motivo: (j && j.erro) || ('servidor respondeu ' + r.status), opcoes: [] };

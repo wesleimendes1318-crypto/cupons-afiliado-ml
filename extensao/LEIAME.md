@@ -237,3 +237,11 @@ A leitura de paginas com a sua sessao ficou como reserva DESLIGADA
 Requer, nos Secrets do Lovable, as credenciais de um aplicativo criado em
 developers.mercadolivre.com.br: `ML_CLIENT_ID`, `ML_CLIENT_SECRET` e, se
 necessario, `ML_REFRESH_TOKEN`.
+
+### v1.47.0 - comparacao so pelo que a API oficial permite
+
+Medido com a conta do Weslei em 24/09/2026: `/products/{catalogo}/items`
+responde (outras lojas do mesmo produto); `/items/{id}` de outra conta e
+`/sites/MLB/search` respondem 403. A comparacao automatica vale para produto
+de CATALOGO. A extensao manda ao servidor o catalogo, o preco e a loja que ja
+leu na pagina colada pelo cliente.

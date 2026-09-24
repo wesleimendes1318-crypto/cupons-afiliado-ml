@@ -2120,7 +2120,15 @@ async function atenderPedidos() {
             let alts = [];
             /* 1. Servidor do site, API oficial do Mercado Livre. Nao usa a
                   sessao de afiliado para ler nada. */
-            const api = await compararNoServidor(sincToken, a.finalUrl || url);
+            /* A API oficial nao deixa ler anuncio de outra conta (403), entao
+               vai junto o que a extensao ja leu na pagina que o cliente colou. */
+            const catDoAnuncio = ((a.canonica || '') + ' ' + (a.finalUrl || '') + ' ' + url).match(/\/p\/(MLB\d{5,})/i);
+            const api = await compararNoServidor(sincToken, a.finalUrl || url, {
+              catalogo: catDoAnuncio ? catDoAnuncio[1].toUpperCase() : null,
+              item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
+              preco: a.preco != null ? Number(a.preco) : null,
+              vendedor: vendedor || null
+            });
             if (api && api.procurou) {
               alts = (api.opcoes || []).map(o => ({
                 item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
