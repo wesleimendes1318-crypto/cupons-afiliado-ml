@@ -176,7 +176,7 @@ const VARIANTES = new Set(["light", "lite", "luminous", "leve", "intense", "inte
   "cacheados", "cachos", "lisos", "loiros", "tonalizante", "noturno", "night", "day", "diurno", "sport", "black", "gold",
   "rose", "blue", "red", "white", "pink", "sensitive", "extra", "forte", "suave", "matte", "gloss"]);
 
-function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
+export function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   /* Números iguais nos DOIS sentidos (tamanho, volume, modelo). Sem isso,
      "Capa Anti Impacto Motorola" aceitava a capa do Moto E6, do Moto G54 e
      do iPhone 14 (teste de 24/09): o título não tinha número para conferir. */
@@ -188,8 +188,21 @@ function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   if (va.size !== vb.size || [...va].some((w) => !vb.has(w))) return false;
   const nums = (t: string) => [...new Set(palavras(t).filter((w) => /^\d+$/.test(w)))].sort().join(",");
   if (nums(tituloAnuncio) !== nums(nomeCatalogo)) return false;
-  return pareceMesmoProduto(tituloAnuncio, nomeCatalogo) || pareceMesmoProduto(nomeCatalogo, tituloAnuncio);
+  /* Nome de catálogo é curto e preciso: palavra dele que não está no título
+     costuma ser OUTRO produto ("Água Perfumada Bamboo" para um anúncio de
+     "Baunilha Âmbar", 24/09). Aceita no máximo uma, fora as genéricas, e o
+     título precisa estar 60% dentro do nome. */
+  const t = new Set(palavras(tituloAnuncio));
+  const c = [...new Set(palavras(nomeCatalogo))];
+  if (!t.size || !c.length) return false;
+  const cobertura = [...t].filter((w) => c.includes(w)).length / t.size;
+  const extras = c.filter((w) => !t.has(w) && !GENERICAS.has(w));
+  return cobertura >= 0.6 && extras.length <= 1;
 }
+
+const GENERICAS = new Set(["litro", "litros", "unidade", "unidades", "peca", "pecas", "capa", "capinha", "case",
+  "produto", "tamanho", "modelo", "cor", "linha", "marca", "lancamento", "profissional", "professional", "premium",
+  "qualidade", "top", "atacado", "envio", "full"]);
 
 type BuscaCatalogo = { results?: { id?: string; name?: string; status?: string }[] };
 

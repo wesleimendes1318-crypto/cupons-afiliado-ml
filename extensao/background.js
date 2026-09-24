@@ -2245,6 +2245,11 @@ async function atenderPedidos() {
             for (const alt of alts.slice(0, 3)) {
               try {
                 const la = await gerarNaAba(tabId, alt.url);
+                /* O gerador do Mercado Livre devolve o MESMO link para ofertas
+                   diferentes da mesma ficha de catalogo (visto em 24/09: duas
+                   lojas, um meli.la so). Mostrar as duas seria prometer a
+                   loja que o link nao abre. Fica so a primeira. */
+                if (!la.link || la.link === r.link || outras.some(o => o.link === la.link)) continue;
                 outras.push({
                   cupomId: alt.cupom ? alt.cupom.id : null,
                   vendedor: alt.vendedor,
@@ -2290,6 +2295,8 @@ async function atenderPedidos() {
                tela mentia por omissao. */
             procurouOutra: procurouOutra,
             motivoNaoProcurou: motivoNaoProcurou,
+            /* Para saber, de longe, qual versao atendeu este cliente. */
+            versaoExtensao: chrome.runtime.getManifest().version,
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,
