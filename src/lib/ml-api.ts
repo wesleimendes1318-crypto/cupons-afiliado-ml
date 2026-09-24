@@ -110,3 +110,81 @@ export async function mlGet<T>(caminho: string): Promise<T> {
 export function temCredencialMl() {
   return Boolean(process.env["ML_CLIENT_ID"] && process.env["ML_CLIENT_SECRET"]);
 }
+
+/* ------------------------------------------------ conexao da conta (OAuth)
+
+   O caminho oficial: o Weslei abre /api/public/ml-conectar no navegador onde
+   esta logado, autoriza o aplicativo dele no Mercado Livre, e o retorno
+   (/api/public/ml-retorno) troca o codigo pelo token e guarda no banco. */
+
+export const URL_RETORNO = "https://cupons-afiliado-ml.lovable.app/api/public/ml-retorno";
+
+export function urlDeAutorizacao(state: string) {
+  const id = process.env["ML_CLIENT_ID"] ?? "";
+  const p = new URLSearchParams({ response_type: "code", client_id: id, redirect_uri: URL_RETORNO, state });
+  return `https://auth.mercadolivre.com.br/authorization?${p.toString()}`;
+}
+
+export async function trocarCodigoPorToken(codigo: string) {
+  const id = process.env["ML_CLIENT_ID"];
+  const segredo = process.env["ML_CLIENT_SECRET"];
+  if (!id || !segredo) throw new Error("faltam ML_CLIENT_ID e ML_CLIENT_SECRET nos Secrets");
+  const r = await fetch(`${API}/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code", client_id: id, client_secret: segredo,
+      code: codigo, redirect_uri: URL_RETORNO,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const j = (await r.json().catch(() => ({}))) as {
+    access_token?: string; refresh_token?: string; expires_in?: number; message?: string; error?: string;
+  };
+  if (!r.ok || !j.access_token) throw new Error(`o Mercado Livre recusou a troca (${r.status}): ${j.message ?? j.error ?? "sem detalhe"}`);
+  const ate = Date.now() + Math.max(60, (j.expires_in ?? 21_600) - 300) * 1000;
+  tokenMem = { valor: j.access_token, ate };
+  await gravarConfig({
+    ml_access_token: j.access_token,
+    ml_token_ate: String(ate),
+    ...(j.refresh_token ? { ml_refresh_token: j.refresh_token } : {}),
+  });
+  return { temRefresh: Boolean(j.refresh_token) };
+}
+
+/** Testa, com o token da conta, quais enderecos da API respondem. So leitura. */
+export async function diagnosticoApi(exemplos: { item: string; catalogo: string; termo: string }) {
+  const testes: Record<string, string> = {
+    conta: "/users/me",
+    anuncio: `/items/${exemplos.item}`,
+    produto_catalogo: `/products/${exemplos.catalogo}`,
+    ofertas_catalogo: `/products/${exemplos.catalogo}/items?limit=3`,
+    busca: `/sites/MLB/search?q=${encodeURIComponent(exemplos.termo)}&limit=3`,
+  };
+  const token = await tokenDeAcesso();
+  const saida: Record<string, { status: number; detalhe: string }> = {};
+  for (const [nome, caminho] of Object.entries(testes)) {
+    try {
+      const r = await fetch(`${API}${caminho}`, {
+        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        signal: AbortSignal.timeout(8_000),
+      });
+      const t = await r.text();
+      let detalhe = t.slice(0, 160);
+      try {
+        const j = JSON.parse(t) as Record<string, unknown>;
+        if (nome === "conta") detalhe = `apelido=${String(j["nickname"] ?? "?")}`;
+        else if (nome === "produto_catalogo") detalhe = `buy_box_winner=${j["buy_box_winner"] ? "sim" : "nao"}`;
+        else if (Array.isArray(j["results"])) detalhe = `resultados=${(j["results"] as unknown[]).length}`;
+        else if (r.ok) detalhe = "ok";
+      } catch { /* fica o texto cru */ }
+      saida[nome] = { status: r.status, detalhe };
+    } catch (e) {
+      saida[nome] = { status: 0, detalhe: (e as Error).message };
+    }
+  }
+  await gravarConfig({ ml_diagnostico: JSON.stringify({ quando: new Date().toISOString(), comToken: Boolean(token), saida }) });
+  return saida;
+}
+
+export { gravarConfig, lerConfig };

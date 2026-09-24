@@ -25,6 +25,8 @@ import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/cl
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
+import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
+import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 
 const IndexRoute = IndexRouteImport.update({
@@ -107,6 +109,16 @@ const ApiPublicMesmoProdutoRoute = ApiPublicMesmoProdutoRouteImport.update({
   path: '/api/public/mesmo-produto',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMlConectarRoute = ApiPublicMlConectarRouteImport.update({
+  id: '/api/public/ml-conectar',
+  path: '/api/public/ml-conectar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMlRetornoRoute = ApiPublicMlRetornoRouteImport.update({
+  id: '/api/public/ml-retorno',
+  path: '/api/public/ml-retorno',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
   id: '/api/public/recomendar',
   path: '/api/public/recomendar',
@@ -130,6 +142,8 @@ export interface FileRoutesByFullPath {
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
+  '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
+  '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesByTo {
@@ -149,6 +163,8 @@ export interface FileRoutesByTo {
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
+  '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
+  '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRoutesById {
@@ -169,6 +185,8 @@ export interface FileRoutesById {
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
+  '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
+  '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
 }
 export interface FileRouteTypes {
@@ -190,6 +208,8 @@ export interface FileRouteTypes {
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
+    | '/api/public/ml-conectar'
+    | '/api/public/ml-retorno'
     | '/api/public/recomendar'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -209,6 +229,8 @@ export interface FileRouteTypes {
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
+    | '/api/public/ml-conectar'
+    | '/api/public/ml-retorno'
     | '/api/public/recomendar'
   id:
     | '__root__'
@@ -228,6 +250,8 @@ export interface FileRouteTypes {
     | '/api/public/comparar'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
+    | '/api/public/ml-conectar'
+    | '/api/public/ml-retorno'
     | '/api/public/recomendar'
   fileRoutesById: FileRoutesById
 }
@@ -248,6 +272,8 @@ export interface RootRouteChildren {
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
+  ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
+  ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
 }
 
@@ -365,6 +391,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMesmoProdutoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ml-conectar': {
+      id: '/api/public/ml-conectar'
+      path: '/api/public/ml-conectar'
+      fullPath: '/api/public/ml-conectar'
+      preLoaderRoute: typeof ApiPublicMlConectarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/ml-retorno': {
+      id: '/api/public/ml-retorno'
+      path: '/api/public/ml-retorno'
+      fullPath: '/api/public/ml-retorno'
+      preLoaderRoute: typeof ApiPublicMlRetornoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/recomendar': {
       id: '/api/public/recomendar'
       path: '/api/public/recomendar'
@@ -392,6 +432,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,
+  ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
+  ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
 }
 export const routeTree = rootRouteImport
