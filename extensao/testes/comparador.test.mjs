@@ -194,3 +194,21 @@ test('identidade do anuncio: GTIN invalido e descartado, ficha em texto', () => 
   const ok = '<tr><th>Código universal de produto</th><td><span>7891000315507</span></td></tr>';
   assert.equal(identificadoresDoAnuncio(ok).gtin, '7891000315507');
 });
+
+import { variacaoEscolhida } from '../comparador.js';
+
+test('variacao escolhida: modelo do celular entra, cor nao', () => {
+  const html = '<p class="ui-pdp-variations__label">Cor e Padrão: <span class="ui-pdp-variations__selected-label">Preto</span></p>'
+    + '<p class="ui-pdp-variations__label">Modelo do Celular: <span class="ui-pdp-variations__selected-label">Edge 70</span></p>';
+  assert.equal(variacaoEscolhida(html), 'Edge 70');
+});
+
+test('variacao escolhida: pelos dados da pagina', () => {
+  const html = '{"pickers":[{"id":"COLOR","label":{"text":"Cor: "},"selected_option":{"id":"1","text":"Preto"}},'
+    + '{"id":"MODEL","label":{"text":"Modelo do Celular: "},"selected_option":{"id":"2","text":"Moto G35"}}]}';
+  assert.equal(variacaoEscolhida(html), 'Moto G35');
+});
+
+test('variacao escolhida: anuncio sem variacao', () => {
+  assert.equal(variacaoEscolhida('<h1>Óleo Wella 100ml</h1>'), null);
+});

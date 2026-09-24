@@ -23,6 +23,7 @@ const entradaSchema = z.object({
   marca: z.string().max(80).nullish().catch(null),
   modelo: z.string().max(80).nullish().catch(null),
   catalogoPagina: z.string().regex(/^MLB\d{5,}$/i).nullish().catch(null),
+  variacao: z.string().max(120).nullish().catch(null),
 });
 const VALIDADE_MS = 6 * 60 * 60 * 1000;
 
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
     handlers: {
       OPTIONS: async ({ request }) => respostaOptions(request),
       /* Abrir no navegador mostra qual versão da comparação está no ar. */
-      GET: async ({ request }) => json(request, { versao: "2026-09-24 11h40 (8 fichas, sem Light/Men, nomes guardados)" }),
+      GET: async ({ request }) => json(request, { versao: "2026-09-24 12h (8 fichas, variacao do anuncio)" }),
       POST: async ({ request }) => {
         const daExtensao = await tokenValido(request);
         if (!daExtensao) {
@@ -86,6 +87,7 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
           titulo: entrada.titulo ?? null,
           gtin: entrada.gtin ?? null, marca: entrada.marca ?? null,
           modelo: entrada.modelo ?? null, catalogoPagina: entrada.catalogoPagina ?? null,
+          variacao: entrada.variacao ?? null,
         });
         if (chave) {
           await tabela.upsert({ chave, resposta: resultado, criado_em: new Date().toISOString() } as never);

@@ -10,7 +10,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
-         identificadoresDoAnuncio } from './comparador.js';
+         identificadoresDoAnuncio, variacaoEscolhida } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -578,7 +578,9 @@ function extrairAnuncio(t, finalUrl, status) {
   const ident = identificadoresDoAnuncio(t);
 
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes,
-           titulo: titulo, preco: preco, canonica: canonica, ...ident };
+           titulo: titulo, preco: preco, canonica: canonica, ...ident,
+           /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
+           variacao: variacaoEscolhida(t) };
 }
 
 /* Le o anuncio a partir do service worker. Segue redirecionamento, entao um
@@ -2172,7 +2174,8 @@ async function atenderPedidos() {
               gtin: a.gtin || null,
               marca: a.marca || null,
               modelo: a.modelo || null,
-              catalogoPagina: a.catalogoPagina || null
+              catalogoPagina: a.catalogoPagina || null,
+              variacao: a.variacao || null
             });
             if (api && api.procurou) {
               alts = (api.opcoes || []).map(o => ({

@@ -361,3 +361,47 @@ export function identificadoresDoAnuncio(html) {
   const cat = /"catalog_product_id"\s*:\s*"(MLB\d{5,})"/i.exec(t);
   return { gtin, marca, modelo, catalogoPagina: cat ? cat[1].toUpperCase() : null };
 }
+
+/* ------------------------------------------- variacao escolhida no anuncio
+
+   Anuncio com variacao (capinha "para Motorola" com o modelo escolhido, roupa
+   com tamanho, aparelho com voltagem): o link do cliente ja abre com a opcao
+   marcada ("Modelo do Celular: Edge 70"). Sem ela, o titulo sozinho nao diz
+   qual produto e, e a busca nao pode chutar (capa do Edge 70 nao serve no
+   Moto G35). Caso visto em 24/09.
+
+   Cor nao entra: a ficha de catalogo costuma juntar as cores, e "Preto" no
+   nome da busca so atrapalha. */
+const CORES = new Set(['preto', 'preta', 'branco', 'branca', 'azul', 'vermelho', 'vermelha', 'rosa', 'verde',
+  'amarelo', 'amarela', 'roxo', 'roxa', 'cinza', 'dourado', 'dourada', 'prata', 'prateado', 'transparente',
+  'marrom', 'bege', 'laranja', 'lilas', 'nude', 'grafite', 'vinho', 'creme', 'off white', 'colorido', 'estampado']);
+
+function ehCor(txt) {
+  const n = String(txt || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  return CORES.has(n) || /^(preto|branco|azul|verde|rosa|cinza)\b/.test(n) && n.split(/\s+/).length <= 2;
+}
+
+export function variacaoEscolhida(html) {
+  const t = desescapar(String(html || '').slice(0, 3000000));
+  const achados = [];
+  const junta = (rotulo, valor) => {
+    const v = String(valor || '').replace(/\s+/g, ' ').trim();
+    if (!v || v.length > 40) return;
+    if (/^cor\b/i.test(String(rotulo || '').trim()) || ehCor(v)) return;
+    if (!achados.includes(v)) achados.push(v);
+  };
+  /* Rotulo visivel do seletor: "Modelo do Celular: <span>Edge 70</span>". */
+  const reRot = /ui-pdp-variations__label[^>]*>([\s\S]{0,300}?)<\/p>/gi;
+  let m;
+  while ((m = reRot.exec(t)) && achados.length < 3) {
+    const txt = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const i = txt.indexOf(':');
+    if (i > 0) junta(txt.slice(0, i), txt.slice(i + 1));
+  }
+  /* Dados da pagina: cada seletor traz a opcao marcada. */
+  if (!achados.length) {
+    const reSel = /"label"\s*:\s*\{\s*"text"\s*:\s*"([^"]{1,40})"[\s\S]{0,600}?"selected_option"\s*:\s*\{[^{}]{0,400}?"text"\s*:\s*"([^"]{1,40})"/g;
+    while ((m = reSel.exec(t)) && achados.length < 3) junta(m[1].replace(/:\s*$/, ''), m[2]);
+  }
+  return achados.length ? achados.join(' ') : null;
+}

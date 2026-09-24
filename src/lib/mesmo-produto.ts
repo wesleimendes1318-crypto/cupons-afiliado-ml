@@ -154,6 +154,8 @@ export type DicaAnuncio = {
   catalogo?: string | null; item?: string | null; preco?: number | null;
   vendedor?: string | null; titulo?: string | null;
   gtin?: string | null; marca?: string | null; modelo?: string | null; catalogoPagina?: string | null;
+  /* Opção marcada no anúncio ("Edge 70"): faz parte de QUAL produto é. */
+  variacao?: string | null;
 };
 
 /* O QUE A API OFICIAL PERMITE, medido com a conta do Weslei em 24/09/2026:
@@ -264,7 +266,12 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
     if (c.length) return { catalogos: c, porNome: false };
   }
 
-  const titulo = (dica.titulo ?? "").trim();
+  /* Com variação marcada, ela entra no nome procurado e precisa bater (os
+     números dela também). Capa "para Motorola" + "Edge 70" só aceita ficha
+     de capa do Edge 70. */
+  const variacao = (dica.variacao ?? "").trim();
+  if (variacao) trilha.push(`variacao=${variacao}`);
+  const titulo = `${(dica.titulo ?? "").trim()} ${variacao}`.trim();
   const modelo = (dica.modelo ?? "").trim();
   const juntos = new Set<string>();
   if (modelo) {
@@ -278,7 +285,9 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
   }
 
   if (titulo) {
-    const q = normPalavra(titulo).split(" ").slice(0, 10).join(" ");
+    /* A variação vai inteira no fim da busca, sem ser cortada. */
+    const base = normPalavra(dica.titulo ?? "").split(" ").filter(Boolean).slice(0, variacao ? 8 : 10).join(" ");
+    const q = `${base} ${normPalavra(variacao)}`.trim();
     const c = await buscar("titulo", `q=${encodeURIComponent(q)}`, (nome) => mesmoNome(titulo, nome));
     c.forEach((x) => juntos.add(x));
   }
