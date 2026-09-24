@@ -52,16 +52,32 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* --------------------------------------------------------- indice cupons */
 
+/* 401 E 403 NAO SAO A MESMA COISA, E EU TRATAVA OS DOIS COMO "NAO LOGADO".
+
+   O Weslei viu "Erro: NAO_LOGADO" no popup enquanto a pagina do Mercado Livre
+   ao lado mostrava o perfil dele, WSLMENDES, com 78 cliques nos ultimos 7 dias.
+   A extensao estava dizendo uma coisa que qualquer um via ser falsa, e isso faz
+   perder tempo procurando defeito no lugar errado.
+
+   401 e "quem e voce": ai sim, entrar na conta resolve.
+   403 e "sei quem voce e e mesmo assim nao deixo": conta logada, recusa do
+   outro lado. Abri a mesma URL na barra de enderecos, logado, e o que voltou
+   foi a pagina de erro do proprio Mercado Livre, com o texto deles:
+   "Estamos um problema e ja estamos trabalhando para resolve-lo."
+
+   Entao cada um leva o nome certo. Mandar a pessoa "entrar na conta" quando ela
+   ja esta dentro e pior que nao dizer nada. */
 async function getPagina(p, tentativa = 0) {
   try {
     const r = await fetch(`${API}?items_per_page=${PER}&page=${p}`, {
       headers: { accept: 'application/json' }, credentials: 'include'
     });
-    if (r.status === 401 || r.status === 403) throw new Error('NAO_LOGADO');
+    if (r.status === 401) throw new Error('NAO_LOGADO');
+    if (r.status === 403) throw new Error('CUPONS_RECUSADOS');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } catch (e) {
-    if (e.message === 'NAO_LOGADO') throw e;
+    if (e.message === 'NAO_LOGADO' || e.message === 'CUPONS_RECUSADOS') throw e;
     if (tentativa < 2) { await sleep(400 * (tentativa + 1)); return getPagina(p, tentativa + 1); }
     return null;
   }
@@ -69,7 +85,7 @@ async function getPagina(p, tentativa = 0) {
 
 async function baixarIndice() {
   const primeira = await getPagina(1);
-  if (!primeira) throw new Error('A API de cupons nao respondeu. Entre na sua conta do Mercado Livre.');
+  if (!primeira) throw new Error('A API de cupons nao respondeu agora. Tento de novo na proxima rodada.');
 
   const total   = primeira.total_items || 0;
   const paginas = Math.max(1, Math.ceil(total / PER));

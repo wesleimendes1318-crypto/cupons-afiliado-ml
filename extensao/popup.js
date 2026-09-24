@@ -225,8 +225,22 @@ $('btsinc').addEventListener('click', async () => {
   b.disabled = false; b.textContent = 'Sincronizar site';
   $('sincinfo').textContent = r.ok
     ? `Site atualizado: ${r.res.total_agora} cupons, ${r.res.novos} novos, ${r.res.vencidos_removidos} vencidos removidos.`
-    : 'Erro: ' + r.erro;
+    : textoDoErro(r.erro);
 });
+
+/* O popup mostrava o codigo cru do erro, e "NAO_LOGADO" aparecia para quem
+   estava logado. Codigo de erro e para o console; na tela vai o que a pessoa
+   precisa saber e o que ela pode fazer a respeito. */
+function textoDoErro(erro) {
+  const e = String(erro || '');
+  if (/NAO_LOGADO/.test(e)) {
+    return 'Você não está logado no Mercado Livre neste navegador. Entre na sua conta e tente de novo.';
+  }
+  if (/CUPONS_RECUSADOS/.test(e)) {
+    return 'O Mercado Livre recusou a lista de cupons agora (erro 403). Sua conta está logada e o gerador de links continua funcionando: é do lado deles. Tento de novo sozinho na próxima rodada.';
+  }
+  return 'Não consegui agora: ' + e;
+}
 
 mostrarStatusSincronia();
 
