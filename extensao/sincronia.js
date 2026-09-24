@@ -14,7 +14,32 @@
    limita a taxa, entao sao preenchidos aos poucos, em lotes pequenos.
 */
 
-const SITE     = 'https://cupons-afiliado-ml.lovable.app';
+/* O site pode estar em mais de um endereco (dominio proprio e o do Lovable,
+   que o Weslei pode renomear). A extensao usa o primeiro que responder e
+   guarda por 1 hora. Se todos ficarem fora, tenta de novo na proxima vez. */
+const SITES = [
+  'https://melhorescolha.io',
+  'https://cupons-afiliado-ml.lovable.app',
+  'https://https-cupons-afiliado-ml.lovable.app',
+  'https://www.melhorescolha.io'
+];
+let SITE = SITES[1];
+let SITE_TS = 0;
+
+async function siteVivo() {
+  if (SITE_TS && Date.now() - SITE_TS < 3600e3) return SITE;
+  for (const s of SITES) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(s + '/api/public/mesmo-produto', { cache: 'no-store', credentials: 'omit', signal: ctrl.signal });
+      clearTimeout(t);
+      const j = await r.json().catch(() => null);
+      if (r.ok && j && j.versao) { SITE = s; SITE_TS = Date.now(); return s; }
+    } catch (e) { /* tenta o proximo */ }
+  }
+  return SITE;
+}
 const SUPABASE = 'https://rjevaqtnlldhnwsidbbn.supabase.co';
 const RPC      = SUPABASE + '/rest/v1/rpc/sincronizar_cupons';
 
@@ -25,6 +50,7 @@ let CHAVE_CACHE = { valor: null, ts: 0 };
 
 async function chavePublicavel() {
   if (CHAVE_CACHE.valor && Date.now() - CHAVE_CACHE.ts < 6 * 3600e3) return CHAVE_CACHE.valor;
+  await siteVivo();
   const html = await (await fetch(SITE, { cache: 'no-store' })).text();
   const srcs = [...html.matchAll(/src="([^"]+\.js)"/g)].map(m =>
     m[1].startsWith('http') ? m[1] : SITE + (m[1].startsWith('/') ? '' : '/') + m[1]);
@@ -391,6 +417,7 @@ export async function compararNoServidor(token, url, dica = {}) {
     /* Sem cookie do site: o navegador do Weslei guardava a versao antiga do
        servidor presa a sessao (24/09: a versao nova ja estava no ar e a
        extensao seguia recebendo a anterior). */
+    await siteVivo();
     const r = await fetch(SITE + '/api/public/mesmo-produto', {
       method: 'POST',
       credentials: 'omit',

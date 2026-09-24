@@ -13,7 +13,7 @@
    filtro evita que outra aba qualquer faca a extensao trabalhar. */
 
 /* Enderecos do site: o antigo (lovable.app) e o dominio proprio. */
-const SITES = ['https://cupons-afiliado-ml.lovable.app', 'https://melhorescolha.io', 'https://www.melhorescolha.io'];
+const SITES = ['https://cupons-afiliado-ml.lovable.app', 'https://https-cupons-afiliado-ml.lovable.app', 'https://melhorescolha.io', 'https://www.melhorescolha.io'];
 
 window.addEventListener('message', (evento) => {
   if (evento.source !== window) return;
