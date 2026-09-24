@@ -1118,7 +1118,7 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
   const c = analise?.cupom ?? null;
 
   if (!c) {
-    const achouOutra = !!analise?.outraLoja;
+    const achouOutra = !!analise?.outraLoja || (analise?.outrasLojas?.length ?? 0) > 0;
     const procurou = analise?.procurouOutra === true;
 
     /* Leitura falhou: o site NAO SABE se tem cupom. Dizer "esta loja nao tem
