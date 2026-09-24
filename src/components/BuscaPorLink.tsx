@@ -727,6 +727,25 @@ function CodigoNaHora({
     if (redirecionamento.current) window.clearTimeout(redirecionamento.current);
   }, []);
 
+  /* Loja com código JÁ gerado: aparece pronto para copiar, sem clique e sem
+     pedir geração nova (só leitura). Pode ser o código de outro cupom válido
+     da mesma loja; nesse caso o desconto dele aparece junto. */
+  const [outroCupom, setOutroCupom] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc("etiqueta_da_loja" as never, { p_cupom_id: cupomId } as never);
+        const e = data as { codigo?: string; desconto?: string | null; mesmo_cupom?: boolean } | null;
+        if (vivo && e?.codigo && e.codigo.startsWith("#")) {
+          setCodigo(e.codigo);
+          if (!e.mesmo_cupom && e.desconto) setOutroCupom(e.desconto);
+        }
+      } catch { /* sem código pronto: fica o botão de sempre */ }
+    })();
+    return () => { vivo = false; };
+  }, [cupomId]);
+
   const abrir = useCallback(() => {
     setRedirecionando(true);
     redirecionamento.current = window.setTimeout(() => window.location.assign(destino), 700);
@@ -776,8 +795,23 @@ function CodigoNaHora({
             ? `Código ${codigo} copiado. Abrindo o produto...`
             : copiou
               ? `Código ${codigo} copiado.`
-              : `Seu código é ${codigo}.`}
+              : `Código da loja: ${codigo}`}
         </p>
+        {outroCupom && (
+          <p className="mt-0.5 text-xs text-secondary-ink">Este código é do cupom de {outroCupom} da mesma loja.</p>
+        )}
+        <div className="mt-2 flex items-center gap-2">
+          <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-base font-bold tracking-wide">
+            {codigo}
+          </code>
+          <button
+            type="button"
+            onClick={() => setCopiou(copiarAgora(codigo))}
+            className="shrink-0 rounded border border-success px-3 py-1.5 text-xs font-bold text-success"
+          >
+            {copiou ? "copiado" : "copiar"}
+          </button>
+        </div>
         <p className="mt-1 text-xs leading-relaxed text-secondary-ink">
           Cole no carrinho da loja para o desconto entrar.
         </p>
