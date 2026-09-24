@@ -204,6 +204,34 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
   } catch (e) {
     saida["nome_da_loja"] = { status: 0, detalhe: (e as Error).message };
   }
+  /* Token do APLICATIVO (fluxo Client Credentials), sem a conta do Weslei.
+     Se as ofertas de catalogo responderem com ele, o servidor renova o proprio
+     acesso sozinho e nao depende de renovacao da conta. */
+  try {
+    const id = process.env["ML_CLIENT_ID"];
+    const segredo = process.env["ML_CLIENT_SECRET"];
+    if (id && segredo) {
+      const t = await fetch(`${API}/oauth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+        body: new URLSearchParams({ grant_type: "client_credentials", client_id: id, client_secret: segredo }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const tj = (await t.json().catch(() => ({}))) as { access_token?: string; message?: string };
+      if (!tj.access_token) {
+        saida["token_do_app"] = { status: t.status, detalhe: tj.message ?? "sem token" };
+      } else {
+        const o = await fetch(`${API}/products/${exemplos.catalogo}/items?limit=3`, {
+          headers: { Accept: "application/json", Authorization: `Bearer ${tj.access_token}` },
+          signal: AbortSignal.timeout(8_000),
+        });
+        const oj = (await o.json().catch(() => ({}))) as { results?: unknown[] };
+        saida["token_do_app"] = { status: o.status, detalhe: `ofertas_catalogo=${oj.results?.length ?? 0}` };
+      }
+    }
+  } catch (e) {
+    saida["token_do_app"] = { status: 0, detalhe: (e as Error).message };
+  }
   await gravarConfig({ ml_diagnostico: JSON.stringify({ quando: new Date().toISOString(), comToken: Boolean(token), saida }) });
   return saida;
 }
