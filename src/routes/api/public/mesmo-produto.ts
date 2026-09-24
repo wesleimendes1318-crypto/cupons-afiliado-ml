@@ -56,7 +56,11 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
         }
 
         const ids = idsDoLink(entrada.url);
-        const chave = (ids.item ?? entrada.item ?? ids.catalogo ?? entrada.catalogo ?? null)?.toUpperCase() ?? null;
+        /* Link /up/MLBU... sem código de anúncio também ganha chave: sem ela
+           a comparação não ficava gravada e não dava para ver o que a API
+           respondeu (caso do Wella da Fragranciaria, 24/09). */
+        const up = /\/up\/(MLBU\d{5,})/i.exec(entrada.url)?.[1] ?? null;
+        const chave = (ids.item ?? entrada.item ?? ids.catalogo ?? entrada.catalogo ?? up ?? null)?.toUpperCase() ?? null;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const tabela = supabaseAdmin.from("comparacoes" as never);
 

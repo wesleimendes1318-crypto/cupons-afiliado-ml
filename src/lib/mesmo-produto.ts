@@ -168,6 +168,11 @@ async function ofertasDoCatalogo(catalogo: string) {
      6. título do anúncio buscado no catálogo; nomes e números precisam bater
                                                           -> palpite forte
    Tudo pela API oficial. Nenhuma página do Mercado Livre é lida aqui. */
+/* Devolve ATÉ 3 produtos de catálogo. O mesmo produto físico às vezes
+   existe em mais de uma ficha de catálogo (medido em 24/09: o Wella Oil
+   Reflections 100ml da Fragranciaria não trouxe a Amobeleza, que vende o
+   mesmo frasco). Por isso, nas buscas por nome, as ofertas de todas as fichas
+   aceitas entram juntas na comparação. */
 async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: string | null, trilha: string[]) {
   /* /user-products/{MLBU} respondeu 403 ("caller is not allowed to access
      this user product") no teste de 24/09 com a conta do Weslei: so o dono
@@ -180,34 +185,35 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
       const ofertas = await ofertasDoCatalogo(daPagina);
       const contem = ofertas.some((o) => String(o["item_id"] ?? o["id"] ?? "").toUpperCase() === itemAtual);
       trilha.push(`catalogo-da-pagina ${daPagina} contem-o-anuncio=${contem ? "sim" : "nao"}`);
-      if (contem) return { catalogo: daPagina, porNome: false };
+      if (contem) return { catalogos: [daPagina], porNome: false };
     } catch (e) { trilha.push(`catalogo-da-pagina ${statusDe(e)}`); }
   }
 
   const buscar = async (rotulo: string, params: string, aceitar: (nome: string) => boolean) => {
+    const achados: string[] = [];
     try {
       const r = await mlGet<BuscaCatalogo>(`/products/search?status=active&site_id=MLB&${params}&limit=10`);
       const lista = (r.results ?? []).filter((p) => p.id);
-      /* Entre os resultados aceitos, fica o primeiro que tem oferta de loja. */
-      for (const p of lista.filter((x) => aceitar(x.name ?? "")).slice(0, 3)) {
+      const aceitos = lista.filter((x) => aceitar(x.name ?? ""));
+      /* Entre os aceitos, ficam os que têm oferta de loja (até 3). */
+      for (const p of aceitos.slice(0, 5)) {
         const ofertas = await ofertasDoCatalogo(p.id!).catch(() => []);
-        if (ofertas.length) {
-          trilha.push(`${rotulo} 200 resultados=${lista.length} escolhido=${p.id}`);
-          return p.id!.toUpperCase();
-        }
+        if (ofertas.length) achados.push(p.id!.toUpperCase());
+        if (achados.length >= 3) break;
       }
-      trilha.push(`${rotulo} 200 resultados=${lista.length} escolhido=nenhum`);
+      trilha.push(`${rotulo} 200 resultados=${lista.length} aceitos=${aceitos.map((x) => `${x.id}:${(x.name ?? "").slice(0, 50)}`).join(" | ") || "nenhum"} escolhidos=${achados.join(",") || "nenhum"}`);
     } catch (e) { trilha.push(`${rotulo} ${statusDe(e)}`); }
-    return null;
+    return achados;
   };
 
   if (dica.gtin && /^\d{8,14}$/.test(dica.gtin)) {
     const c = await buscar("gtin", `product_identifier=${dica.gtin}`, () => true);
-    if (c) return { catalogo: c, porNome: false };
+    if (c.length) return { catalogos: c, porNome: false };
   }
 
   const titulo = (dica.titulo ?? "").trim();
   const modelo = (dica.modelo ?? "").trim();
+  const juntos = new Set<string>();
   if (modelo) {
     const q = normPalavra(`${dica.marca ?? ""} ${modelo}`).split(" ").slice(0, 8).join(" ");
     const tokensModelo = palavras(modelo);
@@ -215,27 +221,30 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
       const b = new Set(palavras(nome));
       return tokensModelo.length > 0 && tokensModelo.every((w) => b.has(w)) && (!titulo || mesmoNome(titulo, nome));
     });
-    if (c) return { catalogo: c, porNome: true };
+    c.forEach((x) => juntos.add(x));
   }
 
   if (titulo) {
     const q = normPalavra(titulo).split(" ").slice(0, 10).join(" ");
     const c = await buscar("titulo", `q=${encodeURIComponent(q)}`, (nome) => mesmoNome(titulo, nome));
-    if (c) return { catalogo: c, porNome: true };
+    c.forEach((x) => juntos.add(x));
   }
+  if (juntos.size) return { catalogos: [...juntos].slice(0, 4), porNome: true };
   return null;
 }
 
 export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}): Promise<Comparacao> {
   const ids = idsDoLink(url);
   const trilha: string[] = [];
-  let catalogo = (ids.catalogo ?? dica.catalogo ?? null)?.toUpperCase() ?? null;
+  const direto = (ids.catalogo ?? dica.catalogo ?? null)?.toUpperCase() ?? null;
+  let catalogos: string[] = direto ? [direto] : [];
   let catalogoPorNome = false;
   const itemAtual = (ids.item ?? dica.item ?? null)?.toUpperCase() ?? null;
-  if (!catalogo) {
+  if (!catalogos.length) {
     const achado = await catalogoDoAnuncio(url, dica, itemAtual, trilha);
-    if (achado) { catalogo = achado.catalogo; catalogoPorNome = achado.porNome; }
+    if (achado) { catalogos = achado.catalogos; catalogoPorNome = achado.porNome; }
   }
+  const catalogo = catalogos[0] ?? null;
   if (!catalogo) {
     return {
       procurou: false,
@@ -251,12 +260,20 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
 
     /* 2. Todas as ofertas do mesmo produto, de lojas diferentes. */
     const candidatos: Candidato[] = [];
-    for (const o of await ofertasDoCatalogo(catalogo)) {
-      const item = String(o["item_id"] ?? o["id"] ?? "");
-      const preco = Number(o["price"]);
-      const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
-      if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
-      candidatos.push({ item, url: urlDaOferta(catalogo, item), preco, sellerId, achadoNaBusca: catalogoPorNome });
+    for (const cat of catalogos) {
+      /* A primeira ficha é obrigatória (erro dela vira erro da comparação);
+         as demais são extras e podem falhar sozinhas. */
+      let lista: Record<string, unknown>[] = [];
+      try { lista = await ofertasDoCatalogo(cat); }
+      catch (e) { if (cat === catalogo) throw e; trilha.push(`products/${cat}/items ${statusDe(e)}`); continue; }
+      for (const o of lista) {
+        const item = String(o["item_id"] ?? o["id"] ?? "");
+        const preco = Number(o["price"]);
+        const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
+        if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
+        if (candidatos.some((c) => c.item === item)) continue;
+        candidatos.push({ item, url: urlDaOferta(cat, item), preco, sellerId, achadoNaBusca: catalogoPorNome });
+      }
     }
 
     /* 3. A oferta que o cliente estava vendo: pela lista, ou pelo que a
@@ -265,7 +282,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
     const preco = minha?.preco ?? dica.preco ?? null;
 
     /* 4. Nome de cada loja e o cupom dela no banco. */
-    const sellers = [...new Set(candidatos.map((c) => c.sellerId))].slice(0, 12);
+    const sellers = [...new Set(candidatos.map((c) => c.sellerId))].slice(0, 20);
     const nomes = new Map<number, string | null>();
     for (const s of sellers) nomes.set(s, await apelido(s));
     const cupons = await cuponsPorNome([...nomes.values(), dica.vendedor].filter(Boolean) as string[]);
@@ -317,7 +334,13 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       .sort((a, b) => a.final - b.final || (b.cupom ? 1 : 0) - (a.cupom ? 1 : 0))
       .slice(0, 3);
 
-    trilha.push(`products/${catalogo}/items ofertas=${candidatos.length}`);
+    trilha.push(`catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual}`);
+    /* Cada loja vista e o que ela daria, para conferir depois por que uma
+       loja não virou opção. */
+    for (const c of candidatos.slice(0, 20)) {
+      const cupom = cupomDe(c.sellerId);
+      trilha.push(`loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`);
+    }
     return { procurou: true, motivo: null, produto, opcoes, fonte: "api-oficial", trilha, catalogoPorNome };
   } catch (e) {
     const status = e instanceof ErroApiMl ? e.status : 0;

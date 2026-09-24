@@ -213,7 +213,12 @@ const PARAMS_UTEIS = new Set(["pdp_filters", "wid", "variation", "quantity"]);
 function limparLinkML(bruto: string): string {
   try {
     const u = new URL(bruto);
+    /* Em link /up/MLBU... o anúncio escolhido vem na âncora (wid=MLB...).
+       Ele vira pdp_filters=item_id:MLB..., a forma do próprio Mercado Livre,
+       para a comparação saber qual loja o cliente estava vendo. */
+    const wid = /[#&]wid=(MLB\d{6,})/i.exec(u.hash)?.[1];
     u.hash = "";
+    if (wid && !/item_id/i.test(u.search)) u.searchParams.set("pdp_filters", `item_id:${wid.toUpperCase()}`);
     for (const chave of [...u.searchParams.keys()]) {
       if (!PARAMS_UTEIS.has(chave)) u.searchParams.delete(chave);
     }
