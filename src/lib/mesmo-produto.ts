@@ -128,6 +128,9 @@ export type Opcao = {
   item: string; url: string; vendedor: string | null; preco: number; economia: number; final: number;
   cupom: { id: number; titulo: string | null; teto: number | null; minimo: number | null; vence: string | null } | null;
   ganho: number; finalAtual: number; motivo: "mais_barata" | "tem_cupom"; achadoNaBusca: boolean;
+  /* Foto e nome da ficha de catálogo: a extensão usa para a IA conferir se é
+     o MESMO produto (caso da capinha com borda diferente, 24/09). */
+  imagem: string | null; nomeCatalogo: string | null;
 };
 
 export type Comparacao = {
@@ -142,13 +145,14 @@ export type Comparacao = {
   /* TODAS as outras lojas vistas com o mesmo produto (até 6), inclusive as
      mais caras, só para exibir: o cliente vê que foi comparado e quanto
      pagaria a mais em cada uma. Sem link (não são recomendação). */
-  referencias?: { vendedor: string | null; preco: number; final: number; diferenca: number; cupom: string | null; url: string }[];
+  referencias?: { vendedor: string | null; preco: number; final: number; diferenca: number; cupom: string | null; url: string;
+    imagem: string | null; nomeCatalogo: string | null; porNome: boolean }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
   catalogoPorNome?: boolean;
 };
 
-type Candidato = { item: string; url: string; preco: number; sellerId: number; achadoNaBusca: boolean };
+type Candidato = { item: string; url: string; preco: number; sellerId: number; achadoNaBusca: boolean; catalogo: string };
 
 /* O que a extensão já sabe do anúncio (ela lê a página que o CLIENTE colou).
    A API oficial não deixa ler anúncio de outra conta (403 medido em 24/09),
@@ -339,7 +343,16 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
   try {
     /* 1. Nome do produto de catálogo (só para exibir). */
     let titulo: string | null = null;
-    try { titulo = (await mlGet<{ name?: string }>(`/products/${catalogo}`)).name ?? null; } catch { titulo = null; }
+    /* Nome e foto de cada ficha (uma consulta por ficha). */
+    const fichas = new Map<string, { nome: string | null; imagem: string | null }>();
+    for (const cat of catalogos) {
+      try {
+        const f = await mlGet<{ name?: string; pictures?: { url?: string; secure_url?: string }[] }>(`/products/${cat}`);
+        const img = f.pictures?.[0]?.secure_url ?? f.pictures?.[0]?.url ?? null;
+        fichas.set(cat, { nome: f.name ?? null, imagem: img ? img.replace(/^http:/, "https:") : null });
+      } catch { fichas.set(cat, { nome: null, imagem: null }); }
+    }
+    titulo = fichas.get(catalogo)?.nome ?? null;
 
     /* 2. Todas as ofertas do mesmo produto, de lojas diferentes. */
     const candidatos: Candidato[] = [];
@@ -355,7 +368,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
         const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
         if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
         if (candidatos.some((c) => c.item === item)) continue;
-        candidatos.push({ item, url: urlDaOferta(cat, item), preco, sellerId, achadoNaBusca: catalogoPorNome });
+        candidatos.push({ item, url: urlDaOferta(cat, item), preco, sellerId, achadoNaBusca: catalogoPorNome, catalogo: cat });
       }
     }
 
@@ -411,6 +424,7 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
           minimo: cupom.compra_min, vence: cupom.vence,
         } : null,
         ganho: Math.max(ganho, 0), finalAtual, motivo, achadoNaBusca: c.achadoNaBusca,
+        imagem: fichas.get(c.catalogo)?.imagem ?? null, nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
       };
       const atual = porLoja.get(c.sellerId);
       if (!atual || opcao.final < atual.final) porLoja.set(c.sellerId, opcao);
@@ -428,6 +442,8 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       if (atual && atual.final <= final) continue;
       refPorLoja.set(c.sellerId, {
         vendedor: nomes.get(c.sellerId) ?? null, preco: c.preco, final, url: c.url,
+        imagem: fichas.get(c.catalogo)?.imagem ?? null, nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
+        porNome: c.achadoNaBusca,
         diferenca: Math.round((final - finalAtual) * 100) / 100,
         cupom: economiaDoCupom(cupom, c.preco) ? cupom?.desconto ?? null : null,
       });

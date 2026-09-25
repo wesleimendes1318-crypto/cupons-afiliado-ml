@@ -396,6 +396,72 @@ async function gerarTexto(titulo, preco, cupom, canal) {
 }
 
 /* ================================================================
+   v1.71 - GEMINI CONFERE SE E O MESMO PRODUTO (foto + descricao)
+
+   Caso que motivou (24/09): a busca achou uma "capa transparente para Edge
+   70" mais barata, mas a do cliente tinha borda preta. Titulo parecido nao
+   basta. A Gemini recebe a foto e o titulo do anuncio original e de cada
+   candidato e diz quais sao EXATAMENTE o mesmo produto. Sem chave ou se a
+   Gemini falhar, devolve null e nada e descartado por ela.
+   ================================================================ */
+async function imagemParaGemini(url) {
+  if (!url || !/^https:\/\//.test(url)) return null;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { credentials: 'omit', signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) return null;
+    const buf = await r.arrayBuffer();
+    if (!buf.byteLength || buf.byteLength > 900000) return null;
+    let bin = '';
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    const mime = (r.headers.get('content-type') || 'image/jpeg').split(';')[0];
+    return { inline_data: { mime_type: /^image\//.test(mime) ? mime : 'image/jpeg', data: btoa(bin) } };
+  } catch (e) { return null; }
+}
+
+/* original: { titulo, imagem, preco }  lista: [{ titulo, imagem, preco }]
+   Devolve um Set com os indices aprovados, ou null se nao deu para conferir. */
+async function mesmoProdutoPelaGemini(original, lista) {
+  if (!lista || !lista.length) return new Set();
+  const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
+  if (!geminiKey) return null;
+  const modelo = geminiModel || 'gemini-flash-latest';
+  const partes = [{ text:
+    'Voce confere anuncios de um marketplace para um comparador de precos. Diga quais CANDIDATOS sao EXATAMENTE '
+    + 'o MESMO produto do ANUNCIO ORIGINAL: mesma marca e modelo, mesma versao, mesma cor/acabamento quando faz parte '
+    + 'do produto (ex.: capinha transparente com borda preta NAO e igual a capinha toda transparente), mesmo tamanho, '
+    + 'volume ou capacidade, mesma compatibilidade (modelo de celular, voltagem) e mesma quantidade (kit, unidades). '
+    + 'Na duvida, responda que NAO e o mesmo. Use as fotos e os titulos. Ignore diferenca de preco, loja e texto de '
+    + 'marketing. Responda so JSON no formato {"iguais":[indices],"motivos":{"indice":"motivo curto"}}.' }];
+  partes.push({ text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') });
+  const imgOrig = await imagemParaGemini(original.imagem);
+  if (imgOrig) partes.push(imgOrig);
+  const itens = lista.slice(0, 10);
+  for (let i = 0; i < itens.length; i++) {
+    partes.push({ text: 'CANDIDATO ' + i + ': ' + (itens[i].titulo || '(sem titulo)') });
+    const img = await imagemParaGemini(itens[i].imagem);
+    if (img) partes.push(img);
+  }
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
+      { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
+        body: JSON.stringify({ contents: [{ parts: partes }],
+                               generationConfig: { responseMimeType: 'application/json', temperature: 0 } }) });
+    const j = await r.json();
+    if (!r.ok) return null;
+    const txt = j?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') || '';
+    const obj = JSON.parse(txt);
+    if (!obj || !Array.isArray(obj.iguais)) return null;
+    return new Set(obj.iguais.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
+  } catch (e) { return null; }
+}
+
+/* ================================================================
    v1.4 - ATENDIMENTO: link do cliente entra, MEU link sai
    ================================================================ */
 
@@ -1827,7 +1893,7 @@ async function lerBuscaNaAba(url) {
   }
 }
 
-async function achadosNaBusca(titulo, precoRef, itemAtual) {
+async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
   /* Pagina de busca e grande (varios cartoes + dados): le ate 3 MB. */
   const html = await lerCatalogo(urlDeBusca(titulo), 3000000);
   /* Contagem de cada etapa da leitura, gravada no pedido: se a busca vier
@@ -1873,7 +1939,19 @@ async function achadosNaBusca(titulo, precoRef, itemAtual) {
     }).catch(() => {});
     const vazio = []; vazio.diag = diag; return vazio;
   }
+  /* A Gemini confere foto e titulo antes de abrir cada anuncio: o que nao
+     for o MESMO produto sai aqui, e ainda poupa leitura de pagina. */
+  if (original) {
+    const ok = await mesmoProdutoPelaGemini(original, candidatos);
+    diag.ia = ok ? { conferidos: candidatos.length, iguais: ok.size } : { indisponivel: true };
+    if (ok) candidatos = candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true }));
+    if (!candidatos.length) { const vazio = []; vazio.diag = diag; return vazio; }
+  }
   const achados = await avaliarCandidatos(candidatos, itemAtual, { achadoNaBusca: true });
+  for (const a of achados) {
+    const c = candidatos.find(x => x.item === a.item);
+    if (c) { a.imagem = c.imagem || null; a.verificadoIA = !!c.verificadoIA; }
+  }
   achados.diag = diag;
   return achados;
 }
@@ -1892,7 +1970,7 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
   if (ctx.soBusca) {
     const titulo = ctx.titulo;
     if (!titulo) return [];
-    const daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual);
+    const daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null);
     const escolha = escolherAlternativas(daBusca, { ...ctx, itemAtual });
     /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */
     escolha.todas = daBusca;
@@ -1924,7 +2002,7 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
   let diag = null;
   if (!escolha.length && titulo) {
     let daBusca = [];
-    try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual); }
+    try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null); }
     catch (e) { if (!achados.length) throw e; }
     diag = daBusca.diag || null;
     todas = achados.concat(daBusca);
@@ -2300,6 +2378,7 @@ async function atenderPedidos() {
           /* Registro da busca fora do catalogo, para conferir de longe. */
           let buscaFora = { rodou: false, motivo: null, vistos: 0 };
           let apiAchou = false;
+          let verificacaoIA = null;
           const pausaLeitura = await freioLigado('leitura');
           /* A comparacao pela API oficial nao depende da pausa de leitura nem
              de ter lido o anuncio: ela so precisa do link. A pausa passa a
@@ -2340,6 +2419,7 @@ async function atenderPedidos() {
                 item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
                 economia: o.economia, final: o.final, ganho: o.ganho, finalAtual: o.finalAtual,
                 motivo: o.motivo, achadoNaBusca: !!o.achadoNaBusca,
+                imagem: o.imagem || null, titulo: o.nomeCatalogo || null,
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
               }));
@@ -2362,7 +2442,8 @@ async function atenderPedidos() {
                   itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
                   /* A API ja olhou o catalogo: vai direto para a busca e nao
                      gasta leitura de pagina repetindo o que ja foi visto. */
-                  soBusca: !!(api && api.procurou)
+                  soBusca: !!(api && api.procurou),
+                  original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco }
                 });
                 buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
                 buscaFora.leitura = alts.diag || null;
@@ -2373,6 +2454,7 @@ async function atenderPedidos() {
                     if (vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase()) continue;
                     vistos.add((t.vendedor || '').toLowerCase());
                     referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final, url: t.url || null,
+                      imagem: t.imagem || null, verificadoIA: !!t.verificadoIA,
                       diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
                       cupom: t.cupom ? t.cupom.titulo : null });
                   }
@@ -2400,6 +2482,24 @@ async function atenderPedidos() {
 
                No maximo duas alternativas ganham link: cada link e uma chamada
                ao gerador, e o gerador ja respondeu 429 hoje. */
+            /* Ofertas achadas pelo NOME (nao pela ficha do proprio anuncio) e
+               lojas da lista passam pela Gemini: foto e titulo contra o
+               anuncio original. O que ela reprovar nao aparece. */
+            {
+              const original = { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco };
+              const conferir = [];
+              alts.forEach((x, i) => { if (x.achadoNaBusca && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem }); });
+              referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem }); });
+              if (conferir.length) {
+                const ok = await mesmoProdutoPelaGemini(original, conferir);
+                verificacaoIA = ok ? { conferidos: conferir.length, iguais: ok.size } : { indisponivel: true };
+                if (ok) {
+                  const fora = new Set(conferir.filter((_, k) => !ok.has(k)).map(c => c.tipo + c.i));
+                  alts = alts.filter((_, i) => !fora.has('alt' + i));
+                  referencias = referencias.filter((_, i) => !fora.has('ref' + i));
+                }
+              }
+            }
             if (alts.length) marcarEtapa(sincToken, p.id, 'links');
             /* Ate 3 lojas mais baratas, todas com o link de afiliado do
                Weslei. Sem link de afiliado a oferta nao vai para a tela. */
@@ -2435,6 +2535,8 @@ async function atenderPedidos() {
                      e um palpite forte. O site precisa dizer a diferenca. */
                   achadoNaBusca: !!alt.achadoNaBusca,
                   mesmaPagina: mesmaPagina,
+                  imagem: alt.imagem || null,
+                  verificadoIA: !!alt.verificadoIA || (verificacaoIA && !verificacaoIA.indisponivel && !!alt.achadoNaBusca),
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
@@ -2470,6 +2572,7 @@ async function atenderPedidos() {
             categoria: (a.categorias && a.categorias[0]) || null,
             categorias: a.categorias || [],
             referencias: referencias,
+            verificacaoIA: verificacaoIA,
             buscaFora: apiAchou ? { rodou: false, motivo: 'a API ja achou loja melhor', vistos: 0 }
               : buscaFora.rodou ? buscaFora
               : { rodou: false, vistos: 0, motivo: pausaLeitura ? 'leitura pausada (freio/captcha)' : !a.ok ? 'anuncio nao lido' : 'teto do dia atingido' },

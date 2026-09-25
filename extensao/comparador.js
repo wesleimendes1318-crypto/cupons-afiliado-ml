@@ -184,6 +184,19 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   if (!saida.length) {
     const limpo = texto.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
     d.bytesDados = limpo.length;
+
+    /* 2a. Cartoes "polycard" (formato medido em 24/09): o link do cartao
+           costuma ser de rastreio (click1...) e o numero do anuncio fica em
+           metadata.id. Monta o endereco pelo numero do anuncio. */
+    const cards = polycards(limpo);
+    d.polycards = cards.length;
+    for (const c of cards) {
+      if (saida.length >= 30) break;
+      aceitar({ item: c.item, catalogo: c.catalogo, url: c.url, imagem: c.imagem }, c.titulo, c.preco);
+    }
+  }
+  if (!saida.length) {
+    const limpo = texto.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
     const reCard = /"metadata"\s*:\s*\{[^{}]*?"url"\s*:\s*"([^"]+)"[\s\S]{0,4000}?"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{8,250})"[\s\S]{0,4000}?"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/g;
     let m, n = 0;
     while ((m = reCard.exec(limpo)) && n < 60) {
@@ -481,4 +494,31 @@ export function candidatosDeCartoes(cartoes, tituloOriginal, precoRef, diag = nu
     saida.push({ ...end, preco: c.preco, titulo: c.titulo });
   }
   return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_BUSCA);
+}
+
+/* Cada cartao "polycard" dos dados da pagina de busca, ja desescapados.
+   Devolve { item, catalogo, url, titulo, preco, imagem }. */
+export function polycards(limpo) {
+  const saida = [];
+  const partes = String(limpo || '').split(/"polycard"\s*:\s*\{/);
+  for (const p of partes.slice(1)) {
+    const bloco = p.slice(0, 15000);
+    const meta = /"metadata"\s*:\s*\{([^{}]*)\}/.exec(bloco);
+    if (!meta) continue;
+    const id = (/"id"\s*:\s*"(MLB\d{6,})"/.exec(meta[1]) || [])[1];
+    if (!id) continue;
+    const urlMeta = (/"url"\s*:\s*"([^"]*)"/.exec(meta[1]) || [])[1] || '';
+    const cat = (/\/p\/(MLB\d{5,})/i.exec(urlMeta) || [])[1] || null;
+    const titulo = (/"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{6,300})"/.exec(bloco) || [])[1];
+    const preco = (/"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/.exec(bloco) || [])[1];
+    if (!titulo || !preco) continue;
+    const foto = (/"pictures"\s*:\s*\{[\s\S]{0,200}?"id"\s*:\s*"([0-9]+-[A-Z]{3}[0-9]+_[0-9]+)"/.exec(bloco) || [])[1];
+    const url = cat ? urlDaOferta(cat.toUpperCase(), id) : 'https://produto.mercadolivre.com.br/' + id.replace(/^MLB/, 'MLB-');
+    saida.push({
+      item: id, catalogo: cat ? cat.toUpperCase() : null, url,
+      titulo: desescapar(titulo), preco: parseFloat(preco),
+      imagem: foto ? 'https://http2.mlstatic.com/D_NQ_NP_' + foto + '-O.webp' : null
+    });
+  }
+  return saida;
 }

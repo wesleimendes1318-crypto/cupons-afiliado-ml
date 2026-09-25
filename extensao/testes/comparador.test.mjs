@@ -252,3 +252,26 @@ test('busca: dados em JSON dentro de string (aspas escapadas, \\u002F), como a p
   assert.equal(r[0].item, 'MLB7608838296');
   assert.equal(r[0].preco, 74.8);
 });
+
+import { polycards } from '../comparador.js';
+
+test('busca: cartao polycard real (link de rastreio, numero do anuncio em metadata.id)', () => {
+  const card = '"results":[{"id":"POLYCARD","state":"VISIBLE","polycard":{"unique_id":"x","metadata":{"id":"MLB6647645240","user_product_id":"MLBU3807900795",'
+    + '"url":"click1.mercadolivre.com.br/mclics/clicks/external/MLB/count","url_fragments":"#wid=MLB6647645240"},'
+    + '"pictures":{"scale":"FILL","pictures":[{"id":"940186-MLB115232945436_082026"}],"square":"Q"},'
+    + '"components":[{"type":"title","id":"title","title":{"text":"Travesseiro Viscoelástico Borboleta Cervical Ortopédico","long_title":false}},'
+    + '{"type":"price","id":"price_v2","price":{"price_labels":[{"values":[{"price":{"value":299,"previous":true}}]}],'
+    + '"current_price":{"value":159,"currency":"BRL"}}}]}}]';
+  const html = '<script>x = "' + card.replace(/"/g, '\\"').replace(/\//g, '\\u002F') + '";</script>';
+  const limpo = html.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+  const c = polycards(limpo);
+  assert.equal(c.length, 1);
+  assert.equal(c[0].item, 'MLB6647645240');
+  assert.equal(c[0].preco, 159);
+  assert.equal(c[0].url, 'https://produto.mercadolivre.com.br/MLB-6647645240');
+  assert.equal(c[0].imagem, 'https://http2.mlstatic.com/D_NQ_NP_940186-MLB115232945436_082026-O.webp');
+  const diag = {};
+  const r = ofertasDaBusca(html, 'Travesseiro Cervical Ortopédico Viscoelástico', 130.16, diag);
+  assert.equal(r.length, 1);
+  assert.equal(diag.polycards, 1);
+});

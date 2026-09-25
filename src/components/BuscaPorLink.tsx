@@ -136,6 +136,9 @@ type OutraLoja = {
      gerador do Mercado Livre devolve um link só por ficha). A pessoa escolhe
      a loja em "Outras opções de compra". */
   mesmaPagina?: boolean | null;
+  /* Foto do anúncio desta loja e se a IA conferiu foto e descrição. */
+  imagem?: string | null;
+  verificadoIA?: boolean | null;
   vendedor: string | null;
   preco: number | null;
   economia: number | null;
@@ -195,6 +198,7 @@ type Referencia = {
   /* Endereço do anúncio desta loja. O link de afiliado só é gerado se o
      cliente pedir ("Ver na loja"). */
   url?: string | null;
+  imagem?: string | null;
 };
 
 type Pedido = {
@@ -1230,11 +1234,14 @@ function OutrasLojasMaisCaras({
           <li
             key={`${r.vendedor ?? "loja"}-${i}`}
             className={
-              "flex items-baseline justify-between gap-3 px-2 py-1.5 " +
+              "flex items-center justify-between gap-3 px-2 py-1.5 " +
               (i % 2 ? "bg-red-100/60 dark:bg-red-950/40" : "bg-card")
             }
           >
-            <span className="min-w-0 break-words">
+            {r.imagem && (
+              <img src={r.imagem} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-10 shrink-0 rounded bg-white object-contain" />
+            )}
+            <span className="min-w-0 flex-1 break-words">
               {r.vendedor ?? "Outra loja"}
               {r.cupom ? <span className="block text-xs text-secondary-ink">com cupom {r.cupom}</span> : null}
             </span>
@@ -1322,6 +1329,14 @@ function OutraLojaComCupom({
               ? `Nenhum cupom para esta loja hoje, mas ${oferta.vendedor ?? "outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
               : "Achei o mesmo produto mais barato em outra loja"}
       </p>
+      {oferta.imagem && (
+        <div className="mt-2 flex items-center gap-2">
+          <img src={oferta.imagem} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-16 shrink-0 rounded bg-white object-contain" />
+          {oferta.verificadoIA && (
+            <span className="rounded bg-card px-2 py-1 text-xs font-semibold text-success">✓ Foto e descrição conferidas por IA</span>
+          )}
+        </div>
+      )}
 
 
       {/* Tabela zebrada, uma coluna por loja, e a conta da economia escrita
@@ -1433,7 +1448,10 @@ function OutraLojaComCupom({
       )}
 
       <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-        {oferta.achadoNaBusca
+        {oferta.verificadoIA
+          ? "Conferi a foto e a descrição com inteligência artificial: é o mesmo produto, vendido por outra loja. "
+          : ""}
+        {oferta.verificadoIA ? "" : oferta.achadoNaBusca
           ? "Achei este anúncio procurando o produto na busca da loja. O título bate com o que você colou, mas confira a descrição antes de comprar: fora do catálogo, quem escreve o anúncio é o vendedor."
           : "É o mesmo produto, na mesma página de catálogo, só que no anúncio desta loja."}
         {temCupomLa ? " O desconto do cupom aparece no carrinho." : " Aqui a economia vem do preço, não de cupom."}
