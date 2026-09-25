@@ -200,21 +200,21 @@ export function Vitrine() {
                     {NOME_CATEGORIA[c] ?? c}{" "}
                     <span className="text-sm font-normal text-secondary-ink">({daCategoria.length})</span>
                   </h3>
-                  {daCategoria.length > 4 && (
+                  {daCategoria.length > 5 && (
                     <button type="button" onClick={() => setCategoria(c)} className="text-sm font-semibold text-ml-blue hover:underline">
                       Ver todos
                     </button>
                   )}
                 </div>
-                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {daCategoria.slice(0, 4).map((i) => <Cartao key={i.chave} i={i} />)}
+                <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
+                  {daCategoria.slice(0, 5).map((i) => <Cartao key={i.chave} i={i} />)}
                 </ul>
               </div>
             );
           })}
         </div>
       ) : (
-        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
           {lista.map((i) => <Cartao key={i.chave} i={i} />)}
         </ul>
       )}
@@ -227,33 +227,33 @@ function Cartao({ i }: { i: ItemVitrine }) {
             const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
             return (
               <li key={i.chave} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
-                <div className="relative aspect-square bg-white">
+                <div className="relative h-28 bg-white sm:h-32">
                   {i.imagem ? (
                     <img
                       src={i.imagem}
                       alt={i.titulo}
                       loading="lazy"
                       referrerPolicy="no-referrer"
-                      className="h-full w-full object-contain p-2"
+                      className="h-full w-full object-contain p-1.5"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center p-3 text-center text-xs text-secondary-ink">
+                    <div className="flex h-full w-full items-center justify-center p-2 text-center text-[11px] text-secondary-ink">
                       {NOME_CATEGORIA[i.categoria_site ?? "outros"] ?? "Produto comparado"}
                     </div>
                   )}
                   {temEconomia && (
-                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-success px-1.5 py-0.5 text-[11px] font-bold text-white">
+                    <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-success px-1 py-0.5 text-[10px] font-bold text-white">
                       <TrendingDown className="size-3" aria-hidden="true" />
                       {brl(i.economia)} a menos
                     </span>
                   )}
                 </div>
-                <div className="flex flex-1 flex-col p-2.5">
-                  <p className="line-clamp-2 text-sm font-medium leading-snug">{i.titulo}</p>
-                  <p className="mt-1.5 text-lg font-extrabold tabular-nums">
+                <div className="flex flex-1 flex-col p-2">
+                  <p className="line-clamp-2 text-xs font-medium leading-snug">{i.titulo}</p>
+                  <p className="mt-1 text-base font-extrabold tabular-nums">
                     {brl(temEconomia ? i.melhor_preco : i.preco)}
                   </p>
-                  <p className="text-xs text-secondary-ink">
+                  <p className="truncate text-[11px] text-secondary-ink">
                     {temEconomia ? (
                       <>
                         na {i.melhor_loja} <span className="line-through">{brl(i.preco)}</span>
@@ -267,13 +267,13 @@ function Cartao({ i }: { i: ItemVitrine }) {
                     visto em {quando(i.visto_em)}
                     {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} lojas comparadas` : ""}
                   </p>
-                  <div className="mt-auto flex flex-col gap-1.5 pt-2.5">
+                  <div className="mt-auto flex flex-col gap-1 pt-2">
                     {destino && (
                       <a
                         href={destino}
                         target="_blank"
                         rel="noopener noreferrer sponsored"
-                        className="rounded-md bg-success py-2 text-center text-sm font-bold text-white hover:brightness-95"
+                        className="rounded-md bg-success py-1.5 text-center text-xs font-bold text-white hover:brightness-95"
                       >
                         Ver oferta
                       </a>
@@ -284,9 +284,9 @@ function Cartao({ i }: { i: ItemVitrine }) {
                         onClick={() =>
                           window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url_produto }))
                         }
-                        className="inline-flex items-center justify-center gap-1 rounded-md border border-border py-1.5 text-xs font-semibold hover:border-ml-blue"
+                        className="inline-flex items-center justify-center gap-1 rounded-md border border-border py-1 text-[11px] font-semibold hover:border-ml-blue"
                       >
-                        <RefreshCw className="size-3.5" aria-hidden="true" />
+                        <RefreshCw className="size-3" aria-hidden="true" />
                         Comparar de novo
                       </button>
                     )}
