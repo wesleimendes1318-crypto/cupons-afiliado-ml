@@ -21,7 +21,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderCircle, Share2 } from "lucide-react";
+import { LoaderCircle, Package, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -98,10 +98,16 @@ function mensagemMelhorOpcao({
   link: string;
 }) {
   const linhas: string[] = [];
-  linhas.push(titulo ? `🔎 Achei o menor preço de *${titulo}*` : "🔎 Achei o menor preço deste produto");
+  linhas.push(
+    titulo ? `🔎 Achei o menor preço de *${titulo}*` : "🔎 Achei o menor preço deste produto",
+  );
   if (preco != null) linhas.push(`💰 *${brl(preco)}*${loja ? ` na loja ${loja}` : ""}`);
-  if (economia != null && economia > 0) linhas.push(`📉 ${brl(economia)} a menos que o anúncio original`);
-  else if (comparadas > 0) linhas.push(`✅ Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata`);
+  if (economia != null && economia > 0)
+    linhas.push(`📉 ${brl(economia)} a menos que o anúncio original`);
+  else if (comparadas > 0)
+    linhas.push(
+      `✅ Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata`,
+    );
   if (cupom) linhas.push(`🎟️ Cupom da loja: ${cupom} (o desconto aparece no carrinho)`);
   linhas.push("", `👉 Compre direto por aqui: ${link}`);
   return linhas.join("\n");
@@ -186,6 +192,16 @@ type Analise = {
   /* Todas as outras lojas vistas com o mesmo produto, inclusive as mais
      caras. Só exibição: a pessoa vê que comparei e quanto pagaria a mais. */
   referencias?: Referencia[] | null;
+  /* Foto do anúncio colado e o que a busca em outras lojas leu. */
+  imagem?: string | null;
+  buscaFora?: {
+    vistos?: number | null;
+    leitura?: {
+      comPreco?: number | null;
+      parecidos?: number | null;
+      ia?: { conferidos?: number | null; iguais?: number | null } | null;
+    } | null;
+  } | null;
 };
 
 type Referencia = {
@@ -257,7 +273,9 @@ const dataBR = (iso: string | null | undefined) => {
 };
 
 const ehLinkML = (u: string) =>
-  /^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com|meli\.la)(\/|$)/i.test(u.trim());
+  /^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com|meli\.la)(\/|$)/i.test(
+    u.trim(),
+  );
 
 /* URL que aponta direto para um anúncio ou produto de catálogo. */
 const ehProdutoML = (u: string) => /\/p\/MLB\d+/i.test(u) || /\/MLB-?\d+/i.test(u);
@@ -282,7 +300,8 @@ function limparLinkML(bruto: string): string {
        para a comparação saber qual loja o cliente estava vendo. */
     const wid = /[#&]wid=(MLB\d{6,})/i.exec(u.hash)?.[1];
     u.hash = "";
-    if (wid && !/item_id/i.test(u.search)) u.searchParams.set("pdp_filters", `item_id:${wid.toUpperCase()}`);
+    if (wid && !/item_id/i.test(u.search))
+      u.searchParams.set("pdp_filters", `item_id:${wid.toUpperCase()}`);
     for (const chave of [...u.searchParams.keys()]) {
       if (!PARAMS_UTEIS.has(chave)) u.searchParams.delete(chave);
     }
@@ -308,7 +327,9 @@ function limparLinkML(bruto: string): string {
    Também resolve a sujeira antiga: mesma URL emendada duas vezes sem espaço,
    texto em volta, quebra de linha no meio. */
 function melhorLinkML(texto: string): string | null {
-  const limpo = String(texto || "").replace(/\s+/g, " ").trim();
+  const limpo = String(texto || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!limpo) return null;
 
   const candidatos: string[] = [];
@@ -320,8 +341,7 @@ function melhorLinkML(texto: string): string | null {
   }
   if (!candidatos.length) return null;
 
-  const escolhido =
-    candidatos.find(ehProdutoML) ?? candidatos.find(ehCurtoML) ?? candidatos[0];
+  const escolhido = candidatos.find(ehProdutoML) ?? candidatos.find(ehCurtoML) ?? candidatos[0];
 
   return escolhido ? limparLinkML(escolhido) : null;
 }
@@ -357,7 +377,11 @@ function useDispositivo(): Dispositivo {
   useEffect(() => {
     const ua = navigator.userAgent || "";
     if (/Instagram|FBAN|FBAV|FB_IAB|TikTok|musical_ly|Line\//i.test(ua)) setD("app-interno");
-    else if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))) setD("celular");
+    else if (
+      /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))
+    )
+      setD("celular");
     else setD("computador");
   }, []);
   return d;
@@ -370,11 +394,11 @@ function textoDoBotao(d: Dispositivo, base: string) {
 function AvisoDoBotao({ d }: { d: Dispositivo }) {
   const texto =
     d === "celular"
-      ? "Toque no botão e o app da loja abre direto no produto, já na sua conta. É só finalizar a compra por lá."
+      ? "Abre direto no app da loja."
       : d === "app-interno"
-        ? "Você está no navegador de dentro de outro app. Se a loja abrir aqui dentro, toque nos três pontinhos e em \"Abrir no navegador\" para ir ao app e finalizar a compra."
-        : "Abre o anúncio numa aba nova, no site da loja. Se você já está logado neste navegador, é só finalizar a compra.";
-  return <p className="mt-1.5 text-center text-xs leading-relaxed text-secondary-ink">{texto}</p>;
+        ? 'Se abrir aqui dentro, toque nos três pontinhos e em "Abrir no navegador".'
+        : "Abre numa aba nova, no site da loja.";
+  return <p className="mt-1 text-center text-[11px] text-secondary-ink">{texto}</p>;
 }
 
 export default function BuscaPorLink() {
@@ -448,8 +472,13 @@ export default function BuscaPorLink() {
       /* Cutuca a extensao na hora. Sem isso o pedido espera o alarme do Chrome,
          que nao roda em menos de 1 minuto: era esse o tempo morto da espera. */
       try {
-        window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id }, window.location.origin);
-      } catch { /* sem extensao: o alarme cobre */ }
+        window.postMessage(
+          { de: "cupons-afiliado-ml", tipo: "pedido-novo", id },
+          window.location.origin,
+        );
+      } catch {
+        /* sem extensao: o alarme cobre */
+      }
 
       let voltas = 0;
       let parou = false;
@@ -530,23 +559,28 @@ export default function BuscaPorLink() {
       .catch(() => undefined);
   };
 
-  const carregando = fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
+  const carregando =
+    fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
 
   return (
-    <section id="colar-link" className="rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5">
+    <section
+      id="colar-link"
+      className="mx-auto max-w-3xl rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-3 sm:p-4"
+    >
       <div className="mb-1 flex items-center gap-2">
-        <span aria-hidden="true" className="text-lg">🔗</span>
+        <span aria-hidden="true" className="text-lg">
+          🔗
+        </span>
         <h2 className="font-semibold">Cole o link do produto</h2>
       </div>
-      <p className="mb-3 text-xs text-secondary-ink">
-        Eu procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Se a loja tiver
-        cupom, aparece também.
+      <p className="mb-2 text-xs text-secondary-ink">
+        Procuro o mesmo produto em outras lojas e mostro onde sai mais barato.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <textarea
           id="campo-link-produto"
-          rows={2}
+          rows={1}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onPaste={(e) => {
@@ -558,13 +592,13 @@ export default function BuscaPorLink() {
           }}
           placeholder="Cole aqui o link do anúncio do produto"
           aria-label="Link do anúncio do produto"
-          className="min-w-0 flex-1 resize-y rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue"
+          className="min-h-10 min-w-0 flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue"
         />
         <button
           type="button"
           onClick={() => buscar(url)}
           disabled={carregando || !url.trim()}
-          className="shrink-0 rounded-md bg-ml-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 sm:self-start"
+          className="shrink-0 rounded-md bg-ml-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 sm:self-start"
         >
           {carregando ? "Comparando..." : "Comparar preços"}
         </button>
@@ -639,9 +673,7 @@ function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
                   </svg>
                 ) : (
                   <span
-                    className={
-                      "size-1.5 rounded-full " + (andando ? "bg-ml-blue" : "bg-border")
-                    }
+                    className={"size-1.5 rounded-full " + (andando ? "bg-ml-blue" : "bg-border")}
                   />
                 )}
               </span>
@@ -674,8 +706,8 @@ function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
 
       {demorando ? (
         <p className="mt-2 text-center text-xs leading-relaxed text-secondary-ink">
-          Está demorando mais que o normal, mas eu continuo tentando. Deixe a página
-          aberta: o resultado aparece aqui sozinho.
+          Está demorando mais que o normal, mas eu continuo tentando. Deixe a página aberta: o
+          resultado aparece aqui sozinho.
         </p>
       ) : (
         <p className="mt-2 text-center text-xs text-secondary-ink">
@@ -703,7 +735,9 @@ function copiarAgora(texto: string): boolean {
       void navigator.clipboard.writeText(texto);
       return true;
     }
-  } catch { /* plano B */ }
+  } catch {
+    /* plano B */
+  }
   try {
     const campo = document.createElement("textarea");
     campo.value = texto;
@@ -740,10 +774,13 @@ function CodigoNaHora({
   const redirecionamento = useRef<number | null>(null);
   const acao = useRef<"abrir" | "compartilhar">("abrir");
 
-  useEffect(() => () => {
-    relogios.current.forEach((t) => window.clearTimeout(t));
-    if (redirecionamento.current) window.clearTimeout(redirecionamento.current);
-  }, []);
+  useEffect(
+    () => () => {
+      relogios.current.forEach((t) => window.clearTimeout(t));
+      if (redirecionamento.current) window.clearTimeout(redirecionamento.current);
+    },
+    [],
+  );
 
   /* Loja com código JÁ gerado: aparece pronto para copiar, sem clique e sem
      pedir geração nova (só leitura). Pode ser o código de outro cupom válido
@@ -753,15 +790,26 @@ function CodigoNaHora({
     let vivo = true;
     (async () => {
       try {
-        const { data } = await supabase.rpc("etiqueta_da_loja" as never, { p_cupom_id: cupomId } as never);
-        const e = data as { codigo?: string; desconto?: string | null; mesmo_cupom?: boolean } | null;
+        const { data } = await supabase.rpc(
+          "etiqueta_da_loja" as never,
+          { p_cupom_id: cupomId } as never,
+        );
+        const e = data as {
+          codigo?: string;
+          desconto?: string | null;
+          mesmo_cupom?: boolean;
+        } | null;
         if (vivo && e?.codigo && e.codigo.startsWith("#")) {
           setCodigo(e.codigo);
           if (!e.mesmo_cupom && e.desconto) setOutroCupom(e.desconto);
         }
-      } catch { /* sem código pronto: fica o botão de sempre */ }
+      } catch {
+        /* sem código pronto: fica o botão de sempre */
+      }
     })();
-    return () => { vivo = false; };
+    return () => {
+      vivo = false;
+    };
   }, [cupomId]);
 
   const abrir = useCallback(() => {
@@ -775,11 +823,22 @@ function CodigoNaHora({
     try {
       const { data } = await supabase.rpc("pedir_etiqueta", { p_cupom_id: cupomId });
       const resposta = String(data ?? "");
-      if (resposta.startsWith("#")) { pronto(resposta); return; }
-      if (resposta !== "pedido") { setFase("falhou"); return; }
+      if (resposta.startsWith("#")) {
+        pronto(resposta);
+        return;
+      }
+      if (resposta !== "pedido") {
+        setFase("falhou");
+        return;
+      }
       try {
-        window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id: cupomId }, window.location.origin);
-      } catch { /* sem extensao: o alarme de 1 minuto cobre */ }
+        window.postMessage(
+          { de: "cupons-afiliado-ml", tipo: "pedido-novo", id: cupomId },
+          window.location.origin,
+        );
+      } catch {
+        /* sem extensao: o alarme de 1 minuto cobre */
+      }
     } catch {
       setFase("falhou");
       return;
@@ -789,10 +848,17 @@ function CodigoNaHora({
     const olhar = async () => {
       try {
         const { data } = await supabase.rpc("consultar_etiqueta", { p_cupom_id: cupomId });
-        if (typeof data === "string" && data.startsWith("#")) { pronto(data); return; }
-      } catch { /* tenta de novo */ }
+        if (typeof data === "string" && data.startsWith("#")) {
+          pronto(data);
+          return;
+        }
+      } catch {
+        /* tenta de novo */
+      }
       if (Date.now() < limite) relogios.current.push(window.setTimeout(olhar, 3000));
-      else { setFase("falhou"); }
+      else {
+        setFase("falhou");
+      }
     };
     relogios.current.push(window.setTimeout(olhar, 3000));
   }
@@ -816,7 +882,9 @@ function CodigoNaHora({
               : `Código da loja: ${codigo}`}
         </p>
         {outroCupom && (
-          <p className="mt-0.5 text-xs text-secondary-ink">Este código é do cupom de {outroCupom} da mesma loja.</p>
+          <p className="mt-0.5 text-xs text-secondary-ink">
+            Este código é do cupom de {outroCupom} da mesma loja.
+          </p>
         )}
         <div className="mt-2 flex items-center gap-2">
           <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-base font-bold tracking-wide">
@@ -835,7 +903,10 @@ function CodigoNaHora({
         </p>
         <button
           type="button"
-          onClick={() => { setCopiou(copiarAgora(codigo)); abrir(); }}
+          onClick={() => {
+            setCopiou(copiarAgora(codigo));
+            abrir();
+          }}
           disabled={redirecionando}
           className="mt-2 w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95"
         >
@@ -843,7 +914,11 @@ function CodigoNaHora({
         </button>
         <button
           type="button"
-          onClick={() => compartilharWhatsApp(mensagemProduto({ titulo, vendedor, cupom, codigo, link: destino }))}
+          onClick={() =>
+            compartilharWhatsApp(
+              mensagemProduto({ titulo, vendedor, cupom, codigo, link: destino }),
+            )
+          }
           className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-success px-3 py-2 text-sm font-bold text-success transition-colors hover:bg-success/10"
         >
           <Share2 className="size-4" aria-hidden="true" />
@@ -857,7 +932,7 @@ function CodigoNaHora({
     <div className="mt-3">
       <button
         type="button"
-          onClick={() => void pedir("abrir")}
+        onClick={() => void pedir("abrir")}
         disabled={fase === "gerando"}
         className="w-full rounded-md bg-success py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:opacity-70"
       >
@@ -866,7 +941,9 @@ function CodigoNaHora({
             <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
             Criando seu código…
           </span>
-        ) : "Usar este cupom"}
+        ) : (
+          "Usar este cupom"
+        )}
       </button>
       <button
         type="button"
@@ -884,9 +961,16 @@ function CodigoNaHora({
           : "Compartilhar cupom no WhatsApp"}
       </button>
       {fase === "gerando" && (
-        <div className="mt-2.5 overflow-hidden rounded-md border border-success/25 bg-success/10 p-3" role="status" aria-live="polite">
+        <div
+          className="mt-2.5 overflow-hidden rounded-md border border-success/25 bg-success/10 p-3"
+          role="status"
+          aria-live="polite"
+        >
           <div className="flex items-center gap-2 text-xs font-bold text-success">
-            <span className="etapa-andando size-2 shrink-0 rounded-full bg-success" aria-hidden="true" />
+            <span
+              className="etapa-andando size-2 shrink-0 rounded-full bg-success"
+              aria-hidden="true"
+            />
             Gerando e validando sua etiqueta
           </div>
           <div className="esqueleto mt-2.5 h-1.5 rounded-full" aria-hidden="true" />
@@ -907,6 +991,41 @@ function CodigoNaHora({
 }
 
 /* ---------------------------------------------------------------- resultado */
+
+/* Foto do produto: sempre aparece alguma coisa. Endereço do Mercado Livre é
+   normalizado para a versão padrão (sem o nome do produto no fim, que às vezes
+   falha); se mesmo assim não carregar, fica um ícone no lugar. */
+function fotoML(u: string | null | undefined): string | null {
+  if (!u) return null;
+  const m = /(\d{5,}-M[A-Z]{2}\d+_\d+)-[A-Z]{1,2}\b/.exec(u);
+  return m ? `https://http2.mlstatic.com/D_NQ_NP_${m[1]}-O.webp` : u;
+}
+
+function Foto({ src, className }: { src: string | null | undefined; className: string }) {
+  const [tentativa, setTentativa] = useState(0);
+  const lista = [fotoML(src), src].filter((x, i, a): x is string => !!x && a.indexOf(x) === i);
+  const atual = lista[tentativa];
+  if (!atual) {
+    return (
+      <span
+        className={`${className} flex items-center justify-center bg-muted text-secondary-ink`}
+        aria-hidden="true"
+      >
+        <Package className="size-1/2" />
+      </span>
+    );
+  }
+  return (
+    <img
+      src={atual}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setTentativa((t) => t + 1)}
+      className={`${className} bg-white object-contain`}
+    />
+  );
+}
 
 function Resultado({
   pedido,
@@ -929,7 +1048,8 @@ function Resultado({
     a?.outrasLojas && a.outrasLojas.length ? a.outrasLojas : a?.outraLoja ? [a.outraLoja] : [];
   /* A troca vira a recomendação principal quando a melhor alternativa sai mais
      barata, ou quando a loja do anúncio não tem cupom e a outra tem. */
-  const trocar = alternativas.length > 0 && (a?.temCupom !== true || (alternativas[0]?.ganho ?? 0) > 0);
+  const trocar =
+    alternativas.length > 0 && (a?.temCupom !== true || (alternativas[0]?.ganho ?? 0) > 0);
 
   /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
@@ -949,20 +1069,28 @@ function Resultado({
   const referencias = (a?.referencias ?? []).filter(
     (r) => r.final != null && !nomesAlternativas.has((r.vendedor ?? "").toLowerCase()),
   );
-  const estaEAMelhor = !leituraFalhou && !semLink && alternativas.length === 0 && a?.procurouOutra === true;
+  const estaEAMelhor =
+    !leituraFalhou && !semLink && alternativas.length === 0 && a?.procurouOutra === true;
 
   return (
-    <div className="mt-4 rounded-lg border border-border p-4">
-      {a?.titulo && (
-        <p className="break-words text-sm font-medium">{a.titulo}</p>
-      )}
-      {a?.preco != null && (
-        <p className="mt-1 text-2xl font-bold tabular-nums">
-          {brl(a.preco)}
-          {a.temCupom && <span className="ml-2 align-middle text-xs font-normal text-secondary-ink">preço do anúncio, sem o cupom</span>}
-        </p>
-      )}
-      {a?.vendedor && <p className="mt-1 text-xs text-secondary-ink">Vendido por {a.vendedor}</p>}
+    <div className="mt-3 rounded-lg border border-border bg-card p-3">
+      <div className="flex items-start gap-3">
+        <Foto src={a?.imagem} className="size-16 shrink-0 rounded-md border border-border" />
+        <div className="min-w-0 flex-1">
+          {a?.titulo && (
+            <p className="line-clamp-2 break-words text-sm font-medium leading-snug">{a.titulo}</p>
+          )}
+          <p className="mt-0.5 text-xs text-secondary-ink">
+            {a?.preco != null && (
+              <span className="text-base font-bold tabular-nums text-foreground">
+                {brl(a.preco)}
+              </span>
+            )}
+            {a?.temCupom && <span> · sem o cupom</span>}
+            {a?.vendedor && <span> · {a.vendedor}</span>}
+          </p>
+        </div>
+      </div>
 
       {alternativas.map((oferta, i) => (
         <OutraLojaComCupom
@@ -970,10 +1098,11 @@ function Resultado({
           oferta={oferta}
           dispositivo={dispositivo}
           vendedorAqui={a?.vendedor ?? null}
-          cupomAqui={a?.temCupom ? a?.cupom?.titulo ?? null : null}
+          cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
           precoAqui={a?.preco ?? null}
           titulo={a?.titulo ?? null}
           principal={trocar && i === 0}
+          compacto={i > 0}
           lojaAquiTemCupom={a?.temCupom === true}
         />
       ))}
@@ -987,6 +1116,8 @@ function Resultado({
           temCupom={a?.temCupom === true}
           /* -1: pedido de versão antiga, sem a lista de lojas. */
           comparadas={a?.referencias ? referencias.length : -1}
+          olhados={a?.buscaFora?.leitura?.comPreco ?? null}
+          conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
         />
       )}
 
@@ -1020,7 +1151,13 @@ function Resultado({
       )}
 
       {a?.temCupom && a.cupom?.id != null && !trocar && (
-        <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
+        <CodigoNaHora
+          cupomId={a.cupom.id}
+          destino={link}
+          titulo={a.titulo}
+          vendedor={a.vendedor}
+          cupom={a.cupom}
+        />
       )}
 
       {/* Achei loja mais barata, mas a pessoa pode preferir a loja que ela
@@ -1029,7 +1166,8 @@ function Resultado({
       {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
         <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
           <p className="text-sm font-bold">
-            Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem cupom
+            Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem
+            cupom
             {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
           </p>
           {alternativas[0]?.finalAtual != null && a.preco != null && (
@@ -1037,10 +1175,15 @@ function Resultado({
               Com o cupom, lá sai por {brl(alternativas[0].finalAtual)} (de {brl(a.preco)}).
             </p>
           )}
-          <CodigoNaHora cupomId={a.cupom.id} destino={link} titulo={a.titulo} vendedor={a.vendedor} cupom={a.cupom} />
+          <CodigoNaHora
+            cupomId={a.cupom.id}
+            destino={link}
+            titulo={a.titulo}
+            vendedor={a.vendedor}
+            cupom={a.cupom}
+          />
         </div>
       )}
-
 
       {!leituraFalhou && !semLink && !estaEAMelhor && (
         <a
@@ -1049,47 +1192,48 @@ function Resultado({
           rel="noopener noreferrer"
           className={
             trocar
-              ? "mt-4 block w-full rounded-md border-2 border-ml-blue py-2.5 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
-              : "mt-4 block w-full rounded-md bg-ml-blue py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+              ? "mt-3 block w-full rounded-md border border-ml-blue py-2 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
+              : "mt-3 block w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
           }
         >
-          {trocar ? "Comprar mesmo assim na loja do anúncio" : textoDoBotao(dispositivo, "Comprar agora")}
+          {trocar
+            ? "Comprar mesmo assim na loja do anúncio"
+            : textoDoBotao(dispositivo, "Comprar agora")}
         </a>
       )}
       {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
 
-
-      {!leituraFalhou && !semLink && (() => {
-        const melhor = trocar ? alternativas[0] : null;
-        const destino = melhor?.link ?? link;
-        const texto = mensagemMelhorOpcao({
-          titulo: a?.titulo,
-          loja: melhor ? melhor.vendedor : a?.vendedor,
-          preco: melhor ? melhor.final : a?.preco,
-          economia: melhor ? melhor.ganho : null,
-          cupom: melhor ? melhor.cupomTitulo : a?.temCupom ? a?.cupom?.titulo : null,
-          comparadas: a?.referencias ? referencias.length : 0,
-          link: destino,
-        });
-        return (
-          <button
-            type="button"
-            onClick={() => compartilharWhatsApp(texto)}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border-2 border-[#25D366] py-2.5 text-sm font-bold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
-          >
-            <Share2 className="size-4" aria-hidden="true" />
-            Compartilhar no WhatsApp
-          </button>
-        );
-      })()}
+      {!leituraFalhou &&
+        !semLink &&
+        (() => {
+          const melhor = trocar ? alternativas[0] : null;
+          const destino = melhor?.link ?? link;
+          const texto = mensagemMelhorOpcao({
+            titulo: a?.titulo,
+            loja: melhor ? melhor.vendedor : a?.vendedor,
+            preco: melhor ? melhor.final : a?.preco,
+            economia: melhor ? melhor.ganho : null,
+            cupom: melhor ? melhor.cupomTitulo : a?.temCupom ? a?.cupom?.titulo : null,
+            comparadas: a?.referencias ? referencias.length : 0,
+            link: destino,
+          });
+          return (
+            <button
+              type="button"
+              onClick={() => compartilharWhatsApp(texto)}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[#25D366] py-2 text-sm font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
+            >
+              <Share2 className="size-4" aria-hidden="true" />
+              Compartilhar no WhatsApp
+            </button>
+          );
+        })()}
 
       {pedido.codigo && (
-        <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
-          <p className="text-xs leading-relaxed text-secondary-ink">
-            Código de busca do anúncio. Não é o cupom: serve só para achar este
-            produto caso o link não abra no aplicativo.
-          </p>
-          <div className="mt-2 flex items-center gap-2">
+        <details className="mt-2 text-xs text-secondary-ink">
+          <summary className="cursor-pointer select-none">O link não abriu no aplicativo?</summary>
+          <p className="mt-1 leading-relaxed">Busque este código no aplicativo. Não é cupom.</p>
+          <div className="mt-1 flex items-center gap-2">
             <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
               {pedido.codigo}
             </code>
@@ -1101,15 +1245,16 @@ function Resultado({
               {copiado === "codigo" ? "copiado" : "copiar"}
             </button>
           </div>
-        </div>
+        </details>
       )}
 
       {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
           feita: seria prometer comissao sobre um link que nao foi gerado. */}
       {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
       {!leituraFalhou && !semLink && (
-        <p className="mt-4 text-center text-xs text-secondary-ink">
-          Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão da loja. Obrigado!
+        <p className="mt-2 text-center text-[11px] text-secondary-ink">
+          Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão da loja.
+          Obrigado!
         </p>
       )}
     </div>
@@ -1125,6 +1270,8 @@ function MelhorOpcao({
   dispositivo,
   temCupom,
   comparadas,
+  olhados,
+  conferidosIA,
 }: {
   vendedor: string | null;
   preco: number | null;
@@ -1132,28 +1279,36 @@ function MelhorOpcao({
   dispositivo: Dispositivo;
   temCupom: boolean;
   comparadas: number;
+  olhados?: number | null;
+  conferidosIA?: number | null;
 }) {
+  /* Nenhuma loja igual: diz quanto foi olhado, para ninguém achar que não
+     procurei. Só números medidos no pedido; sem número, frase genérica. */
+  const semIguais =
+    olhados != null && olhados > 0
+      ? `Olhei ${olhados} anúncios parecidos${conferidosIA ? ` e conferi ${conferidosIA} pela foto` : ""}: nenhum era este mesmo produto mais barato.`
+      : "Não encontrei este mesmo produto mais barato em outra loja.";
   return (
-    <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
-      <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
-        Melhor opção
-      </p>
-      <p className="text-sm font-bold text-success">
-        {comparadas > 0
-          ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
-          : comparadas === 0
-            ? "Não encontrei este mesmo produto mais barato em outra loja."
-            : `Comparei com as outras lojas que vendem este mesmo produto e esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
-      </p>
-      <div className="mt-2 flex items-baseline justify-between gap-3 rounded-md border border-success/30 bg-card px-3 py-2 text-sm">
-        <span className="min-w-0">{vendedor ? <span className="font-semibold">{vendedor}</span> : "Loja do anúncio"}</span>
-        <span className="shrink-0 text-base font-bold tabular-nums">{brl(preco)}</span>
+    <div className="mt-3 rounded-lg border border-success/50 bg-success/10 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded bg-success px-1.5 py-0.5 text-[11px] font-bold text-white">
+          Melhor opção
+        </span>
+        <span className="text-sm font-semibold">{vendedor ?? "Loja do anúncio"}</span>
+        <span className="ml-auto text-base font-bold tabular-nums">{brl(preco)}</span>
       </div>
+      <p className="mt-1 text-xs text-success">
+        {comparadas > 0
+          ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
+          : comparadas === 0
+            ? semIguais
+            : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
+      </p>
       <a
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+        className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
       >
         {textoDoBotao(dispositivo, vendedor ? `Comprar na ${vendedor}` : "Comprar agora")}
       </a>
@@ -1171,16 +1326,30 @@ function VerNaLoja({ url }: { url: string }) {
   async function gerar() {
     setEstado("gerando");
     try {
-      const { data: id, error } = await supabase.rpc("pedir_link_loja" as never, { p_url: url } as never);
+      const { data: id, error } = await supabase.rpc(
+        "pedir_link_loja" as never,
+        { p_url: url } as never,
+      );
       if (error || id == null) throw new Error("falhou");
       try {
-        window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id }, window.location.origin);
-      } catch { /* sem extensão: o alarme cobre */ }
+        window.postMessage(
+          { de: "cupons-afiliado-ml", tipo: "pedido-novo", id },
+          window.location.origin,
+        );
+      } catch {
+        /* sem extensão: o alarme cobre */
+      }
       for (let volta = 0; volta < 45; volta++) {
         await new Promise((ok) => setTimeout(ok, volta < 10 ? 1200 : 2500));
         const { data } = await supabase.rpc("consultar_pedido", { p_id: Number(id) });
-        const linha = (Array.isArray(data) ? data[0] : data) as { status?: string; link?: string | null } | null;
-        if (linha?.status === "pronto" && linha.link) { setLink(linha.link); return; }
+        const linha = (Array.isArray(data) ? data[0] : data) as {
+          status?: string;
+          link?: string | null;
+        } | null;
+        if (linha?.status === "pronto" && linha.link) {
+          setLink(linha.link);
+          return;
+        }
         if (linha?.status === "falhou") break;
       }
       setEstado("falhou");
@@ -1208,7 +1377,11 @@ function VerNaLoja({ url }: { url: string }) {
       disabled={estado === "gerando"}
       className="mt-1 block w-full text-right text-xs font-semibold text-secondary-ink underline underline-offset-2 disabled:no-underline"
     >
-      {estado === "gerando" ? "Gerando link…" : estado === "falhou" ? "Tentar de novo" : "Ver na loja"}
+      {estado === "gerando"
+        ? "Gerando link…"
+        : estado === "falhou"
+          ? "Tentar de novo"
+          : "Ver na loja"}
     </button>
   );
 }
@@ -1227,7 +1400,9 @@ function OutrasLojasMaisCaras({
   return (
     <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
       <p className="text-sm font-bold text-red-700 dark:text-red-400">
-        {temAlternativa ? "Outras lojas com o mesmo produto (não compensam)" : "Outras lojas com o mesmo produto: mais caras"}
+        {temAlternativa
+          ? "Outras lojas com o mesmo produto (não compensam)"
+          : "Outras lojas com o mesmo produto: mais caras"}
       </p>
       <ul className="mt-2 overflow-hidden rounded-md border border-red-200 text-sm dark:border-red-900">
         {caras.map((r, i) => (
@@ -1238,18 +1413,20 @@ function OutrasLojasMaisCaras({
               (i % 2 ? "bg-red-100/60 dark:bg-red-950/40" : "bg-card")
             }
           >
-            {r.imagem && (
-              <img src={r.imagem} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-10 shrink-0 rounded bg-white object-contain" />
-            )}
+            <Foto src={r.imagem} className="size-10 shrink-0 rounded" />
             <span className="min-w-0 flex-1 break-words">
               {r.vendedor ?? "Outra loja"}
-              {r.cupom ? <span className="block text-xs text-secondary-ink">com cupom {r.cupom}</span> : null}
+              {r.cupom ? (
+                <span className="block text-xs text-secondary-ink">com cupom {r.cupom}</span>
+              ) : null}
             </span>
             <span className="shrink-0 text-right tabular-nums">
               <span className="font-semibold">{brl(r.final)}</span>
               {r.diferenca != null && (
                 <span className="block text-xs font-bold text-red-700 dark:text-red-400">
-                  {r.diferenca > 0 ? `+${brl(r.diferenca)} mais caro` : "praticamente o mesmo preço"}
+                  {r.diferenca > 0
+                    ? `+${brl(r.diferenca)} mais caro`
+                    : "praticamente o mesmo preço"}
                 </span>
               )}
               {r.url && <VerNaLoja url={r.url} />}
@@ -1280,6 +1457,7 @@ function OutraLojaComCupom({
   precoAqui,
   titulo,
   principal,
+  compacto,
   lojaAquiTemCupom,
 }: {
   oferta: OutraLoja;
@@ -1289,6 +1467,7 @@ function OutraLojaComCupom({
   precoAqui: number | null;
   titulo?: string | null;
   principal?: boolean;
+  compacto?: boolean;
   lojaAquiTemCupom?: boolean;
 }) {
   /* A extensao ja comparou preco final contra preco final e mandou o ganho.
@@ -1313,8 +1492,34 @@ function OutraLojaComCupom({
       ? Math.round((diferenca / atual) * 100)
       : null;
 
+  /* Segunda e terceira lojas mais baratas: uma linha só, com foto, preço,
+     quanto economiza e o botão. A tabela completa fica para a melhor. */
+  if (compacto) {
+    return (
+      <div className="mt-2 flex items-center gap-2 rounded-lg border border-success/40 bg-success/5 p-2">
+        <Foto src={oferta.imagem} className="size-12 shrink-0 rounded" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{oferta.vendedor ?? "Outra loja"}</p>
+          <p className="text-xs tabular-nums text-secondary-ink">
+            <span className="text-sm font-bold text-success">{brl(oferta.final)}</span>
+            {diferenca != null && diferenca > 0 ? ` · ${brl(diferenca)} a menos` : ""}
+            {oferta.verificadoIA ? " · ✓ conferido pela foto" : ""}
+          </p>
+        </div>
+        <a
+          href={oferta.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-md bg-success px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
+        >
+          Comprar
+        </a>
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-3 rounded-lg border-2 border-success/50 bg-success/10 p-3">
+    <div className="mt-3 rounded-lg border border-success/50 bg-success/10 p-3">
       {principal && (
         <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
           Minha recomendação
@@ -1326,18 +1531,17 @@ function OutraLojaComCupom({
           : temCupomLa
             ? "Achei o mesmo produto mais barato em outra loja, e lá também tem cupom"
             : !lojaAquiTemCupom && diferenca != null && diferenca > 0
-              ? `Nenhum cupom para esta loja hoje, mas ${oferta.vendedor ?? "outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
+              ? `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
               : "Achei o mesmo produto mais barato em outra loja"}
       </p>
-      {oferta.imagem && (
-        <div className="mt-2 flex items-center gap-2">
-          <img src={oferta.imagem} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-16 shrink-0 rounded bg-white object-contain" />
-          {oferta.verificadoIA && (
-            <span className="rounded bg-card px-2 py-1 text-xs font-semibold text-success">✓ Foto e descrição conferidas por IA</span>
-          )}
-        </div>
-      )}
-
+      <div className="mt-2 flex items-center gap-2">
+        <Foto src={oferta.imagem} className="size-14 shrink-0 rounded" />
+        {oferta.verificadoIA && (
+          <span className="rounded bg-card px-2 py-1 text-xs font-semibold text-success">
+            ✓ Mesmo produto: foto conferida por IA
+          </span>
+        )}
+      </div>
 
       {/* Tabela zebrada, uma coluna por loja, e a conta da economia escrita
           por extenso. Antes o topo mostrava o preço SEM cupom (R$ 428,90) e a
@@ -1347,11 +1551,12 @@ function OutraLojaComCupom({
         <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="bg-muted/60 text-xs">
-              <th className="w-[34%] px-2 py-2 text-left font-semibold text-secondary-ink"></th>
-              <th className="px-2 py-2 text-right font-semibold text-secondary-ink break-words">
-                Anúncio colado{vendedorAqui ? <span className="block font-normal">{vendedorAqui}</span> : null}
+              <th className="w-[34%] px-2 py-1.5 text-left font-semibold text-secondary-ink"></th>
+              <th className="px-2 py-1.5 text-right font-semibold text-secondary-ink break-words">
+                Anúncio colado
+                {vendedorAqui ? <span className="block font-normal">{vendedorAqui}</span> : null}
               </th>
-              <th className="px-2 py-2 text-right font-bold text-success break-words">
+              <th className="px-2 py-1.5 text-right font-bold text-success break-words">
                 {oferta.vendedor ?? "Outra loja"}
                 <span className="block font-normal">mais barata</span>
               </th>
@@ -1359,31 +1564,51 @@ function OutraLojaComCupom({
           </thead>
           <tbody className="tabular-nums">
             <tr className="bg-card">
-              <td className="px-2 py-2 text-secondary-ink">Preço</td>
-              <td className="px-2 py-2 text-right">{brl(precoAqui)}</td>
-              <td className="px-2 py-2 text-right">{brl(oferta.preco)}</td>
+              <td className="px-2 py-1.5 text-secondary-ink">Preço</td>
+              <td className="px-2 py-1.5 text-right">{brl(precoAqui)}</td>
+              <td className="px-2 py-1.5 text-right">{brl(oferta.preco)}</td>
             </tr>
-            <tr className="bg-muted/40">
-              <td className="px-2 py-2 text-secondary-ink">Cupom</td>
-              <td className="px-2 py-2 text-right">
-                {descontoAqui > 0 ? <>−{brl(descontoAqui)}{cupomAqui ? <span className="block text-xs text-secondary-ink">{cupomAqui}</span> : null}</> : "—"}
-              </td>
-              <td className="px-2 py-2 text-right">
-                {temCupomLa && oferta.economia ? <>−{brl(oferta.economia)}<span className="block text-xs text-secondary-ink">{oferta.cupomTitulo}</span></> : "—"}
-              </td>
-            </tr>
+            {(descontoAqui > 0 || temCupomLa) && (
+              <tr className="bg-muted/40">
+                <td className="px-2 py-1.5 text-secondary-ink">Cupom</td>
+                <td className="px-2 py-1.5 text-right">
+                  {descontoAqui > 0 ? (
+                    <>
+                      −{brl(descontoAqui)}
+                      {cupomAqui ? (
+                        <span className="block text-xs text-secondary-ink">{cupomAqui}</span>
+                      ) : null}
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td className="px-2 py-1.5 text-right">
+                  {temCupomLa && oferta.economia ? (
+                    <>
+                      −{brl(oferta.economia)}
+                      <span className="block text-xs text-secondary-ink">{oferta.cupomTitulo}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            )}
             <tr className="bg-card font-bold">
-              <td className="px-2 py-2">Você paga</td>
-              <td className="px-2 py-2 text-right text-secondary-ink">{brl(atual)}</td>
-              <td className="px-2 py-2 text-right text-base text-success">{brl(oferta.final)}</td>
+              <td className="px-2 py-1.5">Você paga</td>
+              <td className="px-2 py-1.5 text-right text-secondary-ink">{brl(atual)}</td>
+              <td className="px-2 py-1.5 text-right text-base text-success">{brl(oferta.final)}</td>
             </tr>
           </tbody>
         </table>
         {diferenca != null && diferenca > 0 && (
-          <div className="border-t border-success/30 bg-success/15 px-3 py-2.5">
+          <div className="border-t border-success/30 bg-success/15 px-3 py-2">
             <p className="flex items-baseline justify-between gap-3">
               <span className="font-bold text-success">Você economiza</span>
-              <span className="text-lg font-extrabold tabular-nums text-success">{brl(diferenca)}</span>
+              <span className="text-base font-extrabold tabular-nums text-success">
+                {brl(diferenca)}
+              </span>
             </p>
             <p className="mt-0.5 text-xs tabular-nums text-secondary-ink">
               {brl(atual)} − {brl(oferta.final)} = {brl(diferenca)}
@@ -1394,33 +1619,40 @@ function OutraLojaComCupom({
       </div>
       {(oferta.minimo != null || oferta.vence) && (
         <dl className="mt-2 divide-y divide-success/20 text-sm">
-          {oferta.minimo != null && <Linha rotulo="Compra mínima do cupom" valor={brl(oferta.minimo)} />}
+          {oferta.minimo != null && (
+            <Linha rotulo="Compra mínima do cupom" valor={brl(oferta.minimo)} />
+          )}
           {oferta.vence && <Linha rotulo="Cupom vale até" valor={dataBR(oferta.vence)} />}
         </dl>
       )}
 
       {oferta.motivo === "tem_cupom" && (diferenca == null || diferenca <= 0) && (
         <p className="mt-2 rounded-md bg-card px-3 py-2 text-sm font-bold">
-          Mesmo preço final{oferta.finalAtual != null ? <> ({brl(oferta.final)})</> : null}, mas lá o
-          desconto vem de cupom, então você vê o valor cair no carrinho.
+          Mesmo preço final{oferta.finalAtual != null ? <> ({brl(oferta.final)})</> : null}, mas lá
+          o desconto vem de cupom, então você vê o valor cair no carrinho.
         </p>
       )}
-
 
       <a
         href={oferta.link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 block w-full rounded-md bg-success py-3 text-center text-base font-bold text-white transition-colors hover:brightness-95"
+        className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
       >
         {oferta.vendedor
-          ? textoDoBotao(dispositivo, `Comprar na ${oferta.vendedor} por ${brl(oferta.final)}`).replace(" pelo app", " no app")
-          : textoDoBotao(dispositivo, temCupomLa ? "Comprar na loja com cupom" : "Comprar mais barato")}
+          ? textoDoBotao(
+              dispositivo,
+              `Comprar na ${oferta.vendedor} por ${brl(oferta.final)}`,
+            ).replace(" pelo app", " no app")
+          : textoDoBotao(
+              dispositivo,
+              temCupomLa ? "Comprar na loja com cupom" : "Comprar mais barato",
+            )}
       </a>
       {oferta.mesmaPagina ? (
         <p className="mt-1.5 rounded-md bg-card px-3 py-2 text-xs leading-relaxed">
-          <span className="font-semibold">Importante:</span> o link abre a página deste produto no Mercado
-          Livre. Se a loja em destaque não for a{" "}
+          <span className="font-semibold">Importante:</span> o link abre a página deste produto no
+          Mercado Livre. Se a loja em destaque não for a{" "}
           <span className="font-semibold">{oferta.vendedor ?? "mais barata"}</span>, toque em{" "}
           <span className="font-semibold">"Outras opções de compra"</span> e escolha{" "}
           {oferta.vendedor ?? "essa loja"} por {brl(oferta.preco)}.
@@ -1447,15 +1679,13 @@ function OutraLojaComCupom({
         />
       )}
 
-      <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-        {oferta.verificadoIA
-          ? "Conferi a foto e a descrição com inteligência artificial: é o mesmo produto, vendido por outra loja. "
-          : ""}
-        {oferta.verificadoIA ? "" : oferta.achadoNaBusca
-          ? "Achei este anúncio procurando o produto na busca da loja. O título bate com o que você colou, mas confira a descrição antes de comprar: fora do catálogo, quem escreve o anúncio é o vendedor."
-          : "É o mesmo produto, na mesma página de catálogo, só que no anúncio desta loja."}
-        {temCupomLa ? " O desconto do cupom aparece no carrinho." : " Aqui a economia vem do preço, não de cupom."}
-      </p>
+      {!oferta.verificadoIA && (
+        <p className="mt-1.5 text-[11px] text-secondary-ink">
+          {oferta.achadoNaBusca
+            ? "Confira a descrição antes de comprar."
+            : "Mesmo produto, na mesma página de catálogo."}
+        </p>
+      )}
     </div>
   );
 }
@@ -1515,33 +1745,32 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
                 : "Não vou dizer que a loja não tem cupom, porque eu não cheguei a conferir. Tente de novo em instantes, ou cole o endereço completo do anúncio em vez do link curto de compartilhamento."}
           </p>
           {analise?.diagnostico && (
-            <p className="mt-1.5 text-xs text-secondary-ink/80">Detalhe técnico: {semMarca(analise.diagnostico)}.</p>
+            <p className="mt-1.5 text-xs text-secondary-ink/80">
+              Detalhe técnico: {semMarca(analise.diagnostico)}.
+            </p>
           )}
         </div>
       );
     }
 
+    /* Achei loja melhor: a comparação acima já diz tudo. Caixa só ocupava
+       espaço (pedido do Weslei: tela menor, texto curto). */
+    if (achouOutra) return null;
+
     return (
       <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
         <p className="text-sm font-semibold">Hoje essa loja não tem cupom.</p>
-        {achouOutra ? (
-          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-            Por isso procurei o mesmo produto em outras lojas, e a melhor opção está logo acima.
-            Se preferir ficar com a loja do anúncio, o botão abaixo continua valendo: mesmo preço da
-            loja, e a comissão que eu recebo é paga pelo vendedor.
-          </p>
-        ) : (
+        {achouOutra ? null : (
           <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
             {procurou
-              ? "Procurei as outras lojas que vendem exatamente este mesmo produto e nenhuma tem cupom nem preço que compense hoje. Prefiro te dizer isso a inventar um desconto que não existe. "
-              : "Não cheguei a comparar com outras lojas desta vez. Prefiro te dizer isso a deixar você achar que comparei. "}
-            O botão de comprar aqui embaixo continua valendo a pena para nós dois: o preço é o mesmo
-            da loja, e por ele eu recebo uma comissão paga pelo vendedor. Não sai um centavo
-            a mais do seu bolso e me ajuda a manter o site de pé.
+              ? "Procurei este mesmo produto em outras lojas e nenhuma sai mais barato hoje. "
+              : "Não cheguei a comparar com outras lojas desta vez. "}
           </p>
         )}
         {!achouOutra && procurou && analise?.motivoOutra && (
-          <p className="mt-1.5 text-xs text-secondary-ink/80">Motivo: {semMarca(analise.motivoOutra)}.</p>
+          <p className="mt-1.5 text-xs text-secondary-ink/80">
+            Motivo: {semMarca(analise.motivoOutra)}.
+          </p>
         )}
         {!procurou && analise?.motivoNaoProcurou && (
           <p className="mt-1.5 text-xs text-secondary-ink/80">
@@ -1558,8 +1787,7 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
 
     // Desconto exato na compra minima, respeitando o teto do cupom.
     const descontoNoMinimo = descontoNaCompraMinima(c.titulo, c.minimo, c.teto);
-    const pagariaNoMinimo =
-      descontoNoMinimo != null ? c.minimo - descontoNoMinimo : null;
+    const pagariaNoMinimo = descontoNoMinimo != null ? c.minimo - descontoNoMinimo : null;
 
     return (
       <div className="mt-3 rounded-md border border-urgency-warning bg-urgency-soft p-3">
@@ -1598,16 +1826,10 @@ function CondicoesDoCupom({ analise }: { analise: Analise | null | undefined }) 
     <div
       className={
         "mt-3 rounded-md p-3 " +
-        (valeAPena
-          ? "border border-success/40 bg-success/10"
-          : "border border-border bg-muted/50")
+        (valeAPena ? "border border-success/40 bg-success/10" : "border border-border bg-muted/50")
       }
     >
-      <p
-        className={
-          "text-sm font-bold " + (valeAPena ? "text-success" : "text-foreground")
-        }
-      >
+      <p className={"text-sm font-bold " + (valeAPena ? "text-success" : "text-foreground")}>
         {valeAPena
           ? `Cupom de ${c.titulo}${c.economia != null ? ` — cerca de ${brl(c.economia)} de desconto` : ""}`
           : c.economia != null
@@ -1645,9 +1867,7 @@ function Linha({
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5">
       <dt className="text-secondary-ink">{rotulo}</dt>
-      <dd className={"text-right font-bold " + (destaque ? "text-ml-blue" : "")}>
-        {valor}
-      </dd>
+      <dd className={"text-right font-bold " + (destaque ? "text-ml-blue" : "")}>{valor}</dd>
     </div>
   );
 }
