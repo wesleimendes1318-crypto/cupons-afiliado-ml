@@ -43,6 +43,18 @@ export function palavrasDoTitulo(t) {
      - 60% das palavras do titulo original no candidato;
      - TODOS os numeros do original presentes (modelo, capacidade, voltagem):
        "128 GB" e "256 GB" nao sao o mesmo produto, por mais que o resto bata. */
+/* Quanto do titulo original aparece no candidato (0 a 1), exigindo os
+   mesmos numeros (modelo, tamanho). Serve para escolher QUEM a Gemini vai
+   conferir pela foto: o titulo so pre-seleciona, quem decide e a foto. */
+export function semelhancaDoTitulo(original, candidato) {
+  const a = [...new Set(palavrasDoTitulo(original))];
+  const b = new Set(palavrasDoTitulo(candidato));
+  if (a.length < 2) return 0;
+  const numeros = a.filter(w => /^\d+$/.test(w));
+  if (!numeros.every(n => b.has(n))) return 0;
+  return a.filter(w => b.has(w)).length / a.length;
+}
+
 export function pareceMesmoProduto(original, candidato) {
   const a = [...new Set(palavrasDoTitulo(original))];
   const b = new Set(palavrasDoTitulo(candidato));
@@ -169,14 +181,18 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
     /* Amostra do que a busca trouxe: se nada parecer o mesmo produto, da para
        ver de longe se o filtro errou ou se a busca veio ruim. */
     if (d.titulosVistos.length < 15) d.titulosVistos.push(String(tit).slice(0, 80) + ' | ' + preco);
-    if (!pareceMesmoProduto(tituloOriginal, tit)) return;
+    /* Titulo parecido (>= 60%) ou razoavel (>= 35%, mesmos numeros): os dois
+       vao para a Gemini, que decide pela foto. Vendedor escreve do jeito dele;
+       foto do mesmo produto costuma ser a mesma. */
+    const nota = semelhancaDoTitulo(tituloOriginal, tit);
+    if (nota < 0.35) return;
     d.parecidos++;
     /* Preco absurdo em relacao ao que a pessoa esta vendo quase sempre e outro
        produto: acessorio, kit, unidade avulsa. Fora. */
     if (precoRef != null && (preco < precoRef * 0.4 || preco > precoRef * 1.6)) return;
     d.naFaixa++;
     vistos.add(end.item);
-    saida.push({ ...end, preco, titulo: tit });
+    saida.push({ ...end, preco, titulo: tit, nota });
   };
 
   /* 1. Cartoes em HTML. O Mercado Livre ja mudou o nome do bloco mais de uma
@@ -246,7 +262,16 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   }
 
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
-  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_IA);
+  return ordenarParaIA(saida);
+}
+
+/* Os 12 que a Gemini confere: primeiro os de titulo mais parecido; entre
+   eles, os mais baratos. Depois a lista final e ordenada por preco. */
+function ordenarParaIA(lista) {
+  return lista
+    .sort((a, b) => (b.nota >= 0.6) - (a.nota >= 0.6) || b.nota - a.nota || a.preco - b.preco)
+    .slice(0, MAX_CANDIDATOS_IA)
+    .sort((a, b) => a.preco - b.preco);
 }
 
 /* Ofertas do MESMO produto de catalogo (bloco buy_box_offers da pagina /p/).
@@ -502,13 +527,14 @@ export function candidatosDeCartoes(cartoes, tituloOriginal, precoRef, diag = nu
   for (const c of cartoes || []) {
     const end = enderecoDoCartao('href="' + String(c.href || '') + '"');
     if (!end || vistos.has(end.item) || !c.titulo || c.preco == null) continue;
-    if (!pareceMesmoProduto(tituloOriginal, c.titulo)) continue;
+    const nota = semelhancaDoTitulo(tituloOriginal, c.titulo);
+    if (nota < 0.35) continue;
     d.parecidosTela++;
     if (precoRef != null && (c.preco < precoRef * 0.4 || c.preco > precoRef * 1.6)) continue;
     vistos.add(end.item);
-    saida.push({ ...end, preco: c.preco, titulo: c.titulo, imagem: imagemDoCartao(c.imagem) });
+    saida.push({ ...end, preco: c.preco, titulo: c.titulo, imagem: imagemDoCartao(c.imagem), nota });
   }
-  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_IA);
+  return ordenarParaIA(saida);
 }
 
 /* Cada cartao "polycard" dos dados da pagina de busca, ja desescapados.
