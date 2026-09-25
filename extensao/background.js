@@ -590,7 +590,24 @@ async function mesmoProdutoPelaGemini(original, lista) {
   const itens = lista.slice(0, 12);
   const erros = [];
 
-  /* 1. Chave da extensao. */
+  /* 1. Chave do SERVIDOR (GEMINI_API_KEY nos Secrets do Lovable). Vem
+     primeiro desde 25/09: a chave da extensao estourou a cota (429) e gastava
+     o tempo da consulta antes de chegar aqui. */
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  const sv = await conferirNoServidor(sincToken, {
+    tipo: 'conferir',
+    original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null },
+    candidatos: itens.map(c => ({ titulo: c.titulo || null, imagem: c.imagem || null, preco: c.preco ?? null }))
+  });
+  if (sv && sv.ok && Array.isArray(sv.iguais)) {
+    ultimaIA = { via: 'servidor', modelo: sv.modelo, descricao: sv.descricaoOriginal || null,
+                 avaliacao: (sv.avaliacao || []).map(a => ({ ...a, titulo: String((itens[a.indice] || {}).titulo || '').slice(0, 70) })) };
+    return new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
+  }
+  erros.push('servidor: ' + ((sv && (sv.status ? sv.status + ' ' : '') + (sv.modelo ? sv.modelo + ' ' : '') + (sv.erro || '')) || 'sem resposta'));
+
+  /* 2. Chave da extensao, como reserva, se ainda couber no prazo. */
+  if (resta() < 10000) { erros.push('extensao: sem tempo'); ultimaIA = { indisponivel: true, erros }; return null; }
   const imgOrig = await imagemParaGemini(original.imagem);
   const fotos = await Promise.all(itens.map(c => imagemParaGemini(c.imagem)));
   if (imgOrig) {
@@ -608,7 +625,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
                      confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
                      motivo: String(c.motivo || '').slice(0, 140), semFoto: !fotos[c.indice] }));
       const iguais = avaliacao.filter(a => a.igual && a.confianca >= CONFIANCA_MINIMA_IA && !a.semFoto).map(a => a.indice);
-      ultimaIA = { via: 'extensao', modelo: r.modelo, descricao: String(obj.descricao_original || '').slice(0, 300),
+      ultimaIA = { via: 'extensao', modelo: r.modelo, erros, descricao: String(obj.descricao_original || '').slice(0, 300),
                    avaliacao: avaliacao.map(a => ({ ...a, titulo: String(itens[a.indice].titulo || '').slice(0, 70) })) };
       return new Set(iguais);
     }
@@ -616,21 +633,6 @@ async function mesmoProdutoPelaGemini(original, lista) {
   } else {
     erros.push('extensao: foto do original nao baixou');
   }
-
-  /* 2. Chave do servidor (Lovable), se ainda couber no prazo. */
-  if (resta() < 12000) { erros.push('servidor: sem tempo'); ultimaIA = { indisponivel: true, erros }; return null; }
-  const { sincToken } = await chrome.storage.local.get('sincToken');
-  const sv = await conferirNoServidor(sincToken, {
-    tipo: 'conferir',
-    original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null },
-    candidatos: itens.map(c => ({ titulo: c.titulo || null, imagem: c.imagem || null, preco: c.preco ?? null }))
-  });
-  if (sv && sv.ok && Array.isArray(sv.iguais)) {
-    ultimaIA = { via: 'servidor', modelo: sv.modelo, descricao: sv.descricaoOriginal || null, erros,
-                 avaliacao: (sv.avaliacao || []).map(a => ({ ...a, titulo: String((itens[a.indice] || {}).titulo || '').slice(0, 70) })) };
-    return new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
-  }
-  erros.push('servidor: ' + ((sv && (sv.status ? sv.status + ' ' : '') + (sv.modelo ? sv.modelo + ' ' : '') + (sv.erro || '')) || 'sem resposta'));
   ultimaIA = { indisponivel: true, erros };
   return null;
 }
