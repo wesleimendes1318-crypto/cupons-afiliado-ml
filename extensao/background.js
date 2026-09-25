@@ -414,26 +414,42 @@ async function gerarTexto(titulo, preco, cupom, canal) {
 let completandoVitrine = false;
 let vitrineUltima = 0;
 async function completarVitrine() {
-  /* Roda no maximo a cada 5 minutos, 3 produtos por vez. */
+  /* A cada 5 minutos, ate 6 produtos. Leitura SEM a conta: primeiro sem cookie,
+     depois na janela anonima; logado so sem anonima e sem freio. Antes pulava
+     sempre que havia freio ou atendimento e nunca registrou uma rodada: as
+     31 fotos antigas ficaram sem preencher. */
   if (completandoVitrine || Date.now() - vitrineUltima < 5 * 60e3) return;
   if (typeof atendendo !== 'undefined' && atendendo) return;
-  if (await freioLigado('leitura')) return;
   const { sincToken } = await chrome.storage.local.get('sincToken');
   if (!sincToken) return;
   completandoVitrine = true;
   vitrineUltima = Date.now();
   const registro = [];
   try {
-    const lista = await vitrineSemFoto(sincToken, 3);
+    const lista = await vitrineSemFoto(sincToken, 6);
     for (const it of lista) {
-      let a = null;
-      try { a = await lerAnuncioNoWorker(limparUrl(it.url_produto)); } catch (e) { registro.push({ chave: it.chave, erro: String(e.message || e).slice(0, 80) }); }
-      if (a && a.captcha) break;
-      registro.push({ chave: it.chave, foto: !!(a && a.imagem), cat: a && a.categorias ? a.categorias[0] : null });
-      await vitrineCompletar(sincToken, it.chave, a && a.imagem, a && a.categorias && a.categorias[0]);
-      await sleep(4000 + Math.random() * 3000);
+      const url = limparUrl(it.url_produto);
+      let a = null, via = null;
+      try {
+        const r = await fetch(url, { credentials: 'omit', redirect: 'follow' });
+        const t = r.ok ? await r.text() : '';
+        const b = t ? extrairAnuncio(t, r.url, r.status) : null;
+        if (b && b.imagem) { a = b; via = 'sem-cookie'; }
+      } catch (e) { /* tenta a anonima */ }
+      if (!a) {
+        const anon = await lerNaJanelaAnonima(url);
+        const b = anon.html ? extrairAnuncio(anon.html, anon.url || url, 200) : null;
+        if (b && b.imagem) { a = b; via = 'anonima'; }
+        else if (!(await anonimaPermitida()) && !(await freioLigado('leitura'))) {
+          try { a = await lerAnuncioNoWorker(url); via = 'logada'; } catch (e) { a = null; }
+        }
+      }
+      registro.push({ chave: it.chave, via, foto: !!(a && a.imagem), cat: a && a.categorias ? a.categorias[0] : null });
+      /* Sempre grava: sem foto, o banco marca como tentado e a fila anda. */
+      await vitrineCompletar(sincToken, it.chave, (a && a.imagem) || null, (a && a.categorias && a.categorias[0]) || null);
+      await sleep(1500 + Math.random() * 1500);
     }
-    if (registro.length) gravarDiagnostico(sincToken, 'vitrine-fotos', { registro }).catch(() => {});
+    gravarDiagnostico(sincToken, 'vitrine-fotos', { versao: chrome.runtime.getManifest().version, pendentes: lista.length, registro }).catch(() => {});
   } catch (e) {
     gravarDiagnostico(sincToken, 'vitrine-fotos', { erro: String(e.message || e).slice(0, 200) }).catch(() => {});
   } finally { completandoVitrine = false; }
