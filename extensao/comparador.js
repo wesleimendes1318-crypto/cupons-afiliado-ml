@@ -23,8 +23,12 @@ export const normPalavra = s => (s ?? '').toString().toLowerCase()
 const norm = s => normPalavra(s).replace(/ /g, '');
 
 const ENT = { '&quot;': '"', '&amp;': '&', '&#39;': "'", '&#039;': "'", '&apos;': "'", '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' };
+/* Entidades numericas tambem (&#x27; -> '): o titulo "D&#x27;agua" virava a
+   busca "d-x27-agua" e nenhum anuncio parecia o mesmo (Baba Black, 25/09). */
 export const desescapar = s => String(s || '')
-  .replace(/&(?:quot|amp|#0?39|apos|lt|gt|nbsp);/g, m => ENT[m] || m)
+  .replace(/&#x([0-9a-f]{1,6});/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d{1,7});/g, (_, d) => String.fromCodePoint(Number(d)))
+  .replace(/&(?:quot|amp|apos|lt|gt|nbsp);/g, m => ENT[m] || m)
   .replace(/\\u002F/g, '/');
 
 /* Palavras que nao ajudam a dizer se e o mesmo produto. */

@@ -1027,7 +1027,8 @@ function extrairAnuncio(t, finalUrl, status) {
    meli.la chega aqui e sai como a url final do produto. */
 async function lerAnuncioNoWorker(url, profundidade = 0) {
   const ctrl = new AbortController();
-  const corta = setTimeout(() => ctrl.abort(), 25000);
+  /* 15 s (era 25): o monitor levou 57 s so para ler o anuncio (25/09). */
+  const corta = setTimeout(() => ctrl.abort(), 15000);
   try {
     const r = await fetch(url, { credentials: 'include', redirect: 'follow', signal: ctrl.signal });
     if (!r.ok || !r.body) return { ok: false, falha: 'HTTP ' + r.status };
@@ -3091,9 +3092,11 @@ async function segundaVolta(sincToken, atenderUm) {
       const antes = j.faltam();
       await j.gerar(3);
       const depois = j.faltam();
-      /* Acabou, nao andou (gerador recusou / freio) ou passou do tempo em que
-         a tela ainda espera: encerra; o botao gera o link no clique. */
-      const acabou = depois === 0 || depois >= antes || Date.now() - j.inicio > 170000;
+      /* Acabou ou nao andou (gerador recusou / freio): encerra; o botao gera
+         o link no clique. Sem prazo: com fila cheia o prazo vencia antes do
+         segundo lote (bateria 1.103.0), e o link gerado depois ainda serve
+         para quem colar o mesmo link na hora seguinte. */
+      const acabou = depois === 0 || depois >= antes;
       if (acabou) {
         paraLinks.shift();
         j.analise.linksPendentes = false;
@@ -3211,9 +3214,10 @@ async function atenderPedidos() {
           /* Perfil social e captcha nao tem plano B: ler a pagina pela aba
              pegaria um produto qualquer da vitrine, ou insistiria no muro. */
           if (!a.perfilSocial && !a.captcha && (!a.ok || !(a.nomes && a.nomes.length))) {
-            const [saida] = await chrome.scripting.executeScript({
+            /* A leitura pela pagina nao tinha prazo nenhum. */
+            const [saida] = await comPrazo(chrome.scripting.executeScript({
               target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
-            });
+            }), 10000, [null]);
             const b = (saida && saida.result) || null;
             if (b && b.ok && b.nomes && b.nomes.length) a = b;
             else if (!a.ok && b && b.ok) a = b;
@@ -3238,7 +3242,9 @@ async function atenderPedidos() {
             let tela = await lerTelaDoAnuncio((a.ok && a.finalUrl) || url).catch(() => null);
             /* Pagina de OFERTA (pdp_filters=deal) sem preco: tenta o mesmo
                produto sem o filtro da oferta (caso do monitor, 25/09). */
-            if ((!tela || tela.preco == null) && /pdp_filters=deal/i.test((a.finalUrl || '') + ' ' + url)) {
+            /* So se ainda der tempo: a consulta do cliente tem 1 minuto. */
+            if ((!tela || tela.preco == null) && /pdp_filters=deal/i.test((a.finalUrl || '') + ' ' + url)
+                && Date.now() - t0p < 30000) {
               let semOferta = String((a.ok && a.finalUrl) || url);
               try {
                 const u = new URL(semOferta);
@@ -3272,6 +3278,8 @@ async function atenderPedidos() {
             }
           }
 
+          /* Titulo sem entidade HTML (D&#x27;agua): vai para a busca e para a tela. */
+          if (a && a.titulo) a.titulo = desescapar(a.titulo);
           marcar('anuncio');
           if (a && a.faltou) gravarDiagnostico(sincToken, 'anuncio-incompleto', a.faltou).catch(() => {});
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
