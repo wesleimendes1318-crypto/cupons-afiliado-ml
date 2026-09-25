@@ -23,7 +23,7 @@ type Resultado =
   | { ok: false; status: number; erro: string; modelo?: string };
 
 /* 2.5 Flash sem a etapa de "pensar" responde em segundos; o prazo e curto. */
-const MODELOS = ["gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest"];
+const MODELOS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"];
 const CONFIANCA_MINIMA = 80;
 
 function ordemDosModelos(): string[] {

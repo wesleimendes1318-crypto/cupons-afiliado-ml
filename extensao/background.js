@@ -505,7 +505,9 @@ async function geminiLocal(partes) {
      total de 16 s: a consulta inteira do cliente tem 1 minuto. */
   /* 2.5 Flash sem a etapa de "pensar" responde em poucos segundos (medido:
      com o pensamento ligado, 20 s e estourava o prazo). */
-  const modelos = [...new Set(['gemini-2.5-flash', 'gemini-flash-lite-latest', geminiModel].filter(Boolean))];
+  /* Medido em 25/09: o Flash-Lite respondeu e julgou certo (borda roxa x
+     preta, Edge 70 x 70 Fusion+); o 2.5 Flash estourou o prazo. */
+  const modelos = [...new Set(['gemini-flash-lite-latest', 'gemini-2.5-flash', geminiModel].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   /* Erro de CADA modelo tentado (antes so o ultimo ficava gravado). */
@@ -2757,6 +2759,11 @@ async function atenderPedidos() {
                 qualquer subdominio e resolve link curto. Se falhar, tenta pela
                 pagina, que so funciona quando a origem bate mas as vezes ve
                 conteudo que o worker nao ve. */
+          /* Tempo de cada etapa, gravado no pedido: e com isso que se corta o
+             que estiver lento (meta: resposta em ate 1 minuto). */
+          const t0p = Date.now();
+          const tempos = {};
+          const marcar = nome => { tempos[nome] = Math.round((Date.now() - t0p) / 100) / 10; };
           let a = await lerAnuncioNoWorker(url);
           /* Perfil social e captcha nao tem plano B: ler a pagina pela aba
              pegaria um produto qualquer da vitrine, ou insistiria no muro. */
@@ -2780,6 +2787,7 @@ async function atenderPedidos() {
             }
           }
 
+          marcar('anuncio');
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
           let cupom = null, vendedor = null;
           for (const nome of (a.nomes || [])) {
@@ -2867,6 +2875,7 @@ async function atenderPedidos() {
             /* A API oficial nao deixa ler anuncio de outra conta (403), entao
                vai junto o que a extensao ja leu na pagina que o cliente colou. */
             const catDoAnuncio = ((a.canonica || '') + ' ' + (a.finalUrl || '') + ' ' + url).match(/\/p\/(MLB\d{5,})/i);
+            marcar('antesApi');
             const api = await compararNoServidor(sincToken, a.finalUrl || url, {
               catalogo: catDoAnuncio ? catDoAnuncio[1].toUpperCase() : null,
               item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
@@ -2884,6 +2893,7 @@ async function atenderPedidos() {
             /* A reserva roda tambem quando a API olhou o catalogo e nao achou
                nada melhor: o mesmo produto costuma estar anunciado FORA da
                ficha de catalogo, mais barato. Comparacao em 100% dos links. */
+            marcar('api');
             apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
             if (api && Array.isArray(api.referencias)) referencias = api.referencias;
             if (apiAchou) {
@@ -2989,6 +2999,7 @@ async function atenderPedidos() {
                 }
               }
             }
+            marcar('busca');
             if (alts.length) marcarEtapa(sincToken, p.id, 'links');
             /* Ate 3 lojas mais baratas, todas com o link de afiliado do
                Weslei. Sem link de afiliado a oferta nao vai para a tela. */
@@ -3056,6 +3067,7 @@ async function atenderPedidos() {
             motivoNaoProcurou: motivoNaoProcurou,
             /* Para saber, de longe, qual versao atendeu este cliente. */
             versaoExtensao: chrome.runtime.getManifest().version,
+            tempos: (marcar('fim'), tempos),
             /* false = falta ligar "Permitir no modo anonimo" na extensao. */
             anonima: anonima,
             /* Para a vitrine do site. */
@@ -3240,6 +3252,25 @@ async function sinalDeVida() {
   if (sincToken) await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
 }
 
+/* FILA VIGIADA. O cliente do site nao tem a extensao, entao o aviso
+   instantaneo (postMessage) so vale no navegador do Weslei: os pedidos dos
+   clientes esperavam o alarme de 1 minuto (medido: 31 a 38 s parados na
+   fila). Agora cada alarme olha a fila a cada 4 s durante ~55 s, e o proximo
+   alarme emenda: espera maxima de ~4 s. Consulta leve ao banco, nao ao
+   Mercado Livre. */
+let vigiando = false;
+async function vigiarFila() {
+  if (vigiando) return;
+  vigiando = true;
+  const fim = Date.now() + 55000;
+  try {
+    while (Date.now() < fim) {
+      if (!atendendo) await atenderPedidos().catch(e => console.warn('[pedidos]', e.message));
+      await sleep(4000);
+    }
+  } finally { vigiando = false; }
+}
+
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
     chrome.alarms.create(nome, { periodInMinutes });
@@ -3262,7 +3293,7 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.alarms.onAlarm.addListener(async a => {
   if (a.name === 'pedidos') {
     sinalDeVida().catch(() => {});
-    atenderPedidos().catch(e => console.warn('[pedidos]', e.message));
+    vigiarFila().catch(() => {});
     completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.
     // Lote de 3 para nao virar porta dos fundos dos tetos diarios.
