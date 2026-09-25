@@ -518,7 +518,9 @@ export default function BuscaPorLink() {
           else setFase("na-fila");
         }
 
-        if (linha?.status === "pronto" && linha.link) {
+        /* Pronto com análise mas sem link: a comparação aparece e o botão gera
+           o link de afiliado no clique (regra: sempre devolver o link). */
+        if (linha?.status === "pronto" && (linha.link || linha.analise)) {
           parou = true;
           limparTimers();
           setPedido(linha);
@@ -631,8 +633,13 @@ export default function BuscaPorLink() {
         <Espera fase={fase} demorando={demorando} inicio={inicio} estimativa={estimativa} />
       )}
 
-      {fase === "pronto" && pedido?.link && (
-        <Resultado pedido={pedido} copiar={copiar} copiado={copiado} />
+      {fase === "pronto" && pedido && (
+        <Resultado
+          pedido={pedido}
+          copiar={copiar}
+          copiado={copiado}
+          urlColada={melhorLinkML(url) ?? null}
+        />
       )}
 
       {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} motivo={motivo} />}
@@ -1109,13 +1116,15 @@ function Resultado({
   pedido,
   copiar,
   copiado,
+  urlColada,
 }: {
   pedido: Pedido;
   copiar: (t: string, m: string) => void;
   copiado: string | null;
+  urlColada: string | null;
 }) {
   const a = pedido.analise;
-  const link = pedido.link as string;
+  const link = pedido.link ?? "";
   const dispositivo = useDispositivo();
 
   /* A loja do anúncio não tem cupom que preste, mas outra loja vende o MESMO
@@ -1147,8 +1156,9 @@ function Resultado({
   const referencias = (a?.referencias ?? []).filter(
     (r) => r.final != null && !nomesAlternativas.has((r.vendedor ?? "").toLowerCase()),
   );
-  const estaEAMelhor =
-    !leituraFalhou && !semLink && alternativas.length === 0 && a?.procurouOutra === true;
+  /* Regra do Weslei: SEMPRE existe uma "Melhor opção". Sem loja mais barata,
+     é o próprio anúncio colado, com o link de afiliado dele. */
+  const estaEAMelhor = !leituraFalhou && !trocar;
 
   return (
     <div className="mt-3 rounded-lg border border-border bg-card p-3">
@@ -1191,7 +1201,9 @@ function Resultado({
         <MelhorOpcao
           vendedor={a?.vendedor ?? null}
           preco={a?.preco ?? null}
-          link={link}
+          link={semLink ? null : link}
+          urlColada={urlColada}
+          comparou={a?.procurouOutra === true}
           dispositivo={dispositivo}
           temCupom={a?.temCupom === true}
           /* -1: pedido de versão antiga, sem a lista de lojas. */
@@ -1205,7 +1217,7 @@ function Resultado({
       {(a?.procurouOutra === true || alternativas.length > 0) && !leituraFalhou && (
         <TodasAsLojas
           linhas={[
-            ...(!semLink && a?.preco != null
+            ...(a?.preco != null
               ? [
                   {
                     chave: "colado",
@@ -1213,8 +1225,8 @@ function Resultado({
                     imagem: a?.imagem,
                     final: a.preco,
                     diferenca: 0,
-                    link,
-                    url: null,
+                    link: semLink ? null : link,
+                    url: semLink ? urlColada : null,
                     colado: true,
                   },
                 ]
@@ -1255,16 +1267,8 @@ function Resultado({
         </p>
       )}
 
-      {!leituraFalhou && semLink && (
-        <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/30">
-          <p className="text-sm font-semibold">Consegui conferir, mas o link de compra não saiu.</p>
-          <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-            As condições acima são reais. O que faltou foi gerar o link, e sem ele eu não coloco
-            botão de compra aqui: seria mandar você comprar por um caminho que não me credita nada.
-            Tente de novo em instantes.
-          </p>
-        </div>
-      )}
+      {/* Sem link pronto: a "Melhor opção" e a tabela trazem o botão que gera o
+          link de afiliado no clique. */}
 
       {a?.temCupom && a.cupom?.id != null && !trocar && (
         <CodigoNaHora
@@ -1389,10 +1393,14 @@ function MelhorOpcao({
   olhados,
   conferidosIA,
   iaIndisponivel,
+  urlColada,
+  comparou = true,
 }: {
   vendedor: string | null;
   preco: number | null;
-  link: string;
+  link: string | null;
+  urlColada?: string | null;
+  comparou?: boolean;
   dispositivo: Dispositivo;
   temCupom: boolean;
   comparadas: number;
@@ -1417,20 +1425,28 @@ function MelhorOpcao({
         <span className="ml-auto text-base font-bold tabular-nums">{brl(preco)}</span>
       </div>
       <p className="mt-1 text-xs text-success">
-        {comparadas > 0
-          ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
-          : comparadas === 0
-            ? semIguais
-            : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
+        {!comparou
+          ? "Desta vez não consegui comparar com outras lojas."
+          : comparadas > 0
+            ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
+            : comparadas === 0
+              ? semIguais
+              : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
       </p>
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
-      >
-        {textoDoBotao(dispositivo, "Comprar com segurança")}
-      </a>
+      {link ? (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+        >
+          {textoDoBotao(dispositivo, "Comprar com segurança")}
+        </a>
+      ) : urlColada ? (
+        <div className="mt-2">
+          <VerNaLoja url={urlColada} grande />
+        </div>
+      ) : null}
       <AvisoDoBotao d={dispositivo} />
     </div>
   );
@@ -1438,7 +1454,7 @@ function MelhorOpcao({
 
 /* "Ver na loja": o link de afiliado da loja só é criado quando o cliente pede,
    para ele conferir o preço lá com os próprios olhos. Nada é gerado sem clique. */
-function VerNaLoja({ url }: { url: string }) {
+function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
   const [estado, setEstado] = useState<"parado" | "gerando" | "falhou">("parado");
   const [link, setLink] = useState<string | null>(null);
 
@@ -1489,9 +1505,13 @@ function VerNaLoja({ url }: { url: string }) {
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
+        className={
+          grande
+            ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+            : "inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
+        }
       >
-        Abrir ↗
+        {grande ? "Comprar com segurança ↗" : "Abrir ↗"}
       </a>
     );
   }
@@ -1500,9 +1520,21 @@ function VerNaLoja({ url }: { url: string }) {
       type="button"
       onClick={() => void gerar()}
       disabled={estado === "gerando"}
-      className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
+      className={
+        grande
+          ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
+          : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
+      }
     >
-      {estado === "gerando" ? "Gerando…" : estado === "falhou" ? "Tentar de novo" : "Abrir"}
+      {estado === "gerando"
+        ? grande
+          ? "Gerando seu link…"
+          : "Gerando…"
+        : estado === "falhou"
+          ? "Tentar de novo"
+          : grande
+            ? "Comprar com segurança"
+            : "Abrir"}
     </button>
   );
 }

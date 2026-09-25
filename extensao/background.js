@@ -2874,11 +2874,26 @@ async function atenderPedidos() {
             /* Sem ler o anuncio nao se gera link: o "alvo" seria o proprio
                link colado, que pode ser de OUTRO afiliado (visto em 24/09 com
                um meli.la de compartilhamento). */
-            if (!a.ok) throw new Error('nao gerei link: o anuncio nao foi lido');
-            r = await gerarNaAba(tabId, alvoDoLink, TAG_PADRAO);
+            /* Regra do Weslei: SEMPRE devolver o link de afiliado dele. Sem
+               leitura do anuncio, so da para gerar a partir do endereco colado
+               quando ele e um endereco de produto (nao um meli.la, que pode ser
+               de outro afiliado); limparUrl tira rastreio de terceiros. */
+            if (!a.ok && !/mercadolivre\.com\.br\/.*MLB/i.test(url)) throw new Error('nao gerei link: o anuncio nao foi lido');
+            r = await gerarNaAba(tabId, a.ok ? alvoDoLink : url, TAG_PADRAO);
           } catch (e) {
             linkFalhou = e.message || String(e);
             console.warn('[link]', linkFalhou);
+            /* Segunda tentativa, direto no gerador, com o endereco do anuncio
+               (e nao o da ficha). Captcha/deslogado/freio nao insistem. */
+            if (!/captcha|verificacao|deslogad|pausad|bloquead/i.test(linkFalhou)
+                && (a.ok || /mercadolivre\.com\.br\/.*MLB/i.test(url))) {
+              try {
+                await sleep(1500);
+                const alvo2 = enderecoDoAnuncio(alvoDoLink, itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null);
+                const r2 = await gerarNaAbaSemCadastro(tabId, alvo2, TAG_PADRAO);
+                if (r2 && r2.link) { r = r2; linkFalhou = null; }
+              } catch (e2) { linkFalhou += ' | 2a tentativa: ' + (e2.message || e2); }
+            }
           }
 
           /* Procura o MESMO produto de catalogo em outra loja e compara PRECO

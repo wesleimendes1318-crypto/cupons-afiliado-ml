@@ -7,7 +7,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Todo link colado precisa ser comparado com o MESMO produto em outras lojas.
 - Só mostrar outra loja quando a Gemini confirmou pela foto que é o mesmo produto.
   Produto parecido apresentado como igual é o pior erro possível.
-- Todo link de compra precisa ser o link de afiliado do Weslei.
+- Todo link de compra precisa ser o link de afiliado do Weslei. SEMPRE devolver o
+  link de afiliado dele, inclusive do anúncio que o cliente colou; se a geração
+  falhar, tentar de novo e oferecer o botão que gera o link no clique.
+- Sempre mostrar a "Melhor opção", mesmo quando é o próprio anúncio colado.
+- Mostrar TODAS as lojas comparadas (tabela zebrada), cada uma com o link de
+  afiliado próprio (gerado pelo endereço do anúncio da loja, não da ficha).
 - A consulta do cliente deve terminar em até 1 minuto. Previsões de tempo na tela
   vêm de medição real (função tempo_estimado), nunca inventadas.
 
