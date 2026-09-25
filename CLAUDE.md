@@ -35,9 +35,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Nunca tela vazia: sem dado, o site mostra o que tem com o botão do link.
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
+- Não desapontar o cliente enquanto não achar opção mais barata ou a análise
+  não estiver completa: o resultado sai em até 1 minuto com o link, e a
+  comparação incompleta (busca falhou, IA fora do ar, loja sem link) é refeita
+  pela "segunda volta" da extensão (até 2 vezes), atualizando a tela sozinha.
+  Nunca frase de "não consegui comparar" / "tente de novo" no resultado.
+- Antes de publicar a extensão: ferramentas/verificar-extensao.sh (sintaxe,
+  variável sem definição/import, testes). Um import esquecido na 1.97 derrubou
+  a comparação inteira e "node --check" não pega isso.
 - Antes de dizer ao Weslei que está pronto: rodar ferramentas/bateria-de-testes.sql
-  (capinha, travesseiro, Eudora, disco de freio, monitor em página de oferta) na versão nova e conferir todas
-  as metas. Falhou alguma: corrigir e rodar de novo. Só então avisar.
+  (capinha, travesseiro, Eudora, disco de freio, monitor em página de oferta,
+  pista dinossauro) na versão nova e conferir todas as metas. Falhou alguma:
+  corrigir e rodar de novo. Só então avisar.
 
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.

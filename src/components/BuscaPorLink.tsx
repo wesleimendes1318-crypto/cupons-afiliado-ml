@@ -39,6 +39,12 @@ const LIMITE_MS = 240000;
 /* Depois disso a espera deixou de ser normal. Nao desiste: troca o texto por um
    aviso honesto e da uma saida util para a pessoa nao abandonar a pagina. */
 const AVISO_MS = 45000;
+/* Segunda volta da extensão (regra do Weslei: enquanto não achar opção mais
+   barata ou não tiver a análise completa, não desapontar o cliente). O
+   resultado aparece em até 1 minuto e a tela continua se atualizando até a
+   comparação terminar. A extensão fecha a análise em até 2 novas tentativas;
+   isto é só a rede de segurança. */
+const COMPLETAR_MS = 180000;
 
 type Cupom = {
   /* id do cupom no banco. Com ele o site pede o código na hora, mesmo quando o
@@ -194,6 +200,12 @@ type Analise = {
   referencias?: Referencia[] | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
   aviso?: string | null;
+  /* completa: achou loja mais barata, ou a busca e a conferência pela foto
+     terminaram. final: false = a extensão ainda está refazendo a comparação
+     (segunda volta); a tela continua se atualizando. */
+  completa?: boolean | null;
+  final?: boolean | null;
+  voltas?: number | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
   imagem?: string | null;
   buscaFora?: {
@@ -419,10 +431,14 @@ export default function BuscaPorLink() {
   const [motivo, setMotivo] = useState<string | null>(null);
   const [inicio, setInicio] = useState(() => Date.now());
   const [estimativa, setEstimativa] = useState<Estimativa>(null);
+  const [completando, setCompletando] = useState(false);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
   const aviso = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* Pedido que a tela está acompanhando. A espera pela segunda volta dura
+     minutos: uma consulta velha nunca pode sobrescrever um link novo colado. */
+  const atual = useRef<number | null>(null);
 
   const limparTimers = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -441,11 +457,13 @@ export default function BuscaPorLink() {
       if (!alvo) return;
 
       limparTimers();
+      atual.current = null;
       setErro(null);
       setPedido(null);
       setCopiado(null);
       setDemorando(false);
       setMotivo(null);
+      setCompletando(false);
 
       const limpo = melhorLinkML(alvo);
       if (!limpo) {
@@ -491,6 +509,7 @@ export default function BuscaPorLink() {
         return;
       }
 
+      atual.current = id;
       setFase("na-fila");
       /* Cutuca a extensao na hora. Sem isso o pedido espera o alarme do Chrome,
          que nao roda em menos de 1 minuto: era esse o tempo morto da espera. */
@@ -505,9 +524,13 @@ export default function BuscaPorLink() {
 
       let voltas = 0;
       let parou = false;
+      let prontoEm: number | null = null;
+      let ultimoVisto = "";
 
       const consultar = async () => {
+        if (atual.current !== id) return;
         const { data } = await supabase.rpc("consultar_pedido", { p_id: id });
+        if (atual.current !== id) return;
         // O tipo gerado do RPC devolve status como string solta; aqui a gente
         // sabe o formato porque a funcao no banco e nossa.
         const bruto = Array.isArray(data) ? data[0] : data;
@@ -523,10 +546,26 @@ export default function BuscaPorLink() {
         /* Pronto com análise mas sem link: a comparação aparece e o botão gera
            o link de afiliado no clique (regra: sempre devolver o link). */
         if (linha?.status === "pronto" && (linha.link || linha.analise)) {
-          parou = true;
           limparTimers();
-          setPedido(linha);
+          /* Só troca a tela quando a análise mudou (a segunda volta grava de
+             novo o pedido). */
+          const visto = JSON.stringify([linha.link, linha.analise]);
+          if (visto !== ultimoVisto) {
+            ultimoVisto = visto;
+            setPedido(linha);
+          }
           setFase("pronto");
+          prontoEm ??= Date.now();
+          /* Comparação ainda em andamento: o cliente já vê produto, preço e o
+             link, e a tela continua se atualizando até a análise completar. */
+          const aindaComparando =
+            linha.analise?.final === false && Date.now() - prontoEm < COMPLETAR_MS;
+          setCompletando(aindaComparando);
+          if (!aindaComparando) {
+            parou = true;
+            return;
+          }
+          timer.current = setTimeout(consultar, RITMO_CALMO_MS);
           return;
         }
         if (linha?.status === "falhou") {
@@ -641,6 +680,7 @@ export default function BuscaPorLink() {
           copiar={copiar}
           copiado={copiado}
           urlColada={melhorLinkML(url) ?? null}
+          completando={completando}
         />
       )}
 
@@ -1119,11 +1159,13 @@ function Resultado({
   copiar,
   copiado,
   urlColada,
+  completando = false,
 }: {
   pedido: Pedido;
   copiar: (t: string, m: string) => void;
   copiado: string | null;
   urlColada: string | null;
+  completando?: boolean;
 }) {
   const a = pedido.analise;
   const link = pedido.link ?? "";
@@ -1213,6 +1255,7 @@ function Resultado({
           link={semLink ? null : link}
           urlColada={urlColada}
           comparou={a?.procurouOutra === true}
+          completando={completando}
           dispositivo={dispositivo}
           temCupom={a?.temCupom === true}
           /* -1: pedido de versão antiga, sem a lista de lojas. */
@@ -1268,11 +1311,9 @@ function Resultado({
           Dizer isso é o que dá confiança para comprar aqui. */}
       {a?.temCupom === true && alternativas.length === 0 && (
         <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-          {a.procurouOutra === true
+          {a.procurouOutra === true && !completando
             ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
-            : a.motivoNaoProcurou
-              ? `Desta vez não comparei com outras lojas (${semMarca(a.motivoNaoProcurou)}).`
-              : null}
+            : null}
         </p>
       )}
 
@@ -1404,12 +1445,14 @@ function MelhorOpcao({
   iaIndisponivel,
   urlColada,
   comparou = true,
+  completando = false,
 }: {
   vendedor: string | null;
   preco: number | null;
   link: string | null;
   urlColada?: string | null;
   comparou?: boolean;
+  completando?: boolean;
   dispositivo: Dispositivo;
   temCupom: boolean;
   comparadas: number;
@@ -1420,7 +1463,7 @@ function MelhorOpcao({
   /* Nenhuma loja igual: diz quanto foi olhado, para ninguém achar que não
      procurei. Só números medidos no pedido; sem número, frase genérica. */
   const semIguais = iaIndisponivel
-    ? `Achei${olhados ? ` ${olhados}` : ""} anúncios parecidos, mas não consegui confirmar pela foto se algum é o mesmo produto. Tente de novo em instantes.`
+    ? `Olhei${olhados ? ` ${olhados}` : ""} anúncios parecidos: nenhum confirmado pela foto como este mesmo produto.`
     : olhados != null && olhados > 0
       ? `Olhei ${olhados} anúncios parecidos${conferidosIA ? ` e conferi ${conferidosIA} pela foto` : ""}: nenhum era este mesmo produto mais barato.`
       : "Não encontrei este mesmo produto mais barato em outra loja.";
@@ -1439,15 +1482,22 @@ function MelhorOpcao({
           )}
         </span>
       </div>
-      <p className="mt-1 text-xs text-success">
-        {!comparou
-          ? "Desta vez não consegui comparar com outras lojas."
-          : comparadas > 0
-            ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
-            : comparadas === 0
-              ? semIguais
-              : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
-      </p>
+      {completando ? (
+        <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-ml-blue">
+          <LoaderCircle className="animate-giro-calmo size-3.5 shrink-0" aria-hidden="true" />
+          Ainda procurando preço menor em outras lojas. A tela atualiza sozinha.
+        </p>
+      ) : (
+        <p className="mt-1 text-xs text-success">
+          {!comparou
+            ? "Produto conferido, com compra segura pelo botão abaixo."
+            : comparadas > 0
+              ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
+              : comparadas === 0
+                ? semIguais
+                : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
+        </p>
+      )}
       {link ? (
         <a
           href={link}

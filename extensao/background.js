@@ -1,5 +1,5 @@
 import { sincronizarComSite, completarCondicoes, condicoesDe,
-         pedidosPendentes, marcarPedido, melhorCupom,
+         pedidosPendentes, pedidosEsperando, marcarPedido, completarPedido, melhorCupom,
          condicoesPendentes, salvarCondicoes, iniciarPedido,
          linksPendentes, salvarLinks,
          etiquetasPendentes, salvarEtiquetas,
@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
-         escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA,
+         escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
@@ -2173,7 +2173,10 @@ let fecharAnonima = null;
    Cada etapa da busca em outras lojas olha quanto tempo resta e se ajusta:
    o que nao cabe e pulado, mas o que ja foi lido nunca e jogado fora. */
 let prazoConsulta = 0;
-function resta() { return prazoConsulta ? prazoConsulta - Date.now() : 60000; }
+/* true = chegou cliente novo durante a segunda volta: as etapas encerram
+   (resta 0) e o cliente novo e atendido primeiro. */
+let interromperVolta = false;
+function resta() { if (interromperVolta) return 0; return prazoConsulta ? prazoConsulta - Date.now() : 60000; }
 function comPrazo(promessa, ms, reserva) {
   let t;
   return Promise.race([promessa, new Promise(ok => { t = setTimeout(() => ok(reserva), Math.max(0, ms)); })])
@@ -2904,6 +2907,92 @@ let atendendo = false;
    assim que a atual termina. */
 let chegouPedidoNovo = false;
 
+/* SEGUNDA VOLTA (regra do Weslei, 25/09: enquanto nao achar opcao mais barata
+   ou nao tiver a analise completa, nao desapontar o cliente).
+   Pedidos entregues com a comparacao incompleta (busca falhou, IA fora do ar,
+   loja mais barata sem link) ficam aqui. O cliente ja ve o produto, o preco e
+   o link de afiliado (resposta em ate 1 minuto) e a tela avisa que ainda estou
+   comparando; a comparacao e refeita ate 2 vezes e a tela dele se atualiza
+   sozinha. Nunca fica esperando para sempre: na ultima tentativa o pedido e
+   fechado (final) com o melhor resultado que houve. */
+const paraCompletar = [];
+const MAX_VOLTAS_EXTRAS = 2;
+
+/* Fica a que mostra mais: loja mais barata com link vale mais que tudo,
+   depois mais lojas conferidas na tabela; empate, a completa (a mais nova). */
+function melhorAnalise(x, y) {
+  if (!x) return y;
+  if (!y) return x;
+  const peso = an => (an.outrasLojas || []).length * 100 + (an.referencias || []).length;
+  if (peso(y) !== peso(x)) return peso(y) > peso(x) ? y : x;
+  if (!!y.completa !== !!x.completa) return y.completa ? y : x;
+  return y;
+}
+
+/* Cliente esperando na fila? Consulta sem reservar. O vigia da fila fica
+   parado enquanto a extensao atende, entao a segunda volta olha por conta
+   propria: cliente novo passa na frente (resposta em ate 1 minuto). */
+async function clienteEsperando(sincToken) {
+  if (chegouPedidoNovo) return true;
+  return (await pedidosEsperando(sincToken).catch(() => 0)) > 0;
+}
+
+async function esperarOuCliente(sincToken, ms) {
+  const fim = Date.now() + ms;
+  while (Date.now() < fim) {
+    if (await clienteEsperando(sincToken)) return true;
+    await sleep(Math.min(4000, Math.max(0, fim - Date.now())));
+  }
+  return false;
+}
+
+async function segundaVolta(sincToken, atenderUm) {
+  while (paraCompletar.length) {
+    if (await clienteEsperando(sincToken)) {
+      chegouPedidoNovo = false;
+      const novos = await pedidosPendentes(sincToken).catch(() => []);
+      for (const n of novos) { await atenderUm(n); await sleep(600); }
+      /* Fila acusou cliente mas nao entregou (rede): sem laco apertado. */
+      if (!novos.length) await sleep(4000);
+      continue;
+    }
+    const c = paraCompletar.shift();
+    c.cortes = c.cortes || 0;
+    /* Respiro entre tentativas do mesmo pedido: IA ocupada (429/503) costuma
+       voltar em segundos. */
+    const espera = 12000 - (Date.now() - c.ultima);
+    if (c.tentativas > 0 && espera > 0 && await esperarOuCliente(sincToken, espera)) {
+      paraCompletar.unshift(c);
+      continue;
+    }
+    /* Enquanto refaz, olha a fila a cada 4 s. Cortada 3 vezes, vai ate o fim
+       (nunca fica sem terminar). */
+    let olhando = true;
+    const olho = c.cortes >= 3 ? null : setInterval(() => {
+      clienteEsperando(sincToken).then(sim => { if (sim && olhando) interromperVolta = true; }).catch(() => {});
+    }, 4000);
+    let an = null;
+    try { an = await c.tentar(c.tentativas + 2); }
+    catch (e) { console.warn('[segunda volta]', c.id, e.message || e); }
+    finally { olhando = false; if (olho) clearInterval(olho); }
+    if (interromperVolta) {
+      /* Tentativa cortada ao meio: nao conta e nao grava. */
+      interromperVolta = false;
+      c.cortes++;
+      paraCompletar.unshift(c);
+      continue;
+    }
+    c.tentativas++;
+    c.ultima = Date.now();
+    c.analise = melhorAnalise(c.analise, an);
+    const acabou = !!(an && an.completa) || c.tentativas >= MAX_VOLTAS_EXTRAS;
+    try {
+      await completarPedido(sincToken, c.id, { ...c.analise, final: acabou, voltas: c.tentativas + 1 });
+    } catch (e) { console.warn('[segunda volta] gravar', c.id, e.message || e); }
+    if (!acabou) paraCompletar.push(c);
+  }
+}
+
 async function atenderPedidos() {
   if (atendendo) { chegouPedidoNovo = true; return { atendidos: 0, pulou: true }; }
   const { sincToken } = await chrome.storage.local.get('sincToken');
@@ -2931,10 +3020,14 @@ async function atenderPedidos() {
     const filaCheia = pendentes.length > 4;
 
     await comAbaML(async (tabId) => {
-      for (const p of pendentes) {
+      /* Um pedido. Virou funcao para a segunda volta poder atender, no meio
+         dela, um cliente novo que chegou (cliente novo tem prioridade). */
+      const atenderUm = async (p) => {
+        /* Cliente novo nunca herda o corte da segunda volta. */
+        interromperVolta = false;
         if (!p.url_alvo) {
           await marcarPedido(sincToken, p.id, null, null, 'pedido sem link');
-          falhou++; continue;
+          falhou++; return;
         }
         /* Pedido so de link: o cliente clicou em "ver na loja" numa das lojas
            mais caras da comparacao, para conferir o preco. So gera o link de
@@ -2948,7 +3041,7 @@ async function atenderPedidos() {
             await marcarPedido(sincToken, p.id, null, null, String(e.message || e).slice(0, 200));
             falhou++;
           }
-          continue;
+          return;
         }
         try {
           /* O banco ja reservou este pedido para esta instancia, de forma
@@ -3117,6 +3210,9 @@ async function atenderPedidos() {
           let buscaFora = { rodou: false, motivo: null, vistos: 0 };
           let apiAchou = false;
           let verificacaoIA = null;
+          /* 1 = atendimento normal; 2 e 3 = segunda volta (comparacao refeita
+             depois que o cliente ja recebeu o resultado). */
+          let volta = 1;
           const pausaLeitura = await freioLigado('leitura');
           /* Com a janela anonima liberada, a busca em outras lojas nao depende
              da conta: roda mesmo com o freio da conta ligado. */
@@ -3128,8 +3224,13 @@ async function atenderPedidos() {
           /* SEMPRE procura (regra do Weslei, 24/09): antes, com mais de 4
              pedidos na fila, a busca era pulada. A busca e do servidor, pela
              API oficial, e nao pesa na conta de afiliado. */
+          const compararAgora = async () => {
+          outra = null; outras = []; outraFalhou = null;
+          procurouOutra = false; motivoNaoProcurou = null;
+          referencias = []; buscaFora = { rodou: false, motivo: null, vistos: 0 };
+          apiAchou = false; verificacaoIA = null; ultimaLeitura = null;
           {
-            marcarEtapa(sincToken, p.id, 'outras_lojas');
+            if (volta === 1) marcarEtapa(sincToken, p.id, 'outras_lojas');
             procurouOutra = true;
             let alts = [];
             /* 1. Servidor do site, API oficial do Mercado Livre. Nao usa a
@@ -3250,6 +3351,8 @@ async function atenderPedidos() {
               buscaFora.motivo = !a.ok ? 'anuncio nao lido' : 'teto do dia de buscas atingido';
             }
 
+            /* Segunda volta interrompida por cliente novo: resultado descartado. */
+            if (volta > 1 && interromperVolta) return;
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
                falhar, o achado NAO vai para a tela: mandar o cliente para uma
                oferta mais barata por um endereco sem etiqueta seria entregar a
@@ -3283,7 +3386,7 @@ async function atenderPedidos() {
               }
             }
             marcar('busca');
-            if (alts.length) marcarEtapa(sincToken, p.id, 'links');
+            if (alts.length && volta === 1) marcarEtapa(sincToken, p.id, 'links');
             /* Ate 3 lojas mais baratas, todas com o link de afiliado do
                Weslei. Sem link de afiliado a oferta nao vai para a tela. */
             for (const alt of alts.slice(0, 3)) {
@@ -3339,6 +3442,7 @@ async function atenderPedidos() {
             outra = outras[0] || null;
           }
 
+          if (volta > 1 && interromperVolta) return;
           /* Todas as lojas da tabela com o link de afiliado ja pronto, numa
              chamada so ao gerador. Loja sem link fica com o botao que gera no
              clique (site). */
@@ -3350,8 +3454,10 @@ async function atenderPedidos() {
               semLink.forEach((x, k) => { if (mapa[alvos[k]]) x.link = mapa[alvos[k]]; });
             }
           } catch (e) { console.warn('[links em lote]', e.message); }
+          };
+          await compararAgora();
 
-          await marcarPedido(sincToken, p.id, r.link, r.codigo, null, {
+          const montarAnalise = (nomeTempo) => ({
             titulo: a.titulo ?? null,
             /* Aviso da pagina do anuncio (ex.: indisponivel), lido da tela. */
             aviso: a.aviso || null,
@@ -3368,7 +3474,7 @@ async function atenderPedidos() {
             motivoNaoProcurou: motivoNaoProcurou,
             /* Para saber, de longe, qual versao atendeu este cliente. */
             versaoExtensao: chrome.runtime.getManifest().version,
-            tempos: (marcar('fim'), tempos),
+            tempos: (marcar(nomeTempo), { ...tempos }),
             /* false = falta ligar "Permitir no modo anonimo" na extensao. */
             anonima: anonima,
             /* Para a vitrine do site. */
@@ -3396,6 +3502,45 @@ async function atenderPedidos() {
             lojaLida: !!(a.nomes && a.nomes.length),
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
           });
+          /* ANALISE COMPLETA (regra do Weslei, 25/09: enquanto nao achar opcao
+             mais barata ou nao tiver a analise completa, nao desapontar o
+             cliente). Completa = achou loja mais barata com link, ou a busca
+             rodou inteira e a IA conferiu todos os candidatos. Busca que
+             falhou, IA fora do ar ou loja mais barata sem link = incompleta:
+             o cliente recebe o resultado agora (1 minuto) e a comparacao e
+             refeita logo em seguida, atualizando a tela dele. */
+          const analiseCompleta = () => {
+            if (outras.length) return true;
+            if (outraFalhou) return false;
+            if (!procurouOutra) return false;
+            if (buscaFora.rodou && buscaFora.motivo) return false;
+            if (buscaFora.leitura && buscaFora.leitura.ia && buscaFora.leitura.ia.indisponivel) return false;
+            if (verificacaoIA && verificacaoIA.indisponivel) return false;
+            return true;
+          };
+          const analise = montarAnalise('fim');
+          analise.completa = !!a.ok && analiseCompleta();
+          /* final = nao vem mais nada; o site para de esperar. Sem o anuncio
+             lido nao ha o que comparar de novo. */
+          analise.final = analise.completa || !a.ok;
+          await marcarPedido(sincToken, p.id, r.link, r.codigo, null, analise);
+          if (!analise.final) {
+            const temposPrimeira = analise.tempos;
+            paraCompletar.push({
+              id: p.id, tentativas: 0, ultima: Date.now(), analise,
+              tentar: async (n) => {
+                volta = n;
+                const t0v = Date.now();
+                await compararAgora();
+                const an = montarAnalise('fim');
+                an.tempos = { ...temposPrimeira, ['volta' + n]: Math.round((Date.now() - t0v) / 100) / 10 };
+                an.completa = analiseCompleta();
+                an.final = false;
+                an.voltas = n;
+                return an;
+              }
+            });
+          }
           /* Resumo do ultimo atendimento, para o popup mostrar o estado real. */
           chrome.storage.local.set({ ultimoAtendimento: {
             quando: Date.now(), titulo: a.titulo || null, segundos: tempos.fim || null,
@@ -3409,10 +3554,14 @@ async function atenderPedidos() {
           await marcarPedido(sincToken, p.id, null, null, e.message || String(e), null);
           falhou++;
         }
+      };
+      for (const p of pendentes) {
+        await atenderUm(p);
         // Ritmo entre pedidos: calmo quando ninguem espera, apertado quando
         // tem gente na fila. Nunca zero: rajada e o que chama atencao.
         await sleep(filaCheia ? 250 : 600);
       }
+      await segundaVolta(sincToken, atenderUm);
     });
 
     if (ok || falhou) console.log(`[pedidos] ${ok} atendidos, ${falhou} falharam`);

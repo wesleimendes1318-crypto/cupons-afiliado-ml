@@ -205,6 +205,21 @@ export async function marcarPedido(token, id, link, codigo, erro, analise) {
   });
 }
 
+/* Segunda volta: troca so a analise de um pedido que ja esta pronto na tela
+   (a comparacao tinha ficado incompleta e foi refeita). */
+export async function completarPedido(token, id, analise) {
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/completar_pedido', {
+    p_token: token, p_id: id, p_analise: analise || null
+  });
+}
+
+/* Quantos clientes esperam na fila, sem reservar nenhum. */
+export async function pedidosEsperando(token) {
+  if (!token) return 0;
+  const n = await chamarRpc(SUPABASE + '/rest/v1/rpc/pedidos_esperando', { p_token: token });
+  return Number(n) || 0;
+}
+
 /* Etapa real do atendimento, que o site mostra ao cliente enquanto espera.
    Nunca derruba o atendimento: se falhar, o cliente so ve a etapa anterior. */
 export async function marcarEtapa(token, id, etapa) {
