@@ -509,7 +509,9 @@ async function geminiLocal(partes, primeiro = null) {
      preta, Edge 70 x 70 Fusion+); o 2.5 Flash estourou o prazo. */
   /* primeiro: a segunda opiniao comeca por OUTRO modelo. */
   /* 2.5-flash-lite: mais uma cota gratuita (modelo que a chave nao tem = 404, pula). */
-  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', geminiModel].filter(Boolean))];
+  /* Gemma (autorizado pelo Weslei em 25/09): so depois de todos os Gemini. */
+  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', geminiModel,
+                               ...MODELOS_GEMMA].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   /* Erro de CADA modelo tentado (antes so o ultimo ficava gravado). */
@@ -524,8 +526,9 @@ async function geminiLocal(partes, primeiro = null) {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
+          /* Gemma nao tem o modo JSON da Gemini: o texto pede JSON e jsonDaIA le. */
           body: JSON.stringify({ contents: [{ parts: partes }],
-                                 generationConfig: { responseMimeType: 'application/json', temperature: 0,
+                                 generationConfig: ehGemma(modelo) ? { temperature: 0 } : { responseMimeType: 'application/json', temperature: 0,
                                    ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}) } })
         });
         clearTimeout(corta);
@@ -549,7 +552,8 @@ async function geminiLocal(partes, primeiro = null) {
         falhas.push(modelo + ' ' + r.status + ' ' + ultimo.erro.slice(0, 90));
         if (r.status === 429) break;
         if (r.status >= 500) { if (tentativa === 0) await sleep(2000); continue; }
-        if (r.status === 404) break;
+        /* 404 (modelo que a chave nao tem) e qualquer recusa do Gemma: proximo. */
+        if (r.status === 404 || ehGemma(modelo)) break;
         return comFalhas(ultimo);
       } catch (e) {
         /* Estourou o prazo: nao repete o mesmo modelo, vai para o proximo. */
@@ -570,6 +574,12 @@ function jsonDaIA(texto) {
 }
 
 const CONFIANCA_MINIMA_IA = 80;
+/* Gemma: so quando a Gemini nao der, e com confianca maior (mais fraco em
+   detalhe de foto). Mesma chave; modelo que a chave nao tem (404) e pulado. */
+const MODELOS_GEMMA = ['gemma-4-31b-it', 'gemma-4-26b-a4b-it', 'gemma-3-27b-it'];
+const CONFIANCA_MINIMA_GEMMA = 90;
+function ehGemma(modelo) { return /^gemma/i.test(modelo || ''); }
+function confiancaMinimaIA(modelo) { return ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA_IA; }
 const PEDIDO_CONFERENCIA =
   'Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL '
   + 'e so pode ver outra loja se for EXATAMENTE o mesmo produto.\n'
@@ -666,7 +676,14 @@ async function mesmoProdutoPelaGemini(original, lista) {
     const obj = r.ok ? jsonDaIA(r.texto) : null;
     if (obj && Array.isArray(obj.candidatos)) {
       const avaliacao = lerVereditosIA(obj.candidatos, itens.length).map(a => ({ ...a, semFoto: !fotos[a.indice] }));
-      const positivos = avaliacao.filter(a => a.igual && a.confianca >= CONFIANCA_MINIMA_IA && !a.semFoto);
+      /* "Igual" abaixo do minimo do modelo (Gemma: 90) nao conta como igual. */
+      for (const a of avaliacao) {
+        if (a.igual && a.confianca < confiancaMinimaIA(r.modelo)) {
+          a.igual = false;
+          a.motivo = ('confianca ' + a.confianca + ' abaixo de ' + confiancaMinimaIA(r.modelo) + ': ' + a.motivo).slice(0, 140);
+        }
+      }
+      const positivos = avaliacao.filter(a => a.igual && !a.semFoto);
       if (positivos.length) {
         /* Segunda opiniao; sem ela, nada entra (a segunda volta refaz). */
         const desc = String(obj.descricao_original || '').slice(0, 400);
@@ -684,7 +701,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
         const segunda = new Map(lerVereditosIA(obj2.candidatos, positivos.length).map(v => [v.indice, v]));
         positivos.forEach((a, k) => {
           const v = segunda.get(k);
-          if (v && v.igual && v.confianca >= CONFIANCA_MINIMA_IA) {
+          if (v && v.igual && v.confianca >= confiancaMinimaIA(r2.modelo)) {
             a.confianca = Math.min(a.confianca, v.confianca);
             a.motivo = (a.motivo + ' | confirmado (' + r2.modelo + ')').slice(0, 140);
           } else {

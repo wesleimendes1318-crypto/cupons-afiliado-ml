@@ -7,6 +7,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Todo link colado precisa ser comparado com o MESMO produto em outras lojas.
 - Só mostrar outra loja quando a Gemini confirmou pela foto que é o mesmo produto.
   Produto parecido apresentado como igual é o pior erro possível.
+  - Todo "igual" passa por DUAS conferências (a segunda foto com foto, de
+    preferência por outro modelo) e qualquer diferença listada reprova.
+  - Gemma (mesma chave) só quando a Gemini não der (cota, fora do ar, tempo),
+    sempre depois de todos os Gemini e com confiança mínima de 90
+    (autorizado pelo Weslei em 25/09).
+  - O Adapta One não oferece API das IAs (central de ajuda deles): não serve
+    para o comparador.
 - Todo link de compra precisa ser o link de afiliado do Weslei. SEMPRE devolver o
   link de afiliado dele, inclusive do anúncio que o cliente colou; se a geração
   falhar, tentar de novo e oferecer o botão que gera o link no clique.

@@ -34,9 +34,21 @@ const MODELOS = [
 ];
 const CONFIANCA_MINIMA = 80;
 
+/* GEMMA (autorizado pelo Weslei em 25/09): so quando a Gemini nao der
+   (cota esgotada, fora do ar, tempo). Mesma chave, cota gratuita propria.
+   Vem sempre DEPOIS de todos os Gemini; modelo que a chave nao tem (404) e
+   pulado. Veredito do Gemma precisa de confianca maior (e mais fraco em
+   detalhe de foto). */
+const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it", "gemma-3-27b-it"];
+const CONFIANCA_MINIMA_GEMMA = 90;
+const ehGemma = (modelo: string | undefined) => /^gemma/i.test(modelo ?? "");
+const confiancaMinima = (modelo: string | undefined) =>
+  ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA;
+
 function ordemDosModelos(): string[] {
   const escolhido = (process.env["GEMINI_MODEL"] ?? "").trim();
-  return escolhido ? [escolhido, ...MODELOS.filter((m) => m !== escolhido)] : MODELOS;
+  const gemini = escolhido ? [escolhido, ...MODELOS.filter((m) => m !== escolhido)] : MODELOS;
+  return [...gemini.filter((m) => !ehGemma(m)), ...MODELOS_GEMMA];
 }
 
 function paraBase64(buf: ArrayBuffer): string {
@@ -84,11 +96,15 @@ async function chamarModelo(
         headers: { "Content-Type": "application/json", "X-goog-api-key": chave },
         body: JSON.stringify({
           contents: [{ role: "user", parts: partes }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0,
-            ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-          },
+          /* Gemma nao tem o modo JSON da Gemini: o pedido ja manda
+             responder so JSON e lerJson tira o bloco {} do texto. */
+          generationConfig: ehGemma(modelo)
+            ? { temperature: 0 }
+            : {
+                responseMimeType: "application/json",
+                temperature: 0,
+                ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+              },
         }),
         signal: sinal,
       },
@@ -425,9 +441,19 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
      sem citar a borda. Todo "igual" passa por uma segunda conferencia, de
      preferencia de OUTRO modelo, comparando foto com foto e listando as
      diferencas. So fica igual o que as duas aprovarem. */
-  const positivos = avaliacao.filter(
-    (a) => a.igual && a.confianca >= CONFIANCA_MINIMA && !a.semFoto && fotoOriginal,
-  );
+  /* "Igual" abaixo do minimo do modelo (Gemma: 90) nao conta como igual:
+     sem isso ele escapava da segunda conferencia e passava no filtro final. */
+  for (const a of avaliacao) {
+    if (a.igual && a.confianca < confiancaMinima(r.modelo)) {
+      a.igual = false;
+      a.motivo =
+        `confianca ${a.confianca} abaixo de ${confiancaMinima(r.modelo)}: ${a.motivo}`.slice(
+          0,
+          140,
+        );
+    }
+  }
+  const positivos = avaliacao.filter((a) => a.igual && !a.semFoto && fotoOriginal);
   if (positivos.length && fotoOriginal) {
     const resta = 21_000 - (Date.now() - t0);
     const semConfirmar = (erro: string): Conferencia => ({
@@ -465,9 +491,13 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
       const f = fotos[a.indice];
       if (f) confirmacao.push(f);
     });
+    /* Outro Gemini primeiro; o mesmo Gemini depois; Gemma so no fim. */
+    const base = ordemDosModelos();
     const outroPrimeiro = [
-      ...ordemDosModelos().filter((m) => m !== r.modelo),
-      ...ordemDosModelos().filter((m) => m === r.modelo),
+      ...base.filter((m) => m !== r.modelo && !ehGemma(m)),
+      ...(ehGemma(r.modelo) ? [] : [r.modelo]),
+      ...base.filter((m) => m !== r.modelo && ehGemma(m)),
+      ...(ehGemma(r.modelo) ? [r.modelo] : []),
     ];
     const r2 = await gerar(confirmacao, { ordem: outroPrimeiro, prazo: Math.min(9_000, resta) });
     if (!r2.ok) return semConfirmar(`${r2.status} ${r2.erro}`);
@@ -478,7 +508,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     );
     positivos.forEach((a, k) => {
       const v = segunda.get(k);
-      if (v && v.igual && v.confianca >= CONFIANCA_MINIMA) {
+      if (v && v.igual && v.confianca >= confiancaMinima(r2.modelo)) {
         a.confianca = Math.min(a.confianca, v.confianca);
         a.motivo = `${a.motivo} | confirmado (${r2.modelo})`.slice(0, 140);
       } else {
