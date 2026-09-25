@@ -115,7 +115,7 @@ export function Vitrine() {
     let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
     if (aba === "economias") l = l.filter((i) => (i.economia ?? 0) > 0).sort((a, b) => (b.economia ?? 0) - (a.economia ?? 0));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
-    return l.slice(0, 24);
+    return l.slice(0, categoria == null ? 120 : 48);
   }, [itens, aba, categoria]);
 
   if (!itens.length) return null;
@@ -187,9 +187,42 @@ export function Vitrine() {
         <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">
           Ainda não há produtos nesta lista.
         </p>
+      ) : categoria == null ? (
+        /* "Todas": uma seção por categoria, cada uma com seus produtos. */
+        <div className="mt-4 space-y-7">
+          {categorias.map((c) => {
+            const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
+            if (!daCategoria.length) return null;
+            return (
+              <div key={c}>
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <h3 className="text-base font-bold">
+                    {NOME_CATEGORIA[c] ?? c}{" "}
+                    <span className="text-sm font-normal text-secondary-ink">({daCategoria.length})</span>
+                  </h3>
+                  {daCategoria.length > 4 && (
+                    <button type="button" onClick={() => setCategoria(c)} className="text-sm font-semibold text-ml-blue hover:underline">
+                      Ver todos
+                    </button>
+                  )}
+                </div>
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {daCategoria.slice(0, 4).map((i) => <Cartao key={i.chave} i={i} />)}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {lista.map((i) => {
+          {lista.map((i) => <Cartao key={i.chave} i={i} />)}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Cartao({ i }: { i: ItemVitrine }) {
             const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
             const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
             return (
@@ -261,9 +294,4 @@ export function Vitrine() {
                 </div>
               </li>
             );
-          })}
-        </ul>
-      )}
-    </section>
-  );
 }

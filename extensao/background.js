@@ -399,20 +399,30 @@ async function gerarTexto(titulo, preco, cupom, canal) {
 /* Vitrine: poucos produtos antigos por rodada ganham foto e categoria, lendo
    o proprio anuncio (uma leitura por produto, so ate acabar a lista). */
 let completandoVitrine = false;
+let vitrineUltima = 0;
 async function completarVitrine() {
-  if (completandoVitrine || atendendo) return;
+  /* Roda no maximo a cada 5 minutos, 3 produtos por vez. */
+  if (completandoVitrine || Date.now() - vitrineUltima < 5 * 60e3) return;
+  if (typeof atendendo !== 'undefined' && atendendo) return;
   if (await freioLigado('leitura')) return;
   const { sincToken } = await chrome.storage.local.get('sincToken');
   if (!sincToken) return;
   completandoVitrine = true;
+  vitrineUltima = Date.now();
+  const registro = [];
   try {
-    for (const it of await vitrineSemFoto(sincToken, 3)) {
+    const lista = await vitrineSemFoto(sincToken, 3);
+    for (const it of lista) {
       let a = null;
-      try { a = await lerAnuncioNoWorker(limparUrl(it.url_produto)); } catch (e) { a = null; }
+      try { a = await lerAnuncioNoWorker(limparUrl(it.url_produto)); } catch (e) { registro.push({ chave: it.chave, erro: String(e.message || e).slice(0, 80) }); }
       if (a && a.captcha) break;
+      registro.push({ chave: it.chave, foto: !!(a && a.imagem), cat: a && a.categorias ? a.categorias[0] : null });
       await vitrineCompletar(sincToken, it.chave, a && a.imagem, a && a.categorias && a.categorias[0]);
       await sleep(4000 + Math.random() * 3000);
     }
+    if (registro.length) gravarDiagnostico(sincToken, 'vitrine-fotos', { registro }).catch(() => {});
+  } catch (e) {
+    gravarDiagnostico(sincToken, 'vitrine-fotos', { erro: String(e.message || e).slice(0, 200) }).catch(() => {});
   } finally { completandoVitrine = false; }
 }
 
@@ -2819,6 +2829,7 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.alarms.onAlarm.addListener(async a => {
   if (a.name === 'pedidos') {
     atenderPedidos().catch(e => console.warn('[pedidos]', e.message));
+    completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.
     // Lote de 3 para nao virar porta dos fundos dos tetos diarios.
     atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
