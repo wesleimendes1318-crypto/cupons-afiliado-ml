@@ -451,6 +451,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      categoria_do_site: {
+        Args: { p_categoria: string; p_titulo: string }
+        Returns: string
+      }
       concluir_geracao: {
         Args: {
           p_chave: string
@@ -633,11 +637,21 @@ export type Database = {
         Args: { p_completo?: boolean; p_cupons: Json; p_token: string }
         Returns: Json
       }
+      tempo_estimado: {
+        Args: never
+        Returns: {
+          amostras: number
+          segundos: number
+        }[]
+      }
       vitrine: {
         Args: { p_limite?: number }
         Returns: {
           categoria: string
+          categoria_site: string
           chave: string
+          cupom_codigo: string
+          cupom_desconto: string
           economia: number
           imagem: string
           link: string
@@ -651,6 +665,22 @@ export type Database = {
           url_produto: string
           vezes: number
           visto_em: string
+        }[]
+      }
+      vitrine_completar: {
+        Args: {
+          p_categoria: string
+          p_chave: string
+          p_imagem: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      vitrine_sem_foto: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          chave: string
+          url_produto: string
         }[]
       }
       vitrines_para_conferir: {
