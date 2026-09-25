@@ -188,7 +188,7 @@ async function lerParcial(url) {
   } catch (e) { /* segue para a janela anonima */ }
   const anon = await lerNaJanelaAnonima(url);
   if (anon.html) return anon.html;
-  if (await freioLigado('leitura') || await anonimaBloqueada()) return '';
+  if (await freioLigado('leitura')) return '';
   return lerParcialCom(url, 'include');
 }
 
@@ -1929,7 +1929,9 @@ async function lerCatalogo(url, limite = MAX_CATALOGO) {
   if (anon.html) return anon.html;
   /* Com a anonima liberada, pagina de outra loja nunca e lida com a conta:
      se a anonima nao leu, a busca segue pelo leitor de cartoes da tela. */
-  if (await anonimaPermitida() || await anonimaBloqueada()) return '';
+  /* Decisao do Weslei (25/09): com a anonima bloqueada pelo Mercado Livre,
+     a busca do CLIENTE usa a conta dele, uma por pedido, com freio. */
+  if (await anonimaPermitida()) return '';
   /* Freio da conta ligado: nao insiste logado. So a anonima podia ler. */
   if (await freioLigado('leitura')) {
     throw new Error('leitura pausada na conta e a janela anonima nao leu (' + (anon.motivo || '?') + ')');
@@ -2217,7 +2219,7 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
 async function lerBuscaNaAba(url) {
   const anon = await lerNaJanelaAnonima(url, cartoesDaBuscaNaPagina);
   if (anon.cartoes) return anon;
-  if (await anonimaPermitida() || await anonimaBloqueada()) return { cartoes: [], motivo: anon.motivo || null };
+  if (await anonimaPermitida()) return { cartoes: [], motivo: anon.motivo || null };
   if (await freioLigado('leitura')) throw new Error('leitura pausada na conta (' + (anon.motivo || '?') + ')');
   const aba = await chrome.tabs.create({ url, active: false });
   try {
@@ -2323,7 +2325,7 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
      seguem (cada um e uma leitura de pagina para saber a loja). */
   /* Adianta a leitura das lojas dos 6 mais baratos enquanto a Gemini
      confere (antes era uma coisa depois da outra). */
-  for (const c of candidatos.slice(0, 6)) { if (c.item !== itemAtual) resolverVendedor(c.item, c.url).catch(() => {}); }
+  for (const c of candidatos.slice(0, 4)) { if (c.item !== itemAtual) resolverVendedor(c.item, c.url).catch(() => {}); }
   if (original) {
     ultimaIA = null;
     const t0 = Date.now();
@@ -2841,7 +2843,7 @@ async function atenderPedidos() {
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
               }));
-            } else if (a.ok && !(await anonimaBloqueada()) && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
+            } else if (a.ok && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
                                         : (!pausaLeitura && LEITURA_RESERVA_POR_DIA > 0
                                            && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA))) {
               /* 2. Reserva: a API nao achou o produto em ficha de catalogo.
