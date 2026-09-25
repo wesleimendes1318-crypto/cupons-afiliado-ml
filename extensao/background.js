@@ -183,7 +183,7 @@ const RE_SLUG_G  = /\\u002F(?:pagina|perfil)\\u002F([A-Za-z0-9._%-]{2,60})|\/(?:
    anonima, e so por ultimo com a sessao (e nunca com o freio ligado). */
 async function lerParcial(url) {
   try {
-    const t = await lerParcialCom(url, 'omit');
+    const t = await comPrazo(lerParcialCom(url, 'omit'), 5000, '');
     if (RE_LABEL.test(t) || nomesDoHtml(t).length) return t;
   } catch (e) { /* segue para a janela anonima */ }
   const anon = await lerNaJanelaAnonima(url);
@@ -497,10 +497,10 @@ async function geminiLocal(partes) {
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   for (const modelo of modelos) {
     for (let tentativa = 0; tentativa < 2; tentativa++) {
-      if (Date.now() - inicio > 16000) return { ...ultimo, erro: (ultimo.erro || '') + ' (prazo de 16s)' };
+      if (Date.now() - inicio > Math.min(16000, resta() - 7000)) return { ...ultimo, erro: (ultimo.erro || '') + ' (sem tempo)' };
       try {
         const ctrl = new AbortController();
-        const corta = setTimeout(() => ctrl.abort(), 16000);
+        const corta = setTimeout(() => ctrl.abort(), Math.max(4000, Math.min(16000, resta() - 7000)));
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
@@ -596,7 +596,8 @@ async function mesmoProdutoPelaGemini(original, lista) {
     erros.push('extensao: foto do original nao baixou');
   }
 
-  /* 2. Chave do servidor (Lovable). */
+  /* 2. Chave do servidor (Lovable), se ainda couber no prazo. */
+  if (resta() < 12000) { erros.push('servidor: sem tempo'); ultimaIA = { indisponivel: true, erros }; return null; }
   const { sincToken } = await chrome.storage.local.get('sincToken');
   const sv = await conferirNoServidor(sincToken, {
     tipo: 'conferir',
@@ -1916,6 +1917,7 @@ async function lerCatalogo(url, limite = MAX_CATALOGO) {
   if (await freioLigado('leitura')) {
     throw new Error('leitura pausada na conta e a janela anonima nao leu (' + (anon.motivo || '?') + ')');
   }
+  if (resta() < 8000) throw new Error('sem tempo para ler logado (' + (anon.motivo || '?') + ')');
   ultimaLeitura = { modo: 'logada', motivoAnonima: anon.motivo || null };
   const ctrl = new AbortController();
   const corta = setTimeout(() => ctrl.abort(), 25000);
@@ -1966,7 +1968,8 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
   /* Lojas dos candidatos lidas AO MESMO TEMPO (antes era uma por vez, com
      pausa): a consulta do cliente precisa caber em 1 minuto. */
   const validos = candidatos.filter(c => !(itemAtual && c.item === itemAtual) && c.preco != null);
-  const nomesDe = await Promise.all(validos.map(c => resolverVendedor(c.item, c.url).catch(() => [])));
+  const nomesDe = await Promise.all(validos.map(c =>
+    comPrazo(resolverVendedor(c.item, c.url).catch(() => []), Math.max(2000, resta() - 3000), [])));
   for (let k = 0; k < validos.length; k++) {
     const c = validos[k];
     const nomes = nomesDe[k] || [];
@@ -2057,6 +2060,48 @@ function cartoesDaBuscaNaPagina() {
    Captcha na anonima NAO puxa o freio da conta: a conta nao estava ali. */
 let janelaAnonima = null;
 let fecharAnonima = null;
+
+/* PRAZO DA CONSULTA (regra do Weslei: resultado em ate 1 minuto).
+   Cada etapa da busca em outras lojas olha quanto tempo resta e se ajusta:
+   o que nao cabe e pulado, mas o que ja foi lido nunca e jogado fora. */
+let prazoConsulta = 0;
+function resta() { return prazoConsulta ? prazoConsulta - Date.now() : 60000; }
+function comPrazo(promessa, ms, reserva) {
+  let t;
+  return Promise.race([promessa, new Promise(ok => { t = setTimeout(() => ok(reserva), Math.max(0, ms)); })])
+    .finally(() => clearTimeout(t));
+}
+
+/* Roda na aba: a pagina ja tem o que interessa? Nao espera carregar
+   imagem, propaganda e rastreio (era isso que estourava o prazo). */
+function prontidaoDaPagina() {
+  const html = document.documentElement ? document.documentElement.outerHTML.length : 0;
+  return {
+    html, estado: document.readyState,
+    itens: document.querySelectorAll('li.ui-search-layout__item, .poly-card').length,
+    og: !!document.querySelector('meta[property="og:image"]'),
+    captcha: /captcha\/wall/i.test(location.href) || /Por seguran.a, complete esta etapa/i.test(document.title || '')
+  };
+}
+
+async function esperarConteudo(tabId, limiteMs) {
+  const fim = Date.now() + limiteMs;
+  let ultimo = null;
+  while (Date.now() < fim) {
+    try {
+      const [r] = await chrome.scripting.executeScript({ target: { tabId }, func: prontidaoDaPagina });
+      ultimo = r && r.result;
+      if (ultimo) {
+        if (ultimo.captcha) return ultimo;
+        if (ultimo.itens >= 8) return ultimo;
+        if (ultimo.og && ultimo.estado !== 'loading' && ultimo.html > 50000) return ultimo;
+        if (ultimo.estado === 'complete') return ultimo;
+      }
+    } catch (e) { /* pagina ainda nao existe: tenta de novo */ }
+    await sleep(500);
+  }
+  return ultimo;
+}
 let ultimaLeitura = null;
 
 async function anonimaPermitida() {
@@ -2106,8 +2151,7 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
   let id = null;
   try {
     id = await abaAnonima(url);
-    await esperarCarregar(id, 15000);
-    await sleep(800 + Math.floor(Math.random() * 400));
+    await esperarConteudo(id, Math.max(3000, Math.min(14000, resta() - 3000)));
     const final = (await chrome.tabs.get(id)).url || '';
     const [s] = await chrome.scripting.executeScript({ target: { tabId: id }, func });
     const r = (s && s.result) || {};
@@ -2178,7 +2222,7 @@ async function termoDeBuscaPelaGemini(original) {
 
 async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
   const primeira = await achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original);
-  if (primeira.length || !original) return primeira;
+  if (primeira.length || !original || resta() < 22000) return primeira;
   const termo = await termoDeBuscaPelaGemini(original);
   if (!termo || termo.toLowerCase() === String(titulo).toLowerCase()) return primeira;
   const segunda = await achadosNaBuscaUmaVez(termo, precoRef, itemAtual, original);
@@ -2193,7 +2237,7 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
      vazia de novo, da para saber onde parou (24/09: 0 anuncios lidos). */
   const diag = {};
   let candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
-  if (!candidatos.length) {
+  if (!candidatos.length && resta() > 12000) {
     /* 2a tentativa: a mesma busca numa aba de verdade, lida da tela. */
     try {
       const tela = await lerBuscaNaAba(urlDeBusca(titulo));
@@ -2238,7 +2282,12 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
      seguem (cada um e uma leitura de pagina para saber a loja). */
   if (original) {
     ultimaIA = null;
-    const ok = await mesmoProdutoPelaGemini(original, candidatos);
+    const t0 = Date.now();
+    const ok = resta() > 9000
+      ? await comPrazo(mesmoProdutoPelaGemini(original, candidatos), resta() - 7000, null)
+      : null;
+    diag.tempoIA = Date.now() - t0;
+    if (!ok && !ultimaIA) ultimaIA = { indisponivel: true, erros: ['sem tempo para a IA (' + Math.round(resta() / 1000) + 's restando)'] };
     diag.ia = ok ? { conferidos: Math.min(candidatos.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
                  : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
     if (ok) candidatos = candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true }));
@@ -2756,7 +2805,10 @@ async function atenderPedidos() {
                 const temCupomAqui = !!(cupom && aval && aval.vale);
                 const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
                 const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
-                /* Prazo de 35 s para a busca inteira: a consulta do cliente toda cabe em 1 minuto (regra do Weslei). */
+                /* A busca inteira tem 38 s (a consulta do cliente cabe em 1
+                   minuto). As etapas se ajustam ao que resta; a corrida abaixo
+                   e so a rede de seguranca. */
+                prazoConsulta = Date.now() + 38000;
                 let prazo;
                 alts = await Promise.race([mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
                   finalAtual: finalAqui, temCupomAqui, vendedorAtual: vendedor,
@@ -2769,8 +2821,8 @@ async function atenderPedidos() {
                   soBusca: !!(api && api.procurou),
                   original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco }
                 }),
-                  new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (35s) na busca em outras lojas')), 35000); })
-                ]).finally(() => clearTimeout(prazo));
+                  new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })
+                ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });
                 buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
                 buscaFora.leitura = alts.diag || null;
                 buscaFora.modo = ultimaLeitura;
@@ -2822,7 +2874,7 @@ async function atenderPedidos() {
                 let prazoIA;
                 const ok = await Promise.race([
                   mesmoProdutoPelaGemini(original, conferir),
-                  new Promise(r => { prazoIA = setTimeout(() => r(null), 20000); })
+                  new Promise(r => { prazoIA = setTimeout(() => r(null), 12000); })
                 ]).finally(() => clearTimeout(prazoIA));
                 verificacaoIA = ok ? { conferidos: Math.min(conferir.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
                                    : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
@@ -3073,6 +3125,17 @@ async function conferirVersaoNoDisco() {
   }
 }
 
+/* Sinal de vida para o site a cada 2 minutos. Antes o visto_em so mudava
+   quando o freio era liberado, ficava velho e o site dizia "pausada" com a
+   extensao funcionando (25/09). Vai junto a versao que esta rodando. */
+let ultimoSinal = 0;
+async function sinalDeVida() {
+  if (Date.now() - ultimoSinal < 2 * 60e3) return;
+  ultimoSinal = Date.now();
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (sincToken) await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
+}
+
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
     chrome.alarms.create(nome, { periodInMinutes });
@@ -3086,6 +3149,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 chrome.runtime.onStartup.addListener(() => {
   armarAlarmes();
+  sinalDeVida().catch(() => {});
   obterIndice().catch(() => {});
   atenderPedidos().catch(() => {});
   // Abrir o Chrome ja adianta uma rodada: nao espera os 10 minutos do alarme.
@@ -3093,6 +3157,7 @@ chrome.runtime.onStartup.addListener(() => {
 });
 chrome.alarms.onAlarm.addListener(async a => {
   if (a.name === 'pedidos') {
+    sinalDeVida().catch(() => {});
     atenderPedidos().catch(e => console.warn('[pedidos]', e.message));
     completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.
