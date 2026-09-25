@@ -182,6 +182,27 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnosticos: {
+        Row: {
+          criado_em: string
+          dados: Json | null
+          id: number
+          tipo: string
+        }
+        Insert: {
+          criado_em?: string
+          dados?: Json | null
+          id?: number
+          tipo: string
+        }
+        Update: {
+          criado_em?: string
+          dados?: Json | null
+          id?: number
+          tipo?: string
+        }
+        Relationships: []
+      }
       geracoes: {
         Row: {
           atualizado_em: string
@@ -287,6 +308,87 @@ export type Database = {
         }
         Relationships: []
       }
+      precos_vistos: {
+        Row: {
+          chave: string
+          id: number
+          loja: string | null
+          preco: number
+          visto_em: string
+        }
+        Insert: {
+          chave: string
+          id?: number
+          loja?: string | null
+          preco: number
+          visto_em?: string
+        }
+        Update: {
+          chave?: string
+          id?: number
+          loja?: string | null
+          preco?: number
+          visto_em?: string
+        }
+        Relationships: []
+      }
+      produtos_vistos: {
+        Row: {
+          categoria: string | null
+          chave: string
+          economia: number | null
+          imagem: string | null
+          link: string | null
+          loja: string | null
+          lojas_comparadas: number | null
+          melhor_link: string | null
+          melhor_loja: string | null
+          melhor_preco: number | null
+          preco: number | null
+          primeiro_em: string
+          titulo: string
+          url_produto: string | null
+          vezes: number
+          visto_em: string
+        }
+        Insert: {
+          categoria?: string | null
+          chave: string
+          economia?: number | null
+          imagem?: string | null
+          link?: string | null
+          loja?: string | null
+          lojas_comparadas?: number | null
+          melhor_link?: string | null
+          melhor_loja?: string | null
+          melhor_preco?: number | null
+          preco?: number | null
+          primeiro_em?: string
+          titulo: string
+          url_produto?: string | null
+          vezes?: number
+          visto_em?: string
+        }
+        Update: {
+          categoria?: string | null
+          chave?: string
+          economia?: number | null
+          imagem?: string | null
+          link?: string | null
+          loja?: string | null
+          lojas_comparadas?: number | null
+          melhor_link?: string | null
+          melhor_loja?: string | null
+          melhor_preco?: number | null
+          preco?: number | null
+          primeiro_em?: string
+          titulo?: string
+          url_produto?: string | null
+          vezes?: number
+          visto_em?: string
+        }
+        Relationships: []
+      }
       sinc_config: {
         Row: {
           chave: string
@@ -389,6 +491,7 @@ export type Database = {
           visto_em: string
         }[]
       }
+      etiqueta_da_loja: { Args: { p_cupom_id: number }; Returns: Json }
       etiquetas_pendentes: {
         Args: { p_limite?: number; p_token: string }
         Returns: {
@@ -398,6 +501,10 @@ export type Database = {
         }[]
       }
       expirar_pedidos: { Args: never; Returns: undefined }
+      gravar_diagnostico: {
+        Args: { p_dados: Json; p_tipo: string; p_token: string }
+        Returns: undefined
+      }
       iniciar_pedido: {
         Args: { p_id: number; p_token: string }
         Returns: undefined
@@ -486,7 +593,13 @@ export type Database = {
       }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
+      pedir_link_loja: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
+      produto_permitido: { Args: { p_texto: string }; Returns: boolean }
+      registrar_produto_visto: {
+        Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
+        Returns: undefined
+      }
       reservar_geracao: {
         Args: { p_chave: string; p_tipo: string; p_token: string }
         Returns: Json
@@ -519,6 +632,26 @@ export type Database = {
       sincronizar_cupons: {
         Args: { p_completo?: boolean; p_cupons: Json; p_token: string }
         Returns: Json
+      }
+      vitrine: {
+        Args: { p_limite?: number }
+        Returns: {
+          categoria: string
+          chave: string
+          economia: number
+          imagem: string
+          link: string
+          loja: string
+          lojas_comparadas: number
+          melhor_link: string
+          melhor_loja: string
+          melhor_preco: number
+          preco: number
+          titulo: string
+          url_produto: string
+          vezes: number
+          visto_em: string
+        }[]
       }
       vitrines_para_conferir: {
         Args: { p_limite?: number; p_token: string }
