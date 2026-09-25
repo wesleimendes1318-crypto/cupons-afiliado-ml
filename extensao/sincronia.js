@@ -456,7 +456,7 @@ export async function conferirNoServidor(token, corpo) {
   try {
     await siteVivo();
     const ctrl = new AbortController();
-    const corta = setTimeout(() => ctrl.abort(), 20000);
+    const corta = setTimeout(() => ctrl.abort(), 26000);
     const r = await fetch(SITE + '/api/public/conferir-produto', {
       signal: ctrl.signal,
       method: 'POST',
