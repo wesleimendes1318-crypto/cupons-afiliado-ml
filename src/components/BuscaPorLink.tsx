@@ -21,7 +21,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderCircle, Package, Share2 } from "lucide-react";
+import { History, LoaderCircle, Package, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -86,36 +86,47 @@ function mensagemProduto({
 /* Mensagem de WhatsApp da MELHOR opção, sempre com o link de afiliado.
    Curta, com o que faz a pessoa clicar: produto, preço, quanto economiza e o
    link. Sem código técnico, sem texto de site. */
+/* Mensagem do WhatsApp: a ECONOMIA na primeira linha (é o que faz a pessoa
+   abrir), sem nome de loja e sem promessa de cupom. Termina convidando quem
+   recebe a comparar também. */
 function mensagemMelhorOpcao({
   titulo,
-  loja,
   preco,
+  precoOriginal,
   economia,
-  cupom,
   comparadas,
+  freteGratis,
   link,
 }: {
   titulo: string | null | undefined;
-  loja: string | null | undefined;
   preco: number | null | undefined;
+  precoOriginal: number | null | undefined;
   economia: number | null | undefined;
-  cupom: string | null | undefined;
   comparadas: number;
+  freteGratis?: boolean | null | undefined;
   link: string;
 }) {
+  const nome = semEntidades(titulo);
   const linhas: string[] = [];
-  linhas.push(
-    titulo ? `🔎 Achei o menor preço de *${titulo}*` : "🔎 Achei o menor preço deste produto",
-  );
-  if (preco != null) linhas.push(`💰 *${brl(preco)}*${loja ? ` na loja ${loja}` : ""}`);
-  if (economia != null && economia > 0)
-    linhas.push(`📉 ${brl(economia)} a menos que o anúncio original`);
-  else if (comparadas > 0)
-    linhas.push(
-      `✅ Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"} e esta é a mais barata`,
-    );
-  if (cupom) linhas.push(`🎟️ Cupom da loja: ${cupom} (o desconto aparece no carrinho)`);
-  linhas.push("", `👉 Compre direto por aqui: ${link}`);
+  if (economia != null && economia >= 0.5) {
+    linhas.push(`💸 Achei o mesmo produto *${brl(economia)} mais barato*!`);
+    if (nome) linhas.push(`🛒 ${nome}`);
+    if (preco != null)
+      linhas.push(
+        `💰 ${precoOriginal != null ? `De ~${brl(precoOriginal)}~ por ` : ""}*${brl(preco)}*` +
+          (freteGratis === true ? " · frete grátis" : ""),
+      );
+  } else {
+    linhas.push(nome ? `✅ Conferi o preço de *${nome}*` : "✅ Conferi o preço deste produto");
+    if (preco != null)
+      linhas.push(
+        `💰 *${brl(preco)}*` +
+          (comparadas > 0 ? ` · a melhor opção entre ${comparadas + 1} lojas` : "") +
+          (freteGratis === true ? " · frete grátis" : ""),
+      );
+  }
+  linhas.push("", `👉 Compre com segurança: ${link}`);
+  linhas.push("", "🔎 Compare qualquer produto em melhorescolha.io");
   return linhas.join("\n");
 }
 
@@ -450,6 +461,111 @@ function AvisoDoBotao({ d }: { d: Dispositivo }) {
   return <p className="mt-1 text-center text-[11px] text-secondary-ink">{texto}</p>;
 }
 
+/* HISTÓRICO NO APARELHO: as últimas comparações ficam só no navegador de quem
+   usa (nada vai para o servidor). Serve para voltar e comprar depois. */
+type ItemHistorico = {
+  url: string;
+  titulo: string;
+  imagem: string | null;
+  melhor: number | null;
+  economia: number | null;
+  quando: number;
+};
+const CHAVE_HISTORICO = "me_historico_v1";
+function lerHistorico(): ItemHistorico[] {
+  try {
+    const bruto = window.localStorage.getItem(CHAVE_HISTORICO);
+    const lista = bruto ? (JSON.parse(bruto) as ItemHistorico[]) : [];
+    return Array.isArray(lista) ? lista.slice(0, 6) : [];
+  } catch {
+    return [];
+  }
+}
+function gravarHistorico(lista: ItemHistorico[]) {
+  try {
+    window.localStorage.setItem(CHAVE_HISTORICO, JSON.stringify(lista.slice(0, 6)));
+  } catch {
+    /* navegador sem armazenamento: segue sem histórico */
+  }
+}
+function itemDoHistorico(urlColada: string, a: Analise): ItemHistorico | null {
+  if (!a.titulo) return null;
+  const candidatos = [
+    a.preco,
+    ...(a.outrasLojas ?? []).filter((o) => o.freteGratis !== false).map((o) => o.final),
+  ].filter((n): n is number => typeof n === "number");
+  const melhor = candidatos.length ? Math.min(...candidatos) : null;
+  return {
+    url: urlColada,
+    titulo: semEntidades(a.titulo) ?? a.titulo,
+    imagem: a.imagem ?? null,
+    melhor,
+    economia:
+      a.preco != null && melhor != null && a.preco - melhor >= 0.5 ? a.preco - melhor : null,
+    quando: Date.now(),
+  };
+}
+
+function Historico({
+  lista,
+  comparar,
+  limpar,
+}: {
+  lista: ItemHistorico[];
+  comparar: (url: string) => void;
+  limpar: () => void;
+}) {
+  if (!lista.length) return null;
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-card p-3">
+      <div className="flex items-center gap-2">
+        <History className="size-4 text-ml-blue" aria-hidden="true" />
+        <p className="text-sm font-bold">Suas últimas comparações</p>
+        <button
+          type="button"
+          onClick={limpar}
+          className="ml-auto text-[11px] font-semibold text-secondary-ink hover:underline"
+        >
+          limpar
+        </button>
+      </div>
+      <p className="text-[11px] text-secondary-ink">Ficam só neste aparelho.</p>
+      <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+        {lista.map((h) => (
+          <li key={h.url} className="flex items-center gap-2 rounded-md border border-border p-1.5">
+            <Foto src={h.imagem} className="size-10 shrink-0 rounded" />
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-1 text-xs font-medium">{h.titulo}</p>
+              <p className="text-[11px] tabular-nums text-secondary-ink">
+                {h.melhor != null && (
+                  <span className="font-bold text-foreground">{brl(h.melhor)}</span>
+                )}
+                {h.economia != null && (
+                  <span className="font-bold text-success"> · {brl(h.economia)} a menos</span>
+                )}
+                <span>
+                  {" · "}
+                  {new Date(h.quando).toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  })}
+                </span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => comparar(h.url)}
+              className="shrink-0 rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+            >
+              Ver de novo
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function BuscaPorLink() {
   const [url, setUrl] = useState("");
   const [fase, setFase] = useState<Fase>("parado");
@@ -461,6 +577,8 @@ export default function BuscaPorLink() {
   const [inicio, setInicio] = useState(() => Date.now());
   const [estimativa, setEstimativa] = useState<Estimativa>(null);
   const [completando, setCompletando] = useState(false);
+  const [historico, setHistorico] = useState<ItemHistorico[]>([]);
+  useEffect(() => setHistorico(lerHistorico()), []);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -468,6 +586,8 @@ export default function BuscaPorLink() {
   /* Pedido que a tela está acompanhando. A espera pela segunda volta dura
      minutos: uma consulta velha nunca pode sobrescrever um link novo colado. */
   const atual = useRef<number | null>(null);
+  /* Link (limpo) do pedido acompanhado, para o histórico. */
+  const urlDoPedido = useRef<string | null>(null);
 
   const limparTimers = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -495,6 +615,7 @@ export default function BuscaPorLink() {
       setCompletando(false);
 
       const limpo = melhorLinkML(alvo);
+      urlDoPedido.current = limpo;
       if (!limpo) {
         setFase("parado");
         setErro("Esse link não é de um anúncio válido. Cole o endereço do produto.");
@@ -652,6 +773,20 @@ export default function BuscaPorLink() {
       .catch(() => undefined);
   };
 
+  /* Guarda o resultado no histórico do aparelho (atualiza quando a segunda
+     volta muda a análise). */
+  useEffect(() => {
+    const alvo = urlDoPedido.current;
+    if (fase !== "pronto" || !pedido?.analise || !alvo) return;
+    const item = itemDoHistorico(alvo, pedido.analise);
+    if (!item) return;
+    setHistorico((h) => {
+      const nova = [item, ...h.filter((x) => x.url !== alvo)].slice(0, 6);
+      gravarHistorico(nova);
+      return nova;
+    });
+  }, [fase, pedido]);
+
   const carregando =
     fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
 
@@ -714,6 +849,20 @@ export default function BuscaPorLink() {
       )}
 
       {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} motivo={motivo} />}
+
+      {!carregando && (
+        <Historico
+          lista={historico.filter((h) => !(fase === "pronto" && h.url === urlDoPedido.current))}
+          comparar={(alvo) => {
+            setUrl(alvo);
+            void buscar(alvo);
+          }}
+          limpar={() => {
+            gravarHistorico([]);
+            setHistorico([]);
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -1314,7 +1463,7 @@ function Resultado({
       {temColuna && (
         <div className="sm:col-start-2 sm:row-span-2 sm:row-start-1">
           {mostraTabela && <TodasAsLojas linhas={linhasLojas} />}
-          <Parecidos lista={a?.parecidos} />
+          <Parecidos lista={a?.parecidos} tituloColado={a?.titulo} precoColado={a?.preco} />
         </div>
       )}
 
@@ -1429,11 +1578,11 @@ function Resultado({
             const destino = melhor?.link ?? link;
             const texto = mensagemMelhorOpcao({
               titulo: a?.titulo,
-              loja: melhor ? melhor.vendedor : a?.vendedor,
               preco: melhor ? melhor.final : a?.preco,
+              precoOriginal: melhor ? a?.preco : null,
               economia: melhor ? melhor.ganho : null,
-              cupom: melhor ? melhor.cupomTitulo : a?.temCupom ? a?.cupom?.titulo : null,
               comparadas: a?.referencias ? referencias.length : 0,
+              freteGratis: melhor ? melhor.freteGratis : a?.freteGratis,
               link: destino,
             });
             return (
@@ -1677,62 +1826,122 @@ type LinhaLoja = {
 
 /* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
    igual). Tabela separada, âmbar (atenção), com o que muda em cada um. */
-function Parecidos({ lista }: { lista: Analise["parecidos"] }) {
+/* PREÇO POR UNIDADE: com quantidade diferente (kit de 30 x kit de 20, 500 ml
+   x 1 L) o preço do anúncio engana; o que compara é o preço por unidade, por
+   litro ou por kg. Só aparece quando os dois títulos trazem a medida. */
+type Medida = { qtd: number; tipo: "un" | "ml" | "g" };
+function medidaDoTitulo(titulo: string | null | undefined): Medida | null {
+  const t = semEntidades(titulo)?.toLowerCase() ?? "";
+  if (!t) return null;
+  const num = (x: string) => Number(x.replace(",", "."));
+  const kit =
+    /\b(?:kit|c\/|com)\s*(\d{1,4})\b/.exec(t) ??
+    /\b(\d{1,4})\s*(?:unidades|unid\.?|un\.?|pe[cç]as|p[cç]s|pares)\b/.exec(t);
+  const vezes = kit ? num(kit[1] ?? "1") : 1;
+  const vol = /\b(\d+(?:[.,]\d+)?)\s*(ml|l|litros?)\b/.exec(t);
+  if (vol) {
+    const v = num(vol[1] ?? "0") * (vol[2] === "ml" ? 1 : 1000);
+    return v > 0 ? { qtd: v * vezes, tipo: "ml" } : null;
+  }
+  const peso = /\b(\d+(?:[.,]\d+)?)\s*(g|kg|gramas?)\b/.exec(t);
+  if (peso) {
+    const g = num(peso[1] ?? "0") * (peso[2] === "kg" ? 1000 : 1);
+    return g > 0 ? { qtd: g * vezes, tipo: "g" } : null;
+  }
+  return kit && vezes > 1 ? { qtd: vezes, tipo: "un" } : null;
+}
+function precoPorMedida(preco: number, m: Medida) {
+  if (m.tipo === "ml") return `${brl((preco / m.qtd) * 1000)} por litro`;
+  if (m.tipo === "g") return `${brl((preco / m.qtd) * 1000)} por kg`;
+  return `${brl(preco / m.qtd)} por unidade`;
+}
+
+function Parecidos({
+  lista,
+  tituloColado,
+  precoColado,
+}: {
+  lista: Analise["parecidos"];
+  tituloColado?: string | null | undefined;
+  precoColado?: number | null | undefined;
+}) {
   if (!lista || !lista.length) return null;
+  const mColado = medidaDoTitulo(tituloColado);
+  /* Só mostra por unidade quando algum parecido tem quantidade diferente. */
+  const medidas = lista.map((p) => medidaDoTitulo(p.titulo));
+  const comparaMedida =
+    mColado != null &&
+    precoColado != null &&
+    medidas.some((m) => m && m.tipo === mColado.tipo && m.qtd !== mColado.qtd);
   return (
     <div className="mt-3 rounded-md border border-amber-400/70 bg-amber-50/60 p-2 first:sm:mt-0 dark:bg-amber-950/20">
       <p className="text-sm font-bold">Parecidos ({lista.length})</p>
       <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
         Não é o mesmo produto: veja o que muda antes de comprar.
       </p>
+      {comparaMedida && mColado && precoColado != null && (
+        <p className="mt-0.5 text-[11px] text-secondary-ink">
+          Você colou: <strong>{precoPorMedida(precoColado, mColado)}</strong>
+        </p>
+      )}
       <ul className="mt-1.5 space-y-1.5">
-        {lista.map((p, i) => (
-          <li key={i} className="flex items-start gap-2 rounded bg-card p-1.5">
-            <Foto src={p.imagem} className="size-10 shrink-0 rounded" />
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-xs font-medium leading-tight">
-                {semEntidades(p.titulo)}
-              </p>
-              {p.freteGratis === false && (
-                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                  Frete pago (valor no carrinho)
+        {lista.map((p, i) => {
+          const m = medidas[i];
+          const porMedida =
+            comparaMedida && m && mColado && m.tipo === mColado.tipo
+              ? precoPorMedida(p.preco, m)
+              : null;
+          return (
+            <li key={i} className="flex items-start gap-2 rounded bg-card p-1.5">
+              <Foto src={p.imagem} className="size-10 shrink-0 rounded" />
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-xs font-medium leading-tight">
+                  {semEntidades(p.titulo)}
                 </p>
-              )}
-              {p.muda && (
-                <p className="mt-0.5 text-[11px] leading-snug text-amber-800 dark:text-amber-300">
-                  Muda: {p.muda}
-                </p>
-              )}
-            </div>
-            <div className="shrink-0 text-right tabular-nums">
-              <span className="block text-sm font-bold">{brl(p.preco)}</span>
-              {p.diferenca != null && Math.abs(p.diferenca) >= 0.5 && (
-                <span
-                  className={
-                    "block text-[11px] font-bold " +
-                    (p.diferenca < 0 ? "text-success" : "text-red-700 dark:text-red-400")
-                  }
-                >
-                  {p.diferenca < 0 ? `${brl(-p.diferenca)} a menos` : `+${brl(p.diferenca)}`}
-                </span>
-              )}
-              <span className="mt-1 block">
-                {p.link ? (
-                  <a
-                    href={p.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                {p.freteGratis === false && (
+                  <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                    Frete pago (valor no carrinho)
+                  </p>
+                )}
+                {p.muda && (
+                  <p className="mt-0.5 text-[11px] leading-snug text-amber-800 dark:text-amber-300">
+                    Muda: {p.muda}
+                  </p>
+                )}
+              </div>
+              <div className="shrink-0 text-right tabular-nums">
+                <span className="block text-sm font-bold">{brl(p.preco)}</span>
+                {porMedida && (
+                  <span className="block text-[10px] text-secondary-ink">{porMedida}</span>
+                )}
+                {p.diferenca != null && Math.abs(p.diferenca) >= 0.5 && (
+                  <span
+                    className={
+                      "block text-[11px] font-bold " +
+                      (p.diferenca < 0 ? "text-success" : "text-red-700 dark:text-red-400")
+                    }
                   >
-                    Abrir
-                  </a>
-                ) : p.url ? (
-                  <VerNaLoja url={p.url} />
-                ) : null}
-              </span>
-            </div>
-          </li>
-        ))}
+                    {p.diferenca < 0 ? `${brl(-p.diferenca)} a menos` : `+${brl(p.diferenca)}`}
+                  </span>
+                )}
+                <span className="mt-1 block">
+                  {p.link ? (
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                    >
+                      Abrir
+                    </a>
+                  ) : p.url ? (
+                    <VerNaLoja url={p.url} />
+                  ) : null}
+                </span>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

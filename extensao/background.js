@@ -262,6 +262,29 @@ function resolverVendedor(id, url) {
   return p;
 }
 
+/* Amostra da pagina do vendedor (ate 3 por dia) para estudar os dados de
+   reputacao antes de mostrar selo ao cliente: nada e exibido sem conferir o
+   formato real. */
+let amostrasVendedor = { dia: '', n: 0 };
+function amostraDoVendedor(id, html) {
+  try {
+    const dia = new Date().toISOString().slice(0, 10);
+    if (amostrasVendedor.dia !== dia) amostrasVendedor = { dia, n: 0 };
+    if (amostrasVendedor.n >= 3 || !html) return;
+    const limpo = String(html).replace(/\\u002F/gi, '/').replace(/\\+"/g, '"');
+    const i = limpo.search(/"seller_link"|MercadoL[ií]der|power_seller|seller_reputation|vendas suficientes/i);
+    if (i < 0) return;
+    amostrasVendedor.n++;
+    chrome.storage.local.get('sincToken').then(({ sincToken }) =>
+      gravarDiagnostico(sincToken, 'vendedor-amostra', {
+        id, bytes: limpo.length,
+        marcas: ['MercadoL', 'power_seller', 'seller_reputation', 'vendas suficientes', 'Loja oficial', 'official_store']
+          .map(m => [m, limpo.indexOf(m)]),
+        trecho: limpo.slice(Math.max(0, i - 500), i + 3500)
+      })).catch(() => {});
+  } catch (e) { /* so diagnostico */ }
+}
+
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
   if (m && Date.now() - m.ts < TTL_VEND) return m.nomes;
@@ -274,7 +297,9 @@ async function resolverVendedorAgora(id, url) {
 
   let nomes = [];
   try {
-    nomes = nomesDoHtml(await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`));
+    const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`);
+    nomes = nomesDoHtml(html);
+    amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
 
   const reg = { nomes, ts: Date.now() };

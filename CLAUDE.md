@@ -35,6 +35,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
   captcha/tráfego suspeito e o ritmo de um pedido por vez.
 
+- Link repetido (mesmo link, análise completa há menos de 1 h) volta na hora
+  (pedir_link). A bateria de testes usa pedir_link_novo, que sempre busca.
+
 ## Texto e visual
 - Botão de compra NUNCA leva o nome da loja: usar texto de compra segura
   ("Comprar com segurança"). Sempre oferecer compartilhar no WhatsApp.
