@@ -1168,7 +1168,8 @@ function Resultado({
         </div>
       </div>
 
-      {alternativas.map((oferta, i) => (
+      {/* Só a melhor em destaque; todas as outras lojas estão na tabela abaixo. */}
+      {alternativas.slice(0, 1).map((oferta, i) => (
         <OutraLojaComCupom
           key={`${oferta.vendedor ?? "loja"}-${i}`}
           oferta={oferta}
@@ -1183,28 +1184,7 @@ function Resultado({
         />
       ))}
 
-      {/* Regra do Weslei: o anúncio que o cliente colou fica SEMPRE disponível,
-          com o link de afiliado dele, mesmo quando outra loja sai mais barata. */}
-      {trocar && !leituraFalhou && !semLink && (
-        <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-card p-2">
-          <Foto src={a?.imagem} className="size-12 shrink-0 rounded" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold leading-tight">Anúncio que você colou</p>
-            <p className="text-xs tabular-nums text-secondary-ink">
-              <span className="text-sm font-bold text-foreground">{brl(a?.preco)}</span>
-            </p>
-          </div>
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 rounded-md border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue hover:bg-ml-blue/5"
-          >
-            Comprar seguro
-          </a>
-        </div>
-      )}
-
+      {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
       {estaEAMelhor && (
         <MelhorOpcao
           vendedor={a?.vendedor ?? null}
@@ -1221,7 +1201,42 @@ function Resultado({
       )}
 
       {(a?.procurouOutra === true || alternativas.length > 0) && !leituraFalhou && (
-        <OutrasLojasMaisCaras referencias={referencias} temAlternativa={alternativas.length > 0} />
+        <TodasAsLojas
+          linhas={[
+            ...(!semLink && a?.preco != null
+              ? [
+                  {
+                    chave: "colado",
+                    nome: a?.vendedor ?? "Anúncio colado",
+                    imagem: a?.imagem,
+                    final: a.preco,
+                    diferenca: 0,
+                    link,
+                    url: null,
+                    colado: true,
+                  },
+                ]
+              : []),
+            ...alternativas.map((o, i) => ({
+              chave: `alt-${i}`,
+              nome: o.vendedor ?? "Outra loja",
+              imagem: o.imagem,
+              final: o.final,
+              diferenca: o.ganho != null ? -o.ganho : null,
+              link: o.link,
+              url: null,
+            })),
+            ...referencias.map((r, i) => ({
+              chave: `ref-${i}`,
+              nome: r.vendedor ?? "Outra loja",
+              imagem: r.imagem,
+              final: r.final,
+              diferenca: r.diferenca,
+              link: null,
+              url: r.url ?? null,
+            })),
+          ]}
+        />
       )}
 
       {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
@@ -1466,9 +1481,9 @@ function VerNaLoja({ url }: { url: string }) {
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-1 inline-block rounded border border-red-300 bg-card px-2 py-1 text-xs font-bold text-red-700 dark:text-red-400"
+        className="inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
       >
-        Abrir a loja ↗
+        Abrir ↗
       </a>
     );
   }
@@ -1477,65 +1492,98 @@ function VerNaLoja({ url }: { url: string }) {
       type="button"
       onClick={() => void gerar()}
       disabled={estado === "gerando"}
-      className="mt-1 block w-full text-right text-xs font-semibold text-secondary-ink underline underline-offset-2 disabled:no-underline"
+      className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
     >
-      {estado === "gerando"
-        ? "Gerando link…"
-        : estado === "falhou"
-          ? "Tentar de novo"
-          : "Ver na loja"}
+      {estado === "gerando" ? "Gerando…" : estado === "falhou" ? "Tentar de novo" : "Abrir"}
     </button>
   );
 }
 
 /* Outras lojas com o mesmo produto que NÃO compensam: em vermelho, com quanto
    sairia a mais. Mostrar isto é o que prova ao cliente que comparei. */
-function OutrasLojasMaisCaras({
-  referencias,
-  temAlternativa,
-}: {
-  referencias: Referencia[];
-  temAlternativa: boolean;
-}) {
-  const caras = referencias.filter((r) => r.diferenca == null || r.diferenca > -2);
-  if (!caras.length) return null;
+/* TODAS as lojas comparadas numa tabela zebrada (regra do Weslei): o
+   anúncio colado, as mais baratas e as mais caras, cada uma com foto, preço,
+   diferença e um botão que abre o anúncio com o link de afiliado dele. As
+   lojas que já têm link pronto abrem direto; as outras geram o link no clique. */
+type LinhaLoja = {
+  chave: string;
+  nome: string;
+  imagem: string | null | undefined;
+  final: number | null;
+  diferenca: number | null;
+  link: string | null;
+  url: string | null;
+  colado?: boolean;
+};
+
+function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
+  if (linhas.length < 2) return null;
+  const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
   return (
-    <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-      <p className="text-sm font-bold text-red-700 dark:text-red-400">
-        {temAlternativa
-          ? "Outras lojas com o mesmo produto (não compensam)"
-          : "Outras lojas com o mesmo produto: mais caras"}
-      </p>
-      <ul className="mt-2 overflow-hidden rounded-md border border-red-200 text-sm dark:border-red-900">
-        {caras.map((r, i) => (
-          <li
-            key={`${r.vendedor ?? "loja"}-${i}`}
-            className={
-              "flex items-center justify-between gap-3 px-2 py-1.5 " +
-              (i % 2 ? "bg-red-100/60 dark:bg-red-950/40" : "bg-card")
-            }
-          >
-            <Foto src={r.imagem} className="size-10 shrink-0 rounded" />
-            <span className="min-w-0 flex-1 break-words">
-              {r.vendedor ?? "Outra loja"}
-              {r.cupom ? (
-                <span className="block text-xs text-secondary-ink">com cupom {r.cupom}</span>
-              ) : null}
-            </span>
-            <span className="shrink-0 text-right tabular-nums">
-              <span className="font-semibold">{brl(r.final)}</span>
-              {r.diferenca != null && (
-                <span className="block text-xs font-bold text-red-700 dark:text-red-400">
-                  {r.diferenca > 0
-                    ? `+${brl(r.diferenca)} mais caro`
-                    : "praticamente o mesmo preço"}
+    <div className="mt-3">
+      <p className="text-sm font-bold">Todas as lojas comparadas ({ordem.length})</p>
+      <table className="mt-1.5 w-full border-collapse overflow-hidden rounded-md border border-border text-sm">
+        <thead>
+          <tr className="bg-muted/70 text-left text-xs text-secondary-ink">
+            <th className="px-2 py-1.5 font-semibold">Loja</th>
+            <th className="px-2 py-1.5 text-right font-semibold">Preço</th>
+          </tr>
+        </thead>
+        <tbody className="tabular-nums">
+          {ordem.map((l, i) => (
+            <tr key={l.chave} className={i % 2 ? "bg-muted/40" : "bg-card"}>
+              <td className="px-2 py-1.5">
+                <span className="flex items-center gap-2">
+                  <Foto src={l.imagem} className="size-9 shrink-0 rounded" />
+                  <span className="min-w-0 break-words text-xs font-medium leading-tight">
+                    {l.colado ? "Anúncio colado" : l.nome}
+                  </span>
                 </span>
-              )}
-              {r.url && <VerNaLoja url={r.url} />}
-            </span>
-          </li>
-        ))}
-      </ul>
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <span className="block font-semibold">{brl(l.final)}</span>
+                <span
+                  className={
+                    "block text-[11px] font-bold " +
+                    (l.colado || l.diferenca == null || Math.abs(l.diferenca) < 0.5
+                      ? "text-secondary-ink"
+                      : l.diferenca < 0
+                        ? "text-success"
+                        : "text-red-700 dark:text-red-400")
+                  }
+                >
+                  {l.colado
+                    ? "você colou"
+                    : l.diferenca == null
+                      ? ""
+                      : Math.abs(l.diferenca) < 0.5
+                        ? "mesmo preço"
+                        : l.diferenca < 0
+                          ? `${brl(-l.diferenca)} a menos`
+                          : `+${brl(l.diferenca)}`}
+                </span>
+                <span className="mt-1 block">
+                  {l.link ? (
+                    <a
+                      href={l.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                    >
+                      Abrir
+                    </a>
+                  ) : l.url ? (
+                    <VerNaLoja url={l.url} />
+                  ) : null}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1 text-[11px] text-secondary-ink">
+        Preço de quando comparei. Todos os botões abrem com compra protegida.
+      </p>
     </div>
   );
 }
