@@ -3716,7 +3716,10 @@ async function sinalDeVida() {
   if (Date.now() - ultimoSinal < 2 * 60e3) return;
   ultimoSinal = Date.now();
   const { sincToken } = await chrome.storage.local.get('sincToken');
-  if (sincToken) await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
+  if (!sincToken) return;
+  await anotarEstadoRobo(sincToken, 'visto_em', new Date().toISOString());
+  /* Versao que esta rodando: conferida antes da bateria de testes. */
+  await anotarEstadoRobo(sincToken, 'versao_extensao', chrome.runtime.getManifest().version);
 }
 
 /* FILA VIGIADA. O cliente do site nao tem a extensao, entao o aviso
