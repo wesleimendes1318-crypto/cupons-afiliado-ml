@@ -22,11 +22,11 @@
 </head>
 <body>
   <h1>Opções</h1>
-  <p class="sub">A extensão funciona inteira sem nada aqui. Isto é só para o gerador de texto de venda.</p>
+  <p class="sub">O token do site é obrigatório. A chave da Gemini aqui é só reserva: a conferência pela foto usa primeiro a chave guardada no site (Lovable).</p>
 
   <label for="key">Chave da API do Gemini</label>
   <input type="password" id="key" placeholder="cole aqui e salve uma vez só" autocomplete="off">
-  <div class="dica">Fica salva no armazenamento local do seu Chrome, neste computador. Não vai para lugar nenhum além da própria Google quando você pedir um texto.</div>
+  <div class="dica">Fica salva só neste Chrome e é enviada apenas para a Google, quando a chave do site não responder.</div>
 
   <label for="modelo">Modelo</label>
   <select id="modelo">
@@ -37,7 +37,7 @@
 
   <label for="sinc">Token de sincronia com o site</label>
   <input type="password" id="sinc" placeholder="cole o token gerado para o seu banco" autocomplete="off">
-  <div class="dica">Com ele preenchido, toda atualizacao do indice sobe sozinha para o site. Sem ele, a extensao funciona normalmente, so nao alimenta o site.</div>
+  <div class="dica">Sem ele a extensão não recebe os pedidos do site: nenhum cliente é atendido.</div>
 
   <label class="chk" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:12px">
     <input type="checkbox" id="sincauto" checked style="width:auto"> sincronizar automaticamente a cada atualizacao

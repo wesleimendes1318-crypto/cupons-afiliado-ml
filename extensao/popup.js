@@ -114,7 +114,8 @@ $('q').addEventListener('input', () => { clearTimeout(t); t = setTimeout(filtrar
 $('csv').addEventListener('click', exportarCsv);
 $('atualizar').addEventListener('click', () => carregar(true));
 
-carregar(false);
+/* A lista de cupons do Mercado Livre responde 403 desde 25/09: nao e
+   carregada ao abrir (so gastaria chamada). */
 
 /* ================================================================
    v1.2 — abas, caçador de produto e texto de venda
@@ -419,3 +420,31 @@ $('btliberar').addEventListener('click', async () => {
 });
 
 mostrarFreio();
+
+
+/* Estado REAL da extensao, no topo do popup (mensagens atualizadas). */
+async function mostrarEstado() {
+  const el = $('estado');
+  const r = await pedir({ tipo: 'estadoGeral' });
+  if (!r || !r.ok) { el.textContent = 'Não consegui ler o estado da extensão.'; return; }
+  const d = r.dados;
+  const linhas = [];
+  linhas.push(`<b>Versão ${escapar(d.versao)}</b> · ${d.token ? 'ligada ao site' : '<span style="color:#c00">sem token do site (Opções)</span>'}`);
+  if (d.anonimaBloqueadaAte && d.anonimaBloqueadaAte > Date.now()) {
+    const min = Math.round((d.anonimaBloqueadaAte - Date.now()) / 60000);
+    linhas.push(`Leitura anônima: pausada pelo Mercado Livre (volta em ${min} min). Buscas usam a sua conta, uma por cliente.`);
+  } else {
+    linhas.push(d.anonima ? 'Leitura anônima: ligada.' : 'Leitura anônima: desligada (chrome://extensions → Detalhes → Permitir no modo anônimo).');
+  }
+  const u = d.ultimo;
+  if (u) {
+    const min = Math.max(0, Math.round((Date.now() - u.quando) / 60000));
+    const ia = u.ia === 'conferiu' ? 'Gemini conferiu pela foto' : u.ia === 'indisponivel' ? 'Gemini sem cota agora' : 'sem conferência necessária';
+    linhas.push(`Último cliente: há ${min} min${u.segundos ? `, em ${Math.round(u.segundos)} s` : ''} · ${u.lojas} lojas comparadas`
+      + `${u.maisBaratas ? ` (${u.maisBaratas} mais baratas)` : ''} · ${ia} · ${u.comLink ? 'seu link gerado' : 'link gerado no clique'}.`);
+  } else {
+    linhas.push('Nenhum cliente atendido desde a última atualização.');
+  }
+  el.innerHTML = linhas.join('<br>');
+}
+mostrarEstado();

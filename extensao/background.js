@@ -3179,6 +3179,14 @@ async function atenderPedidos() {
             lojaLida: !!(a.nomes && a.nomes.length),
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
           });
+          /* Resumo do ultimo atendimento, para o popup mostrar o estado real. */
+          chrome.storage.local.set({ ultimoAtendimento: {
+            quando: Date.now(), titulo: a.titulo || null, segundos: tempos.fim || null,
+            lojas: (referencias || []).length + (outras || []).length,
+            maisBaratas: (outras || []).length, comLink: !!r.link,
+            ia: verificacaoIA && !verificacaoIA.indisponivel ? 'conferiu' : (buscaFora && buscaFora.leitura && buscaFora.leitura.ia
+                  ? (buscaFora.leitura.ia.indisponivel ? 'indisponivel' : 'conferiu') : 'nao precisou')
+          } }).catch(() => {});
           ok++;
         } catch (e) {
           await marcarPedido(sincToken, p.id, null, null, e.message || String(e), null);
@@ -3252,6 +3260,16 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
         atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
         responder({ ok: true });
+      } else if (msg.tipo === 'estadoGeral') {
+        const st = await chrome.storage.local.get(['ultimoAtendimento', 'anonimaBloqueadaAte', 'sincToken']);
+        responder({ ok: true, dados: {
+          versao: chrome.runtime.getManifest().version,
+          anonima: await anonimaPermitida(),
+          anonimaBloqueadaAte: st.anonimaBloqueadaAte || null,
+          token: !!st.sincToken,
+          ultimo: st.ultimoAtendimento || null,
+          freio: await estadoDoFreio()
+        } });
       } else if (msg.tipo === 'estadoFreio') {
         responder({ ok: true, dados: await estadoDoFreio() });
       } else if (msg.tipo === 'liberarFreio') {
