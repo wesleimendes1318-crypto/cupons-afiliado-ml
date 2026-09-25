@@ -2263,6 +2263,43 @@ async function termoDeBuscaPelaGemini(original) {
   return busca.length >= 6 ? busca.slice(0, 90) : null;
 }
 
+/* Anuncios achados pelo GOOGLE (SerpApi, no servidor): nenhuma busca no
+   site do Mercado Livre. Le so esses anuncios (no maximo 4, ao mesmo tempo)
+   para ter preco, loja e foto; a Gemini confere pela foto; so o que ela
+   aprovar vira opcao. */
+async function achadosPeloGoogle(lista, precoRef, itemAtual, original) {
+  const diag = { fonte: 'google', recebidos: lista.length };
+  const alvos = lista.filter(g => g.url && g.item !== itemAtual).slice(0, 4);
+  const lidos = await Promise.all(alvos.map(g =>
+    comPrazo(lerAnuncioNoWorker(g.url).catch(() => null), Math.max(4000, Math.min(15000, resta() - 12000)), null)));
+  let candidatos = [];
+  lidos.forEach((b, k) => {
+    if (!b || !b.ok || b.preco == null) return;
+    const item = itemDoUrl(b.finalUrl || '') || alvos[k].item;
+    if (!item || item === itemAtual) return;
+    if (precoRef != null && (b.preco < precoRef * 0.4 || b.preco > precoRef * 1.6)) return;
+    if (b.nomes && b.nomes.length) cacheMem.set(item, { nomes: b.nomes, ts: Date.now() });
+    candidatos.push({ item, url: b.canonica || b.finalUrl || alvos[k].url, preco: b.preco,
+                      titulo: b.titulo || alvos[k].titulo, imagem: b.imagem || null });
+  });
+  diag.lidos = candidatos.length;
+  if (!candidatos.length) { const v = []; v.diag = diag; return v; }
+  ultimaIA = null;
+  const ok = resta() > 9000 ? await comPrazo(mesmoProdutoPelaGemini(original, candidatos), resta() - 7000, null) : null;
+  diag.ia = ok ? { conferidos: candidatos.length, iguais: ok.size, ...(ultimaIA || {}) }
+               : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
+  /* Mesma regra da busca: sem confirmacao pela foto, nao aparece. */
+  candidatos = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true })) : [];
+  if (!candidatos.length) { const v = []; v.diag = diag; return v; }
+  const achados = await avaliarCandidatos(candidatos.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
+  for (const a of achados) {
+    const c = candidatos.find(x => x.item === a.item);
+    if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; }
+  }
+  achados.diag = diag;
+  return achados;
+}
+
 async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
   const primeira = await achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original);
   if (primeira.length || !original || resta() < 22000) return primeira;
@@ -2367,7 +2404,17 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
   if (ctx.soBusca) {
     const titulo = ctx.titulo;
     if (!titulo) return [];
-    const daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null);
+    /* Primeiro os anuncios que o Google achou (sem busca no site); a busca
+       do site so se o Google nao trouxe nada aprovado e ainda houver tempo. */
+    let daBusca = [];
+    if (Array.isArray(ctx.google) && ctx.google.length && ctx.original) {
+      daBusca = await achadosPeloGoogle(ctx.google, finalAtual, itemAtual, ctx.original);
+    }
+    if (!daBusca.length && resta() > 20000) {
+      const doGoogle = daBusca.diag || null;
+      daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null);
+      if (doGoogle) daBusca.diag = { ...(daBusca.diag || {}), google: doGoogle };
+    }
     const escolha = escolherAlternativas(daBusca, { ...ctx, itemAtual });
     /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */
     escolha.todas = daBusca;
@@ -2868,7 +2915,8 @@ async function atenderPedidos() {
                   itemAtual: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
                   /* A API ja olhou o catalogo: vai direto para a busca e nao
                      gasta leitura de pagina repetindo o que ja foi visto. */
-                  soBusca: !!(api && api.procurou),
+                  soBusca: !!(api && api.procurou) || !!(api && Array.isArray(api.google) && api.google.length),
+                  google: (api && Array.isArray(api.google)) ? api.google : [],
                   original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco }
                 }),
                   new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })

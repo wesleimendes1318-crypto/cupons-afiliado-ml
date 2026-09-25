@@ -11,20 +11,48 @@
    Regras de "mesmo produto" e de escolha são as mesmas de
    extensao/comparador.js (testadas lá com node --test). */
 
+import { anunciosPeloGoogle, type AnuncioGoogle } from "@/lib/busca-google";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 
 /* ------------------------------------------------------------- textos */
 
 const normPalavra = (s: string | null | undefined) =>
-  (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 const norm = (s: string | null | undefined) => normPalavra(s).replace(/ /g, "");
 
-const VAZIAS = new Set(["com", "para", "sem", "por", "the", "and", "dos", "das", "que", "kit", "novo", "nova",
-  "original", "promocao", "oferta", "frete", "gratis", "envio", "imediato", "pronta", "entrega"]);
+const VAZIAS = new Set([
+  "com",
+  "para",
+  "sem",
+  "por",
+  "the",
+  "and",
+  "dos",
+  "das",
+  "que",
+  "kit",
+  "novo",
+  "nova",
+  "original",
+  "promocao",
+  "oferta",
+  "frete",
+  "gratis",
+  "envio",
+  "imediato",
+  "pronta",
+  "entrega",
+]);
 
 function palavras(t: string) {
   return normPalavra(t)
-    .replace(/([a-z])(\d)/g, "$1 $2").replace(/(\d)([a-z])/g, "$1 $2")
+    .replace(/([a-z])(\d)/g, "$1 $2")
+    .replace(/(\d)([a-z])/g, "$1 $2")
     .split(" ")
     .filter((w) => (w.length >= 3 || /^\d+$/.test(w)) && !VAZIAS.has(w));
 }
@@ -42,9 +70,15 @@ export function pareceMesmoProduto(original: string, candidato: string) {
 
 export function idsDoLink(url: string) {
   let s = url;
-  try { s = decodeURIComponent(url); } catch { /* fica como veio */ }
-  const item = /item_id[:=](MLB\d{6,})/i.exec(s)?.[1] ?? /[?&#]wid=(MLB\d{6,})/i.exec(s)?.[1]
-    ?? (/\/MLB-(\d{6,})/i.exec(s)?.[1] ? `MLB${/\/MLB-(\d{6,})/i.exec(s)![1]}` : null);
+  try {
+    s = decodeURIComponent(url);
+  } catch {
+    /* fica como veio */
+  }
+  const item =
+    /item_id[:=](MLB\d{6,})/i.exec(s)?.[1] ??
+    /[?&#]wid=(MLB\d{6,})/i.exec(s)?.[1] ??
+    (/\/MLB-(\d{6,})/i.exec(s)?.[1] ? `MLB${/\/MLB-(\d{6,})/i.exec(s)![1]}` : null);
   const catalogo = /\/p\/(MLB\d{5,})/i.exec(s)?.[1] ?? null;
   return { item: item?.toUpperCase() ?? null, catalogo: catalogo?.toUpperCase() ?? null };
 }
@@ -55,8 +89,15 @@ const urlDaOferta = (catalogo: string, item: string) =>
 /* -------------------------------------------------------------- cupons */
 
 export type CupomLoja = {
-  id: number; vendedor: string; desconto: string | null; tipo: string | null; valor: number | null;
-  teto: number | null; sem_teto: boolean | null; compra_min: number | null; vence: string | null;
+  id: number;
+  vendedor: string;
+  desconto: string | null;
+  tipo: string | null;
+  valor: number | null;
+  teto: number | null;
+  sem_teto: boolean | null;
+  compra_min: number | null;
+  vence: string | null;
   codigo_cupom: string | null;
 };
 
@@ -73,14 +114,16 @@ export function economiaDoCupom(c: CupomLoja | null, preco: number | null) {
 
 async function cuponsPorNome(nomes: string[]) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.rpc("melhores_cupons_por_nome" as never, { p_nomes: nomes } as never);
+  const { data } = await supabaseAdmin.rpc(
+    "melhores_cupons_por_nome" as never,
+    { p_nomes: nomes } as never,
+  );
   const mapa = new Map<string, CupomLoja>();
   for (const l of (data ?? []) as (CupomLoja & { nome: string })[]) mapa.set(l.nome, l);
   return mapa;
 }
 
 /* ------------------------------------------------------------ API do ML */
-
 
 const cacheVendedor = new Map<number, string | null>();
 
@@ -90,34 +133,53 @@ const cacheVendedor = new Map<number, string | null>();
 async function apelidos(ids: number[], trilha: string[]) {
   const nomes = new Map<number, string | null>();
   const faltam = ids.filter((id) => {
-    if (cacheVendedor.has(id)) { nomes.set(id, cacheVendedor.get(id) ?? null); return false; }
+    if (cacheVendedor.has(id)) {
+      nomes.set(id, cacheVendedor.get(id) ?? null);
+      return false;
+    }
     return true;
   });
   if (!faltam.length) return nomes;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const tabela = () => supabaseAdmin.from("apelidos_ml" as never);
   try {
-    const { data } = await tabela().select("seller_id,apelido").in("seller_id" as never, faltam as never);
+    const { data } = await tabela()
+      .select("seller_id,apelido")
+      .in("seller_id" as never, faltam as never);
     for (const l of (data ?? []) as { seller_id: number; apelido: string | null }[]) {
       nomes.set(Number(l.seller_id), l.apelido);
       cacheVendedor.set(Number(l.seller_id), l.apelido);
     }
-  } catch { /* sem tabela: segue pela API */ }
+  } catch {
+    /* sem tabela: segue pela API */
+  }
   const novos: { seller_id: number; apelido: string | null }[] = [];
   let naApi = 0;
   for (const id of faltam) {
     if (nomes.has(id)) continue;
-    if (naApi >= 25) { nomes.set(id, null); continue; }
+    if (naApi >= 25) {
+      nomes.set(id, null);
+      continue;
+    }
     naApi++;
     let nome: string | null = null;
-    try { nome = (await mlGet<{ nickname?: string }>(`/users/${id}`)).nickname ?? null; }
-    catch (e) { trilha.push(`users/${id} ${statusDe(e)}`); nomes.set(id, null); continue; }
+    try {
+      nome = (await mlGet<{ nickname?: string }>(`/users/${id}`)).nickname ?? null;
+    } catch (e) {
+      trilha.push(`users/${id} ${statusDe(e)}`);
+      nomes.set(id, null);
+      continue;
+    }
     nomes.set(id, nome);
     cacheVendedor.set(id, nome);
     novos.push({ seller_id: id, apelido: nome });
   }
   if (novos.length) {
-    try { await tabela().upsert(novos as never); } catch { /* fica só na memória */ }
+    try {
+      await tabela().upsert(novos as never);
+    } catch {
+      /* fica só na memória */
+    }
   }
   return nomes;
 }
@@ -125,18 +187,38 @@ async function apelidos(ids: number[], trilha: string[]) {
 /* ------------------------------------------------------------- decisão */
 
 export type Opcao = {
-  item: string; url: string; vendedor: string | null; preco: number; economia: number; final: number;
-  cupom: { id: number; titulo: string | null; teto: number | null; minimo: number | null; vence: string | null } | null;
-  ganho: number; finalAtual: number; motivo: "mais_barata" | "tem_cupom"; achadoNaBusca: boolean;
+  item: string;
+  url: string;
+  vendedor: string | null;
+  preco: number;
+  economia: number;
+  final: number;
+  cupom: {
+    id: number;
+    titulo: string | null;
+    teto: number | null;
+    minimo: number | null;
+    vence: string | null;
+  } | null;
+  ganho: number;
+  finalAtual: number;
+  motivo: "mais_barata" | "tem_cupom";
+  achadoNaBusca: boolean;
   /* Foto e nome da ficha de catálogo: a extensão usa para a IA conferir se é
      o MESMO produto (caso da capinha com borda diferente, 24/09). */
-  imagem: string | null; nomeCatalogo: string | null;
+  imagem: string | null;
+  nomeCatalogo: string | null;
 };
 
 export type Comparacao = {
   procurou: boolean;
   motivo: string | null;
-  produto: { item: string | null; titulo: string | null; preco: number | null; vendedor: string | null } | null;
+  produto: {
+    item: string | null;
+    titulo: string | null;
+    preco: number | null;
+    vendedor: string | null;
+  } | null;
   opcoes: Opcao[];
   fonte: "api-oficial";
   /* Resposta de cada endereço da API nesta comparação. Fica gravada com o
@@ -145,23 +227,49 @@ export type Comparacao = {
   /* TODAS as outras lojas vistas com o mesmo produto (até 6), inclusive as
      mais caras, só para exibir: o cliente vê que foi comparado e quanto
      pagaria a mais em cada uma. Sem link (não são recomendação). */
-  referencias?: { vendedor: string | null; preco: number; final: number; diferenca: number; cupom: string | null; url: string;
-    imagem: string | null; nomeCatalogo: string | null; porNome: boolean }[];
+  referencias?: {
+    vendedor: string | null;
+    preco: number;
+    final: number;
+    diferenca: number;
+    cupom: string | null;
+    url: string;
+    imagem: string | null;
+    nomeCatalogo: string | null;
+    porNome: boolean;
+  }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
   catalogoPorNome?: boolean;
+  /* Anúncios do mesmo produto achados pelo Google (SerpApi) quando o
+     catálogo oficial não resolveu. A extensão lê cada um e a Gemini confere
+     pela foto antes de virar opção. */
+  google?: AnuncioGoogle[];
 };
 
-type Candidato = { item: string; url: string; preco: number; sellerId: number; achadoNaBusca: boolean; catalogo: string };
+type Candidato = {
+  item: string;
+  url: string;
+  preco: number;
+  sellerId: number;
+  achadoNaBusca: boolean;
+  catalogo: string;
+};
 
 /* O que a extensão já sabe do anúncio (ela lê a página que o CLIENTE colou).
    A API oficial não deixa ler anúncio de outra conta (403 medido em 24/09),
    então preço, loja e catálogo do anúncio original vêm daqui quando
    necessário. */
 export type DicaAnuncio = {
-  catalogo?: string | null; item?: string | null; preco?: number | null;
-  vendedor?: string | null; titulo?: string | null;
-  gtin?: string | null; marca?: string | null; modelo?: string | null; catalogoPagina?: string | null;
+  catalogo?: string | null;
+  item?: string | null;
+  preco?: number | null;
+  vendedor?: string | null;
+  titulo?: string | null;
+  gtin?: string | null;
+  marca?: string | null;
+  modelo?: string | null;
+  catalogoPagina?: string | null;
   /* Opção marcada no anúncio ("Edge 70"): faz parte de QUAL produto é. */
   variacao?: string | null;
 };
@@ -179,10 +287,53 @@ const statusDe = (e: unknown) => (e instanceof ErroApiMl ? String(e.status) : "f
  *  sentidos: nome de catálogo costuma ser mais curto que o título do anúncio
  *  ("Banco Mesa 1,80 m 8 Lugares" dentro de "Banco Que Vira Mesa 1,80 M - 8
  *  Lugares - Campeão De Vendas"). Números sempre precisam bater. */
-const VARIANTES = new Set(["light", "lite", "luminous", "leve", "intense", "intenso", "intensa", "men", "masculino",
-  "feminino", "kids", "infantil", "mini", "refil", "max", "plus", "ultra", "pro", "fine", "fino", "finos", "grossos",
-  "cacheados", "cachos", "lisos", "loiros", "tonalizante", "noturno", "night", "day", "diurno", "sport", "black", "gold",
-  "rose", "blue", "red", "white", "pink", "sensitive", "extra", "forte", "suave", "matte", "gloss"]);
+const VARIANTES = new Set([
+  "light",
+  "lite",
+  "luminous",
+  "leve",
+  "intense",
+  "intenso",
+  "intensa",
+  "men",
+  "masculino",
+  "feminino",
+  "kids",
+  "infantil",
+  "mini",
+  "refil",
+  "max",
+  "plus",
+  "ultra",
+  "pro",
+  "fine",
+  "fino",
+  "finos",
+  "grossos",
+  "cacheados",
+  "cachos",
+  "lisos",
+  "loiros",
+  "tonalizante",
+  "noturno",
+  "night",
+  "day",
+  "diurno",
+  "sport",
+  "black",
+  "gold",
+  "rose",
+  "blue",
+  "red",
+  "white",
+  "pink",
+  "sensitive",
+  "extra",
+  "forte",
+  "suave",
+  "matte",
+  "gloss",
+]);
 
 export function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   /* Números iguais nos DOIS sentidos (tamanho, volume, modelo). Sem isso,
@@ -194,7 +345,8 @@ export function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   const va = new Set(palavras(tituloAnuncio).filter((w) => VARIANTES.has(w)));
   const vb = new Set(palavras(nomeCatalogo).filter((w) => VARIANTES.has(w)));
   if (va.size !== vb.size || [...va].some((w) => !vb.has(w))) return false;
-  const nums = (t: string) => [...new Set(palavras(t).filter((w) => /^\d+$/.test(w)))].sort().join(",");
+  const nums = (t: string) =>
+    [...new Set(palavras(t).filter((w) => /^\d+$/.test(w)))].sort().join(",");
   if (nums(tituloAnuncio) !== nums(nomeCatalogo)) return false;
   /* Nome de catálogo é curto e preciso: palavra dele que não está no título
      costuma ser OUTRO produto ("Água Perfumada Bamboo" para um anúncio de
@@ -208,9 +360,32 @@ export function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
   return cobertura >= 0.6 && extras.length <= 1;
 }
 
-const GENERICAS = new Set(["litro", "litros", "unidade", "unidades", "peca", "pecas", "capa", "capinha", "case",
-  "produto", "tamanho", "modelo", "cor", "linha", "marca", "lancamento", "profissional", "professional", "premium",
-  "qualidade", "top", "atacado", "envio", "full"]);
+const GENERICAS = new Set([
+  "litro",
+  "litros",
+  "unidade",
+  "unidades",
+  "peca",
+  "pecas",
+  "capa",
+  "capinha",
+  "case",
+  "produto",
+  "tamanho",
+  "modelo",
+  "cor",
+  "linha",
+  "marca",
+  "lancamento",
+  "profissional",
+  "professional",
+  "premium",
+  "qualidade",
+  "top",
+  "atacado",
+  "envio",
+  "full",
+]);
 
 type BuscaCatalogo = { results?: { id?: string; name?: string; status?: string }[] };
 
@@ -220,7 +395,9 @@ const cacheOfertas = new Map<string, { em: number; lista: Record<string, unknown
 async function ofertasDoCatalogo(catalogo: string) {
   const c = cacheOfertas.get(catalogo);
   if (c && Date.now() - c.em < 5 * 60 * 1000) return c.lista;
-  const r = await mlGet<{ results?: Record<string, unknown>[] }>(`/products/${catalogo}/items?limit=20`);
+  const r = await mlGet<{ results?: Record<string, unknown>[] }>(
+    `/products/${catalogo}/items?limit=20`,
+  );
   const lista = r.results ?? [];
   if (cacheOfertas.size > 200) cacheOfertas.clear();
   cacheOfertas.set(catalogo, { em: Date.now(), lista });
@@ -249,7 +426,12 @@ async function ofertasDoCatalogo(catalogo: string) {
    Reflections 100ml da Fragranciaria não trouxe a Amobeleza, que vende o
    mesmo frasco). Por isso, nas buscas por nome, as ofertas de todas as fichas
    aceitas entram juntas na comparação. */
-async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: string | null, trilha: string[]) {
+async function catalogoDoAnuncio(
+  url: string,
+  dica: DicaAnuncio,
+  itemAtual: string | null,
+  trilha: string[],
+) {
   /* /user-products/{MLBU} respondeu 403 ("caller is not allowed to access
      this user product") no teste de 24/09 com a conta do Weslei: so o dono
      do produto le. Por isso nao e chamado; os passos abaixo cobrem. */
@@ -259,27 +441,40 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
   if (/^MLB\d{5,}$/.test(daPagina) && itemAtual) {
     try {
       const ofertas = await ofertasDoCatalogo(daPagina);
-      const contem = ofertas.some((o) => String(o["item_id"] ?? o["id"] ?? "").toUpperCase() === itemAtual);
+      const contem = ofertas.some(
+        (o) => String(o["item_id"] ?? o["id"] ?? "").toUpperCase() === itemAtual,
+      );
       trilha.push(`catalogo-da-pagina ${daPagina} contem-o-anuncio=${contem ? "sim" : "nao"}`);
       if (contem) return { catalogos: [daPagina], porNome: false };
-    } catch (e) { trilha.push(`catalogo-da-pagina ${statusDe(e)}`); }
+    } catch (e) {
+      trilha.push(`catalogo-da-pagina ${statusDe(e)}`);
+    }
   }
 
   const buscar = async (rotulo: string, params: string, aceitar: (nome: string) => boolean) => {
     const achados: string[] = [];
     try {
-      const r = await mlGet<BuscaCatalogo>(`/products/search?status=active&site_id=MLB&${params}&limit=20`);
+      const r = await mlGet<BuscaCatalogo>(
+        `/products/search?status=active&site_id=MLB&${params}&limit=20`,
+      );
       const lista = (r.results ?? []).filter((p) => p.id);
       const aceitos = lista.filter((x) => aceitar(x.name ?? ""));
       /* Entre os aceitos, ficam os que têm oferta de loja (até 8). */
       for (const p of aceitos.slice(0, 12)) {
-        const ofertas = await ofertasDoCatalogo(p.id!).catch((e) => { trilha.push(`products/${p.id}/items ${statusDe(e)}`); return []; });
+        const ofertas = await ofertasDoCatalogo(p.id!).catch((e) => {
+          trilha.push(`products/${p.id}/items ${statusDe(e)}`);
+          return [];
+        });
         if (!ofertas.length) trilha.push(`products/${p.id}/items sem-ofertas`);
         if (ofertas.length) achados.push(p.id!.toUpperCase());
         if (achados.length >= 8) break;
       }
-      trilha.push(`${rotulo} 200 resultados=${lista.length} aceitos=${aceitos.map((x) => `${x.id}:${(x.name ?? "").slice(0, 50)}`).join(" | ") || "nenhum"} escolhidos=${achados.join(",") || "nenhum"}`);
-    } catch (e) { trilha.push(`${rotulo} ${statusDe(e)}`); }
+      trilha.push(
+        `${rotulo} 200 resultados=${lista.length} aceitos=${aceitos.map((x) => `${x.id}:${(x.name ?? "").slice(0, 50)}`).join(" | ") || "nenhum"} escolhidos=${achados.join(",") || "nenhum"}`,
+      );
+    } catch (e) {
+      trilha.push(`${rotulo} ${statusDe(e)}`);
+    }
     return achados;
   };
 
@@ -297,27 +492,43 @@ async function catalogoDoAnuncio(url: string, dica: DicaAnuncio, itemAtual: stri
   const modelo = (dica.modelo ?? "").trim();
   const juntos = new Set<string>();
   if (modelo) {
-    const q = normPalavra(`${dica.marca ?? ""} ${modelo}`).split(" ").slice(0, 8).join(" ");
+    const q = normPalavra(`${dica.marca ?? ""} ${modelo}`)
+      .split(" ")
+      .slice(0, 8)
+      .join(" ");
     const tokensModelo = palavras(modelo);
     const c = await buscar("marca-modelo", `q=${encodeURIComponent(q)}`, (nome) => {
       const b = new Set(palavras(nome));
-      return tokensModelo.length > 0 && tokensModelo.every((w) => b.has(w)) && (!titulo || mesmoNome(titulo, nome));
+      return (
+        tokensModelo.length > 0 &&
+        tokensModelo.every((w) => b.has(w)) &&
+        (!titulo || mesmoNome(titulo, nome))
+      );
     });
     c.forEach((x) => juntos.add(x));
   }
 
   if (titulo) {
     /* A variação vai inteira no fim da busca, sem ser cortada. */
-    const base = normPalavra(dica.titulo ?? "").split(" ").filter(Boolean).slice(0, variacao ? 8 : 10).join(" ");
+    const base = normPalavra(dica.titulo ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, variacao ? 8 : 10)
+      .join(" ");
     const q = `${base} ${normPalavra(variacao)}`.trim();
-    const c = await buscar("titulo", `q=${encodeURIComponent(q)}`, (nome) => mesmoNome(titulo, nome));
+    const c = await buscar("titulo", `q=${encodeURIComponent(q)}`, (nome) =>
+      mesmoNome(titulo, nome),
+    );
     c.forEach((x) => juntos.add(x));
   }
   if (juntos.size) return { catalogos: [...juntos].slice(0, 8), porNome: true };
   return null;
 }
 
-export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}): Promise<Comparacao> {
+export async function compararMesmoProduto(
+  url: string,
+  dica: DicaAnuncio = {},
+): Promise<Comparacao> {
   const ids = idsDoLink(url);
   const trilha: string[] = [];
   const direto = (ids.catalogo ?? dica.catalogo ?? null)?.toUpperCase() ?? null;
@@ -326,17 +537,37 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
   const itemAtual = (ids.item ?? dica.item ?? null)?.toUpperCase() ?? null;
   if (!catalogos.length) {
     const achado = await catalogoDoAnuncio(url, dica, itemAtual, trilha);
-    if (achado) { catalogos = achado.catalogos; catalogoPorNome = achado.porNome; }
+    if (achado) {
+      catalogos = achado.catalogos;
+      catalogoPorNome = achado.porNome;
+    }
   }
   const catalogo = catalogos[0] ?? null;
   if (!catalogo && trilha.some((t) => / 429$/.test(t))) {
-    return { procurou: false, motivo: "limite de consultas da API oficial atingido", produto: null, opcoes: [], fonte: "api-oficial", trilha };
-  }
-  if (!catalogo) {
     return {
       procurou: false,
-      motivo: "não achei o mesmo produto (mesmo código de barras, marca e modelo) sendo vendido por outras lojas no catálogo oficial do Mercado Livre",
-      produto: null, opcoes: [], fonte: "api-oficial", trilha,
+      motivo: "limite de consultas da API oficial atingido",
+      produto: null,
+      opcoes: [],
+      fonte: "api-oficial",
+      trilha,
+    };
+  }
+  if (!catalogo) {
+    /* Fora do catálogo: pede ao Google os anúncios do mesmo produto. */
+    const consulta = `${dica.titulo ?? ""} ${dica.variacao ?? ""}`.trim();
+    const google = consulta
+      ? (await anunciosPeloGoogle(consulta, trilha)).filter((g) => g.item !== itemAtual)
+      : [];
+    return {
+      procurou: false,
+      motivo:
+        "não achei o mesmo produto (mesmo código de barras, marca e modelo) sendo vendido por outras lojas no catálogo oficial do Mercado Livre",
+      produto: null,
+      opcoes: [],
+      fonte: "api-oficial",
+      trilha,
+      google,
     };
   }
 
@@ -347,10 +578,18 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
     const fichas = new Map<string, { nome: string | null; imagem: string | null }>();
     for (const cat of catalogos) {
       try {
-        const f = await mlGet<{ name?: string; pictures?: { url?: string; secure_url?: string }[] }>(`/products/${cat}`);
+        const f = await mlGet<{
+          name?: string;
+          pictures?: { url?: string; secure_url?: string }[];
+        }>(`/products/${cat}`);
         const img = f.pictures?.[0]?.secure_url ?? f.pictures?.[0]?.url ?? null;
-        fichas.set(cat, { nome: f.name ?? null, imagem: img ? img.replace(/^http:/, "https:") : null });
-      } catch { fichas.set(cat, { nome: null, imagem: null }); }
+        fichas.set(cat, {
+          nome: f.name ?? null,
+          imagem: img ? img.replace(/^http:/, "https:") : null,
+        });
+      } catch {
+        fichas.set(cat, { nome: null, imagem: null });
+      }
     }
     titulo = fichas.get(catalogo)?.nome ?? null;
 
@@ -360,15 +599,27 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       /* A primeira ficha é obrigatória (erro dela vira erro da comparação);
          as demais são extras e podem falhar sozinhas. */
       let lista: Record<string, unknown>[] = [];
-      try { lista = await ofertasDoCatalogo(cat); }
-      catch (e) { if (cat === catalogo) throw e; trilha.push(`products/${cat}/items ${statusDe(e)}`); continue; }
+      try {
+        lista = await ofertasDoCatalogo(cat);
+      } catch (e) {
+        if (cat === catalogo) throw e;
+        trilha.push(`products/${cat}/items ${statusDe(e)}`);
+        continue;
+      }
       for (const o of lista) {
         const item = String(o["item_id"] ?? o["id"] ?? "");
         const preco = Number(o["price"]);
         const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
         if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
         if (candidatos.some((c) => c.item === item)) continue;
-        candidatos.push({ item, url: urlDaOferta(cat, item), preco, sellerId, achadoNaBusca: catalogoPorNome, catalogo: cat });
+        candidatos.push({
+          item,
+          url: urlDaOferta(cat, item),
+          preco,
+          sellerId,
+          achadoNaBusca: catalogoPorNome,
+          catalogo: cat,
+        });
       }
     }
 
@@ -381,26 +632,45 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
     /* Nome de TODAS as lojas: loja mais cara com cupom pode sair mais barata
        no final (caso da Amobeleza). Os nomes ficam guardados, então isso só
        custa consulta na primeira vez que a loja aparece. */
-    const sellers = [...new Set([...candidatos].sort((a, b) => a.preco - b.preco).map((c) => c.sellerId))].slice(0, 60);
+    const sellers = [
+      ...new Set([...candidatos].sort((a, b) => a.preco - b.preco).map((c) => c.sellerId)),
+    ].slice(0, 60);
     const nomes = await apelidos(sellers, trilha);
-    const cupons = await cuponsPorNome([...nomes.values(), dica.vendedor].filter(Boolean) as string[]);
+    const cupons = await cuponsPorNome(
+      [...nomes.values(), dica.vendedor].filter(Boolean) as string[],
+    );
     const cupomDe = (sellerId: number) => {
       const n = nomes.get(sellerId);
-      return n ? cupons.get(norm(n)) ?? null : null;
+      return n ? (cupons.get(norm(n)) ?? null) : null;
     };
 
-    const vendedorAqui = minha ? nomes.get(minha.sellerId) ?? dica.vendedor ?? null : dica.vendedor ?? null;
-    const cupomAqui = minha ? cupomDe(minha.sellerId) : (dica.vendedor ? cupons.get(norm(dica.vendedor)) ?? null : null);
+    const vendedorAqui = minha
+      ? (nomes.get(minha.sellerId) ?? dica.vendedor ?? null)
+      : (dica.vendedor ?? null);
+    const cupomAqui = minha
+      ? cupomDe(minha.sellerId)
+      : dica.vendedor
+        ? (cupons.get(norm(dica.vendedor)) ?? null)
+        : null;
     const economiaAqui = economiaDoCupom(cupomAqui, preco) ?? 0;
     const finalAtual = preco != null ? preco - economiaAqui : null;
     const produto = { item: itemAtual, titulo, preco, vendedor: vendedorAqui };
     const item = minha ? { id: minha.item, seller_id: minha.sellerId } : null;
     const ehMinhaLoja = (sellerId: number) =>
-      (item && sellerId === item.seller_id)
-      || (!!dica.vendedor && !!nomes.get(sellerId) && norm(nomes.get(sellerId)) === norm(dica.vendedor));
+      (item && sellerId === item.seller_id) ||
+      (!!dica.vendedor &&
+        !!nomes.get(sellerId) &&
+        norm(nomes.get(sellerId)) === norm(dica.vendedor));
 
     if (finalAtual == null) {
-      return { procurou: false, motivo: "não consegui o preço do anúncio", produto, opcoes: [], fonte: "api-oficial", trilha };
+      return {
+        procurou: false,
+        motivo: "não consegui o preço do anúncio",
+        produto,
+        opcoes: [],
+        fonte: "api-oficial",
+        trilha,
+      };
     }
 
     /* 4. Escolha: mais barata por pelo menos R$ 2, ou com cupom quando a loja
@@ -418,13 +688,28 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       else if (!economiaAqui && temCupom && final <= finalAtual) motivo = "tem_cupom";
       if (!motivo) continue;
       const opcao: Opcao = {
-        item: c.item, url: c.url, vendedor: nomes.get(c.sellerId) ?? null, preco: c.preco, economia, final,
-        cupom: temCupom && cupom ? {
-          id: cupom.id, titulo: cupom.desconto, teto: cupom.sem_teto ? null : cupom.teto,
-          minimo: cupom.compra_min, vence: cupom.vence,
-        } : null,
-        ganho: Math.max(ganho, 0), finalAtual, motivo, achadoNaBusca: c.achadoNaBusca,
-        imagem: fichas.get(c.catalogo)?.imagem ?? null, nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
+        item: c.item,
+        url: c.url,
+        vendedor: nomes.get(c.sellerId) ?? null,
+        preco: c.preco,
+        economia,
+        final,
+        cupom:
+          temCupom && cupom
+            ? {
+                id: cupom.id,
+                titulo: cupom.desconto,
+                teto: cupom.sem_teto ? null : cupom.teto,
+                minimo: cupom.compra_min,
+                vence: cupom.vence,
+              }
+            : null,
+        ganho: Math.max(ganho, 0),
+        finalAtual,
+        motivo,
+        achadoNaBusca: c.achadoNaBusca,
+        imagem: fichas.get(c.catalogo)?.imagem ?? null,
+        nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
       };
       const atual = porLoja.get(c.sellerId);
       if (!atual || opcao.final < atual.final) porLoja.set(c.sellerId, opcao);
@@ -441,28 +726,48 @@ export async function compararMesmoProduto(url: string, dica: DicaAnuncio = {}):
       const atual = refPorLoja.get(c.sellerId);
       if (atual && atual.final <= final) continue;
       refPorLoja.set(c.sellerId, {
-        vendedor: nomes.get(c.sellerId) ?? null, preco: c.preco, final, url: c.url,
-        imagem: fichas.get(c.catalogo)?.imagem ?? null, nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
+        vendedor: nomes.get(c.sellerId) ?? null,
+        preco: c.preco,
+        final,
+        url: c.url,
+        imagem: fichas.get(c.catalogo)?.imagem ?? null,
+        nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
         porNome: c.achadoNaBusca,
         diferenca: Math.round((final - finalAtual) * 100) / 100,
-        cupom: economiaDoCupom(cupom, c.preco) ? cupom?.desconto ?? null : null,
+        cupom: economiaDoCupom(cupom, c.preco) ? (cupom?.desconto ?? null) : null,
       });
     }
     const referencias = [...refPorLoja.values()].sort((a, b) => a.final - b.final).slice(0, 6);
 
-    trilha.push(`catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual}`);
+    trilha.push(
+      `catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual}`,
+    );
     /* Cada loja vista e o que ela daria, para conferir depois por que uma
        loja não virou opção. */
     for (const c of [...candidatos].sort((a, b) => a.preco - b.preco).slice(0, 30)) {
       const cupom = cupomDe(c.sellerId);
-      trilha.push(`loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`);
+      trilha.push(
+        `loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`,
+      );
     }
-    return { procurou: true, motivo: null, produto, opcoes, referencias, fonte: "api-oficial", trilha, catalogoPorNome };
+    return {
+      procurou: true,
+      motivo: null,
+      produto,
+      opcoes,
+      referencias,
+      fonte: "api-oficial",
+      trilha,
+      catalogoPorNome,
+    };
   } catch (e) {
     const status = e instanceof ErroApiMl ? e.status : 0;
-    const motivo = status === 401 || status === 403
-      ? "a API oficial do Mercado Livre pediu autorização (configurar o aplicativo)"
-      : status === 429 ? "limite de consultas da API oficial atingido" : "a API oficial do Mercado Livre não respondeu";
+    const motivo =
+      status === 401 || status === 403
+        ? "a API oficial do Mercado Livre pediu autorização (configurar o aplicativo)"
+        : status === 429
+          ? "limite de consultas da API oficial atingido"
+          : "a API oficial do Mercado Livre não respondeu";
     trilha.push(`erro ${statusDe(e)}`);
     return { procurou: false, motivo, produto: null, opcoes: [], fonte: "api-oficial", trilha };
   }
