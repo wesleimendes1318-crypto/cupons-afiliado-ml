@@ -238,6 +238,7 @@ export type Conferencia =
         confianca: number;
         motivo: string;
         semFoto: boolean;
+        parecido?: boolean;
       }>;
     }
   | {
@@ -253,6 +254,7 @@ export type Conferencia =
         confianca: number;
         motivo: string;
         semFoto: boolean;
+        parecido?: boolean;
       }>;
     };
 
@@ -260,7 +262,10 @@ export type Conferencia =
    original x candidato" conferido pela Gemini fica na tabela ia_vereditos por
    30 dias. Na próxima consulta com o mesmo par, a resposta vem do banco e não
    gasta cota da API. Só vai para a Gemini o que nunca foi conferido. */
-type Veredito = { igual: boolean; confianca: number; motivo: string };
+/* parecido: NAO e o mesmo produto, mas e uma alternativa honesta (mesmo tipo
+   e funcao, mesma compatibilidade/tamanho; muda marca, cor ou detalhe). O site
+   mostra separado, com o aviso "nao e o mesmo produto" (Weslei, 25/09). */
+type Veredito = { igual: boolean; confianca: number; motivo: string; parecido?: boolean };
 
 async function vereditosGuardados(original: string, chaves: string[]) {
   const mapa = new Map<string, Veredito>();
@@ -269,12 +274,17 @@ async function vereditosGuardados(original: string, chaves: string[]) {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("ia_vereditos" as never)
-      .select("chave_candidato,igual,confianca,motivo")
+      .select("chave_candidato,igual,confianca,motivo,parecido")
       .eq("chave_original" as never, original as never)
       .in("chave_candidato" as never, chaves as never)
       .gte("criado_em" as never, new Date(Date.now() - 30 * 86400_000).toISOString() as never);
     for (const l of (data ?? []) as Array<{ chave_candidato: string } & Veredito>) {
-      mapa.set(l.chave_candidato, { igual: l.igual, confianca: l.confianca, motivo: l.motivo });
+      mapa.set(l.chave_candidato, {
+        igual: l.igual,
+        confianca: l.confianca,
+        motivo: l.motivo,
+        parecido: l.parecido === true,
+      });
     }
   } catch {
     /* sem cache: confere tudo */
@@ -297,6 +307,7 @@ async function guardarVereditos(
         igual: l.igual,
         confianca: l.confianca,
         motivo: l.motivo,
+        parecido: l.parecido === true,
         modelo,
         criado_em: new Date().toISOString(),
       })) as never,
@@ -337,6 +348,7 @@ export async function conferirMesmoProduto(
           igual: false,
           confianca: a.confianca,
           motivo: a.motivo,
+          parecido: a.parecido === true,
         })),
         novo.modelo ?? "parcial",
       );
@@ -351,6 +363,7 @@ export async function conferirMesmoProduto(
     motivo: string;
     semFoto: boolean;
     guardado?: boolean;
+    parecido?: boolean;
   }> = [];
   lista.forEach((c, i) => {
     const g = guardados.get((c.chave ?? "").trim());
@@ -365,13 +378,20 @@ export async function conferirMesmoProduto(
       const chave = (f.c.chave ?? "").trim();
       /* Sem foto não é veredito de verdade: não guarda. */
       if (chave && !a.semFoto)
-        paraGuardar.push({ chave, igual: a.igual, confianca: a.confianca, motivo: a.motivo });
+        paraGuardar.push({
+          chave,
+          igual: a.igual,
+          confianca: a.confianca,
+          motivo: a.motivo,
+          parecido: a.parecido === true,
+        });
     }
     await guardarVereditos(chaveOriginal, paraGuardar, novo.modelo);
   }
   const iguais = avaliacao
     .filter((a) => a.igual && a.confianca >= CONFIANCA_MINIMA && !a.semFoto)
     .map((a) => a.indice);
+  for (const a of avaliacao) if (a.igual || a.semFoto) a.parecido = false;
   return {
     ok: true,
     modelo: novo && novo.ok ? novo.modelo : "guardado",
@@ -396,22 +416,22 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     {
       text:
         "Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL " +
-        "e so pode ver outra loja se for EXATAMENTE o mesmo produto.\n" +
-        "Passo 1: descreva a FOTO do anuncio original em detalhe: tipo de produto, marca/modelo visiveis, cor, " +
-        "bordas, material, acabamento, formato, tamanho aparente, quantidade de unidades e qualquer detalhe que " +
-        "diferencie de produtos parecidos.\n" +
-        "Passo 2: para cada CANDIDATO, compare a foto dele com essa descricao e o titulo dele com o titulo " +
-        "original. E o mesmo produto so se bater: tipo, marca e modelo, versao, cor e acabamento (ex.: capinha " +
-        "transparente com borda preta NAO e igual a capinha toda transparente), tamanho/volume/capacidade, " +
-        "compatibilidade (modelo do celular, voltagem) e quantidade (kit, unidades). Anuncio que atende varios " +
-        "modelos so e igual se o titulo citar o mesmo modelo do original. Candidato sem foto: igual=false. " +
-        "Na duvida, igual=false. Ignore preco, loja e texto de propaganda.\n" +
-        "Em diferencas, liste TODA diferenca visivel na foto ou no titulo em relacao ao original (cor, borda, " +
-        "moldura, material, formato, estampa, acessorios inclusos como pelicula, quantidade, tamanho, modelo " +
-        "compativel). Fundo, angulo e iluminacao nao contam. igual=true so com diferencas vazia, e o motivo " +
-        "precisa citar os detalhes do original que voce viu na foto do candidato.\n" +
-        'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],' +
-        '"igual":false,"confianca":0-100,"motivo":"curto"}]}',
+        "e so pode ver outra loja como mesmo produto se o PRODUTO for o mesmo. Cada vendedor faz a propria foto: " +
+        "fundo, angulo, montagem, textos, selos, enfeites e quantas unidades aparecem na foto NAO importam.\n" +
+        "Passo 1: descreva o PRODUTO do original (foto e titulo): tipo, marca e modelo, cor e acabamento do proprio " +
+        "produto, material, formato, tamanho/volume, compatibilidade (modelo do celular, voltagem) e quantidade do kit.\n" +
+        "Passo 2: para cada CANDIDATO, use a foto e o titulo dele. E o mesmo produto quando tipo, marca/modelo (se o " +
+        "original tem marca), cor e acabamento do produto, tamanho, compatibilidade e quantidade batem. Detalhe que so " +
+        "nao aparece na foto do candidato NAO e diferenca (ex.: gravacao pequena que o angulo nao mostra), se o titulo " +
+        "e o resto confirmam. Diferenca e o que CONTRADIZ o original: outra marca, outra cor ou borda do produto " +
+        "(capinha transparente com borda preta x capinha toda transparente), outro modelo compativel, outro tamanho, " +
+        "outra quantidade, acessorio vendido junto (ex.: pelicula). Anuncio que atende varios modelos so e igual se " +
+        "citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n" +
+        "Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n" +
+        "parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma " +
+        "compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so " +
+        "marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n" +
+        'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"confianca":0-100,"motivo":"curto"}]}',
     },
     { text: "ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)") },
   ];
@@ -446,6 +466,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
   for (const a of avaliacao) {
     if (a.igual && a.confianca < confiancaMinima(r.modelo)) {
       a.igual = false;
+      a.parecido = true;
       a.motivo =
         `confianca ${a.confianca} abaixo de ${confiancaMinima(r.modelo)}: ${a.motivo}`.slice(
           0,
@@ -467,16 +488,14 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     const confirmacao: Parte[] = [
       {
         text:
-          "Segunda conferencia, rigorosa. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou " +
-          "que os CANDIDATOS abaixo sao exatamente o mesmo produto: confirme ou derrube cada um.\n" +
-          "Compare a foto de cada candidato com a foto do original e liste TODAS as diferencas visiveis: cor, " +
-          "bordas, moldura, material, transparencia, formato, estampa ou texto, acessorios inclusos (pelicula, " +
-          "cabo, brinde), quantidade de unidades, tamanho ou volume, modelo compativel. Fundo, angulo, " +
-          "iluminacao e montagem da foto nao contam.\n" +
-          "igual=true SOMENTE se diferencas estiver vazia e voce enxergar no candidato os detalhes que " +
-          "distinguem o original. Na duvida, igual=false.\n" +
-          'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,' +
-          '"confianca":0-100,"motivo":"curto"}]}',
+          "Segunda conferencia. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou que os CANDIDATOS " +
+          "abaixo sao o mesmo PRODUTO: confirme ou derrube cada um.\n" +
+          "Cada vendedor faz a propria foto: fundo, angulo, montagem, textos, selos e enfeites NAO contam, nem detalhe " +
+          "que so nao aparece na foto. Liste em diferencas o que CONTRADIZ o original no produto: outra marca, outra cor " +
+          "ou borda, outro material ou formato, outro modelo compativel, outro tamanho ou volume, outra quantidade, " +
+          "acessorio vendido junto (pelicula, cabo).\n" +
+          "igual=true somente sem nenhuma contradicao. Contradicao real na duvida: igual=false.\n" +
+          'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":true,"confianca":0-100,"motivo":"curto"}]}',
       },
       {
         text:
@@ -513,7 +532,8 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
         a.motivo = `${a.motivo.slice(0, 95)} | confirmado (${r2.modelo})`;
       } else {
         a.igual = false;
-        a.motivo = `2a conferencia (${r2.modelo}): ${v?.motivo || "nao confirmou"}`.slice(0, 140);
+        a.parecido = v ? v.parecido : true;
+        a.motivo = (v?.motivo || "a segunda conferencia nao confirmou").slice(0, 140);
       }
     });
   }
@@ -538,6 +558,7 @@ type VereditoIA = {
   confianca?: number;
   motivo?: string;
   diferencas?: unknown;
+  parecido?: boolean;
 };
 
 /* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */
@@ -552,15 +573,19 @@ function lerVereditos(lista: VereditoIA[], total: number) {
         ? c.diferencas.map((d) => String(d ?? "").trim()).filter(Boolean)
         : [];
       const igual = c.igual === true && diferencas.length === 0;
-      const motivo = String(c.motivo ?? "") || diferencas.join("; ");
+      /* Quando nao e igual, o motivo e O QUE MUDA: e o aviso que o site mostra
+         nos parecidos. */
+      const motivo =
+        !igual && diferencas.length
+          ? diferencas.join("; ")
+          : String(c.motivo ?? "") || diferencas.join("; ");
       return {
         indice: c.indice as number,
         igual,
+        /* "Igual" derrubado por diferenca vira parecido. */
+        parecido: !igual && (c.parecido === true || c.igual === true),
         confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
-        motivo: (c.igual === true && !igual
-          ? "diferencas: " + diferencas.join("; ")
-          : motivo
-        ).slice(0, 140),
+        motivo: motivo.slice(0, 140),
       };
     });
 }

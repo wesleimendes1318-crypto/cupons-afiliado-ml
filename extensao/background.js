@@ -582,36 +582,34 @@ function ehGemma(modelo) { return /^gemma/i.test(modelo || ''); }
 function confiancaMinimaIA(modelo) { return ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA_IA; }
 const PEDIDO_CONFERENCIA =
   'Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL '
-  + 'e so pode ver outra loja se for EXATAMENTE o mesmo produto.\n'
-  + 'Passo 1: descreva a FOTO do anuncio original em detalhe: tipo de produto, marca/modelo visiveis, cor, '
-  + 'bordas, material, acabamento, formato, tamanho aparente, quantidade de unidades e qualquer detalhe que '
-  + 'diferencie de produtos parecidos.\n'
-  + 'Passo 2: para cada CANDIDATO, compare a foto dele com essa descricao e o titulo dele com o titulo '
-  + 'original. E o mesmo produto so se bater: tipo, marca e modelo, versao, cor e acabamento (ex.: capinha '
-  + 'transparente com borda preta NAO e igual a capinha toda transparente), tamanho/volume/capacidade, '
-  + 'compatibilidade (modelo do celular, voltagem) e quantidade (kit, unidades). Anuncio que atende varios '
-  + 'modelos so e igual se o titulo citar o mesmo modelo do original. Candidato sem foto: igual=false. '
-  + 'Na duvida, igual=false. Ignore preco, loja e texto de propaganda.\n'
-  + 'Em diferencas, liste TODA diferenca visivel na foto ou no titulo em relacao ao original (cor, borda, '
-  + 'moldura, material, formato, estampa, acessorios inclusos como pelicula, quantidade, tamanho, modelo '
-  + 'compativel). Fundo, angulo e iluminacao nao contam. igual=true so com diferencas vazia, e o motivo '
-  + 'precisa citar os detalhes do original que voce viu na foto do candidato.\n'
-  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],'
-  + '"igual":false,"confianca":0-100,"motivo":"curto"}]}';
+  + 'e so pode ver outra loja como mesmo produto se o PRODUTO for o mesmo. Cada vendedor faz a propria foto: '
+  + 'fundo, angulo, montagem, textos, selos, enfeites e quantas unidades aparecem na foto NAO importam.\n'
+  + 'Passo 1: descreva o PRODUTO do original (foto e titulo): tipo, marca e modelo, cor e acabamento do proprio '
+  + 'produto, material, formato, tamanho/volume, compatibilidade (modelo do celular, voltagem) e quantidade do kit.\n'
+  + 'Passo 2: para cada CANDIDATO, use a foto e o titulo dele. E o mesmo produto quando tipo, marca/modelo (se o '
+  + 'original tem marca), cor e acabamento do produto, tamanho, compatibilidade e quantidade batem. Detalhe que so '
+  + 'nao aparece na foto do candidato NAO e diferenca (ex.: gravacao pequena que o angulo nao mostra), se o titulo '
+  + 'e o resto confirmam. Diferenca e o que CONTRADIZ o original: outra marca, outra cor ou borda do produto '
+  + '(capinha transparente com borda preta x capinha toda transparente), outro modelo compativel, outro tamanho, '
+  + 'outra quantidade, acessorio vendido junto (ex.: pelicula). Anuncio que atende varios modelos so e igual se '
+  + 'citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n'
+  + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n'
+  + 'parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma '
+  + 'compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so '
+  + 'marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n'
+  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"confianca":0-100,"motivo":"curto"}]}';
 
 /* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
    foto com foto, de preferencia por outro modelo. */
 const PEDIDO_CONFIRMACAO =
-  'Segunda conferencia, rigorosa. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou '
-  + 'que os CANDIDATOS abaixo sao exatamente o mesmo produto: confirme ou derrube cada um.\n'
-  + 'Compare a foto de cada candidato com a foto do original e liste TODAS as diferencas visiveis: cor, '
-  + 'bordas, moldura, material, transparencia, formato, estampa ou texto, acessorios inclusos (pelicula, '
-  + 'cabo, brinde), quantidade de unidades, tamanho ou volume, modelo compativel. Fundo, angulo, '
-  + 'iluminacao e montagem da foto nao contam.\n'
-  + 'igual=true SOMENTE se diferencas estiver vazia e voce enxergar no candidato os detalhes que '
-  + 'distinguem o original. Na duvida, igual=false.\n'
-  + 'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,'
-  + '"confianca":0-100,"motivo":"curto"}]}';
+  'Segunda conferencia. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou que os CANDIDATOS '
+  + 'abaixo sao o mesmo PRODUTO: confirme ou derrube cada um.\n'
+  + 'Cada vendedor faz a propria foto: fundo, angulo, montagem, textos, selos e enfeites NAO contam, nem detalhe '
+  + 'que so nao aparece na foto. Liste em diferencas o que CONTRADIZ o original no produto: outra marca, outra cor '
+  + 'ou borda, outro material ou formato, outro modelo compativel, outro tamanho ou volume, outra quantidade, '
+  + 'acessorio vendido junto (pelicula, cabo).\n'
+  + 'igual=true somente sem nenhuma contradicao. Contradicao real na duvida: igual=false.\n'
+  + 'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":true,"confianca":0-100,"motivo":"curto"}]}';
 
 /* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */
 function lerVereditosIA(lista, total) {
@@ -620,9 +618,10 @@ function lerVereditosIA(lista, total) {
     .map(c => {
       const dif = Array.isArray(c.diferencas) ? c.diferencas.map(d => String(d ?? '').trim()).filter(Boolean) : [];
       const igual = c.igual === true && dif.length === 0;
-      const motivo = (c.igual === true && !igual) ? 'diferencas: ' + dif.join('; ') : (String(c.motivo || '') || dif.join('; '));
-      return { indice: c.indice, igual, confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
-               motivo: motivo.slice(0, 140) };
+      /* Nao igual: o motivo e O QUE MUDA (aviso dos parecidos no site). */
+      const motivo = (!igual && dif.length) ? dif.join('; ') : (String(c.motivo || '') || dif.join('; '));
+      return { indice: c.indice, igual, parecido: !igual && (c.parecido === true || c.igual === true),
+               confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)), motivo: motivo.slice(0, 140) };
     });
 }
 
@@ -680,6 +679,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
       for (const a of avaliacao) {
         if (a.igual && a.confianca < confiancaMinimaIA(r.modelo)) {
           a.igual = false;
+          a.parecido = true;
           a.motivo = ('confianca ' + a.confianca + ' abaixo de ' + confiancaMinimaIA(r.modelo) + ': ' + a.motivo).slice(0, 140);
         }
       }
@@ -706,7 +706,8 @@ async function mesmoProdutoPelaGemini(original, lista) {
             a.motivo = a.motivo.slice(0, 95) + ' | confirmado (' + r2.modelo + ')';
           } else {
             a.igual = false;
-            a.motivo = ('2a conferencia (' + r2.modelo + '): ' + ((v && v.motivo) || 'nao confirmou')).slice(0, 140);
+            a.parecido = v ? v.parecido : true;
+            a.motivo = ((v && v.motivo) || 'a segunda conferencia nao confirmou').slice(0, 140);
           }
         });
       }
@@ -2590,15 +2591,30 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   if (!ok && !ultimaIA) ultimaIA = { indisponivel: true, erros: ['sem tempo para a IA (' + Math.round(resta() / 1000) + 's restando)'] };
   diag.ia = ok ? { conferidos: candidatos.length, iguais: ok.size, ...(ultimaIA || {}) }
                : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
+  /* PARECIDOS (Weslei, 25/09): nao sao o mesmo produto, mas a IA viu que
+     servem de alternativa (mesmo tipo e compatibilidade; muda marca ou
+     detalhe). Vao para uma lista separada, com o aviso do que muda. */
+  const parecidos = (ok && ultimaIA && Array.isArray(ultimaIA.avaliacao) ? ultimaIA.avaliacao : [])
+    .filter(a => a.parecido && !a.igual && !a.semFoto)
+    .map(a => {
+      const c = candidatos[a.indice];
+      return c && c.preco != null && c.item !== itemAtual
+        ? { item: c.item, url: c.url || null, titulo: c.titulo || null, imagem: c.imagem || null,
+            preco: c.preco, muda: String(a.motivo || '').slice(0, 140) }
+        : null;
+    })
+    .filter(Boolean);
+  diag.parecidos = parecidos.length;
   /* Regra: so o que a Gemini confirmou pela foto aparece. */
   const aprovados = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true })) : [];
-  if (!aprovados.length) return vazioCom(diag);
+  if (!aprovados.length) { const v = vazioCom(diag); v.parecidos = parecidos; return v; }
   const achados = await avaliarCandidatos(aprovados.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
   for (const a of achados) {
     const c = aprovados.find(x => x.item === a.item);
     if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; }
   }
   achados.diag = diag;
+  achados.parecidos = parecidos;
   return achados;
 }
 
@@ -3287,6 +3303,8 @@ async function atenderPedidos() {
           let motivoNaoProcurou = null;
           /* Outras lojas vistas, inclusive as mais caras (so exibicao). */
           let referencias = [];
+          /* Parecidos (nao e o mesmo produto): lista separada, com o que muda. */
+          let parecidos = [];
           /* Registro da busca fora do catalogo, para conferir de longe. */
           let buscaFora = { rodou: false, motivo: null, vistos: 0 };
           let apiAchou = false;
@@ -3308,7 +3326,7 @@ async function atenderPedidos() {
           const compararAgora = async () => {
           outra = null; outras = []; outraFalhou = null;
           procurouOutra = false; motivoNaoProcurou = null;
-          referencias = []; buscaFora = { rodou: false, motivo: null, vistos: 0 };
+          referencias = []; parecidos = []; buscaFora = { rodou: false, motivo: null, vistos: 0 };
           apiAchou = false; verificacaoIA = null; ultimaLeitura = null;
           {
             if (volta === 1) marcarEtapa(sincToken, p.id, 'outras_lojas');
@@ -3388,6 +3406,10 @@ async function atenderPedidos() {
                   new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })
                 ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });
                 buscaFora.vistos = Array.isArray(busca.todas) ? busca.todas.length : 0;
+                if (busca.todas && Array.isArray(busca.todas.parecidos)) {
+                  parecidos = busca.todas.parecidos.slice().sort((x, y) => x.preco - y.preco).slice(0, 5)
+                    .map(x => ({ ...x, diferenca: a.preco != null ? Math.round((x.preco - a.preco) * 100) / 100 : null }));
+                }
                 buscaFora.leitura = busca.diag || null;
                 buscaFora.modo = ultimaLeitura;
                 /* Junta catalogo + busca: uma entrada por loja, a de menor preco
@@ -3528,7 +3550,8 @@ async function atenderPedidos() {
              chamada so ao gerador. Loja sem link fica com o botao que gera no
              clique (site). */
           try {
-            const semLink = referencias.filter(x => !x.link && x.url);
+            /* Lojas da tabela e parecidos, tudo numa chamada so. */
+            const semLink = [...referencias, ...parecidos].filter(x => !x.link && x.url);
             if (semLink.length && !(await freioLigado('link'))) {
               const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
               const mapa = await gerarVariosNaAba(tabId, alvos);
@@ -3563,6 +3586,8 @@ async function atenderPedidos() {
             categoria: (a.categorias && a.categorias[0]) || null,
             categorias: a.categorias || [],
             referencias: referencias,
+            /* Nao e o mesmo produto: o site mostra separado, com "muda". */
+            parecidos: parecidos,
             verificacaoIA: verificacaoIA,
             buscaFora: buscaFora.rodou ? buscaFora
               : { rodou: false, vistos: 0, motivo: !a.ok ? 'anuncio nao lido' : (pausaLeitura && !anonima) ? 'leitura pausada (freio/captcha) e modo anonimo nao permitido' : 'teto do dia atingido' },

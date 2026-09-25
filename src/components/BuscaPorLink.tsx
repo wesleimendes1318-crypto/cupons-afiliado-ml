@@ -198,6 +198,17 @@ type Analise = {
   /* Todas as outras lojas vistas com o mesmo produto, inclusive as mais
      caras. Só exibição: a pessoa vê que comparei e quanto pagaria a mais. */
   referencias?: Referencia[] | null;
+  /* NAO e o mesmo produto: alternativas que a IA viu servir (mesmo tipo e
+     compatibilidade), com o que muda. Sempre separadas e com aviso. */
+  parecidos?: Array<{
+    titulo: string | null;
+    imagem?: string | null;
+    preco: number;
+    diferenca?: number | null;
+    muda?: string | null;
+    link?: string | null;
+    url?: string | null;
+  }> | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
   aviso?: string | null;
   /* completa: achou loja mais barata, ou a busca e a conferência pela foto
@@ -1246,12 +1257,14 @@ function Resultado({
     (a?.procurouOutra === true || alternativas.length > 0) &&
     !leituraFalhou &&
     linhasLojas.length >= 2;
+  /* Coluna da direita: lojas comparadas e/ou parecidos. */
+  const temColuna = mostraTabela || (!leituraFalhou && (a?.parecidos?.length ?? 0) > 0);
 
   return (
     <div
       className={
         "mt-3 rounded-lg border border-border bg-card p-3" +
-        (mostraTabela ? " sm:grid sm:grid-cols-2 sm:gap-x-4" : "")
+        (temColuna ? " sm:grid sm:grid-cols-2 sm:gap-x-4" : "")
       }
     >
       <div className="flex items-start gap-3 sm:col-start-1 sm:row-start-1">
@@ -1277,9 +1290,10 @@ function Resultado({
         </div>
       </div>
 
-      {mostraTabela && (
+      {temColuna && (
         <div className="sm:col-start-2 sm:row-span-2 sm:row-start-1">
-          <TodasAsLojas linhas={linhasLojas} />
+          {mostraTabela && <TodasAsLojas linhas={linhasLojas} />}
+          <Parecidos lista={a?.parecidos} />
         </div>
       )}
 
@@ -1637,6 +1651,62 @@ type LinhaLoja = {
   url: string | null;
   colado?: boolean;
 };
+
+/* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
+   igual). Tabela separada, âmbar (atenção), com o que muda em cada um. */
+function Parecidos({ lista }: { lista: Analise["parecidos"] }) {
+  if (!lista || !lista.length) return null;
+  return (
+    <div className="mt-3 rounded-md border border-amber-400/70 bg-amber-50/60 p-2 first:sm:mt-0 dark:bg-amber-950/20">
+      <p className="text-sm font-bold">Parecidos ({lista.length})</p>
+      <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+        Não é o mesmo produto: veja o que muda antes de comprar.
+      </p>
+      <ul className="mt-1.5 space-y-1.5">
+        {lista.map((p, i) => (
+          <li key={i} className="flex items-start gap-2 rounded bg-card p-1.5">
+            <Foto src={p.imagem} className="size-10 shrink-0 rounded" />
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-xs font-medium leading-tight">{p.titulo}</p>
+              {p.muda && (
+                <p className="mt-0.5 text-[11px] leading-snug text-amber-800 dark:text-amber-300">
+                  Muda: {p.muda}
+                </p>
+              )}
+            </div>
+            <div className="shrink-0 text-right tabular-nums">
+              <span className="block text-sm font-bold">{brl(p.preco)}</span>
+              {p.diferenca != null && Math.abs(p.diferenca) >= 0.5 && (
+                <span
+                  className={
+                    "block text-[11px] font-bold " +
+                    (p.diferenca < 0 ? "text-success" : "text-red-700 dark:text-red-400")
+                  }
+                >
+                  {p.diferenca < 0 ? `${brl(-p.diferenca)} a menos` : `+${brl(p.diferenca)}`}
+                </span>
+              )}
+              <span className="mt-1 block">
+                {p.link ? (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                  >
+                    Abrir
+                  </a>
+                ) : p.url ? (
+                  <VerNaLoja url={p.url} />
+                ) : null}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
   if (linhas.length < 2) return null;

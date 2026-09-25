@@ -1,7 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, Check, ChevronDown, Clock3, Copy, Info, Link2, LoaderCircle, Search, Share2, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  ChevronDown,
+  Clock3,
+  Copy,
+  Info,
+  Link2,
+  LoaderCircle,
+  Search,
+  Share2,
+  ShieldAlert,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  WandSparkles,
+  X,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
@@ -50,8 +76,7 @@ export const Route = createFileRoute("/")({
           name: "Melhor Escolha",
           url: "https://melhorescolha.io/",
           inLanguage: "pt-BR",
-          description:
-            "Ferramenta independente que compara o preço do mesmo produto entre lojas.",
+          description: "Ferramenta independente que compara o preço do mesmo produto entre lojas.",
         }),
       },
     ],
@@ -119,28 +144,87 @@ type Comparacao = {
 
 const FAIXAS: Array<{ id: FaixaEconomia; rotulo: string; aceita: (cupom: Cupom) => boolean }> = [
   { id: "semlimite", rotulo: "sem limite", aceita: (cupom) => semLimite(cupom) },
-  { id: "ate50", rotulo: "até R$ 50", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! <= 50 },
-  { id: "50a200", rotulo: "R$ 50 a R$ 200", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 50 && tetoReal(cupom)! <= 200 },
-  { id: "200a1000", rotulo: "R$ 200 a R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 200 && tetoReal(cupom)! <= 1000 },
-  { id: "acima1000", rotulo: "acima de R$ 1.000", aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000 },
+  {
+    id: "ate50",
+    rotulo: "até R$ 50",
+    aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! <= 50,
+  },
+  {
+    id: "50a200",
+    rotulo: "R$ 50 a R$ 200",
+    aceita: (cupom) =>
+      !semLimite(cupom) &&
+      tetoReal(cupom) != null &&
+      tetoReal(cupom)! > 50 &&
+      tetoReal(cupom)! <= 200,
+  },
+  {
+    id: "200a1000",
+    rotulo: "R$ 200 a R$ 1.000",
+    aceita: (cupom) =>
+      !semLimite(cupom) &&
+      tetoReal(cupom) != null &&
+      tetoReal(cupom)! > 200 &&
+      tetoReal(cupom)! <= 1000,
+  },
+  {
+    id: "acima1000",
+    rotulo: "acima de R$ 1.000",
+    aceita: (cupom) => !semLimite(cupom) && tetoReal(cupom) != null && tetoReal(cupom)! > 1000,
+  },
 ];
 
-type EtiquetaId = "cometiqueta" | "termina24" | "termina48" | "semlimite" | "comprabaixa" | "economiaalta" | "semcompramin";
+type EtiquetaId =
+  | "cometiqueta"
+  | "termina24"
+  | "termina48"
+  | "semlimite"
+  | "comprabaixa"
+  | "economiaalta"
+  | "semcompramin";
 
 /** Etiquetas inteligentes: recortes prontos que respondem a intenções comuns. */
-const ETIQUETAS: Array<{ id: EtiquetaId; rotulo: string; aceita: (cupom: Cupom, agora: number | null) => boolean }> = [
+const ETIQUETAS: Array<{
+  id: EtiquetaId;
+  rotulo: string;
+  aceita: (cupom: Cupom, agora: number | null) => boolean;
+}> = [
   // Primeiro da fila de proposito: e o unico atalho que muda o que a pessoa
   // leva embora, e nao so quais cupons ela ve.
-  { id: "cometiqueta", rotulo: "Cupom com código gerado", aceita: (cupom) => Boolean(cupom.codigo_cupom) },
-  { id: "termina24", rotulo: "Termina em 24h", aceita: (cupom, agora) => dentroDe(cupom, agora, 24) },
-  { id: "termina48", rotulo: "Termina em 2 dias", aceita: (cupom, agora) => dentroDe(cupom, agora, 48) },
+  {
+    id: "cometiqueta",
+    rotulo: "Cupom com código gerado",
+    aceita: (cupom) => Boolean(cupom.codigo_cupom),
+  },
+  {
+    id: "termina24",
+    rotulo: "Termina em 24h",
+    aceita: (cupom, agora) => dentroDe(cupom, agora, 24),
+  },
+  {
+    id: "termina48",
+    rotulo: "Termina em 2 dias",
+    aceita: (cupom, agora) => dentroDe(cupom, agora, 48),
+  },
   { id: "semlimite", rotulo: "Desconto sem limite", aceita: (cupom) => semLimite(cupom) },
-  { id: "economiaalta", rotulo: "Economia acima de R$ 200", aceita: (cupom) => semLimite(cupom) || (tetoUtil(cupom) ?? 0) > 200 },
+  {
+    id: "economiaalta",
+    rotulo: "Economia acima de R$ 200",
+    aceita: (cupom) => semLimite(cupom) || (tetoUtil(cupom) ?? 0) > 200,
+  },
   /* Cupom SEM compra minima passa neste filtro. Ele exigia compra_min preenchido,
      entao os cupons sem exigencia nenhuma - os melhores desse filtro - eram os
      unicos que ficavam de fora. */
-  { id: "comprabaixa", rotulo: "Compra até R$ 50", aceita: (cupom) => (cupom.compra_min ?? 0) <= 50 },
-  { id: "semcompramin", rotulo: "Sem compra mínima", aceita: (cupom) => cupom.compra_min == null || cupom.compra_min === 0 },
+  {
+    id: "comprabaixa",
+    rotulo: "Compra até R$ 50",
+    aceita: (cupom) => (cupom.compra_min ?? 0) <= 50,
+  },
+  {
+    id: "semcompramin",
+    rotulo: "Sem compra mínima",
+    aceita: (cupom) => cupom.compra_min == null || cupom.compra_min === 0,
+  },
 ];
 
 /** Sugestões que giram no campo da IA, para mostrar o que dá para pedir. */
@@ -160,7 +244,11 @@ const SUGESTOES_IA = [
 const PAGE_SIZE = 50;
 const SEM_CATEGORIA = "Sem categoria";
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const brlCurto = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const brlCurto = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0,
+});
 const dataCurta = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
 
 /** Verdadeiro quando o cupom ainda vale e termina dentro das próximas `horas`. */
@@ -196,7 +284,10 @@ function contagemRegressiva(vence: string | null, agora: number | null) {
   const horasRestantes = minutosRestantes / 60;
   if (horasRestantes > 48) {
     const dias = Math.ceil(horasRestantes / 24);
-    return { texto: dias === 1 ? "Falta 1 dia" : `Faltam ${dias} dias`, urgencia: "normal" as Urgencia };
+    return {
+      texto: dias === 1 ? "Falta 1 dia" : `Faltam ${dias} dias`,
+      urgencia: "normal" as Urgencia,
+    };
   }
   if (horasRestantes >= 24) {
     return { texto: `Faltam ${Math.ceil(horasRestantes)} horas`, urgencia: "atencao" as Urgencia };
@@ -333,10 +424,9 @@ function economiaCurta(cupom: Cupom) {
   if (semLimite(cupom)) return "Desconto sem limite de valor";
   const teto = tetoUtil(cupom);
   if (teto == null) return "Limite não informado";
-  if (tetoFolgado(cupom)) return 'Desconto sem limite prático';
+  if (tetoFolgado(cupom)) return "Desconto sem limite prático";
   return `Economize até ${brl.format(teto)}`;
 }
-
 
 /** "30% de desconto" quando o cupom é percentual; senão o texto cadastrado. */
 function percentualTexto(cupom: Pick<Cupom, "tipo" | "valor" | "desconto">) {
@@ -380,8 +470,6 @@ function abrirWhatsApp(texto: string) {
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
 }
 
-
-
 /** Lê a resposta do servidor sem quebrar quando ela não vem em JSON (tempo limite, página de erro). */
 async function lerJson(resposta: Response): Promise<Record<string, unknown>> {
   const texto = await resposta.text();
@@ -418,9 +506,15 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
   const [copiado, setCopiado] = useState(false);
 
   function copiar() {
-    const guardar = () => { setCopiado(true); window.setTimeout(() => setCopiado(false), 1800); };
+    const guardar = () => {
+      setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 1800);
+    };
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(codigo).then(guardar).catch(() => undefined);
+      navigator.clipboard
+        .writeText(codigo)
+        .then(guardar)
+        .catch(() => undefined);
       return;
     }
     // Navegador antigo ou sem permissao: seleciona para a pessoa copiar a mao.
@@ -434,7 +528,9 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
       document.execCommand("copy");
       document.body.removeChild(campo);
       guardar();
-    } catch { /* deixa a pessoa selecionar na mao */ }
+    } catch {
+      /* deixa a pessoa selecionar na mao */
+    }
   }
 
   return (
@@ -454,11 +550,19 @@ function EtiquetaDoCupom({ codigo, vendedor }: { codigo: string; vendedor?: stri
         </button>
       </div>
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink">
-        No carrinho, a loja aceita <span className="font-bold">um cupom de loja por
-        compra</span>. Se ele já tiver aplicado o cupom da própria loja, remova aquele e cole este
-        no lugar: o desconto para você é o mesmo, e assim ele fica registrado por aqui. Se o
-        carrinho não aceitar a troca, fique com o que já está aplicado, porque o valor final não
-        muda{vendedor ? <> em produtos de <span className="font-bold">{vendedor}</span></> : ""}.
+        No carrinho, a loja aceita <span className="font-bold">um cupom de loja por compra</span>.
+        Se ele já tiver aplicado o cupom da própria loja, remova aquele e cole este no lugar: o
+        desconto para você é o mesmo, e assim ele fica registrado por aqui. Se o carrinho não
+        aceitar a troca, fique com o que já está aplicado, porque o valor final não muda
+        {vendedor ? (
+          <>
+            {" "}
+            em produtos de <span className="font-bold">{vendedor}</span>
+          </>
+        ) : (
+          ""
+        )}
+        .
       </p>
     </div>
   );
@@ -486,11 +590,15 @@ function EsperaDoCupom({
       className="mt-2.5 overflow-hidden rounded-md border border-ml-blue/25 bg-ml-blue/5 p-3"
       role="status"
       aria-live="polite"
-      aria-label={codigoPronto ? "Etiqueta pronta, preparando o destino" : "Gerando a etiqueta do cupom"}
+      aria-label={
+        codigoPronto ? "Etiqueta pronta, preparando o destino" : "Gerando a etiqueta do cupom"
+      }
     >
       <div className="flex items-center gap-2 text-xs font-bold text-ml-blue">
         <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
-        <span>{codigoPronto ? "Etiqueta pronta. Só mais um instante…" : "Preparando seu cupom…"}</span>
+        <span>
+          {codigoPronto ? "Etiqueta pronta. Só mais um instante…" : "Preparando seu cupom…"}
+        </span>
       </div>
       <div className="mt-2 flex min-w-0 items-center gap-1.5" aria-hidden="true">
         {etapas.map((etapa, indice) => (
@@ -507,7 +615,14 @@ function EsperaDoCupom({
             >
               {etapa.pronta ? <Check className="size-2.5" /> : indice + 1}
             </span>
-            <span className={cn("min-w-0 text-[10px] leading-3", etapa.atual || etapa.pronta ? "font-semibold text-foreground" : "text-secondary-ink")}>
+            <span
+              className={cn(
+                "min-w-0 text-[10px] leading-3",
+                etapa.atual || etapa.pronta
+                  ? "font-semibold text-foreground"
+                  : "text-secondary-ink",
+              )}
+            >
               {etapa.nome}
             </span>
             {indice < etapas.length - 1 && <span className="h-px min-w-2 flex-1 bg-border" />}
@@ -516,12 +631,12 @@ function EsperaDoCupom({
       </div>
       <div className="esqueleto mt-2.5 h-1.5 rounded-full" aria-hidden="true" />
       <p className="mt-2 text-[10px] leading-4 text-secondary-ink">
-        Pode permanecer nesta página. Assim que tudo estiver confirmado, o próximo passo aparece automaticamente.
+        Pode permanecer nesta página. Assim que tudo estiver confirmado, o próximo passo aparece
+        automaticamente.
       </p>
     </div>
   );
 }
-
 
 /* Avisa a extensao que existe pedido novo.
 
@@ -532,8 +647,13 @@ function EsperaDoCupom({
 function avisarExtensao(id: number) {
   if (typeof window === "undefined") return;
   try {
-    window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo", id }, window.location.origin);
-  } catch { /* sem extensao: o alarme cobre */ }
+    window.postMessage(
+      { de: "cupons-afiliado-ml", tipo: "pedido-novo", id },
+      window.location.origin,
+    );
+  } catch {
+    /* sem extensao: o alarme cobre */
+  }
 }
 
 /* Copia um texto e diz se conseguiu.
@@ -546,7 +666,9 @@ function copiarTexto(texto: string): boolean {
       void navigator.clipboard.writeText(texto);
       return true;
     }
-  } catch { /* cai no plano B */ }
+  } catch {
+    /* cai no plano B */
+  }
   try {
     const campo = document.createElement("textarea");
     campo.value = texto;
@@ -579,7 +701,11 @@ function copiarTexto(texto: string): boolean {
  *  A comissão aqui vem da etiqueta #WSLMENDES…, copiada no mesmo clique. */
 export function paginaDaLoja(cupom: Pick<Cupom, "link_loja" | "link_origem">): string | null {
   const guardada = (cupom.link_loja ?? "").trim();
-  if (/^https:\/\/(www|lista)\.mercadolivre\.com\.br\/(pagina\/[A-Za-z0-9._%-]{2,60}\/?|_CustId_\d{4,})$/.test(guardada)) {
+  if (
+    /^https:\/\/(www|lista)\.mercadolivre\.com\.br\/(pagina\/[A-Za-z0-9._%-]{2,60}\/?|_CustId_\d{4,})$/.test(
+      guardada,
+    )
+  ) {
     return guardada;
   }
   const vendedor = (cupom.link_origem ?? "").match(/_CustId_(\d{4,})/i)?.[1] ?? null;
@@ -611,8 +737,15 @@ function usePreparoDoCupom(cupom: Cupom) {
   const relogios = useRef<number[]>([]);
   const ocupado = useRef(false);
 
-  useEffect(() => () => { relogios.current.forEach((t) => window.clearTimeout(t)); }, []);
-  useEffect(() => { if (cupom.codigo_cupom) setCodigo(cupom.codigo_cupom); }, [cupom.codigo_cupom]);
+  useEffect(
+    () => () => {
+      relogios.current.forEach((t) => window.clearTimeout(t));
+    },
+    [],
+  );
+  useEffect(() => {
+    if (cupom.codigo_cupom) setCodigo(cupom.codigo_cupom);
+  }, [cupom.codigo_cupom]);
   useEffect(() => {
     const p = paginaDaLoja(cupom);
     if (p) setLoja(p);
@@ -623,7 +756,10 @@ function usePreparoDoCupom(cupom: Cupom) {
     let temCodigo = Boolean(codigo);
     let temLoja = Boolean(loja);
     let codigoImpossivel = semCodigo;
-    if ((temCodigo || codigoImpossivel) && temLoja) { setFase("pronto"); return; }
+    if ((temCodigo || codigoImpossivel) && temLoja) {
+      setFase("pronto");
+      return;
+    }
 
     ocupado.current = true;
     setFase("preparando");
@@ -642,21 +778,39 @@ function usePreparoDoCupom(cupom: Cupom) {
     const [rCodigo, rLoja] = await Promise.all([
       temCodigo || codigoImpossivel
         ? Promise.resolve(null)
-        : supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id }).then((r) => String(r.data ?? ""), () => ""),
+        : supabase.rpc("pedir_etiqueta", { p_cupom_id: cupom.id }).then(
+            (r) => String(r.data ?? ""),
+            () => "",
+          ),
       temLoja
         ? Promise.resolve(null)
-        : supabase.rpc("pedir_loja", { p_cupom_id: cupom.id }).then((r) => String(r.data ?? ""), () => ""),
+        : supabase.rpc("pedir_loja", { p_cupom_id: cupom.id }).then(
+            (r) => String(r.data ?? ""),
+            () => "",
+          ),
     ]);
 
     if (rCodigo != null) {
-      if (rCodigo.startsWith("#")) { setCodigo(rCodigo); temCodigo = true; }
-      else if (rCodigo !== "pedido") { setSemCodigo(true); codigoImpossivel = true; }
+      if (rCodigo.startsWith("#")) {
+        setCodigo(rCodigo);
+        temCodigo = true;
+      } else if (rCodigo !== "pedido") {
+        setSemCodigo(true);
+        codigoImpossivel = true;
+      }
     }
     if (rLoja != null && rLoja.startsWith("https://")) {
       const p = paginaDaLoja({ link_loja: rLoja, link_origem: null });
-      if (p) { setLoja(p); temLoja = true; }
+      if (p) {
+        setLoja(p);
+        temLoja = true;
+      }
     }
-    if ((temCodigo || codigoImpossivel) && temLoja) { ocupado.current = false; setFase("pronto"); return; }
+    if ((temCodigo || codigoImpossivel) && temLoja) {
+      ocupado.current = false;
+      setFase("pronto");
+      return;
+    }
 
     avisarExtensao(cupom.id);
 
@@ -674,8 +828,13 @@ function usePreparoDoCupom(cupom: Cupom) {
           temCodigo = true;
         }
         const p = data ? paginaDaLoja(data) : null;
-        if (p) { setLoja(p); temLoja = true; }
-      } catch { /* tenta de novo */ }
+        if (p) {
+          setLoja(p);
+          temLoja = true;
+        }
+      } catch {
+        /* tenta de novo */
+      }
 
       if ((temCodigo || codigoImpossivel) && temLoja) {
         ocupado.current = false;
@@ -689,28 +848,38 @@ function usePreparoDoCupom(cupom: Cupom) {
         conferiuPausa = true;
         try {
           const { data: estado } = await supabase.rpc("estado_do_robo");
-          const linha = (Array.isArray(estado) ? estado[0] : estado) as
-            { freio_motivo?: string | null; freio_ate?: string | null } | null;
+          const linha = (Array.isArray(estado) ? estado[0] : estado) as {
+            freio_motivo?: string | null;
+            freio_ate?: string | null;
+          } | null;
           const ate = Date.parse(linha?.freio_ate ?? "");
           if ((linha?.freio_motivo ?? "").trim() && Number.isFinite(ate) && ate > Date.now()) {
             const min = Math.max(1, Math.ceil((ate - Date.now()) / 60_000));
             /* O freio guarda o motivo real. 403 ao criar código não é captcha:
                é o Mercado Livre recusando a criação, e o texto diz isso. */
             const recusa = /403|429|criar o codigo/i.test(linha?.freio_motivo ?? "");
-            setPausa(recusa
-              ? "A criação de códigos de cupom não está liberada agora."
-              : `O site da loja pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`);
+            setPausa(
+              recusa
+                ? "A criação de códigos de cupom não está liberada agora."
+                : `O site da loja pediu uma verificação de segurança e eu pausei por cerca de ${min} min.`,
+            );
             /* Não prende a tela girando: libera o botão para tentar de novo
                assim que a verificação for resolvida. */
             ocupado.current = false;
             setFase("demorou");
             return;
           }
-        } catch { /* sem resposta: segue esperando */ }
+        } catch {
+          /* sem resposta: segue esperando */
+        }
       }
 
-      if (Date.now() - inicio < ESPERA_PREPARO_MS) relogios.current.push(window.setTimeout(olhar, 3000));
-      else { ocupado.current = false; setFase("demorou"); }
+      if (Date.now() - inicio < ESPERA_PREPARO_MS)
+        relogios.current.push(window.setTimeout(olhar, 3000));
+      else {
+        ocupado.current = false;
+        setFase("demorou");
+      }
     };
     relogios.current.push(window.setTimeout(olhar, 2500));
   }, [codigo, loja, semCodigo, cupom.id]);
@@ -788,17 +957,25 @@ export function AcaoDoCupom({
         {preparando
           ? "Preparando cupom e loja…"
           : abrindo
-            ? p.codigo ? "Copiado! Abrindo a loja…" : "Abrindo a loja…"
+            ? p.codigo
+              ? "Copiado! Abrindo a loja…"
+              : "Abrindo a loja…"
             : pronto
-              ? p.codigo ? "Copiar cupom e ver produtos da loja" : "Ver produtos da loja"
-              : p.fase === "demorou" ? "Tentar de novo" : "Usar este cupom"}
+              ? p.codigo
+                ? "Copiar cupom e ver produtos da loja"
+                : "Ver produtos da loja"
+              : p.fase === "demorou"
+                ? "Tentar de novo"
+                : "Usar este cupom"}
       </Button>
 
       {pronto && p.codigo && (
         <Button
           type="button"
           variant="outline"
-          onClick={() => abrirWhatsApp(mensagemCompartilharCupom(cupom, p.codigo as string, p.loja as string))}
+          onClick={() =>
+            abrirWhatsApp(mensagemCompartilharCupom(cupom, p.codigo as string, p.loja as string))
+          }
           className="mt-2 h-auto min-h-11 w-full whitespace-normal border-ml-blue/40 px-3 py-2 text-sm font-bold text-ml-blue hover:bg-ml-blue/5"
         >
           <Share2 className="size-4" aria-hidden="true" />
@@ -806,7 +983,12 @@ export function AcaoDoCupom({
         </Button>
       )}
 
-      {preparando && <EsperaDoCupom codigoPronto={Boolean(p.codigo) || p.semCodigo} linkPronto={Boolean(p.loja)} />}
+      {preparando && (
+        <EsperaDoCupom
+          codigoPronto={Boolean(p.codigo) || p.semCodigo}
+          linkPronto={Boolean(p.loja)}
+        />
+      )}
 
       {p.pausa && !pronto && (
         <p className="mt-2 rounded-md border border-amber-400/60 bg-amber-50 p-2.5 text-[12px] leading-4 text-foreground dark:bg-amber-950/30">
@@ -817,28 +999,42 @@ export function AcaoDoCupom({
         </p>
       )}
 
-      {p.codigo && !cupom.codigo_cupom && <EtiquetaDoCupom codigo={p.codigo} vendedor={cupom.vendedor} />}
+      {p.codigo && !cupom.codigo_cupom && (
+        <EtiquetaDoCupom codigo={p.codigo} vendedor={cupom.vendedor} />
+      )}
 
       <p className="mt-1.5 text-[11px] leading-4 text-secondary-ink" aria-live="polite">
-        {preparando
-          ? "Gerando seu código e localizando a página desta loja. Leva alguns segundos."
-          : abrindo && p.codigo
-            ? <>O código <span className="font-bold">{p.codigo}</span> ficou copiado. Escolha os produtos e cole no carrinho.</>
-            : pronto
-              ? p.codigo
-                ? "Copia o código e abre a loja com todos os produtos. Cole o código no carrinho."
-                : "Abre a loja com todos os produtos. O desconto do cupom aparece no carrinho."
-              : p.fase === "demorou"
-                ? !p.loja
-                  ? "Ainda não consegui abrir a página desta loja. Tente de novo em instantes."
-                  : "O código ainda não saiu. Tente de novo em instantes."
-                : "Gera o seu código do cupom e abre a página da loja com os produtos."}
+        {preparando ? (
+          "Gerando seu código e localizando a página desta loja. Leva alguns segundos."
+        ) : abrindo && p.codigo ? (
+          <>
+            O código <span className="font-bold">{p.codigo}</span> ficou copiado. Escolha os
+            produtos e cole no carrinho.
+          </>
+        ) : pronto ? (
+          p.codigo ? (
+            "Copia o código e abre a loja com todos os produtos. Cole o código no carrinho."
+          ) : (
+            "Abre a loja com todos os produtos. O desconto do cupom aparece no carrinho."
+          )
+        ) : p.fase === "demorou" ? (
+          !p.loja ? (
+            "Ainda não consegui abrir a página desta loja. Tente de novo em instantes."
+          ) : (
+            "O código ainda não saiu. Tente de novo em instantes."
+          )
+        ) : (
+          "Gera o seu código do cupom e abre a página da loja com os produtos."
+        )}
       </p>
 
       {p.fase === "demorou" && p.loja && !p.codigo && (
         <button
           type="button"
-          onClick={() => { marcarConsultado(cupom.id); abrirLoja(p.loja as string); }}
+          onClick={() => {
+            marcarConsultado(cupom.id);
+            abrirLoja(p.loja as string);
+          }}
           className="mt-1.5 text-[11px] font-semibold text-ml-blue underline-offset-2 hover:underline"
         >
           Ver os produtos da loja sem o código
@@ -855,7 +1051,9 @@ export function AcaoDoCupom({
           }}
           className="mt-2 w-full rounded-md border border-ml-blue px-3 py-2 text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/10"
         >
-          {p.codigo ? "Copiar cupom e ver os produtos em que ele vale" : "Ver os produtos em que este cupom vale"}
+          {p.codigo
+            ? "Copiar cupom e ver os produtos em que ele vale"
+            : "Ver os produtos em que este cupom vale"}
         </button>
       )}
 
@@ -866,7 +1064,9 @@ export function AcaoDoCupom({
         </p>
       )}
       {p.codigo && copiou && abrindo && (
-        <p className="mt-1.5 animate-scale-in text-[11px] font-bold text-success">Código copiado.</p>
+        <p className="mt-1.5 animate-scale-in text-[11px] font-bold text-success">
+          Código copiado.
+        </p>
       )}
     </>
   );
@@ -988,13 +1188,28 @@ function Index() {
   }, []);
 
   useEffect(() => {
-    const intervalo = window.setInterval(() => setSugestao((atual) => (atual + 1) % SUGESTOES_IA.length), 4_000);
+    const intervalo = window.setInterval(
+      () => setSugestao((atual) => (atual + 1) % SUGESTOES_IA.length),
+      4_000,
+    );
     return () => window.clearInterval(intervalo);
   }, []);
 
   useEffect(() => {
     setPagina(1);
-  }, [termo, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, ordem, categorias, faixas, lojas]);
+  }, [
+    termo,
+    vitrine,
+    tipo,
+    descontoMin,
+    orcamentoMin,
+    tetoMin,
+    compraMax,
+    ordem,
+    categorias,
+    faixas,
+    lojas,
+  ]);
 
   const indexado = useMemo(() => {
     const preparados = cupons.map((c) => ({
@@ -1008,7 +1223,8 @@ function Index() {
     for (const cupom of preparados) {
       const chaveUnica = `${cupom.chave}|${normalizar(cupom.desconto ?? "")}`;
       const existente = unicos.get(chaveUnica);
-      if (!existente || (cupom.score ?? -1) > (existente.score ?? -1)) unicos.set(chaveUnica, cupom);
+      if (!existente || (cupom.score ?? -1) > (existente.score ?? -1))
+        unicos.set(chaveUnica, cupom);
     }
     return [...unicos.values()];
   }, [cupons, agora]);
@@ -1055,15 +1271,39 @@ function Index() {
       if (tMin && (tetoReal(cupom) ?? 0) < tMin) return false;
       /* Sem compra minima = minimo zero, e zero cabe em qualquer teto. */
       if (cMax !== null && (cupom.compra_min ?? 0) > cMax) return false;
-      if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item))) return false;
+      if (!lojas.length && termos.length && !termos.some((item) => cupom.chave.includes(item)))
+        return false;
       if (categorias.length && !categorias.includes(cupom.categoria ?? SEM_CATEGORIA)) return false;
-      if (ignorar !== "faixas" && faixas.length
-        && !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))) return false;
-      if (ignorar !== "etiquetas" && etiquetas.length
-        && !ETIQUETAS.some((etiqueta) => etiquetas.includes(etiqueta.id) && etiqueta.aceita(cupom, agora))) return false;
+      if (
+        ignorar !== "faixas" &&
+        faixas.length &&
+        !FAIXAS.some((faixa) => faixas.includes(faixa.id) && faixa.aceita(cupom))
+      )
+        return false;
+      if (
+        ignorar !== "etiquetas" &&
+        etiquetas.length &&
+        !ETIQUETAS.some(
+          (etiqueta) => etiquetas.includes(etiqueta.id) && etiqueta.aceita(cupom, agora),
+        )
+      )
+        return false;
       return true;
     },
-    [termos, lojas, vitrine, tipo, descontoMin, orcamentoMin, tetoMin, compraMax, categorias, faixas, etiquetas, agora],
+    [
+      termos,
+      lojas,
+      vitrine,
+      tipo,
+      descontoMin,
+      orcamentoMin,
+      tetoMin,
+      compraMax,
+      categorias,
+      faixas,
+      etiquetas,
+      agora,
+    ],
   );
 
   const filtrados = useMemo(() => {
@@ -1099,7 +1339,13 @@ function Index() {
     [filtrados],
   );
   const escolhidos = useMemo(
-    () => escolhasIa.map((escolha) => ({ cupom: indexado.find((item) => item.id === escolha.id), motivo: escolha.motivo })).filter((item): item is { cupom: CupomIndexado; motivo: string } => Boolean(item.cupom)),
+    () =>
+      escolhasIa
+        .map((escolha) => ({
+          cupom: indexado.find((item) => item.id === escolha.id),
+          motivo: escolha.motivo,
+        }))
+        .filter((item): item is { cupom: CupomIndexado; motivo: string } => Boolean(item.cupom)),
     [escolhasIa, indexado],
   );
   const cupomSelecionados = useMemo(
@@ -1130,41 +1376,73 @@ function Index() {
 
   const lojasDisponiveis = useMemo(() => {
     const contagens = new Map<string, number>();
-    indexado.forEach((cupom) => contagens.set(cupom.vendedor, (contagens.get(cupom.vendedor) ?? 0) + 1));
+    indexado.forEach((cupom) =>
+      contagens.set(cupom.vendedor, (contagens.get(cupom.vendedor) ?? 0) + 1),
+    );
     return [...contagens.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   }, [indexado]);
 
   /* Lojas com mais cupons: viram atalhos visiveis, sem precisar abrir nada. */
   const lojasDestaque = useMemo(
-    () => [...lojasDisponiveis].sort(([a, qa], [b, qb]) => qb - qa || a.localeCompare(b, "pt-BR")).slice(0, 14),
+    () =>
+      [...lojasDisponiveis]
+        .sort(([a, qa], [b, qb]) => qb - qa || a.localeCompare(b, "pt-BR"))
+        .slice(0, 14),
     [lojasDisponiveis],
   );
 
   const lojasFiltradas = useMemo(() => {
     const busca = normalizar(texto);
-    const lista = busca ? lojasDisponiveis.filter(([nome]) => normalizar(nome).includes(busca)) : lojasDisponiveis;
+    const lista = busca
+      ? lojasDisponiveis.filter(([nome]) => normalizar(nome).includes(busca))
+      : lojasDisponiveis;
     return lista.slice(0, 80);
   }, [lojasDisponiveis, texto]);
   /* Cada numero responde: "se eu ligar este chip agora, quantos cupons sobram?" */
   const contagensFaixa = useMemo(() => {
     const base = indexado.filter((cupom) => passaNosFiltros(cupom, "faixas"));
-    return new Map(FAIXAS.map((faixa) => [faixa.id, base.filter((cupom) => faixa.aceita(cupom)).length]));
+    return new Map(
+      FAIXAS.map((faixa) => [faixa.id, base.filter((cupom) => faixa.aceita(cupom)).length]),
+    );
   }, [indexado, passaNosFiltros]);
   const contagensEtiqueta = useMemo(() => {
     const base = indexado.filter((cupom) => passaNosFiltros(cupom, "etiquetas"));
     return new Map(
-      ETIQUETAS.map((etiqueta) => [etiqueta.id, base.filter((cupom) => etiqueta.aceita(cupom, agora)).length]),
+      ETIQUETAS.map((etiqueta) => [
+        etiqueta.id,
+        base.filter((cupom) => etiqueta.aceita(cupom, agora)).length,
+      ]),
     );
   }, [indexado, passaNosFiltros, agora]);
-  const filtrosAtivos = Boolean(texto || lojas.length || tipo !== "todos" || descontoMin || orcamentoMin || tetoMin || compraMax || categorias.length || faixas.length || etiquetas.length || vitrine !== "recomendados" || ordem !== "score");
+  const filtrosAtivos = Boolean(
+    texto ||
+    lojas.length ||
+    tipo !== "todos" ||
+    descontoMin ||
+    orcamentoMin ||
+    tetoMin ||
+    compraMax ||
+    categorias.length ||
+    faixas.length ||
+    etiquetas.length ||
+    vitrine !== "recomendados" ||
+    ordem !== "score",
+  );
 
   /* Quantos filtros a pessoa ligou. Vira o numerinho no botao "Filtros", que e
      o que faz ela lembrar que a lista esta cortada — o problema classico de
      esconder filtro atras de um botao. */
   const quantosFiltros =
-    (texto ? 1 : 0) + lojas.length + (tipo !== "todos" ? 1 : 0) +
-    (descontoMin ? 1 : 0) + (orcamentoMin ? 1 : 0) + (tetoMin ? 1 : 0) +
-    (compraMax ? 1 : 0) + categorias.length + faixas.length + etiquetas.length;
+    (texto ? 1 : 0) +
+    lojas.length +
+    (tipo !== "todos" ? 1 : 0) +
+    (descontoMin ? 1 : 0) +
+    (orcamentoMin ? 1 : 0) +
+    (tetoMin ? 1 : 0) +
+    (compraMax ? 1 : 0) +
+    categorias.length +
+    faixas.length +
+    etiquetas.length;
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -1204,7 +1482,11 @@ function Index() {
   const destaques = useMemo(() => {
     const melhores = new Map<string, CupomIndexado>();
     indexado
-      .filter((cupom) => cupom.qualidade === "bom" && contagemRegressiva(cupom.vence, agora).urgencia !== "encerrado")
+      .filter(
+        (cupom) =>
+          cupom.qualidade === "bom" &&
+          contagemRegressiva(cupom.vence, agora).urgencia !== "encerrado",
+      )
       .forEach((cupom) => {
         const categoria = cupom.categoria ?? SEM_CATEGORIA;
         const atual = melhores.get(categoria);
@@ -1215,7 +1497,6 @@ function Index() {
       .sort((a, b) => (b[1].score ?? 0) - (a[1].score ?? 0))
       .slice(0, 6);
   }, [indexado, agora]);
-
 
   const atualizado = useMemo(() => {
     const datas = cupons
@@ -1237,19 +1518,29 @@ function Index() {
   }
 
   function alternarLoja(loja: string) {
-    setLojas((atuais) => (atuais.includes(loja) ? atuais.filter((item) => item !== loja) : [...atuais, loja]));
+    setLojas((atuais) =>
+      atuais.includes(loja) ? atuais.filter((item) => item !== loja) : [...atuais, loja],
+    );
   }
 
   function alternarCategoria(categoria: string) {
-    setCategorias((atuais) => atuais.includes(categoria) ? atuais.filter((item) => item !== categoria) : [...atuais, categoria]);
+    setCategorias((atuais) =>
+      atuais.includes(categoria)
+        ? atuais.filter((item) => item !== categoria)
+        : [...atuais, categoria],
+    );
   }
 
   function alternarFaixa(faixa: FaixaEconomia) {
-    setFaixas((atuais) => atuais.includes(faixa) ? atuais.filter((item) => item !== faixa) : [...atuais, faixa]);
+    setFaixas((atuais) =>
+      atuais.includes(faixa) ? atuais.filter((item) => item !== faixa) : [...atuais, faixa],
+    );
   }
 
   function alternarEtiqueta(id: EtiquetaId) {
-    setEtiquetas((atuais) => atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]);
+    setEtiquetas((atuais) =>
+      atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id],
+    );
   }
 
   function limparFiltros() {
@@ -1279,15 +1570,34 @@ function Index() {
       const resposta = await fetch("/api/public/recomendar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pedido: pedidoIa, cupons: recomendadosFiltrados.map(({ id, vendedor, categoria, desconto, teto, compra_min }) => ({ id, vendedor, categoria, desconto, teto, compra_min })) }),
+        body: JSON.stringify({
+          pedido: pedidoIa,
+          cupons: recomendadosFiltrados.map(
+            ({ id, vendedor, categoria, desconto, teto, compra_min }) => ({
+              id,
+              vendedor,
+              categoria,
+              desconto,
+              teto,
+              compra_min,
+            }),
+          ),
+        }),
       });
-      const dados = (await lerJson(resposta)) as { escolhas?: EscolhaIa[]; mensagem?: string; erro?: string };
-      if (!resposta.ok || !dados.escolhas || !dados.mensagem) throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
+      const dados = (await lerJson(resposta)) as {
+        escolhas?: EscolhaIa[];
+        mensagem?: string;
+        erro?: string;
+      };
+      if (!resposta.ok || !dados.escolhas || !dados.mensagem)
+        throw new Error(dados.erro ?? "Não foi possível buscar recomendações.");
       setEscolhasIa(dados.escolhas);
       setMensagemIa(dados.mensagem);
       setConsultaIa(pedidoIa.trim());
     } catch (motivo) {
-      setErroIa(motivo instanceof Error ? motivo.message : "Não foi possível buscar recomendações.");
+      setErroIa(
+        motivo instanceof Error ? motivo.message : "Não foi possível buscar recomendações.",
+      );
     } finally {
       setRecomendando(false);
     }
@@ -1305,11 +1615,23 @@ function Index() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cupons: escolhidosParaComparar.map(({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade }) => ({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade })),
+          cupons: escolhidosParaComparar.map(
+            ({ id, vendedor, categoria, desconto, teto, compra_min, vence, qualidade }) => ({
+              id,
+              vendedor,
+              categoria,
+              desconto,
+              teto,
+              compra_min,
+              vence,
+              qualidade,
+            }),
+          ),
         }),
       });
       const dados = (await lerJson(resposta)) as Partial<Comparacao> & { erro?: string };
-      if (!resposta.ok || typeof dados.veredito !== "string") throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
+      if (!resposta.ok || typeof dados.veredito !== "string")
+        throw new Error(dados.erro ?? "Não foi possível comparar os cupons.");
       setComparacao({
         vencedor_id: dados.vencedor_id ?? null,
         veredito: dados.veredito,
@@ -1318,7 +1640,9 @@ function Index() {
         urgencia: dados.urgencia ?? null,
       });
     } catch (motivo) {
-      setErroComparacao(motivo instanceof Error ? motivo.message : "Não foi possível comparar os cupons.");
+      setErroComparacao(
+        motivo instanceof Error ? motivo.message : "Não foi possível comparar os cupons.",
+      );
     } finally {
       setComparando(false);
     }
@@ -1328,13 +1652,25 @@ function Index() {
     setClassificando(true);
     setStatusClassificacao("Classificando as lojas em lotes de até 40...");
     try {
-      const resposta = await fetch("/api/public/classificar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      const dados = (await lerJson(resposta)) as { classificados?: number; total?: number; erro?: string };
+      const resposta = await fetch("/api/public/classificar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const dados = (await lerJson(resposta)) as {
+        classificados?: number;
+        total?: number;
+        erro?: string;
+      };
       if (!resposta.ok) throw new Error(dados.erro ?? "Não foi possível classificar as lojas.");
-      setStatusClassificacao(`${dados.classificados ?? 0} de ${dados.total ?? 0} lojas classificadas.`);
+      setStatusClassificacao(
+        `${dados.classificados ?? 0} de ${dados.total ?? 0} lojas classificadas.`,
+      );
       await refetch();
     } catch (motivo) {
-      setStatusClassificacao(motivo instanceof Error ? motivo.message : "Não foi possível classificar as lojas.");
+      setStatusClassificacao(
+        motivo instanceof Error ? motivo.message : "Não foi possível classificar as lojas.",
+      );
     } finally {
       setClassificando(false);
     }
@@ -1352,7 +1688,9 @@ function Index() {
                   Curadoria independente
                 </span>
                 <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                  {atualizado ? `Atualizado em ${atualizado}` : "Aguardando a primeira carga de dados"}
+                  {atualizado
+                    ? `Atualizado em ${atualizado}`
+                    : "Aguardando a primeira carga de dados"}
                 </span>
               </div>
 
@@ -1369,8 +1707,8 @@ function Index() {
               </h1>
 
               <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
-                Cole o link do produto. Eu mostro o mesmo produto em outras lojas,
-                do mais barato ao mais caro.
+                Cole o link do produto. Eu mostro o mesmo produto em outras lojas, do mais barato ao
+                mais caro.
               </p>
               <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
                 Se a loja tiver cupom, eu te passo o cupom junto, com quanto ele desconta.
@@ -1386,7 +1724,9 @@ function Index() {
                 </Button>
                 <nav aria-label="Conteúdo do site" className="flex flex-wrap gap-2">
                   {[
-                    ...(MOSTRAR_CUPONS ? [{ para: "/categorias" as const, texto: "Categorias" }] : []),
+                    ...(MOSTRAR_CUPONS
+                      ? [{ para: "/categorias" as const, texto: "Categorias" }]
+                      : []),
                     { para: "/guias" as const, texto: "Guias" },
                     { para: "/sobre" as const, texto: "Sobre" },
                   ].map((item) => (
@@ -1408,16 +1748,22 @@ function Index() {
               </p>
               <ul className="mt-3 space-y-3 text-sm leading-relaxed text-white/90">
                 <li className="flex items-start gap-2.5">
-                  <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  O mesmo produto, não um parecido
+                  <ShieldCheck
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-ml-yellow"
+                  />
+                  Comparo o mesmo produto, conferido pela foto
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Mostro também as lojas mais caras, para você conferir
+                  Mostro todas as lojas, até as mais caras
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Loja com cupom: o cupom vem junto com o link
+                  <ShieldAlert
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-ml-yellow"
+                  />
+                  Parecido só aparece separado, com o que muda
                 </li>
               </ul>
               <p className="mt-4 border-t border-white/20 pt-3 text-xs leading-relaxed text-white/75">
@@ -1429,37 +1775,39 @@ function Index() {
       </header>
 
       {MOSTRAR_CUPONS && (
-      <nav aria-label="Categorias" className="border-b border-border bg-card">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-secondary-ink">
-              Categorias
-            </span>
-            {CATEGORIAS.map((item) => {
-              const Icone = ICONE_CATEGORIA[item.slug];
-              const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
-              return (
-                <Link
-                  key={item.slug}
-                  to="/categorias/$slug"
-                  params={{ slug: item.slug }}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold transition-colors hover:border-ml-blue hover:text-ml-blue"
-                >
-                  {Icone ? <Icone className="size-4" style={{ color: cor }} aria-hidden="true" /> : null}
-                  {item.nome}
-                </Link>
-              );
-            })}
-            <Link
-              to="/categorias"
-              className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ml-blue hover:underline"
-            >
-              Ver todas
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
+        <nav aria-label="Categorias" className="border-b border-border bg-card">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-secondary-ink">
+                Categorias
+              </span>
+              {CATEGORIAS.map((item) => {
+                const Icone = ICONE_CATEGORIA[item.slug];
+                const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
+                return (
+                  <Link
+                    key={item.slug}
+                    to="/categorias/$slug"
+                    params={{ slug: item.slug }}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold transition-colors hover:border-ml-blue hover:text-ml-blue"
+                  >
+                    {Icone ? (
+                      <Icone className="size-4" style={{ color: cor }} aria-hidden="true" />
+                    ) : null}
+                    {item.nome}
+                  </Link>
+                );
+              })}
+              <Link
+                to="/categorias"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ml-blue hover:underline"
+              >
+                Ver todas
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
       )}
 
       <section className="border-b border-border bg-card" aria-label="Como funciona">
@@ -1467,8 +1815,14 @@ function Index() {
           <ol className="grid gap-4 text-sm sm:grid-cols-3">
             {[
               { icone: Link2, texto: "Você cola o link do produto que quer comprar" },
-              { icone: Search, texto: "O site procura o mesmo produto em outras lojas e compara os preços" },
-              { icone: ShieldCheck, texto: "Você escolhe a loja, pega o cupom (se houver) e compra direto na loja" },
+              {
+                icone: Search,
+                texto: "O site procura o mesmo produto em outras lojas e compara os preços",
+              },
+              {
+                icone: ShieldCheck,
+                texto: "Você escolhe a loja, pega o cupom (se houver) e compra direto na loja",
+              },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
                 <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
@@ -1489,144 +1843,201 @@ function Index() {
 
         <Vitrine />
 
-        {MOSTRAR_CUPONS && (<>
-        <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Assistente de cupons">
-          <div className="flex items-center gap-2">
-            <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
-            <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
-          </div>
-          <form onSubmit={recomendar} className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <input
-              value={pedidoIa}
-              onChange={(event) => setPedidoIa(event.target.value)}
-              maxLength={500}
-              placeholder={`O que você está procurando? Ex: ${SUGESTOES_IA[sugestao % SUGESTOES_IA.length]}`}
-              aria-label="O que você está procurando?"
-              className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 transition-colors placeholder:text-muted-foreground placeholder:transition-opacity focus:ring-2"
-            />
-            <Button disabled={recomendando || pedidoIa.trim().length < 3} className="min-h-12 bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90">
-              <Sparkles aria-hidden="true" />
-              {recomendando ? "Procurando..." : "Encontrar cupons"}
-            </Button>
-          </form>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-secondary-ink">Experimente:</span>
-            {[0, 1, 2].map((passo) => {
-              const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
-              const atual = passo === 0;
-              return (
-                <button
-                  key={texto}
-                  type="button"
-                  onClick={() => setPedidoIa(texto)}
-                  className={
-                    atual
-                      ? "animate-sugestao rounded-full border border-ml-blue bg-ml-blue/10 px-3 py-1.5 text-xs font-medium text-ml-blue transition-colors hover:bg-ml-blue/20"
-                      : "animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
-                  }
+        {MOSTRAR_CUPONS && (
+          <>
+            <section
+              className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
+              aria-label="Assistente de cupons"
+            >
+              <div className="flex items-center gap-2">
+                <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
+                <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
+              </div>
+              <form onSubmit={recomendar} className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={pedidoIa}
+                  onChange={(event) => setPedidoIa(event.target.value)}
+                  maxLength={500}
+                  placeholder={`O que você está procurando? Ex: ${SUGESTOES_IA[sugestao % SUGESTOES_IA.length]}`}
+                  aria-label="O que você está procurando?"
+                  className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 transition-colors placeholder:text-muted-foreground placeholder:transition-opacity focus:ring-2"
+                />
+                <Button
+                  disabled={recomendando || pedidoIa.trim().length < 3}
+                  className="min-h-12 bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90"
                 >
-                  {texto}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2 text-xs text-secondary-ink">A IA escolhe somente entre os cupons recomendados e os filtros ativos.</p>
-          {erroIa && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erroIa}</p>}
-        </section>
+                  <Sparkles aria-hidden="true" />
+                  {recomendando ? "Procurando..." : "Encontrar cupons"}
+                </Button>
+              </form>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-secondary-ink">Experimente:</span>
+                {[0, 1, 2].map((passo) => {
+                  const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
+                  const atual = passo === 0;
+                  return (
+                    <button
+                      key={texto}
+                      type="button"
+                      onClick={() => setPedidoIa(texto)}
+                      className={
+                        atual
+                          ? "animate-sugestao rounded-full border border-ml-blue bg-ml-blue/10 px-3 py-1.5 text-xs font-medium text-ml-blue transition-colors hover:bg-ml-blue/20"
+                          : "animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
+                      }
+                    >
+                      {texto}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-secondary-ink">
+                A IA escolhe somente entre os cupons recomendados e os filtros ativos.
+              </p>
+              {erroIa && (
+                <p
+                  className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger"
+                  role="alert"
+                >
+                  {erroIa}
+                </p>
+              )}
+            </section>
 
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo dos cupons">
-          <Indicador
-            titulo="Cupons conferidos"
-            valor={indicadores.conferidos.toLocaleString("pt-BR")}
-            detalhe={`de ${indicadores.total.toLocaleString("pt-BR")} cupons de ${indicadores.vendedores.toLocaleString("pt-BR")} lojas`}
-          />
-          <Indicador
-            titulo="Valem a pena"
-            valor={indicadores.bons.toLocaleString("pt-BR")}
-            tom="bom"
-            {...(indicadores.aproveitamento != null
-              ? { detalhe: `${indicadores.aproveitamento}% dos que eu conferi` }
-              : {})}
-          />
-          <Indicador
-            titulo="Armadilhas"
-            valor={indicadores.armadilhas.toLocaleString("pt-BR")}
-            tom="armadilha"
-            detalhe="anunciam muito e descontam pouco"
-          />
-          {/* "Ainda na fila" era vocabulário interno: dizia respeito ao meu
+            <section
+              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+              aria-label="Resumo dos cupons"
+            >
+              <Indicador
+                titulo="Cupons conferidos"
+                valor={indicadores.conferidos.toLocaleString("pt-BR")}
+                detalhe={`de ${indicadores.total.toLocaleString("pt-BR")} cupons de ${indicadores.vendedores.toLocaleString("pt-BR")} lojas`}
+              />
+              <Indicador
+                titulo="Valem a pena"
+                valor={indicadores.bons.toLocaleString("pt-BR")}
+                tom="bom"
+                {...(indicadores.aproveitamento != null
+                  ? { detalhe: `${indicadores.aproveitamento}% dos que eu conferi` }
+                  : {})}
+              />
+              <Indicador
+                titulo="Armadilhas"
+                valor={indicadores.armadilhas.toLocaleString("pt-BR")}
+                tom="armadilha"
+                detalhe="anunciam muito e descontam pouco"
+              />
+              {/* "Ainda na fila" era vocabulário interno: dizia respeito ao meu
               sistema, não à compra de quem está lendo. Trocado pelo número que
               importa para a pessoa: quantos cupons são bons E têm produto à
               venda na loja agora. */}
-          <Indicador
-            titulo="Com produto no ar"
-            valor={indicadores.comProduto.toLocaleString("pt-BR")}
-            detalhe={
-              indicadores.vitrineNaFila > 0
-                ? `mais ${indicadores.vitrineNaFila.toLocaleString("pt-BR")} lojas sendo conferidas`
-                : "loja conferida: o cupom tem onde ser usado"
-            }
-          />
-        </section>
+              <Indicador
+                titulo="Com produto no ar"
+                valor={indicadores.comProduto.toLocaleString("pt-BR")}
+                detalhe={
+                  indicadores.vitrineNaFila > 0
+                    ? `mais ${indicadores.vitrineNaFila.toLocaleString("pt-BR")} lojas sendo conferidas`
+                    : "loja conferida: o cupom tem onde ser usado"
+                }
+              />
+            </section>
 
-        {(mensagemIa || escolhidos.length > 0) && (
-          <section className="mt-6 rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5" aria-label="Resultado da busca com IA">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-ml-blue">Busca realizada: “{consultaIa}”</h2>
-                <p className="mt-1 text-sm font-medium">
-                  {escolhidos.length === 0
-                    ? "Nenhum cupom encontrado para essa busca."
-                    : escolhidos.length === 1
-                      ? "1 cupom encontrado para essa busca."
-                      : `${escolhidos.length} cupons encontrados para essa busca.`}
-                </p>
-                <p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p>
-              </div>
-              <Button variant="ghost" size="icon" aria-label="Fechar resultado da busca" onClick={() => { setEscolhasIa([]); setMensagemIa(""); setConsultaIa(""); }}><X aria-hidden="true" /></Button>
-            </div>
-            {escolhidos.length > 0 && (
-              <>
-                <Button onClick={irParaColarLink} size="lg" className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90">
-                  <Link2 className="size-5" aria-hidden="true" />
-                  Escolheu um produto? Cole o link e eu confiro o cupom
-                </Button>
-                <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {escolhidos.map(({ cupom, motivo }) => (
-                    <div key={cupom.id} className="flex flex-col gap-2">
-                      <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">{motivo}</p>
-                      <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-        )}
-
-        {destaques.length > 0 && (
-          <section className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6" aria-label="Melhor cupom de cada categoria">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
-              <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-              {destaques.map(([categoria, cupom]) => (
-                <div key={categoria} className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3">
-                  <button
-                    type="button"
-                    onClick={() => { setCategorias([categoria]); setVitrine("recomendados"); }}
-                    className="self-start rounded-full border border-ml-blue px-2.5 py-1 text-[11px] font-semibold text-ml-blue"
+            {(mensagemIa || escolhidos.length > 0) && (
+              <section
+                className="mt-6 rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5"
+                aria-label="Resultado da busca com IA"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold text-ml-blue">Busca realizada: “{consultaIa}”</h2>
+                    <p className="mt-1 text-sm font-medium">
+                      {escolhidos.length === 0
+                        ? "Nenhum cupom encontrado para essa busca."
+                        : escolhidos.length === 1
+                          ? "1 cupom encontrado para essa busca."
+                          : `${escolhidos.length} cupons encontrados para essa busca.`}
+                    </p>
+                    <p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Fechar resultado da busca"
+                    onClick={() => {
+                      setEscolhasIa([]);
+                      setMensagemIa("");
+                      setConsultaIa("");
+                    }}
                   >
-                    {categoria}
-                  </button>
-                  <p className="mt-2 text-base font-extrabold leading-tight">{percentualTexto(cupom)}</p>
-                  <p className="text-xs font-semibold text-success">{economiaCurta(cupom)}</p>
-                  <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
-                    Em produtos de <span className="font-bold">{cupom.vendedor}</span>
-                  </p>
+                    <X aria-hidden="true" />
+                  </Button>
+                </div>
+                {escolhidos.length > 0 && (
+                  <>
+                    <Button
+                      onClick={irParaColarLink}
+                      size="lg"
+                      className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90"
+                    >
+                      <Link2 className="size-5" aria-hidden="true" />
+                      Escolheu um produto? Cole o link e eu confiro o cupom
+                    </Button>
+                    <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {escolhidos.map(({ cupom, motivo }) => (
+                        <div key={cupom.id} className="flex flex-col gap-2">
+                          <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">
+                            {motivo}
+                          </p>
+                          <CupomCard
+                            cupom={cupom}
+                            agora={agora}
+                            abrirCondicoes={setCupomAberto}
+                            selecionado={selecionados.includes(cupom.id)}
+                            alternarSelecao={alternarSelecao}
+                            limiteAtingido={selecionados.length >= MAX_COMPARACAO}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
 
-                  {/* CONDICOES SEMPRE A VISTA.
+            {destaques.length > 0 && (
+              <section
+                className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
+                aria-label="Melhor cupom de cada categoria"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
+                  <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  {destaques.map(([categoria, cupom]) => (
+                    <div
+                      key={categoria}
+                      className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCategorias([categoria]);
+                          setVitrine("recomendados");
+                        }}
+                        className="self-start rounded-full border border-ml-blue px-2.5 py-1 text-[11px] font-semibold text-ml-blue"
+                      >
+                        {categoria}
+                      </button>
+                      <p className="mt-2 text-base font-extrabold leading-tight">
+                        {percentualTexto(cupom)}
+                      </p>
+                      <p className="text-xs font-semibold text-success">{economiaCurta(cupom)}</p>
+                      <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
+                        Em produtos de <span className="font-bold">{cupom.vendedor}</span>
+                      </p>
+
+                      {/* CONDICOES SEMPRE A VISTA.
 
                       Estes cartoes mostravam so o desconto e o vendedor. Sem
                       compra minima e sem validade, um "R$ 140 OFF" parece
@@ -1634,92 +2045,98 @@ function Index() {
                       partir de R$ 175. Prometer desconto e esconder a regra e
                       exatamente o que este site existe para denunciar, entao a
                       regra anda junto com a promessa, aqui como em todo lugar. */}
-                  <dl className="mt-2 space-y-0.5 text-xs text-secondary-ink">
-                    <div className="flex justify-between gap-2">
-                      <dt>Compra mínima</dt>
-                      <dd className="font-semibold text-foreground">
-                        {cupom.compra_min != null && cupom.compra_min > 0 ? brl.format(cupom.compra_min) : "não tem"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Validade</dt>
-                      <dd className="font-semibold text-foreground">
-                        {contagemRegressiva(cupom.vence, agora).texto}
-                      </dd>
-                    </div>
-                  </dl>
+                      <dl className="mt-2 space-y-0.5 text-xs text-secondary-ink">
+                        <div className="flex justify-between gap-2">
+                          <dt>Compra mínima</dt>
+                          <dd className="font-semibold text-foreground">
+                            {cupom.compra_min != null && cupom.compra_min > 0
+                              ? brl.format(cupom.compra_min)
+                              : "não tem"}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <dt>Validade</dt>
+                          <dd className="font-semibold text-foreground">
+                            {contagemRegressiva(cupom.vence, agora).texto}
+                          </dd>
+                        </div>
+                      </dl>
 
-                  <AcaoDoCupom
-                    cupom={cupom}
-                    className="mt-3 h-auto min-h-10 w-full whitespace-normal bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90"
-                  />
+                      <AcaoDoCupom
+                        cupom={cupom}
+                        className="mt-3 h-auto min-h-10 w-full whitespace-normal bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90"
+                      />
 
+                      <button
+                        type="button"
+                        onClick={() => setCupomAberto(cupom)}
+                        className="mt-2 inline-flex items-center gap-1 self-start text-xs font-medium text-secondary-ink underline-offset-2 hover:underline"
+                      >
+                        <Info className="size-3.5" aria-hidden="true" />
+                        Condições do cupom
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
+            {lojasDestaque.length > 0 && (
+              <section
+                className="mt-8 rounded-xl border border-border bg-card p-5"
+                aria-label="Lojas parceiras"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-bold">Lojas parceiras</h2>
+                  <p className="text-xs text-secondary-ink">
+                    {lojasDisponiveis.length.toLocaleString("pt-BR")} lojas com cupom conferido
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {lojasDestaque.map(([loja, quantidade]) => (
+                    <button
+                      key={loja}
+                      type="button"
+                      aria-pressed={lojas.includes(loja)}
+                      onClick={() => alternarLoja(loja)}
+                      className={cn(
+                        "max-w-full rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                        lojas.includes(loja)
+                          ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                          : "border-border bg-background hover:border-ml-blue",
+                      )}
+                    >
+                      <span className="truncate">{loja}</span> ({quantidade})
+                    </button>
+                  ))}
                   <button
                     type="button"
-                    onClick={() => setCupomAberto(cupom)}
-                    className="mt-2 inline-flex items-center gap-1 self-start text-xs font-medium text-secondary-ink underline-offset-2 hover:underline"
+                    onClick={() => {
+                      setPainelAberto(true);
+                      document
+                        .getElementById("painel-filtros")
+                        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                    className="rounded-full border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
                   >
-                    <Info className="size-3.5" aria-hidden="true" />
-                    Condições do cupom
+                    Ver todas as lojas
                   </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-
-        {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
-        {lojasDestaque.length > 0 && (
-          <section className="mt-8 rounded-xl border border-border bg-card p-5" aria-label="Lojas parceiras">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-bold">Lojas parceiras</h2>
-              <p className="text-xs text-secondary-ink">
-                {lojasDisponiveis.length.toLocaleString("pt-BR")} lojas com cupom conferido
-              </p>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {lojasDestaque.map(([loja, quantidade]) => (
-                <button
-                  key={loja}
-                  type="button"
-                  aria-pressed={lojas.includes(loja)}
-                  onClick={() => alternarLoja(loja)}
-                  className={cn(
-                    "max-w-full rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    lojas.includes(loja)
-                      ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
-                      : "border-border bg-background hover:border-ml-blue",
+                  {lojas.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setLojas([])}
+                      className="rounded-full border border-danger px-3 py-1.5 text-xs font-medium text-danger"
+                    >
+                      Limpar lojas
+                    </button>
                   )}
-                >
-                  <span className="truncate">{loja}</span> ({quantidade})
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setPainelAberto(true);
-                  document.getElementById("painel-filtros")?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-                className="rounded-full border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
-              >
-                Ver todas as lojas
-              </button>
-              {lojas.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setLojas([])}
-                  className="rounded-full border border-danger px-3 py-1.5 text-xs font-medium text-danger"
-                >
-                  Limpar lojas
-                </button>
-              )}
-            </div>
-          </section>
-        )}
+                </div>
+              </section>
+            )}
 
-        <section className="mt-6" aria-label="Filtros de cupons">
-          {/* Barra de controle
+            <section className="mt-6" aria-label="Filtros de cupons">
+              {/* Barra de controle
               ================
               Antes eram 871px de filtros entre a pessoa e o primeiro cupom: busca
               de loja, lista rolavel, cinco campos numericos, lista de categorias e
@@ -1730,385 +2147,464 @@ function Index() {
               contagem, a ordem e os atalhos — e o resto mora na gaveta. A barra
               gruda no topo porque a lista tem quase 9.000px: sem isso, refinar a
               busca obriga a rolar tudo de volta. */}
-          <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <div className="flex" role="tablist" aria-label="Qualidade do cupom">
-                {([
-                  ["recomendados", "Recomendados"],
-                  ["todos", "Ver todos"],
-                ] as const).map(([valor, rotulo]) => (
-                  <Button
-                    key={valor}
-                    type="button"
-                    variant="ghost"
-                    role="tab"
-                    aria-selected={vitrine === valor}
-                    onClick={() => setVitrine(valor)}
-                    className={cn(
-                      "h-10 rounded-none border-b-2 px-2 text-sm sm:px-4",
-                      vitrine === valor
-                        ? "border-ml-blue text-ml-blue"
-                        : "border-transparent text-secondary-ink",
-                    )}
-                  >
-                    {rotulo}
-                  </Button>
-                ))}
-              </div>
-
-              <p
-                key={filtrados.length}
-                aria-live="polite"
-                className="animate-contagem rounded px-1.5 py-0.5 text-sm font-semibold"
-              >
-                {isLoading
-                  ? "Carregando..."
-                  : filtrados.length === 1
-                    ? "1 cupom"
-                    : `${filtrados.length.toLocaleString("pt-BR")} cupons`}
-              </p>
-
-              <div className="ml-auto flex items-center gap-2">
-                <label className="sr-only" htmlFor="ordenar-cupons">Ordenar por</label>
-                <select
-                  id="ordenar-cupons"
-                  value={ordem}
-                  onChange={(event) => setOrdem(event.target.value as typeof ordem)}
-                  className="h-10 rounded-lg border border-border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                >
-                  <option value="score">Melhores oportunidades</option>
-                  <option value="desconto">Maior desconto</option>
-                  <option value="teto">Maior teto de desconto</option>
-                  <option value="orcamento">Maior orçamento</option>
-                  <option value="termina">Termina primeiro</option>
-                  <option value="vendedor">Vendedor A-Z</option>
-                </select>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  aria-expanded={painelAberto}
-                  aria-controls="painel-filtros"
-                  onClick={() => setPainelAberto((aberto) => !aberto)}
-                  className="h-10 gap-1.5"
-                >
-                  <SlidersHorizontal aria-hidden="true" className="size-4" />
-                  Filtros
-                  {quantosFiltros > 0 && (
-                    <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-ml-blue px-1.5 text-xs font-bold text-white">
-                      {quantosFiltros}
-                    </span>
-                  )}
-                  <ChevronDown
-                    aria-hidden="true"
-                    className={cn("size-4 transition-transform duration-300", painelAberto && "rotate-180")}
-                  />
-                </Button>
-              </div>
-            </div>
-
-            {/* Atalhos: e o que um comprador de verdade usa. Ficam de fora da
-                gaveta, em uma tira que rola de lado no celular. */}
-            <div className="-mx-1 mt-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {ETIQUETAS.filter((etiqueta) => (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 || etiquetas.includes(etiqueta.id)).map((etiqueta) => (
-                <button
-                  key={etiqueta.id}
-                  type="button"
-                  aria-pressed={etiquetas.includes(etiqueta.id)}
-                  onClick={() => alternarEtiqueta(etiqueta.id)}
-                  className={cn(
-                    "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    etiquetas.includes(etiqueta.id)
-                      ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
-                      : etiqueta.id === "cometiqueta"
-                        ? "border-success bg-success/10 font-bold text-success hover:bg-success/20"
-                        : "border-border bg-card hover:border-ml-blue",
-                  )}
-                >
-                  {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
-                </button>
-              ))}
-              {filtrosAtivos && (
-                <button
-                  type="button"
-                  onClick={limparFiltros}
-                  className="shrink-0 rounded-full border border-danger px-3 py-1 text-xs font-medium text-danger"
-                >
-                  Limpar tudo
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* A gaveta: aberta so quando a pessoa pede */}
-          <div id="painel-filtros" className={cn("gaveta", painelAberto && "gaveta-aberta")}>
-            <div>
-              <div className="pb-1 pt-3">
-              <div className="mt-4">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    value={texto}
-                    onChange={(event) => setTexto(event.target.value)}
-                    inputMode="search"
-                    aria-label="Buscar loja"
-                    placeholder="Buscar loja e marcar na lista abaixo"
-                    className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
-                  />
-                </div>
-
-                {lojas.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {lojas.map((loja) => (
-                      <button
-                        key={loja}
+              <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div className="flex" role="tablist" aria-label="Qualidade do cupom">
+                    {(
+                      [
+                        ["recomendados", "Recomendados"],
+                        ["todos", "Ver todos"],
+                      ] as const
+                    ).map(([valor, rotulo]) => (
+                      <Button
+                        key={valor}
                         type="button"
-                        onClick={() => alternarLoja(loja)}
-                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
-                        aria-label={`Remover a loja ${loja} da seleção`}
+                        variant="ghost"
+                        role="tab"
+                        aria-selected={vitrine === valor}
+                        onClick={() => setVitrine(valor)}
+                        className={cn(
+                          "h-10 rounded-none border-b-2 px-2 text-sm sm:px-4",
+                          vitrine === valor
+                            ? "border-ml-blue text-ml-blue"
+                            : "border-transparent text-secondary-ink",
+                        )}
                       >
-                        <span className="truncate">{loja}</span>
-                        <X aria-hidden="true" className="size-3" />
-                      </button>
+                        {rotulo}
+                      </Button>
                     ))}
-                    <button type="button" onClick={() => setLojas([])} className="text-xs font-medium text-secondary-ink underline">
-                      Limpar lojas
-                    </button>
                   </div>
-                )}
 
-                <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de lojas">
-                  {lojasFiltradas.length === 0 ? (
-                    <p className="px-3 py-2 text-sm text-secondary-ink">Nenhuma loja com esse nome.</p>
-                  ) : (
-                    lojasFiltradas.map(([loja, quantidade]) => (
-                      <label
-                        key={loja}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={lojas.includes(loja)}
-                          onChange={() => alternarLoja(loja)}
-                          className="size-4 accent-[var(--ml-blue)]"
-                        />
-                        <span className="min-w-0 flex-1 truncate">{loja}</span>
-                        <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-secondary-ink">Marque uma ou mais lojas para filtrar os cupons.</p>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-                <Campo rotulo="Tipo">
-                  <select
-                    value={tipo}
-                    onChange={(event) => setTipo(event.target.value as typeof tipo)}
-                    className="campo-filtro"
+                  <p
+                    key={filtrados.length}
+                    aria-live="polite"
+                    className="animate-contagem rounded px-1.5 py-0.5 text-sm font-semibold"
                   >
-                    <option value="todos">Todos</option>
-                    <option value="%">Só %</option>
-                    <option value="R$">Só R$</option>
-                  </select>
-                </Campo>
-                <Campo rotulo="Desconto mínimo">
-                  <InputNumero valor={descontoMin} aoMudar={setDescontoMin} />
-                </Campo>
-                <Campo rotulo="Orçamento mínimo (R$)">
-                  <InputNumero valor={orcamentoMin} aoMudar={setOrcamentoMin} />
-                </Campo>
-                <Campo rotulo="Teto mínimo (R$)">
-                  <InputNumero valor={tetoMin} aoMudar={setTetoMin} />
-                </Campo>
-                <Campo rotulo="Compra máxima que aceito (R$)">
-                  <InputNumero valor={compraMax} aoMudar={setCompraMax} />
-                </Campo>
-              </div>
+                    {isLoading
+                      ? "Carregando..."
+                      : filtrados.length === 1
+                        ? "1 cupom"
+                        : `${filtrados.length.toLocaleString("pt-BR")} cupons`}
+                  </p>
 
-              {categoriasDisponiveis.length > 0 && (
-                <div className="mt-5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-secondary-ink">Categorias — organizadas pela IA a partir do nome da loja</p>
+                  <div className="ml-auto flex items-center gap-2">
+                    <label className="sr-only" htmlFor="ordenar-cupons">
+                      Ordenar por
+                    </label>
+                    <select
+                      id="ordenar-cupons"
+                      value={ordem}
+                      onChange={(event) => setOrdem(event.target.value as typeof ordem)}
+                      className="h-10 rounded-lg border border-border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                    >
+                      <option value="score">Melhores oportunidades</option>
+                      <option value="desconto">Maior desconto</option>
+                      <option value="teto">Maior teto de desconto</option>
+                      <option value="orcamento">Maior orçamento</option>
+                      <option value="termina">Termina primeiro</option>
+                      <option value="vendedor">Vendedor A-Z</option>
+                    </select>
+
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={classificando}
-                      onClick={classificar}
-                      className="h-8 px-2 text-xs text-ml-blue"
+                      variant="outline"
+                      aria-expanded={painelAberto}
+                      aria-controls="painel-filtros"
+                      onClick={() => setPainelAberto((aberto) => !aberto)}
+                      className="h-10 gap-1.5"
                     >
-                      <WandSparkles aria-hidden="true" className="size-4" />
-                      {classificando ? "Organizando..." : "Organizar categorias com IA"}
+                      <SlidersHorizontal aria-hidden="true" className="size-4" />
+                      Filtros
+                      {quantosFiltros > 0 && (
+                        <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-ml-blue px-1.5 text-xs font-bold text-white">
+                          {quantosFiltros}
+                        </span>
+                      )}
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={cn(
+                          "size-4 transition-transform duration-300",
+                          painelAberto && "rotate-180",
+                        )}
+                      />
                     </Button>
-                    {categorias.length > 0 && (
-                      <button type="button" onClick={() => setCategorias([])} className="text-xs font-medium text-secondary-ink underline">
-                        Limpar categorias
-                      </button>
-                    )}
-                  </div>
-                  <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1" role="group" aria-label="Lista de categorias">
-                    {categoriasDisponiveis.map(([categoria, quantidade]) => (
-                      <label
-                        key={categoria}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={categorias.includes(categoria)}
-                          onChange={() => alternarCategoria(categoria)}
-                          className="size-4 accent-[var(--ml-blue)]"
-                        />
-                        <span className="min-w-0 flex-1 truncate">{categoria}</span>
-                        <span className="shrink-0 text-xs text-secondary-ink">{quantidade}</span>
-                      </label>
-                    ))}
                   </div>
                 </div>
-              )}
-              <div className="mt-5">
-                <p className="text-xs font-semibold text-secondary-ink">Faixa de economia real</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {FAIXAS.filter((faixa) => (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id)).map((faixa) => (
+
+                {/* Atalhos: e o que um comprador de verdade usa. Ficam de fora da
+                gaveta, em uma tira que rola de lado no celular. */}
+                <div className="-mx-1 mt-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {ETIQUETAS.filter(
+                    (etiqueta) =>
+                      (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 ||
+                      etiquetas.includes(etiqueta.id),
+                  ).map((etiqueta) => (
                     <button
-                      key={faixa.id}
+                      key={etiqueta.id}
                       type="button"
-                      aria-pressed={faixas.includes(faixa.id)}
-                      onClick={() => alternarFaixa(faixa.id)}
-                      className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", faixas.includes(faixa.id) ? "border-ml-blue bg-ml-blue text-ml-blue-foreground" : "border-border bg-card hover:border-ml-blue")}
+                      aria-pressed={etiquetas.includes(etiqueta.id)}
+                      onClick={() => alternarEtiqueta(etiqueta.id)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        etiquetas.includes(etiqueta.id)
+                          ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                          : etiqueta.id === "cometiqueta"
+                            ? "border-success bg-success/10 font-bold text-success hover:bg-success/20"
+                            : "border-border bg-card hover:border-ml-blue",
+                      )}
                     >
-                      {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
+                      {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
                     </button>
                   ))}
+                  {filtrosAtivos && (
+                    <button
+                      type="button"
+                      onClick={limparFiltros}
+                      className="shrink-0 rounded-full border border-danger px-3 py-1 text-xs font-medium text-danger"
+                    >
+                      Limpar tudo
+                    </button>
+                  )}
                 </div>
               </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <section className="mt-4" aria-label="Cupons encontrados">
-          {indicadores.total > 0 && (
-            <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
-              Analisei {indicadores.total.toLocaleString("pt-BR")}{" "}
-              {indicadores.total === 1 ? "cupom" : "cupons"}.{" "}
-              {indicadores.armadilhas === 1
-                ? "1 desconta pouco demais para valer a pena."
-                : `${indicadores.armadilhas.toLocaleString("pt-BR")} descontam pouco demais para valer a pena.`}{" "}
-              {indicadores.bons === 1
-                ? "O que passou no teste está aqui embaixo."
-                : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
-            </p>
-          )}
-          <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-secondary-ink">
-            <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
-            <ul className="mt-1 space-y-1">
-              <li><strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da compra. Acima disso o desconto não aumenta.</li>
-              <li><strong>Sem limite de valor</strong>: o percentual vale sobre o valor todo da compra.</li>
-              <li><strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo antes de gerar para você.</li>
-            </ul>
-          </div>
-          {armadilhasDaBusca.length > 0 && (
-            <div className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger" role="alert">
-              <strong>Atenção:</strong>{" "}
-              {armadilhasDaBusca.map((cupom, indice) => {
-                const limite = tetoUtil(cupom);
-                return (
-                  <span key={cupom.id}>
-                    {indice > 0 ? " · " : ""}
-                    {cupom.vendedor}:{" "}
-                    {limite != null
-                      ? `este cupom desconta no máximo ${brl.format(limite)}.`
-                      : "este cupom não informa o limite real de desconto."}{" "}
-                    Não recomendo usá-lo como argumento de venda.
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          {error && !cupons.length ? (
-            <Aviso
-              titulo="Carregando os cupons"
-              texto="A conexão falhou e estou tentando de novo sozinho. Deixe esta página aberta: assim que voltar, a lista aparece."
-            >
-              <Button
-                onClick={() => void refetch()}
-                className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
-              >
-                Tentar agora
-              </Button>
-            </Aviso>
-          ) : isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, indice) => (
-                <div key={indice} className="h-56 animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : !cupons.length ? (
-            <Aviso
-              titulo="Nenhum cupom cadastrado ainda"
-              texto="Assim que os cupons forem carregados, eles aparecem aqui automaticamente."
-            />
-          ) : !filtrados.length ? (
-            <Aviso
-              titulo="Nenhum resultado para esses filtros"
-              texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
-            >
-              <Button onClick={irParaColarLink} className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90">
-                <Link2 className="size-5" aria-hidden="true" />
-                Colar o link do produto
-              </Button>
-            </Aviso>
-          ) : (
-            <>
-              <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-ml-blue/40 bg-ml-blue/10 p-4 sm:flex-row sm:items-center">
-                <p className="text-sm font-medium">
-                  Não achou a loja aqui? Cole o link do anúncio que você quer: eu confiro o cupom
-                  daquele vendedor na hora.
-                </p>
-                <Button onClick={irParaColarLink} className="h-auto min-h-11 shrink-0 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90">
-                  <Link2 className="size-5" aria-hidden="true" />
-                  Colar o link do produto
-                </Button>
-              </div>
-              <div key={`${paginaAtual}-${filtrados.length}`} className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {visiveis.map((cupom, indice) => (
-                  <div
-                    key={cupom.id}
-                    className="animate-cartao h-full"
-                    style={{ animationDelay: `${Math.min(indice, 11) * 35}ms` }}
-                  >
-                    <CupomCard cupom={cupom} agora={agora} abrirCondicoes={setCupomAberto} selecionado={selecionados.includes(cupom.id)} alternarSelecao={alternarSelecao} limiteAtingido={selecionados.length >= MAX_COMPARACAO} />
+              {/* A gaveta: aberta so quando a pessoa pede */}
+              <div id="painel-filtros" className={cn("gaveta", painelAberto && "gaveta-aberta")}>
+                <div>
+                  <div className="pb-1 pt-3">
+                    <div className="mt-4">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          value={texto}
+                          onChange={(event) => setTexto(event.target.value)}
+                          inputMode="search"
+                          aria-label="Buscar loja"
+                          placeholder="Buscar loja e marcar na lista abaixo"
+                          className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+                        />
+                      </div>
+
+                      {lojas.length > 0 && (
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {lojas.map((loja) => (
+                            <button
+                              key={loja}
+                              type="button"
+                              onClick={() => alternarLoja(loja)}
+                              className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
+                              aria-label={`Remover a loja ${loja} da seleção`}
+                            >
+                              <span className="truncate">{loja}</span>
+                              <X aria-hidden="true" className="size-3" />
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setLojas([])}
+                            className="text-xs font-medium text-secondary-ink underline"
+                          >
+                            Limpar lojas
+                          </button>
+                        </div>
+                      )}
+
+                      <div
+                        className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1"
+                        role="group"
+                        aria-label="Lista de lojas"
+                      >
+                        {lojasFiltradas.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-secondary-ink">
+                            Nenhuma loja com esse nome.
+                          </p>
+                        ) : (
+                          lojasFiltradas.map(([loja, quantidade]) => (
+                            <label
+                              key={loja}
+                              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={lojas.includes(loja)}
+                                onChange={() => alternarLoja(loja)}
+                                className="size-4 accent-[var(--ml-blue)]"
+                              />
+                              <span className="min-w-0 flex-1 truncate">{loja}</span>
+                              <span className="shrink-0 text-xs text-secondary-ink">
+                                {quantidade}
+                              </span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-secondary-ink">
+                        Marque uma ou mais lojas para filtrar os cupons.
+                      </p>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+                      <Campo rotulo="Tipo">
+                        <select
+                          value={tipo}
+                          onChange={(event) => setTipo(event.target.value as typeof tipo)}
+                          className="campo-filtro"
+                        >
+                          <option value="todos">Todos</option>
+                          <option value="%">Só %</option>
+                          <option value="R$">Só R$</option>
+                        </select>
+                      </Campo>
+                      <Campo rotulo="Desconto mínimo">
+                        <InputNumero valor={descontoMin} aoMudar={setDescontoMin} />
+                      </Campo>
+                      <Campo rotulo="Orçamento mínimo (R$)">
+                        <InputNumero valor={orcamentoMin} aoMudar={setOrcamentoMin} />
+                      </Campo>
+                      <Campo rotulo="Teto mínimo (R$)">
+                        <InputNumero valor={tetoMin} aoMudar={setTetoMin} />
+                      </Campo>
+                      <Campo rotulo="Compra máxima que aceito (R$)">
+                        <InputNumero valor={compraMax} aoMudar={setCompraMax} />
+                      </Campo>
+                    </div>
+
+                    {categoriasDisponiveis.length > 0 && (
+                      <div className="mt-5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-secondary-ink">
+                            Categorias — organizadas pela IA a partir do nome da loja
+                          </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={classificando}
+                            onClick={classificar}
+                            className="h-8 px-2 text-xs text-ml-blue"
+                          >
+                            <WandSparkles aria-hidden="true" className="size-4" />
+                            {classificando ? "Organizando..." : "Organizar categorias com IA"}
+                          </Button>
+                          {categorias.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setCategorias([])}
+                              className="text-xs font-medium text-secondary-ink underline"
+                            >
+                              Limpar categorias
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1"
+                          role="group"
+                          aria-label="Lista de categorias"
+                        >
+                          {categoriasDisponiveis.map(([categoria, quantidade]) => (
+                            <label
+                              key={categoria}
+                              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={categorias.includes(categoria)}
+                                onChange={() => alternarCategoria(categoria)}
+                                className="size-4 accent-[var(--ml-blue)]"
+                              />
+                              <span className="min-w-0 flex-1 truncate">{categoria}</span>
+                              <span className="shrink-0 text-xs text-secondary-ink">
+                                {quantidade}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-5">
+                      <p className="text-xs font-semibold text-secondary-ink">
+                        Faixa de economia real
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {FAIXAS.filter(
+                          (faixa) =>
+                            (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id),
+                        ).map((faixa) => (
+                          <button
+                            key={faixa.id}
+                            type="button"
+                            aria-pressed={faixas.includes(faixa.id)}
+                            onClick={() => alternarFaixa(faixa.id)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                              faixas.includes(faixa.id)
+                                ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                                : "border-border bg-card hover:border-ml-blue",
+                            )}
+                          >
+                            {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
+            </section>
 
-              {totalPaginas > 1 && (
-                <nav className="mt-6 flex items-center justify-between gap-3" aria-label="Paginação">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
-                    disabled={paginaAtual === 1}
-                  >
-                    Anterior
-                  </Button>
-                  <span className="text-sm text-secondary-ink">
-                    Página {paginaAtual} de {totalPaginas}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
-                    disabled={paginaAtual === totalPaginas}
-                  >
-                    Próxima
-                  </Button>
-                </nav>
+            <section className="mt-4" aria-label="Cupons encontrados">
+              {indicadores.total > 0 && (
+                <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
+                  Analisei {indicadores.total.toLocaleString("pt-BR")}{" "}
+                  {indicadores.total === 1 ? "cupom" : "cupons"}.{" "}
+                  {indicadores.armadilhas === 1
+                    ? "1 desconta pouco demais para valer a pena."
+                    : `${indicadores.armadilhas.toLocaleString("pt-BR")} descontam pouco demais para valer a pena.`}{" "}
+                  {indicadores.bons === 1
+                    ? "O que passou no teste está aqui embaixo."
+                    : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
+                </p>
               )}
-            </>
-          )}
-        </section>
-        </>)}
+              <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-secondary-ink">
+                <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
+                <ul className="mt-1 space-y-1">
+                  <li>
+                    <strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da compra.
+                    Acima disso o desconto não aumenta.
+                  </li>
+                  <li>
+                    <strong>Sem limite de valor</strong>: o percentual vale sobre o valor todo da
+                    compra.
+                  </li>
+                  <li>
+                    <strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo
+                    antes de gerar para você.
+                  </li>
+                </ul>
+              </div>
+              {armadilhasDaBusca.length > 0 && (
+                <div
+                  className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger"
+                  role="alert"
+                >
+                  <strong>Atenção:</strong>{" "}
+                  {armadilhasDaBusca.map((cupom, indice) => {
+                    const limite = tetoUtil(cupom);
+                    return (
+                      <span key={cupom.id}>
+                        {indice > 0 ? " · " : ""}
+                        {cupom.vendedor}:{" "}
+                        {limite != null
+                          ? `este cupom desconta no máximo ${brl.format(limite)}.`
+                          : "este cupom não informa o limite real de desconto."}{" "}
+                        Não recomendo usá-lo como argumento de venda.
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {error && !cupons.length ? (
+                <Aviso
+                  titulo="Carregando os cupons"
+                  texto="A conexão falhou e estou tentando de novo sozinho. Deixe esta página aberta: assim que voltar, a lista aparece."
+                >
+                  <Button
+                    onClick={() => void refetch()}
+                    className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+                  >
+                    Tentar agora
+                  </Button>
+                </Aviso>
+              ) : isLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, indice) => (
+                    <div key={indice} className="h-56 animate-pulse rounded-lg bg-muted" />
+                  ))}
+                </div>
+              ) : !cupons.length ? (
+                <Aviso
+                  titulo="Nenhum cupom cadastrado ainda"
+                  texto="Assim que os cupons forem carregados, eles aparecem aqui automaticamente."
+                />
+              ) : !filtrados.length ? (
+                <Aviso
+                  titulo="Nenhum resultado para esses filtros"
+                  texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
+                >
+                  <Button
+                    onClick={irParaColarLink}
+                    className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+                  >
+                    <Link2 className="size-5" aria-hidden="true" />
+                    Colar o link do produto
+                  </Button>
+                </Aviso>
+              ) : (
+                <>
+                  <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-ml-blue/40 bg-ml-blue/10 p-4 sm:flex-row sm:items-center">
+                    <p className="text-sm font-medium">
+                      Não achou a loja aqui? Cole o link do anúncio que você quer: eu confiro o
+                      cupom daquele vendedor na hora.
+                    </p>
+                    <Button
+                      onClick={irParaColarLink}
+                      className="h-auto min-h-11 shrink-0 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+                    >
+                      <Link2 className="size-5" aria-hidden="true" />
+                      Colar o link do produto
+                    </Button>
+                  </div>
+                  <div
+                    key={`${paginaAtual}-${filtrados.length}`}
+                    className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                  >
+                    {visiveis.map((cupom, indice) => (
+                      <div
+                        key={cupom.id}
+                        className="animate-cartao h-full"
+                        style={{ animationDelay: `${Math.min(indice, 11) * 35}ms` }}
+                      >
+                        <CupomCard
+                          cupom={cupom}
+                          agora={agora}
+                          abrirCondicoes={setCupomAberto}
+                          selecionado={selecionados.includes(cupom.id)}
+                          alternarSelecao={alternarSelecao}
+                          limiteAtingido={selecionados.length >= MAX_COMPARACAO}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {totalPaginas > 1 && (
+                    <nav
+                      className="mt-6 flex items-center justify-between gap-3"
+                      aria-label="Paginação"
+                    >
+                      <Button
+                        variant="outline"
+                        onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
+                        disabled={paginaAtual === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <span className="text-sm text-secondary-ink">
+                        Página {paginaAtual} de {totalPaginas}
+                      </span>
+                      <Button
+                        variant="outline"
+                        onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
+                        disabled={paginaAtual === totalPaginas}
+                      >
+                        Próxima
+                      </Button>
+                    </nav>
+                  )}
+                </>
+              )}
+            </section>
+          </>
+        )}
       </main>
 
       <section aria-label="Guias de compra" className="border-y border-border bg-card">
@@ -2123,10 +2619,14 @@ function Index() {
                 Entenda o desconto antes de comprar
               </h2>
               <p className="mt-1 max-w-2xl text-sm text-secondary-ink">
-                Textos curtos, com as contas feitas, sobre teto, compra mínima e o que separa um bom cupom de uma armadilha.
+                Textos curtos, com as contas feitas, sobre teto, compra mínima e o que separa um bom
+                cupom de uma armadilha.
               </p>
             </div>
-            <Link to="/guias" className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ml-blue hover:underline">
+            <Link
+              to="/guias"
+              className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ml-blue hover:underline"
+            >
               Ver todos os guias
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
@@ -2148,7 +2648,10 @@ function Index() {
                 <span className="text-sm text-secondary-ink">{guia.resumo}</span>
                 <span className="mt-auto inline-flex items-center gap-1 pt-2 text-sm font-bold text-ml-blue">
                   Ler o guia
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  <ArrowRight
+                    className="size-4 transition-transform group-hover:translate-x-1"
+                    aria-hidden="true"
+                  />
                 </span>
               </Link>
             ))}
@@ -2161,7 +2664,10 @@ function Index() {
           <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold">
-                {cupomSelecionados.length === 1 ? "1 cupom marcado" : `${cupomSelecionados.length} cupons marcados`} de até {MAX_COMPARACAO} · economia estimada de até {formatarMoeda(economiaSomada)}
+                {cupomSelecionados.length === 1
+                  ? "1 cupom marcado"
+                  : `${cupomSelecionados.length} cupons marcados`}{" "}
+                de até {MAX_COMPARACAO} · economia estimada de até {formatarMoeda(economiaSomada)}
               </p>
               <p className="text-xs text-secondary-ink">
                 {cupomSelecionados.length < 2
@@ -2172,17 +2678,26 @@ function Index() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>Limpar seleção</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelecionados([])}>
+                Limpar seleção
+              </Button>
               <Button
                 className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white shadow-md hover:bg-ml-blue/90"
                 disabled={cupomSelecionados.length < 2}
-                title={cupomSelecionados.length < 2 ? "Marque 2 ou 3 cupons nos cards para comparar." : undefined}
+                title={
+                  cupomSelecionados.length < 2
+                    ? "Marque 2 ou 3 cupons nos cards para comparar."
+                    : undefined
+                }
                 onClick={abrirComparador}
               >
                 <Sparkles aria-hidden="true" />
                 Comparar economia{cupomSelecionados.length < 2 ? " (marque mais 1)" : ""}
               </Button>
-              <Button onClick={irParaColarLink} className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90">
+              <Button
+                onClick={irParaColarLink}
+                className="h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+              >
                 <Link2 className="size-5" aria-hidden="true" />
                 Colar o link do produto
               </Button>
@@ -2204,7 +2719,6 @@ function Index() {
         <span className="hidden sm:inline">Colar link do produto</span>
       </button>
 
-
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
 
       <ComparadorModal
@@ -2221,28 +2735,48 @@ function Index() {
         <div className="mx-auto grid max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Limite real sempre informado</p>
-            <p className="mt-1 text-xs text-secondary-ink">Mostro quanto cada cupom desconta de verdade, inclusive quando o desconto é pequeno.</p>
+            <p className="mt-1 text-xs text-secondary-ink">
+              Mostro quanto cada cupom desconta de verdade, inclusive quando o desconto é pequeno.
+            </p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Sem custo para você</p>
-            <p className="mt-1 text-xs text-secondary-ink">Recebo comissão do vendedor, nunca de quem compra. O preço é o mesmo.</p>
+            <p className="mt-1 text-xs text-secondary-ink">
+              Recebo comissão do vendedor, nunca de quem compra. O preço é o mesmo.
+            </p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Dados vindos dos cupons oficiais</p>
-            <p className="mt-1 text-xs text-secondary-ink">Nada é inventado: cada condição vem do texto oficial da campanha do vendedor.</p>
+            <p className="mt-1 text-xs text-secondary-ink">
+              Nada é inventado: cada condição vem do texto oficial da campanha do vendedor.
+            </p>
           </div>
         </div>
         <div className="mx-auto mt-6 flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:px-6 lg:px-8 sm:flex-row sm:items-center sm:justify-between">
-
           <div className="space-y-1">
-            <p className="text-xs text-secondary-ink">Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade.</p>
+            <p className="text-xs text-secondary-ink">
+              Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar
+              antes da validade.
+            </p>
             <AvisoAfiliado />
           </div>
           <div className="text-left sm:text-right">
-            <Button type="button" variant="ghost" size="sm" disabled={classificando} onClick={classificar} className="px-2 text-xs text-secondary-ink">
-              <WandSparkles aria-hidden="true" />{classificando ? "Classificando lojas..." : "Classificar lojas com IA"}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={classificando}
+              onClick={classificar}
+              className="px-2 text-xs text-secondary-ink"
+            >
+              <WandSparkles aria-hidden="true" />
+              {classificando ? "Classificando lojas..." : "Classificar lojas com IA"}
             </Button>
-            {statusClassificacao && <p className="mt-1 text-xs text-secondary-ink" aria-live="polite">{statusClassificacao}</p>}
+            {statusClassificacao && (
+              <p className="mt-1 text-xs text-secondary-ink" aria-live="polite">
+                {statusClassificacao}
+              </p>
+            )}
           </div>
         </div>
       </footer>
@@ -2277,11 +2811,17 @@ function ComparadorModal({
   }, [chaveCupons]);
 
   const alternarEscolhida = (id: number) =>
-    setEscolhidas((atual) => (atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id]));
-
+    setEscolhidas((atual) =>
+      atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id],
+    );
 
   return (
-    <Dialog open={aberto} onOpenChange={(estado) => { if (!estado) fechar(); }}>
+    <Dialog
+      open={aberto}
+      onOpenChange={(estado) => {
+        if (!estado) fechar();
+      }}
+    >
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Qual compensa mais</DialogTitle>
@@ -2311,18 +2851,25 @@ function ComparadorModal({
               {cupons.map((cupom) => (
                 <tr
                   key={cupom.id}
-                  className={cn("border-t border-border align-top", comparacao?.vencedor_id === cupom.id && "bg-success-soft")}
+                  className={cn(
+                    "border-t border-border align-top",
+                    comparacao?.vencedor_id === cupom.id && "bg-success-soft",
+                  )}
                 >
                   <td className="py-2 pr-3 font-semibold">
                     {cupom.vendedor}
                     {comparacao?.vencedor_id === cupom.id && (
-                      <span className="ml-2 rounded border border-success px-1.5 py-0.5 text-[10px] font-bold text-success">MELHOR</span>
+                      <span className="ml-2 rounded border border-success px-1.5 py-0.5 text-[10px] font-bold text-success">
+                        MELHOR
+                      </span>
                     )}
                   </td>
                   <td className="py-2 pr-3">{cupom.desconto ?? "Não informado"}</td>
                   <td className="py-2 pr-3 font-semibold text-success">{formatarTeto(cupom)}</td>
                   <td className="py-2 pr-3">{formatarMoeda(cupom.compra_min)}</td>
-                  <td className="py-2">{cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "Sem data"}</td>
+                  <td className="py-2">
+                    {cupom.vence ? dataCurta.format(dataDoBanco(cupom.vence)) : "Sem data"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -2332,7 +2879,9 @@ function ComparadorModal({
         {cupons.length > 0 && (
           <div className="rounded-md border border-border p-3">
             <p className="text-sm font-semibold">Quais cupons você quer?</p>
-            <p className="mt-0.5 text-xs text-secondary-ink">Marque as lojas que te interessam e fale comigo sobre elas.</p>
+            <p className="mt-0.5 text-xs text-secondary-ink">
+              Marque as lojas que te interessam e fale comigo sobre elas.
+            </p>
             <ul className="mt-2 space-y-2">
               {cupons.map((cupom) => {
                 const marcada = escolhidas.includes(cupom.id);
@@ -2363,10 +2912,19 @@ function ComparadorModal({
           </div>
         )}
 
-        {carregando && <p className="text-sm text-secondary-ink" aria-live="polite">Analisando os cupons...</p>}
+        {carregando && (
+          <p className="text-sm text-secondary-ink" aria-live="polite">
+            Analisando os cupons...
+          </p>
+        )}
 
         {!carregando && erro && (
-          <p className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{erro}</p>
+          <p
+            className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
+            role="alert"
+          >
+            {erro}
+          </p>
         )}
 
         {!carregando && comparacao && (
@@ -2386,17 +2944,23 @@ function ComparadorModal({
               </p>
             )}
             {comparacao.chamada && (
-              <p className="mt-2 border-t border-border pt-2 text-sm font-semibold text-success">{comparacao.chamada}</p>
+              <p className="mt-2 border-t border-border pt-2 text-sm font-semibold text-success">
+                {comparacao.chamada}
+              </p>
             )}
           </div>
         )}
 
-        <Button onClick={irParaColarLink} className="h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90">
+        <Button
+          onClick={irParaColarLink}
+          className="h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90"
+        >
           <Link2 className="size-5" aria-hidden="true" />
           Colar o link do produto e conferir o cupom
         </Button>
         <p className="text-xs text-secondary-ink">
-          Comparação feita com os dados cadastrados de cada cupom. A categoria é estimada pelo nome da loja.
+          Comparação feita com os dados cadastrados de cada cupom. A categoria é estimada pelo nome
+          da loja.
         </p>
       </DialogContent>
     </Dialog>
@@ -2455,7 +3019,11 @@ export function CupomCard({
               "flex shrink-0 items-center gap-1.5 text-xs font-medium text-secondary-ink",
               limiteAtingido && !selecionado ? "cursor-not-allowed opacity-50" : "cursor-pointer",
             )}
-            title={limiteAtingido && !selecionado ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.` : "Marque para comparar (até 3)"}
+            title={
+              limiteAtingido && !selecionado
+                ? `Você já marcou ${MAX_COMPARACAO} cupons para comparar.`
+                : "Marque para comparar (até 3)"
+            }
           >
             <input
               type="checkbox"
@@ -2492,7 +3060,9 @@ export function CupomCard({
       </div>
 
       <div className="mt-5 flex min-w-0 flex-1 flex-col">
-        <p className="text-2xl font-extrabold leading-tight text-foreground sm:text-3xl">{percentualTexto(cupom)}</p>
+        <p className="text-2xl font-extrabold leading-tight text-foreground sm:text-3xl">
+          {percentualTexto(cupom)}
+        </p>
         {ilimitado ? (
           <p className="mt-1 text-sm text-secondary-ink">
             Vale sobre o valor todo da compra, sem limite.
@@ -2506,18 +3076,20 @@ export function CupomCard({
           </p>
         ) : teto != null ? (
           <p className="mt-1 text-sm text-secondary-ink">
-            <span className="font-semibold text-success">Economize até {brl.format(teto)}</span> — acima disso o desconto não aumenta.
+            <span className="font-semibold text-success">Economize até {brl.format(teto)}</span> —
+            acima disso o desconto não aumenta.
             {em200 > 0 ? ` Numa compra de R$ 200, você economiza ${brl.format(em200)}.` : ""}
           </p>
         ) : (
-          <p className="mt-1 text-sm text-secondary-ink">O cupom não informa o limite. Eu confirmo o máximo antes de gerar o seu.</p>
+          <p className="mt-1 text-sm text-secondary-ink">
+            O cupom não informa o limite. Eu confirmo o máximo antes de gerar o seu.
+          </p>
         )}
         {cupom.compra_min != null && (
-          <p className="mt-1 text-sm font-medium text-foreground">Compra mínima de {formatarMoeda(cupom.compra_min)}</p>
+          <p className="mt-1 text-sm font-medium text-foreground">
+            Compra mínima de {formatarMoeda(cupom.compra_min)}
+          </p>
         )}
-
-
-
 
         <p className="mt-4 min-w-0 break-words text-sm text-secondary-ink [overflow-wrap:anywhere]">
           Em produtos de <span className="font-bold text-foreground">{cupom.vendedor}</span>
@@ -2528,7 +3100,9 @@ export function CupomCard({
           </span>
         </div>
         {cupom.categoria && (
-          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">categoria estimada pelo nome da loja</p>
+          <p className="mt-1 text-[11px] leading-4 text-secondary-ink">
+            categoria estimada pelo nome da loja
+          </p>
         )}
 
         <AcaoDoCupom
@@ -2664,7 +3238,13 @@ function CalculadoraDoCupom({ cupom }: { cupom: CupomIndexado }) {
   );
 }
 
-export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null; fechar: () => void }) {
+export function CondicoesModal({
+  cupom,
+  fechar,
+}: {
+  cupom: CupomIndexado | null;
+  fechar: () => void;
+}) {
   if (!cupom) return null;
 
   const compraParaTeto = compraParaAtingirTeto(cupom);
@@ -2674,14 +3254,19 @@ export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null;
     <Dialog open onOpenChange={(aberto) => !aberto && fechar()}>
       <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-lg border-border bg-card p-0 text-card-foreground shadow-modal sm:rounded-lg">
         <DialogHeader className="border-b border-border px-5 py-5 pr-14 text-left sm:px-6">
-          <DialogTitle className="text-xl font-semibold">{cupom.desconto ?? "Condições do cupom"}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            {cupom.desconto ?? "Condições do cupom"}
+          </DialogTitle>
           <DialogDescription>Condições e limite real do desconto</DialogDescription>
         </DialogHeader>
         <div className="space-y-5 px-5 pb-6 sm:px-6">
           <CalculadoraDoCupom cupom={cupom} />
           <Button
             size="lg"
-            onClick={() => { fechar(); irParaColarLink(); }}
+            onClick={() => {
+              fechar();
+              irParaColarLink();
+            }}
             className={cn(
               "h-auto min-h-12 w-full whitespace-normal py-3 text-base font-bold",
               cupom.qualidade === "armadilha"
@@ -2693,18 +3278,18 @@ export function CondicoesModal({ cupom, fechar }: { cupom: CupomIndexado | null;
             Usar este cupom
           </Button>
           <p className="-mt-3 text-xs leading-relaxed text-secondary-ink">
-            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span>,
-            cole o link aqui no site e eu confiro se este cupom pega nele e gero o seu link de compra.
+            Procure um produto de <span className="font-semibold">{cupom.vendedor}</span>, cole o
+            link aqui no site e eu confiro se este cupom pega nele e gero o seu link de compra.
           </p>
           {cupom.codigo_cupom && (
             <div className="-mt-2">
               <EtiquetaDoCupom codigo={cupom.codigo_cupom} vendedor={cupom.vendedor} />
               <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-                No carrinho, a loja aceita <span className="font-semibold">um cupom de
-                loja por compra</span>. Se ele já tiver aplicado o cupom da própria loja, remova
-                aquele e cole este no lugar: o desconto para você é o mesmo, e assim ele fica
-                registrado por aqui. Se o carrinho não aceitar a troca, fique com o que já está
-                aplicado, porque o valor final não muda.
+                No carrinho, a loja aceita{" "}
+                <span className="font-semibold">um cupom de loja por compra</span>. Se ele já tiver
+                aplicado o cupom da própria loja, remova aquele e cole este no lugar: o desconto
+                para você é o mesmo, e assim ele fica registrado por aqui. Se o carrinho não aceitar
+                a troca, fique com o que já está aplicado, porque o valor final não muda.
               </p>
             </div>
           )}
@@ -2742,7 +3327,8 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
         }),
       });
       const dados = (await lerJson(resposta)) as { texto?: string; erro?: string };
-      if (!resposta.ok || !dados.texto) throw new Error(dados.erro ?? "Não foi possível gerar o texto.");
+      if (!resposta.ok || !dados.texto)
+        throw new Error(dados.erro ?? "Não foi possível gerar o texto.");
       setResultado(dados.texto);
     } catch (motivo) {
       setErro(motivo instanceof Error ? motivo.message : "Não foi possível gerar o texto.");
@@ -2809,7 +3395,14 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
         </Button>
       </div>
 
-      {erro && <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">{erro}</p>}
+      {erro && (
+        <p
+          className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger"
+          role="alert"
+        >
+          {erro}
+        </p>
+      )}
       {resultado && (
         <div className="mt-3 rounded-lg border border-border bg-muted/50 p-4">
           <p className="whitespace-pre-line text-sm leading-6">{resultado}</p>
@@ -2825,7 +3418,15 @@ function GeradorTexto({ cupom }: { cupom: CupomIndexado }) {
   );
 }
 
-function ResumoModal({ rotulo, valor, destaque = false }: { rotulo: string; valor: string; destaque?: boolean }) {
+function ResumoModal({
+  rotulo,
+  valor,
+  destaque = false,
+}: {
+  rotulo: string;
+  valor: string;
+  destaque?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
       <span className="text-sm text-secondary-ink">{rotulo}</span>
@@ -2848,7 +3449,13 @@ function Indicador({
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <p className="text-xs text-secondary-ink">{titulo}</p>
-      <p className={cn("mt-1 text-xl font-bold tabular-nums sm:text-2xl", tom === "bom" && "text-success", tom === "armadilha" && "text-danger")}>
+      <p
+        className={cn(
+          "mt-1 text-xl font-bold tabular-nums sm:text-2xl",
+          tom === "bom" && "text-success",
+          tom === "armadilha" && "text-danger",
+        )}
+      >
         {valor}
       </p>
       {detalhe && <p className="mt-1 text-xs text-secondary-ink">{detalhe}</p>}
@@ -2879,7 +3486,15 @@ function InputNumero({ valor, aoMudar }: { valor: string; aoMudar: (valor: strin
   );
 }
 
-function Aviso({ titulo, texto, children }: { titulo: string; texto: string; children?: ReactNode }) {
+function Aviso({
+  titulo,
+  texto,
+  children,
+}: {
+  titulo: string;
+  texto: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center">
       <p className="text-base font-semibold">{titulo}</p>

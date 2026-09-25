@@ -12,6 +12,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   - Gemma (mesma chave) só quando a Gemini não der (cota, fora do ar, tempo),
     sempre depois de todos os Gemini e com confiança mínima de 90
     (autorizado pelo Weslei em 25/09).
+  - A foto não precisa ser idêntica (cada vendedor faz a sua): conta o PRODUTO.
+    Diferença é o que contradiz o original (marca, cor/borda, modelo, tamanho,
+    quantidade, acessório junto), não fundo/ângulo/montagem.
+  - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
+    SEPARADOS, com aviso "não é o mesmo produto" e o que muda, cada um com o
+    link de afiliado (Weslei, 25/09).
   - O Adapta One não oferece API das IAs (central de ajuda deles): não serve
     para o comparador.
 - Todo link de compra precisa ser o link de afiliado do Weslei. SEMPRE devolver o
