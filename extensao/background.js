@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
-         escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA,
+         escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
@@ -2556,6 +2556,8 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
       .catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) }))
   ]);
   const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null };
+  /* Frete do anuncio colado, se ele apareceu na busca. */
+  if (Array.isArray(daBusca.freteAtual)) diag.freteAtual = daBusca.freteAtual[0];
   const vistos = new Set();
   let candidatos = [];
   /* Alterna as fontes para as duas terem vez nos 8 conferidos. */
@@ -2600,7 +2602,8 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
       const c = candidatos[a.indice];
       return c && c.preco != null && c.item !== itemAtual
         ? { item: c.item, url: c.url || null, titulo: c.titulo || null, imagem: c.imagem || null,
-            preco: c.preco, muda: String(a.motivo || '').slice(0, 140) }
+            preco: c.preco, muda: String(a.motivo || '').slice(0, 140),
+            freteGratis: c.freteGratis != null ? c.freteGratis : null }
         : null;
     })
     .filter(Boolean);
@@ -2611,7 +2614,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   const achados = await avaliarCandidatos(aprovados.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
   for (const a of achados) {
     const c = aprovados.find(x => x.item === a.item);
-    if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; }
+    if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; if (c.freteGratis != null) a.freteGratis = c.freteGratis; }
   }
   achados.diag = diag;
   achados.parecidos = parecidos;
@@ -2635,6 +2638,7 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
      vazia de novo, da para saber onde parou (24/09: 0 anuncios lidos). */
   const diag = {};
   let candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
+  const freteAtual = itemAtual ? freteGratisDaBusca(html).get(itemAtual) : undefined;
   if (!candidatos.length && resta() > 12000) {
     /* 2a tentativa: a mesma busca numa aba de verdade, lida da tela. */
     try {
@@ -2681,7 +2685,7 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
   /* Adianta a leitura das lojas dos 6 mais baratos enquanto a Gemini
      confere (antes era uma coisa depois da outra). */
   for (const c of candidatos.slice(0, 4)) { if (c.item !== itemAtual) resolverVendedor(c.item, c.url).catch(() => {}); }
-  if (soCandidatos) { candidatos.diag = diag; return candidatos; }
+  if (soCandidatos) { candidatos.diag = diag; if (freteAtual != null) candidatos.freteAtual = [freteAtual]; return candidatos; }
   if (original) {
     ultimaIA = null;
     const t0 = Date.now();
@@ -3305,6 +3309,8 @@ async function atenderPedidos() {
           let referencias = [];
           /* Parecidos (nao e o mesmo produto): lista separada, com o que muda. */
           let parecidos = [];
+          /* Frete do anuncio colado: true gratis, false pago, null nao sei. */
+          let freteAqui = null;
           /* Registro da busca fora do catalogo, para conferir de longe. */
           let buscaFora = { rodou: false, motivo: null, vistos: 0 };
           let apiAchou = false;
@@ -3326,7 +3332,7 @@ async function atenderPedidos() {
           const compararAgora = async () => {
           outra = null; outras = []; outraFalhou = null;
           procurouOutra = false; motivoNaoProcurou = null;
-          referencias = []; parecidos = []; buscaFora = { rodou: false, motivo: null, vistos: 0 };
+          referencias = []; parecidos = []; freteAqui = null; buscaFora = { rodou: false, motivo: null, vistos: 0 };
           apiAchou = false; verificacaoIA = null; ultimaLeitura = null;
           {
             if (volta === 1) marcarEtapa(sincToken, p.id, 'outras_lojas');
@@ -3374,9 +3380,10 @@ async function atenderPedidos() {
                parava ali ("a API ja achou loja melhor"). Catalogo + busca sao
                juntados e a mais barata vira a recomendacao. */
             const doCatalogo = alts;
-            if (a.ok && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
-                                        : (!pausaLeitura && LEITURA_RESERVA_POR_DIA > 0
-                                           && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA))) {
+            /* SEM TETO DIARIO (Weslei, 25/09): o teto era da fila de cupons; a
+               busca do cliente roda sempre. Fica so o freio de captcha /
+               trafego suspeito (pausaLeitura), e o ritmo de um pedido por vez. */
+            if (a.ok && (anonima || !pausaLeitura)) {
               /* 2. Reserva: a API nao achou o produto em ficha de catalogo.
                     Le a busca do Mercado Livre como uma pessoa faria, com
                     teto diario (LEITURA_RESERVA_POR_DIA). */
@@ -3422,6 +3429,11 @@ async function atenderPedidos() {
                     if (!atual || (x.final ?? 1e12) < (atual.final ?? 1e12)) porLoja.set(k, x);
                   }
                   alts = [...porLoja.values()].sort((x, y) => (x.final ?? 1e12) - (y.final ?? 1e12)).slice(0, 3);
+                  /* FRETE (Weslei, 25/09): loja com frete PAGO nao vira "mais
+                     barata" (R$ 57 + R$ 32,99 de frete saia mais caro que os
+                     R$ 86,90 com frete gratis). Fica na tabela, marcada. */
+                  freteAqui = busca.diag && busca.diag.freteAtual != null ? busca.diag.freteAtual : null;
+                  alts = alts.filter(x => !(x.freteGratis === false && freteAqui !== false));
                 }
                 if (Array.isArray(busca.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
@@ -3431,6 +3443,7 @@ async function atenderPedidos() {
                     vistos.add((t.vendedor || '').toLowerCase());
                     referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final, url: t.url || null,
                       imagem: t.imagem || null, verificadoIA: !!t.verificadoIA,
+                      freteGratis: t.freteGratis != null ? t.freteGratis : null,
                       diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
                       cupom: t.cupom ? t.cupom.titulo : null });
                   }
@@ -3451,7 +3464,7 @@ async function atenderPedidos() {
               procurouOutra = false;
               motivoNaoProcurou = (api && api.motivo) || 'comparacao indisponivel agora';
             } else {
-              buscaFora.motivo = !a.ok ? 'anuncio nao lido' : 'teto do dia de buscas atingido';
+              buscaFora.motivo = !a.ok ? 'anuncio nao lido' : 'leitura pausada (freio de captcha)';
             }
 
             /* Segunda volta interrompida por cliente novo: resultado descartado. */
@@ -3530,6 +3543,7 @@ async function atenderPedidos() {
                   mesmaPagina: mesmaPagina,
                   imagem: alt.imagem || null,
                   verificadoIA: !!alt.verificadoIA || (verificacaoIA && !verificacaoIA.indisponivel && !!alt.achadoNaBusca),
+                  freteGratis: alt.freteGratis != null ? alt.freteGratis : null,
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
@@ -3588,9 +3602,10 @@ async function atenderPedidos() {
             referencias: referencias,
             /* Nao e o mesmo produto: o site mostra separado, com "muda". */
             parecidos: parecidos,
+            freteGratis: freteAqui,
             verificacaoIA: verificacaoIA,
             buscaFora: buscaFora.rodou ? buscaFora
-              : { rodou: false, vistos: 0, motivo: !a.ok ? 'anuncio nao lido' : (pausaLeitura && !anonima) ? 'leitura pausada (freio/captcha) e modo anonimo nao permitido' : 'teto do dia atingido' },
+              : { rodou: false, vistos: 0, motivo: !a.ok ? 'anuncio nao lido' : 'leitura pausada (freio/captcha) e modo anonimo nao permitido' },
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,

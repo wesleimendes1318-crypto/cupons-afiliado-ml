@@ -261,8 +261,39 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
     }
   }
 
+  /* FRETE (Weslei, 25/09): anuncio R$ 29,90 mais barato com frete pago de
+     R$ 32,99 saia o mais caro de todos. Cada anuncio da busca traz, nos dados
+     de rastreio, "has_free_shipping" junto do "pid_extended" (..._MLB123). */
+  const frete = freteGratisDaBusca(texto);
+  d.comFrete = frete.size;
+  for (const c of saida) if (frete.has(c.item)) c.freteGratis = frete.get(c.item);
+
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
   return ordenarParaIA(saida);
+}
+
+/* Mapa anuncio -> frete gratis (true/false), lido da pagina de busca. Anuncio
+   sem a informacao fica fora do mapa (desconhecido). */
+export function freteGratisDaBusca(html) {
+  const limpo = String(html || '').replace(/\\+"/g, '"').replace(/\\u002F/gi, '/');
+  const mapa = new Map();
+  const re = /"has_free_shipping"\s*:\s*(true|false)/g;
+  let m;
+  while ((m = re.exec(limpo))) {
+    /* O numero do anuncio fica no mesmo objeto, logo depois (pid_extended ou
+       item_id); olha ate o fim do objeto. */
+    const depois = limpo.slice(m.index, m.index + 1500);
+    const fim = depois.indexOf('}');
+    const obj = fim > 0 ? depois.slice(0, fim) : depois;
+    const antes = limpo.slice(Math.max(0, m.index - 1500), m.index);
+    const ini = antes.lastIndexOf('{');
+    const todo = (ini >= 0 ? antes.slice(ini) : '') + obj;
+    const id = /"pid_extended"\s*:\s*"[^"]*_(MLB\d{6,})"/.exec(todo)
+            || /"item_id"\s*:\s*"(MLB\d{6,})"/.exec(todo)
+            || /"id"\s*:\s*"(MLB\d{6,})"/.exec(todo);
+    if (id && !mapa.has(id[1])) mapa.set(id[1], m[1] === 'true');
+  }
+  return mapa;
 }
 
 /* Os 12 que a Gemini confere: primeiro os de titulo mais parecido; entre

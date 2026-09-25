@@ -46,8 +46,8 @@ function Sobre() {
       <ul>
         <li>Você cola o link do anúncio do produto que quer comprar.</li>
         <li>
-          O site procura o mesmo produto em outras lojas. Uma inteligência artificial compara foto e
-          título de cada anúncio, e todo resultado igual passa por uma segunda conferência.
+          O site procura o mesmo produto em outras lojas e confere marca, modelo, foto e título de
+          cada anúncio. Todo resultado igual passa por uma segunda conferência.
         </li>
         <li>
           Em até um minuto aparece a tabela com todas as lojas do mesmo produto, da mais barata à

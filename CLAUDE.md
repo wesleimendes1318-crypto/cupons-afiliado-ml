@@ -29,11 +29,21 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - A consulta do cliente deve terminar em até 1 minuto. Previsões de tempo na tela
   vêm de medição real (função tempo_estimado), nunca inventadas.
 
+- Frete conta: loja com frete PAGO nunca vira "mais barata"/recomendação
+  (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90 com frete grátis).
+  Na tabela aparece "Frete grátis" ou "Frete pago (valor no carrinho)".
+- Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
+  captcha/tráfego suspeito e o ritmo de um pedido por vez.
+
 ## Texto e visual
 - Botão de compra NUNCA leva o nome da loja: usar texto de compra segura
   ("Comprar com segurança"). Sempre oferecer compartilhar no WhatsApp.
 - Não escrever "Mercado Livre" no texto do site (marca / AdSense).
 - Textos curtos. Não prometer cupom. Sempre mostrar foto do produto.
+- Não citar IA/inteligência artificial nos textos do site nem nos guias
+  (monetização: diretrizes do Google Ads e do programa de afiliados).
+- Guias com exemplos REAIS (dados medidos nos pedidos, com data), sem nome de
+  vendedor.
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.

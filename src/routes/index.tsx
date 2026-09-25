@@ -2761,24 +2761,26 @@ function Index() {
             </p>
             <AvisoAfiliado />
           </div>
-          <div className="text-left sm:text-right">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={classificando}
-              onClick={classificar}
-              className="px-2 text-xs text-secondary-ink"
-            >
-              <WandSparkles aria-hidden="true" />
-              {classificando ? "Classificando lojas..." : "Classificar lojas com IA"}
-            </Button>
-            {statusClassificacao && (
-              <p className="mt-1 text-xs text-secondary-ink" aria-live="polite">
-                {statusClassificacao}
-              </p>
-            )}
-          </div>
+          {MOSTRAR_CUPONS && (
+            <div className="text-left sm:text-right">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={classificando}
+                onClick={classificar}
+                className="px-2 text-xs text-secondary-ink"
+              >
+                <WandSparkles aria-hidden="true" />
+                {classificando ? "Classificando lojas..." : "Classificar lojas com IA"}
+              </Button>
+              {statusClassificacao && (
+                <p className="mt-1 text-xs text-secondary-ink" aria-live="polite">
+                  {statusClassificacao}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </footer>
 

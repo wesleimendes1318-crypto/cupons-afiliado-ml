@@ -55,6 +55,37 @@ export const GUIAS: Guia[] = [
           "Parecidos: aparecem numa lista separada, com o aviso do que muda. Não são o mesmo produto.",
         ],
       },
+      { tipo: "h2", texto: "Exemplos reais" },
+      {
+        tipo: "conta",
+        titulo: "Pista de dinossauro com 279 peças (comparado em 25/09/2026)",
+        linhas: [
+          { rotulo: "Anúncio colado", valor: "R$ 119,60" },
+          { rotulo: "Mesmo produto em outra loja", valor: "R$ 113,00" },
+          { rotulo: "Diferença", valor: "R$ 6,60 a menos (5,5%)" },
+        ],
+        nota: "Mesma pista, mesma quantidade de peças e mesmos carrinhos: só mudava a loja.",
+      },
+      {
+        tipo: "conta",
+        titulo: "Kit shampoo e condicionador Siàge Nutri Diamond (25/09/2026)",
+        linhas: [
+          { rotulo: "Lojas mais baratas", valor: "R$ 78,00" },
+          { rotulo: "Outras lojas", valor: "R$ 89,90 · R$ 98,90 · R$ 99,90" },
+          { rotulo: "Da mais barata à mais cara", valor: "R$ 21,90 de diferença" },
+        ],
+        nota: "O mesmo kit, no mesmo dia. Quem comprasse na loja mais cara pagaria 28% a mais.",
+      },
+      {
+        tipo: "conta",
+        titulo: "Disco de freio traseiro Honda NX 400 Falcon (25/09/2026)",
+        linhas: [
+          { rotulo: "Anúncio colado", valor: "R$ 42,92" },
+          { rotulo: "Outras lojas", valor: "R$ 45,31 · R$ 47,69" },
+          { rotulo: "Resultado", valor: "o anúncio colado já era o mais barato" },
+        ],
+        nota: "Comparar também serve para confirmar que você já está no melhor preço.",
+      },
       {
         tipo: "destaque",
         titulo: "O preço é o de quando comparei",
@@ -110,7 +141,31 @@ export const GUIAS: Guia[] = [
         tipo: "destaque",
         titulo: "Como o site confere",
         texto:
-          "Uma inteligência artificial compara foto e título de cada anúncio com o que você colou, e todo resultado igual passa por uma segunda conferência. Só entra na tabela de lojas o que é o mesmo produto. O que é apenas parecido aparece separado, com o que muda escrito.",
+          "Cada anúncio encontrado é comparado com o que você colou: marca, modelo, foto e título. Todo resultado igual passa por uma segunda conferência. Só entra na tabela de lojas o que é o mesmo produto. O que é apenas parecido aparece separado, com o que muda escrito.",
+      },
+      { tipo: "h2", texto: "Exemplos reais" },
+      {
+        tipo: "conta",
+        titulo: "Capinha para Motorola Edge 70 (25/09/2026)",
+        linhas: [
+          { rotulo: "Anúncio colado", valor: "acrílico transparente com borda preta" },
+          { rotulo: "Capinha slim toda transparente", valor: "parecida: muda a borda" },
+          {
+            rotulo: "Capinha para Edge 70 Fusion ou Edge 70 Pro",
+            valor: "diferente: outro celular",
+          },
+        ],
+        nota: 'O título das três dizia "capinha anti-impacto Edge 70". Só a foto e o modelo mostravam a diferença.',
+      },
+      {
+        tipo: "conta",
+        titulo: "Kit de cabides de madeira (25/09/2026)",
+        linhas: [
+          { rotulo: "Anúncio colado: 30 cabides de uma marca", valor: "R$ 116,10 (R$ 3,87 cada)" },
+          { rotulo: "30 cabides de outra marca", valor: "R$ 110,48: parecido, muda a marca" },
+          { rotulo: "Kit com 20 cabides", valor: "R$ 148,80 (R$ 7,44 cada): outra quantidade" },
+        ],
+        nota: "Com quantidade diferente, compare o preço por unidade, não o preço do anúncio.",
       },
     ],
     perguntas: [

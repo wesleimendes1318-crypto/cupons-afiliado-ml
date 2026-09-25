@@ -121,6 +121,19 @@ function mensagemMelhorOpcao({
 
 /* Motivos técnicos vêm da extensão e do servidor e citam o marketplace pelo
    nome. Na tela do cliente o site não exibe marca de terceiro. */
+/* Título lido da página pode vir com entidade HTML (D&#x27;água). */
+function semEntidades(t: string | null | undefined): string | null {
+  if (!t) return t ?? null;
+  return t
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
 function semMarca(t: string | null | undefined) {
   return String(t ?? "")
     .replace(/\bdo Mercado Livre\b/gi, "da loja")
@@ -137,6 +150,7 @@ function compartilharWhatsApp(texto: string) {
    cupom. Só chega aqui quando é o mesmo produto de catálogo do Mercado Livre,
    nunca um parecido, e só quando sai mais barato que o anúncio colado. */
 type OutraLoja = {
+  freteGratis?: boolean | null;
   cupomId?: number | null;
   /* Quanto a troca economiza de fato, ja comparando preco final com preco
      final. Vem da extensao, que e quem conhece os dois lados. */
@@ -208,6 +222,7 @@ type Analise = {
     muda?: string | null;
     link?: string | null;
     url?: string | null;
+    freteGratis?: boolean | null;
   }> | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
   aviso?: string | null;
@@ -217,6 +232,8 @@ type Analise = {
   completa?: boolean | null;
   final?: boolean | null;
   voltas?: number | null;
+  /* Frete do anúncio colado: true grátis, false pago, null não sei. */
+  freteGratis?: boolean | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
   imagem?: string | null;
   buscaFora?: {
@@ -246,6 +263,7 @@ type Referencia = {
   imagem?: string | null;
   /* Link de afiliado desta loja, gerado em lote pela extensão. */
   link?: string | null;
+  freteGratis?: boolean | null;
 };
 
 type Pedido = {
@@ -1231,6 +1249,7 @@ function Resultado({
             link: semLink ? null : link,
             url: semLink ? urlColada : null,
             colado: true,
+            freteGratis: a?.freteGratis ?? null,
           },
         ]
       : []),
@@ -1240,6 +1259,7 @@ function Resultado({
       imagem: o.imagem,
       final: o.final,
       diferenca: o.ganho != null ? -o.ganho : null,
+      freteGratis: o.freteGratis ?? null,
       link: o.link,
       url: null,
     })),
@@ -1249,6 +1269,7 @@ function Resultado({
       imagem: r.imagem,
       final: r.final,
       diferenca: r.diferenca,
+      freteGratis: r.freteGratis ?? null,
       link: r.link ?? null,
       url: r.url ?? null,
     })),
@@ -1271,7 +1292,7 @@ function Resultado({
         <Foto src={a?.imagem} className="size-16 shrink-0 rounded-md border border-border" />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
-            {a?.titulo ?? "Produto do link que você colou"}
+            {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
           </p>
           {a?.aviso && (
             <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
@@ -1650,6 +1671,8 @@ type LinhaLoja = {
   link: string | null;
   url: string | null;
   colado?: boolean;
+  /* true frete grátis, false frete pago, null/undefined não sei. */
+  freteGratis?: boolean | null;
 };
 
 /* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
@@ -1667,7 +1690,14 @@ function Parecidos({ lista }: { lista: Analise["parecidos"] }) {
           <li key={i} className="flex items-start gap-2 rounded bg-card p-1.5">
             <Foto src={p.imagem} className="size-10 shrink-0 rounded" />
             <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-xs font-medium leading-tight">{p.titulo}</p>
+              <p className="line-clamp-2 text-xs font-medium leading-tight">
+                {semEntidades(p.titulo)}
+              </p>
+              {p.freteGratis === false && (
+                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                  Frete pago (valor no carrinho)
+                </p>
+              )}
               {p.muda && (
                 <p className="mt-0.5 text-[11px] leading-snug text-amber-800 dark:text-amber-300">
                   Muda: {p.muda}
@@ -1714,16 +1744,23 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
   /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
      seguro); vermelho = quanto se paga A MAIS em cada outra loja (perda);
      o anúncio colado, quando não é o mais barato, fica em âmbar (atenção). */
-  const menor = ordem[0]?.final ?? null;
+  /* FRETE (Weslei, 25/09): loja com frete pago não leva o selo "Mais
+     barato" — o frete pode deixá-la mais cara que as outras. O selo vai para
+     a mais barata com frete grátis (ou sem informação de frete). */
+  const melhorIdx = Math.max(
+    0,
+    ordem.findIndex((l) => l.freteGratis !== false),
+  );
+  const menor = ordem[melhorIdx]?.final ?? null;
   return (
     <div className="mt-3 sm:mt-0">
       <p className="text-sm font-bold">Todas as lojas comparadas ({ordem.length})</p>
-      <table className="mt-1.5 w-full border-collapse overflow-hidden rounded-md border border-border text-sm">
+      <table className="mt-1.5 w-full table-fixed border-collapse overflow-hidden rounded-md border border-border text-sm">
         <thead>
           <tr className="bg-muted/70 text-left text-xs text-secondary-ink">
             <th className="px-2 py-1.5 font-semibold">Loja</th>
-            <th className="px-2 py-1.5 text-right font-semibold">Preço</th>
-            <th className="w-0 px-2 py-1.5" />
+            <th className="w-[38%] px-2 py-1.5 text-right font-semibold">Preço</th>
+            <th className="w-16 px-1 py-1.5" />
           </tr>
         </thead>
         <tbody className="tabular-nums">
@@ -1731,7 +1768,7 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
             <tr
               key={l.chave}
               className={
-                i === 0 && menor != null
+                i === melhorIdx && menor != null
                   ? "border-l-4 border-l-success bg-success/15"
                   : l.colado
                     ? "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/30"
@@ -1743,30 +1780,49 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
               <td className="px-2 py-1">
                 <span className="flex items-center gap-2">
                   <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
-                  <span className="min-w-0 break-words text-xs font-medium leading-tight">
+                  <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
                     {l.colado ? "Anúncio colado" : l.nome}
+                    {l.freteGratis === true && (
+                      <span className="block text-[10px] font-semibold text-success">
+                        Frete grátis
+                      </span>
+                    )}
+                    {l.freteGratis === false && (
+                      <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                        Frete pago (valor no carrinho)
+                      </span>
+                    )}
                   </span>
                 </span>
               </td>
               <td className="px-2 py-1 text-right">
                 <span
                   className={
-                    "block font-bold " + (i === 0 ? "text-base text-success" : "text-foreground")
+                    "block font-bold " +
+                    (i === melhorIdx ? "text-base text-success" : "text-foreground")
                   }
                 >
                   {brl(l.final)}
                 </span>
                 {(() => {
                   const extra = menor != null && l.final != null ? l.final - menor : null;
-                  if (i === 0)
+                  if (i === melhorIdx)
                     return (
                       <span className="mt-0.5 inline-block rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-white">
                         {l.colado ? "Mais barato · você colou" : "Mais barato"}
                       </span>
                     );
+                  if (l.freteGratis === false && extra != null && extra < 0.5)
+                    return (
+                      <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                        + frete pago
+                        {l.colado ? " · você colou" : ""}
+                      </span>
+                    );
                   return (
                     <span className="block text-[11px] font-bold text-red-700 dark:text-red-400">
                       {extra != null && extra >= 0.5 ? `+${brl(extra)} a mais` : "mesmo preço"}
+                      {l.freteGratis === false ? " + frete" : ""}
                       {l.colado ? " · você colou" : ""}
                     </span>
                   );
@@ -1897,7 +1953,7 @@ function OutraLojaComCupom({
         <Foto src={oferta.imagem} className="size-14 shrink-0 rounded" />
         {oferta.verificadoIA && (
           <span className="rounded bg-card px-2 py-1 text-xs font-semibold text-success">
-            ✓ Mesmo produto: foto conferida por IA
+            ✓ Mesmo produto: foto e título conferidos
           </span>
         )}
       </div>
