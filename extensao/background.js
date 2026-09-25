@@ -508,7 +508,8 @@ async function geminiLocal(partes, primeiro = null) {
   /* Medido em 25/09: o Flash-Lite respondeu e julgou certo (borda roxa x
      preta, Edge 70 x 70 Fusion+); o 2.5 Flash estourou o prazo. */
   /* primeiro: a segunda opiniao comeca por OUTRO modelo. */
-  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash', geminiModel].filter(Boolean))];
+  /* 2.5-flash-lite: mais uma cota gratuita (modelo que a chave nao tem = 404, pula). */
+  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', geminiModel].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   /* Erro de CADA modelo tentado (antes so o ultimo ficava gravado). */
@@ -537,6 +538,14 @@ async function geminiLocal(partes, primeiro = null) {
           break;
         }
         ultimo = { ok: false, status: r.status, erro: String((j && j.error && j.error.message) || '').slice(0, 200), modelo };
+        if (r.status === 429) {
+          /* Qual cota acabou (por dia ou por minuto) e quando volta. */
+          const det = (j && j.error && j.error.details) || [];
+          const v = det.flatMap(d => d.violations || [])[0];
+          const volta = (det.find(d => d.retryDelay) || {}).retryDelay;
+          ultimo.erro = (v && v.quotaId ? 'cota ' + v.quotaId + (v.quotaValue ? ' limite ' + v.quotaValue : '') : 'cota esgotada')
+            + (volta ? ' volta em ' + volta : '');
+        }
         falhas.push(modelo + ' ' + r.status + ' ' + ultimo.erro.slice(0, 90));
         if (r.status === 429) break;
         if (r.status >= 500) { if (tentativa === 0) await sleep(2000); continue; }
@@ -664,7 +673,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
         const conf = [{ text: PEDIDO_CONFIRMACAO },
           { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') + (desc ? '\nDescricao da foto do original: ' + desc : '') }, imgOrig];
         positivos.forEach((a, k) => { conf.push({ text: 'CANDIDATO ' + k + ': ' + (itens[a.indice].titulo || '(sem titulo)') }); conf.push(fotos[a.indice]); });
-        const outro = ['gemini-2.5-flash', 'gemini-flash-lite-latest'].find(m => m !== r.modelo) || null;
+        const outro = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest'].find(m => m !== r.modelo) || null;
         const r2 = resta() > 9000 ? await geminiLocal(conf, outro) : { ok: false, status: 504, erro: 'sem tempo' };
         const obj2 = r2.ok ? jsonDaIA(r2.texto) : null;
         if (!obj2 || !Array.isArray(obj2.candidatos)) {

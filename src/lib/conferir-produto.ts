@@ -23,7 +23,15 @@ type Resultado =
   | { ok: false; status: number; erro: string; modelo?: string };
 
 /* 2.5 Flash sem a etapa de "pensar" responde em segundos; o prazo e curto. */
-const MODELOS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"];
+/* Cada modelo tem a sua cota gratuita (medido em 25/09: 2.5-flash e
+   flash-latest em 429 o resto do dia depois das baterias). O 2.5-flash-lite
+   entra como mais uma cota; modelo que a chave nao tem (404) e pulado. */
+const MODELOS = [
+  "gemini-flash-lite-latest",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+];
 const CONFIANCA_MINIMA = 80;
 
 function ordemDosModelos(): string[] {
@@ -87,7 +95,13 @@ async function chamarModelo(
     );
     const j = (await r.json().catch(() => null)) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
-      error?: { message?: string };
+      error?: {
+        message?: string;
+        details?: Array<{
+          retryDelay?: string;
+          violations?: Array<{ quotaId?: string; quotaValue?: string }>;
+        }>;
+      };
     } | null;
     if (r.ok) {
       const texto = (j?.candidates?.[0]?.content?.parts ?? [])
@@ -97,6 +111,21 @@ async function chamarModelo(
       return texto
         ? { ok: true, texto, modelo }
         : { ok: false, status: 502, erro: "resposta vazia", modelo };
+    }
+    /* 429: qual cota acabou (por dia ou por minuto) e quando volta. */
+    if (r.status === 429) {
+      const det = j?.error?.details ?? [];
+      const v = det.flatMap((d) => d.violations ?? [])[0];
+      const volta = det.find((d) => d.retryDelay)?.retryDelay;
+      const cota = v?.quotaId
+        ? `cota ${v.quotaId}${v.quotaValue ? " limite " + v.quotaValue : ""}`
+        : "cota esgotada";
+      return {
+        ok: false,
+        status: 429,
+        erro: `${cota}${volta ? " volta em " + volta : ""}`,
+        modelo,
+      };
     }
     return { ok: false, status: r.status, erro: (j?.error?.message ?? "").slice(0, 160), modelo };
   } catch (e) {
