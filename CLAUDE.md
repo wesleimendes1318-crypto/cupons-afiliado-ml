@@ -28,6 +28,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Não trocar a Gemini pela "Lovable AI" (plano sem crédito: responde 402).
 - Nunca pedir nem colocar chaves no código ou no chat (vão nos Secrets do Lovable).
 
+## Garantia (obrigatório a cada versão)
+- A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
+  resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
+- Antes de dizer ao Weslei que está pronto: rodar ferramentas/bateria-de-testes.sql
+  (capinha, travesseiro, Eudora, disco de freio) na versão nova e conferir todas
+  as metas. Falhou alguma: corrigir e rodar de novo. Só então avisar.
+
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.

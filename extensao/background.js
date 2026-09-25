@@ -2972,7 +2972,14 @@ async function atenderPedidos() {
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
               }));
-            } else if (a.ok && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
+            }
+            /* REGRA (Weslei, 25/09): a busca em outras lojas roda SEMPRE, mesmo
+               quando o catalogo oficial ja achou uma loja melhor. Caso real: o
+               disco de freio tinha so 1 outra loja no catalogo e a comparacao
+               parava ali ("a API ja achou loja melhor"). Catalogo + busca sao
+               juntados e a mais barata vira a recomendacao. */
+            const doCatalogo = alts;
+            if (a.ok && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
                                         : (!pausaLeitura && LEITURA_RESERVA_POR_DIA > 0
                                            && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA))) {
               /* 2. Reserva: a API nao achou o produto em ficha de catalogo.
@@ -2989,7 +2996,7 @@ async function atenderPedidos() {
                    e so a rede de seguranca. */
                 prazoConsulta = Date.now() + 38000;
                 let prazo;
-                alts = await Promise.race([mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
+                const busca = await Promise.race([mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
                   finalAtual: finalAqui, temCupomAqui, vendedorAtual: vendedor,
                   /* Com a variacao marcada (Edge 70, 110V...), senao a busca
                      traz o produto de outro modelo. */
@@ -3003,12 +3010,23 @@ async function atenderPedidos() {
                 }),
                   new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })
                 ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });
-                buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
-                buscaFora.leitura = alts.diag || null;
+                buscaFora.vistos = Array.isArray(busca.todas) ? busca.todas.length : 0;
+                buscaFora.leitura = busca.diag || null;
                 buscaFora.modo = ultimaLeitura;
-                if (Array.isArray(alts.todas)) {
+                /* Junta catalogo + busca: uma entrada por loja, a de menor preco
+                   final primeiro, ate 3 recomendadas. */
+                {
+                  const porLoja = new Map();
+                  for (const x of [...doCatalogo, ...busca]) {
+                    const k = String(x.vendedor || x.item || '').toLowerCase();
+                    const atual = porLoja.get(k);
+                    if (!atual || (x.final ?? 1e12) < (atual.final ?? 1e12)) porLoja.set(k, x);
+                  }
+                  alts = [...porLoja.values()].sort((x, y) => (x.final ?? 1e12) - (y.final ?? 1e12)).slice(0, 3);
+                }
+                if (Array.isArray(busca.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
-                  for (const t of alts.todas) {
+                  for (const t of busca.todas) {
                     if (t.final == null || vistos.has((t.vendedor || '').toLowerCase())) continue;
                     if (vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase()) continue;
                     vistos.add((t.vendedor || '').toLowerCase());
@@ -3022,7 +3040,8 @@ async function atenderPedidos() {
                 }
               } catch (e) {
                 /* Se a API ja olhou o catalogo, a comparacao aconteceu: so a
-                   busca extra falhou. */
+                   busca extra falhou. O que o catalogo achou continua. */
+                alts = doCatalogo;
                 buscaFora.motivo = 'falhou: ' + e.message;
                 if (!(api && api.procurou)) {
                   procurouOutra = false;
@@ -3032,6 +3051,8 @@ async function atenderPedidos() {
             } else if (!(api && api.procurou)) {
               procurouOutra = false;
               motivoNaoProcurou = (api && api.motivo) || 'comparacao indisponivel agora';
+            } else {
+              buscaFora.motivo = !a.ok ? 'anuncio nao lido' : 'teto do dia de buscas atingido';
             }
 
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
@@ -3159,8 +3180,7 @@ async function atenderPedidos() {
             categorias: a.categorias || [],
             referencias: referencias,
             verificacaoIA: verificacaoIA,
-            buscaFora: apiAchou ? { rodou: false, motivo: 'a API ja achou loja melhor', vistos: 0 }
-              : buscaFora.rodou ? buscaFora
+            buscaFora: buscaFora.rodou ? buscaFora
               : { rodou: false, vistos: 0, motivo: !a.ok ? 'anuncio nao lido' : (pausaLeitura && !anonima) ? 'leitura pausada (freio/captcha) e modo anonimo nao permitido' : 'teto do dia atingido' },
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
