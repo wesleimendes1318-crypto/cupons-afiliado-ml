@@ -1183,6 +1183,28 @@ function Resultado({
         />
       ))}
 
+      {/* Regra do Weslei: o anúncio que o cliente colou fica SEMPRE disponível,
+          com o link de afiliado dele, mesmo quando outra loja sai mais barata. */}
+      {trocar && !leituraFalhou && !semLink && (
+        <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-card p-2">
+          <Foto src={a?.imagem} className="size-12 shrink-0 rounded" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-tight">Anúncio que você colou</p>
+            <p className="text-xs tabular-nums text-secondary-ink">
+              <span className="text-sm font-bold text-foreground">{brl(a?.preco)}</span>
+            </p>
+          </div>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-md border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue hover:bg-ml-blue/5"
+          >
+            Comprar seguro
+          </a>
+        </div>
+      )}
+
       {estaEAMelhor && (
         <MelhorOpcao
           vendedor={a?.vendedor ?? null}
@@ -1202,7 +1224,7 @@ function Resultado({
         <OutrasLojasMaisCaras referencias={referencias} temAlternativa={alternativas.length > 0} />
       )}
 
-      {(!estaEAMelhor || a?.temCupom === true) && <CondicoesDoCupom analise={a} />}
+      {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
 
       {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
           Dizer isso é o que dá confiança para comprar aqui. */}
@@ -1262,7 +1284,7 @@ function Resultado({
         </div>
       )}
 
-      {!leituraFalhou && !semLink && !estaEAMelhor && (
+      {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
         <a
           href={link}
           target="_blank"
@@ -1727,8 +1749,8 @@ function OutraLojaComCupom({
       </a>
       {oferta.mesmaPagina ? (
         <p className="mt-1.5 rounded-md bg-card px-3 py-2 text-xs leading-relaxed">
-          <span className="font-semibold">Importante:</span> o link abre a página deste produto no
-          Mercado Livre. Se a loja em destaque não for a{" "}
+          <span className="font-semibold">Importante:</span> o link abre a página deste produto. Se
+          a loja em destaque não for a{" "}
           <span className="font-semibold">{oferta.vendedor ?? "mais barata"}</span>, toque em{" "}
           <span className="font-semibold">"Outras opções de compra"</span> e escolha{" "}
           {oferta.vendedor ?? "essa loja"} por {brl(oferta.preco)}.
