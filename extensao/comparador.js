@@ -76,8 +76,8 @@ function decodeURIComponentSeguro(s) {
 }
 
 export function ehCaptcha(html, url) {
-  return /\/captcha\/wall/i.test(String(url || ''))
-      || /Por seguran.a, complete esta etapa/i.test(String(html || '').slice(0, 30000));
+  return /\/captcha\/wall|\/gz\/account-verification|\/gz\/webdevice/i.test(String(url || ''))
+      || /Por seguran.a, complete esta etapa|suspicious-traffic-frontend|gz-account-verification/i.test(String(html || '').slice(0, 30000));
 }
 
 /* Preco atual de um pedaco de HTML de cartao. Tira o preco riscado antes. */

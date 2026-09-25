@@ -188,7 +188,7 @@ async function lerParcial(url) {
   } catch (e) { /* segue para a janela anonima */ }
   const anon = await lerNaJanelaAnonima(url);
   if (anon.html) return anon.html;
-  if (await freioLigado('leitura')) return '';
+  if (await freioLigado('leitura') || await anonimaBloqueada()) return '';
   return lerParcialCom(url, 'include');
 }
 
@@ -451,7 +451,7 @@ async function completarVitrine() {
         const anon = await lerNaJanelaAnonima(url);
         const b = anon.html ? extrairAnuncio(anon.html, anon.url || url, 200) : null;
         if (b && b.imagem) { a = b; via = 'anonima'; }
-        else if (!(await anonimaPermitida()) && !(await freioLigado('leitura'))) {
+        else if (!(await anonimaPermitida()) && !(await anonimaBloqueada()) && !(await freioLigado('leitura'))) {
           try { a = await lerAnuncioNoWorker(url); via = 'logada'; } catch (e) { a = null; }
         }
       }
@@ -1929,7 +1929,7 @@ async function lerCatalogo(url, limite = MAX_CATALOGO) {
   if (anon.html) return anon.html;
   /* Com a anonima liberada, pagina de outra loja nunca e lida com a conta:
      se a anonima nao leu, a busca segue pelo leitor de cartoes da tela. */
-  if (await anonimaPermitida()) return '';
+  if (await anonimaPermitida() || await anonimaBloqueada()) return '';
   /* Freio da conta ligado: nao insiste logado. So a anonima podia ler. */
   if (await freioLigado('leitura')) {
     throw new Error('leitura pausada na conta e a janela anonima nao leu (' + (anon.motivo || '?') + ')');
@@ -2124,8 +2124,28 @@ async function esperarConteudo(tabId, limiteMs) {
 }
 let ultimaLeitura = null;
 
+/* 25/09 14h: o Mercado Livre passou a responder as leituras anonimas com a
+   pagina de "trafego suspeito" (suspicious-traffic / account-verification).
+   E a protecao antirrobo deles pedindo para PARAR. Nao se tenta contornar:
+   a leitura anonima fica desligada por 12 horas e a comparacao segue pela
+   API oficial no servidor do site. Leitura logada de outras lojas continua
+   proibida (protege a conta de afiliado). */
+const PAUSA_ANONIMA_MS = 12 * 60 * 60 * 1000;
 async function anonimaPermitida() {
-  try { return await chrome.extension.isAllowedIncognitoAccess(); } catch (e) { return false; }
+  try {
+    const { anonimaBloqueadaAte } = await chrome.storage.local.get('anonimaBloqueadaAte');
+    if (anonimaBloqueadaAte && Date.now() < anonimaBloqueadaAte) return false;
+    return await chrome.extension.isAllowedIncognitoAccess();
+  } catch (e) { return false; }
+}
+async function anonimaBloqueada() {
+  const { anonimaBloqueadaAte } = await chrome.storage.local.get('anonimaBloqueadaAte');
+  return !!(anonimaBloqueadaAte && Date.now() < anonimaBloqueadaAte);
+}
+async function bloquearAnonima(url) {
+  await chrome.storage.local.set({ anonimaBloqueadaAte: Date.now() + PAUSA_ANONIMA_MS });
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  gravarDiagnostico(sincToken, 'anonima-bloqueada', { url: String(url || '').slice(0, 200), ate: new Date(Date.now() + PAUSA_ANONIMA_MS).toISOString() }).catch(() => {});
 }
 
 let criandoAnonima = null;
@@ -2175,7 +2195,7 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
     const final = (await chrome.tabs.get(id)).url || '';
     const [s] = await chrome.scripting.executeScript({ target: { tabId: id }, func });
     const r = (s && s.result) || {};
-    if (ehCaptcha(r.html || '', final)) return { motivo: 'captcha na anonima' };
+    if (ehCaptcha(r.html || '', final) || (r.captcha)) { await bloquearAnonima(final); return { motivo: 'trafego suspeito na anonima (pausada 12h)' }; }
     if (func === htmlDaPagina) {
       if (!r.html || r.html.length < 5000) return { motivo: 'pagina curta (' + (r.html || '').length + ')' };
       ultimaLeitura = { modo: 'anonima' };
@@ -2197,7 +2217,7 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
 async function lerBuscaNaAba(url) {
   const anon = await lerNaJanelaAnonima(url, cartoesDaBuscaNaPagina);
   if (anon.cartoes) return anon;
-  if (await anonimaPermitida()) return { cartoes: [], motivo: anon.motivo || null };
+  if (await anonimaPermitida() || await anonimaBloqueada()) return { cartoes: [], motivo: anon.motivo || null };
   if (await freioLigado('leitura')) throw new Error('leitura pausada na conta (' + (anon.motivo || '?') + ')');
   const aba = await chrome.tabs.create({ url, active: false });
   try {
@@ -2821,7 +2841,7 @@ async function atenderPedidos() {
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
               }));
-            } else if (a.ok && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
+            } else if (a.ok && !(await anonimaBloqueada()) && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
                                         : (!pausaLeitura && LEITURA_RESERVA_POR_DIA > 0
                                            && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA))) {
               /* 2. Reserva: a API nao achou o produto em ficha de catalogo.
