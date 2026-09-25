@@ -848,12 +848,33 @@ function extrairAnuncio(t, finalUrl, status) {
                    .replace(/\s*-\s*R\$\s*[\d.,]+\s*$/, '').trim();
   }
 
+  /* Preco: varias formas, da mais confiavel para a menos (pagina de oferta
+     "deal" nao trazia a primeira e o site escondia o resultado, 25/09). */
   let preco = null;
-  const pm = /"price"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)\s*[,}]/.exec(t);
-  if (pm) { const n = parseFloat(pm[1]); if (n > 0 && n < 1e7) preco = n; }
+  const formasPreco = [
+    /<meta[^>]+itemprop="price"[^>]+content="(\d{1,7}(?:\.\d{1,2})?)"/i,
+    /"offers"\s*:\s*\{[^{}]*?"price"\s*:\s*"?(\d{1,7}(?:\.\d{1,2})?)/,
+    /"price"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)\s*[,}]/,
+    /"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/,
+    /"price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/
+  ];
+  for (const re of formasPreco) {
+    const pm = re.exec(t);
+    if (pm) { const n = parseFloat(pm[1]); if (n > 0 && n < 1e7) { preco = n; break; } }
+  }
 
   const nomes = [];
   if (lab) nomes.push(lab[1]);
+  /* Outras formas de achar a loja (pagina de oferta, layout novo). */
+  if (!lab) {
+    const outras = [
+      /Vendido por\s*(?:<[^>]+>\s*)*([^<>]{2,60}?)\s*</i,
+      /"seller_name"\s*:\s*"([^"]{2,60})"/,
+      /"official_store_name"\s*:\s*"([^"]{2,60})"/,
+      /"seller"\s*:\s*\{[^{}]*?"name"\s*:\s*"([^"]{2,60})"/
+    ];
+    for (const re of outras) { const m = re.exec(t); if (m) { nomes.push(limpo(m[1])); break; } }
+  }
   if (slug) {
     const x = slug[1] || slug[2];
     try { nomes.push(decodeURIComponent(x)); } catch (e) { nomes.push(x); }
@@ -879,7 +900,16 @@ function extrairAnuncio(t, finalUrl, status) {
     if (bc) for (const m of bc[0].matchAll(/"name"\s*:\s*"([^"]{2,80})"/g)) categorias.push(limpo(m[1]));
   }
 
-  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes,
+  /* Faltou preco ou loja: guarda o trecho da pagina para corrigir a leitura
+     com a pagina real (sem isso so da para adivinhar). */
+  let faltou = null;
+  if (preco == null || !nomes.length) {
+    const perto = re => { const m = re.exec(t); return m ? t.slice(Math.max(0, m.index - 300), m.index + 700) : null; };
+    faltou = { preco: preco == null, loja: !nomes.length, url: String(finalUrl || '').slice(0, 200), bytes: t.length,
+               trechoPreco: perto(/price|preco|money-amount/i), trechoLoja: perto(/Vendido por|seller|vendedor/i) };
+  }
+
+  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou,
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
@@ -2840,6 +2870,7 @@ async function atenderPedidos() {
           }
 
           marcar('anuncio');
+          if (a && a.faltou) gravarDiagnostico(sincToken, 'anuncio-incompleto', a.faltou).catch(() => {});
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
           let cupom = null, vendedor = null;
           for (const nome of (a.nomes || [])) {

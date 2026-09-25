@@ -1142,7 +1142,9 @@ function Resultado({
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
      pessoa tiver colado o link de afiliado de outra pessoa a venda vai para
      ela. Nesse caso o botao nao aparece. */
-  const leituraFalhou = !(a?.lojaLida === true || !!a?.vendedor);
+  /* Leu o produto (título) ou tem link de afiliado: mostra o resultado. Só
+     esconde quando nada foi lido (link de outra pessoa não vira botão). */
+  const leituraFalhou = !(a?.lojaLida === true || !!a?.vendedor || !!a?.titulo);
 
   /* Sem link de afiliado nao existe botao de compra, mesmo que a leitura do
      produto tenha dado certo. Comprar por um endereco sem etiqueta entrega a
@@ -1422,7 +1424,13 @@ function MelhorOpcao({
           Melhor opção
         </span>
         <span className="text-sm font-semibold">{vendedor ?? "Loja do anúncio"}</span>
-        <span className="ml-auto text-base font-bold tabular-nums">{brl(preco)}</span>
+        <span className="ml-auto text-base font-bold tabular-nums">
+          {preco != null ? (
+            brl(preco)
+          ) : (
+            <span className="text-xs font-normal">preço no anúncio</span>
+          )}
+        </span>
       </div>
       <p className="mt-1 text-xs text-success">
         {!comparou

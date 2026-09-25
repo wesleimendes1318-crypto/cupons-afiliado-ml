@@ -32,7 +32,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
 - Antes de dizer ao Weslei que está pronto: rodar ferramentas/bateria-de-testes.sql
-  (capinha, travesseiro, Eudora, disco de freio) na versão nova e conferir todas
+  (capinha, travesseiro, Eudora, disco de freio, monitor em página de oferta) na versão nova e conferir todas
   as metas. Falhou alguma: corrigir e rodar de novo. Só então avisar.
 
 ## Publicação
