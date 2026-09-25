@@ -219,6 +219,8 @@ type Referencia = {
      cliente pedir ("Ver na loja"). */
   url?: string | null;
   imagem?: string | null;
+  /* Link de afiliado desta loja, gerado em lote pela extensão. */
+  link?: string | null;
 };
 
 type Pedido = {
@@ -1232,7 +1234,7 @@ function Resultado({
               imagem: r.imagem,
               final: r.final,
               diferenca: r.diferenca,
-              link: null,
+              link: r.link ?? null,
               url: r.url ?? null,
             })),
           ]}
@@ -1443,9 +1445,15 @@ function VerNaLoja({ url }: { url: string }) {
   async function gerar() {
     setEstado("gerando");
     try {
+      /* Endereço do ANÚNCIO da loja, não da ficha de catálogo: assim cada loja
+         ganha o seu próprio link de afiliado (medido em 25/09). */
+      const item =
+        /item_id(?:%3A|:)(MLB)-?(\d{6,})/i.exec(url) ??
+        /(?<!\/p)\/(MLB)-?(\d{9,})(?:[-_/?#]|$)/i.exec(url);
+      const alvo = item ? `https://produto.mercadolivre.com.br/MLB-${item[2]}` : url;
       const { data: id, error } = await supabase.rpc(
         "pedir_link_loja" as never,
-        { p_url: url } as never,
+        { p_url: alvo } as never,
       );
       if (error || id == null) throw new Error("falhou");
       try {

@@ -693,6 +693,51 @@ function chamadaNaPagina(rota, url, tag) {
     .catch(e => ({ falha: String(e && e.message || e) }));
 }
 
+/* Varios links numa chamada so: o proprio gerador aceita "1 ou mais URLs
+   separadas por linha" (lembrado pelo Weslei, 25/09). Uma chamada para todas
+   as lojas da tabela, em vez de uma por loja. */
+function chamadaVariosNaPagina(rota, urls, tag) {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (!meta || !meta.content) return { falha: 'deslogado' };
+  return fetch(rota, {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': meta.content },
+    body: JSON.stringify({ urls, tag })
+  }).then(r => r.text().then(t => ({ status: r.status, txt: t.slice(0, 120000) })))
+    .catch(e => ({ falha: String(e && e.message || e) }));
+}
+
+/* Endereco do ANUNCIO de uma loja (nao da ficha de catalogo): cada loja ganha
+   o seu proprio link de afiliado (medido em 25/09). */
+function enderecoDoAnuncio(url, item) {
+  const it = item || (/item_id(?:%3A|:)(MLB-?\d{6,})/i.exec(url || '') || [])[1] || itemDoUrl(url || '');
+  return it ? 'https://produto.mercadolivre.com.br/' + String(it).toUpperCase().replace(/^MLB-?/, 'MLB-') : url;
+}
+
+async function gerarVariosNaAba(tabId, urls, tag = TAG_PADRAO) {
+  const mapa = {};
+  if (!urls.length) return mapa;
+  const [saida] = await chrome.scripting.executeScript({
+    target: { tabId }, world: 'MAIN', func: chamadaVariosNaPagina, args: [ROTA_CRIAR, urls, tag]
+  });
+  const r = saida && saida.result;
+  if (!r || r.falha || r.status >= 400) return mapa;
+  let j = null;
+  try { j = JSON.parse(r.txt || ''); } catch (e) { return mapa; }
+  const lista = (j && j.urls) || (Array.isArray(j) ? j : []);
+  const norm = u => String(u || '').split('#')[0].replace(/\/+$/, '').toLowerCase();
+  lista.forEach((it, i) => {
+    if (!it) return;
+    const curto = it.short_url || it.shortUrl
+      || (String(it.text || '').match(/https?:\/\/meli\.la\/[A-Za-z0-9]+/) || [])[0] || null;
+    if (!curto) return;
+    const origem = norm(it.origin_url || it.long_url || '');
+    const k = urls.findIndex(u => norm(u) === origem);
+    mapa[urls[k >= 0 ? k : i]] = curto;
+  });
+  return mapa;
+}
+
 /* Vitrine do cupom, lida de dentro da pagina do Mercado Livre.
    E o mesmo endpoint que o botao "Ver produtos" do hub de afiliados usa.
    Devolve a lista exata dos produtos que aquele cupom cobre, em uma das duas
@@ -3012,7 +3057,11 @@ async function atenderPedidos() {
                Weslei. Sem link de afiliado a oferta nao vai para a tela. */
             for (const alt of alts.slice(0, 3)) {
               try {
-                const la = await gerarNaAba(tabId, alt.url);
+                /* Endereco do ANUNCIO da loja (nao da ficha de catalogo): medido em
+                   25/09, assim cada loja ganha o seu proprio link de afiliado
+                   (pela ficha o gerador devolvia o mesmo link para todas). */
+                const alvoAlt = enderecoDoAnuncio(alt.url, alt.item);
+                const la = await gerarNaAba(tabId, alvoAlt);
                 /* O gerador do Mercado Livre devolve o MESMO link para todas as
                    ofertas da mesma ficha de catalogo (medido em 24/09: Celimax
                    e capinha). Entao:
@@ -3058,6 +3107,18 @@ async function atenderPedidos() {
             }
             outra = outras[0] || null;
           }
+
+          /* Todas as lojas da tabela com o link de afiliado ja pronto, numa
+             chamada so ao gerador. Loja sem link fica com o botao que gera no
+             clique (site). */
+          try {
+            const semLink = referencias.filter(x => !x.link && x.url);
+            if (semLink.length && !(await freioLigado('link'))) {
+              const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
+              const mapa = await gerarVariosNaAba(tabId, alvos);
+              semLink.forEach((x, k) => { if (mapa[alvos[k]]) x.link = mapa[alvos[k]]; });
+            }
+          } catch (e) { console.warn('[links em lote]', e.message); }
 
           await marcarPedido(sincToken, p.id, r.link, r.codigo, null, {
             titulo: a.titulo ?? null,
