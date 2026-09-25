@@ -179,9 +179,22 @@ const RE_SLUG  = /\\u002F(?:pagina|perfil)\\u002F([A-Za-z0-9._%-]{2,60})|\/(?:pa
 const RE_LABEL_G = /"seller_link"[\s\S]{0,600}?"label"\s*:\s*\{\s*"text"\s*:\s*"([^"]{2,60})"/g;
 const RE_SLUG_G  = /\\u002F(?:pagina|perfil)\\u002F([A-Za-z0-9._%-]{2,60})|\/(?:pagina|perfil)\/([A-Za-z0-9._%-]{2,60})|"(?:nickname|seller_name)"\s*:\s*"([A-Za-z0-9._-]{2,60})"|\\u002Fperfil\\u002F([A-Za-z0-9._%-]{2,60})/g;
 
+/* Anuncio de OUTRA loja: primeiro sem cookie nenhum, depois na janela
+   anonima, e so por ultimo com a sessao (e nunca com o freio ligado). */
 async function lerParcial(url) {
+  try {
+    const t = await lerParcialCom(url, 'omit');
+    if (RE_LABEL.test(t) || nomesDoHtml(t).length) return t;
+  } catch (e) { /* segue para a janela anonima */ }
+  const anon = await lerNaJanelaAnonima(url);
+  if (anon.html) return anon.html;
+  if (await freioLigado('leitura')) return '';
+  return lerParcialCom(url, 'include');
+}
+
+async function lerParcialCom(url, credenciais) {
   const ctrl = new AbortController();
-  const r = await fetch(url, { credentials: 'include', redirect: 'follow', signal: ctrl.signal });
+  const r = await fetch(url, { credentials: credenciais, redirect: 'follow', signal: ctrl.signal });
   if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
 
   const leitor = r.body.getReader();
@@ -1787,6 +1800,15 @@ const MAX_CATALOGO = 900000;
    voltava como um HTML sem ofertas, a comparacao concluia "nenhuma loja
    melhor" e o site dizia ao cliente que tinha procurado. Nao tinha. */
 async function lerCatalogo(url, limite = MAX_CATALOGO) {
+  /* Primeiro na janela anonima: pagina de outra loja nao precisa da conta do
+     Weslei, e o que se le ali nao fica ligado a ela. */
+  const anon = await lerNaJanelaAnonima(url);
+  if (anon.html) return anon.html;
+  /* Freio da conta ligado: nao insiste logado. So a anonima podia ler. */
+  if (await freioLigado('leitura')) {
+    throw new Error('leitura pausada na conta e a janela anonima nao leu (' + (anon.motivo || '?') + ')');
+  }
+  ultimaLeitura = { modo: 'logada', motivoAnonima: anon.motivo || null };
   const ctrl = new AbortController();
   const corta = setTimeout(() => ctrl.abort(), 25000);
   let r;
@@ -1907,9 +1929,102 @@ function cartoesDaBuscaNaPagina() {
   return { cartoes: saida, tituloPagina: document.title, url: location.href, itens: links.length };
 }
 
+/* ------------------------------------------------- janela anonima
+
+   Pedido do Weslei (25/09): analisar os anuncios das outras lojas sem expor a
+   conta dele. Tudo que e LEITURA de pagina de outra loja (busca, ficha de
+   catalogo, anuncio candidato) abre numa janela anonima minimizada: cookies
+   separados, sem login, sem ligacao com a conta de afiliado. Logado fica so o
+   que precisa de login de verdade: gerar o link de afiliado.
+
+   Por que janela e nao fetch sem cookie: medido em 22/09, a busca lida por
+   fetch deslogado volta uma casca de 9 KB sem preco nenhum. A janela roda o
+   JavaScript da pagina como um navegador comum e ve a lista inteira.
+
+   Precisa de UMA permissao que so o dono do Chrome da: em
+   chrome://extensions > Detalhes > "Permitir no modo anonimo". Sem ela tudo
+   segue como antes (leitura logada, com freio), e o motivo fica gravado.
+
+   Captcha na anonima NAO puxa o freio da conta: a conta nao estava ali. */
+let janelaAnonima = null;
+let fecharAnonima = null;
+let ultimaLeitura = null;
+
+async function anonimaPermitida() {
+  try { return await chrome.extension.isAllowedIncognitoAccess(); } catch (e) { return false; }
+}
+
+let criandoAnonima = null;
+async function abaAnonima(url) {
+  if (fecharAnonima) { clearTimeout(fecharAnonima); fecharAnonima = null; }
+  /* Duas leituras ao mesmo tempo nao podem abrir duas janelas. */
+  if (criandoAnonima) { try { await criandoAnonima; } catch (e) { /* tenta de novo abaixo */ } }
+  if (janelaAnonima != null) {
+    try {
+      const t = await chrome.tabs.create({ windowId: janelaAnonima, url, active: false });
+      return t.id;
+    } catch (e) { janelaAnonima = null; }
+  }
+  criandoAnonima = chrome.windows.create({ url, incognito: true, focused: false, state: 'minimized' });
+  try {
+    const w = await criandoAnonima;
+    janelaAnonima = w.id;
+    return w.tabs[0].id;
+  } finally { criandoAnonima = null; }
+}
+
+/* Fecha a janela depois de 2 minutos parada: sessao anonima nova a cada
+   rodada, sem acumular cookie nenhum. */
+function agendarFecharAnonima() {
+  if (fecharAnonima) clearTimeout(fecharAnonima);
+  fecharAnonima = setTimeout(async () => {
+    fecharAnonima = null;
+    const id = janelaAnonima;
+    janelaAnonima = null;
+    if (id != null) { try { await chrome.windows.remove(id); } catch (e) { /* ja fechada */ } }
+  }, 120000);
+}
+
+function htmlDaPagina() {
+  return { html: document.documentElement.outerHTML, titulo: document.title };
+}
+
+/* Le uma pagina na janela anonima. Devolve { html } ou { motivo } (nunca
+   lanca): quem chama decide o plano B. func troca o leitor (ex.: cartoes da
+   busca lidos da tela). */
+async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
+  if (!(await anonimaPermitida())) return { motivo: 'sem permissao de modo anonimo' };
+  let id = null;
+  try {
+    id = await abaAnonima(url);
+    await esperarCarregar(id, 30000);
+    await sleep(1500 + Math.floor(Math.random() * 1000));
+    const final = (await chrome.tabs.get(id)).url || '';
+    const [s] = await chrome.scripting.executeScript({ target: { tabId: id }, func });
+    const r = (s && s.result) || {};
+    if (ehCaptcha(r.html || '', final)) return { motivo: 'captcha na anonima' };
+    if (func === htmlDaPagina) {
+      if (!r.html || r.html.length < 50000) return { motivo: 'pagina curta (' + (r.html || '').length + ')' };
+      ultimaLeitura = { modo: 'anonima' };
+      return { html: r.html, url: final };
+    }
+    ultimaLeitura = { modo: 'anonima' };
+    return { ...r, url: final };
+  } catch (e) {
+    return { motivo: String((e && e.message) || e).slice(0, 120) };
+  } finally {
+    if (id != null) { try { await chrome.tabs.remove(id); } catch (e) { /* ja fechada */ } }
+    agendarFecharAnonima();
+  }
+}
+
 /* Abre a busca numa aba de fundo, como uma pessoa abriria, espera a lista
-   aparecer e le a tela. Usada quando a leitura "por baixo" veio vazia. */
+   aparecer e le a tela. Usada quando a leitura "por baixo" veio vazia.
+   Anonima primeiro; aba logada so sem a permissao e sem freio. */
 async function lerBuscaNaAba(url) {
+  const anon = await lerNaJanelaAnonima(url, cartoesDaBuscaNaPagina);
+  if (anon.cartoes) return anon;
+  if (await freioLigado('leitura')) throw new Error('leitura pausada na conta (' + (anon.motivo || '?') + ')');
   const aba = await chrome.tabs.create({ url, active: false });
   try {
     await esperarCarregar(aba.id, 30000);
@@ -2131,6 +2246,8 @@ const TETO_DIA_LOJAS = 60;
    de catalogo, com teto diario e com o freio de captcha de sempre: se o
    Mercado Livre pedir verificacao, para tudo e avisa. */
 const LEITURA_RESERVA_POR_DIA = 120;
+/* Na janela anonima a conta nao aparece: teto maior, so contra rajada. */
+const LEITURA_RESERVA_ANONIMA = 400;
 const LOTE_LOJAS = 8;
 
 function diaSP() {
@@ -2382,6 +2499,16 @@ async function atenderPedidos() {
             else if (!a.ok && b && b.ok) a = b;
           }
           if (!a) a = { ok: false, falha: 'a pagina nao respondeu' };
+          /* Ultimo recurso para ler o anuncio colado: janela anonima (serve
+             tambem quando a conta levou captcha). Perfil social nao: ali nao
+             ha produto para ler. */
+          if (!a.ok && !a.perfilSocial) {
+            const anon = await lerNaJanelaAnonima(url);
+            if (anon.html) {
+              const b = extrairAnuncio(anon.html, anon.url || url, 200);
+              if (b && b.titulo) a = { ...b, lidoAnonimo: true };
+            }
+          }
 
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
           let cupom = null, vendedor = null;
@@ -2451,6 +2578,10 @@ async function atenderPedidos() {
           let apiAchou = false;
           let verificacaoIA = null;
           const pausaLeitura = await freioLigado('leitura');
+          /* Com a janela anonima liberada, a busca em outras lojas nao depende
+             da conta: roda mesmo com o freio da conta ligado. */
+          const anonima = await anonimaPermitida();
+          ultimaLeitura = null;
           /* A comparacao pela API oficial nao depende da pausa de leitura nem
              de ter lido o anuncio: ela so precisa do link. A pausa passa a
              valer apenas para a reserva que le paginas (mais abaixo). */
@@ -2494,8 +2625,9 @@ async function atenderPedidos() {
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
               }));
-            } else if (LEITURA_RESERVA_POR_DIA > 0 && !pausaLeitura && a.ok
-                       && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA) {
+            } else if (a.ok && (anonima ? (await gastoDoDia()).comparacoes < LEITURA_RESERVA_ANONIMA
+                                        : (!pausaLeitura && LEITURA_RESERVA_POR_DIA > 0
+                                           && (await gastoDoDia()).comparacoes < LEITURA_RESERVA_POR_DIA))) {
               /* 2. Reserva: a API nao achou o produto em ficha de catalogo.
                     Le a busca do Mercado Livre como uma pessoa faria, com
                     teto diario (LEITURA_RESERVA_POR_DIA). */
@@ -2518,6 +2650,7 @@ async function atenderPedidos() {
                 });
                 buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
                 buscaFora.leitura = alts.diag || null;
+                buscaFora.modo = ultimaLeitura;
                 if (Array.isArray(alts.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
                   for (const t of alts.todas) {
@@ -2638,6 +2771,8 @@ async function atenderPedidos() {
             motivoNaoProcurou: motivoNaoProcurou,
             /* Para saber, de longe, qual versao atendeu este cliente. */
             versaoExtensao: chrome.runtime.getManifest().version,
+            /* false = falta ligar "Permitir no modo anonimo" na extensao. */
+            anonima: anonima,
             /* Para a vitrine do site. */
             imagem: a.imagem || null,
             categoria: (a.categorias && a.categorias[0]) || null,
@@ -2646,7 +2781,7 @@ async function atenderPedidos() {
             verificacaoIA: verificacaoIA,
             buscaFora: apiAchou ? { rodou: false, motivo: 'a API ja achou loja melhor', vistos: 0 }
               : buscaFora.rodou ? buscaFora
-              : { rodou: false, vistos: 0, motivo: pausaLeitura ? 'leitura pausada (freio/captcha)' : !a.ok ? 'anuncio nao lido' : 'teto do dia atingido' },
+              : { rodou: false, vistos: 0, motivo: !a.ok ? 'anuncio nao lido' : (pausaLeitura && !anonima) ? 'leitura pausada (freio/captcha) e modo anonimo nao permitido' : 'teto do dia atingido' },
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,
