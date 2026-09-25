@@ -257,7 +257,8 @@ import { polycards } from '../comparador.js';
 
 test('busca: cartao polycard real (link de rastreio, numero do anuncio em metadata.id)', () => {
   const card = '"results":[{"id":"POLYCARD","state":"VISIBLE","polycard":{"unique_id":"x","metadata":{"id":"MLB6647645240","user_product_id":"MLBU3807900795",'
-    + '"url":"click1.mercadolivre.com.br/mclics/clicks/external/MLB/count","url_fragments":"#wid=MLB6647645240"},'
+    + '"url":"click1.mercadolivre.com.br/mclics/clicks/external/MLB/count","url_fragments":"#wid=MLB6647645240",'
+    + '"tracks":{"melidata_track":{"type":"view","event_data":{"position":1}}},"is_ad":true},'
     + '"pictures":{"scale":"FILL","pictures":[{"id":"940186-MLB115232945436_082026"}],"square":"Q"},'
     + '"components":[{"type":"title","id":"title","title":{"text":"Travesseiro Viscoelástico Borboleta Cervical Ortopédico","long_title":false}},'
     + '{"type":"price","id":"price_v2","price":{"price_labels":[{"values":[{"price":{"value":299,"previous":true}}]}],'

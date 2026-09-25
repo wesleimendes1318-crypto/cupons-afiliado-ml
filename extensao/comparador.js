@@ -503,11 +503,14 @@ export function polycards(limpo) {
   const partes = String(limpo || '').split(/"polycard"\s*:\s*\{/);
   for (const p of partes.slice(1)) {
     const bloco = p.slice(0, 15000);
-    const meta = /"metadata"\s*:\s*\{([^{}]*)\}/.exec(bloco);
-    if (!meta) continue;
-    const id = (/"id"\s*:\s*"(MLB\d{6,})"/.exec(meta[1]) || [])[1];
+    /* metadata tem sub-blocos (tracks...), entao nao da para casar ate o
+       "}" dele: le os primeiros campos a partir do inicio do bloco. */
+    const mi = bloco.search(/"metadata"\s*:\s*\{/);
+    if (mi < 0) continue;
+    const metaTxt = bloco.slice(mi, mi + 4000);
+    const id = (/"id"\s*:\s*"(MLB\d{6,})"/.exec(metaTxt) || [])[1];
     if (!id) continue;
-    const urlMeta = (/"url"\s*:\s*"([^"]*)"/.exec(meta[1]) || [])[1] || '';
+    const urlMeta = (/"url"\s*:\s*"([^"]*)"/.exec(metaTxt) || [])[1] || '';
     const cat = (/\/p\/(MLB\d{5,})/i.exec(urlMeta) || [])[1] || null;
     const titulo = (/"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{6,300})"/.exec(bloco) || [])[1];
     const preco = (/"current_price"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d{1,7}(?:\.\d{1,2})?)/.exec(bloco) || [])[1];
