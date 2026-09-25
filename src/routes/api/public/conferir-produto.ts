@@ -12,6 +12,7 @@ const anuncio = z.object({
   titulo: z.string().max(400).nullish(),
   imagem: z.string().max(600).nullish(),
   preco: z.number().nullish().catch(null),
+  chave: z.string().max(120).nullish(),
 });
 const entradaSchema = z.object({
   tipo: z.enum(["conferir", "busca"]),

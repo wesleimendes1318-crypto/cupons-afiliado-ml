@@ -108,7 +108,10 @@ async function gerar(partes: Parte[]): Promise<Resultado> {
         };
         /* 429 (cota) e 5xx passam com uma pausa; 404 (modelo que a chave nao
            tem) vai direto para o proximo; o resto e defeito do pedido. */
-        if (r.status === 429 || r.status >= 500) {
+        /* 429 = cota esgotada: repetir o mesmo modelo só gasta mais cota.
+           Vai direto para o próximo. 5xx ganha uma segunda chance. */
+        if (r.status === 429) break;
+        if (r.status >= 500) {
           if (tentativa === 0) await new Promise((ok) => setTimeout(ok, 1000));
           continue;
         }
@@ -157,10 +160,118 @@ export type Conferencia =
     }
   | { ok: false; status: number; erro: string; modelo?: string };
 
+/* VEREDITOS GUARDADOS (custo zero, pedido do Weslei): cada par "anúncio
+   original x candidato" conferido pela Gemini fica na tabela ia_vereditos por
+   30 dias. Na próxima consulta com o mesmo par, a resposta vem do banco e não
+   gasta cota da API. Só vai para a Gemini o que nunca foi conferido. */
+type Veredito = { igual: boolean; confianca: number; motivo: string };
+
+async function vereditosGuardados(original: string, chaves: string[]) {
+  const mapa = new Map<string, Veredito>();
+  if (!original || !chaves.length) return mapa;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("ia_vereditos" as never)
+      .select("chave_candidato,igual,confianca,motivo")
+      .eq("chave_original" as never, original as never)
+      .in("chave_candidato" as never, chaves as never)
+      .gte("criado_em" as never, new Date(Date.now() - 30 * 86400_000).toISOString() as never);
+    for (const l of (data ?? []) as Array<{ chave_candidato: string } & Veredito>) {
+      mapa.set(l.chave_candidato, { igual: l.igual, confianca: l.confianca, motivo: l.motivo });
+    }
+  } catch {
+    /* sem cache: confere tudo */
+  }
+  return mapa;
+}
+
+async function guardarVereditos(
+  original: string,
+  linhas: Array<{ chave: string } & Veredito>,
+  modelo: string,
+) {
+  if (!original || !linhas.length) return;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("ia_vereditos" as never).upsert(
+      linhas.map((l) => ({
+        chave_original: original,
+        chave_candidato: l.chave,
+        igual: l.igual,
+        confianca: l.confianca,
+        motivo: l.motivo,
+        modelo,
+        criado_em: new Date().toISOString(),
+      })) as never,
+    );
+  } catch {
+    /* só cache */
+  }
+}
+
 export async function conferirMesmoProduto(
-  original: Anuncio,
-  candidatos: Anuncio[],
-): Promise<Conferencia> {
+  original: Anuncio & { chave?: string | null | undefined },
+  candidatos: Array<Anuncio & { chave?: string | null | undefined }>,
+): Promise<Conferencia & { guardados?: number }> {
+  const lista = candidatos.slice(0, 12);
+  const chaveOriginal = (original.chave ?? "").trim();
+  const guardados = await vereditosGuardados(
+    chaveOriginal,
+    lista.map((c) => (c.chave ?? "").trim()).filter(Boolean),
+  );
+  const faltam = lista
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => !guardados.has((c.chave ?? "").trim()));
+
+  let novo: Conferencia | null = null;
+  if (faltam.length) {
+    novo = await conferirSemGuardar(
+      original,
+      faltam.map((f) => f.c),
+    );
+    if (!novo.ok) return novo;
+  }
+
+  const avaliacao: Array<{
+    indice: number;
+    igual: boolean;
+    confianca: number;
+    motivo: string;
+    semFoto: boolean;
+    guardado?: boolean;
+  }> = [];
+  lista.forEach((c, i) => {
+    const g = guardados.get((c.chave ?? "").trim());
+    if (g) avaliacao.push({ indice: i, ...g, semFoto: false, guardado: true });
+  });
+  const paraGuardar: Array<{ chave: string } & Veredito> = [];
+  if (novo && novo.ok) {
+    for (const a of novo.avaliacao) {
+      const f = faltam[a.indice];
+      if (!f) continue;
+      avaliacao.push({ ...a, indice: f.i });
+      const chave = (f.c.chave ?? "").trim();
+      /* Sem foto não é veredito de verdade: não guarda. */
+      if (chave && !a.semFoto)
+        paraGuardar.push({ chave, igual: a.igual, confianca: a.confianca, motivo: a.motivo });
+    }
+    await guardarVereditos(chaveOriginal, paraGuardar, novo.modelo);
+  }
+  const iguais = avaliacao
+    .filter((a) => a.igual && a.confianca >= CONFIANCA_MINIMA && !a.semFoto)
+    .map((a) => a.indice);
+  return {
+    ok: true,
+    modelo: novo && novo.ok ? novo.modelo : "guardado",
+    descricaoOriginal: novo && novo.ok ? novo.descricaoOriginal : null,
+    iguais,
+    avaliacao,
+    guardados: guardados.size,
+  };
+}
+
+async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Promise<Conferencia> {
   const lista = candidatos.slice(0, 12);
   const [fotoOriginal, ...fotos] = await Promise.all([
     imagem(original.imagem),

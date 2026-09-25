@@ -151,7 +151,7 @@ function enderecoDoCartao(pedaco) {
 export const MAX_CANDIDATOS_BUSCA = 4;
 /* Quantos parecidos vao para a Gemini conferir pela foto antes de escolher
    os MAX_CANDIDATOS_BUSCA mais baratos entre os aprovados. */
-export const MAX_CANDIDATOS_IA = 12;
+export const MAX_CANDIDATOS_IA = 8;
 
 /* Foto do cartao: o primeiro endereco de imagem do Mercado Livre no bloco,
    normalizado para a versao grande (-O.webp). Serve para a Gemini conferir. */

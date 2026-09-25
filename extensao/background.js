@@ -537,7 +537,8 @@ async function geminiLocal(partes) {
         }
         ultimo = { ok: false, status: r.status, erro: String((j && j.error && j.error.message) || '').slice(0, 200), modelo };
         falhas.push(modelo + ' ' + r.status + ' ' + ultimo.erro.slice(0, 90));
-        if (r.status === 429 || r.status >= 500) { if (tentativa === 0) await sleep(2000); continue; }
+        if (r.status === 429) break;
+        if (r.status >= 500) { if (tentativa === 0) await sleep(2000); continue; }
         if (r.status === 404) break;
         return comFalhas(ultimo);
       } catch (e) {
@@ -596,11 +597,15 @@ async function mesmoProdutoPelaGemini(original, lista) {
   const { sincToken } = await chrome.storage.local.get('sincToken');
   const sv = await conferirNoServidor(sincToken, {
     tipo: 'conferir',
-    original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null },
-    candidatos: itens.map(c => ({ titulo: c.titulo || null, imagem: c.imagem || null, preco: c.preco ?? null }))
+    /* chave = codigo do anuncio: o servidor reaproveita vereditos ja dados
+       para o mesmo par (nao gasta cota da Gemini de novo). */
+    original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null,
+                chave: original.item || null },
+    candidatos: itens.map(c => ({ titulo: c.titulo || null, imagem: c.imagem || null, preco: c.preco ?? null,
+                                  chave: c.item || null }))
   });
   if (sv && sv.ok && Array.isArray(sv.iguais)) {
-    ultimaIA = { via: 'servidor', modelo: sv.modelo, descricao: sv.descricaoOriginal || null,
+    ultimaIA = { via: 'servidor', guardados: sv.guardados || 0, modelo: sv.modelo, descricao: sv.descricaoOriginal || null,
                  avaliacao: (sv.avaliacao || []).map(a => ({ ...a, titulo: String((itens[a.indice] || {}).titulo || '').slice(0, 70) })) };
     return new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
   }
@@ -2934,7 +2939,7 @@ async function atenderPedidos() {
                      gasta leitura de pagina repetindo o que ja foi visto. */
                   soBusca: !!(api && api.procurou) || !!(api && Array.isArray(api.google) && api.google.length),
                   google: (api && Array.isArray(api.google)) ? api.google : [],
-                  original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco }
+                  original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco, item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null }
                 }),
                   new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })
                 ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });
@@ -2980,10 +2985,10 @@ async function atenderPedidos() {
                lojas da lista passam pela Gemini: foto e titulo contra o
                anuncio original. O que ela reprovar nao aparece. */
             {
-              const original = { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco };
+              const original = { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco, item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null };
               const conferir = [];
-              alts.forEach((x, i) => { if (x.achadoNaBusca && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem }); });
-              referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem }); });
+              alts.forEach((x, i) => { if (x.achadoNaBusca && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem, item: x.item || itemDoUrl(x.url || '') }); });
+              referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem, item: itemDoUrl(x.url || '') }); });
               if (conferir.length) {
                 ultimaIA = null;
                 let prazoIA;
