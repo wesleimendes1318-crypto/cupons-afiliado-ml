@@ -35,7 +35,7 @@ const RITMO_RAPIDO_MS = 1200;
 const VOLTAS_RAPIDAS = 15;
 const RITMO_CALMO_MS = 3000;
 /* A busca em outras lojas e os links de cada uma levam mais tempo. */
-const LIMITE_MS = 90000;
+const LIMITE_MS = 240000;
 /* Depois disso a espera deixou de ser normal. Nao desiste: troca o texto por um
    aviso honesto e da uma saida util para a pessoa nao abandonar a pagina. */
 const AVISO_MS = 45000;
@@ -413,6 +413,8 @@ export default function BuscaPorLink() {
   const [copiado, setCopiado] = useState<string | null>(null);
   const [demorando, setDemorando] = useState(false);
   const [motivo, setMotivo] = useState<string | null>(null);
+  const [inicio, setInicio] = useState(() => Date.now());
+  const [estimativa, setEstimativa] = useState<Estimativa>(null);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -449,6 +451,19 @@ export default function BuscaPorLink() {
       }
 
       setFase("enviando");
+      setInicio(Date.now());
+      void (async () => {
+        try {
+          const { data } = await supabase.rpc("tempo_estimado" as never);
+          const l = (Array.isArray(data) ? data[0] : data) as {
+            segundos?: number | null;
+            amostras?: number;
+          } | null;
+          setEstimativa(l?.segundos ? { segundos: l.segundos, amostras: l.amostras ?? 0 } : null);
+        } catch {
+          setEstimativa(null);
+        }
+      })();
 
       /* Extensão desligada: o pedido ficaria na fila sem ninguém atender e o
          cliente esperaria à toa. Diz na hora. */
@@ -610,7 +625,9 @@ export default function BuscaPorLink() {
 
       {erro && <p className="mt-3 text-sm font-medium text-danger">{erro}</p>}
 
-      {carregando && <Espera fase={fase} demorando={demorando} />}
+      {carregando && (
+        <Espera fase={fase} demorando={demorando} inicio={inicio} estimativa={estimativa} />
+      )}
 
       {fase === "pronto" && pedido?.link && (
         <Resultado pedido={pedido} copiar={copiar} copiado={copiado} />
@@ -635,7 +652,60 @@ export default function BuscaPorLink() {
    3. O brilho atravessando o esqueleto mostra atividade sem prometer prazo.
 */
 
-function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
+/* Tempo REAL das últimas consultas (percentil 75, calculado no banco pela
+   função tempo_estimado). Sem medição suficiente, não há previsão: mostra só
+   quanto tempo já passou. Nunca um número inventado. */
+type Estimativa = { segundos: number; amostras: number } | null;
+
+function Relogio({ inicio, estimativa }: { inicio: number; estimativa: Estimativa }) {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const passou = Math.max(0, Math.round((agora - inicio) / 1000));
+  const fmt = (n: number) =>
+    n >= 60 ? `${Math.floor(n / 60)}min ${String(n % 60).padStart(2, "0")}s` : `${n}s`;
+  if (!estimativa) {
+    return (
+      <p className="mb-2 text-center text-xs tabular-nums text-secondary-ink">
+        Comparando há {fmt(passou)}
+      </p>
+    );
+  }
+  const falta = estimativa.segundos - passou;
+  const pct = Math.min(100, Math.round((passou / estimativa.segundos) * 100));
+  return (
+    <div className="mb-3">
+      <p className="text-center text-sm font-semibold tabular-nums">
+        {falta > 0 ? <>Pronto em até {fmt(falta)}</> : <>Quase lá… já são {fmt(passou)}</>}
+      </p>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-ml-blue transition-all duration-1000"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-1 text-center text-[11px] text-secondary-ink">
+        {falta > 0
+          ? `Previsão pelo tempo real das últimas ${estimativa.amostras} consultas.`
+          : `Passou do tempo usual (${fmt(estimativa.segundos)}). Continuo comparando.`}
+      </p>
+    </div>
+  );
+}
+
+function Espera({
+  fase,
+  demorando,
+  inicio,
+  estimativa,
+}: {
+  fase: Fase;
+  demorando: boolean;
+  inicio: number;
+  estimativa: Estimativa;
+}) {
   const atual = ETAPAS.findIndex((e) => e.id === fase);
 
   return (
@@ -648,6 +718,8 @@ function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
         <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
         <span>{atual >= 0 ? ETAPAS[atual]?.rotulo : "Conferindo seu produto"}</span>
       </div>
+
+      <Relogio inicio={inicio} estimativa={estimativa} />
 
       <ol className="mb-3 space-y-2">
         {ETAPAS.map((etapa, i) => {
@@ -708,7 +780,7 @@ function Espera({ fase, demorando }: { fase: Fase; demorando: boolean }) {
         <div className="esqueleto mt-4 h-11 w-full rounded-md" />
       </div>
 
-      {demorando ? (
+      {demorando && !estimativa ? (
         <p className="mt-2 text-center text-xs leading-relaxed text-secondary-ink">
           Está demorando mais que o normal, mas eu continuo tentando. Deixe a página aberta: o
           resultado aparece aqui sozinho.
