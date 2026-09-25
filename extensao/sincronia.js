@@ -456,3 +456,20 @@ export async function gravarDiagnostico(token, tipo, dados) {
     await chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_diagnostico', { p_token: token, p_tipo: tipo, p_dados: dados });
   } catch (e) { /* so diagnostico */ }
 }
+
+/* Vitrine: produtos antigos sem foto (a extensao completa aos poucos). */
+export async function vitrineSemFoto(token, limite = 5) {
+  if (!token) return [];
+  try {
+    const l = await chamarRpc(SUPABASE + '/rest/v1/rpc/vitrine_sem_foto', { p_token: token, p_limite: limite });
+    return Array.isArray(l) ? l : [];
+  } catch (e) { return []; }
+}
+
+export async function vitrineCompletar(token, chave, imagem, categoria) {
+  if (!token) return;
+  try {
+    await chamarRpc(SUPABASE + '/rest/v1/rpc/vitrine_completar',
+      { p_token: token, p_chave: chave, p_imagem: imagem || '', p_categoria: categoria || '' });
+  } catch (e) { /* tenta na proxima rodada */ }
+}

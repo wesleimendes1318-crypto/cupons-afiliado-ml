@@ -9,13 +9,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, TrendingDown } from "lucide-react";
 
+import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
+
+const NOME_CATEGORIA: Record<string, string> = Object.fromEntries(
+  [...CATEGORIAS.map((c) => [c.slug, c.nome] as const), ["outros", "Mais achados"] as const],
+);
 
 type ItemVitrine = {
   chave: string;
   titulo: string;
   imagem: string | null;
   categoria: string | null;
+  categoria_site: string | null;
   loja: string | null;
   preco: number | null;
   url_produto: string | null;
@@ -27,7 +33,38 @@ type ItemVitrine = {
   lojas_comparadas: number | null;
   vezes: number | null;
   visto_em: string;
+  cupom_codigo: string | null;
+  cupom_desconto: string | null;
 };
+
+/* Código de cupom já gerado da loja, pronto para copiar. */
+function CupomDaLoja({ codigo, desconto }: { codigo: string; desconto: string | null }) {
+  const [copiou, setCopiou] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        try {
+          void navigator.clipboard.writeText(codigo);
+          setCopiou(true);
+          setTimeout(() => setCopiou(false), 2500);
+        } catch {
+          /* sem área de transferência: o código continua visível */
+        }
+      }}
+      className="mt-1.5 flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-success bg-success/10 px-2 py-1.5 text-left"
+      title="Copiar código do cupom"
+    >
+      <span className="min-w-0">
+        <span className="block text-[10px] font-semibold uppercase tracking-wide text-success">
+          Cupom da loja{desconto ? ` · ${desconto}` : ""}
+        </span>
+        <span className="block truncate font-mono text-xs font-bold">{codigo}</span>
+      </span>
+      <span className="shrink-0 text-[11px] font-bold text-success">{copiou ? "copiado ✓" : "copiar"}</span>
+    </button>
+  );
+}
 
 const brl = (n: number | null | undefined) =>
   n == null ? "—" : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -68,13 +105,14 @@ export function Vitrine() {
     };
   }, []);
 
-  const categorias = useMemo(
-    () => [...new Set(itens.map((i) => i.categoria).filter(Boolean) as string[])].slice(0, 12),
-    [itens],
-  );
+  /* Categorias do próprio site, na ordem do site; "Mais achados" por último. */
+  const categorias = useMemo(() => {
+    const presentes = new Set(itens.map((i) => i.categoria_site ?? "outros"));
+    return [...CATEGORIAS.map((c) => c.slug), "outros"].filter((s) => presentes.has(s));
+  }, [itens]);
 
   const lista = useMemo(() => {
-    let l = categoria ? itens.filter((i) => i.categoria === categoria) : itens;
+    let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
     if (aba === "economias") l = l.filter((i) => (i.economia ?? 0) > 0).sort((a, b) => (b.economia ?? 0) - (a.economia ?? 0));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
     return l.slice(0, 24);
@@ -139,7 +177,7 @@ export function Vitrine() {
                 (categoria === c ? "bg-foreground text-background" : "border border-border bg-card")
               }
             >
-              {c}
+              {NOME_CATEGORIA[c] ?? c}
             </button>
           ))}
         </div>
@@ -167,7 +205,7 @@ export function Vitrine() {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center p-3 text-center text-xs text-secondary-ink">
-                      {i.categoria ?? "Produto comparado"}
+                      {NOME_CATEGORIA[i.categoria_site ?? "outros"] ?? "Produto comparado"}
                     </div>
                   )}
                   {temEconomia && (
@@ -191,6 +229,7 @@ export function Vitrine() {
                       <>na {i.loja ?? "loja"}</>
                     )}
                   </p>
+                  {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
                   <p className="mt-0.5 text-[11px] text-secondary-ink/80">
                     visto em {quando(i.visto_em)}
                     {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} lojas comparadas` : ""}

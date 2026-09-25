@@ -6,7 +6,8 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrinesParaConferir, salvarVitrines,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
-         reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico } from './sincronia.js';
+         reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
+         vitrineSemFoto, vitrineCompletar } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
          escolherAlternativas, ehCaptcha, desescapar,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
@@ -393,6 +394,26 @@ async function gerarTexto(titulo, preco, cupom, canal) {
   const txt = j?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('\n');
   if (!txt) throw new Error('A Gemini nao devolveu texto.');
   return txt.trim();
+}
+
+/* Vitrine: poucos produtos antigos por rodada ganham foto e categoria, lendo
+   o proprio anuncio (uma leitura por produto, so ate acabar a lista). */
+let completandoVitrine = false;
+async function completarVitrine() {
+  if (completandoVitrine || atendendo) return;
+  if (await freioLigado('leitura')) return;
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return;
+  completandoVitrine = true;
+  try {
+    for (const it of await vitrineSemFoto(sincToken, 3)) {
+      let a = null;
+      try { a = await lerAnuncioNoWorker(limparUrl(it.url_produto)); } catch (e) { a = null; }
+      if (a && a.captcha) break;
+      await vitrineCompletar(sincToken, it.chave, a && a.imagem, a && a.categorias && a.categorias[0]);
+      await sleep(4000 + Math.random() * 3000);
+    }
+  } finally { completandoVitrine = false; }
 }
 
 /* ================================================================
@@ -2771,6 +2792,7 @@ chrome.alarms.onAlarm.addListener(async a => {
   }
   if (a.name === 'fila') {
     andarFila().catch(e => console.warn('[fila]', e.message));
+    completarVitrine().catch(() => {});
     return;
   }
   /* 'refresh' e 'diario' nao existem mais: viraram as janelas, tratadas
