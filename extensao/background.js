@@ -2335,7 +2335,11 @@ function precoELojaDaTela() {
     imagem = im ? (im.currentSrc || im.src) : null;
   }
   if (imagem && !/^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(imagem)) imagem = null;
-  return { preco, loja, titulo, imagem };
+  /* Aviso da pagina (anuncio sem oferta ativa): vai para o diagnostico e
+     para o cliente, em vez de um preco inventado. */
+  const texto = (document.querySelector('main, .ui-pdp-container, body') || document.body).innerText || '';
+  const av = /(indispon[ií]vel|sem estoque|esgotad[oa]|an[uú]ncio pausado|n[aã]o est[aá] dispon[ií]vel|finalizad[oa])/i.exec(texto);
+  return { preco, loja, titulo, imagem, aviso: av ? av[1] : null };
 }
 
 /* Anuncio colado aberto numa aba de fundo so para ler preco e loja da tela.
@@ -2417,7 +2421,7 @@ async function termoDeBuscaPelaGemini(original) {
    site do Mercado Livre. Le so esses anuncios (no maximo 4, ao mesmo tempo)
    para ter preco, loja e foto; a Gemini confere pela foto; so o que ela
    aprovar vira opcao. */
-async function achadosPeloGoogle(lista, precoRef, itemAtual, original) {
+async function achadosPeloGoogle(lista, precoRef, itemAtual, original, soCandidatos = false) {
   const diag = { fonte: 'google', recebidos: lista.length };
   const alvos = lista.filter(g => g.url && g.item !== itemAtual).slice(0, 4);
   const lidos = await Promise.all(alvos.map(g =>
@@ -2433,6 +2437,7 @@ async function achadosPeloGoogle(lista, precoRef, itemAtual, original) {
                       titulo: b.titulo || alvos[k].titulo, imagem: b.imagem || null });
   });
   diag.lidos = candidatos.length;
+  if (soCandidatos) { candidatos.diag = diag; return candidatos; }
   if (!candidatos.length) { const v = []; v.diag = diag; return v; }
   ultimaIA = null;
   const ok = resta() > 9000 ? await comPrazo(mesmoProdutoPelaGemini(original, candidatos), resta() - 7000, null) : null;
@@ -2450,6 +2455,69 @@ async function achadosPeloGoogle(lista, precoRef, itemAtual, original) {
   return achados;
 }
 
+/* GOOGLE + BUSCA DO SITE AO MESMO TEMPO, UMA CONFERENCIA SO (25/09).
+   Antes era um depois do outro, cada um com a sua conferencia pela Gemini, e
+   a segunda chegava com 7 s restando ("sem tempo para a IA"): o travesseiro,
+   que tinha 2 lojas iguais, voltou vazio. Agora os candidatos das duas fontes
+   sao juntados (ate 8) e a Gemini confere todos de uma vez, com o tempo que
+   sobra da consulta. */
+async function achadosCombinados(titulo, precoRef, itemAtual, original, google) {
+  const vazioCom = d => { const v = []; v.diag = d; return v; };
+  const [doGoogle, daBusca] = await Promise.all([
+    Array.isArray(google) && google.length && original
+      ? achadosPeloGoogle(google, precoRef, itemAtual, original, true).catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) }))
+      : Promise.resolve(vazioCom(null)),
+    achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original, true)
+      .catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) }))
+  ]);
+  const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null };
+  const vistos = new Set();
+  let candidatos = [];
+  /* Alterna as fontes para as duas terem vez nos 8 conferidos. */
+  const g = [...doGoogle], b = [...daBusca];
+  while ((g.length || b.length) && candidatos.length < MAX_CANDIDATOS_IA) {
+    for (const fonte of [g, b]) {
+      const c = fonte.shift();
+      if (c && c.item && c.item !== itemAtual && !vistos.has(c.item) && candidatos.length < MAX_CANDIDATOS_IA) {
+        vistos.add(c.item); candidatos.push(c);
+      }
+    }
+  }
+  diag.candidatos = candidatos.length;
+  if (!candidatos.length) {
+    /* Nenhuma fonte trouxe nada: a Gemini escreve uma busca melhor e tenta uma
+       vez (se ainda houver tempo). */
+    if (original && resta() > 22000) {
+      const termo = await termoDeBuscaPelaGemini(original);
+      if (termo && termo.toLowerCase() !== String(titulo).toLowerCase()) {
+        const segunda = await achadosNaBuscaUmaVez(termo, precoRef, itemAtual, original);
+        segunda.diag = { ...(segunda.diag || {}), buscaGemini: termo, primeira: diag };
+        return segunda;
+      }
+    }
+    return vazioCom(diag);
+  }
+  ultimaIA = null;
+  const t0 = Date.now();
+  const ok = original && resta() > 6000
+    ? await comPrazo(mesmoProdutoPelaGemini(original, candidatos), Math.max(6000, resta() - 3000), null)
+    : null;
+  diag.tempoIA = Date.now() - t0;
+  if (!ok && !ultimaIA) ultimaIA = { indisponivel: true, erros: ['sem tempo para a IA (' + Math.round(resta() / 1000) + 's restando)'] };
+  diag.ia = ok ? { conferidos: candidatos.length, iguais: ok.size, ...(ultimaIA || {}) }
+               : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
+  /* Regra: so o que a Gemini confirmou pela foto aparece. */
+  const aprovados = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true })) : [];
+  if (!aprovados.length) return vazioCom(diag);
+  const achados = await avaliarCandidatos(aprovados.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
+  for (const a of achados) {
+    const c = aprovados.find(x => x.item === a.item);
+    if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; }
+  }
+  achados.diag = diag;
+  return achados;
+}
+
 async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
   const primeira = await achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original);
   if (primeira.length || !original || resta() < 22000) return primeira;
@@ -2460,7 +2528,7 @@ async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
   return segunda;
 }
 
-async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null) {
+async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null, soCandidatos = false) {
   /* Pagina de busca e grande (varios cartoes + dados): le ate 3 MB. */
   const html = await lerCatalogo(urlDeBusca(titulo), 3000000);
   /* Contagem de cada etapa da leitura, gravada no pedido: se a busca vier
@@ -2513,6 +2581,7 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
   /* Adianta a leitura das lojas dos 6 mais baratos enquanto a Gemini
      confere (antes era uma coisa depois da outra). */
   for (const c of candidatos.slice(0, 4)) { if (c.item !== itemAtual) resolverVendedor(c.item, c.url).catch(() => {}); }
+  if (soCandidatos) { candidatos.diag = diag; return candidatos; }
   if (original) {
     ultimaIA = null;
     const t0 = Date.now();
@@ -2556,15 +2625,7 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
     if (!titulo) return [];
     /* Primeiro os anuncios que o Google achou (sem busca no site); a busca
        do site so se o Google nao trouxe nada aprovado e ainda houver tempo. */
-    let daBusca = [];
-    if (Array.isArray(ctx.google) && ctx.google.length && ctx.original) {
-      daBusca = await achadosPeloGoogle(ctx.google, finalAtual, itemAtual, ctx.original);
-    }
-    if (!daBusca.length && resta() > 20000) {
-      const doGoogle = daBusca.diag || null;
-      daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null);
-      if (doGoogle) daBusca.diag = { ...(daBusca.diag || {}), google: doGoogle };
-    }
+    const daBusca = await achadosCombinados(titulo, finalAtual, itemAtual, ctx.original || null, ctx.google);
     const escolha = escolherAlternativas(daBusca, { ...ctx, itemAtual });
     /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */
     escolha.todas = daBusca;
@@ -2935,7 +2996,20 @@ async function atenderPedidos() {
              NA TELA, numa aba de fundo, como uma pessoa leria. */
           if (a && !a.perfilSocial && !a.captcha
               && (!a.ok || a.preco == null || !(a.nomes && a.nomes.length) || !a.titulo || !a.imagem)) {
-            const tela = await lerTelaDoAnuncio((a.ok && a.finalUrl) || url).catch(() => null);
+            let tela = await lerTelaDoAnuncio((a.ok && a.finalUrl) || url).catch(() => null);
+            /* Pagina de OFERTA (pdp_filters=deal) sem preco: tenta o mesmo
+               produto sem o filtro da oferta (caso do monitor, 25/09). */
+            if ((!tela || tela.preco == null) && /pdp_filters=deal/i.test((a.finalUrl || '') + ' ' + url)) {
+              let semOferta = String((a.ok && a.finalUrl) || url);
+              try {
+                const u = new URL(semOferta);
+                if (/^deal/i.test(u.searchParams.get('pdp_filters') || '')) u.searchParams.delete('pdp_filters');
+                semOferta = u.toString();
+              } catch (e) { /* endereco estranho: tenta como veio */ }
+              const t2 = await lerTelaDoAnuncio(semOferta).catch(() => null);
+              if (t2 && t2.preco != null) tela = { ...(tela || {}), ...t2 };
+              else if (t2 && !tela) tela = t2;
+            }
             if (tela && (tela.titulo || tela.preco != null)) {
               if (!a.ok) {
                 /* So vale se a tela for de um anuncio (nao perfil social/lista):
@@ -2953,7 +3027,8 @@ async function atenderPedidos() {
               if (!(a.nomes && a.nomes.length) && tela.loja) a.nomes = [tela.loja];
               if (!a.titulo && tela.titulo) a.titulo = tela.titulo;
               if (!a.imagem && tela.imagem) a.imagem = tela.imagem;
-              if (a.faltou) a.faltou.tela = { preco: tela.preco, loja: tela.loja, titulo: !!tela.titulo };
+              if (tela.aviso) a.aviso = tela.aviso;
+              if (a.faltou) a.faltou.tela = { preco: tela.preco, loja: tela.loja, titulo: !!tela.titulo, aviso: tela.aviso || null };
               }
             }
           }
@@ -3278,6 +3353,8 @@ async function atenderPedidos() {
 
           await marcarPedido(sincToken, p.id, r.link, r.codigo, null, {
             titulo: a.titulo ?? null,
+            /* Aviso da pagina do anuncio (ex.: indisponivel), lido da tela. */
+            aviso: a.aviso || null,
             preco: a.preco ?? null,
             vendedor: vendedor ?? null,
             outraLoja: outra,

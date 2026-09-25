@@ -192,6 +192,8 @@ type Analise = {
   /* Todas as outras lojas vistas com o mesmo produto, inclusive as mais
      caras. Só exibição: a pessoa vê que comparei e quanto pagaria a mais. */
   referencias?: Referencia[] | null;
+  /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
+  aviso?: string | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
   imagem?: string | null;
   buscaFora?: {
@@ -1170,6 +1172,11 @@ function Resultado({
           <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
             {a?.titulo ?? "Produto do link que você colou"}
           </p>
+          {a?.aviso && (
+            <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
+              O anúncio informa: {a.aviso}
+            </p>
+          )}
           <p className="mt-0.5 text-xs text-secondary-ink">
             {a?.preco != null && (
               <span className="text-base font-bold tabular-nums text-foreground">
