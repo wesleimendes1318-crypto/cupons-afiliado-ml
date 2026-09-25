@@ -11,7 +11,10 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { BannerConsentimento } from "../components/BannerConsentimento";
-import { GoogleConsentimento, SCRIPT_CONSENTIMENTO_PADRAO } from "../components/GoogleConsentimento";
+import {
+  GoogleConsentimento,
+  SCRIPT_CONSENTIMENTO_PADRAO,
+} from "../components/GoogleConsentimento";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -79,12 +82,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Melhor Escolha — comparador de preços e cupons" },
+      { title: "Melhor Escolha — comparador de preços" },
       {
         name: "description",
         content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Melhor Escolha — comparador de preços e cupons" },
+      { property: "og:title", content: "Melhor Escolha — comparador de preços" },
       {
         property: "og:description",
         content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",

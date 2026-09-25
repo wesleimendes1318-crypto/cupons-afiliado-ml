@@ -10,16 +10,16 @@ export const Route = createFileRoute("/guias/")({
   component: Guias,
   head: () => ({
     meta: [
-      { title: "Guias de cupons e economia real — Melhor Escolha" },
+      { title: "Guias para comparar preços — Melhor Escolha" },
       {
         name: "description",
         content:
-          "Guias práticos para calcular a economia real de um cupom, entender tetos e valores mínimos e evitar ofertas falsas.",
+          "Guias práticos para achar o mesmo produto mais barato, diferenciar produto igual de parecido e conferir a loja antes de pagar.",
       },
-      { property: "og:title", content: "Guias de cupons e economia real" },
+      { property: "og:title", content: "Guias para comparar preços" },
       {
         property: "og:description",
-        content: "Como cupons funcionam de verdade, com as contas e os limites explicados.",
+        content: "Como achar o mesmo produto mais barato e não cair em anúncio parecido.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: URL },
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/guias/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "ItemList",
-          name: "Guias de cupons e economia real",
+          name: "Guias para comparar preços",
           itemListElement: GUIAS.map((guia, indice) => ({
             "@type": "ListItem",
             position: indice + 1,
@@ -49,8 +49,8 @@ function Guias() {
     <LayoutConteudo
       etiqueta="Conteúdo próprio"
       titulo="Guias"
-      resumo="Como cupons funcionam de verdade: as contas, os limites e as armadilhas, explicados sem enrolação."
-      atualizacao="23/09/2026"
+      resumo="Como achar o mesmo produto mais barato, diferenciar igual de parecido e comprar com segurança. Os guias de cupom continuam aqui, mais abaixo."
+      atualizacao="25/09/2026"
       trilha={
         <span className="inline-flex items-center gap-1.5">
           <BookOpen className="size-3.5" aria-hidden="true" />
@@ -59,9 +59,9 @@ function Guias() {
       }
     >
       <p>
-        Todo guia aqui nasceu de uma dúvida concreta de quem estava prestes a comprar. São
-        textos curtos, com exemplos numéricos, e nenhum deles precisa que você clique em nada
-        para ser útil.
+        Todo guia aqui nasceu de uma dúvida concreta de quem estava prestes a comprar. São textos
+        curtos, com exemplos numéricos, e nenhum deles precisa que você clique em nada para ser
+        útil.
       </p>
 
       <div className="not-prose grid gap-4 sm:grid-cols-2">

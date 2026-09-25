@@ -57,7 +57,7 @@ export const Route = createFileRoute("/")({
         content:
           "Cole o link de um produto e veja o mesmo produto em outras lojas, do mais barato ao mais caro.",
       },
-      { property: "og:title", content: "Melhor Escolha — comparador de preços e cupons" },
+      { property: "og:title", content: "Melhor Escolha — comparador de preços" },
       {
         property: "og:description",
         content: "O mesmo produto em outras lojas, com a diferença de preço de cada uma.",
@@ -1685,13 +1685,15 @@ function Index() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
                   <ShieldAlert className="size-3.5" aria-hidden="true" />
-                  Curadoria independente
+                  Comparador independente
                 </span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                  {atualizado
-                    ? `Atualizado em ${atualizado}`
-                    : "Aguardando a primeira carga de dados"}
-                </span>
+                {MOSTRAR_CUPONS && (
+                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                    {atualizado
+                      ? `Atualizado em ${atualizado}`
+                      : "Aguardando a primeira carga de dados"}
+                  </span>
+                )}
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
@@ -1711,7 +1713,8 @@ function Index() {
                 mais caro.
               </p>
               <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
-                Se a loja tiver cupom, eu te passo o cupom junto, com quanto ele desconta.
+                Confiro pela foto que é o mesmo produto. Parecidos aparecem separados, com o que
+                muda.
               </p>
 
               <div className="mt-7 flex flex-wrap items-center gap-2.5">
@@ -1821,7 +1824,7 @@ function Index() {
               },
               {
                 icone: ShieldCheck,
-                texto: "Você escolhe a loja, pega o cupom (se houver) e compra direto na loja",
+                texto: "Você escolhe a loja e compra com segurança pelo link",
               },
             ].map((passo, indice) => (
               <li key={passo.texto} className="flex min-w-0 items-start gap-2">
@@ -2615,12 +2618,10 @@ function Index() {
                 <BookOpen className="size-4 text-ml-blue" aria-hidden="true" />
                 Guias de compra
               </p>
-              <h2 className="mt-1 text-xl font-extrabold sm:text-2xl">
-                Entenda o desconto antes de comprar
-              </h2>
+              <h2 className="mt-1 text-xl font-extrabold sm:text-2xl">Compare antes de comprar</h2>
               <p className="mt-1 max-w-2xl text-sm text-secondary-ink">
-                Textos curtos, com as contas feitas, sobre teto, compra mínima e o que separa um bom
-                cupom de uma armadilha.
+                Textos curtos sobre como achar o mesmo produto mais barato e não cair em anúncio
+                parecido.
               </p>
             </div>
             <Link
@@ -2734,9 +2735,9 @@ function Index() {
       <footer className="mt-10 border-t border-border py-8">
         <div className="mx-auto grid max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-bold">Limite real sempre informado</p>
+            <p className="text-sm font-bold">Mesmo produto, conferido pela foto</p>
             <p className="mt-1 text-xs text-secondary-ink">
-              Mostro quanto cada cupom desconta de verdade, inclusive quando o desconto é pequeno.
+              Loja só entra na comparação quando é o mesmo produto. Parecido aparece separado.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
@@ -2746,17 +2747,17 @@ function Index() {
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-bold">Dados vindos dos cupons oficiais</p>
+            <p className="text-sm font-bold">Todas as lojas, até as mais caras</p>
             <p className="mt-1 text-xs text-secondary-ink">
-              Nada é inventado: cada condição vem do texto oficial da campanha do vendedor.
+              Você vê a diferença de preço de cada loja, com a foto do anúncio.
             </p>
           </div>
         </div>
         <div className="mx-auto mt-6 flex max-w-[1400px] flex-col items-start gap-3 px-4 sm:px-6 lg:px-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-xs text-secondary-ink">
-              Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar
-              antes da validade.
+              Preço de quando comparei. Preço, estoque e frete mudam: confira na página da loja
+              antes de pagar.
             </p>
             <AvisoAfiliado />
           </div>

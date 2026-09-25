@@ -16,8 +16,8 @@ const PAGINAS = [
 export function AvisoAfiliado({ className }: { className?: string }) {
   return (
     <p className={className ?? "text-xs text-secondary-ink"}>
-      Este site pode receber comissão por compras feitas através de determinados links. O
-      preço que você paga não aumenta por causa disso.{" "}
+      Este site pode receber comissão por compras feitas através de determinados links. O preço que
+      você paga não aumenta por causa disso.{" "}
       <Link to="/divulgacao-de-afiliados" className="font-semibold text-ml-blue hover:underline">
         Saiba como funciona
       </Link>
@@ -52,13 +52,13 @@ export function RodapeInstitucional() {
         <div className="mt-4 space-y-2 border-t border-border pt-4">
           <AvisoAfiliado />
           <p className="text-xs text-secondary-ink">
-            Site independente, feito por um participante do programa de afiliados. Não é um
-            site oficial de nenhuma loja ou marketplace, nem tem vínculo, patrocínio ou
-            aprovação de qualquer um deles.
+            Site independente, feito por um participante do programa de afiliados. Não é um site
+            oficial de nenhuma loja ou marketplace, nem tem vínculo, patrocínio ou aprovação de
+            qualquer um deles.
           </p>
           <p className="text-xs text-secondary-ink">
-            Preços, estoque, frete e condições de cupom mudam a qualquer momento e devem ser
-            conferidos na página da loja antes de comprar.
+            Preços, estoque e frete mudam a qualquer momento e devem ser conferidos na página da
+            loja antes de comprar.
           </p>
         </div>
       </div>

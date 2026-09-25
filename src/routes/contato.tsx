@@ -12,12 +12,12 @@ export const Route = createFileRoute("/contato")({
       {
         name: "description",
         content:
-          "Como falar com quem mantém o site: correções de cupom, dúvidas sobre privacidade e demais assuntos.",
+          "Como falar com quem mantém o site: correções na comparação de preços, dúvidas sobre privacidade e demais assuntos.",
       },
       { property: "og:title", content: "Contato" },
       {
         property: "og:description",
-        content: "Canal para correções de cupons, privacidade e outros assuntos.",
+        content: "Canal para correções na comparação, privacidade e outros assuntos.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: URL },
@@ -51,13 +51,16 @@ function Contato() {
       <h2>Assuntos atendidos</h2>
       <ul>
         <li>
-          <strong>Correção de cupom:</strong> cupom vencido, condição errada, desconto que não
-          bate. Correções desse tipo entram na frente da fila.
+          <strong>Correção na comparação:</strong> loja que não vendia o mesmo produto, preço
+          errado, link que não abriu. Correções desse tipo entram na frente da fila.
         </li>
         <li>
-          <strong>Privacidade:</strong> pedidos relacionados aos seus direitos previstos na
-          LGPD, descritos na{" "}
-          <Link to="/politica-de-privacidade" className="font-semibold text-ml-blue hover:underline">
+          <strong>Privacidade:</strong> pedidos relacionados aos seus direitos previstos na LGPD,
+          descritos na{" "}
+          <Link
+            to="/politica-de-privacidade"
+            className="font-semibold text-ml-blue hover:underline"
+          >
             política de privacidade
           </Link>
           .
@@ -69,16 +72,16 @@ function Contato() {
 
       <h2>O que não é atendido aqui</h2>
       <p>
-        Pedido, pagamento, entrega, troca, devolução e garantia são responsabilidade da loja
-        onde a compra foi feita. Este site não vende produtos e não tem acesso a pedidos. Nessas
-        situações, procure o atendimento da própria loja.
+        Pedido, pagamento, entrega, troca, devolução e garantia são responsabilidade da loja onde a
+        compra foi feita. Este site não vende produtos e não tem acesso a pedidos. Nessas situações,
+        procure o atendimento da própria loja.
       </p>
 
       <h2>Encontrou erro em uma informação?</h2>
       <p>
         Envie o nome do vendedor e, se puder, um print da tela. Informação que não puder ser
-        reconfirmada é despublicada ou marcada como não verificada em vez de continuar no ar
-        como certa.
+        reconfirmada é despublicada ou marcada como não verificada em vez de continuar no ar como
+        certa.
       </p>
     </LayoutConteudo>
   );

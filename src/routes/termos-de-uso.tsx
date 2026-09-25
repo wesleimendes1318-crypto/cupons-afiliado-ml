@@ -36,37 +36,36 @@ function Termos() {
     >
       <h2>1. Aceitação</h2>
       <p>
-        Ao usar este site você concorda com estes termos. Se não concordar com algum ponto,
-        basta não utilizá-lo.
+        Ao usar este site você concorda com estes termos. Se não concordar com algum ponto, basta
+        não utilizá-lo.
       </p>
 
       <h2>2. O que o site é</h2>
       <p>
-        Uma ferramenta informativa e independente que reúne cupons e calcula a economia real
-        de cada um. O site não vende produtos, não processa pagamentos, não emite nota fiscal,
-        não entrega mercadorias e não intermedeia a relação entre você e a loja.
+        Uma ferramenta informativa e independente que compara o preço do mesmo produto entre lojas.
+        O site não vende produtos, não processa pagamentos, não emite nota fiscal, não entrega
+        mercadorias e não intermedeia a relação entre você e a loja.
       </p>
 
       <h2>3. Independência</h2>
       <p>
-        Este site não é oficial, não é operado, patrocinado, administrado nem aprovado por
-        nenhum marketplace, loja ou marca aqui citada. Marcas pertencem aos seus respectivos
-        titulares.
+        Este site não é oficial, não é operado, patrocinado, administrado nem aprovado por nenhum
+        marketplace, loja ou marca aqui citada. Marcas pertencem aos seus respectivos titulares.
       </p>
 
       <h2>4. Informações sujeitas a mudança</h2>
       <p>
-        Preço, estoque, frete, prazo de entrega, percentual de desconto, teto, valor mínimo e
-        validade de cupom mudam a qualquer momento e sem aviso. Os dados aqui são uma
-        fotografia do momento da coleta, com a data indicada quando disponível. Confira sempre
-        na página da loja antes de finalizar a compra. Não garantimos que um cupom funcionará
-        na sua compra específica.
+        Preço, estoque, frete, prazo de entrega e condições de desconto mudam a qualquer momento e
+        sem aviso. Os dados aqui são uma fotografia do momento da coleta, com a data indicada quando
+        disponível. Confira sempre na página da loja antes de finalizar a compra. A conferência de
+        que duas ofertas são o mesmo produto é automática; confira modelo, versão e quantidade no
+        anúncio antes de pagar.
       </p>
 
       <h2>5. Links de afiliado</h2>
       <p>
-        Parte dos links é de afiliado e pode gerar comissão, sem custo adicional para você,
-        conforme a{" "}
+        Parte dos links é de afiliado e pode gerar comissão, sem custo adicional para você, conforme
+        a{" "}
         <Link to="/divulgacao-de-afiliados" className="font-semibold text-ml-blue hover:underline">
           divulgação de afiliados
         </Link>
@@ -75,14 +74,14 @@ function Termos() {
 
       <h2>6. Relação de consumo com a loja</h2>
       <p>
-        Compra, pagamento, entrega, troca, garantia, arrependimento e devolução são
-        responsabilidade da loja ou do vendedor, conforme o Código de Defesa do Consumidor.
-        Reclamações sobre pedidos devem ser feitas diretamente a eles.
+        Compra, pagamento, entrega, troca, garantia, arrependimento e devolução são responsabilidade
+        da loja ou do vendedor, conforme o Código de Defesa do Consumidor. Reclamações sobre pedidos
+        devem ser feitas diretamente a eles.
       </p>
 
       <h2>7. Uso permitido</h2>
       <ul>
-        <li>Consultar e comparar cupons livremente, para uso próprio.</li>
+        <li>Consultar e comparar preços livremente, para uso próprio.</li>
         <li>Compartilhar links das páginas do site.</li>
       </ul>
       <p>É vedado:</p>
@@ -95,20 +94,18 @@ function Termos() {
 
       <h2>8. Limitação de responsabilidade</h2>
       <p>
-        O conteúdo é oferecido "no estado em que se encontra". Dentro dos limites da lei
-        aplicável, não respondemos por prejuízos decorrentes de decisão de compra tomada com
-        base em informação que mudou na loja, nem por indisponibilidade temporária do site.
+        O conteúdo é oferecido "no estado em que se encontra". Dentro dos limites da lei aplicável,
+        não respondemos por prejuízos decorrentes de decisão de compra tomada com base em informação
+        que mudou na loja, nem por indisponibilidade temporária do site.
       </p>
 
       <h2>9. Alterações</h2>
-      <p>
-        Estes termos podem mudar. A data de atualização no topo indica a versão vigente.
-      </p>
+      <p>Estes termos podem mudar. A data de atualização no topo indica a versão vigente.</p>
 
       <h2>10. Lei aplicável</h2>
       <p>
-        Aplica-se a legislação brasileira, incluindo o Código de Defesa do Consumidor, o Marco
-        Civil da Internet e a Lei Geral de Proteção de Dados.
+        Aplica-se a legislação brasileira, incluindo o Código de Defesa do Consumidor, o Marco Civil
+        da Internet e a Lei Geral de Proteção de Dados.
       </p>
     </LayoutConteudo>
   );

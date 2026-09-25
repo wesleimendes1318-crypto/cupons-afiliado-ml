@@ -12,12 +12,13 @@ export const Route = createFileRoute("/sobre")({
       {
         name: "description",
         content:
-          "Quem mantém o site, de onde vêm os dados dos cupons e o que prometemos (e o que não prometemos) a quem usa.",
+          "Quem mantém o site, como a comparação de preços funciona e o que prometemos (e o que não prometemos) a quem usa.",
       },
       { property: "og:title", content: "Sobre o site — Melhor Escolha" },
       {
         property: "og:description",
-        content: "Quem mantém o site, de onde vêm os dados dos cupons e como o site se sustenta.",
+        content:
+          "Quem mantém o site, como a comparação de preços funciona e como o site se sustenta.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: URL },
@@ -31,53 +32,62 @@ function Sobre() {
     <LayoutConteudo
       etiqueta="Quem somos"
       titulo="Sobre o site"
-      resumo="Uma ferramenta independente para descobrir quanto um cupom desconta de verdade."
-      atualizacao="23/09/2026"
+      resumo="Um comparador de preços independente: você cola o link de um produto e vê o mesmo produto em outras lojas, do mais barato ao mais caro."
+      atualizacao="25/09/2026"
     >
       <h2>Por que este site existe</h2>
       <p>
-        Um cupom anunciado como "40% de desconto" muitas vezes desconta R$ 2, porque tem um
-        teto de desconto e um valor mínimo de compra escritos em letras pequenas. Quem compra
-        só descobre isso no carrinho. Este site existe para mostrar esse número antes, com a
-        conta feita.
+        O mesmo produto costuma ser vendido por várias lojas, com preços diferentes. O anúncio que
+        aparece primeiro nem sempre é o mais barato, e comparar um por um toma tempo. Este site faz
+        essa comparação por você e mostra a diferença de preço de cada loja.
       </p>
 
-      <h2>De onde vêm as informações</h2>
-      <p>
-        As condições de cada cupom (percentual, teto de desconto, valor mínimo e validade) são
-        lidas do texto da própria campanha do vendedor. Nada é estimado, arredondado ou
-        preenchido por suposição. Quando uma condição não pôde ser confirmada, o cupom aparece
-        marcado como não verificado em vez de ser apresentado como certo.
-      </p>
-
-      <h2>O que o site faz</h2>
+      <h2>Como funciona</h2>
       <ul>
-        <li>Calcula a economia real de um cupom para o valor de compra que você informar.</li>
-        <li>Mostra o teto de desconto e o valor mínimo com todas as letras.</li>
-        <li>Ajuda a comparar cupons diferentes para a mesma compra.</li>
-        <li>Publica guias explicando como cupons funcionam e como avaliar uma oferta.</li>
+        <li>Você cola o link do anúncio do produto que quer comprar.</li>
+        <li>
+          O site procura o mesmo produto em outras lojas. Uma inteligência artificial compara foto e
+          título de cada anúncio, e todo resultado igual passa por uma segunda conferência.
+        </li>
+        <li>
+          Em até um minuto aparece a tabela com todas as lojas do mesmo produto, da mais barata à
+          mais cara, cada uma com o botão de compra segura.
+        </li>
+        <li>
+          Anúncios apenas parecidos (outra marca ou outro detalhe) aparecem separados, com o aviso
+          do que muda.
+        </li>
       </ul>
 
       <h2>O que o site não faz</h2>
       <ul>
-        <li>Não garante preço, estoque, frete, prazo de entrega nem disponibilidade.</li>
+        <li>Não mostra produto parecido como se fosse o mesmo.</li>
+        <li>
+          Não garante preço, estoque, frete, prazo de entrega nem disponibilidade: o preço é o de
+          quando comparei.
+        </li>
         <li>Não afirma ter "o menor preço do Brasil" nem qualquer superlativo sem prova.</li>
-        <li>Não cria cupons, descontos, prazos ou condições que não existam.</li>
         <li>Não é um site oficial de nenhuma loja ou marketplace.</li>
       </ul>
 
+      <h2>E os cupons?</h2>
+      <p>
+        O site começou mostrando o desconto real de cupons. Depois que a forma de distribuir cupons
+        mudou, eles ficaram em segundo plano, e o foco passou a ser a comparação de preços. Os guias
+        sobre cupons continuam disponíveis na página de guias.
+      </p>
+
       <h2>Como o site se sustenta</h2>
       <p>
-        Por comissão de afiliado em parte das compras feitas a partir daqui, sem custo
-        adicional para quem compra. A explicação completa está na página de divulgação de
-        afiliados. O site continua útil mesmo para quem nunca clicar em um link comercial: as
-        contas, as comparações e os guias são abertos.
+        Por comissão de afiliado em parte das compras feitas a partir daqui, sem custo adicional
+        para quem compra: o preço é o mesmo da loja. A explicação completa está na página de
+        divulgação de afiliados.
       </p>
 
       <h2>Contato</h2>
       <p>
-        Encontrou um cupom com informação errada ou vencida? Avise pela página de contato.
-        Correções desse tipo entram na frente da fila.
+        Viu uma loja na comparação que não era o mesmo produto, ou um preço errado? Avise pela
+        página de contato. Correções desse tipo entram na frente da fila.
       </p>
     </LayoutConteudo>
   );

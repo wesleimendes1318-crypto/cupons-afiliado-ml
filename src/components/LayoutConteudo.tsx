@@ -31,7 +31,7 @@ export function LayoutConteudo({
               className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" />
-              Voltar para os cupons
+              Voltar para o comparador
             </Link>
           </div>
 

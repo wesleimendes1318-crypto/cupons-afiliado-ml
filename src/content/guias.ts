@@ -1,5 +1,6 @@
-/* Guias escritos à mão. Conteúdo editorial próprio: explica como cupom
-   funciona de verdade, com as contas. Nada de texto inflado para SEO — cada
+/* Guias escritos à mão. Conteúdo editorial próprio. Primeiro os de
+   comparação de preço (função atual do site); os de cupom ficam depois
+   (cupons em segundo plano desde 25/09). Nada de texto inflado para SEO — cada
    guia responde uma dúvida concreta de quem está prestes a comprar. */
 
 export type Bloco =
@@ -21,6 +22,154 @@ export type Guia = {
 };
 
 export const GUIAS: Guia[] = [
+  {
+    slug: "como-comparar-o-preco-do-mesmo-produto",
+    titulo: "Como comparar o preço do mesmo produto em outras lojas",
+    resumo:
+      "O mesmo produto costuma ser vendido por várias lojas com preços diferentes. Veja como achar e ler essa comparação.",
+    tempo: "3 min de leitura",
+    atualizacao: "25/09/2026",
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "Um mesmo produto, da mesma marca e do mesmo modelo, costuma ser anunciado por várias lojas ao mesmo tempo. O preço muda de uma para outra, e a diferença pode passar de dezenas de reais. O anúncio que aparece primeiro para você nem sempre é o mais barato.",
+      },
+      { tipo: "h2", texto: "Como usar o comparador" },
+      {
+        tipo: "passos",
+        itens: [
+          "Abra o anúncio do produto que você quer comprar e copie o endereço (o link).",
+          "Cole o link na caixa da página inicial e toque em Comparar preços.",
+          "Em até um minuto aparece a tabela com todas as lojas que vendem o mesmo produto, do mais barato ao mais caro.",
+          "Escolha a loja e compre pelo botão, direto no site oficial, com pagamento protegido.",
+        ],
+      },
+      { tipo: "h2", texto: "Como ler o resultado" },
+      {
+        tipo: "lista",
+        itens: [
+          "Verde com o selo Mais barato: a loja com o menor preço entre as que vendem o mesmo produto.",
+          "Vermelho: quanto você pagaria a mais em cada uma das outras lojas.",
+          "Âmbar: o anúncio que você colou, quando ele não é o mais barato.",
+          "Parecidos: aparecem numa lista separada, com o aviso do que muda. Não são o mesmo produto.",
+        ],
+      },
+      {
+        tipo: "destaque",
+        titulo: "O preço é o de quando comparei",
+        texto:
+          "Preço, estoque e frete mudam ao longo do dia. Confira o valor final na página da loja antes de pagar.",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "E se não aparecer nenhuma outra loja?",
+        resposta:
+          "Quer dizer que nenhuma outra loja vende este mesmo produto por menos, ou que só encontrei anúncios diferentes. O anúncio que você colou aparece como melhor opção, com o botão de compra.",
+      },
+      {
+        pergunta: "Pago mais caro comprando pelo botão do site?",
+        resposta:
+          "Não. O preço é o mesmo da loja. O site recebe uma comissão do vendedor, nunca de quem compra.",
+      },
+    ],
+  },
+  {
+    slug: "mesmo-produto-ou-parecido",
+    titulo: "Mesmo produto ou só parecido? Como diferenciar",
+    resumo:
+      "Foto diferente não quer dizer produto diferente, e título igual não quer dizer produto igual. O que realmente conta.",
+    tempo: "4 min de leitura",
+    atualizacao: "25/09/2026",
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "Comparar preço só faz sentido entre produtos iguais. Um anúncio parecido, mais barato, pode ser de outra marca, de outro modelo ou vir com menos unidades, e aí a economia é ilusão.",
+      },
+      { tipo: "h2", texto: "O que precisa ser igual" },
+      {
+        tipo: "lista",
+        itens: [
+          "Marca e modelo.",
+          "Cor e acabamento do próprio produto (uma capinha transparente com borda preta não é a mesma que uma toda transparente).",
+          "Tamanho, volume ou capacidade.",
+          "Compatibilidade: modelo do celular, voltagem, medida.",
+          "Quantidade: um kit com 30 unidades não é igual a um com 20.",
+          "O que vem junto: película, cabo ou brinde mudam o que você está comprando.",
+        ],
+      },
+      { tipo: "h2", texto: "O que não conta" },
+      {
+        tipo: "p",
+        texto:
+          "Cada loja faz a própria foto. Fundo, ângulo, iluminação, montagem e textos na imagem mudam de anúncio para anúncio sem que o produto mude. Um detalhe que só não aparece na foto não é, sozinho, sinal de produto diferente.",
+      },
+      {
+        tipo: "destaque",
+        titulo: "Como o site confere",
+        texto:
+          "Uma inteligência artificial compara foto e título de cada anúncio com o que você colou, e todo resultado igual passa por uma segunda conferência. Só entra na tabela de lojas o que é o mesmo produto. O que é apenas parecido aparece separado, com o que muda escrito.",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "Vale a pena comprar um parecido mais barato?",
+        resposta:
+          "Pode valer, desde que você leia o que muda. Outra marca ou outro acabamento podem não fazer diferença para você; outro modelo de celular ou outra voltagem fazem.",
+      },
+      {
+        pergunta: "O título igual garante que é o mesmo produto?",
+        resposta:
+          "Não. Muitos anúncios copiam títulos de outros. Confira marca, modelo, quantidade e o que vem junto.",
+      },
+    ],
+  },
+  {
+    slug: "o-que-conferir-antes-de-pagar",
+    titulo: "O que conferir antes de pagar no anúncio mais barato",
+    resumo:
+      "Achou o mesmo produto mais barato? Cinco verificações rápidas para a economia não virar dor de cabeça.",
+    tempo: "3 min de leitura",
+    atualizacao: "25/09/2026",
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "A diferença de preço entre lojas é real, mas o preço do produto não é o único custo. Antes de finalizar, confira o que pode mudar a conta.",
+      },
+      { tipo: "h2", texto: "As verificações" },
+      {
+        tipo: "passos",
+        itens: [
+          "Frete: some ao preço. Um produto R$ 10 mais barato com R$ 20 de frete sai mais caro.",
+          "Prazo de entrega: se você precisa logo, compare também quando chega.",
+          "Reputação da loja: veja as avaliações e o histórico de vendas do vendedor.",
+          "Versão certa: confira de novo modelo, voltagem, tamanho e quantidade na página do anúncio.",
+          "Pagamento no site oficial: pague sempre dentro da loja, nunca por transferência ou link enviado por mensagem.",
+        ],
+      },
+      {
+        tipo: "destaque",
+        titulo: "Na dúvida, fique com o que você colou",
+        texto:
+          "O anúncio que você colou também tem o botão de compra segura. Economizar pouco com uma loja que você não confia não compensa.",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "O preço da tabela é garantido?",
+        resposta:
+          "Não. É o preço lido no momento da comparação. A loja pode mudar o preço ou o estoque a qualquer hora.",
+      },
+      {
+        pergunta: "Tenho direito de devolver?",
+        resposta:
+          "Compras feitas pela internet têm direito de arrependimento em até sete dias a partir do recebimento, previsto no Código de Defesa do Consumidor.",
+      },
+    ],
+  },
   {
     slug: "como-calcular-a-economia-real-de-um-cupom",
     titulo: "Como calcular a economia real de um cupom",
@@ -203,8 +352,7 @@ export const GUIAS: Guia[] = [
       { tipo: "h2", texto: "4. Some o frete antes de comemorar" },
       {
         tipo: "p",
-        texto:
-          "Um item R$ 15 mais barato com frete R$ 25 mais caro é um item mais caro.",
+        texto: "Um item R$ 15 mais barato com frete R$ 25 mais caro é um item mais caro.",
       },
       { tipo: "h2", texto: "5. Verifique o vendedor" },
       {
@@ -351,8 +499,7 @@ export const GUIAS: Guia[] = [
   {
     slug: "como-evitar-ofertas-falsas",
     titulo: "Como evitar ofertas falsas",
-    resumo:
-      "Sinais de que uma promoção não é o que parece e como se proteger antes de pagar.",
+    resumo: "Sinais de que uma promoção não é o que parece e como se proteger antes de pagar.",
     tempo: "4 min de leitura",
     atualizacao: "23/09/2026",
     blocos: [
