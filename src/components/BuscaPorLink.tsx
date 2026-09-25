@@ -1206,9 +1206,55 @@ function Resultado({
      é o próprio anúncio colado, com o link de afiliado dele. */
   const estaEAMelhor = !leituraFalhou && !trocar;
 
+  /* Tabela de todas as lojas. Fica AO LADO do resultado (tela larga) ou logo
+     abaixo do produto (celular): o cliente vê tudo sem rolar (Weslei, 25/09). */
+  const linhasLojas: LinhaLoja[] = [
+    ...(a?.preco != null
+      ? [
+          {
+            chave: "colado",
+            nome: a?.vendedor ?? "Anúncio colado",
+            imagem: a?.imagem,
+            final: a.preco,
+            diferenca: 0,
+            link: semLink ? null : link,
+            url: semLink ? urlColada : null,
+            colado: true,
+          },
+        ]
+      : []),
+    ...alternativas.map((o, i) => ({
+      chave: `alt-${i}`,
+      nome: o.vendedor ?? "Outra loja",
+      imagem: o.imagem,
+      final: o.final,
+      diferenca: o.ganho != null ? -o.ganho : null,
+      link: o.link,
+      url: null,
+    })),
+    ...referencias.map((r, i) => ({
+      chave: `ref-${i}`,
+      nome: r.vendedor ?? "Outra loja",
+      imagem: r.imagem,
+      final: r.final,
+      diferenca: r.diferenca,
+      link: r.link ?? null,
+      url: r.url ?? null,
+    })),
+  ];
+  const mostraTabela =
+    (a?.procurouOutra === true || alternativas.length > 0) &&
+    !leituraFalhou &&
+    linhasLojas.length >= 2;
+
   return (
-    <div className="mt-3 rounded-lg border border-border bg-card p-3">
-      <div className="flex items-start gap-3">
+    <div
+      className={
+        "mt-3 rounded-lg border border-border bg-card p-3" +
+        (mostraTabela ? " sm:grid sm:grid-cols-2 sm:gap-x-4" : "")
+      }
+    >
+      <div className="flex items-start gap-3 sm:col-start-1 sm:row-start-1">
         <Foto src={a?.imagem} className="size-16 shrink-0 rounded-md border border-border" />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
@@ -1231,120 +1277,64 @@ function Resultado({
         </div>
       </div>
 
-      {/* Só a melhor em destaque; todas as outras lojas estão na tabela abaixo. */}
-      {alternativas.slice(0, 1).map((oferta, i) => (
-        <OutraLojaComCupom
-          key={`${oferta.vendedor ?? "loja"}-${i}`}
-          oferta={oferta}
-          dispositivo={dispositivo}
-          vendedorAqui={a?.vendedor ?? null}
-          cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
-          precoAqui={a?.preco ?? null}
-          titulo={a?.titulo ?? null}
-          principal={trocar && i === 0}
-          compacto={i > 0}
-          lojaAquiTemCupom={a?.temCupom === true}
-        />
-      ))}
-
-      {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
-      {estaEAMelhor && (
-        <MelhorOpcao
-          vendedor={a?.vendedor ?? null}
-          preco={a?.preco ?? null}
-          link={semLink ? null : link}
-          urlColada={urlColada}
-          comparou={a?.procurouOutra === true}
-          completando={completando}
-          dispositivo={dispositivo}
-          temCupom={a?.temCupom === true}
-          /* -1: pedido de versão antiga, sem a lista de lojas. */
-          comparadas={a?.referencias ? referencias.length : -1}
-          olhados={a?.buscaFora?.leitura?.comPreco ?? null}
-          conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
-          iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
-        />
+      {mostraTabela && (
+        <div className="sm:col-start-2 sm:row-span-2 sm:row-start-1">
+          <TodasAsLojas linhas={linhasLojas} />
+        </div>
       )}
 
-      {(a?.procurouOutra === true || alternativas.length > 0) && !leituraFalhou && (
-        <TodasAsLojas
-          linhas={[
-            ...(a?.preco != null
-              ? [
-                  {
-                    chave: "colado",
-                    nome: a?.vendedor ?? "Anúncio colado",
-                    imagem: a?.imagem,
-                    final: a.preco,
-                    diferenca: 0,
-                    link: semLink ? null : link,
-                    url: semLink ? urlColada : null,
-                    colado: true,
-                  },
-                ]
-              : []),
-            ...alternativas.map((o, i) => ({
-              chave: `alt-${i}`,
-              nome: o.vendedor ?? "Outra loja",
-              imagem: o.imagem,
-              final: o.final,
-              diferenca: o.ganho != null ? -o.ganho : null,
-              link: o.link,
-              url: null,
-            })),
-            ...referencias.map((r, i) => ({
-              chave: `ref-${i}`,
-              nome: r.vendedor ?? "Outra loja",
-              imagem: r.imagem,
-              final: r.final,
-              diferenca: r.diferenca,
-              link: r.link ?? null,
-              url: r.url ?? null,
-            })),
-          ]}
-        />
-      )}
+      <div className="sm:col-start-1 sm:row-start-2">
+        {/* Só a melhor em destaque; todas as outras lojas estão na tabela. */}
+        {alternativas.slice(0, 1).map((oferta, i) => (
+          <OutraLojaComCupom
+            key={`${oferta.vendedor ?? "loja"}-${i}`}
+            oferta={oferta}
+            dispositivo={dispositivo}
+            vendedorAqui={a?.vendedor ?? null}
+            cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
+            precoAqui={a?.preco ?? null}
+            titulo={a?.titulo ?? null}
+            principal={trocar && i === 0}
+            compacto={i > 0}
+            lojaAquiTemCupom={a?.temCupom === true}
+          />
+        ))}
 
-      {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
+        {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
+        {estaEAMelhor && (
+          <MelhorOpcao
+            vendedor={a?.vendedor ?? null}
+            preco={a?.preco ?? null}
+            link={semLink ? null : link}
+            urlColada={urlColada}
+            comparou={a?.procurouOutra === true}
+            completando={completando}
+            dispositivo={dispositivo}
+            temCupom={a?.temCupom === true}
+            /* -1: pedido de versão antiga, sem a lista de lojas. */
+            comparadas={a?.referencias ? referencias.length : -1}
+            olhados={a?.buscaFora?.leitura?.comPreco ?? null}
+            conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
+            iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
+          />
+        )}
 
-      {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
+        {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
+
+        {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
           Dizer isso é o que dá confiança para comprar aqui. */}
-      {a?.temCupom === true && alternativas.length === 0 && (
-        <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-          {a.procurouOutra === true && !completando
-            ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
-            : null}
-        </p>
-      )}
+        {a?.temCupom === true && alternativas.length === 0 && (
+          <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+            {a.procurouOutra === true && !completando
+              ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
+              : null}
+          </p>
+        )}
 
-      {/* Sem link pronto: a "Melhor opção" e a tabela trazem o botão que gera o
+        {/* Sem link pronto: a "Melhor opção" e a tabela trazem o botão que gera o
           link de afiliado no clique. */}
 
-      {a?.temCupom && a.cupom?.id != null && !trocar && (
-        <CodigoNaHora
-          cupomId={a.cupom.id}
-          destino={link}
-          titulo={a.titulo}
-          vendedor={a.vendedor}
-          cupom={a.cupom}
-        />
-      )}
-
-      {/* Achei loja mais barata, mas a pessoa pode preferir a loja que ela
-          colou. Se essa loja tem cupom, o meu cupom continua disponível para
-          ela, com o valor que fica com o desconto. */}
-      {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
-        <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
-          <p className="text-sm font-bold">
-            Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem
-            cupom
-            {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
-          </p>
-          {alternativas[0]?.finalAtual != null && a.preco != null && (
-            <p className="mt-1 text-xs tabular-nums text-secondary-ink">
-              Com o cupom, lá sai por {brl(alternativas[0].finalAtual)} (de {brl(a.preco)}).
-            </p>
-          )}
+        {a?.temCupom && a.cupom?.id != null && !trocar && (
           <CodigoNaHora
             cupomId={a.cupom.id}
             destino={link}
@@ -1352,81 +1342,108 @@ function Resultado({
             vendedor={a.vendedor}
             cupom={a.cupom}
           />
-        </div>
-      )}
+        )}
 
-      {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={
-            trocar
-              ? "mt-3 block w-full rounded-md border border-ml-blue py-2 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
-              : "mt-3 block w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
-          }
-        >
-          {trocar
-            ? "Prefiro o anúncio que colei"
-            : textoDoBotao(dispositivo, "Comprar com segurança")}
-        </a>
-      )}
-      {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
-
-      {!leituraFalhou &&
-        !semLink &&
-        (() => {
-          const melhor = trocar ? alternativas[0] : null;
-          const destino = melhor?.link ?? link;
-          const texto = mensagemMelhorOpcao({
-            titulo: a?.titulo,
-            loja: melhor ? melhor.vendedor : a?.vendedor,
-            preco: melhor ? melhor.final : a?.preco,
-            economia: melhor ? melhor.ganho : null,
-            cupom: melhor ? melhor.cupomTitulo : a?.temCupom ? a?.cupom?.titulo : null,
-            comparadas: a?.referencias ? referencias.length : 0,
-            link: destino,
-          });
-          return (
-            <button
-              type="button"
-              onClick={() => compartilharWhatsApp(texto)}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[#25D366] py-2 text-sm font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
-            >
-              <Share2 className="size-4" aria-hidden="true" />
-              Compartilhar no WhatsApp
-            </button>
-          );
-        })()}
-
-      {pedido.codigo && (
-        <details className="mt-2 text-xs text-secondary-ink">
-          <summary className="cursor-pointer select-none">O link não abriu no aplicativo?</summary>
-          <p className="mt-1 leading-relaxed">Busque este código no aplicativo. Não é cupom.</p>
-          <div className="mt-1 flex items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
-              {pedido.codigo}
-            </code>
-            <button
-              type="button"
-              onClick={() => copiar(pedido.codigo as string, "codigo")}
-              className="shrink-0 rounded border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
-            >
-              {copiado === "codigo" ? "copiado" : "copiar"}
-            </button>
+        {/* Achei loja mais barata, mas a pessoa pode preferir a loja que ela
+          colou. Se essa loja tem cupom, o meu cupom continua disponível para
+          ela, com o valor que fica com o desconto. */}
+        {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
+          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+            <p className="text-sm font-bold">
+              Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem
+              cupom
+              {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
+            </p>
+            {alternativas[0]?.finalAtual != null && a.preco != null && (
+              <p className="mt-1 text-xs tabular-nums text-secondary-ink">
+                Com o cupom, lá sai por {brl(alternativas[0].finalAtual)} (de {brl(a.preco)}).
+              </p>
+            )}
+            <CodigoNaHora
+              cupomId={a.cupom.id}
+              destino={link}
+              titulo={a.titulo}
+              vendedor={a.vendedor}
+              cupom={a.cupom}
+            />
           </div>
-        </details>
-      )}
+        )}
 
-      {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
+        {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={
+              trocar
+                ? "mt-3 block w-full rounded-md border border-ml-blue py-2 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
+                : "mt-3 block w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+            }
+          >
+            {trocar
+              ? "Prefiro o anúncio que colei"
+              : textoDoBotao(dispositivo, "Comprar com segurança")}
+          </a>
+        )}
+        {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
+
+        {!leituraFalhou &&
+          !semLink &&
+          (() => {
+            const melhor = trocar ? alternativas[0] : null;
+            const destino = melhor?.link ?? link;
+            const texto = mensagemMelhorOpcao({
+              titulo: a?.titulo,
+              loja: melhor ? melhor.vendedor : a?.vendedor,
+              preco: melhor ? melhor.final : a?.preco,
+              economia: melhor ? melhor.ganho : null,
+              cupom: melhor ? melhor.cupomTitulo : a?.temCupom ? a?.cupom?.titulo : null,
+              comparadas: a?.referencias ? referencias.length : 0,
+              link: destino,
+            });
+            return (
+              <button
+                type="button"
+                onClick={() => compartilharWhatsApp(texto)}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[#25D366] py-2 text-sm font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
+              >
+                <Share2 className="size-4" aria-hidden="true" />
+                Compartilhar no WhatsApp
+              </button>
+            );
+          })()}
+
+        {pedido.codigo && (
+          <details className="mt-2 text-xs text-secondary-ink">
+            <summary className="cursor-pointer select-none">
+              O link não abriu no aplicativo?
+            </summary>
+            <p className="mt-1 leading-relaxed">Busque este código no aplicativo. Não é cupom.</p>
+            <div className="mt-1 flex items-center gap-2">
+              <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
+                {pedido.codigo}
+              </code>
+              <button
+                type="button"
+                onClick={() => copiar(pedido.codigo as string, "codigo")}
+                className="shrink-0 rounded border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
+              >
+                {copiado === "codigo" ? "copiado" : "copiar"}
+              </button>
+            </div>
+          </details>
+        )}
+
+        {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
           feita: seria prometer comissao sobre um link que nao foi gerado. */}
-      {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
-      {!leituraFalhou && !semLink && (
-        <p className="mt-2 text-center text-[11px] text-secondary-ink">
-          Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão da loja.
-          Obrigado!
-        </p>
-      )}
+        {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
+        {!leituraFalhou && !semLink && (
+          <p className="mt-2 text-center text-[11px] text-secondary-ink">
+            Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão da
+            loja. Obrigado!
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -1624,63 +1641,80 @@ type LinhaLoja = {
 function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
   if (linhas.length < 2) return null;
   const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
+  /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
+     seguro); vermelho = quanto se paga A MAIS em cada outra loja (perda);
+     o anúncio colado, quando não é o mais barato, fica em âmbar (atenção). */
+  const menor = ordem[0]?.final ?? null;
   return (
-    <div className="mt-3">
+    <div className="mt-3 sm:mt-0">
       <p className="text-sm font-bold">Todas as lojas comparadas ({ordem.length})</p>
       <table className="mt-1.5 w-full border-collapse overflow-hidden rounded-md border border-border text-sm">
         <thead>
           <tr className="bg-muted/70 text-left text-xs text-secondary-ink">
             <th className="px-2 py-1.5 font-semibold">Loja</th>
             <th className="px-2 py-1.5 text-right font-semibold">Preço</th>
+            <th className="w-0 px-2 py-1.5" />
           </tr>
         </thead>
         <tbody className="tabular-nums">
           {ordem.map((l, i) => (
-            <tr key={l.chave} className={i % 2 ? "bg-muted/40" : "bg-card"}>
-              <td className="px-2 py-1.5">
+            <tr
+              key={l.chave}
+              className={
+                i === 0 && menor != null
+                  ? "border-l-4 border-l-success bg-success/15"
+                  : l.colado
+                    ? "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/30"
+                    : i % 2
+                      ? "border-l-4 border-l-transparent bg-muted/40"
+                      : "border-l-4 border-l-transparent bg-card"
+              }
+            >
+              <td className="px-2 py-1">
                 <span className="flex items-center gap-2">
-                  <Foto src={l.imagem} className="size-9 shrink-0 rounded" />
+                  <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
                   <span className="min-w-0 break-words text-xs font-medium leading-tight">
                     {l.colado ? "Anúncio colado" : l.nome}
                   </span>
                 </span>
               </td>
-              <td className="px-2 py-1.5 text-right">
-                <span className="block font-semibold">{brl(l.final)}</span>
+              <td className="px-2 py-1 text-right">
                 <span
                   className={
-                    "block text-[11px] font-bold " +
-                    (l.colado || l.diferenca == null || Math.abs(l.diferenca) < 0.5
-                      ? "text-secondary-ink"
-                      : l.diferenca < 0
-                        ? "text-success"
-                        : "text-red-700 dark:text-red-400")
+                    "block font-bold " + (i === 0 ? "text-base text-success" : "text-foreground")
                   }
                 >
-                  {l.colado
-                    ? "você colou"
-                    : l.diferenca == null
-                      ? ""
-                      : Math.abs(l.diferenca) < 0.5
-                        ? "mesmo preço"
-                        : l.diferenca < 0
-                          ? `${brl(-l.diferenca)} a menos`
-                          : `+${brl(l.diferenca)}`}
+                  {brl(l.final)}
                 </span>
-                <span className="mt-1 block">
-                  {l.link ? (
-                    <a
-                      href={l.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
-                    >
-                      Abrir
-                    </a>
-                  ) : l.url ? (
-                    <VerNaLoja url={l.url} />
-                  ) : null}
-                </span>
+                {(() => {
+                  const extra = menor != null && l.final != null ? l.final - menor : null;
+                  if (i === 0)
+                    return (
+                      <span className="mt-0.5 inline-block rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {l.colado ? "Mais barato · você colou" : "Mais barato"}
+                      </span>
+                    );
+                  return (
+                    <span className="block text-[11px] font-bold text-red-700 dark:text-red-400">
+                      {extra != null && extra >= 0.5 ? `+${brl(extra)} a mais` : "mesmo preço"}
+                      {l.colado ? " · você colou" : ""}
+                    </span>
+                  );
+                })()}
+              </td>
+              <td className="px-2 py-1 text-right">
+                {l.link ? (
+                  <a
+                    href={l.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                  >
+                    Abrir
+                  </a>
+                ) : l.url ? (
+                  <VerNaLoja url={l.url} />
+                ) : null}
               </td>
             </tr>
           ))}
@@ -1801,8 +1835,10 @@ function OutraLojaComCupom({
       {/* Tabela zebrada, uma coluna por loja, e a conta da economia escrita
           por extenso. Antes o topo mostrava o preço SEM cupom (R$ 428,90) e a
           comparação usava o preço COM cupom (R$ 364,57) sem dizer isso, e a
-          conta não fechava para quem lia (24/09). */}
-      <div className="mt-3 overflow-hidden rounded-md border border-success/30 bg-card text-sm">
+          conta não fechava para quem lia (24/09).
+          No celular fica escondida: a tabela de lojas logo acima já mostra os
+          mesmos preços, e o botão de compra precisa aparecer sem rolar. */}
+      <div className="mt-3 hidden overflow-hidden rounded-md border border-success/30 bg-card text-sm sm:block">
         <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="bg-muted/60 text-xs">
