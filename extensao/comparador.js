@@ -137,6 +137,16 @@ function enderecoDoCartao(pedaco) {
 /* Quantos anuncios da busca sao abertos para ler a loja: os MAIS BARATOS entre
    os que parecem o mesmo produto (cada um e uma leitura de pagina). */
 export const MAX_CANDIDATOS_BUSCA = 4;
+/* Quantos parecidos vao para a Gemini conferir pela foto antes de escolher
+   os MAX_CANDIDATOS_BUSCA mais baratos entre os aprovados. */
+export const MAX_CANDIDATOS_IA = 12;
+
+/* Foto do cartao: o primeiro endereco de imagem do Mercado Livre no bloco,
+   normalizado para a versao grande (-O.webp). Serve para a Gemini conferir. */
+export function imagemDoCartao(pedaco) {
+  const m = /https?:\/\/http2\.mlstatic\.com\/D_[A-Za-z0-9_]*?(\d{5,}-M[A-Z]{2}\d+_\d+)-[A-Z]{1,2}\.(?:webp|jpg|jpeg|png)/.exec(String(pedaco || ''));
+  return m ? 'https://http2.mlstatic.com/D_NQ_NP_' + m[1] + '-O.webp' : null;
+}
 
 /* Resultados da busca que parecem o MESMO produto. Cada um vira
    { item, catalogo, url, preco, titulo }. */
@@ -148,6 +158,7 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   d.bytes = texto.length;
   d.cartoes = 0; d.comEndereco = 0; d.comTitulo = 0; d.comPreco = 0; d.parecidos = 0; d.naFaixa = 0;
 
+  d.titulosVistos = [];
   const aceitar = (end, tit, preco) => {
     if (!end || vistos.has(end.item)) return;
     d.comEndereco++;
@@ -155,6 +166,9 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
     d.comTitulo++;
     if (preco == null) return;
     d.comPreco++;
+    /* Amostra do que a busca trouxe: se nada parecer o mesmo produto, da para
+       ver de longe se o filtro errou ou se a busca veio ruim. */
+    if (d.titulosVistos.length < 15) d.titulosVistos.push(String(tit).slice(0, 80) + ' | ' + preco);
     if (!pareceMesmoProduto(tituloOriginal, tit)) return;
     d.parecidos++;
     /* Preco absurdo em relacao ao que a pessoa esta vendo quase sempre e outro
@@ -174,7 +188,8 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   for (const b of blocos.slice(1)) {
     if (saida.length >= 30) break;
     const pedaco = b.slice(0, 12000);
-    aceitar(enderecoDoCartao(pedaco), tituloDoCartao(pedaco), precoDoCartao(pedaco));
+    const end = enderecoDoCartao(pedaco);
+    aceitar(end ? { ...end, imagem: imagemDoCartao(pedaco) } : null, tituloDoCartao(pedaco), precoDoCartao(pedaco));
   }
 
   /* 2. Dados da pagina (JSON dos polycards), quando o HTML nao trouxe nada.
@@ -231,7 +246,7 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   }
 
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
-  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_BUSCA);
+  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_IA);
 }
 
 /* Ofertas do MESMO produto de catalogo (bloco buy_box_offers da pagina /p/).
@@ -491,9 +506,9 @@ export function candidatosDeCartoes(cartoes, tituloOriginal, precoRef, diag = nu
     d.parecidosTela++;
     if (precoRef != null && (c.preco < precoRef * 0.4 || c.preco > precoRef * 1.6)) continue;
     vistos.add(end.item);
-    saida.push({ ...end, preco: c.preco, titulo: c.titulo });
+    saida.push({ ...end, preco: c.preco, titulo: c.titulo, imagem: imagemDoCartao(c.imagem) });
   }
-  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_BUSCA);
+  return saida.sort((a, b) => a.preco - b.preco).slice(0, MAX_CANDIDATOS_IA);
 }
 
 /* Cada cartao "polycard" dos dados da pagina de busca, ja desescapados.

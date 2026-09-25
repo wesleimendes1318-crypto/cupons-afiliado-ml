@@ -276,3 +276,31 @@ test('busca: cartao polycard real (link de rastreio, numero do anuncio em metada
   assert.equal(r.length, 1);
   assert.equal(diag.polycards, 1);
 });
+
+test('foto do cartao vem do bloco renderizado (lido na janela anonima)', async () => {
+  const { imagemDoCartao, ofertasDaBusca } = await import('../comparador.js');
+  const img = '<img class="poly-component__picture" src="https://http2.mlstatic.com/D_Q_NP_2X_727622-MLB113306582127_062026-E.webp" alt="x">';
+  assert.equal(imagemDoCartao(img), 'https://http2.mlstatic.com/D_NQ_NP_727622-MLB113306582127_062026-O.webp');
+  assert.equal(imagemDoCartao('<img src="data:image/gif;base64,R0lGOD">'), null);
+  const cartao = t => '<li class="ui-search-layout__item"><div class="poly-card">' + img
+    + '<h3 class="poly-component__title-wrapper"><a class="poly-component__title" href="https://produto.mercadolivre.com.br/MLB-1234567890-capa">'
+    + t + '</a></h3><span class="andes-money-amount__fraction">39</span></div></li>';
+  const html = cartao('Capa Case Anti Impacto Motorola Edge 70 Transparente Acrilico');
+  const diag = {};
+  const r = ofertasDaBusca(html, 'Capa Case Anti Impacto Para Motorola Transparente Acrilico Edge 70', 45, diag);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].imagem, 'https://http2.mlstatic.com/D_NQ_NP_727622-MLB113306582127_062026-O.webp');
+  assert.equal(diag.titulosVistos.length, 1);
+});
+
+test('ate 12 parecidos seguem para a Gemini conferir', async () => {
+  const { ofertasDaBusca, MAX_CANDIDATOS_IA } = await import('../comparador.js');
+  let html = '';
+  for (let i = 0; i < 20; i++) {
+    html += '<li class="ui-search-layout__item"><a class="poly-component__title" href="https://produto.mercadolivre.com.br/MLB-12345678' + String(i).padStart(2, '0')
+      + '-x">Travesseiro Cervical Ortopedico Viscoelastico Nasa</a><span class="andes-money-amount__fraction">' + (50 + i) + '</span></li>';
+  }
+  const r = ofertasDaBusca(html, 'Travesseiro Cervical Ortopedico Viscoelastico', 60);
+  assert.equal(r.length, MAX_CANDIDATOS_IA);
+  assert.ok(r[0].preco <= r[1].preco);
+});

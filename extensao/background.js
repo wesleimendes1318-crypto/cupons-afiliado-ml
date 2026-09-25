@@ -7,9 +7,9 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar } from './sincronia.js';
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
-         escolherAlternativas, ehCaptcha, desescapar,
+         escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
@@ -466,43 +466,128 @@ async function imagemParaGemini(url) {
   } catch (e) { return null; }
 }
 
+/* Chamada a Gemini com a chave da EXTENSAO. O modelo escolhido nas opcoes vem
+   primeiro; se ele recusar (429 cota, 404 modelo que a chave nao tem, 5xx),
+   tenta os Flash. Medido em 25/09: com gemini-2.5-pro escolhido, toda
+   conferencia voltava "indisponivel" e o motivo nao ficava em lugar nenhum. */
+async function geminiLocal(partes) {
+  const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
+  if (!geminiKey) return { ok: false, status: 0, erro: 'sem chave na extensao' };
+  const modelos = [...new Set([geminiModel, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean))];
+  let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
+  for (const modelo of modelos) {
+    for (let tentativa = 0; tentativa < 2; tentativa++) {
+      try {
+        const ctrl = new AbortController();
+        const corta = setTimeout(() => ctrl.abort(), 60000);
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+          method: 'POST', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
+          body: JSON.stringify({ contents: [{ parts: partes }],
+                                 generationConfig: { responseMimeType: 'application/json', temperature: 0 } })
+        });
+        clearTimeout(corta);
+        const j = await r.json().catch(() => null);
+        if (r.ok) {
+          const texto = ((j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [])
+            .filter(x => !x.thought && x.text).map(x => x.text).join('');
+          if (texto) return { ok: true, texto, modelo };
+          ultimo = { ok: false, status: 502, erro: 'resposta vazia', modelo };
+          break;
+        }
+        ultimo = { ok: false, status: r.status, erro: String((j && j.error && j.error.message) || '').slice(0, 200), modelo };
+        if (r.status === 429 || r.status >= 500) { if (tentativa === 0) await sleep(2000); continue; }
+        if (r.status === 404) break;
+        return ultimo;
+      } catch (e) {
+        ultimo = { ok: false, status: 504, erro: String((e && e.message) || e).slice(0, 120), modelo };
+      }
+    }
+  }
+  return ultimo;
+}
+
+function jsonDaIA(texto) {
+  try { return JSON.parse(texto); } catch (e) { /* tenta o bloco {} */ }
+  const m = /\{[\s\S]*\}/.exec(texto || '');
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch (e) { return null; }
+}
+
+const CONFIANCA_MINIMA_IA = 80;
+const PEDIDO_CONFERENCIA =
+  'Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL '
+  + 'e so pode ver outra loja se for EXATAMENTE o mesmo produto.\n'
+  + 'Passo 1: descreva a FOTO do anuncio original em detalhe: tipo de produto, marca/modelo visiveis, cor, '
+  + 'bordas, material, acabamento, formato, tamanho aparente, quantidade de unidades e qualquer detalhe que '
+  + 'diferencie de produtos parecidos.\n'
+  + 'Passo 2: para cada CANDIDATO, compare a foto dele com essa descricao e o titulo dele com o titulo '
+  + 'original. E o mesmo produto so se bater: tipo, marca e modelo, versao, cor e acabamento (ex.: capinha '
+  + 'transparente com borda preta NAO e igual a capinha toda transparente), tamanho/volume/capacidade, '
+  + 'compatibilidade (modelo do celular, voltagem) e quantidade (kit, unidades). Anuncio que atende varios '
+  + 'modelos so e igual se o titulo citar o mesmo modelo do original. Candidato sem foto: igual=false. '
+  + 'Na duvida, igual=false. Ignore preco, loja e texto de propaganda.\n'
+  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"igual":true,"confianca":0-100,'
+  + '"motivo":"curto"}]}';
+
+/* Ultima conferencia feita, para gravar no pedido: por onde passou, qual
+   modelo, o que a IA viu na foto e por que reprovou cada um. */
+let ultimaIA = null;
+
 /* original: { titulo, imagem, preco }  lista: [{ titulo, imagem, preco }]
-   Devolve um Set com os indices aprovados, ou null se nao deu para conferir. */
+   Devolve um Set com os indices aprovados, ou null se nao deu para conferir.
+
+   Pedido do Weslei: a Gemini decodifica a FOTO e garante que e o mesmo
+   produto. Ela descreve a foto do original, compara cada candidato e so passa
+   o que ela der como igual com confianca >= 80. Sem foto nao passa.
+   Ordem: chave da extensao (varios modelos) e, se falhar, a do servidor. */
 async function mesmoProdutoPelaGemini(original, lista) {
   if (!lista || !lista.length) return new Set();
-  const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
-  if (!geminiKey) return null;
-  const modelo = geminiModel || 'gemini-flash-latest';
-  const partes = [{ text:
-    'Voce confere anuncios de um marketplace para um comparador de precos. Diga quais CANDIDATOS sao EXATAMENTE '
-    + 'o MESMO produto do ANUNCIO ORIGINAL: mesma marca e modelo, mesma versao, mesma cor/acabamento quando faz parte '
-    + 'do produto (ex.: capinha transparente com borda preta NAO e igual a capinha toda transparente), mesmo tamanho, '
-    + 'volume ou capacidade, mesma compatibilidade (modelo de celular, voltagem) e mesma quantidade (kit, unidades). '
-    + 'Na duvida, responda que NAO e o mesmo. Use as fotos e os titulos. Ignore diferenca de preco, loja e texto de '
-    + 'marketing. Responda so JSON no formato {"iguais":[indices],"motivos":{"indice":"motivo curto"}}.' }];
-  partes.push({ text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') });
+  const itens = lista.slice(0, 12);
+  const erros = [];
+
+  /* 1. Chave da extensao. */
   const imgOrig = await imagemParaGemini(original.imagem);
-  if (imgOrig) partes.push(imgOrig);
-  const itens = lista.slice(0, 10);
-  for (let i = 0; i < itens.length; i++) {
-    partes.push({ text: 'CANDIDATO ' + i + ': ' + (itens[i].titulo || '(sem titulo)') });
-    const img = await imagemParaGemini(itens[i].imagem);
-    if (img) partes.push(img);
+  const fotos = await Promise.all(itens.map(c => imagemParaGemini(c.imagem)));
+  if (imgOrig) {
+    const partes = [{ text: PEDIDO_CONFERENCIA }, { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') }, imgOrig];
+    itens.forEach((c, i) => {
+      partes.push({ text: 'CANDIDATO ' + i + ': ' + (c.titulo || '(sem titulo)') + (fotos[i] ? '' : ' (sem foto)') });
+      if (fotos[i]) partes.push(fotos[i]);
+    });
+    const r = await geminiLocal(partes);
+    const obj = r.ok ? jsonDaIA(r.texto) : null;
+    if (obj && Array.isArray(obj.candidatos)) {
+      const avaliacao = obj.candidatos
+        .filter(c => Number.isInteger(c.indice) && c.indice >= 0 && c.indice < itens.length)
+        .map(c => ({ indice: c.indice, igual: c.igual === true,
+                     confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
+                     motivo: String(c.motivo || '').slice(0, 140), semFoto: !fotos[c.indice] }));
+      const iguais = avaliacao.filter(a => a.igual && a.confianca >= CONFIANCA_MINIMA_IA && !a.semFoto).map(a => a.indice);
+      ultimaIA = { via: 'extensao', modelo: r.modelo, descricao: String(obj.descricao_original || '').slice(0, 300),
+                   avaliacao: avaliacao.map(a => ({ ...a, titulo: String(itens[a.indice].titulo || '').slice(0, 70) })) };
+      return new Set(iguais);
+    }
+    erros.push('extensao: ' + (r.ok ? 'JSON invalido' : (r.status + ' ' + (r.modelo || '') + ' ' + (r.erro || ''))));
+  } else {
+    erros.push('extensao: foto do original nao baixou');
   }
-  try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
-      { method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
-        body: JSON.stringify({ contents: [{ parts: partes }],
-                               generationConfig: { responseMimeType: 'application/json', temperature: 0 } }) });
-    const j = await r.json();
-    if (!r.ok) return null;
-    const txt = j?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') || '';
-    const obj = JSON.parse(txt);
-    if (!obj || !Array.isArray(obj.iguais)) return null;
-    return new Set(obj.iguais.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
-  } catch (e) { return null; }
+
+  /* 2. Chave do servidor (Lovable). */
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  const sv = await conferirNoServidor(sincToken, {
+    tipo: 'conferir',
+    original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null },
+    candidatos: itens.map(c => ({ titulo: c.titulo || null, imagem: c.imagem || null, preco: c.preco ?? null }))
+  });
+  if (sv && sv.ok && Array.isArray(sv.iguais)) {
+    ultimaIA = { via: 'servidor', modelo: sv.modelo, descricao: sv.descricaoOriginal || null, erros,
+                 avaliacao: (sv.avaliacao || []).map(a => ({ ...a, titulo: String((itens[a.indice] || {}).titulo || '').slice(0, 70) })) };
+    return new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
+  }
+  erros.push('servidor: ' + ((sv && (sv.status ? sv.status + ' ' : '') + (sv.modelo ? sv.modelo + ' ' : '') + (sv.erro || '')) || 'sem resposta'));
+  ultimaIA = { indisponivel: true, erros };
+  return null;
 }
 
 /* ================================================================
@@ -1923,7 +2008,9 @@ function cartoesDaBuscaNaPagina() {
       if (m) preco = parseFloat(m[1].replace(/\./g, '')) + (m[2] ? Number(m[2]) / 100 : 0);
     }
     vistos.add(chave);
-    saida.push({ href: a.href, titulo, preco });
+    const foto = bloco.querySelector('img');
+    const imagem = foto ? (foto.currentSrc || foto.src || foto.getAttribute('data-src') || '') + ' ' + (foto.getAttribute('srcset') || '') : null;
+    saida.push({ href: a.href, titulo, preco, imagem });
     if (saida.length >= 48) break;
   }
   return { cartoes: saida, tituloPagina: document.title, url: location.href, itens: links.length };
@@ -2046,27 +2133,25 @@ async function lerBuscaNaAba(url) {
    tamanho), e a busca roda de novo UMA vez com ela. A Gemini continua sendo
    quem confere, pela foto, se cada resultado e o mesmo produto. */
 async function termoDeBuscaPelaGemini(original) {
-  const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
-  if (!geminiKey || !original || !original.titulo) return null;
+  if (!original || !original.titulo) return null;
   const partes = [{ text:
     'Escreva a melhor busca curta (3 a 8 palavras, sem aspas, sem pontuacao) para achar EXATAMENTE este produto '
-    + 'em outras lojas de um marketplace brasileiro: marca, linha/modelo, versao, tamanho/volume/capacidade e '
-    + 'compatibilidade quando existirem. Sem palavras de marketing. Responda so JSON {"busca":"..."}.\n'
+    + 'em outras lojas de um marketplace brasileiro: marca, linha/modelo, versao, cor quando for parte do produto, '
+    + 'tamanho/volume/capacidade e compatibilidade quando existirem. Use a foto para confirmar o que e o produto. '
+    + 'Sem palavras de marketing. Responda so JSON {"busca":"..."}.\n'
     + 'Titulo do anuncio: ' + original.titulo }];
   const img = await imagemParaGemini(original.imagem);
   if (img) partes.push(img);
-  try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel || 'gemini-flash-latest'}:generateContent`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
-        body: JSON.stringify({ contents: [{ parts: partes }],
-                               generationConfig: { responseMimeType: 'application/json', temperature: 0 } }) });
-    const j = await r.json();
-    if (!r.ok) return null;
-    const txt = j?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') || '';
-    const busca = String(JSON.parse(txt).busca || '').replace(/["']/g, '').trim();
-    return busca.length >= 6 ? busca.slice(0, 90) : null;
-  } catch (e) { return null; }
+  const r = await geminiLocal(partes);
+  const obj = r.ok ? jsonDaIA(r.texto) : null;
+  let busca = obj ? String(obj.busca || '').replace(/["']/g, '').trim() : '';
+  if (busca.length < 6) {
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    const sv = await conferirNoServidor(sincToken, { tipo: 'busca',
+      original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null } });
+    busca = sv && sv.ok ? String(sv.busca || '').trim() : '';
+  }
+  return busca.length >= 6 ? busca.slice(0, 90) : null;
 }
 
 async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
@@ -2127,12 +2212,17 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
   }
   /* A Gemini confere foto e titulo antes de abrir cada anuncio: o que nao
      for o MESMO produto sai aqui, e ainda poupa leitura de pagina. */
+  /* Ate 12 parecidos vao para a Gemini; dos aprovados, os 4 mais baratos
+     seguem (cada um e uma leitura de pagina para saber a loja). */
   if (original) {
+    ultimaIA = null;
     const ok = await mesmoProdutoPelaGemini(original, candidatos);
-    diag.ia = ok ? { conferidos: candidatos.length, iguais: ok.size } : { indisponivel: true };
+    diag.ia = ok ? { conferidos: Math.min(candidatos.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
+                 : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
     if (ok) candidatos = candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true }));
     if (!candidatos.length) { const vazio = []; vazio.diag = diag; return vazio; }
   }
+  candidatos = candidatos.slice(0, MAX_CANDIDATOS_BUSCA);
   const achados = await avaliarCandidatos(candidatos, itemAtual, { achadoNaBusca: true });
   for (const a of achados) {
     const c = candidatos.find(x => x.item === a.item);
@@ -2695,8 +2785,10 @@ async function atenderPedidos() {
               alts.forEach((x, i) => { if (x.achadoNaBusca && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem }); });
               referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem }); });
               if (conferir.length) {
+                ultimaIA = null;
                 const ok = await mesmoProdutoPelaGemini(original, conferir);
-                verificacaoIA = ok ? { conferidos: conferir.length, iguais: ok.size } : { indisponivel: true };
+                verificacaoIA = ok ? { conferidos: Math.min(conferir.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
+                                   : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
                 if (ok) {
                   const fora = new Set(conferir.filter((_, k) => !ok.has(k)).map(c => c.tipo + c.i));
                   alts = alts.filter((_, i) => !fora.has('alt' + i));

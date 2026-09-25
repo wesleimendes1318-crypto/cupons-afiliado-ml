@@ -448,6 +448,28 @@ export async function compararNoServidor(token, url, dica = {}) {
   }
 }
 
+/* Gemini do SERVIDOR do site (chave nos secrets do Lovable): confere pela foto
+   se os candidatos sao o mesmo produto, ou escreve a busca. Plano B de quando
+   a chave da extensao falha (cota, modelo indisponivel). */
+export async function conferirNoServidor(token, corpo) {
+  if (!token) return { ok: false, erro: 'sem token de sincronia' };
+  try {
+    await siteVivo();
+    const r = await fetch(SITE + '/api/public/conferir-produto', {
+      method: 'POST',
+      credentials: 'omit',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'x-sinc-token': token },
+      body: JSON.stringify(corpo)
+    });
+    const j = await r.json().catch(() => null);
+    if (!j) return { ok: false, erro: 'servidor respondeu ' + r.status };
+    return j;
+  } catch (e) {
+    return { ok: false, erro: 'servidor do site fora do ar' };
+  }
+}
+
 /* Diagnostico para o desenvolvedor (tabela diagnosticos, 7 dias). Nunca
    derruba nada: se falhar, so nao grava. */
 export async function gravarDiagnostico(token, tipo, dados) {

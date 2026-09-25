@@ -23,6 +23,7 @@ import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
+import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
@@ -100,6 +101,12 @@ const ApiPublicCompararRoute = ApiPublicCompararRouteImport.update({
   path: '/api/public/comparar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicConferirProdutoRoute =
+  ApiPublicConferirProdutoRouteImport.update({
+    id: '/api/public/conferir-produto',
+    path: '/api/public/conferir-produto',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicGerarTextoRoute = ApiPublicGerarTextoRouteImport.update({
   id: '/api/public/gerar-texto',
   path: '/api/public/gerar-texto',
@@ -146,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/guias/': typeof GuiasIndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
+  '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
@@ -168,6 +176,7 @@ export interface FileRoutesByTo {
   '/guias': typeof GuiasIndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
+  '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
@@ -191,6 +200,7 @@ export interface FileRoutesById {
   '/guias/': typeof GuiasIndexRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
+  '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/guias/'
     | '/api/public/classificar'
     | '/api/public/comparar'
+    | '/api/public/conferir-produto'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/guias'
     | '/api/public/classificar'
     | '/api/public/comparar'
+    | '/api/public/conferir-produto'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
@@ -259,6 +271,7 @@ export interface FileRouteTypes {
     | '/guias/'
     | '/api/public/classificar'
     | '/api/public/comparar'
+    | '/api/public/conferir-produto'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
@@ -282,6 +295,7 @@ export interface RootRouteChildren {
   GuiasIndexRoute: typeof GuiasIndexRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
+  ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
@@ -390,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCompararRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/conferir-produto': {
+      id: '/api/public/conferir-produto'
+      path: '/api/public/conferir-produto'
+      fullPath: '/api/public/conferir-produto'
+      preLoaderRoute: typeof ApiPublicConferirProdutoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gerar-texto': {
       id: '/api/public/gerar-texto'
       path: '/api/public/gerar-texto'
@@ -450,6 +471,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuiasIndexRoute: GuiasIndexRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
+  ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
