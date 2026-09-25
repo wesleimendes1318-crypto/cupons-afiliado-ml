@@ -1816,8 +1816,11 @@ function tituloDaPagina(html) {
 /* Le o vendedor de cada candidato e o cupom dele no indice. Cupom e BONUS,
    nao requisito: loja sem cupom entra com desconto zero. */
 async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
-  const indice = await obterIndice();
-  const chaves = Object.keys(indice.mapa);
+  /* Cupom e BONUS, nunca requisito, e vem do BANCO do site (com teto e compra
+     minima). Antes vinha do indice de cupons do Mercado Livre, e em 25/09 esse
+     indice passou a responder 403 (CUPONS_RECUSADOS): a comparacao inteira
+     morria por causa de um bonus. */
+  const { sincToken } = await chrome.storage.local.get('sincToken');
   const achados = [];
 
   for (const c of candidatos) {
@@ -1828,21 +1831,20 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
     let nomes = [];
     try { nomes = await resolverVendedor(c.item, c.url); } catch (e) { nomes = []; }
 
-    const cupom = acharCupom(indice.mapa, chaves, nomes);
-    let aval = null;
-    if (cupom) {
-      let cond = null;
-      try { cond = await condicoesDe(cupom.i); } catch (e) { cond = null; }
-      aval = avaliar(cupom, cond, c.preco);
+    let cupom = null;
+    for (const nome of nomes) {
+      try { cupom = await melhorCupom(sincToken, nome); } catch (e) { cupom = null; }
+      if (cupom) break;
     }
+    const aval = cupom ? avaliarCupom(cupom, c.preco) : null;
     await sleep(400);
 
     const vale = Boolean(aval && aval.vale);
-    const economia = vale && aval.economia != null ? aval.economia : 0;
+    const economia = vale && aval.economia != null ? Math.round(aval.economia * 100) / 100 : 0;
 
     achados.push({
-      item: c.item, url: c.url, preco: c.preco, vendedor: nomes[0] || null,
-      cupom: vale ? { id: cupom.i, titulo: cupom.t, vence: cupom.x } : null,
+      item: c.item, url: c.url, preco: c.preco, vendedor: (cupom && cupom.vendedor) || nomes[0] || null,
+      cupom: vale ? { id: cupom.id, titulo: cupom.desconto || cupom.titulo || null, vence: cupom.vence || null } : null,
       economia,
       minimo: vale ? aval.minimo : null,
       teto: vale ? aval.teto : null,
@@ -1914,7 +1916,45 @@ async function lerBuscaNaAba(url) {
   }
 }
 
+/* Se a busca pelo titulo nao achar o mesmo produto, a Gemini olha a foto e o
+   titulo do anuncio e escreve uma busca mais precisa (marca, modelo, versao,
+   tamanho), e a busca roda de novo UMA vez com ela. A Gemini continua sendo
+   quem confere, pela foto, se cada resultado e o mesmo produto. */
+async function termoDeBuscaPelaGemini(original) {
+  const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
+  if (!geminiKey || !original || !original.titulo) return null;
+  const partes = [{ text:
+    'Escreva a melhor busca curta (3 a 8 palavras, sem aspas, sem pontuacao) para achar EXATAMENTE este produto '
+    + 'em outras lojas de um marketplace brasileiro: marca, linha/modelo, versao, tamanho/volume/capacidade e '
+    + 'compatibilidade quando existirem. Sem palavras de marketing. Responda so JSON {"busca":"..."}.\n'
+    + 'Titulo do anuncio: ' + original.titulo }];
+  const img = await imagemParaGemini(original.imagem);
+  if (img) partes.push(img);
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel || 'gemini-flash-latest'}:generateContent`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
+        body: JSON.stringify({ contents: [{ parts: partes }],
+                               generationConfig: { responseMimeType: 'application/json', temperature: 0 } }) });
+    const j = await r.json();
+    if (!r.ok) return null;
+    const txt = j?.candidates?.[0]?.content?.parts?.map(p => p.text).filter(Boolean).join('') || '';
+    const busca = String(JSON.parse(txt).busca || '').replace(/["']/g, '').trim();
+    return busca.length >= 6 ? busca.slice(0, 90) : null;
+  } catch (e) { return null; }
+}
+
 async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
+  const primeira = await achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original);
+  if (primeira.length || !original) return primeira;
+  const termo = await termoDeBuscaPelaGemini(original);
+  if (!termo || termo.toLowerCase() === String(titulo).toLowerCase()) return primeira;
+  const segunda = await achadosNaBuscaUmaVez(termo, precoRef, itemAtual, original);
+  segunda.diag = { ...(segunda.diag || {}), buscaGemini: termo, primeira: primeira.diag || null };
+  return segunda;
+}
+
+async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null) {
   /* Pagina de busca e grande (varios cartoes + dados): le ate 3 MB. */
   const html = await lerCatalogo(urlDeBusca(titulo), 3000000);
   /* Contagem de cada etapa da leitura, gravada no pedido: se a busca vier
