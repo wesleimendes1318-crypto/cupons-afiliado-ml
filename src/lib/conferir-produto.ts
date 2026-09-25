@@ -22,7 +22,7 @@ type Resultado =
   | { ok: true; texto: string; modelo: string }
   | { ok: false; status: number; erro: string; modelo?: string };
 
-const MODELOS = ["gemini-flash-latest", "gemini-pro-latest", "gemini-flash-lite-latest"];
+const MODELOS = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-pro-latest"];
 const CONFIANCA_MINIMA = 80;
 
 function ordemDosModelos(): string[] {
@@ -44,7 +44,7 @@ function paraBase64(buf: ArrayBuffer): string {
 async function imagem(url: string | null | undefined): Promise<Parte | null> {
   if (!url || !/^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(url)) return null;
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    const r = await fetch(url, { signal: AbortSignal.timeout(6_000) });
     if (!r.ok) return null;
     const buf = await r.arrayBuffer();
     if (!buf.byteLength || buf.byteLength > 1_500_000) return null;
@@ -64,8 +64,11 @@ async function gerar(partes: Parte[]): Promise<Resultado> {
   const chave = process.env["GEMINI_API_KEY"];
   if (!chave) return { ok: false, status: 503, erro: "GEMINI_API_KEY ausente nos secrets" };
   let ultimo: Resultado = { ok: false, status: 502, erro: "sem resposta" };
+  /* Prazo total de 17 s: a consulta do cliente inteira cabe em 1 minuto. */
+  const inicio = Date.now();
   for (const modelo of ordemDosModelos()) {
     for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+      if (Date.now() - inicio > 16_000) return ultimo;
       try {
         const r = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
@@ -76,7 +79,7 @@ async function gerar(partes: Parte[]): Promise<Resultado> {
               contents: [{ role: "user", parts: partes }],
               generationConfig: { responseMimeType: "application/json", temperature: 0 },
             }),
-            signal: AbortSignal.timeout(60_000),
+            signal: AbortSignal.timeout(Math.max(3_000, 17_000 - (Date.now() - inicio))),
           },
         );
         const j = (await r.json().catch(() => null)) as {
@@ -101,7 +104,7 @@ async function gerar(partes: Parte[]): Promise<Resultado> {
         /* 429 (cota) e 5xx passam com uma pausa; 404 (modelo que a chave nao
            tem) vai direto para o proximo; o resto e defeito do pedido. */
         if (r.status === 429 || r.status >= 500) {
-          if (tentativa === 0) await new Promise((ok) => setTimeout(ok, 2000));
+          if (tentativa === 0) await new Promise((ok) => setTimeout(ok, 1000));
           continue;
         }
         if (r.status === 404) break;

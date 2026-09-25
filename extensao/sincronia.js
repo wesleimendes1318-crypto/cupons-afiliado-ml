@@ -455,7 +455,10 @@ export async function conferirNoServidor(token, corpo) {
   if (!token) return { ok: false, erro: 'sem token de sincronia' };
   try {
     await siteVivo();
+    const ctrl = new AbortController();
+    const corta = setTimeout(() => ctrl.abort(), 20000);
     const r = await fetch(SITE + '/api/public/conferir-produto', {
+      signal: ctrl.signal,
       method: 'POST',
       credentials: 'omit',
       cache: 'no-store',
@@ -463,6 +466,7 @@ export async function conferirNoServidor(token, corpo) {
       body: JSON.stringify(corpo)
     });
     const j = await r.json().catch(() => null);
+    clearTimeout(corta);
     if (!j) return { ok: false, erro: 'servidor respondeu ' + r.status };
     return j;
   } catch (e) {

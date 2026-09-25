@@ -35,7 +35,7 @@ const RITMO_RAPIDO_MS = 1200;
 const VOLTAS_RAPIDAS = 15;
 const RITMO_CALMO_MS = 3000;
 /* A busca em outras lojas e os links de cada uma levam mais tempo. */
-const LIMITE_MS = 150000;
+const LIMITE_MS = 90000;
 /* Depois disso a espera deixou de ser normal. Nao desiste: troca o texto por um
    aviso honesto e da uma saida util para a pessoa nao abandonar a pagina. */
 const AVISO_MS = 45000;

@@ -473,13 +473,18 @@ async function imagemParaGemini(url) {
 async function geminiLocal(partes) {
   const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
   if (!geminiKey) return { ok: false, status: 0, erro: 'sem chave na extensao' };
-  const modelos = [...new Set([geminiModel, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean))];
+  /* Flash primeiro: responde em segundos e confere foto muito bem. O modelo
+     escolhido nas opcoes (ex.: 2.5 Pro) fica como segunda tentativa. Prazo
+     total de 16 s: a consulta inteira do cliente tem 1 minuto. */
+  const modelos = [...new Set(['gemini-flash-latest', geminiModel, 'gemini-2.5-flash'].filter(Boolean))];
+  const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   for (const modelo of modelos) {
     for (let tentativa = 0; tentativa < 2; tentativa++) {
+      if (Date.now() - inicio > 16000) return { ...ultimo, erro: (ultimo.erro || '') + ' (prazo de 16s)' };
       try {
         const ctrl = new AbortController();
-        const corta = setTimeout(() => ctrl.abort(), 60000);
+        const corta = setTimeout(() => ctrl.abort(), 16000);
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
@@ -500,7 +505,9 @@ async function geminiLocal(partes) {
         if (r.status === 404) break;
         return ultimo;
       } catch (e) {
+        /* Estourou o prazo: nao repete o mesmo modelo, vai para o proximo. */
         ultimo = { ok: false, status: 504, erro: String((e && e.message) || e).slice(0, 120), modelo };
+        break;
       }
     }
   }
@@ -1940,13 +1947,13 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
   const { sincToken } = await chrome.storage.local.get('sincToken');
   const achados = [];
 
-  for (const c of candidatos) {
-    if (itemAtual && c.item === itemAtual) continue;
-    /* Sem preco nao da para comparar nada, entao nao entra. */
-    if (c.preco == null) continue;
-
-    let nomes = [];
-    try { nomes = await resolverVendedor(c.item, c.url); } catch (e) { nomes = []; }
+  /* Lojas dos candidatos lidas AO MESMO TEMPO (antes era uma por vez, com
+     pausa): a consulta do cliente precisa caber em 1 minuto. */
+  const validos = candidatos.filter(c => !(itemAtual && c.item === itemAtual) && c.preco != null);
+  const nomesDe = await Promise.all(validos.map(c => resolverVendedor(c.item, c.url).catch(() => [])));
+  for (let k = 0; k < validos.length; k++) {
+    const c = validos[k];
+    const nomes = nomesDe[k] || [];
 
     let cupom = null;
     for (const nome of nomes) {
@@ -1954,7 +1961,6 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
       if (cupom) break;
     }
     const aval = cupom ? avaliarCupom(cupom, c.preco) : null;
-    await sleep(400);
 
     const vale = Boolean(aval && aval.vale);
     const economia = vale && aval.economia != null ? Math.round(aval.economia * 100) / 100 : 0;
@@ -2084,8 +2090,8 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
   let id = null;
   try {
     id = await abaAnonima(url);
-    await esperarCarregar(id, 30000);
-    await sleep(1500 + Math.floor(Math.random() * 1000));
+    await esperarCarregar(id, 15000);
+    await sleep(800 + Math.floor(Math.random() * 400));
     const final = (await chrome.tabs.get(id)).url || '';
     const [s] = await chrome.scripting.executeScript({ target: { tabId: id }, func });
     const r = (s && s.result) || {};
@@ -2531,6 +2537,13 @@ async function atenderPedidos() {
   if (!sincToken) return { atendidos: 0, semToken: true };
 
   atendendo = true;
+  /* O Chrome desliga o service worker depois de ~30 s sem chamada de API de
+     extensao, e esperar resposta de fetch (Gemini, janela anonima) nao conta.
+     Medido em 25/09 na 1.77: pedidos 195-197 morreram no meio de
+     "outras_lojas" e ficaram girando na tela por mais de 10 minutos. Uma
+     chamada leve a cada 20 s mantem o worker vivo enquanto ha cliente
+     esperando. */
+  const vivo = setInterval(() => { try { chrome.runtime.getPlatformInfo(() => {}); } catch (e) {} }, 20000);
   let ok = 0, falhou = 0, pendentes = [];
   try {
     pendentes = await pedidosPendentes(sincToken);
@@ -2727,7 +2740,9 @@ async function atenderPedidos() {
                 const temCupomAqui = !!(cupom && aval && aval.vale);
                 const economiaAqui = (temCupomAqui && aval.economia != null) ? aval.economia : 0;
                 const finalAqui = a.preco != null ? a.preco - economiaAqui : null;
-                alts = await mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
+                /* Prazo de 35 s para a busca inteira: a consulta do cliente toda cabe em 1 minuto (regra do Weslei). */
+                let prazo;
+                alts = await Promise.race([mesmoProdutoEmOutrasLojas(a.canonica || a.finalUrl || url, {
                   finalAtual: finalAqui, temCupomAqui, vendedorAtual: vendedor,
                   /* Com a variacao marcada (Edge 70, 110V...), senao a busca
                      traz o produto de outro modelo. */
@@ -2737,7 +2752,9 @@ async function atenderPedidos() {
                      gasta leitura de pagina repetindo o que ja foi visto. */
                   soBusca: !!(api && api.procurou),
                   original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco }
-                });
+                }),
+                  new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (35s) na busca em outras lojas')), 35000); })
+                ]).finally(() => clearTimeout(prazo));
                 buscaFora.vistos = Array.isArray(alts.todas) ? alts.todas.length : 0;
                 buscaFora.leitura = alts.diag || null;
                 buscaFora.modo = ultimaLeitura;
@@ -2786,7 +2803,11 @@ async function atenderPedidos() {
               referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem }); });
               if (conferir.length) {
                 ultimaIA = null;
-                const ok = await mesmoProdutoPelaGemini(original, conferir);
+                let prazoIA;
+                const ok = await Promise.race([
+                  mesmoProdutoPelaGemini(original, conferir),
+                  new Promise(r => { prazoIA = setTimeout(() => r(null), 20000); })
+                ]).finally(() => clearTimeout(prazoIA));
                 verificacaoIA = ok ? { conferidos: Math.min(conferir.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
                                    : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
                 if (ok) {
@@ -2910,6 +2931,7 @@ async function atenderPedidos() {
     return { atendidos: ok, falharam: falhou, pendentes: pendentes.length };
   } finally {
     atendendo = false;
+    clearInterval(vivo);
     if (chegouPedidoNovo) {
       chegouPedidoNovo = false;
       setTimeout(() => atenderPedidos().catch(() => {}), 400);
