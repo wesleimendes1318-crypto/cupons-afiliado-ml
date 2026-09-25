@@ -22,7 +22,8 @@ type Resultado =
   | { ok: true; texto: string; modelo: string }
   | { ok: false; status: number; erro: string; modelo?: string };
 
-const MODELOS = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-pro-latest"];
+/* 2.5 Flash sem a etapa de "pensar" responde em segundos; o prazo e curto. */
+const MODELOS = ["gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest"];
 const CONFIANCA_MINIMA = 80;
 
 function ordemDosModelos(): string[] {
@@ -77,7 +78,11 @@ async function gerar(partes: Parte[]): Promise<Resultado> {
             headers: { "Content-Type": "application/json", "X-goog-api-key": chave },
             body: JSON.stringify({
               contents: [{ role: "user", parts: partes }],
-              generationConfig: { responseMimeType: "application/json", temperature: 0 },
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0,
+                ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+              },
             }),
             signal: AbortSignal.timeout(Math.max(3_000, 17_000 - (Date.now() - inicio))),
           },

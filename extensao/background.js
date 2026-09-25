@@ -251,7 +251,18 @@ function nomesDoHtml(buf) {
 
 const cacheMem = new Map();
 
-async function resolverVendedor(id, url) {
+/* Leituras em andamento: a busca adianta a leitura das lojas enquanto a
+   Gemini confere as fotos, e quem pedir o mesmo anuncio depois espera a
+   mesma leitura em vez de abrir outra aba. */
+const lendoVendedor = new Map();
+function resolverVendedor(id, url) {
+  if (lendoVendedor.has(id)) return lendoVendedor.get(id);
+  const p = resolverVendedorAgora(id, url).finally(() => lendoVendedor.delete(id));
+  lendoVendedor.set(id, p);
+  return p;
+}
+
+async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
   if (m && Date.now() - m.ts < TTL_VEND) return m.nomes;
 
@@ -492,7 +503,9 @@ async function geminiLocal(partes) {
   /* Flash primeiro: responde em segundos e confere foto muito bem. O modelo
      escolhido nas opcoes (ex.: 2.5 Pro) fica como segunda tentativa. Prazo
      total de 16 s: a consulta inteira do cliente tem 1 minuto. */
-  const modelos = [...new Set(['gemini-flash-latest', geminiModel, 'gemini-2.5-flash'].filter(Boolean))];
+  /* 2.5 Flash sem a etapa de "pensar" responde em poucos segundos (medido:
+     com o pensamento ligado, 20 s e estourava o prazo). */
+  const modelos = [...new Set(['gemini-2.5-flash', 'gemini-flash-lite-latest', geminiModel].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   for (const modelo of modelos) {
@@ -500,12 +513,13 @@ async function geminiLocal(partes) {
       if (Date.now() - inicio > Math.min(16000, resta() - 7000)) return { ...ultimo, erro: (ultimo.erro || '') + ' (sem tempo)' };
       try {
         const ctrl = new AbortController();
-        const corta = setTimeout(() => ctrl.abort(), Math.max(4000, Math.min(16000, resta() - 7000)));
+        const corta = setTimeout(() => ctrl.abort(), Math.max(4000, Math.min(12000, resta() - 7000)));
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
           body: JSON.stringify({ contents: [{ parts: partes }],
-                                 generationConfig: { responseMimeType: 'application/json', temperature: 0 } })
+                                 generationConfig: { responseMimeType: 'application/json', temperature: 0,
+                                   ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}) } })
         });
         clearTimeout(corta);
         const j = await r.json().catch(() => null);
@@ -1913,6 +1927,9 @@ async function lerCatalogo(url, limite = MAX_CATALOGO) {
      Weslei, e o que se le ali nao fica ligado a ela. */
   const anon = await lerNaJanelaAnonima(url);
   if (anon.html) return anon.html;
+  /* Com a anonima liberada, pagina de outra loja nunca e lida com a conta:
+     se a anonima nao leu, a busca segue pelo leitor de cartoes da tela. */
+  if (await anonimaPermitida()) return '';
   /* Freio da conta ligado: nao insiste logado. So a anonima podia ler. */
   if (await freioLigado('leitura')) {
     throw new Error('leitura pausada na conta e a janela anonima nao leu (' + (anon.motivo || '?') + ')');
@@ -2093,8 +2110,11 @@ async function esperarConteudo(tabId, limiteMs) {
       ultimo = r && r.result;
       if (ultimo) {
         if (ultimo.captcha) return ultimo;
-        if (ultimo.itens >= 8) return ultimo;
-        if (ultimo.og && ultimo.estado !== 'loading' && ultimo.html > 50000) return ultimo;
+        /* Busca: cartoes na tela E os dados da pagina ja chegaram (medido:
+           com 8 cartoes o HTML ainda tinha 40 KB, e caia para a leitura
+           logada). Anuncio: og:image e HTML de verdade. */
+        if (ultimo.itens >= 8 && ultimo.html > 300000) return ultimo;
+        if (ultimo.og && ultimo.estado !== 'loading' && ultimo.html > 150000) return ultimo;
         if (ultimo.estado === 'complete') return ultimo;
       }
     } catch (e) { /* pagina ainda nao existe: tenta de novo */ }
@@ -2157,7 +2177,7 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
     const r = (s && s.result) || {};
     if (ehCaptcha(r.html || '', final)) return { motivo: 'captcha na anonima' };
     if (func === htmlDaPagina) {
-      if (!r.html || r.html.length < 50000) return { motivo: 'pagina curta (' + (r.html || '').length + ')' };
+      if (!r.html || r.html.length < 5000) return { motivo: 'pagina curta (' + (r.html || '').length + ')' };
       ultimaLeitura = { modo: 'anonima' };
       return { html: r.html, url: final };
     }
@@ -2177,6 +2197,7 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
 async function lerBuscaNaAba(url) {
   const anon = await lerNaJanelaAnonima(url, cartoesDaBuscaNaPagina);
   if (anon.cartoes) return anon;
+  if (await anonimaPermitida()) return { cartoes: [], motivo: anon.motivo || null };
   if (await freioLigado('leitura')) throw new Error('leitura pausada na conta (' + (anon.motivo || '?') + ')');
   const aba = await chrome.tabs.create({ url, active: false });
   try {
@@ -2280,6 +2301,9 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
      for o MESMO produto sai aqui, e ainda poupa leitura de pagina. */
   /* Ate 12 parecidos vao para a Gemini; dos aprovados, os 4 mais baratos
      seguem (cada um e uma leitura de pagina para saber a loja). */
+  /* Adianta a leitura das lojas dos 6 mais baratos enquanto a Gemini
+     confere (antes era uma coisa depois da outra). */
+  for (const c of candidatos.slice(0, 6)) { if (c.item !== itemAtual) resolverVendedor(c.item, c.url).catch(() => {}); }
   if (original) {
     ultimaIA = null;
     const t0 = Date.now();
