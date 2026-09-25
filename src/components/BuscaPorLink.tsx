@@ -398,10 +398,10 @@ function textoDoBotao(d: Dispositivo, base: string) {
 function AvisoDoBotao({ d }: { d: Dispositivo }) {
   const texto =
     d === "celular"
-      ? "Abre direto no app da loja."
+      ? "Abre no app oficial, com pagamento protegido."
       : d === "app-interno"
         ? 'Se abrir aqui dentro, toque nos três pontinhos e em "Abrir no navegador".'
-        : "Abre numa aba nova, no site da loja.";
+        : "Abre no site oficial, com pagamento protegido.";
   return <p className="mt-1 text-center text-[11px] text-secondary-ink">{texto}</p>;
 }
 
@@ -1274,8 +1274,8 @@ function Resultado({
           }
         >
           {trocar
-            ? "Comprar mesmo assim na loja do anúncio"
-            : textoDoBotao(dispositivo, "Comprar agora")}
+            ? "Prefiro o anúncio que colei"
+            : textoDoBotao(dispositivo, "Comprar com segurança")}
         </a>
       )}
       {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
@@ -1390,7 +1390,7 @@ function MelhorOpcao({
         rel="noopener noreferrer"
         className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
       >
-        {textoDoBotao(dispositivo, vendedor ? `Comprar na ${vendedor}` : "Comprar agora")}
+        {textoDoBotao(dispositivo, "Comprar com segurança")}
       </a>
       <AvisoDoBotao d={dispositivo} />
     </div>
@@ -1592,7 +1592,7 @@ function OutraLojaComCupom({
           rel="noopener noreferrer"
           className="shrink-0 rounded-md bg-success px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
         >
-          Comprar
+          Comprar seguro
         </a>
       </div>
     );
@@ -1719,15 +1719,11 @@ function OutraLojaComCupom({
         rel="noopener noreferrer"
         className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
       >
-        {oferta.vendedor
-          ? textoDoBotao(
-              dispositivo,
-              `Comprar na ${oferta.vendedor} por ${brl(oferta.final)}`,
-            ).replace(" pelo app", " no app")
-          : textoDoBotao(
-              dispositivo,
-              temCupomLa ? "Comprar na loja com cupom" : "Comprar mais barato",
-            )}
+        {/* Regra do Weslei: nunca o nome da loja no botão; texto de compra segura. */}
+        {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(
+          " pelo app",
+          " no app",
+        )}
       </a>
       {oferta.mesmaPagina ? (
         <p className="mt-1.5 rounded-md bg-card px-3 py-2 text-xs leading-relaxed">
