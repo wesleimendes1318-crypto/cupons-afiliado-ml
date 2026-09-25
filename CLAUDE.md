@@ -29,6 +29,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Nunca pedir nem colocar chaves no código ou no chat (vão nos Secrets do Lovable).
 
 ## Garantia (obrigatório a cada versão)
+- O cliente SEMPRE recebe: produto, preço, o link de afiliado e a comparação
+  possível. Cada etapa tem plano B: leitura do código da página → aba logada →
+  janela anônima → leitura da TELA (preço/loja/título/foto como a pessoa vê).
+  Nunca tela vazia: sem dado, o site mostra o que tem com o botão do link.
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
 - Antes de dizer ao Weslei que está pronto: rodar ferramentas/bateria-de-testes.sql

@@ -2302,6 +2302,67 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
   }
 }
 
+/* Roda NA ABA do anuncio: preco e loja como aparecem na tela. */
+function precoELojaDaTela() {
+  const num = el => {
+    if (!el) return null;
+    const fr = ((el.querySelector('[class*="fraction"]') || {}).textContent || '').replace(/\D/g, '');
+    const ct = ((el.querySelector('[class*="cents"]') || {}).textContent || '').replace(/\D/g, '');
+    const n = parseFloat(fr) + (ct ? Number(ct) / 100 : 0);
+    return n > 0 && n < 1e7 ? Math.round(n * 100) / 100 : null;
+  };
+  const cont = document.querySelector('.ui-pdp-price__second-line, [class*="ui-pdp-price__main"], .ui-pdp-price') || document.body;
+  const caixas = [...cont.querySelectorAll('[class*="andes-money-amount"]')]
+    .filter(x => !x.closest('s') && !/previous|original/i.test(x.className) && x.querySelector('[class*="fraction"]'));
+  let preco = caixas.length ? num(caixas[0]) : null;
+  if (preco == null) {
+    const m = document.querySelector('meta[itemprop="price"]');
+    if (m) preco = parseFloat(m.getAttribute('content')) || null;
+  }
+  let loja = null;
+  const el = document.querySelector('.ui-pdp-seller__link-trigger, [class*="seller__link"], a[href*="/pagina/"], a[href*="/perfil/"]');
+  if (el) loja = el.textContent.replace(/\s+/g, ' ').replace(/^Vendido por\s*/i, '').trim() || null;
+  if (!loja) {
+    const m = /Vendido por\s+([^\n]{2,60})/i.exec(document.body.innerText || '');
+    if (m) loja = m[1].trim();
+  }
+  const h1 = document.querySelector('h1');
+  const titulo = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() || null : null;
+  const og = document.querySelector('meta[property="og:image"]');
+  let imagem = og ? og.getAttribute('content') : null;
+  if (!imagem) {
+    const im = document.querySelector('.ui-pdp-gallery img, figure img, img[src*="mlstatic.com"]');
+    imagem = im ? (im.currentSrc || im.src) : null;
+  }
+  if (imagem && !/^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(imagem)) imagem = null;
+  return { preco, loja, titulo, imagem };
+}
+
+/* Anuncio colado aberto numa aba de fundo so para ler preco e loja da tela.
+   Uma pagina por cliente (decisao do Weslei: a busca do cliente pode usar a
+   conta). Anonima primeiro, se estiver liberada. */
+async function lerTelaDoAnuncio(url) {
+  if (await anonimaPermitida()) {
+    const anon = await lerNaJanelaAnonima(url, precoELojaDaTela);
+    if (anon && (anon.preco != null || anon.loja || anon.titulo)) {
+      return { preco: anon.preco ?? null, loja: anon.loja || null, titulo: anon.titulo || null, imagem: anon.imagem || null,
+               url: anon.url || null };
+    }
+  }
+  if (await freioLigado('leitura')) return null;
+  const aba = await chrome.tabs.create({ url, active: false });
+  try {
+    await esperarConteudo(aba.id, 12000);
+    const [saida] = await chrome.scripting.executeScript({ target: { tabId: aba.id }, func: precoELojaDaTela });
+    const r = (saida && saida.result) || null;
+    /* Endereco FINAL (depois do meli.la): e dele que sai o link de afiliado. */
+    if (r) r.url = (await chrome.tabs.get(aba.id)).url || null;
+    return r;
+  } finally {
+    try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ }
+  }
+}
+
 /* Abre a busca numa aba de fundo, como uma pessoa abriria, espera a lista
    aparecer e le a tela. Usada quando a leitura "por baixo" veio vazia.
    Anonima primeiro; aba logada so sem a permissao e sem freio. */
@@ -2866,6 +2927,34 @@ async function atenderPedidos() {
             if (anon.html) {
               const b = extrairAnuncio(anon.html, anon.url || url, 200);
               if (b && b.titulo) a = { ...b, lidoAnonimo: true };
+            }
+          }
+
+          /* PRECO E LOJA SEMPRE (regra do Weslei). Se o codigo da pagina nao
+             trouxe (pagina de oferta "deal" e outros layouts), le o que aparece
+             NA TELA, numa aba de fundo, como uma pessoa leria. */
+          if (a && !a.perfilSocial && !a.captcha
+              && (!a.ok || a.preco == null || !(a.nomes && a.nomes.length) || !a.titulo || !a.imagem)) {
+            const tela = await lerTelaDoAnuncio((a.ok && a.finalUrl) || url).catch(() => null);
+            if (tela && (tela.titulo || tela.preco != null)) {
+              if (!a.ok) {
+                /* So vale se a tela for de um anuncio (nao perfil social/lista):
+                   o link de afiliado sai do endereco final, nunca do meli.la
+                   colado, que pode ser de outro afiliado. */
+                const fim = tela.url || '';
+                if (!/mercadolivre\.com\.br\/.*MLB/i.test(fim) || /\/social\/|lista\.mercadolivre/i.test(fim)) {
+                  a = { ok: false, falha: 'o link nao abre um anuncio de produto' };
+                } else {
+                  a = { ok: true, finalUrl: fim, canonica: fim.split('#')[0], status: 200, nomes: [], lidoPelaTela: true };
+                }
+              }
+              if (a.ok) {
+              if (a.preco == null && tela.preco != null) a.preco = tela.preco;
+              if (!(a.nomes && a.nomes.length) && tela.loja) a.nomes = [tela.loja];
+              if (!a.titulo && tela.titulo) a.titulo = tela.titulo;
+              if (!a.imagem && tela.imagem) a.imagem = tela.imagem;
+              if (a.faltou) a.faltou.tela = { preco: tela.preco, loja: tela.loja, titulo: !!tela.titulo };
+              }
             }
           }
 

@@ -1144,7 +1144,7 @@ function Resultado({
      ela. Nesse caso o botao nao aparece. */
   /* Leu o produto (título) ou tem link de afiliado: mostra o resultado. Só
      esconde quando nada foi lido (link de outra pessoa não vira botão). */
-  const leituraFalhou = !(a?.lojaLida === true || !!a?.vendedor || !!a?.titulo);
+  const leituraFalhou = !(a?.lojaLida === true || !!a?.vendedor || !!a?.titulo || !!pedido.link);
 
   /* Sem link de afiliado nao existe botao de compra, mesmo que a leitura do
      produto tenha dado certo. Comprar por um endereco sem etiqueta entrega a
@@ -1167,9 +1167,9 @@ function Resultado({
       <div className="flex items-start gap-3">
         <Foto src={a?.imagem} className="size-16 shrink-0 rounded-md border border-border" />
         <div className="min-w-0 flex-1">
-          {a?.titulo && (
-            <p className="line-clamp-2 break-words text-sm font-medium leading-snug">{a.titulo}</p>
-          )}
+          <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
+            {a?.titulo ?? "Produto do link que você colou"}
+          </p>
           <p className="mt-0.5 text-xs text-secondary-ink">
             {a?.preco != null && (
               <span className="text-base font-bold tabular-nums text-foreground">
