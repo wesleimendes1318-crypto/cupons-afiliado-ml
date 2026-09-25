@@ -31,7 +31,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 
 - Frete conta: loja com frete PAGO nunca vira "mais barata"/recomendação
   (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90 com frete grátis).
-  Na tabela aparece "Frete grátis" ou "Frete pago (valor no carrinho)".
+  Na tabela aparece "Frete grátis" ou "Sem frete grátis".
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
   captcha/tráfego suspeito e o ritmo de um pedido por vez.
 

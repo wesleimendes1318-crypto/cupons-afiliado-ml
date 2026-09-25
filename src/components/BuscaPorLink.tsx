@@ -1906,7 +1906,7 @@ function Parecidos({
                 </p>
                 {p.freteGratis === false && (
                   <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                    Frete pago (valor no carrinho)
+                    Sem frete grátis
                   </p>
                 )}
                 {p.muda && (
@@ -2004,7 +2004,7 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
                     )}
                     {l.freteGratis === false && (
                       <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                        Frete pago (valor no carrinho)
+                        Sem frete grátis
                       </span>
                     )}
                   </span>
@@ -2030,7 +2030,7 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
                   if (l.freteGratis === false && extra != null && extra < 0.5)
                     return (
                       <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                        + frete pago
+                        + frete
                         {l.colado ? " · você colou" : ""}
                       </span>
                     );
