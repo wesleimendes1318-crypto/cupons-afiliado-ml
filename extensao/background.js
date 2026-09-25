@@ -497,7 +497,7 @@ async function imagemParaGemini(url) {
    primeiro; se ele recusar (429 cota, 404 modelo que a chave nao tem, 5xx),
    tenta os Flash. Medido em 25/09: com gemini-2.5-pro escolhido, toda
    conferencia voltava "indisponivel" e o motivo nao ficava em lugar nenhum. */
-async function geminiLocal(partes) {
+async function geminiLocal(partes, primeiro = null) {
   const { geminiKey, geminiModel } = await chrome.storage.local.get(['geminiKey', 'geminiModel']);
   if (!geminiKey) return { ok: false, status: 0, erro: 'sem chave na extensao' };
   /* Flash primeiro: responde em segundos e confere foto muito bem. O modelo
@@ -507,7 +507,8 @@ async function geminiLocal(partes) {
      com o pensamento ligado, 20 s e estourava o prazo). */
   /* Medido em 25/09: o Flash-Lite respondeu e julgou certo (borda roxa x
      preta, Edge 70 x 70 Fusion+); o 2.5 Flash estourou o prazo. */
-  const modelos = [...new Set(['gemini-flash-lite-latest', 'gemini-2.5-flash', geminiModel].filter(Boolean))];
+  /* primeiro: a segunda opiniao comeca por OUTRO modelo. */
+  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash', geminiModel].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
   /* Erro de CADA modelo tentado (antes so o ultimo ficava gravado). */
@@ -572,8 +573,39 @@ const PEDIDO_CONFERENCIA =
   + 'compatibilidade (modelo do celular, voltagem) e quantidade (kit, unidades). Anuncio que atende varios '
   + 'modelos so e igual se o titulo citar o mesmo modelo do original. Candidato sem foto: igual=false. '
   + 'Na duvida, igual=false. Ignore preco, loja e texto de propaganda.\n'
-  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"igual":true,"confianca":0-100,'
-  + '"motivo":"curto"}]}';
+  + 'Em diferencas, liste TODA diferenca visivel na foto ou no titulo em relacao ao original (cor, borda, '
+  + 'moldura, material, formato, estampa, acessorios inclusos como pelicula, quantidade, tamanho, modelo '
+  + 'compativel). Fundo, angulo e iluminacao nao contam. igual=true so com diferencas vazia, e o motivo '
+  + 'precisa citar os detalhes do original que voce viu na foto do candidato.\n'
+  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],'
+  + '"igual":false,"confianca":0-100,"motivo":"curto"}]}';
+
+/* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
+   foto com foto, de preferencia por outro modelo. */
+const PEDIDO_CONFIRMACAO =
+  'Segunda conferencia, rigorosa. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou '
+  + 'que os CANDIDATOS abaixo sao exatamente o mesmo produto: confirme ou derrube cada um.\n'
+  + 'Compare a foto de cada candidato com a foto do original e liste TODAS as diferencas visiveis: cor, '
+  + 'bordas, moldura, material, transparencia, formato, estampa ou texto, acessorios inclusos (pelicula, '
+  + 'cabo, brinde), quantidade de unidades, tamanho ou volume, modelo compativel. Fundo, angulo, '
+  + 'iluminacao e montagem da foto nao contam.\n'
+  + 'igual=true SOMENTE se diferencas estiver vazia e voce enxergar no candidato os detalhes que '
+  + 'distinguem o original. Na duvida, igual=false.\n'
+  + 'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,'
+  + '"confianca":0-100,"motivo":"curto"}]}';
+
+/* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */
+function lerVereditosIA(lista, total) {
+  return (lista || [])
+    .filter(c => Number.isInteger(c.indice) && c.indice >= 0 && c.indice < total)
+    .map(c => {
+      const dif = Array.isArray(c.diferencas) ? c.diferencas.map(d => String(d ?? '').trim()).filter(Boolean) : [];
+      const igual = c.igual === true && dif.length === 0;
+      const motivo = (c.igual === true && !igual) ? 'diferencas: ' + dif.join('; ') : (String(c.motivo || '') || dif.join('; '));
+      return { indice: c.indice, igual, confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
+               motivo: motivo.slice(0, 140) };
+    });
+}
 
 /* Ultima conferencia feita, para gravar no pedido: por onde passou, qual
    modelo, o que a IA viu na foto e por que reprovou cada um. */
@@ -624,11 +656,34 @@ async function mesmoProdutoPelaGemini(original, lista) {
     const r = await geminiLocal(partes);
     const obj = r.ok ? jsonDaIA(r.texto) : null;
     if (obj && Array.isArray(obj.candidatos)) {
-      const avaliacao = obj.candidatos
-        .filter(c => Number.isInteger(c.indice) && c.indice >= 0 && c.indice < itens.length)
-        .map(c => ({ indice: c.indice, igual: c.igual === true,
-                     confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
-                     motivo: String(c.motivo || '').slice(0, 140), semFoto: !fotos[c.indice] }));
+      const avaliacao = lerVereditosIA(obj.candidatos, itens.length).map(a => ({ ...a, semFoto: !fotos[a.indice] }));
+      const positivos = avaliacao.filter(a => a.igual && a.confianca >= CONFIANCA_MINIMA_IA && !a.semFoto);
+      if (positivos.length) {
+        /* Segunda opiniao; sem ela, nada entra (a segunda volta refaz). */
+        const desc = String(obj.descricao_original || '').slice(0, 400);
+        const conf = [{ text: PEDIDO_CONFIRMACAO },
+          { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') + (desc ? '\nDescricao da foto do original: ' + desc : '') }, imgOrig];
+        positivos.forEach((a, k) => { conf.push({ text: 'CANDIDATO ' + k + ': ' + (itens[a.indice].titulo || '(sem titulo)') }); conf.push(fotos[a.indice]); });
+        const outro = ['gemini-2.5-flash', 'gemini-flash-lite-latest'].find(m => m !== r.modelo) || null;
+        const r2 = resta() > 9000 ? await geminiLocal(conf, outro) : { ok: false, status: 504, erro: 'sem tempo' };
+        const obj2 = r2.ok ? jsonDaIA(r2.texto) : null;
+        if (!obj2 || !Array.isArray(obj2.candidatos)) {
+          erros.push('extensao: confirmacao ' + (r2.ok ? 'JSON invalido' : (r2.status + ' ' + (r2.erro || ''))));
+          ultimaIA = { indisponivel: true, erros };
+          return null;
+        }
+        const segunda = new Map(lerVereditosIA(obj2.candidatos, positivos.length).map(v => [v.indice, v]));
+        positivos.forEach((a, k) => {
+          const v = segunda.get(k);
+          if (v && v.igual && v.confianca >= CONFIANCA_MINIMA_IA) {
+            a.confianca = Math.min(a.confianca, v.confianca);
+            a.motivo = (a.motivo + ' | confirmado (' + r2.modelo + ')').slice(0, 140);
+          } else {
+            a.igual = false;
+            a.motivo = ('2a conferencia (' + r2.modelo + '): ' + ((v && v.motivo) || 'nao confirmou')).slice(0, 140);
+          }
+        });
+      }
       const iguais = avaliacao.filter(a => a.igual && a.confianca >= CONFIANCA_MINIMA_IA && !a.semFoto).map(a => a.indice);
       ultimaIA = { via: 'extensao', modelo: r.modelo, erros, descricao: String(obj.descricao_original || '').slice(0, 300),
                    avaliacao: avaliacao.map(a => ({ ...a, titulo: String(itens[a.indice].titulo || '').slice(0, 70) })) };

@@ -61,73 +61,110 @@ async function imagem(url: string | null | undefined): Promise<Parte | null> {
   }
 }
 
-async function gerar(partes: Parte[]): Promise<Resultado> {
+/* Um modelo, uma chamada. */
+async function chamarModelo(
+  chave: string,
+  modelo: string,
+  partes: Parte[],
+  sinal: AbortSignal,
+): Promise<Resultado> {
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-goog-api-key": chave },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: partes }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0,
+            ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          },
+        }),
+        signal: sinal,
+      },
+    );
+    const j = (await r.json().catch(() => null)) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
+      error?: { message?: string };
+    } | null;
+    if (r.ok) {
+      const texto = (j?.candidates?.[0]?.content?.parts ?? [])
+        .filter((p) => !p.thought && p.text)
+        .map((p) => p.text)
+        .join("");
+      return texto
+        ? { ok: true, texto, modelo }
+        : { ok: false, status: 502, erro: "resposta vazia", modelo };
+    }
+    return { ok: false, status: r.status, erro: (j?.error?.message ?? "").slice(0, 160), modelo };
+  } catch (e) {
+    return {
+      ok: false,
+      status: 504,
+      erro: String((e as Error)?.message ?? e).slice(0, 100),
+      modelo,
+    };
+  }
+}
+
+/* Modelos em paralelo escalonado. Medido em 25/09 (1.98.1): o flash-lite
+   passou dos 17 s em metade das consultas e, como os modelos eram tentados um
+   depois do outro, nao sobrava tempo para o segundo. Agora o primeiro modelo
+   sai na hora; se nao respondeu em 5 s (ou falhou), o proximo sai junto, e
+   vale a primeira resposta boa. Cada modelo tem a sua cota gratuita. */
+const ESCALONA_MS = 5_000;
+
+async function gerar(
+  partes: Parte[],
+  opcoes: { ordem?: string[]; prazo?: number } = {},
+): Promise<Resultado> {
   const chave = process.env["GEMINI_API_KEY"];
   if (!chave) return { ok: false, status: 503, erro: "GEMINI_API_KEY ausente nos secrets" };
-  let ultimo: Resultado = { ok: false, status: 502, erro: "sem resposta" };
-  /* Prazo total de 17 s: a consulta do cliente inteira cabe em 1 minuto. */
-  const inicio = Date.now();
-  for (const modelo of ordemDosModelos()) {
-    for (let tentativa = 0; tentativa < 2; tentativa += 1) {
-      if (Date.now() - inicio > 16_000) return ultimo;
-      try {
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-goog-api-key": chave },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: partes }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0,
-                ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-              },
-            }),
-            signal: AbortSignal.timeout(Math.max(3_000, 17_000 - (Date.now() - inicio))),
-          },
-        );
-        const j = (await r.json().catch(() => null)) as {
-          candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
-          error?: { message?: string };
-        } | null;
-        if (r.ok) {
-          const texto = (j?.candidates?.[0]?.content?.parts ?? [])
-            .filter((p) => !p.thought && p.text)
-            .map((p) => p.text)
-            .join("");
-          if (texto) return { ok: true, texto, modelo };
-          ultimo = { ok: false, status: 502, erro: "resposta vazia", modelo };
-          break;
-        }
-        ultimo = {
-          ok: false,
-          status: r.status,
-          erro: (j?.error?.message ?? "").slice(0, 200),
-          modelo,
-        };
-        /* 429 (cota) e 5xx passam com uma pausa; 404 (modelo que a chave nao
-           tem) vai direto para o proximo; o resto e defeito do pedido. */
-        /* 429 = cota esgotada: repetir o mesmo modelo só gasta mais cota.
-           Vai direto para o próximo. 5xx ganha uma segunda chance. */
-        if (r.status === 429) break;
-        if (r.status >= 500) {
-          if (tentativa === 0) await new Promise((ok) => setTimeout(ok, 1000));
-          continue;
-        }
-        if (r.status === 404) break;
-        return ultimo;
-      } catch (e) {
-        ultimo = {
+  const ordem = opcoes.ordem ?? ordemDosModelos();
+  const prazo = opcoes.prazo ?? 17_000;
+  const ctrl = new AbortController();
+  return new Promise<Resultado>((fim) => {
+    let proximo = 0;
+    let andando = 0;
+    let acabou = false;
+    const falhas: string[] = [];
+    let escalona: ReturnType<typeof setTimeout> | null = null;
+    const encerrar = (r: Resultado) => {
+      if (acabou) return;
+      acabou = true;
+      clearTimeout(corte);
+      if (escalona) clearTimeout(escalona);
+      ctrl.abort();
+      fim(r);
+    };
+    const corte = setTimeout(
+      () =>
+        encerrar({
           ok: false,
           status: 504,
-          erro: String((e as Error)?.message ?? e).slice(0, 120),
-          modelo,
-        };
-      }
-    }
-  }
-  return ultimo;
+          erro: (falhas.join(" | ") || "tempo esgotado") + ` (prazo ${prazo / 1000}s)`,
+        }),
+      prazo,
+    );
+    const lancar = (): boolean => {
+      if (acabou || proximo >= ordem.length) return false;
+      const modelo = ordem[proximo++] as string;
+      andando += 1;
+      void chamarModelo(chave, modelo, partes, ctrl.signal).then((r) => {
+        andando -= 1;
+        if (acabou) return;
+        if (r.ok) return encerrar(r);
+        falhas.push(`${modelo} ${r.status} ${r.erro}`.slice(0, 140));
+        if (!lancar() && andando === 0)
+          encerrar({ ok: false, status: r.status, erro: falhas.join(" | "), modelo });
+      });
+      return true;
+    };
+    lancar();
+    escalona = setTimeout(() => lancar(), ESCALONA_MS);
+  });
 }
 
 function lerJson<T>(texto: string): T | null {
@@ -158,7 +195,21 @@ export type Conferencia =
         semFoto: boolean;
       }>;
     }
-  | { ok: false; status: number; erro: string; modelo?: string };
+  | {
+      ok: false;
+      status: number;
+      erro: string;
+      modelo?: string;
+      /* Vereditos "diferente" ja dados quando so a confirmacao falhou: sao
+         guardados, e a proxima tentativa so confere o que falta. */
+      parcial?: Array<{
+        indice: number;
+        igual: boolean;
+        confianca: number;
+        motivo: string;
+        semFoto: boolean;
+      }>;
+    };
 
 /* VEREDITOS GUARDADOS (custo zero, pedido do Weslei): cada par "anúncio
    original x candidato" conferido pela Gemini fica na tabela ia_vereditos por
@@ -230,7 +281,22 @@ export async function conferirMesmoProduto(
       original,
       faltam.map((f) => f.c),
     );
-    if (!novo.ok) return novo;
+    if (!novo.ok) {
+      const negativos = (novo.parcial ?? [])
+        .map((a) => ({ a, f: faltam[a.indice] }))
+        .filter(({ a, f }) => f && !a.igual && !a.semFoto && (f.c.chave ?? "").trim());
+      await guardarVereditos(
+        chaveOriginal,
+        negativos.map(({ a, f }) => ({
+          chave: (f?.c.chave ?? "").trim(),
+          igual: false,
+          confianca: a.confianca,
+          motivo: a.motivo,
+        })),
+        novo.modelo ?? "parcial",
+      );
+      return novo;
+    }
   }
 
   const avaliacao: Array<{
@@ -273,6 +339,9 @@ export async function conferirMesmoProduto(
 
 async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Promise<Conferencia> {
   const lista = candidatos.slice(0, 12);
+  /* Tudo (fotos + conferencia + confirmacao) cabe em 21 s: a extensao espera
+     o servidor por 26 s. */
+  const t0 = Date.now();
   const [fotoOriginal, ...fotos] = await Promise.all([
     imagem(original.imagem),
     ...lista.map((c) => imagem(c.imagem)),
@@ -292,8 +361,12 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
         "compatibilidade (modelo do celular, voltagem) e quantidade (kit, unidades). Anuncio que atende varios " +
         "modelos so e igual se o titulo citar o mesmo modelo do original. Candidato sem foto: igual=false. " +
         "Na duvida, igual=false. Ignore preco, loja e texto de propaganda.\n" +
-        'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"igual":true,"confianca":0-100,' +
-        '"motivo":"curto"}]}',
+        "Em diferencas, liste TODA diferenca visivel na foto ou no titulo em relacao ao original (cor, borda, " +
+        "moldura, material, formato, estampa, acessorios inclusos como pelicula, quantidade, tamanho, modelo " +
+        "compativel). Fundo, angulo e iluminacao nao contam. igual=true so com diferencas vazia, e o motivo " +
+        "precisa citar os detalhes do original que voce viu na foto do candidato.\n" +
+        'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],' +
+        '"igual":false,"confianca":0-100,"motivo":"curto"}]}',
     },
     { text: "ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)") },
   ];
@@ -306,32 +379,86 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     if (f) partes.push(f);
   });
 
-  const r = await gerar(partes);
+  const r = await gerar(partes, { prazo: Math.max(4_000, 13_000 - (Date.now() - t0)) });
   if (!r.ok) return r;
-  const obj = lerJson<{
-    descricao_original?: string;
-    candidatos?: Array<{ indice?: number; igual?: boolean; confianca?: number; motivo?: string }>;
-  }>(r.texto);
+  const obj = lerJson<{ descricao_original?: string; candidatos?: VereditoIA[] }>(r.texto);
   if (!obj || !Array.isArray(obj.candidatos))
     return { ok: false, status: 502, erro: "JSON invalido da IA", modelo: r.modelo };
 
-  const avaliacao = obj.candidatos
-    .filter(
-      (c) =>
-        Number.isInteger(c.indice) &&
-        (c.indice as number) >= 0 &&
-        (c.indice as number) < lista.length,
-    )
-    .map((c) => {
-      const indice = c.indice as number;
-      return {
-        indice,
-        igual: c.igual === true,
-        confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
-        motivo: String(c.motivo ?? "").slice(0, 140),
-        semFoto: !fotos[indice],
-      };
+  const avaliacao = lerVereditos(obj.candidatos, lista.length).map((a) => ({
+    ...a,
+    semFoto: !fotos[a.indice],
+  }));
+  const descricao = obj.descricao_original ? String(obj.descricao_original).slice(0, 400) : null;
+
+  /* SEGUNDA OPINIAO (25/09): o flash-lite aprovou uma capinha "slim toda
+     transparente" como igual a uma capinha de acrilico com borda preta (90%),
+     sem citar a borda. Todo "igual" passa por uma segunda conferencia, de
+     preferencia de OUTRO modelo, comparando foto com foto e listando as
+     diferencas. So fica igual o que as duas aprovarem. */
+  const positivos = avaliacao.filter(
+    (a) => a.igual && a.confianca >= CONFIANCA_MINIMA && !a.semFoto && fotoOriginal,
+  );
+  if (positivos.length && fotoOriginal) {
+    const resta = 21_000 - (Date.now() - t0);
+    const semConfirmar = (erro: string): Conferencia => ({
+      ok: false,
+      status: 504,
+      erro: "confirmacao: " + erro,
+      modelo: r.modelo,
+      parcial: avaliacao,
     });
+    if (resta < 4_000) return semConfirmar("sem tempo");
+    const confirmacao: Parte[] = [
+      {
+        text:
+          "Segunda conferencia, rigorosa. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou " +
+          "que os CANDIDATOS abaixo sao exatamente o mesmo produto: confirme ou derrube cada um.\n" +
+          "Compare a foto de cada candidato com a foto do original e liste TODAS as diferencas visiveis: cor, " +
+          "bordas, moldura, material, transparencia, formato, estampa ou texto, acessorios inclusos (pelicula, " +
+          "cabo, brinde), quantidade de unidades, tamanho ou volume, modelo compativel. Fundo, angulo, " +
+          "iluminacao e montagem da foto nao contam.\n" +
+          "igual=true SOMENTE se diferencas estiver vazia e voce enxergar no candidato os detalhes que " +
+          "distinguem o original. Na duvida, igual=false.\n" +
+          'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,' +
+          '"confianca":0-100,"motivo":"curto"}]}',
+      },
+      {
+        text:
+          "ANUNCIO ORIGINAL: " +
+          (original.titulo ?? "") +
+          (descricao ? "\nDescricao da foto do original: " + descricao : ""),
+      },
+      fotoOriginal,
+    ];
+    positivos.forEach((a, k) => {
+      confirmacao.push({ text: `CANDIDATO ${k}: ${lista[a.indice]?.titulo ?? "(sem titulo)"}` });
+      const f = fotos[a.indice];
+      if (f) confirmacao.push(f);
+    });
+    const outroPrimeiro = [
+      ...ordemDosModelos().filter((m) => m !== r.modelo),
+      ...ordemDosModelos().filter((m) => m === r.modelo),
+    ];
+    const r2 = await gerar(confirmacao, { ordem: outroPrimeiro, prazo: Math.min(9_000, resta) });
+    if (!r2.ok) return semConfirmar(`${r2.status} ${r2.erro}`);
+    const obj2 = lerJson<{ candidatos?: VereditoIA[] }>(r2.texto);
+    if (!obj2 || !Array.isArray(obj2.candidatos)) return semConfirmar("JSON invalido");
+    const segunda = new Map(
+      lerVereditos(obj2.candidatos, positivos.length).map((v) => [v.indice, v]),
+    );
+    positivos.forEach((a, k) => {
+      const v = segunda.get(k);
+      if (v && v.igual && v.confianca >= CONFIANCA_MINIMA) {
+        a.confianca = Math.min(a.confianca, v.confianca);
+        a.motivo = `${a.motivo} | confirmado (${r2.modelo})`.slice(0, 140);
+      } else {
+        a.igual = false;
+        a.motivo = `2a conferencia (${r2.modelo}): ${v?.motivo || "nao confirmou"}`.slice(0, 140);
+      }
+    });
+  }
+
   /* A regra final e daqui, nao da IA: sem foto do original ou do candidato,
      ou abaixo da confianca minima, nao passa. */
   const iguais = avaliacao
@@ -340,10 +467,43 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
   return {
     ok: true,
     modelo: r.modelo,
-    descricaoOriginal: obj.descricao_original ? String(obj.descricao_original).slice(0, 400) : null,
+    descricaoOriginal: descricao,
     iguais,
     avaliacao,
   };
+}
+
+type VereditoIA = {
+  indice?: number;
+  igual?: boolean;
+  confianca?: number;
+  motivo?: string;
+  diferencas?: unknown;
+};
+
+/* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */
+function lerVereditos(lista: VereditoIA[], total: number) {
+  return lista
+    .filter(
+      (c) =>
+        Number.isInteger(c.indice) && (c.indice as number) >= 0 && (c.indice as number) < total,
+    )
+    .map((c) => {
+      const diferencas = Array.isArray(c.diferencas)
+        ? c.diferencas.map((d) => String(d ?? "").trim()).filter(Boolean)
+        : [];
+      const igual = c.igual === true && diferencas.length === 0;
+      const motivo = String(c.motivo ?? "") || diferencas.join("; ");
+      return {
+        indice: c.indice as number,
+        igual,
+        confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
+        motivo: (c.igual === true && !igual
+          ? "diferencas: " + diferencas.join("; ")
+          : motivo
+        ).slice(0, 140),
+      };
+    });
 }
 
 export async function termoDeBusca(
