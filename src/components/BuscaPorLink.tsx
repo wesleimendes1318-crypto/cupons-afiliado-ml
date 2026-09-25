@@ -243,6 +243,9 @@ type Analise = {
   completa?: boolean | null;
   final?: boolean | null;
   voltas?: number | null;
+  /* true = os links de afiliado das outras linhas ainda estão sendo gerados
+     (a tela continua se atualizando). */
+  linksPendentes?: boolean | null;
   /* Frete do anúncio colado: true grátis, false pago, null não sei. */
   freteGratis?: boolean | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
@@ -708,10 +711,13 @@ export default function BuscaPorLink() {
           prontoEm ??= Date.now();
           /* Comparação ainda em andamento: o cliente já vê produto, preço e o
              link, e a tela continua se atualizando até a análise completar. */
-          const aindaComparando =
-            linha.analise?.final === false && Date.now() - prontoEm < COMPLETAR_MS;
+          const dentroDoPrazo = Date.now() - prontoEm < COMPLETAR_MS;
+          const aindaComparando = linha.analise?.final === false && dentroDoPrazo;
+          /* Links da tabela chegando logo depois do resultado: continua
+             consultando, sem mostrar "ainda procurando". */
+          const esperandoLinks = linha.analise?.linksPendentes === true && dentroDoPrazo;
           setCompletando(aindaComparando);
-          if (!aindaComparando) {
+          if (!aindaComparando && !esperandoLinks) {
             parou = true;
             return;
           }

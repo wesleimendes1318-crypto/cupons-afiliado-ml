@@ -208,6 +208,8 @@ export type Opcao = {
      o MESMO produto (caso da capinha com borda diferente, 24/09). */
   imagem: string | null;
   nomeCatalogo: string | null;
+  /* true frete grátis, false frete pago, null a API não disse. */
+  freteGratis: boolean | null;
 };
 
 export type Comparacao = {
@@ -218,6 +220,7 @@ export type Comparacao = {
     titulo: string | null;
     preco: number | null;
     vendedor: string | null;
+    freteGratis?: boolean | null;
   } | null;
   opcoes: Opcao[];
   fonte: "api-oficial";
@@ -237,6 +240,7 @@ export type Comparacao = {
     imagem: string | null;
     nomeCatalogo: string | null;
     porNome: boolean;
+    freteGratis: boolean | null;
   }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
@@ -254,6 +258,7 @@ type Candidato = {
   sellerId: number;
   achadoNaBusca: boolean;
   catalogo: string;
+  freteGratis: boolean | null;
 };
 
 /* O que a extensão já sabe do anúncio (ela lê a página que o CLIENTE colou).
@@ -619,6 +624,12 @@ export async function compararMesmoProduto(
           sellerId,
           achadoNaBusca: catalogoPorNome,
           catalogo: cat,
+          /* FRETE (Weslei, 25/09): R$ 57 com frete pago saía mais caro que
+             R$ 86,90 com frete grátis. A lista de ofertas traz shipping. */
+          freteGratis: (() => {
+            const sh = o["shipping"] as { free_shipping?: unknown } | undefined;
+            return typeof sh?.free_shipping === "boolean" ? sh.free_shipping : null;
+          })(),
         });
       }
     }
@@ -654,7 +665,14 @@ export async function compararMesmoProduto(
         : null;
     const economiaAqui = economiaDoCupom(cupomAqui, preco) ?? 0;
     const finalAtual = preco != null ? preco - economiaAqui : null;
-    const produto = { item: itemAtual, titulo, preco, vendedor: vendedorAqui };
+    const freteAqui = minha?.freteGratis ?? null;
+    const produto = {
+      item: itemAtual,
+      titulo,
+      preco,
+      vendedor: vendedorAqui,
+      freteGratis: freteAqui,
+    };
     const item = minha ? { id: minha.item, seller_id: minha.sellerId } : null;
     const ehMinhaLoja = (sellerId: number) =>
       (item && sellerId === item.seller_id) ||
@@ -687,6 +705,9 @@ export async function compararMesmoProduto(
       if (ganho >= 2) motivo = "mais_barata";
       else if (!economiaAqui && temCupom && final <= finalAtual) motivo = "tem_cupom";
       if (!motivo) continue;
+      /* Frete pago nunca vira recomendação (a não ser que o anúncio do cliente
+         também tenha frete pago): fica só na tabela, marcado. */
+      if (c.freteGratis === false && freteAqui !== false) continue;
       const opcao: Opcao = {
         item: c.item,
         url: c.url,
@@ -710,6 +731,7 @@ export async function compararMesmoProduto(
         achadoNaBusca: c.achadoNaBusca,
         imagem: fichas.get(c.catalogo)?.imagem ?? null,
         nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
+        freteGratis: c.freteGratis,
       };
       const atual = porLoja.get(c.sellerId);
       if (!atual || opcao.final < atual.final) porLoja.set(c.sellerId, opcao);
@@ -733,6 +755,7 @@ export async function compararMesmoProduto(
         imagem: fichas.get(c.catalogo)?.imagem ?? null,
         nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
         porNome: c.achadoNaBusca,
+        freteGratis: c.freteGratis,
         diferenca: Math.round((final - finalAtual) * 100) / 100,
         cupom: economiaDoCupom(cupom, c.preco) ? (cupom?.desconto ?? null) : null,
       });
@@ -740,14 +763,14 @@ export async function compararMesmoProduto(
     const referencias = [...refPorLoja.values()].sort((a, b) => a.final - b.final).slice(0, 6);
 
     trilha.push(
-      `catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual}`,
+      `catalogos=${catalogos.join(",")} ofertas=${candidatos.length} final-aqui=${finalAtual} frete-conhecido=${candidatos.filter((c) => c.freteGratis != null).length} frete-aqui=${freteAqui}`,
     );
     /* Cada loja vista e o que ela daria, para conferir depois por que uma
        loja não virou opção. */
     for (const c of [...candidatos].sort((a, b) => a.preco - b.preco).slice(0, 30)) {
       const cupom = cupomDe(c.sellerId);
       trilha.push(
-        `loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`,
+        `loja ${nomes.get(c.sellerId) ?? c.sellerId} ${c.item} R$${c.preco} frete=${c.freteGratis == null ? "?" : c.freteGratis ? "gratis" : "pago"} cupom=${cupom ? cupom.desconto : "-"} final=${Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100}`,
       );
     }
     return {

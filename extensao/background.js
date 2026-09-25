@@ -3388,12 +3388,15 @@ async function atenderPedidos() {
                ficha de catalogo, mais barato. Comparacao em 100% dos links. */
             marcar('api');
             apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
+            /* Frete do anuncio colado pela lista oficial de ofertas. */
+            if (api && api.produto && api.produto.freteGratis != null) freteAqui = api.produto.freteGratis;
             if (api && Array.isArray(api.referencias)) referencias = api.referencias;
             if (apiAchou) {
               alts = (api.opcoes || []).map(o => ({
                 item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
                 economia: o.economia, final: o.final, ganho: o.ganho, finalAtual: o.finalAtual,
                 motivo: o.motivo, achadoNaBusca: !!o.achadoNaBusca,
+                freteGratis: o.freteGratis != null ? o.freteGratis : null,
                 imagem: o.imagem || null, titulo: o.nomeCatalogo || null,
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
@@ -3457,7 +3460,7 @@ async function atenderPedidos() {
                   /* FRETE (Weslei, 25/09): loja com frete PAGO nao vira "mais
                      barata" (R$ 57 + R$ 32,99 de frete saia mais caro que os
                      R$ 86,90 com frete gratis). Fica na tabela, marcada. */
-                  freteAqui = busca.diag && busca.diag.freteAtual != null ? busca.diag.freteAtual : null;
+                  if (busca.diag && busca.diag.freteAtual != null) freteAqui = busca.diag.freteAtual;
                   alts = alts.filter(x => !(x.freteGratis === false && freteAqui !== false));
                 }
                 if (Array.isArray(busca.todas)) {
@@ -3492,6 +3495,8 @@ async function atenderPedidos() {
               buscaFora.motivo = !a.ok ? 'anuncio nao lido' : 'leitura pausada (freio de captcha)';
             }
 
+            /* Frete pago nunca vira "mais barata" (catalogo ou busca). */
+            alts = alts.filter(x => !(x.freteGratis === false && freteAqui !== false));
             /* Segunda volta interrompida por cliente novo: resultado descartado. */
             if (volta > 1 && interromperVolta) return;
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
@@ -3584,19 +3589,22 @@ async function atenderPedidos() {
             outra = outras[0] || null;
           }
 
-          if (volta > 1 && interromperVolta) return;
-          /* Todas as lojas da tabela com o link de afiliado ja pronto, numa
-             chamada so ao gerador. Loja sem link fica com o botao que gera no
-             clique (site). */
-          try {
-            /* Lojas da tabela e parecidos, tudo numa chamada so. */
-            const semLink = [...referencias, ...parecidos].filter(x => !x.link && x.url);
-            if (semLink.length && !(await freioLigado('link'))) {
-              const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
-              const mapa = await gerarVariosNaAba(tabId, alvos);
-              semLink.forEach((x, k) => { if (mapa[alvos[k]]) x.link = mapa[alvos[k]]; });
-            }
-          } catch (e) { console.warn('[links em lote]', e.message); }
+          marcar('linksAlt');
+          };
+          /* Links de afiliado das OUTRAS linhas da tabela e dos parecidos, numa
+             chamada so ao gerador. Roda DEPOIS de entregar o resultado (medido
+             em 25/09 na 1.101.0: com os parecidos, esta etapa levava a consulta
+             a 60 s). Ate la o site mostra o botao que gera o link no clique. */
+          const faltamLinks = () => [...referencias, ...parecidos].some(x => !x.link && x.url);
+          const linksDaTabela = async () => {
+            try {
+              const semLink = [...referencias, ...parecidos].filter(x => !x.link && x.url);
+              if (semLink.length && !(await freioLigado('link'))) {
+                const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
+                const mapa = await gerarVariosNaAba(tabId, alvos);
+                semLink.forEach((x, k) => { if (mapa[alvos[k]]) x.link = mapa[alvos[k]]; });
+              }
+            } catch (e) { console.warn('[links em lote]', e.message); }
           };
           await compararAgora();
 
@@ -3669,7 +3677,16 @@ async function atenderPedidos() {
           /* final = nao vem mais nada; o site para de esperar. Sem o anuncio
              lido nao ha o que comparar de novo. */
           analise.final = analise.completa || !a.ok;
+          /* true = o site continua atualizando ate os links da tabela chegarem. */
+          analise.linksPendentes = faltamLinks();
           await marcarComInsistencia(sincToken, p.id, r.link, r.codigo, null, analise);
+          if (analise.linksPendentes) {
+            const t0l = Date.now();
+            await linksDaTabela();
+            analise.linksPendentes = false;
+            analise.tempos = { ...analise.tempos, lote: Math.round((Date.now() - t0l) / 100) / 10 };
+            await completarPedido(sincToken, p.id, analise).catch(e => console.warn('[links da tabela]', e.message));
+          }
           if (!analise.final) {
             const temposPrimeira = analise.tempos;
             paraCompletar.push({
@@ -3678,6 +3695,7 @@ async function atenderPedidos() {
                 volta = n;
                 const t0v = Date.now();
                 await compararAgora();
+                if (!interromperVolta) await linksDaTabela();
                 const an = montarAnalise('fim');
                 an.tempos = { ...temposPrimeira, ['volta' + n]: Math.round((Date.now() - t0v) / 100) / 10 };
                 an.completa = analiseCompleta();
