@@ -199,7 +199,11 @@ type Analise = {
     leitura?: {
       comPreco?: number | null;
       parecidos?: number | null;
-      ia?: { conferidos?: number | null; iguais?: number | null } | null;
+      ia?: {
+        conferidos?: number | null;
+        iguais?: number | null;
+        indisponivel?: boolean | null;
+      } | null;
     } | null;
   } | null;
 };
@@ -1118,6 +1122,7 @@ function Resultado({
           comparadas={a?.referencias ? referencias.length : -1}
           olhados={a?.buscaFora?.leitura?.comPreco ?? null}
           conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
+          iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
         />
       )}
 
@@ -1272,6 +1277,7 @@ function MelhorOpcao({
   comparadas,
   olhados,
   conferidosIA,
+  iaIndisponivel,
 }: {
   vendedor: string | null;
   preco: number | null;
@@ -1281,11 +1287,13 @@ function MelhorOpcao({
   comparadas: number;
   olhados?: number | null;
   conferidosIA?: number | null;
+  iaIndisponivel?: boolean;
 }) {
   /* Nenhuma loja igual: diz quanto foi olhado, para ninguém achar que não
      procurei. Só números medidos no pedido; sem número, frase genérica. */
-  const semIguais =
-    olhados != null && olhados > 0
+  const semIguais = iaIndisponivel
+    ? `Achei${olhados ? ` ${olhados}` : ""} anúncios parecidos, mas não consegui confirmar pela foto se algum é o mesmo produto. Tente de novo em instantes.`
+    : olhados != null && olhados > 0
       ? `Olhei ${olhados} anúncios parecidos${conferidosIA ? ` e conferi ${conferidosIA} pela foto` : ""}: nenhum era este mesmo produto mais barato.`
       : "Não encontrei este mesmo produto mais barato em outra loja.";
   return (

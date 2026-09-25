@@ -2314,7 +2314,11 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
     if (!ok && !ultimaIA) ultimaIA = { indisponivel: true, erros: ['sem tempo para a IA (' + Math.round(resta() / 1000) + 's restando)'] };
     diag.ia = ok ? { conferidos: Math.min(candidatos.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
                  : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
-    if (ok) candidatos = candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true }));
+    /* REGRA (Weslei, 25/09): loja achada pela busca so aparece se a Gemini
+       confirmou pela foto que e o MESMO produto. Sem conferencia nao se mostra
+       nada: produto parecido apresentado como igual e o pior erro possivel
+       (pedido 201: capas "Armadura" mostradas no lugar da capa de acrilico). */
+    candidatos = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true })) : [];
     if (!candidatos.length) { const vazio = []; vazio.diag = diag; return vazio; }
   }
   candidatos = candidatos.slice(0, MAX_CANDIDATOS_BUSCA);
@@ -2902,8 +2906,9 @@ async function atenderPedidos() {
                 ]).finally(() => clearTimeout(prazoIA));
                 verificacaoIA = ok ? { conferidos: Math.min(conferir.length, 12), iguais: ok.size, ...(ultimaIA || {}) }
                                    : { indisponivel: true, erros: (ultimaIA && ultimaIA.erros) || null };
-                if (ok) {
-                  const fora = new Set(conferir.filter((_, k) => !ok.has(k)).map(c => c.tipo + c.i));
+                {
+                  /* Sem conferencia da IA, nada achado por nome fica na tela. */
+                  const fora = new Set(conferir.filter((_, k) => !(ok && ok.has(k))).map(c => c.tipo + c.i));
                   alts = alts.filter((_, i) => !fora.has('alt' + i));
                   referencias = referencias.filter((_, i) => !fora.has('ref' + i));
                 }
