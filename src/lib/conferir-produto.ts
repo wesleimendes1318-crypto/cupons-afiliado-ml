@@ -1,12 +1,14 @@
-/* Conferencia do MESMO produto pela IA do Lovable (credencial gerenciada pela
-   plataforma, so no servidor). A extensao chama isto: a comparacao nao pode
-   depender de uma configuracao no computador de casa.
+/* Conferencia do MESMO produto pela Gemini, com a chave do servidor
+   (GEMINI_API_KEY nos secrets). A extensao chama isto quando a chave dela
+   falha ou nao existe: a comparacao nao pode depender de uma configuracao no
+   computador de casa.
 
-   Como confere: a IA primeiro descreve a FOTO do anuncio original e depois
-   compara cada candidato com essa descricao, pela foto e pelo titulo. So passa
-   o que ela disser que e igual com confianca alta. Candidato sem foto nao passa. */
-
-import { chamarLovableIa, MODELO_IA } from "@/lib/public-ai-api";
+   Como confere: a Gemini primeiro descreve a FOTO do anuncio original (tipo,
+   cor, bordas, material, formato, detalhes visiveis) e depois compara cada
+   candidato com essa descricao, pela foto e pelo titulo. So passa o que ela
+   disser que e igual com confianca alta. Candidato sem foto nao passa: sem
+   imagem nao da para garantir (caso real: capinha com borda preta x capinha
+   toda transparente). */
 
 export type Anuncio = {
   titulo?: string | null | undefined;
@@ -14,13 +16,20 @@ export type Anuncio = {
   preco?: number | null | undefined;
 };
 
-type Parte = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+type Parte = { text: string } | { inline_data: { mime_type: string; data: string } };
 
 type Resultado =
   | { ok: true; texto: string; modelo: string }
   | { ok: false; status: number; erro: string; modelo?: string };
 
+/* 2.5 Flash sem a etapa de "pensar" responde em segundos; o prazo e curto. */
+const MODELOS = ["gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest"];
 const CONFIANCA_MINIMA = 80;
+
+function ordemDosModelos(): string[] {
+  const escolhido = (process.env["GEMINI_MODEL"] ?? "").trim();
+  return escolhido ? [escolhido, ...MODELOS.filter((m) => m !== escolhido)] : MODELOS;
+}
 
 function paraBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
@@ -41,19 +50,81 @@ async function imagem(url: string | null | undefined): Promise<Parte | null> {
     const buf = await r.arrayBuffer();
     if (!buf.byteLength || buf.byteLength > 1_500_000) return null;
     const tipo = (r.headers.get("content-type") ?? "image/jpeg").split(";")[0] ?? "image/jpeg";
-    const mime = /^image\//.test(tipo) ? tipo : "image/jpeg";
-    return { type: "image_url", image_url: { url: `data:${mime};base64,${paraBase64(buf)}` } };
+    return {
+      inline_data: {
+        mime_type: /^image\//.test(tipo) ? tipo : "image/jpeg",
+        data: paraBase64(buf),
+      },
+    };
   } catch {
     return null;
   }
 }
 
-const txt = (text: string): Parte => ({ type: "text", text });
-
 async function gerar(partes: Parte[]): Promise<Resultado> {
-  const r = await chamarLovableIa([{ role: "user", content: partes }], { esforco: "low", prazoMs: 25_000 });
-  if (!r.ok) return { ...r, modelo: MODELO_IA };
-  return { ok: true, texto: r.texto, modelo: MODELO_IA };
+  const chave = process.env["GEMINI_API_KEY"];
+  if (!chave) return { ok: false, status: 503, erro: "GEMINI_API_KEY ausente nos secrets" };
+  let ultimo: Resultado = { ok: false, status: 502, erro: "sem resposta" };
+  /* Prazo total de 17 s: a consulta do cliente inteira cabe em 1 minuto. */
+  const inicio = Date.now();
+  for (const modelo of ordemDosModelos()) {
+    for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+      if (Date.now() - inicio > 16_000) return ultimo;
+      try {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-goog-api-key": chave },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: partes }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0,
+                ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+              },
+            }),
+            signal: AbortSignal.timeout(Math.max(3_000, 17_000 - (Date.now() - inicio))),
+          },
+        );
+        const j = (await r.json().catch(() => null)) as {
+          candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
+          error?: { message?: string };
+        } | null;
+        if (r.ok) {
+          const texto = (j?.candidates?.[0]?.content?.parts ?? [])
+            .filter((p) => !p.thought && p.text)
+            .map((p) => p.text)
+            .join("");
+          if (texto) return { ok: true, texto, modelo };
+          ultimo = { ok: false, status: 502, erro: "resposta vazia", modelo };
+          break;
+        }
+        ultimo = {
+          ok: false,
+          status: r.status,
+          erro: (j?.error?.message ?? "").slice(0, 200),
+          modelo,
+        };
+        /* 429 (cota) e 5xx passam com uma pausa; 404 (modelo que a chave nao
+           tem) vai direto para o proximo; o resto e defeito do pedido. */
+        if (r.status === 429 || r.status >= 500) {
+          if (tentativa === 0) await new Promise((ok) => setTimeout(ok, 1000));
+          continue;
+        }
+        if (r.status === 404) break;
+        return ultimo;
+      } catch (e) {
+        ultimo = {
+          ok: false,
+          status: 504,
+          erro: String((e as Error)?.message ?? e).slice(0, 120),
+          modelo,
+        };
+      }
+    }
+  }
+  return ultimo;
 }
 
 function lerJson<T>(texto: string): T | null {
@@ -98,7 +169,6 @@ export async function conferirMesmoProduto(
 
   const partes: Parte[] = [
     {
-      type: "text",
       text:
         "Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL " +
         "e so pode ver outra loja se for EXATAMENTE o mesmo produto.\n" +
@@ -114,11 +184,13 @@ export async function conferirMesmoProduto(
         'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"igual":true,"confianca":0-100,' +
         '"motivo":"curto"}]}',
     },
-    txt("ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)")),
+    { text: "ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)") },
   ];
   if (fotoOriginal) partes.push(fotoOriginal);
   lista.forEach((c, i) => {
-    partes.push(txt(`CANDIDATO ${i}: ${c.titulo ?? "(sem titulo)"}${fotos[i] ? "" : " (sem foto)"}`));
+    partes.push({
+      text: `CANDIDATO ${i}: ${c.titulo ?? "(sem titulo)"}${fotos[i] ? "" : " (sem foto)"}`,
+    });
     const f = fotos[i];
     if (f) partes.push(f);
   });
@@ -170,7 +242,6 @@ export async function termoDeBusca(
 > {
   const partes: Parte[] = [
     {
-      type: "text",
       text:
         "Escreva a melhor busca curta (3 a 8 palavras, sem aspas, sem pontuacao) para achar EXATAMENTE este produto " +
         "em outras lojas de um marketplace brasileiro: marca, linha/modelo, versao, cor quando for parte do produto, " +

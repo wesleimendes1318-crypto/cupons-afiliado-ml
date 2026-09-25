@@ -4,7 +4,7 @@ import { z } from "zod";
 import { conferirMesmoProduto, termoDeBusca } from "@/lib/conferir-produto";
 import { json, respostaOptions } from "@/lib/public-ai-api";
 
-/* IA do servidor para a extensao: confere pela FOTO se cada candidato e o
+/* Gemini do servidor para a extensao: confere pela FOTO se cada candidato e o
    mesmo produto, ou escreve a busca para acha-lo. So atende quem manda o token
    de sincronia (a extensao do Weslei): e a chave paga dele. */
 
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/api/public/conferir-produto")({
       GET: async ({ request }) =>
         json(request, {
           versao: "2026-09-25 conferencia por foto",
-          ia: "lovable",
+          chave: Boolean(process.env["GEMINI_API_KEY"]),
         }),
       POST: async ({ request }) => {
         if (!(await tokenValido(request)))

@@ -508,9 +508,12 @@ async function geminiLocal(partes) {
   const modelos = [...new Set(['gemini-2.5-flash', 'gemini-flash-lite-latest', geminiModel].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
+  /* Erro de CADA modelo tentado (antes so o ultimo ficava gravado). */
+  const falhas = [];
+  const comFalhas = r => (r.ok ? r : { ...r, erro: falhas.concat(r.erro ? [] : []).join(' | ') || r.erro });
   for (const modelo of modelos) {
     for (let tentativa = 0; tentativa < 2; tentativa++) {
-      if (Date.now() - inicio > Math.min(16000, resta() - 7000)) return { ...ultimo, erro: (ultimo.erro || '') + ' (sem tempo)' };
+      if (Date.now() - inicio > Math.min(16000, resta() - 7000)) { falhas.push('sem tempo'); return comFalhas(ultimo); }
       try {
         const ctrl = new AbortController();
         const corta = setTimeout(() => ctrl.abort(), Math.max(4000, Math.min(12000, resta() - 7000)));
@@ -531,17 +534,19 @@ async function geminiLocal(partes) {
           break;
         }
         ultimo = { ok: false, status: r.status, erro: String((j && j.error && j.error.message) || '').slice(0, 200), modelo };
+        falhas.push(modelo + ' ' + r.status + ' ' + ultimo.erro.slice(0, 90));
         if (r.status === 429 || r.status >= 500) { if (tentativa === 0) await sleep(2000); continue; }
         if (r.status === 404) break;
-        return ultimo;
+        return comFalhas(ultimo);
       } catch (e) {
         /* Estourou o prazo: nao repete o mesmo modelo, vai para o proximo. */
         ultimo = { ok: false, status: 504, erro: String((e && e.message) || e).slice(0, 120), modelo };
+        falhas.push(modelo + ' tempo ' + Math.round((Date.now() - inicio) / 1000) + 's');
         break;
       }
     }
   }
-  return ultimo;
+  return comFalhas(ultimo);
 }
 
 function jsonDaIA(texto) {
