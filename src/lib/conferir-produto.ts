@@ -510,7 +510,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
       const v = segunda.get(k);
       if (v && v.igual && v.confianca >= confiancaMinima(r2.modelo)) {
         a.confianca = Math.min(a.confianca, v.confianca);
-        a.motivo = `${a.motivo} | confirmado (${r2.modelo})`.slice(0, 140);
+        a.motivo = `${a.motivo.slice(0, 95)} | confirmado (${r2.modelo})`;
       } else {
         a.igual = false;
         a.motivo = `2a conferencia (${r2.modelo}): ${v?.motivo || "nao confirmou"}`.slice(0, 140);

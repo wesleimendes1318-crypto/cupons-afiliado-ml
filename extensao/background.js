@@ -703,7 +703,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
           const v = segunda.get(k);
           if (v && v.igual && v.confianca >= confiancaMinimaIA(r2.modelo)) {
             a.confianca = Math.min(a.confianca, v.confianca);
-            a.motivo = (a.motivo + ' | confirmado (' + r2.modelo + ')').slice(0, 140);
+            a.motivo = a.motivo.slice(0, 95) + ' | confirmado (' + r2.modelo + ')';
           } else {
             a.igual = false;
             a.motivo = ('2a conferencia (' + r2.modelo + '): ' + ((v && v.motivo) || 'nao confirmou')).slice(0, 140);
@@ -3103,7 +3103,7 @@ async function atenderPedidos() {
     await comAbaML(async (tabId) => {
       /* Um pedido. Virou funcao para a segunda volta poder atender, no meio
          dela, um cliente novo que chegou (cliente novo tem prioridade). */
-      const atenderUm = async (p) => {
+      const atenderUmCorpo = async (p) => {
         /* Cliente novo nunca herda o corte da segunda volta. */
         interromperVolta = false;
         if (!p.url_alvo) {
@@ -3604,7 +3604,7 @@ async function atenderPedidos() {
           /* final = nao vem mais nada; o site para de esperar. Sem o anuncio
              lido nao ha o que comparar de novo. */
           analise.final = analise.completa || !a.ok;
-          await marcarPedido(sincToken, p.id, r.link, r.codigo, null, analise);
+          await marcarComInsistencia(sincToken, p.id, r.link, r.codigo, null, analise);
           if (!analise.final) {
             const temposPrimeira = analise.tempos;
             paraCompletar.push({
@@ -3635,6 +3635,15 @@ async function atenderPedidos() {
           await marcarPedido(sincToken, p.id, null, null, e.message || String(e), null);
           falhou++;
         }
+      };
+      /* Marca o pedido "em atendimento" no armazenamento: se o service worker
+         morrer ou recarregar no meio (visto em 25/09, pedido 259: 139 s de
+         espera), o proximo worker registra o caso em diagnosticos. */
+      const atenderUm = async (p) => {
+        await chrome.storage.local.set({ pedidoEmAndamento: {
+          id: p.id, desde: Date.now(), versao: chrome.runtime.getManifest().version } }).catch(() => {});
+        try { await atenderUmCorpo(p); }
+        finally { await chrome.storage.local.remove('pedidoEmAndamento').catch(() => {}); }
       };
       for (const p of pendentes) {
         await atenderUm(p);
@@ -3792,6 +3801,29 @@ async function conferirVersaoNoDisco() {
 /* Sinal de vida para o site a cada 2 minutos. Antes o visto_em so mudava
    quando o freio era liberado, ficava velho e o site dizia "pausada" com a
    extensao funcionando (25/09). Vai junto a versao que esta rodando. */
+/* O resultado do cliente nao pode se perder numa oscilacao de rede: antes,
+   uma falha aqui caia no catch, que gravava "falhou" (ou deixava o pedido
+   preso em "processando"). */
+async function marcarComInsistencia(...args) {
+  for (let i = 0; ; i++) {
+    try { return await marcarPedido(...args); }
+    catch (e) { if (i >= 2) throw e; await sleep(1500 * (i + 1)); }
+  }
+}
+
+/* Pedido que estava em atendimento quando o worker anterior morreu. */
+const inicioDoWorker = Date.now();
+(async () => {
+  try {
+    const { pedidoEmAndamento: pa, sincToken } = await chrome.storage.local.get(['pedidoEmAndamento', 'sincToken']);
+    if (!pa || !(pa.desde < inicioDoWorker)) return;
+    await chrome.storage.local.remove('pedidoEmAndamento');
+    await gravarDiagnostico(sincToken, 'pedido-interrompido', {
+      ...pa, versaoAgora: chrome.runtime.getManifest().version,
+      segundosAteReiniciar: Math.round((inicioDoWorker - pa.desde) / 1000) });
+  } catch (e) { /* so diagnostico */ }
+})();
+
 let ultimoSinal = 0;
 async function sinalDeVida() {
   if (Date.now() - ultimoSinal < 2 * 60e3) return;
