@@ -3042,6 +3042,9 @@ let chegouPedidoNovo = false;
    sozinha. Nunca fica esperando para sempre: na ultima tentativa o pedido e
    fechado (final) com o melhor resultado que houve. */
 const paraCompletar = [];
+/* Links de afiliado das outras linhas da tabela, gerados em lotes de 3 depois
+   da fila; a tela do cliente recebe cada lote. */
+const paraLinks = [];
 const MAX_VOLTAS_EXTRAS = 2;
 
 /* Fica a que mostra mais: loja mais barata com link vale mais que tudo,
@@ -3073,13 +3076,30 @@ async function esperarOuCliente(sincToken, ms) {
 }
 
 async function segundaVolta(sincToken, atenderUm) {
-  while (paraCompletar.length) {
+  while (paraCompletar.length || paraLinks.length) {
     if (await clienteEsperando(sincToken)) {
       chegouPedidoNovo = false;
       const novos = await pedidosPendentes(sincToken).catch(() => []);
       for (const n of novos) { await atenderUm(n); await sleep(600); }
       /* Fila acusou cliente mas nao entregou (rede): sem laco apertado. */
       if (!novos.length) await sleep(4000);
+      continue;
+    }
+    /* Links da tabela primeiro: o cliente ja esta vendo o resultado. */
+    if (paraLinks.length) {
+      const j = paraLinks[0];
+      const antes = j.faltam();
+      await j.gerar(3);
+      const depois = j.faltam();
+      /* Acabou, nao andou (gerador recusou / freio) ou passou do tempo em que
+         a tela ainda espera: encerra; o botao gera o link no clique. */
+      const acabou = depois === 0 || depois >= antes || Date.now() - j.inicio > 170000;
+      if (acabou) {
+        paraLinks.shift();
+        j.analise.linksPendentes = false;
+        j.analise.tempos = { ...j.analise.tempos, lote: Math.round((Date.now() - j.inicio) / 100) / 10 };
+      }
+      await completarPedido(sincToken, j.id, j.analise).catch(e => console.warn('[links da tabela]', e.message));
       continue;
     }
     const c = paraCompletar.shift();
@@ -3595,10 +3615,12 @@ async function atenderPedidos() {
              chamada so ao gerador. Roda DEPOIS de entregar o resultado (medido
              em 25/09 na 1.101.0: com os parecidos, esta etapa levava a consulta
              a 60 s). Ate la o site mostra o botao que gera o link no clique. */
-          const faltamLinks = () => [...referencias, ...parecidos].some(x => !x.link && x.url);
-          const linksDaTabela = async () => {
+          const faltamLinks = () => [...referencias, ...parecidos].filter(x => !x.link && x.url).length;
+          /* limite: quantos links nesta chamada (lotes pequenos deixam cliente
+             novo passar na frente entre um lote e outro). */
+          const linksDaTabela = async (limite = Infinity) => {
             try {
-              const semLink = [...referencias, ...parecidos].filter(x => !x.link && x.url);
+              const semLink = [...referencias, ...parecidos].filter(x => !x.link && x.url).slice(0, limite);
               if (semLink.length && !(await freioLigado('link'))) {
                 const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
                 const mapa = await gerarVariosNaAba(tabId, alvos);
@@ -3678,14 +3700,13 @@ async function atenderPedidos() {
              lido nao ha o que comparar de novo. */
           analise.final = analise.completa || !a.ok;
           /* true = o site continua atualizando ate os links da tabela chegarem. */
-          analise.linksPendentes = faltamLinks();
+          analise.linksPendentes = faltamLinks() > 0;
           await marcarComInsistencia(sincToken, p.id, r.link, r.codigo, null, analise);
-          if (analise.linksPendentes) {
-            const t0l = Date.now();
-            await linksDaTabela();
-            analise.linksPendentes = false;
-            analise.tempos = { ...analise.tempos, lote: Math.round((Date.now() - t0l) / 100) / 10 };
-            await completarPedido(sincToken, p.id, analise).catch(e => console.warn('[links da tabela]', e.message));
+          /* Links da tabela DEPOIS da fila (medido na 1.102.0: o lote levava
+             42-48 s e segurava o proximo cliente). Pedido que ainda vai ter
+             segunda volta ganha os links nela. */
+          if (analise.linksPendentes && analise.final) {
+            paraLinks.push({ id: p.id, analise, inicio: Date.now(), faltam: faltamLinks, gerar: linksDaTabela });
           }
           if (!analise.final) {
             const temposPrimeira = analise.tempos;
