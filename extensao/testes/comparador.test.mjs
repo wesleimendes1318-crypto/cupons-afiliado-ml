@@ -112,18 +112,25 @@ test('escolha: concorrente com cupom mas mais cara fica fora', () => {
   assert.equal(r.length, 0);
 });
 
-test('escolha: menor custo primeiro, sem a propria loja, maximo 3', () => {
+test('escolha: menor custo primeiro, maximo 3; propria loja so com outro anuncio mais barato', () => {
   const r = escolherAlternativas([
-    alt({ v: 'LojaA', p: 50 }),                  // a propria loja do cliente
+    alt({ v: 'LojaA', p: 50 }),                  // a propria loja do cliente, OUTRO anuncio mais barato
     alt({ v: 'LojaB', p: 90 }),
     alt({ v: 'LojaC', p: 80, e: 5, c: true }),
     alt({ v: 'LojaD', p: 99 }),                  // ganho de R$ 1: nao vale a troca
     alt({ v: 'LojaE', p: 70 }),
     alt({ v: 'LojaF', p: 60 }),
   ], { finalAtual: 100, temCupomAqui: true, vendedorAtual: 'loja a' });
-  assert.deepEqual(r.map(x => x.vendedor), ['LojaF', 'LojaE', 'LojaC']);
+  assert.deepEqual(r.map(x => x.vendedor), ['LojaA', 'LojaF', 'LojaE']);
   assert.ok(r.every(x => x.motivo === 'mais_barata'));
-  assert.equal(r[0].ganho, 40);
+  assert.equal(r[0].mesmaLoja, true);
+  assert.equal(r[1].ganho, 40);
+});
+
+test('escolha: propria loja com o mesmo preco (o proprio anuncio) fica fora', () => {
+  const r = escolherAlternativas([alt({ v: 'LojaA', p: 100 }), alt({ v: 'LojaB', p: 90 })],
+    { finalAtual: 100, vendedorAtual: 'loja a' });
+  assert.deepEqual(r.map(x => x.vendedor), ['LojaB']);
 });
 
 test('escolha: sem preco da loja do cliente nao compara', () => {

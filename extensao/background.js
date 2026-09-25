@@ -3425,6 +3425,7 @@ async function atenderPedidos() {
                 economia: o.economia, final: o.final, ganho: o.ganho, finalAtual: o.finalAtual,
                 motivo: o.motivo, achadoNaBusca: !!o.achadoNaBusca,
                 freteGratis: o.freteGratis != null ? o.freteGratis : null,
+                mesmaLoja: !!o.mesmaLoja,
                 imagem: o.imagem || null, titulo: o.nomeCatalogo || null,
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
@@ -3495,11 +3496,14 @@ async function atenderPedidos() {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
                   for (const t of busca.todas) {
                     if (t.final == null || vistos.has((t.vendedor || '').toLowerCase())) continue;
-                    if (vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase()) continue;
+                    const mesmaLoja = !!(vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase());
+                    /* Mesma loja so com OUTRO anuncio mais barato. */
+                    if (mesmaLoja && !(finalAqui != null && t.final <= finalAqui - 0.5)) continue;
                     vistos.add((t.vendedor || '').toLowerCase());
                     referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final, url: t.url || null,
                       imagem: t.imagem || null, verificadoIA: !!t.verificadoIA,
                       freteGratis: t.freteGratis != null ? t.freteGratis : null,
+                      mesmaLoja,
                       diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
                       cupom: t.cupom ? t.cupom.titulo : null });
                   }
@@ -3602,6 +3606,7 @@ async function atenderPedidos() {
                   imagem: alt.imagem || null,
                   verificadoIA: !!alt.verificadoIA || (verificacaoIA && !verificacaoIA.indisponivel && !!alt.achadoNaBusca),
                   freteGratis: alt.freteGratis != null ? alt.freteGratis : null,
+                  mesmaLoja: !!alt.mesmaLoja,
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,

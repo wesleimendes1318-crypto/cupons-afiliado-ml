@@ -364,7 +364,9 @@ export function escolherAlternativas(achados, { finalAtual, temCupomAqui, vended
   const validos = (achados || []).filter(a =>
     a && a.final != null && Number.isFinite(a.final) && a.preco != null
     && (!itemAtual || a.item !== itemAtual)
-    && (!meu || !a.vendedor || norm(a.vendedor) !== meu));
+    /* Mesma loja so entra com OUTRO anuncio mais barato (Camelo, 25/09). */
+    && (!meu || !a.vendedor || norm(a.vendedor) !== meu || a.final <= finalAtual - 0.5))
+    .map(a => (meu && a.vendedor && norm(a.vendedor) === meu ? { ...a, mesmaLoja: true } : a));
 
   /* A mesma loja pode aparecer em dois anuncios: fica o mais barato. */
   const porLoja = new Map();

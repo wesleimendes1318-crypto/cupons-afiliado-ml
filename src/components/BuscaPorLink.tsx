@@ -162,6 +162,8 @@ function compartilharWhatsApp(texto: string) {
    nunca um parecido, e só quando sai mais barato que o anúncio colado. */
 type OutraLoja = {
   freteGratis?: boolean | null;
+  /* Outro anúncio da mesma loja do link colado, mais barato. */
+  mesmaLoja?: boolean | null;
   cupomId?: number | null;
   /* Quanto a troca economiza de fato, ja comparando preco final com preco
      final. Vem da extensao, que e quem conhece os dois lados. */
@@ -278,6 +280,7 @@ type Referencia = {
   /* Link de afiliado desta loja, gerado em lote pela extensão. */
   link?: string | null;
   freteGratis?: boolean | null;
+  mesmaLoja?: boolean | null;
 };
 
 type Pedido = {
@@ -1415,6 +1418,7 @@ function Resultado({
       final: o.final,
       diferenca: o.ganho != null ? -o.ganho : null,
       freteGratis: o.freteGratis ?? null,
+      mesmaLoja: o.mesmaLoja ?? null,
       link: o.link,
       url: null,
     })),
@@ -1425,6 +1429,7 @@ function Resultado({
       final: r.final,
       diferenca: r.diferenca,
       freteGratis: r.freteGratis ?? null,
+      mesmaLoja: r.mesmaLoja ?? null,
       link: r.link ?? null,
       url: r.url ?? null,
     })),
@@ -1828,6 +1833,7 @@ type LinhaLoja = {
   colado?: boolean;
   /* true frete grátis, false frete pago, null/undefined não sei. */
   freteGratis?: boolean | null;
+  mesmaLoja?: boolean | null;
 };
 
 /* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
@@ -1997,6 +2003,11 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
                   <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
                   <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
                     {l.colado ? "Anúncio colado" : l.nome}
+                    {l.mesmaLoja && (
+                      <span className="block text-[10px] font-semibold text-ml-blue">
+                        Mesma loja, outro anúncio
+                      </span>
+                    )}
                     {l.freteGratis === true && (
                       <span className="block text-[10px] font-semibold text-success">
                         Frete grátis
@@ -2161,7 +2172,9 @@ function OutraLojaComCupom({
           : temCupomLa
             ? "Achei o mesmo produto mais barato em outra loja, e lá também tem cupom"
             : !lojaAquiTemCupom && diferenca != null && diferenca > 0
-              ? `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
+              ? oferta.mesmaLoja
+                ? `A mesma loja vende este produto por ${brl(diferenca)} a menos em outro anúncio`
+                : `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
               : "Achei o mesmo produto mais barato em outra loja"}
       </p>
       <div className="mt-2 flex items-center gap-2">

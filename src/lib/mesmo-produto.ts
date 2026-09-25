@@ -210,6 +210,8 @@ export type Opcao = {
   nomeCatalogo: string | null;
   /* true frete grátis, false frete pago, null a API não disse. */
   freteGratis: boolean | null;
+  /* Outro anúncio da MESMA loja do link colado, mais barato. */
+  mesmaLoja?: boolean;
 };
 
 export type Comparacao = {
@@ -241,6 +243,7 @@ export type Comparacao = {
     nomeCatalogo: string | null;
     porNome: boolean;
     freteGratis: boolean | null;
+    mesmaLoja?: boolean;
   }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
@@ -694,8 +697,13 @@ export async function compararMesmoProduto(
     /* 4. Escolha: mais barata por pelo menos R$ 2, ou com cupom quando a loja
           do cliente não tem (sem sair mais cara). Nunca a própria loja. */
     const porLoja = new Map<number, Opcao>();
+    /* Mesma loja do link colado: só entra quando é OUTRO anúncio dela mais
+       barato (Camelo, 25/09: R$ 78,54 x R$ 86,90 no anúncio colado). */
+    const foraDaComparacao = (c: Candidato) =>
+      c.item === itemAtual ||
+      (ehMinhaLoja(c.sellerId) && !(preco != null && preco - c.preco >= 0.5));
     for (const c of candidatos) {
-      if (c.item === itemAtual || ehMinhaLoja(c.sellerId)) continue;
+      if (foraDaComparacao(c)) continue;
       const cupom = cupomDe(c.sellerId);
       const economia = economiaDoCupom(cupom, c.preco) ?? 0;
       const final = Math.round((c.preco - economia) * 100) / 100;
@@ -732,6 +740,7 @@ export async function compararMesmoProduto(
         imagem: fichas.get(c.catalogo)?.imagem ?? null,
         nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
         freteGratis: c.freteGratis,
+        mesmaLoja: Boolean(ehMinhaLoja(c.sellerId)),
       };
       const atual = porLoja.get(c.sellerId);
       if (!atual || opcao.final < atual.final) porLoja.set(c.sellerId, opcao);
@@ -742,7 +751,7 @@ export async function compararMesmoProduto(
 
     const refPorLoja = new Map<number, NonNullable<Comparacao["referencias"]>[number]>();
     for (const c of candidatos) {
-      if (c.item === itemAtual || ehMinhaLoja(c.sellerId)) continue;
+      if (foraDaComparacao(c)) continue;
       const cupom = cupomDe(c.sellerId);
       const final = Math.round((c.preco - (economiaDoCupom(cupom, c.preco) ?? 0)) * 100) / 100;
       const atual = refPorLoja.get(c.sellerId);
@@ -756,6 +765,7 @@ export async function compararMesmoProduto(
         nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
         porNome: c.achadoNaBusca,
         freteGratis: c.freteGratis,
+        mesmaLoja: Boolean(ehMinhaLoja(c.sellerId)),
         diferenca: Math.round((final - finalAtual) * 100) / 100,
         cupom: economiaDoCupom(cupom, c.preco) ? (cupom?.desconto ?? null) : null,
       });
