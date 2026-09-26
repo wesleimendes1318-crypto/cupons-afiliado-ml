@@ -1378,12 +1378,29 @@ function Resultado({
   const refsBase = (a?.referencias ?? []).filter(
     (r) => r.final != null && !nomesAlt.has((r.vendedor ?? "").toLowerCase()),
   );
+  /* Link igual ao do anúncio colado = o programa de afiliados recusou o
+     anúncio desta loja ("URL not allowed", erro 111) e só a ficha do produto
+     gerou link, que abre na oferta principal (Advocate, 26/09: R$ 147,81 em
+     vez de R$ 109,92). O botão vai direto à oferta DESTA loja na ficha
+     (Weslei, 26/09: "o botão deve direcionar para a melhor escolha"). Sem o
+     endereço da oferta, fica o link da ficha com o aviso de escolher a loja. */
+  const urlDaLoja = new Map(
+    (a?.referencias ?? [])
+      .filter((r) => r.url)
+      .map((r) => [(r.vendedor ?? "").toLowerCase(), r.url as string] as const),
+  );
+  const destinoDaLoja = (
+    vendedor: string | null | undefined,
+    lk: string | null | undefined,
+    url?: string | null,
+  ) => {
+    if (!lk || lk !== link) return { link: lk ?? null, mesmaPagina: false };
+    const direto = url ?? urlDaLoja.get((vendedor ?? "").toLowerCase()) ?? null;
+    return direto ? { link: direto, mesmaPagina: false } : { link: lk, mesmaPagina: true };
+  };
   const candidatas = [
-    /* Link igual ao do anúncio colado = link da ficha do produto (a loja não
-       aceita link próprio): abre a página geral, e o cliente escolhe a loja
-       em "Outras opções de compra" (Advocate, 26/09). */
     ...alternativas.map((o, i) => ({
-      o: { ...o, mesmaPagina: Boolean(o.mesmaPagina || (o.link && o.link === link)) },
+      o: { ...o, ...destinoDaLoja(o.vendedor, o.link, o.url) },
       chave: `alt-${i}`,
     })),
     ...refsBase.map((r, i) => ({
@@ -1397,8 +1414,7 @@ function Resultado({
             ? Math.round((precoColado - r.final) * 100) / 100
             : null,
         finalAtual: precoColado,
-        link: r.link ?? null,
-        mesmaPagina: Boolean(r.link && r.link === link),
+        ...destinoDaLoja(r.vendedor, r.link, r.url),
         url: r.url ?? null,
         imagem: r.imagem ?? null,
         freteGratis: r.freteGratis ?? null,
@@ -1470,8 +1486,7 @@ function Resultado({
       diferenca: o.ganho != null ? -o.ganho : null,
       freteGratis: o.freteGratis ?? null,
       mesmaLoja: o.mesmaLoja ?? null,
-      mesmaPagina: Boolean(o.link && o.link === link),
-      link: o.link,
+      ...destinoDaLoja(o.vendedor, o.link, o.url),
       url: null,
     })),
     ...referencias.map((r, i) => ({
@@ -1482,8 +1497,7 @@ function Resultado({
       diferenca: r.diferenca,
       freteGratis: r.freteGratis ?? null,
       mesmaLoja: r.mesmaLoja ?? null,
-      mesmaPagina: Boolean(r.link && r.link === link),
-      link: r.link ?? null,
+      ...destinoDaLoja(r.vendedor, r.link, r.url),
       url: r.url ?? null,
     })),
   ];

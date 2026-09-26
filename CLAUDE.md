@@ -39,6 +39,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Todo anúncio pode gerar link de afiliado: se o gerador recusar o endereço
   avulso ("URL not allowed", erro 111), tentar o endereço da ficha do
   catálogo com o anúncio (/p/MLB...?pdp_filters=item_id:...).
+- O botão da recomendação leva à MELHOR opção (Weslei, 26/09). Se o programa
+  recusar o anúncio da loja (erro 111) e o link da ficha sair igual ao do
+  anúncio colado (abre na oferta principal), o botão vai direto à oferta da
+  loja na ficha (pdp_filters=item_id:...), sem comissão nesse anúncio.
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
   captcha/tráfego suspeito e o ritmo de um pedido por vez.
 
