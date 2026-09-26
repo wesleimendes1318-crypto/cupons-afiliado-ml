@@ -476,7 +476,7 @@ async function completarVitrine() {
         const anon = await lerNaJanelaAnonima(url);
         const b = anon.html ? extrairAnuncio(anon.html, anon.url || url, 200) : null;
         if (b && b.imagem) { a = b; via = 'anonima'; }
-        else if (!(await anonimaPermitida()) && !(await anonimaBloqueada()) && !(await freioLigado('leitura'))) {
+        else if (!(await anonimaPermitida()) && !(await freioLigado('leitura'))) {
           try { a = await lerAnuncioNoWorker(url); via = 'logada'; } catch (e) { a = null; }
         }
       }
@@ -2357,7 +2357,13 @@ let ultimaLeitura = null;
    API oficial no servidor do site. Leitura logada de outras lojas continua
    proibida (protege a conta de afiliado). */
 const PAUSA_ANONIMA_MS = 12 * 60 * 60 * 1000;
+/* DESLIGADA (Weslei, 26/09: "nao deve fazer mais buscas anonimas"). A
+   anonima passou a receber paginas sem anuncio (pedidos 350-352) e a
+   comparacao ficava vazia. Toda leitura segue logada, com o freio de
+   captcha/trafego suspeito e um pedido por vez. */
+const ANONIMA_LIGADA = false;
 async function anonimaPermitida() {
+  if (!ANONIMA_LIGADA) return false;
   try {
     const { anonimaBloqueadaAte } = await chrome.storage.local.get('anonimaBloqueadaAte');
     if (anonimaBloqueadaAte && Date.now() < anonimaBloqueadaAte) return false;

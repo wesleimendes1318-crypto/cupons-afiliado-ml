@@ -65,14 +65,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
-- Se o Mercado Livre responder "tráfego suspeito", parar a leitura anônima.
+- Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em
+  captcha/"tráfego suspeito" e um pedido por vez.
 - Não trocar a Gemini pela "Lovable AI" (plano sem crédito: responde 402).
 - Nunca pedir nem colocar chaves no código ou no chat (vão nos Secrets do Lovable).
 
 ## Garantia (obrigatório a cada versão)
 - O cliente SEMPRE recebe: produto, preço, o link de afiliado e a comparação
   possível. Cada etapa tem plano B: leitura do código da página → aba logada →
-  janela anônima → leitura da TELA (preço/loja/título/foto como a pessoa vê).
+  leitura da TELA (preço/loja/título/foto como a pessoa vê).
   Nunca tela vazia: sem dado, o site mostra o que tem com o botão do link.
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
