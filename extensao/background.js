@@ -1111,6 +1111,41 @@ async function lerAnuncioNoWorker(url, profundidade = 0) {
   }
 }
 
+/* Abre o link de perfil numa aba de fundo (logada) e devolve o produto,
+   so quando nao ha duvida: a aba terminou num anuncio, ou a tela mostra
+   um anuncio so. */
+async function produtoDoPerfilNaAba(url) {
+  const aba = await chrome.tabs.create({ url, active: false });
+  try {
+    await esperarCarregar(aba.id, 20000);
+    await sleep(3000);
+    const fim = (await chrome.tabs.get(aba.id)).url || '';
+    if (/mercadolivre\.com\.br\/.*(\/p\/MLB\d+|MLB-?\d{8,}|\/up\/MLBU\d+)/i.test(fim) && !/\/social\//i.test(fim)) {
+      return { produto: fim.split('#')[0], via: 'destino da aba' };
+    }
+    const [saida] = await chrome.scripting.executeScript({
+      target: { tabId: aba.id },
+      func: () => {
+        const ids = new Map();
+        for (const a of document.querySelectorAll('a[href]')) {
+          const h = a.href || '';
+          if (/\/social\/|click1\.|\/pagina\//i.test(h)) continue;
+          const m = /\/p\/(MLB\d+)|\/up\/(MLBU\d+)|MLB-?(\d{8,})/i.exec(h);
+          if (!m) continue;
+          const k = (m[1] || m[2] || ('MLB' + m[3])).toUpperCase();
+          if (!ids.has(k)) ids.set(k, h.split('#')[0]);
+        }
+        return [...ids.values()].slice(0, 5);
+      }
+    });
+    const achados = (saida && saida.result) || [];
+    if (achados.length === 1) return { produto: achados[0], via: 'unico anuncio da tela', fim };
+    return { produto: null, fim, anuncios: achados.length };
+  } finally {
+    try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ }
+  }
+}
+
 function analiseNaPagina(url) {
   return fetch(url, { credentials: 'include', redirect: 'follow' })
     .then(function (r) { return r.text().then(function (t) { return { u: r.url, st: r.status, t: t }; }); })
@@ -3265,6 +3300,19 @@ async function atenderPedidos() {
           const tempos = {};
           const marcar = nome => { tempos[nome] = Math.round((Date.now() - t0p) / 100) / 10; };
           let a = await lerAnuncioNoWorker(url);
+          /* Link de afiliado que abre o PERFIL (/social/<apelido>?...&ref=...,
+             ou meli.la que termina nele): o produto em destaque e montado pelo
+             navegador, a leitura "por baixo" nao ve (26/09, meli.la/1zUB87o).
+             Abre numa aba de verdade e so aceita se sair UM produto: o destino
+             final da aba ou o unico anuncio da tela. Mais de um = nao chuta. */
+          if (a && a.perfilSocial && !(await freioLigado('leitura'))) {
+            const doPerfil = await produtoDoPerfilNaAba(url).catch(e => ({ motivo: String(e.message || e).slice(0, 120) }));
+            gravarDiagnostico(sincToken, 'perfil-social', { url: String(url).slice(0, 300), ...doPerfil }).catch(() => {});
+            if (doPerfil && doPerfil.produto) {
+              const b = await lerAnuncioNoWorker(doPerfil.produto, 1);
+              if (b && b.ok) a = b;
+            }
+          }
           /* Perfil social e captcha nao tem plano B: ler a pagina pela aba
              pegaria um produto qualquer da vitrine, ou insistiria no muro. */
           if (!a.perfilSocial && !a.captcha && (!a.ok || !(a.nomes && a.nomes.length))) {

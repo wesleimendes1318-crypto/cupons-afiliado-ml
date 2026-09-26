@@ -372,6 +372,13 @@ function limparLinkML(bruto: string): string {
     /* Em link /up/MLBU... o anúncio escolhido vem na âncora (wid=MLB...).
        Ele vira pdp_filters=item_id:MLB..., a forma do próprio Mercado Livre,
        para a comparação saber qual loja o cliente estava vendo. */
+    /* Link de afiliado que abre o PERFIL (/social/<apelido>?...&ref=...): o
+       produto está no "ref". Sem ele o link cai na lista do perfil (26/09:
+       "a conferência está pausada" com o link do próprio Weslei). */
+    if (/\/social\//i.test(u.pathname)) {
+      u.hash = "";
+      return u.toString();
+    }
     const wid = /[#&]wid=(MLB\d{6,})/i.exec(u.hash)?.[1];
     u.hash = "";
     if (wid && !/item_id/i.test(u.search))
@@ -741,7 +748,11 @@ export default function BuscaPorLink() {
           /* Guarda o motivo real. Sem isso a pessoa (e o Weslei) so via "fora
              do ar" e nao dava para saber se era sessao caida, link errado ou
              erro nosso. */
-          setMotivo(linha.erro ?? null);
+          setMotivo(
+            linha.erro ??
+              (linha.analise as { diagnostico?: string | null } | null)?.diagnostico ??
+              null,
+          );
           setFase("offline");
           return;
         }
@@ -2646,6 +2657,18 @@ function Linha({
 */
 
 function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | null }) {
+  /* Link que abre um perfil (lista de produtos), não um produto: não é
+     pausa, é o link. Diz o que fazer (26/09). */
+  if (motivo && /perfil|nao abre um anuncio/i.test(motivo)) {
+    return (
+      <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
+        <p className="text-sm font-medium">Esse link abre uma lista de produtos, não um produto.</p>
+        <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
+          Abra o produto que você quer, toque em compartilhar e cole aqui o link da página dele.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
       <p className="text-sm font-medium">A conferência de links está pausada neste momento.</p>
