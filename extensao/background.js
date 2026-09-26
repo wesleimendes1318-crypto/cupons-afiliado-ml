@@ -2844,11 +2844,31 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
     if (!titulo) return [];
     /* Primeiro os anuncios que o Google achou (sem busca no site); a busca
        do site so se o Google nao trouxe nada aprovado e ainda houver tempo. */
-    const daBusca = await achadosCombinados(titulo, finalAtual, itemAtual, ctx.original || null, ctx.google);
-    const escolha = escolherAlternativas(daBusca, { ...ctx, itemAtual });
+    /* OUTRAS OFERTAS DA PROPRIA PAGINA (26/09, Tomate W12 /up/: a oferta de
+       R$ 124,99 estava na pagina do anuncio e so apareceu quando a API caiu;
+       nas consultas normais a comparacao nao olhava ali). Pagina /p/ ja vem
+       inteira pela lista oficial. Passam pela conferencia pela foto depois. */
+    const daPaginaP = /\/p\/MLB\d+/i.test(urlProduto) ? Promise.resolve([]) : (async () => {
+      try {
+        const h = await lerCatalogo(urlProduto);
+        const c = (RE_CATALOGO.exec(h) || [])[1] || null;
+        const ofertas = ofertasDoCatalogo(h).filter(o => o.item !== itemAtual && o.preco != null).slice(0, 3);
+        if (!ofertas.length) return [];
+        return await avaliarCandidatos(ofertas.map(o => ({ ...o,
+          url: c ? urlDaOferta(c, o.item) : 'https://produto.mercadolivre.com.br/' + o.item.replace(/^MLB/, 'MLB-') })), itemAtual);
+      } catch (e) { return []; }
+    })();
+    const [daBusca, daPagina] = await Promise.all([
+      achadosCombinados(titulo, finalAtual, itemAtual, ctx.original || null, ctx.google),
+      daPaginaP
+    ]);
+    const todas = [...daBusca, ...daPagina.filter(x => !daBusca.some(y => y.item === x.item))];
+    todas.diag = daBusca.diag ? { ...daBusca.diag, daPagina: daPagina.length } : { daPagina: daPagina.length };
+    if (daBusca.parecidos) todas.parecidos = daBusca.parecidos;
+    const escolha = escolherAlternativas(todas, { ...ctx, itemAtual });
     /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */
-    escolha.todas = daBusca;
-    escolha.diag = daBusca.diag || null;
+    escolha.todas = todas;
+    escolha.diag = todas.diag;
     return escolha;
   }
 
