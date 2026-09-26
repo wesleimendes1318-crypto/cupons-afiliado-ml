@@ -1381,8 +1381,11 @@ function Resultado({
      produto de catálogo com cupom valendo para este preço. Nesse caso a troca
      vira a recomendação principal: é ela que põe dinheiro no bolso da pessoa.
      O anúncio original continua disponível, só que como segunda opção. */
-  const alternativas: OutraLoja[] =
-    a?.outrasLojas && a.outrasLojas.length ? a.outrasLojas : a?.outraLoja ? [a.outraLoja] : [];
+  /* Loja sem nome e sem foto não aparece: não dá para o cliente conferir
+     (26/09, Tomate W12: "Outra loja" R$ 124,99 sem conferência pela foto). */
+  const alternativas: OutraLoja[] = (
+    a?.outrasLojas && a.outrasLojas.length ? a.outrasLojas : a?.outraLoja ? [a.outraLoja] : []
+  ).filter((o) => Boolean(o.vendedor) || Boolean(o.imagem));
   /* A troca vira a recomendação principal quando a melhor alternativa sai mais
      barata, ou quando a loja do anúncio não tem cupom e a outra tem. */
   /* UMA recomendação só, e ela é a mesma linha que leva o selo "Mais barato"

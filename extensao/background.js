@@ -3525,7 +3525,7 @@ async function atenderPedidos() {
             if (api && Array.isArray(api.referencias)) referencias = api.referencias;
             if (apiAchou) {
               alts = (api.opcoes || []).map(o => ({
-                item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco,
+                item: o.item, url: o.url, vendedor: o.vendedor, preco: o.preco, daApi: true,
                 economia: o.economia, final: o.final, ganho: o.ganho, finalAtual: o.finalAtual,
                 motivo: o.motivo, achadoNaBusca: !!o.achadoNaBusca,
                 freteGratis: o.freteGratis != null ? o.freteGratis : null,
@@ -3656,7 +3656,12 @@ async function atenderPedidos() {
             {
               const original = { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco, item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null };
               const conferir = [];
-              alts.forEach((x, i) => { if (x.achadoNaBusca && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem, item: x.item || itemDoUrl(x.url || '') }); });
+              /* Tudo que nao veio da lista OFICIAL de ofertas (API) passa pela
+                 foto, inclusive as ofertas lidas da propria pagina do anuncio:
+                 26/09, Tomate W12 (/up/) mostrou "Outra loja" R$ 124,99 sem
+                 nome, sem foto e sem conferencia (outra cor da mesma pagina).
+                 Sem foto a conferencia reprova. */
+              alts.forEach((x, i) => { if (!x.daApi && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem, item: x.item || itemDoUrl(x.url || '') }); });
               referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem, item: itemDoUrl(x.url || '') }); });
               if (conferir.length) {
                 ultimaIA = null;
