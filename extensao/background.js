@@ -3539,11 +3539,17 @@ async function atenderPedidos() {
                 }
                 if (Array.isArray(busca.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
+                  /* Todo anuncio igual que NAO entra na tabela fica registrado com
+                     o motivo (Weslei, 26/09: garantir ao cliente que a escolha e
+                     a melhor; Tomate W12 R$ 144,99 visto e fora da tabela). */
+                  const fora = [];
+                  const anotarFora = (t, motivo) => fora.push({ vendedor: t.vendedor || null, final: t.final ?? null, url: t.url || null, motivo });
                   for (const t of busca.todas) {
-                    if (t.final == null || vistos.has((t.vendedor || '').toLowerCase())) continue;
+                    if (t.final == null) { anotarFora(t, 'sem preco'); continue; }
+                    if (vistos.has((t.vendedor || '').toLowerCase())) { anotarFora(t, 'loja ja na tabela (fica o menor preco dela)'); continue; }
                     const mesmaLoja = !!(vendedor && (t.vendedor || '').toLowerCase() === vendedor.toLowerCase());
                     /* Mesma loja so com OUTRO anuncio mais barato. */
-                    if (mesmaLoja && !(finalAqui != null && t.final <= finalAqui - 0.5)) continue;
+                    if (mesmaLoja && !(finalAqui != null && t.final <= finalAqui - 0.5)) { anotarFora(t, 'mesma loja do link colado, nao mais barato'); continue; }
                     vistos.add((t.vendedor || '').toLowerCase());
                     referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final, url: t.url || null,
                       imagem: t.imagem || null, verificadoIA: !!t.verificadoIA,
@@ -3553,7 +3559,9 @@ async function atenderPedidos() {
                       cupom: t.cupom ? t.cupom.titulo : null });
                   }
                   referencias.sort((x, y) => x.final - y.final);
+                  referencias.slice(6).forEach(t => anotarFora(t, 'alem das 6 mais baratas'));
                   referencias = referencias.slice(0, 6);
+                  buscaFora.foraDaTabela = fora.length ? fora : null;
                 }
               } catch (e) {
                 /* Se a API ja olhou o catalogo, a comparacao aconteceu: so a
