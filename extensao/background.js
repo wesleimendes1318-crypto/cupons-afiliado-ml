@@ -1135,12 +1135,23 @@ async function produtoDoPerfilNaAba(url) {
           const k = (m[1] || m[2] || ('MLB' + m[3])).toUpperCase();
           if (!ids.has(k)) ids.set(k, h.split('#')[0]);
         }
-        return [...ids.values()].slice(0, 5);
+        /* Amostra para descobrir qual e o produto em destaque: endereco,
+           texto do cartao e posicao na tela. */
+        const amostra = [];
+        for (const [k, h] of ids) {
+          const a = [...document.querySelectorAll('a[href]')].find(x => (x.href || '').split('#')[0] === h);
+          const r = a ? a.getBoundingClientRect() : null;
+          amostra.push({ k, texto: a ? (a.innerText || a.getAttribute('aria-label') || '').slice(0, 80) : '',
+                         y: r ? Math.round(r.top) : null, larg: r ? Math.round(r.width) : null });
+          if (amostra.length >= 8) break;
+        }
+        return { links: [...ids.values()].slice(0, 5), amostra };
       }
     });
-    const achados = (saida && saida.result) || [];
+    const res = (saida && saida.result) || {};
+    const achados = res.links || [];
     if (achados.length === 1) return { produto: achados[0], via: 'unico anuncio da tela', fim };
-    return { produto: null, fim, anuncios: achados.length };
+    return { produto: null, fim, anuncios: achados.length, amostra: res.amostra || null };
   } finally {
     try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ }
   }
@@ -2854,8 +2865,20 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
         const c = (RE_CATALOGO.exec(h) || [])[1] || null;
         const ofertas = ofertasDoCatalogo(h).filter(o => o.item !== itemAtual && o.preco != null).slice(0, 3);
         if (!ofertas.length) return [];
-        return await avaliarCandidatos(ofertas.map(o => ({ ...o,
+        const achados = await avaliarCandidatos(ofertas.map(o => ({ ...o,
           url: c ? urlDaOferta(c, o.item) : 'https://produto.mercadolivre.com.br/' + o.item.replace(/^MLB/, 'MLB-') })), itemAtual);
+        /* Loja, titulo e FOTO de cada oferta, lidos da TELA da oferta (como a
+           pessoa ve): sem isso a conferencia reprovava ("Sem foto; Sem
+           titulo", Tomate W12 R$ 124,99, 26/09). Ate 2, uma aba por vez. */
+        for (const x of achados.slice(0, 2)) {
+          if (x.vendedor && x.imagem && x.titulo) continue;
+          const tela = await comPrazo(lerTelaDoAnuncio(x.url), 12000, null).catch(() => null);
+          if (!tela) continue;
+          if (!x.vendedor && tela.loja) x.vendedor = tela.loja;
+          if (!x.imagem && tela.imagem) x.imagem = tela.imagem;
+          if (!x.titulo && tela.titulo) x.titulo = desescapar(tela.titulo);
+        }
+        return achados;
       } catch (e) { return []; }
     })();
     const [daBusca, daPagina] = await Promise.all([
