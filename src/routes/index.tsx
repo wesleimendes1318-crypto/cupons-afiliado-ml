@@ -48,19 +48,60 @@ import { roboAtivo } from "@/lib/robo";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
 
+/* PERGUNTAS FREQUENTES: visíveis na página e nos dados estruturados
+   (FAQPage). O nome da marca aparece só de forma descritiva, com o aviso de
+   site independente (Weslei, 26/09: busca no Google). Sem citar IA, sem
+   prometer cupom. */
+const PERGUNTAS = [
+  {
+    pergunta: "O que é a Melhor Escolha?",
+    resposta:
+      "Um comparador de preços gratuito para produtos do Mercado Livre. Você cola o link de um anúncio e eu mostro o mesmo produto em outras lojas, do menor preço ao maior.",
+  },
+  {
+    pergunta: "Como achar o menor preço de um produto no Mercado Livre?",
+    resposta:
+      "Cole aqui o link do anúncio. Eu procuro o mesmo produto em outras lojas, confiro pela foto que é o mesmo e mostro a melhor escolha, já com o frete grátis indicado.",
+  },
+  {
+    pergunta: "O site mostra cupom de desconto?",
+    resposta:
+      "Quando a loja tem cupom, o desconto entra no preço final da comparação. Não prometo cupom: o foco é o menor preço de verdade.",
+  },
+  {
+    pergunta: "O frete entra na comparação?",
+    resposta:
+      "Sim. Loja sem frete grátis nunca vira a recomendação, mesmo com preço menor, porque o frete pode deixar a compra mais cara.",
+  },
+  {
+    pergunta: "Paguei mais por comprar pelo link do site?",
+    resposta:
+      "Não. O preço é o mesmo da loja. Quando você compra pelo link, eu recebo uma comissão do programa de afiliados.",
+  },
+  {
+    pergunta: "A Melhor Escolha é do Mercado Livre?",
+    resposta:
+      "Não. É um site independente, feito por um participante do programa de afiliados, sem vínculo com o Mercado Livre.",
+  },
+];
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Melhor Escolha — o mesmo produto, na loja mais barata" },
+      { title: "Comparador de preços do Mercado Livre: menor preço | Melhor Escolha" },
       {
         name: "description",
         content:
-          "Cole o link de um produto e veja o mesmo produto em outras lojas, do mais barato ao mais caro.",
+          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, do menor preço ao maior, com frete grátis e desconto conferidos. Grátis.",
       },
-      { property: "og:title", content: "Melhor Escolha — comparador de preços" },
+      {
+        property: "og:title",
+        content: "Melhor Escolha: comparador de preços do Mercado Livre",
+      },
       {
         property: "og:description",
-        content: "O mesmo produto em outras lojas, com a diferença de preço de cada uma.",
+        content:
+          "O mesmo produto em outras lojas, do menor preço ao maior. Cole o link e veja a melhor escolha.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://melhorescolha.io/" },
@@ -74,9 +115,23 @@ export const Route = createFileRoute("/")({
           "@context": "https://schema.org",
           "@type": "WebSite",
           name: "Melhor Escolha",
+          alternateName: ["melhorescolha.io", "Melhor Escolha comparador de preços"],
           url: "https://melhorescolha.io/",
           inLanguage: "pt-BR",
-          description: "Ferramenta independente que compara o preço do mesmo produto entre lojas.",
+          description:
+            "Comparador de preços independente para produtos do Mercado Livre: o mesmo produto em outras lojas, do menor preço ao maior.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: PERGUNTAS.map((p) => ({
+            "@type": "Question",
+            name: p.pergunta,
+            acceptedAnswer: { "@type": "Answer", text: p.resposta },
+          })),
         }),
       },
     ],
@@ -1697,7 +1752,10 @@ function Index() {
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Melhor Escolha: compare preços — por{" "}
+                Melhor Escolha: comparador de preços do Mercado Livre
+              </h1>
+              <p className="mt-2 text-sm font-semibold text-white/85">
+                por{" "}
                 <a
                   href="https://www.instagram.com/wslmendes/"
                   target="_blank"
@@ -1706,7 +1764,7 @@ function Index() {
                 >
                   @WSLMENDES
                 </a>
-              </h1>
+              </p>
 
               <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
                 Cole o link do produto. Eu mostro o mesmo produto em outras lojas, do mais barato ao
@@ -2609,6 +2667,22 @@ function Index() {
           </>
         )}
       </main>
+
+      <section aria-label="Perguntas frequentes" className="border-t border-border bg-background">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+          <h2 className="text-xl font-extrabold sm:text-2xl">
+            Comparador de preços: perguntas frequentes
+          </h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {PERGUNTAS.map((p) => (
+              <details key={p.pergunta} className="cartao-conteudo p-4">
+                <summary className="cursor-pointer text-base font-bold">{p.pergunta}</summary>
+                <p className="mt-2 text-sm leading-relaxed text-secondary-ink">{p.resposta}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section aria-label="Guias de compra" className="border-y border-border bg-card">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">

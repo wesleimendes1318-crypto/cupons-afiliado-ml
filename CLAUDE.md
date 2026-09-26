@@ -61,7 +61,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 ## Texto e visual
 - Botão de compra NUNCA leva o nome da loja: usar texto de compra segura
   ("Comprar com segurança"). Sempre oferecer compartilhar no WhatsApp.
-- Não escrever "Mercado Livre" no texto do site (marca / AdSense).
+- "Mercado Livre" só de forma DESCRITIVA e com moderação (Weslei, 26/09, para
+  a busca no Google: "comparador de preços do Mercado Livre"), sempre com o
+  aviso de site independente, sem vínculo. Nunca logo, cores ou visual da marca,
+  nem em botão de compra.
 - Textos curtos. Não prometer cupom. Sempre mostrar foto do produto.
 - Não citar IA/inteligência artificial nos textos do site nem nos guias
   (monetização: diretrizes do Google Ads e do programa de afiliados).

@@ -11,6 +11,21 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://melhorescolha.io/guias/como-comparar-o-preco-do-mesmo-produto</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://melhorescolha.io/guias/mesmo-produto-ou-parecido</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://melhorescolha.io/guias/o-que-conferir-antes-de-pagar</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://melhorescolha.io/guias/como-calcular-a-economia-real-de-um-cupom</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

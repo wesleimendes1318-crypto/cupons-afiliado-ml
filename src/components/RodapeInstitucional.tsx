@@ -53,8 +53,8 @@ export function RodapeInstitucional() {
           <AvisoAfiliado />
           <p className="text-xs text-secondary-ink">
             Site independente, feito por um participante do programa de afiliados. Não é um site
-            oficial de nenhuma loja ou marketplace, nem tem vínculo, patrocínio ou aprovação de
-            qualquer um deles.
+            oficial do Mercado Livre nem de nenhuma loja, e não tem vínculo, patrocínio ou aprovação
+            de nenhum deles. Mercado Livre é marca de seus donos.
           </p>
           <p className="text-xs text-secondary-ink">
             Preços, estoque e frete mudam a qualquer momento e devem ser conferidos na página da
