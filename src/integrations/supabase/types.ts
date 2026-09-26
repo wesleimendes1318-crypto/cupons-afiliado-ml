@@ -239,6 +239,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_vereditos: {
+        Row: {
+          chave_candidato: string
+          chave_original: string
+          confianca: number
+          criado_em: string
+          igual: boolean
+          modelo: string | null
+          motivo: string | null
+          parecido: boolean | null
+        }
+        Insert: {
+          chave_candidato: string
+          chave_original: string
+          confianca?: number
+          criado_em?: string
+          igual: boolean
+          modelo?: string | null
+          motivo?: string | null
+          parecido?: boolean | null
+        }
+        Update: {
+          chave_candidato?: string
+          chave_original?: string
+          confianca?: number
+          criado_em?: string
+          igual?: boolean
+          modelo?: string | null
+          motivo?: string | null
+          parecido?: boolean | null
+        }
+        Relationships: []
+      }
       limites: {
         Row: {
           chave: string
@@ -455,6 +488,10 @@ export type Database = {
         Args: { p_categoria: string; p_titulo: string }
         Returns: string
       }
+      completar_pedido: {
+        Args: { p_analise: Json; p_id: number; p_token: string }
+        Returns: undefined
+      }
       concluir_geracao: {
         Args: {
           p_chave: string
@@ -586,6 +623,7 @@ export type Database = {
         }[]
       }
       normalizar_nome: { Args: { p: string }; Returns: string }
+      pedidos_esperando: { Args: { p_token: string }; Returns: number }
       pedidos_pendentes: {
         Args: { p_token: string }
         Returns: {
@@ -598,6 +636,7 @@ export type Database = {
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
       pedir_link_loja: { Args: { p_url: string }; Returns: number }
+      pedir_link_novo: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
       produto_permitido: { Args: { p_texto: string }; Returns: boolean }
       registrar_produto_visto: {

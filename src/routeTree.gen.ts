@@ -12,15 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as DivulgacaoDeAfiliadosRouteImport } from './routes/divulgacao-de-afiliados'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
 import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as CategoriasIndexRouteImport } from './routes/categorias.index'
 import { Route as CategoriasSlugRouteImport } from './routes/categorias.$slug'
 import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
@@ -44,6 +48,16 @@ const ContatoRoute = ContatoRouteImport.update({
 const DivulgacaoDeAfiliadosRoute = DivulgacaoDeAfiliadosRouteImport.update({
   id: '/divulgacao-de-afiliados',
   path: '/divulgacao-de-afiliados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
@@ -71,6 +85,12 @@ const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   path: '/termos-de-uso',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CategoriasIndexRoute = CategoriasIndexRouteImport.update({
   id: '/categorias/',
   path: '/categorias/',
@@ -89,6 +109,11 @@ const GuiasIndexRoute = GuiasIndexRouteImport.update({
 const GuiasSlugRoute = GuiasSlugRouteImport.update({
   id: '/guias/$slug',
   path: '/guias/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
@@ -142,15 +167,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contato': typeof ContatoRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/sobre': typeof SobreRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -165,15 +194,19 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contato': typeof ContatoRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/sobre': typeof SobreRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/categorias': typeof CategoriasIndexRoute
   '/guias': typeof GuiasIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -189,15 +222,19 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/contato': typeof ContatoRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/sobre': typeof SobreRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -214,15 +251,19 @@ export interface FileRouteTypes {
     | '/'
     | '/contato'
     | '/divulgacao-de-afiliados'
+    | '/login'
+    | '/mcp'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
     | '/sobre'
     | '/termos-de-uso'
+    | '/.well-known/oauth-protected-resource'
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/categorias/'
     | '/guias/'
+    | '/.lovable/oauth/consent'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -237,15 +278,19 @@ export interface FileRouteTypes {
     | '/'
     | '/contato'
     | '/divulgacao-de-afiliados'
+    | '/login'
+    | '/mcp'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
     | '/sobre'
     | '/termos-de-uso'
+    | '/.well-known/oauth-protected-resource'
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/categorias'
     | '/guias'
+    | '/.lovable/oauth/consent'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -260,15 +305,19 @@ export interface FileRouteTypes {
     | '/'
     | '/contato'
     | '/divulgacao-de-afiliados'
+    | '/login'
+    | '/mcp'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
     | '/sobre'
     | '/termos-de-uso'
+    | '/.well-known/oauth-protected-resource'
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/categorias/'
     | '/guias/'
+    | '/.lovable/oauth/consent'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -284,15 +333,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContatoRoute: typeof ContatoRoute
   DivulgacaoDeAfiliadosRoute: typeof DivulgacaoDeAfiliadosRoute
+  LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   SobreRoute: typeof SobreRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CategoriasSlugRoute: typeof CategoriasSlugRoute
   GuiasSlugRoute: typeof GuiasSlugRoute
   CategoriasIndexRoute: typeof CategoriasIndexRoute
   GuiasIndexRoute: typeof GuiasIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
@@ -325,6 +378,20 @@ declare module '@tanstack/react-router' {
       path: '/divulgacao-de-afiliados'
       fullPath: '/divulgacao-de-afiliados'
       preLoaderRoute: typeof DivulgacaoDeAfiliadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-cookies': {
@@ -362,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermosDeUsoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/categorias/': {
       id: '/categorias/'
       path: '/categorias'
@@ -388,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/guias/$slug'
       fullPath: '/guias/$slug'
       preLoaderRoute: typeof GuiasSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/classificar': {
@@ -460,15 +541,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContatoRoute: ContatoRoute,
   DivulgacaoDeAfiliadosRoute: DivulgacaoDeAfiliadosRoute,
+  LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   SobreRoute: SobreRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CategoriasSlugRoute: CategoriasSlugRoute,
   GuiasSlugRoute: GuiasSlugRoute,
   CategoriasIndexRoute: CategoriasIndexRoute,
   GuiasIndexRoute: GuiasIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
