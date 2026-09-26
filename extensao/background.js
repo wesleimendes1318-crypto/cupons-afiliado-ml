@@ -3806,6 +3806,10 @@ async function atenderPedidos() {
             if (outraFalhou) return false;
             if (!procurouOutra) return false;
             if (buscaFora.rodou && buscaFora.motivo) return false;
+            /* Busca que leu pagina sem nenhum preco NAO procurou (26/09, pedidos
+               350-354: 11 KB e 0 anuncios, e o site dizia "nao encontrei mais
+               barato"). Toda busca do Mercado Livre traz cartoes com preco. */
+            if (buscaFora.rodou && buscaFora.leitura && !buscaFora.leitura.comPreco && !(buscaFora.vistos > 0)) return false;
             if (buscaFora.leitura && buscaFora.leitura.ia && buscaFora.leitura.ia.indisponivel) return false;
             if (verificacaoIA && verificacaoIA.indisponivel) return false;
             return true;
