@@ -1379,7 +1379,13 @@ function Resultado({
     (r) => r.final != null && !nomesAlt.has((r.vendedor ?? "").toLowerCase()),
   );
   const candidatas = [
-    ...alternativas.map((o, i) => ({ o, chave: `alt-${i}` })),
+    /* Link igual ao do anúncio colado = link da ficha do produto (a loja não
+       aceita link próprio): abre a página geral, e o cliente escolhe a loja
+       em "Outras opções de compra" (Advocate, 26/09). */
+    ...alternativas.map((o, i) => ({
+      o: { ...o, mesmaPagina: Boolean(o.mesmaPagina || (o.link && o.link === link)) },
+      chave: `alt-${i}`,
+    })),
     ...refsBase.map((r, i) => ({
       chave: `ref-${i}`,
       o: {
@@ -1392,6 +1398,7 @@ function Resultado({
             : null,
         finalAtual: precoColado,
         link: r.link ?? null,
+        mesmaPagina: Boolean(r.link && r.link === link),
         url: r.url ?? null,
         imagem: r.imagem ?? null,
         freteGratis: r.freteGratis ?? null,
@@ -1463,6 +1470,7 @@ function Resultado({
       diferenca: o.ganho != null ? -o.ganho : null,
       freteGratis: o.freteGratis ?? null,
       mesmaLoja: o.mesmaLoja ?? null,
+      mesmaPagina: Boolean(o.link && o.link === link),
       link: o.link,
       url: null,
     })),
@@ -1474,6 +1482,7 @@ function Resultado({
       diferenca: r.diferenca,
       freteGratis: r.freteGratis ?? null,
       mesmaLoja: r.mesmaLoja ?? null,
+      mesmaPagina: Boolean(r.link && r.link === link),
       link: r.link ?? null,
       url: r.url ?? null,
     })),
@@ -1883,6 +1892,8 @@ type LinhaLoja = {
   /* true frete grátis, false frete pago, null/undefined não sei. */
   freteGratis?: boolean | null;
   mesmaLoja?: boolean | null;
+  /* Link abre a página geral do produto: escolher a loja em "Outras opções". */
+  mesmaPagina?: boolean | null;
 };
 
 /* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
@@ -2063,6 +2074,11 @@ function TodasAsLojas({
                   <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
                   <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
                     {l.colado ? "Anúncio colado" : l.nome}
+                    {l.mesmaPagina && !l.colado && (
+                      <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                        Na página, escolha esta loja em "Outras opções de compra"
+                      </span>
+                    )}
                     {l.mesmaLoja && (
                       <span className="block text-[10px] font-semibold text-ml-blue">
                         Mesma loja, outro anúncio

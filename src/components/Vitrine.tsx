@@ -12,9 +12,10 @@ import { RefreshCw, TrendingDown } from "lucide-react";
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
 
-const NOME_CATEGORIA: Record<string, string> = Object.fromEntries(
-  [...CATEGORIAS.map((c) => [c.slug, c.nome] as const), ["outros", "Mais achados"] as const],
-);
+const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
+  ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
+  ["outros", "Mais achados"] as const,
+]);
 
 type ItemVitrine = {
   chave: string;
@@ -61,7 +62,9 @@ function CupomDaLoja({ codigo, desconto }: { codigo: string; desconto: string | 
         </span>
         <span className="block truncate font-mono text-xs font-bold">{codigo}</span>
       </span>
-      <span className="shrink-0 text-[11px] font-bold text-success">{copiou ? "copiado ✓" : "copiar"}</span>
+      <span className="shrink-0 text-[11px] font-bold text-success">
+        {copiou ? "copiado ✓" : "copiar"}
+      </span>
     </button>
   );
 }
@@ -113,7 +116,10 @@ export function Vitrine() {
 
   const lista = useMemo(() => {
     let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
-    if (aba === "economias") l = l.filter((i) => (i.economia ?? 0) > 0).sort((a, b) => (b.economia ?? 0) - (a.economia ?? 0));
+    if (aba === "economias")
+      l = l
+        .filter((i) => (i.economia ?? 0) > 0)
+        .sort((a, b) => (b.economia ?? 0) - (a.economia ?? 0));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
     return l.slice(0, categoria == null ? 120 : 48);
   }, [itens, aba, categoria]);
@@ -147,7 +153,9 @@ export function Vitrine() {
             onClick={() => setAba(a.id)}
             className={
               "rounded-full px-3 py-1.5 text-sm font-semibold transition-colors " +
-              (aba === a.id ? "bg-ml-blue text-white" : "border border-border bg-card hover:border-ml-blue")
+              (aba === a.id
+                ? "bg-ml-blue text-white"
+                : "border border-border bg-card hover:border-ml-blue")
             }
           >
             {a.rotulo}
@@ -198,16 +206,24 @@ export function Vitrine() {
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <h3 className="text-base font-bold">
                     {NOME_CATEGORIA[c] ?? c}{" "}
-                    <span className="text-sm font-normal text-secondary-ink">({daCategoria.length})</span>
+                    <span className="text-sm font-normal text-secondary-ink">
+                      ({daCategoria.length})
+                    </span>
                   </h3>
                   {daCategoria.length > 5 && (
-                    <button type="button" onClick={() => setCategoria(c)} className="text-sm font-semibold text-ml-blue hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => setCategoria(c)}
+                      className="text-sm font-semibold text-ml-blue hover:underline"
+                    >
                       Ver todos
                     </button>
                   )}
                 </div>
                 <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                  {daCategoria.slice(0, 5).map((i) => <Cartao key={i.chave} i={i} />)}
+                  {daCategoria.slice(0, 5).map((i) => (
+                    <Cartao key={i.chave} i={i} />
+                  ))}
                 </ul>
               </div>
             );
@@ -215,7 +231,9 @@ export function Vitrine() {
         </div>
       ) : (
         <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-          {lista.map((i) => <Cartao key={i.chave} i={i} />)}
+          {lista.map((i) => (
+            <Cartao key={i.chave} i={i} />
+          ))}
         </ul>
       )}
     </section>
@@ -223,75 +241,85 @@ export function Vitrine() {
 }
 
 function Cartao({ i }: { i: ItemVitrine }) {
-            const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
-            const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
-            return (
-              <li key={i.chave} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
-                <div className="relative h-28 bg-white sm:h-32">
-                  {i.imagem ? (
-                    <img
-                      src={i.imagem}
-                      alt={i.titulo}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full object-contain p-1.5"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center p-2 text-center text-[11px] text-secondary-ink">
-                      {NOME_CATEGORIA[i.categoria_site ?? "outros"] ?? "Produto comparado"}
-                    </div>
-                  )}
-                  {temEconomia && (
-                    <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-success px-1 py-0.5 text-[10px] font-bold text-white">
-                      <TrendingDown className="size-3" aria-hidden="true" />
-                      {brl(i.economia)} a menos
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col p-2">
-                  <p className="line-clamp-2 text-xs font-medium leading-snug">{i.titulo}</p>
-                  <p className="mt-1 text-base font-extrabold tabular-nums">
-                    {brl(temEconomia ? i.melhor_preco : i.preco)}
-                  </p>
-                  <p className="truncate text-[11px] text-secondary-ink">
-                    {temEconomia ? (
-                      <>
-                        na {i.melhor_loja} <span className="line-through">{brl(i.preco)}</span>
-                      </>
-                    ) : (
-                      <>na {i.loja ?? "loja"}</>
-                    )}
-                  </p>
-                  {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
-                  <p className="mt-0.5 text-[11px] text-secondary-ink/80">
-                    visto em {quando(i.visto_em)}
-                    {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} lojas comparadas` : ""}
-                  </p>
-                  <div className="mt-auto flex flex-col gap-1 pt-2">
-                    {destino && (
-                      <a
-                        href={destino}
-                        target="_blank"
-                        rel="noopener noreferrer sponsored"
-                        className="rounded-md bg-success py-1.5 text-center text-xs font-bold text-white hover:brightness-95"
-                      >
-                        Ver oferta
-                      </a>
-                    )}
-                    {i.url_produto && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url_produto }))
-                        }
-                        className="inline-flex items-center justify-center gap-1 rounded-md border border-border py-1 text-[11px] font-semibold hover:border-ml-blue"
-                      >
-                        <RefreshCw className="size-3" aria-hidden="true" />
-                        Comparar de novo
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
+  const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
+  const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
+  return (
+    <li
+      key={i.chave}
+      className="flex flex-col overflow-hidden rounded-lg border border-border bg-card"
+    >
+      <div className="relative h-28 bg-white sm:h-32">
+        {i.imagem ? (
+          <img
+            src={i.imagem}
+            alt={i.titulo}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-contain p-1.5"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center p-2 text-center text-[11px] text-secondary-ink">
+            {NOME_CATEGORIA[i.categoria_site ?? "outros"] ?? "Produto comparado"}
+          </div>
+        )}
+        {temEconomia && (
+          <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-success px-1 py-0.5 text-[10px] font-bold text-white">
+            <TrendingDown className="size-3" aria-hidden="true" />
+            {brl(i.economia)} a menos
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-2">
+        <p className="line-clamp-2 text-xs font-medium leading-snug">{i.titulo}</p>
+        <p className="mt-1 text-base font-extrabold tabular-nums">
+          {brl(temEconomia ? i.melhor_preco : i.preco)}
+        </p>
+        <p className="truncate text-[11px] text-secondary-ink">
+          {temEconomia ? (
+            <>
+              na {i.melhor_loja} <span className="line-through">{brl(i.preco)}</span>
+            </>
+          ) : (
+            <>na {i.loja ?? "loja"}</>
+          )}
+        </p>
+        {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
+        <p className="mt-0.5 text-[11px] text-secondary-ink/80">
+          visto em {quando(i.visto_em)}
+          {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} lojas comparadas` : ""}
+        </p>
+        <div className="mt-auto flex flex-col gap-1 pt-2">
+          {destino && (
+            <a
+              href={destino}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="rounded-md bg-success py-1.5 text-center text-xs font-bold text-white hover:brightness-95"
+            >
+              Ver oferta
+            </a>
+          )}
+          {/* Link da ficha do produto (a loja mais barata não aceita link
+              próprio): a página abre na oferta principal. */}
+          {temEconomia && i.melhor_link && i.melhor_link === i.link && (
+            <p className="text-[10px] leading-snug text-amber-700 dark:text-amber-300">
+              Na página, toque em "Outras opções de compra" e escolha {i.melhor_loja}.
+            </p>
+          )}
+          {i.url_produto && (
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url_produto }))
+              }
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-border py-1 text-[11px] font-semibold hover:border-ml-blue"
+            >
+              <RefreshCw className="size-3" aria-hidden="true" />
+              Comparar de novo
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
+  );
 }
