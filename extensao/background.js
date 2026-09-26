@@ -3573,7 +3573,15 @@ async function atenderPedidos() {
                    25/09, assim cada loja ganha o seu proprio link de afiliado
                    (pela ficha o gerador devolvia o mesmo link para todas). */
                 const alvoAlt = enderecoDoAnuncio(alt.url, alt.item);
-                const la = await gerarNaAba(tabId, alvoAlt);
+                let la;
+                try { la = await gerarNaAba(tabId, alvoAlt); }
+                catch (e) {
+                  /* "URL not allowed" (erro 111) para o endereco avulso de anuncio
+                     de catalogo (Advocate, 26/09): o gerador aceita o endereco da
+                     ficha com o anuncio escolhido. Tenta de novo com ele. */
+                  if (!/not allowed|111/i.test(e.message || '') || !alt.url || alt.url === alvoAlt) throw e;
+                  la = await gerarNaAba(tabId, alt.url);
+                }
                 /* O gerador do Mercado Livre devolve o MESMO link para todas as
                    ofertas da mesma ficha de catalogo (medido em 24/09: Celimax
                    e capinha). Entao:
@@ -3638,6 +3646,13 @@ async function atenderPedidos() {
                 const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
                 const mapa = await gerarVariosNaAba(tabId, alvos);
                 semLink.forEach((x, k) => { if (mapa[alvos[k]]) x.link = mapa[alvos[k]]; });
+                /* Recusado no endereco avulso ("URL not allowed"): tenta o
+                   endereco original (ficha do catalogo com o anuncio). */
+                const recusados = semLink.filter((x, k) => !x.link && x.url !== alvos[k]);
+                if (recusados.length) {
+                  const mapa2 = await gerarVariosNaAba(tabId, recusados.map(x => x.url));
+                  recusados.forEach(x => { if (mapa2[x.url]) x.link = mapa2[x.url]; });
+                }
               }
             } catch (e) { console.warn('[links em lote]', e.message); }
           };

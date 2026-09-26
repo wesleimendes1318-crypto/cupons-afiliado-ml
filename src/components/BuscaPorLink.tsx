@@ -186,7 +186,9 @@ type OutraLoja = {
   final: number | null;
   cupomTitulo: string | null;
   vence: string | null;
-  link: string;
+  link: string | null;
+  /* Endereço do anúncio: sem link pronto, o botão gera o link no clique. */
+  url?: string | null;
   codigo: string | null;
   /* 'mais_barata': o preço final lá é menor. 'tem_cupom': a loja do anúncio
      não tem cupom e esta tem, sem sair mais cara. */
@@ -1366,8 +1368,50 @@ function Resultado({
     a?.outrasLojas && a.outrasLojas.length ? a.outrasLojas : a?.outraLoja ? [a.outraLoja] : [];
   /* A troca vira a recomendação principal quando a melhor alternativa sai mais
      barata, ou quando a loja do anúncio não tem cupom e a outra tem. */
-  const trocar =
-    alternativas.length > 0 && (a?.temCupom !== true || (alternativas[0]?.ganho ?? 0) > 0);
+  /* UMA recomendação só, e ela é a mesma linha que leva o selo "Mais barato"
+     na tabela (Weslei, 26/09: a tabela marcava uma loja e a recomendação
+     outra). Candidatas: todas as lojas do mesmo produto, da busca e da tabela,
+     com frete grátis (ou sem informação), com link ou endereço para gerar o
+     link, e pelo menos R$ 0,50 abaixo do anúncio colado. */
+  const precoColado = a?.preco ?? null;
+  const nomesAlt = new Set(alternativas.map((o) => (o.vendedor ?? "").toLowerCase()));
+  const refsBase = (a?.referencias ?? []).filter(
+    (r) => r.final != null && !nomesAlt.has((r.vendedor ?? "").toLowerCase()),
+  );
+  const candidatas = [
+    ...alternativas.map((o, i) => ({ o, chave: `alt-${i}` })),
+    ...refsBase.map((r, i) => ({
+      chave: `ref-${i}`,
+      o: {
+        vendedor: r.vendedor,
+        preco: r.preco,
+        final: r.final,
+        ganho:
+          precoColado != null && r.final != null
+            ? Math.round((precoColado - r.final) * 100) / 100
+            : null,
+        finalAtual: precoColado,
+        link: r.link ?? null,
+        url: r.url ?? null,
+        imagem: r.imagem ?? null,
+        freteGratis: r.freteGratis ?? null,
+        mesmaLoja: r.mesmaLoja ?? null,
+        verificadoIA: true,
+        achadoNaBusca: true,
+        motivo: "mais_barata",
+      } as OutraLoja,
+    })),
+  ]
+    .filter(
+      (c) =>
+        c.o.final != null &&
+        c.o.freteGratis !== false &&
+        Boolean(c.o.link || c.o.url) &&
+        (precoColado == null ? (c.o.ganho ?? 0) > 0 : c.o.final <= precoColado - 0.5),
+    )
+    .sort((x, y) => (x.o.final ?? 0) - (y.o.final ?? 0));
+  const recomendada = candidatas[0] ?? null;
+  const trocar = recomendada != null;
 
   /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
@@ -1473,14 +1517,19 @@ function Resultado({
 
       {temColuna && (
         <div className="sm:col-start-2 sm:row-span-2 sm:row-start-1">
-          {mostraTabela && <TodasAsLojas linhas={linhasLojas} />}
+          {mostraTabela && (
+            <TodasAsLojas
+              linhas={linhasLojas}
+              melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
+            />
+          )}
           <Parecidos lista={a?.parecidos} tituloColado={a?.titulo} precoColado={a?.preco} />
         </div>
       )}
 
       <div className="sm:col-start-1 sm:row-start-2">
         {/* Só a melhor em destaque; todas as outras lojas estão na tabela. */}
-        {alternativas.slice(0, 1).map((oferta, i) => (
+        {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
           <OutraLojaComCupom
             key={`${oferta.vendedor ?? "loja"}-${i}`}
             oferta={oferta}
@@ -1585,7 +1634,7 @@ function Resultado({
         {!leituraFalhou &&
           !semLink &&
           (() => {
-            const melhor = trocar ? alternativas[0] : null;
+            const melhor = recomendada ? recomendada.o : null;
             const destino = melhor?.link ?? link;
             const texto = mensagemMelhorOpcao({
               titulo: a?.titulo,
@@ -1959,7 +2008,13 @@ function Parecidos({
   );
 }
 
-function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
+function TodasAsLojas({
+  linhas,
+  melhorChave,
+}: {
+  linhas: LinhaLoja[];
+  melhorChave?: string | null;
+}) {
   if (linhas.length < 2) return null;
   const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
   /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
@@ -1968,10 +2023,15 @@ function TodasAsLojas({ linhas }: { linhas: LinhaLoja[] }) {
   /* FRETE (Weslei, 25/09): loja com frete pago não leva o selo "Mais
      barato" — o frete pode deixá-la mais cara que as outras. O selo vai para
      a mais barata com frete grátis (ou sem informação de frete). */
-  const melhorIdx = Math.max(
-    0,
-    ordem.findIndex((l) => l.freteGratis !== false),
-  );
+  /* O selo vai na MESMA linha da recomendação (melhorChave). */
+  const idxRecomendada = melhorChave ? ordem.findIndex((l) => l.chave === melhorChave) : -1;
+  const melhorIdx =
+    idxRecomendada >= 0
+      ? idxRecomendada
+      : Math.max(
+          0,
+          ordem.findIndex((l) => l.freteGratis !== false),
+        );
   const menor = ordem[melhorIdx]?.final ?? null;
   return (
     <div className="mt-3 sm:mt-0">
@@ -2147,14 +2207,18 @@ function OutraLojaComCupom({
             {oferta.verificadoIA ? " · ✓ conferido pela foto" : ""}
           </p>
         </div>
-        <a
-          href={oferta.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 rounded-md bg-success px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
-        >
-          Comprar seguro
-        </a>
+        {oferta.link ? (
+          <a
+            href={oferta.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-md bg-success px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
+          >
+            Comprar seguro
+          </a>
+        ) : oferta.url ? (
+          <VerNaLoja url={oferta.url} />
+        ) : null}
       </div>
     );
   }
@@ -2278,18 +2342,24 @@ function OutraLojaComCupom({
         </p>
       )}
 
-      <a
-        href={oferta.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
-      >
-        {/* Regra do Weslei: nunca o nome da loja no botão; texto de compra segura. */}
-        {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(
-          " pelo app",
-          " no app",
-        )}
-      </a>
+      {oferta.link ? (
+        <a
+          href={oferta.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+        >
+          {/* Regra do Weslei: nunca o nome da loja no botão; texto de compra segura. */}
+          {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(
+            " pelo app",
+            " no app",
+          )}
+        </a>
+      ) : oferta.url ? (
+        <div className="mt-2">
+          <VerNaLoja url={oferta.url} grande />
+        </div>
+      ) : null}
       {oferta.mesmaPagina ? (
         <p className="mt-1.5 rounded-md bg-card px-3 py-2 text-xs leading-relaxed">
           <span className="font-semibold">Importante:</span> o link abre a página deste produto. Se
@@ -2302,7 +2372,7 @@ function OutraLojaComCupom({
         principal && <AvisoDoBotao d={dispositivo} />
       )}
 
-      {oferta.cupomId != null && (
+      {oferta.cupomId != null && oferta.link && (
         <CodigoNaHora
           cupomId={oferta.cupomId}
           destino={oferta.link}

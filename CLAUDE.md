@@ -34,6 +34,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Na tabela aparece "Frete grátis" ou "Sem frete grátis".
 - Mesma loja do link colado entra na comparação só com OUTRO anúncio dela
   mais barato ("Mesma loja, outro anúncio"; Camelo R$ 78,54 x R$ 86,90).
+- UMA recomendação só: é sempre a mesma linha que leva o selo "Mais barato"
+  na tabela (Advocate, 26/09: tabela e recomendação apontavam lojas diferentes).
+- Todo anúncio pode gerar link de afiliado: se o gerador recusar o endereço
+  avulso ("URL not allowed", erro 111), tentar o endereço da ficha do
+  catálogo com o anúncio (/p/MLB...?pdp_filters=item_id:...).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
   captcha/tráfego suspeito e o ritmo de um pedido por vez.
 
