@@ -299,13 +299,6 @@ function Cartao({ i }: { i: ItemVitrine }) {
               Ver oferta
             </a>
           )}
-          {/* Link da ficha do produto (a loja mais barata não aceita link
-              próprio): a página abre na oferta principal. */}
-          {temEconomia && i.melhor_link && i.melhor_link === i.link && (
-            <p className="text-[10px] leading-snug text-amber-700 dark:text-amber-300">
-              Na página, toque em "Outras opções de compra" e escolha {i.melhor_loja}.
-            </p>
-          )}
           {i.url_produto && (
             <button
               type="button"

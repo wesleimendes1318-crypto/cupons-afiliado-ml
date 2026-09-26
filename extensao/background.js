@@ -821,7 +821,25 @@ function enderecoDoAnuncio(url, item) {
   return it ? 'https://produto.mercadolivre.com.br/' + String(it).toUpperCase().replace(/^MLB-?/, 'MLB-') : url;
 }
 
-async function gerarVariosNaAba(tabId, urls, tag = TAG_PADRAO) {
+/* "URL not allowed in affiliates program" (erro 111): o programa de afiliados
+   nao aceita o endereco avulso deste anuncio. Medido em 26/09 (Advocate,
+   CORDAOUMBILICAL): pela ficha do catalogo o gerador devolve o MESMO link do
+   anuncio colado (um link por ficha), que abre na oferta principal.
+   Estrategia (Weslei, 26/09: todo botao leva o link de afiliado dele e a
+   recomendacao precisa gerar comissao):
+     1. tenta o endereco do anuncio na forma MLB-...-_JM;
+     2. nao deu: a loja fica na tabela com o link de afiliado da ficha e o
+        aviso de escolher a loja, marcada semAfiliado; o site NAO a recomenda
+        e recomenda a mais barata que tem link proprio. */
+const recusadoNoPrograma = e => /not allowed|\b111\b/i.test((e && e.message) || String(e || ''));
+
+function anuncioComSufixo(url, item) {
+  const base = enderecoDoAnuncio(url, item);
+  return /^https:\/\/produto\.mercadolivre\.com\.br\/MLB-\d+$/i.test(base || '') ? base + '-_JM' : null;
+}
+
+/* recusados (opcional): recebe os enderecos que o programa recusou (erro 111). */
+async function gerarVariosNaAba(tabId, urls, tag = TAG_PADRAO, recusados = null) {
   const mapa = {};
   if (!urls.length) return mapa;
   const [saida] = await chrome.scripting.executeScript({
@@ -837,7 +855,13 @@ async function gerarVariosNaAba(tabId, urls, tag = TAG_PADRAO) {
     if (!it) return;
     const curto = it.short_url || it.shortUrl
       || (String(it.text || '').match(/https?:\/\/meli\.la\/[A-Za-z0-9]+/) || [])[0] || null;
-    if (!curto) return;
+    if (!curto) {
+      if (recusados && (String(it.error_code) === '111' || /not allowed/i.test(it.message || ''))) {
+        const k = urls.findIndex(u => norm(u) === norm(it.origin_url || ''));
+        recusados.add(urls[k >= 0 ? k : i]);
+      }
+      return;
+    }
     const origem = norm(it.origin_url || it.long_url || '');
     const k = urls.findIndex(u => norm(u) === origem);
     mapa[urls[k >= 0 ? k : i]] = curto;
@@ -3349,6 +3373,8 @@ async function atenderPedidos() {
           let outra = null;
           let outras = [];
           let outraFalhou = null;
+          /* Anuncios recusados pelo programa de afiliados e o que foi tentado. */
+          let recusados111 = [];
           /* O SITE PRECISA SABER SE EU PROCUREI.
 
              Sem este sinal, "nao achei loja melhor" e "nem cheguei a olhar"
@@ -3383,7 +3409,7 @@ async function atenderPedidos() {
              pedidos na fila, a busca era pulada. A busca e do servidor, pela
              API oficial, e nao pesa na conta de afiliado. */
           const compararAgora = async () => {
-          outra = null; outras = []; outraFalhou = null;
+          outra = null; outras = []; outraFalhou = null; recusados111 = [];
           procurouOutra = false; motivoNaoProcurou = null;
           referencias = []; parecidos = []; freteAqui = null; buscaFora = { rodou: false, motivo: null, vistos: 0 };
           apiAchou = false; verificacaoIA = null; ultimaLeitura = null;
@@ -3576,11 +3602,35 @@ async function atenderPedidos() {
                 let la;
                 try { la = await gerarNaAba(tabId, alvoAlt); }
                 catch (e) {
-                  /* "URL not allowed" (erro 111) para o endereco avulso de anuncio
-                     de catalogo (Advocate, 26/09): o gerador aceita o endereco da
-                     ficha com o anuncio escolhido. Tenta de novo com ele. */
-                  if (!/not allowed|111/i.test(e.message || '') || !alt.url || alt.url === alvoAlt) throw e;
-                  la = await gerarNaAba(tabId, alt.url);
+                  if (!recusadoNoPrograma(e)) throw e;
+                  /* Recusado (erro 111): estrategia descrita em recusadoNoPrograma. */
+                  la = null;
+                  const variante = anuncioComSufixo(alt.url, alt.item);
+                  const tentativa = { vendedor: alt.vendedor || null, item: alvoAlt, sufixo: null, ficha: null };
+                  if (variante) {
+                    try {
+                      const lv = await gerarNaAba(tabId, variante);
+                      tentativa.sufixo = lv.link && lv.link !== r.link ? 'link proprio' : 'mesmo link do anuncio colado';
+                      if (lv.link && lv.link !== r.link) la = lv;
+                    } catch (e2) {
+                      if (!recusadoNoPrograma(e2)) throw e2;
+                      tentativa.sufixo = 'recusado';
+                    }
+                  }
+                  if (!la && alt.url && alt.url !== alvoAlt) {
+                    try {
+                      const lf = await gerarNaAba(tabId, alt.url);
+                      tentativa.ficha = lf.link === r.link ? 'mesmo link do anuncio colado' : 'link da ficha';
+                      la = { link: lf.link, codigo: lf.codigo, semAfiliado: true };
+                    } catch (e3) {
+                      if (/429|seguranca|captcha/i.test(e3.message || '')) throw e3;
+                      tentativa.ficha = 'falhou: ' + String(e3.message || e3).slice(0, 80);
+                    }
+                  }
+                  /* Sem link nenhum: o botao usa o link de afiliado do anuncio colado
+                     (mesmo produto). Nunca sai botao sem o link do Weslei. */
+                  if (!la) la = { link: r.link || null, codigo: null, semAfiliado: true };
+                  recusados111.push(tentativa);
                 }
                 /* O gerador do Mercado Livre devolve o MESMO link para todas as
                    ofertas da mesma ficha de catalogo (medido em 24/09: Celimax
@@ -3591,8 +3641,10 @@ async function atenderPedidos() {
                        marcada mesmaPagina, e o site ensina o cliente a escolher
                        a loja em "Outras opcoes de compra". Descartar escondia a
                        economia (Celimax: R$ 8,88 a menos sumiu da tela). */
-                if (!la.link || outras.some(o => o.link === la.link)) continue;
-                const mesmaPagina = la.link === r.link;
+                if (!la.link || (!la.semAfiliado && outras.some(o => o.link === la.link))) continue;
+                /* true = o link abre a pagina do produto na oferta principal: o
+                   cliente escolhe a loja em "Outras opcoes de compra". */
+                const mesmaPagina = !!la.semAfiliado || la.link === r.link;
                 outras.push({
                   cupomId: alt.cupom ? alt.cupom.id : null,
                   vendedor: alt.vendedor,
@@ -3618,6 +3670,9 @@ async function atenderPedidos() {
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
+                  /* true = o programa recusou este anuncio (erro 111): o link e
+                     o da ficha. Fica na tabela, mas nao vira recomendacao. */
+                  semAfiliado: !!la.semAfiliado,
                   codigo: la.codigo
                 });
               } catch (e) {
@@ -3636,22 +3691,37 @@ async function atenderPedidos() {
              chamada so ao gerador. Roda DEPOIS de entregar o resultado (medido
              em 25/09 na 1.101.0: com os parecidos, esta etapa levava a consulta
              a 60 s). Ate la o site mostra o botao que gera o link no clique. */
-          const faltamLinks = () => [...referencias, ...parecidos].filter(x => !x.link && x.url).length;
+          const faltamLinks = () => [...referencias, ...parecidos].filter(x => !x.link && x.url && !x.semAfiliado).length;
           /* limite: quantos links nesta chamada (lotes pequenos deixam cliente
              novo passar na frente entre um lote e outro). */
           const linksDaTabela = async (limite = Infinity) => {
             try {
-              const semLink = [...referencias, ...parecidos].filter(x => !x.link && x.url).slice(0, limite);
+              const semLink = [...referencias, ...parecidos]
+                .filter(x => !x.link && x.url && !x.semAfiliado).slice(0, limite);
               if (semLink.length && !(await freioLigado('link'))) {
                 const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
-                const mapa = await gerarVariosNaAba(tabId, alvos);
+                const recusados = new Set();
+                const mapa = await gerarVariosNaAba(tabId, alvos, TAG_PADRAO, recusados);
                 semLink.forEach((x, k) => { if (mapa[alvos[k]]) x.link = mapa[alvos[k]]; });
-                /* Recusado no endereco avulso ("URL not allowed"): tenta o
-                   endereco original (ficha do catalogo com o anuncio). */
-                const recusados = semLink.filter((x, k) => !x.link && x.url !== alvos[k]);
-                if (recusados.length) {
-                  const mapa2 = await gerarVariosNaAba(tabId, recusados.map(x => x.url));
-                  recusados.forEach(x => { if (mapa2[x.url]) x.link = mapa2[x.url]; });
+                /* Recusado pelo programa (erro 111): numa chamada so, a forma
+                   MLB-...-_JM (link proprio) e a ficha do catalogo (link da
+                   ficha, abre na oferta principal: semAfiliado). */
+                const rec = semLink.map((x, k) => ({ x, alvo: alvos[k] })).filter(o => !o.x.link && recusados.has(o.alvo));
+                if (rec.length) {
+                  const segunda = [];
+                  rec.forEach(o => {
+                    o.sufixo = anuncioComSufixo(o.x.url, null);
+                    if (o.sufixo) segunda.push(o.sufixo);
+                    if (o.x.url !== o.alvo && /\/p\/MLB\d+/i.test(o.x.url)) segunda.push(o.x.url);
+                  });
+                  const mapa2 = segunda.length ? await gerarVariosNaAba(tabId, [...new Set(segunda)]) : {};
+                  rec.forEach(o => {
+                    const proprio = o.sufixo && mapa2[o.sufixo];
+                    if (proprio && proprio !== r.link) { o.x.link = proprio; return; }
+                    o.x.link = mapa2[o.x.url] || r.link || null;
+                    o.x.semAfiliado = true;
+                    recusados111.push({ vendedor: o.x.vendedor || null, item: o.alvo, sufixo: proprio ? 'mesmo link do anuncio colado' : (o.sufixo ? 'recusado' : null), ficha: mapa2[o.x.url] ? 'link da ficha' : null, lote: true });
+                  });
                 }
               }
             } catch (e) { console.warn('[links em lote]', e.message); }
@@ -3704,6 +3774,7 @@ async function atenderPedidos() {
               bloqueado: aval ? aval.bloqueado : null
             } : null,
             lojaLida: !!(a.nomes && a.nomes.length),
+            recusados111: recusados111.length ? recusados111 : null,
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
           });
           /* ANALISE COMPLETA (regra do Weslei, 25/09: enquanto nao achar opcao

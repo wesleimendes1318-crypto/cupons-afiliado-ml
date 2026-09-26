@@ -637,10 +637,13 @@ export async function compararMesmoProduto(
       }
     }
 
-    /* 3. A oferta que o cliente estava vendo: pela lista, ou pelo que a
-          extensão leu na página. */
+    /* 3. A oferta que o cliente estava vendo. O preço é o que a extensão leu
+          NA PÁGINA (o que o cliente vê e o que a tabela mostra); a lista da
+          API só entra sem ele. Medido em 26/09 (Advocate): a API dava
+          R$ 169,90 e a página R$ 147,81, e a economia saía R$ 25 onde era
+          R$ 2,91. */
     const minha = candidatos.find((c) => c.item === itemAtual) ?? null;
-    const preco = minha?.preco ?? dica.preco ?? null;
+    const preco = dica.preco ?? minha?.preco ?? null;
 
     /* 4. Nome de cada loja e o cupom dela no banco. */
     /* Nome de TODAS as lojas: loja mais cara com cupom pode sair mais barata

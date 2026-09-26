@@ -175,6 +175,9 @@ type OutraLoja = {
      gerador do Mercado Livre devolve um link só por ficha). A pessoa escolhe
      a loja em "Outras opções de compra". */
   mesmaPagina?: boolean | null;
+  /* O programa de afiliados recusou este anúncio (erro 111): o link é o da
+     ficha do produto. Fica na tabela, mas não vira recomendação. */
+  semAfiliado?: boolean | null;
   /* Foto do anúncio desta loja e se a IA conferiu foto e descrição. */
   imagem?: string | null;
   verificadoIA?: boolean | null;
@@ -237,6 +240,7 @@ type Analise = {
     muda?: string | null;
     link?: string | null;
     url?: string | null;
+    semAfiliado?: boolean | null;
     freteGratis?: boolean | null;
   }> | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
@@ -281,6 +285,8 @@ type Referencia = {
   imagem?: string | null;
   /* Link de afiliado desta loja, gerado em lote pela extensão. */
   link?: string | null;
+  /* Recusado pelo programa de afiliados (erro 111): link da ficha. */
+  semAfiliado?: boolean | null;
   freteGratis?: boolean | null;
   mesmaLoja?: boolean | null;
 };
@@ -1378,29 +1384,31 @@ function Resultado({
   const refsBase = (a?.referencias ?? []).filter(
     (r) => r.final != null && !nomesAlt.has((r.vendedor ?? "").toLowerCase()),
   );
-  /* Link igual ao do anúncio colado = o programa de afiliados recusou o
-     anúncio desta loja ("URL not allowed", erro 111) e só a ficha do produto
-     gerou link, que abre na oferta principal (Advocate, 26/09: R$ 147,81 em
-     vez de R$ 109,92). O botão vai direto à oferta DESTA loja na ficha
-     (Weslei, 26/09: "o botão deve direcionar para a melhor escolha"). Sem o
-     endereço da oferta, fica o link da ficha com o aviso de escolher a loja. */
-  const urlDaLoja = new Map(
-    (a?.referencias ?? [])
-      .filter((r) => r.url)
-      .map((r) => [(r.vendedor ?? "").toLowerCase(), r.url as string] as const),
-  );
-  const destinoDaLoja = (
-    vendedor: string | null | undefined,
-    lk: string | null | undefined,
-    url?: string | null,
-  ) => {
-    if (!lk || lk !== link) return { link: lk ?? null, mesmaPagina: false };
-    const direto = url ?? urlDaLoja.get((vendedor ?? "").toLowerCase()) ?? null;
-    return direto ? { link: direto, mesmaPagina: false } : { link: lk, mesmaPagina: true };
+  /* Anúncio que o programa de afiliados recusa ("URL not allowed", erro 111)
+     só tem o link da ficha do produto, igual ao do anúncio colado, e ele abre
+     na oferta principal (Advocate, 26/09). A loja fica na tabela com esse
+     link e o aviso de escolher a loja em "Outras opções de compra", mas NÃO
+     vira recomendação: todo botão leva o link de afiliado do Weslei e a
+     recomendação é a mais barata com link próprio (Weslei, 26/09). */
+  /* Economia sempre contra o preço do anúncio colado que a tela mostra (até
+     a 1.106.0 a da API podia vir de outro preço: Advocate, R$ 25 em vez de
+     R$ 2,91). */
+  const ganhoReal = (final: number | null | undefined, ganho?: number | null) =>
+    precoColado != null && final != null
+      ? Math.round((precoColado - final) * 100) / 100
+      : (ganho ?? null);
+  const destinoDaLoja = (lk: string | null | undefined, semAfiliado?: boolean | null) => {
+    const l = lk || (semAfiliado ? link || null : null);
+    return { link: l, mesmaPagina: Boolean(semAfiliado || (l && l === link)) };
   };
   const candidatas = [
     ...alternativas.map((o, i) => ({
-      o: { ...o, ...destinoDaLoja(o.vendedor, o.link, o.url) },
+      o: {
+        ...o,
+        ganho: ganhoReal(o.final, o.ganho),
+        finalAtual: precoColado ?? o.finalAtual ?? null,
+        ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
+      },
       chave: `alt-${i}`,
     })),
     ...refsBase.map((r, i) => ({
@@ -1414,7 +1422,7 @@ function Resultado({
             ? Math.round((precoColado - r.final) * 100) / 100
             : null,
         finalAtual: precoColado,
-        ...destinoDaLoja(r.vendedor, r.link, r.url),
+        ...destinoDaLoja(r.link, r.semAfiliado),
         url: r.url ?? null,
         imagem: r.imagem ?? null,
         freteGratis: r.freteGratis ?? null,
@@ -1429,6 +1437,7 @@ function Resultado({
       (c) =>
         c.o.final != null &&
         c.o.freteGratis !== false &&
+        !c.o.mesmaPagina &&
         Boolean(c.o.link || c.o.url) &&
         (precoColado == null ? (c.o.ganho ?? 0) > 0 : c.o.final <= precoColado - 0.5),
     )
@@ -1483,10 +1492,13 @@ function Resultado({
       nome: o.vendedor ?? "Outra loja",
       imagem: o.imagem,
       final: o.final,
-      diferenca: o.ganho != null ? -o.ganho : null,
+      diferenca: (() => {
+        const g = ganhoReal(o.final, o.ganho);
+        return g != null ? -g : null;
+      })(),
       freteGratis: o.freteGratis ?? null,
       mesmaLoja: o.mesmaLoja ?? null,
-      ...destinoDaLoja(o.vendedor, o.link, o.url),
+      ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
     ...referencias.map((r, i) => ({
@@ -1497,7 +1509,7 @@ function Resultado({
       diferenca: r.diferenca,
       freteGratis: r.freteGratis ?? null,
       mesmaLoja: r.mesmaLoja ?? null,
-      ...destinoDaLoja(r.vendedor, r.link, r.url),
+      ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
   ];
@@ -2055,9 +2067,15 @@ function TodasAsLojas({
       ? idxRecomendada
       : Math.max(
           0,
-          ordem.findIndex((l) => l.freteGratis !== false),
+          ordem.findIndex((l) => l.freteGratis !== false && (l.colado || !l.mesmaPagina)),
         );
   const menor = ordem[melhorIdx]?.final ?? null;
+  /* Loja mais barata que só abre pela página do produto (recusada pelo
+     programa, erro 111) não leva o selo: a linha recomendada vira "Melhor
+     opção" em vez de "Mais barato", para o selo não mentir. */
+  const haMaisBarata = ordem
+    .slice(0, melhorIdx)
+    .some((l) => l.final != null && menor != null && l.final <= menor - 0.5);
   return (
     <div className="mt-3 sm:mt-0">
       <p className="text-sm font-bold">Todas as lojas comparadas ({ordem.length})</p>
@@ -2125,7 +2143,15 @@ function TodasAsLojas({
                   if (i === melhorIdx)
                     return (
                       <span className="mt-0.5 inline-block rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        {l.colado ? "Mais barato · você colou" : "Mais barato"}
+                        {(haMaisBarata ? "Melhor opção" : "Mais barato") +
+                          (l.colado ? " · você colou" : "")}
+                      </span>
+                    );
+                  if (extra != null && extra <= -0.5)
+                    return (
+                      <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                        {brl(-extra)} a menos
+                        {l.freteGratis === false ? " + frete" : ""}
                       </span>
                     );
                   if (l.freteGratis === false && extra != null && extra < 0.5)

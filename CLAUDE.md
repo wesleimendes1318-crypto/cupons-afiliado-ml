@@ -36,13 +36,17 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   mais barato ("Mesma loja, outro anúncio"; Camelo R$ 78,54 x R$ 86,90).
 - UMA recomendação só: é sempre a mesma linha que leva o selo "Mais barato"
   na tabela (Advocate, 26/09: tabela e recomendação apontavam lojas diferentes).
-- Todo anúncio pode gerar link de afiliado: se o gerador recusar o endereço
-  avulso ("URL not allowed", erro 111), tentar o endereço da ficha do
-  catálogo com o anúncio (/p/MLB...?pdp_filters=item_id:...).
-- O botão da recomendação leva à MELHOR opção (Weslei, 26/09). Se o programa
-  recusar o anúncio da loja (erro 111) e o link da ficha sair igual ao do
-  anúncio colado (abre na oferta principal), o botão vai direto à oferta da
-  loja na ficha (pdp_filters=item_id:...), sem comissão nesse anúncio.
+- SEMPRE o link de afiliado do Weslei em todo botão (26/09: "foi para isso
+  que eu criei o site"). Nunca endereço sem afiliado.
+- Anúncio que o programa recusa ("URL not allowed", erro 111): pela ficha o
+  gerador devolve o mesmo link do anúncio colado (um link por ficha), que abre
+  na oferta principal (medido em 26/09, Advocate). A extensão tenta a forma
+  MLB-...-_JM; não dando, a loja fica na tabela com o link da ficha e o aviso
+  "escolha esta loja em Outras opções de compra" (semAfiliado), e a
+  recomendação é a mais barata com link PRÓPRIO e frete grátis (Weslei, 26/09).
+  O cadastro não chama o gerador de novo para anúncio recusado há menos de 24 h.
+- Economia sempre contra o preço que a página mostra ao cliente (a API pode
+  trazer outro: Advocate R$ 169,90 na API x R$ 147,81 na página).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
   captcha/tráfego suspeito e o ritmo de um pedido por vez.
 
