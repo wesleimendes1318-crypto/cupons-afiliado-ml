@@ -3656,6 +3656,20 @@ async function atenderPedidos() {
             {
               const original = { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco, item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null };
               const conferir = [];
+              /* Oferta sem nome da loja ou sem foto (lida da propria pagina do
+                 anuncio): abre a pagina DELA e completa loja, titulo e foto antes
+                 da conferencia (26/09, Tomate W12: R$ 124,99 era uma otima
+                 recomendacao, so faltou nome e foto). Ate 3, com prazo. */
+              const t0c = Date.now();
+              for (const x of alts.filter(y => !y.daApi && (!y.vendedor || !y.imagem) && y.url).slice(0, 3)) {
+                if (Date.now() - t0c > 16000) break;
+                const lido = await comPrazo(lerAnuncioNoWorker(x.url, 1), 8000, null).catch(() => null);
+                if (lido && lido.ok) {
+                  if (!x.vendedor && lido.nomes && lido.nomes.length) x.vendedor = lido.nomes[0];
+                  if (!x.imagem && lido.imagem) x.imagem = lido.imagem;
+                  if (!x.titulo && lido.titulo) x.titulo = desescapar(lido.titulo);
+                }
+              }
               /* Tudo que nao veio da lista OFICIAL de ofertas (API) passa pela
                  foto, inclusive as ofertas lidas da propria pagina do anuncio:
                  26/09, Tomate W12 (/up/) mostrou "Outra loja" R$ 124,99 sem
