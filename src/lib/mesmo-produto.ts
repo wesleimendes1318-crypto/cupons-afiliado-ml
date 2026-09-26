@@ -412,25 +412,20 @@ async function ofertasDoCatalogo(catalogo: string) {
   return lista;
 }
 
-/* FRETE PARA O COMPRADOR (26/09). "shipping.free_shipping" diz só se o
-   VENDEDOR banca o frete: a Tomate W12 (R$ 129,99, Full) vinha false e a
-   página mostrava "Chegará grátis amanhã". Regra do Mercado Livre desde 2025
-   (frete grátis a partir de R$ 19): produto NOVO a partir de R$ 19, enviado
-   pelo Mercado Envios (mode me2), sai com frete grátis para o comprador (de
-   R$ 19 a R$ 78,99 o próprio Mercado Livre paga). Então:
-     - free_shipping true, ou novo + me2 + preço >= 19  -> grátis (true);
-     - abaixo de R$ 19 sem free_shipping, ou envio fora do Mercado Envios
-       (me1 / custom / a combinar) sem free_shipping    -> pago (false);
-     - o resto (usado, sem modo informado)               -> não sei (null).
-   Só "false" tira a loja da recomendação; "null" não afirma nada na tela. */
-export function freteDaOferta(o: Record<string, unknown>, preco: number): boolean | null {
-  const sh = (o["shipping"] ?? {}) as { free_shipping?: unknown; mode?: unknown };
+/* FRETE PARA O COMPRADOR (26/09). A lista oficial de ofertas traz
+   shipping.cost, o frete que o comprador paga (medido no Baba Black:
+   AHFDEGCAB89611 R$ 57 com cost 44,92, free_shipping false, mode me2, novo;
+   Camelo cost 0; BRENNODAPAZCARMO free_shipping true e cost 0).
+   free_shipping sozinho diz só se o VENDEDOR banca: false com cost 0 é
+   frete grátis para o comprador (Tomate W12, "Chegará grátis amanhã").
+     - free_shipping true ou cost 0  -> grátis (true);
+     - cost > 0                      -> pago (false);
+     - sem cost e sem flag true      -> não sei (null: a tela não afirma). */
+export function freteDaOferta(o: Record<string, unknown>): boolean | null {
+  const sh = (o["shipping"] ?? {}) as { free_shipping?: unknown; cost?: unknown };
   if (sh.free_shipping === true) return true;
-  const modo = typeof sh.mode === "string" ? sh.mode : null;
-  const condicao = typeof o["condition"] === "string" ? (o["condition"] as string) : null;
-  if (modo === "me2" && condicao === "new" && preco >= 19) return true;
-  if (sh.free_shipping === false && preco < 19) return false;
-  if (sh.free_shipping === false && modo && modo !== "me2") return false;
+  const custo = typeof sh.cost === "number" ? sh.cost : Number.NaN;
+  if (Number.isFinite(custo)) return custo <= 0;
   return null;
 }
 
@@ -656,7 +651,7 @@ export async function compararMesmoProduto(
           catalogo: cat,
           /* FRETE (Weslei, 25/09): R$ 57 com frete pago saía mais caro que
              R$ 86,90 com frete grátis. */
-          freteGratis: freteDaOferta(o, preco),
+          freteGratis: freteDaOferta(o),
         });
       }
     }

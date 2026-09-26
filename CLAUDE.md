@@ -32,12 +32,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Frete conta: loja com frete PAGO nunca vira "mais barata"/recomendação
   (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90 com frete grátis).
   Na tabela aparece "Frete grátis" ou "Sem frete grátis".
-  Frete é o que o COMPRADOR paga (26/09, Tomate W12 Full "Chegará grátis"
-  marcada como pago): free_shipping/has_free_shipping false só diz que o
-  vendedor não banca. Regra do Mercado Livre desde 2025: produto novo a partir
-  de R$ 19 pelo Mercado Envios tem frete grátis. Grátis = texto "grátis" no
-  cartão, flag true, ou novo + me2 + >= R$ 19; pago = abaixo de R$ 19 ou envio
-  fora do Mercado Envios, sem flag; o resto é "não sei" (a tela não afirma).
+  Frete é o que o COMPRADOR paga (26/09): free_shipping/has_free_shipping
+  false só diz que o vendedor não banca. Fonte certa: shipping.cost da lista
+  oficial de ofertas (0 = grátis, > 0 = pago; Baba Black R$ 57 cost 44,92) e o
+  texto "grátis" no cartão da busca. Sem isso, "não sei" (a tela não afirma).
+  Nunca deduzir pela regra geral de R$ 19 (errou no Baba Black).
 - Mesma loja do link colado entra na comparação só com OUTRO anúncio dela
   mais barato ("Mesma loja, outro anúncio"; Camelo R$ 78,54 x R$ 86,90).
 - UMA recomendação só: é sempre a mesma linha que leva o selo "Mais barato"
