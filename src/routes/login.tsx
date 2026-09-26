@@ -9,7 +9,7 @@ function destinoSeguro(next: unknown): string {
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({ next: destinoSeguro(s.next) }),
+  validateSearch: (s: Record<string, unknown>) => ({ next: destinoSeguro(s["next"]) }),
   head: () => ({
     meta: [
       { title: "Entrar | Cupom Afiliado" },
