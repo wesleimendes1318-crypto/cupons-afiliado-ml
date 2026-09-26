@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://rjevaqtnlldhnwsidbbn.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "cupom-afiliado",
+      "version": "0.1.0",
+      "title": "Cupom Afiliado"
+    },
+    "tools": [
+      {
+        "name": "buscar_cupons",
+        "title": "Buscar cupons",
+        "description": "Lista cupons válidos, opcionalmente filtrando por loja, categoria ou qualidade.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loja": {
+              "type": "string",
+              "description": "Parte do nome da loja."
+            },
+            "categoria": {
+              "type": "string",
+              "description": "Categoria, ex.: Beleza, Casa."
+            },
+            "somente_bons": {
+              "type": "boolean",
+              "description": "Só cupons aprovados (padrão: true)."
+            },
+            "limite": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Quantidade máxima (padrão 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
