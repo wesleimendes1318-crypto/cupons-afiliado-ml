@@ -2424,6 +2424,14 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
     if (ehCaptcha(r.html || '', final) || (r.captcha)) { await bloquearAnonima(final); return { motivo: 'trafego suspeito na anonima (pausada 12h)' }; }
     if (func === htmlDaPagina) {
       if (!r.html || r.html.length < 5000) return { motivo: 'pagina curta (' + (r.html || '').length + ')' };
+      /* Pagina sem NENHUM anuncio (medido em 26/09, pedidos 350-352: a busca
+         na anonima voltava com 11 KB e 0 anuncios, e a comparacao fora do
+         catalogo "rodava" sem achar nada; logada eram ~700 KB). E muro do
+         Mercado Livre: pausa a anonima e a leitura segue logada, com freio. */
+      if (!/MLB-?\d{6,}/i.test(r.html)) {
+        await bloquearAnonima(final);
+        return { motivo: 'pagina sem anuncios na anonima (' + r.html.length + ' bytes, pausada 12h)' };
+      }
       ultimaLeitura = { modo: 'anonima' };
       return { html: r.html, url: final };
     }
@@ -2507,7 +2515,10 @@ async function lerTelaDoAnuncio(url) {
    Anonima primeiro; aba logada so sem a permissao e sem freio. */
 async function lerBuscaNaAba(url) {
   const anon = await lerNaJanelaAnonima(url, cartoesDaBuscaNaPagina);
-  if (anon.cartoes) return anon;
+  if (anon.cartoes && anon.cartoes.length) return anon;
+  /* Busca sem nenhum cartao na anonima = muro (26/09): pausa a anonima e
+     le logada abaixo. */
+  if (anon.cartoes && !anon.cartoes.length) await bloquearAnonima(anon.url || url);
   if (await anonimaPermitida()) return { cartoes: [], motivo: anon.motivo || null };
   if (await freioLigado('leitura')) throw new Error('leitura pausada na conta (' + (anon.motivo || '?') + ')');
   const aba = await chrome.tabs.create({ url, active: false });
