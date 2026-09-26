@@ -327,3 +327,20 @@ test('busca: outros anuncios na faixa de preco completam a conferencia (Itan, 26
   // A Tomate (outro modelo) vai para a conferencia pela foto; a fita de R$ 20 fica fora da faixa.
   assert.deepEqual(r.outros.map(o => o.item), ['MLB4222222222']);
 });
+
+import { freteGratisDaBusca } from '../comparador.js';
+
+test('frete: "gratis" no cartao vale; has_free_shipping false nao prova frete pago (Tomate W12, 26/09)', () => {
+  const dados = '"polycard":{"metadata":{"id":"MLB4739507505","url":"x"},"components":[{"type":"shipping","id":"shipping","shipping":{"text":"Chegará grátis amanhã"}}]}'
+    + '"polycard":{"metadata":{"id":"MLB7578359238","url":"y"},"components":[{"type":"price"}]}'
+    + '{"has_free_shipping":false,"pid_extended":"a_MLB7578359238"}'
+    + '{"has_free_shipping":true,"pid_extended":"a_MLB1111111111"}';
+  const mapa = freteGratisDaBusca(dados);
+  assert.equal(mapa.get('MLB4739507505'), true);
+  assert.equal(mapa.has('MLB7578359238'), false);
+  assert.equal(mapa.get('MLB1111111111'), true);
+
+  const html = cartao({ href: 'https://produto.mercadolivre.com.br/MLB-4222222222-x-_JM', titulo: 'Barra Led', fracao: '99' })
+    .replace('</li>', '<span class="poly-component__shipping">Frete gr&aacute;tis</span></li>');
+  assert.equal(freteGratisDaBusca('<ol>' + html + '</ol>').get('MLB4222222222'), true);
+});

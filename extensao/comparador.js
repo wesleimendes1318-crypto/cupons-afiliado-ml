@@ -300,16 +300,40 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   return ordenada;
 }
 
-/* Mapa anuncio -> frete gratis (true/false), lido da pagina de busca. Anuncio
-   sem a informacao fica fora do mapa (desconhecido). */
+/* Mapa anuncio -> true quando o cartao da busca MOSTRA frete gratis ("Frete
+   gratis", "Chegara gratis amanha"...), como a pessoa ve.
+
+   26/09: o campo "has_free_shipping" dos dados de rastreio vinha false para a
+   Tomate W12 (R$ 129,99, Full), e a pagina dizia "Chegara gratis amanha". Ele
+   diz so se o VENDEDOR banca o frete; desde 2025 o Mercado Livre da frete
+   gratis ao comprador em produto novo a partir de R$ 19 pelo Mercado Envios.
+   Entao "false" nao prova frete pago: aqui so entra o que e gratis. Anuncio
+   fora do mapa = nao sei (o site nao afirma nada e nao tira da recomendacao). */
 export function freteGratisDaBusca(html) {
-  const limpo = String(html || '').replace(/\\+"/g, '"').replace(/\\u002F/gi, '/');
+  const texto = String(html || '');
+  const limpo = texto.replace(/\\+"/g, '"').replace(/\\u002F/gi, '/').replace(/\\u00e1/gi, '\u00e1');
   const mapa = new Map();
-  const re = /"has_free_shipping"\s*:\s*(true|false)/g;
+  const GRATIS = /gr[a\u00e1]tis/i;
+  /* 1. Polycards (dados da pagina): componente "shipping" do cartao. */
+  for (const p of limpo.split(/"polycard"\s*:\s*\{/).slice(1)) {
+    const bloco = p.slice(0, 15000);
+    const id = (/"metadata"\s*:\s*\{[\s\S]{0,4000}?"id"\s*:\s*"(MLB\d{6,})"/.exec(bloco) || [])[1];
+    if (!id) continue;
+    const i = bloco.search(/"(?:type|id)"\s*:\s*"shipping"/);
+    if (i >= 0 && GRATIS.test(bloco.slice(i, i + 800))) mapa.set(id, true);
+  }
+  /* 2. Cartoes em HTML: texto visivel do cartao. */
+  for (const b of texto.split(/ui-search-layout__item|class="[^"]*poly-card[\s"]/).slice(1)) {
+    const pedaco = b.slice(0, 12000);
+    const end = enderecoDoCartao(pedaco);
+    if (!end || !end.item) continue;
+    const visivel = desescapar(pedaco.replace(/<[^>]+>/g, ' ').replace(/&aacute;/gi, 'á')).replace(/\s+/g, ' ');
+    if (/(frete|envio|chega(?:r[a\u00e1])?)\s[^.]{0,40}gr[a\u00e1]tis/i.test(visivel)) mapa.set(end.item, true);
+  }
+  /* 3. has_free_shipping TRUE tambem vale (false nao prova nada). */
+  const re = /"has_free_shipping"\s*:\s*true/g;
   let m;
   while ((m = re.exec(limpo))) {
-    /* O numero do anuncio fica no mesmo objeto, logo depois (pid_extended ou
-       item_id); olha ate o fim do objeto. */
     const depois = limpo.slice(m.index, m.index + 1500);
     const fim = depois.indexOf('}');
     const obj = fim > 0 ? depois.slice(0, fim) : depois;
@@ -319,7 +343,7 @@ export function freteGratisDaBusca(html) {
     const id = /"pid_extended"\s*:\s*"[^"]*_(MLB\d{6,})"/.exec(todo)
             || /"item_id"\s*:\s*"(MLB\d{6,})"/.exec(todo)
             || /"id"\s*:\s*"(MLB\d{6,})"/.exec(todo);
-    if (id && !mapa.has(id[1])) mapa.set(id[1], m[1] === 'true');
+    if (id) mapa.set(id[1], true);
   }
   return mapa;
 }

@@ -412,6 +412,28 @@ async function ofertasDoCatalogo(catalogo: string) {
   return lista;
 }
 
+/* FRETE PARA O COMPRADOR (26/09). "shipping.free_shipping" diz só se o
+   VENDEDOR banca o frete: a Tomate W12 (R$ 129,99, Full) vinha false e a
+   página mostrava "Chegará grátis amanhã". Regra do Mercado Livre desde 2025
+   (frete grátis a partir de R$ 19): produto NOVO a partir de R$ 19, enviado
+   pelo Mercado Envios (mode me2), sai com frete grátis para o comprador (de
+   R$ 19 a R$ 78,99 o próprio Mercado Livre paga). Então:
+     - free_shipping true, ou novo + me2 + preço >= 19  -> grátis (true);
+     - abaixo de R$ 19 sem free_shipping, ou envio fora do Mercado Envios
+       (me1 / custom / a combinar) sem free_shipping    -> pago (false);
+     - o resto (usado, sem modo informado)               -> não sei (null).
+   Só "false" tira a loja da recomendação; "null" não afirma nada na tela. */
+export function freteDaOferta(o: Record<string, unknown>, preco: number): boolean | null {
+  const sh = (o["shipping"] ?? {}) as { free_shipping?: unknown; mode?: unknown };
+  if (sh.free_shipping === true) return true;
+  const modo = typeof sh.mode === "string" ? sh.mode : null;
+  const condicao = typeof o["condition"] === "string" ? (o["condition"] as string) : null;
+  if (modo === "me2" && condicao === "new" && preco >= 19) return true;
+  if (sh.free_shipping === false && preco < 19) return false;
+  if (sh.free_shipping === false && modo && modo !== "me2") return false;
+  return null;
+}
+
 /* COMO ACHAR O MESMO PRODUTO, SEJA QUAL FOR O LINK COLADO.
 
    O cliente não sabe se o link é de catálogo (/p/MLB...), de produto de
@@ -620,6 +642,11 @@ export async function compararMesmoProduto(
         const sellerId = Number(o["seller_id"] ?? (o["seller"] as { id?: number } | undefined)?.id);
         if (!item || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(sellerId)) continue;
         if (candidatos.some((c) => c.item === item)) continue;
+        /* Prova do frete: os campos crus das 3 primeiras ofertas (26/09). */
+        if (candidatos.length < 3)
+          trilha.push(
+            `frete ${item} shipping=${JSON.stringify(o["shipping"] ?? null).slice(0, 200)} condition=${String(o["condition"] ?? "?")}`,
+          );
         candidatos.push({
           item,
           url: urlDaOferta(cat, item),
@@ -628,11 +655,8 @@ export async function compararMesmoProduto(
           achadoNaBusca: catalogoPorNome,
           catalogo: cat,
           /* FRETE (Weslei, 25/09): R$ 57 com frete pago saía mais caro que
-             R$ 86,90 com frete grátis. A lista de ofertas traz shipping. */
-          freteGratis: (() => {
-            const sh = o["shipping"] as { free_shipping?: unknown } | undefined;
-            return typeof sh?.free_shipping === "boolean" ? sh.free_shipping : null;
-          })(),
+             R$ 86,90 com frete grátis. */
+          freteGratis: freteDaOferta(o, preco),
         });
       }
     }
