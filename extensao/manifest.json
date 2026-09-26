@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Conferidor de Cupons",
-  "version": "1.112.0",
+  "version": "1.113.0",
   "incognito": "spanning",
   "description": "Confere o desconto real dos cupons de afiliado: teto, compra minima e validade, direto na pagina do anuncio.",
   "author": "Weslei Mendes",

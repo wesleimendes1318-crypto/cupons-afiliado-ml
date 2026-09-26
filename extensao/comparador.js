@@ -59,6 +59,15 @@ export function semelhancaDoTitulo(original, candidato) {
   return a.filter(w => b.has(w)).length / a.length;
 }
 
+/* Palavras em comum sem exigir os mesmos numeros: ordena os OUTROS da busca
+   (mesmo tipo de produto primeiro). */
+export function semelhancaSemNumeros(original, candidato) {
+  const a = [...new Set(palavrasDoTitulo(original))].filter(w => !/^\d+$/.test(w));
+  const b = new Set(palavrasDoTitulo(candidato));
+  if (!a.length) return 0;
+  return a.filter(w => b.has(w)).length / a.length;
+}
+
 export function pareceMesmoProduto(original, candidato) {
   const a = [...new Set(palavrasDoTitulo(original))];
   const b = new Set(palavrasDoTitulo(candidato));
@@ -175,6 +184,7 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   d.cartoes = 0; d.comEndereco = 0; d.comTitulo = 0; d.comPreco = 0; d.parecidos = 0; d.naFaixa = 0;
 
   d.titulosVistos = [];
+  const outros = [];
   const aceitar = (end, tit, preco) => {
     if (!end || vistos.has(end.item)) return;
     d.comEndereco++;
@@ -189,7 +199,17 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
        vao para a Gemini, que decide pela foto. Vendedor escreve do jeito dele;
        foto do mesmo produto costuma ser a mesma. */
     const nota = semelhancaDoTitulo(tituloOriginal, tit);
-    if (nota < 0.35) return;
+    if (nota < 0.35) {
+      /* OUTROS da mesma busca, na faixa de preco: completam a conferencia
+         para SEMPRE haver comparacao (Weslei, 26/09). A foto decide se e
+         igual, parecido (com o que muda) ou nada. Itan MLG-202: o "202"
+         barrava as outras barras infladas e o cliente nao via alternativa. */
+      if (precoRef != null && preco >= precoRef * 0.4 && preco <= precoRef * 1.6 && outros.length < 20 && !vistos.has(end.item)) {
+        vistos.add(end.item);
+        outros.push({ ...end, preco, titulo: tit, nota: semelhancaSemNumeros(tituloOriginal, tit) });
+      }
+      return;
+    }
     d.parecidos++;
     /* Preco absurdo em relacao ao que a pessoa esta vendo quase sempre e outro
        produto: acessorio, kit, unidade avulsa. Fora. */
@@ -270,10 +290,14 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
      de rastreio, "has_free_shipping" junto do "pid_extended" (..._MLB123). */
   const frete = freteGratisDaBusca(texto);
   d.comFrete = frete.size;
-  for (const c of saida) if (frete.has(c.item)) c.freteGratis = frete.get(c.item);
+  for (const c of [...saida, ...outros]) if (frete.has(c.item)) c.freteGratis = frete.get(c.item);
 
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
-  return ordenarParaIA(saida);
+  const ordenada = ordenarParaIA(saida);
+  /* Outros da busca: mesmo tipo primeiro, depois o mais barato. */
+  ordenada.outros = outros.sort((a, b) => b.nota - a.nota || a.preco - b.preco);
+  d.outros = outros.length;
+  return ordenada;
 }
 
 /* Mapa anuncio -> frete gratis (true/false), lido da pagina de busca. Anuncio

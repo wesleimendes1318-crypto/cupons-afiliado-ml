@@ -77,6 +77,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Nunca tela vazia: sem dado, o site mostra o que tem com o botão do link.
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
+- SEMPRE comparação com outras lojas para qualquer produto (Weslei, 26/09):
+  as vagas da conferência pela foto que sobram vão para os outros anúncios da
+  mesma busca na faixa de preço (Itan MLG-202: só o próprio anúncio passava
+  no filtro de título). Sai o mesmo produto (tabela) ou "Parecidos".
 - Não desapontar o cliente enquanto não achar opção mais barata ou a análise
   não estiver completa: o resultado sai em até 1 minuto com o link, e a
   comparação incompleta (busca falhou, IA fora do ar, loja sem link) é refeita

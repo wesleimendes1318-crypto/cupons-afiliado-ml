@@ -311,3 +311,19 @@ test('ate 12 parecidos seguem para a Gemini conferir', async () => {
   assert.equal(r.length, MAX_CANDIDATOS_IA);
   assert.ok(r[0].preco <= r[1].preco);
 });
+
+test('busca: outros anuncios na faixa de preco completam a conferencia (Itan, 26/09)', () => {
+  const html = '<ol>' + [
+    cartao({ href: 'https://produto.mercadolivre.com.br/MLB-4111111111-itan-_JM',
+             titulo: 'Barra Led Inflável Itan MLG-202 Iluminador Bastão Magnético', fracao: '150' }),
+    cartao({ href: 'https://produto.mercadolivre.com.br/MLB-4222222222-tomate-_JM',
+             titulo: 'Barra Led Inflável Tomate W12 Iluminador Bastão Magnético', fracao: '129', centavos: '99' }),
+    cartao({ href: 'https://produto.mercadolivre.com.br/MLB-4333333333-fita-_JM',
+             titulo: 'Fita Led 5 Metros Rgb Com Controle', fracao: '20' }),
+  ].join('') + '</ol>';
+  const r = ofertasDaBusca(html, 'Barra Led Inflável Itan MLG-202 Iluminador Bastão Magnético Estrutura Preto', 150);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].item, 'MLB4111111111');
+  // A Tomate (outro modelo) vai para a conferencia pela foto; a fita de R$ 20 fica fora da faixa.
+  assert.deepEqual(r.outros.map(o => o.item), ['MLB4222222222']);
+});

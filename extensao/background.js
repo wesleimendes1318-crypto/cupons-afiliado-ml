@@ -2638,6 +2638,11 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
     }
   }
   diag.candidatos = candidatos.length;
+  /* SEMPRE comparacao com outras lojas (Weslei, 26/09): as vagas que sobram
+     na conferencia vao para os OUTROS anuncios da mesma busca, na faixa de
+     preco. A foto decide: igual (tabela), parecido (com o que muda) ou nada. */
+  const extras = (Array.isArray(daBusca.outros) ? daBusca.outros : [])
+    .filter(c => c.item && c.item !== itemAtual && !vistos.has(c.item));
   if (!candidatos.length) {
     /* Nenhuma fonte trouxe nada: a Gemini escreve uma busca melhor e tenta uma
        vez (se ainda houver tempo). */
@@ -2646,11 +2651,17 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
       if (termo && termo.toLowerCase() !== String(titulo).toLowerCase()) {
         const segunda = await achadosNaBuscaUmaVez(termo, precoRef, itemAtual, original);
         segunda.diag = { ...(segunda.diag || {}), buscaGemini: termo, primeira: diag };
-        return segunda;
+        if (segunda.length || (segunda.parecidos && segunda.parecidos.length) || !extras.length) return segunda;
       }
     }
-    return vazioCom(diag);
+    if (!extras.length || !original) return vazioCom(diag);
   }
+  for (const c of extras) {
+    if (candidatos.length >= MAX_CANDIDATOS_IA) break;
+    vistos.add(c.item); candidatos.push(c);
+  }
+  diag.extras = candidatos.length - diag.candidatos;
+  diag.candidatos = candidatos.length;
   ultimaIA = null;
   const t0 = Date.now();
   const ok = original && resta() > 6000
