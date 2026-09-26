@@ -2703,7 +2703,9 @@ async function achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original = null
   const html = await lerCatalogo(urlDeBusca(titulo), 3000000);
   /* Contagem de cada etapa da leitura, gravada no pedido: se a busca vier
      vazia de novo, da para saber onde parou (24/09: 0 anuncios lidos). */
-  const diag = {};
+  /* url: a MESMA busca que uma pessoa faria, gravada no pedido para conferir
+     o resultado lado a lado com o que o cliente ve (Weslei, 26/09). */
+  const diag = { url: urlDeBusca(titulo) };
   let candidatos = ofertasDaBusca(html, titulo, precoRef, diag);
   const freteAtual = itemAtual ? freteGratisDaBusca(html).get(itemAtual) : undefined;
   if (!candidatos.length && resta() > 12000) {
