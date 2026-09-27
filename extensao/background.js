@@ -605,6 +605,24 @@ const MODELOS_GEMMA = ['gemma-4-31b-it', 'gemma-4-26b-a4b-it', 'gemma-3-27b-it']
 const CONFIANCA_MINIMA_GEMMA = 90;
 function ehGemma(modelo) { return /^gemma/i.test(modelo || ''); }
 function confiancaMinimaIA(modelo) { return ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA_IA; }
+/* ROUPA E FOTO IGUAL (Weslei, 27/09; mesma regra do servidor): o agasalho
+   "Basic 3s" e o "Woven 3 Listras" da loja oficial tinham a MESMA foto e foram
+   separados so pelo nome no titulo. Contradicao e o que os DOIS dizem de forma
+   diferente; a IA diz tambem se e a mesma foto e o quanto parece. */
+const REGRA_NOMES =
+  'Contradicao so existe quando os DOIS anuncios dizem coisas diferentes sobre o mesmo ponto. Palavra que so um '
+  + 'dos titulos tem (nome de linha, apelido, abreviacao, basic, essentials, tipo de tecido) NAO e contradicao quando '
+  + 'a foto e o resto batem; abreviacoes equivalem (3s = 3 Stripes = 3 Listras; WV = Woven).\n'
+  + 'Roupa, calcado e acessorio de moda: compare as pecas (conjunto jaqueta + calca x so jaqueta), a cor de cada '
+  + 'parte, listras ou estampa e onde ficam, logo, gola, capuz, ziper, bolsos, modelagem e genero; tecido so conta '
+  + 'quando os dois informam e sao diferentes (tricot x woven). Tamanho da grade (P, M, G, 40, 42) NAO e diferenca: '
+  + 'cada anuncio vende varios tamanhos.\n'
+  + 'mesma_foto=true quando a foto do candidato e a MESMA foto do original ou da mesma sessao de fotos (mesma pessoa '
+  + 'ou manequim, mesma pose, mesmo produto), mesmo recortada, com outro fundo ou outro enquadramento. Com '
+  + 'mesma_foto=true e nada na foto contradizendo, so contradicao EXPLICITA nos dois titulos derruba o igual.\n'
+  + 'semelhanca de 0 a 100: quanto o produto do candidato se parece com o do original (100 = identico).\n';
+const CONFIANCA_REVISAO_IA = 90;
+const MAX_REVISAO_IA = 4;
 const PEDIDO_CONFERENCIA =
   'Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL '
   + 'e so pode ver outra loja como mesmo produto se o PRODUTO for o mesmo. Cada vendedor faz a propria foto: '
@@ -618,23 +636,27 @@ const PEDIDO_CONFERENCIA =
   + '(capinha transparente com borda preta x capinha toda transparente), outro modelo compativel, outro tamanho, '
   + 'outra quantidade, acessorio vendido junto (ex.: pelicula). Anuncio que atende varios modelos so e igual se '
   + 'citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n'
+  + REGRA_NOMES
   + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n'
   + 'parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma '
   + 'compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so '
   + 'marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n'
-  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"confianca":0-100,"motivo":"curto"}]}';
+  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}';
 
 /* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
    foto com foto, de preferencia por outro modelo. */
 const PEDIDO_CONFIRMACAO =
   'Segunda conferencia. O cliente vai comprar o ANUNCIO ORIGINAL. Outra conferencia achou que os CANDIDATOS '
-  + 'abaixo sao o mesmo PRODUTO: confirme ou derrube cada um.\n'
+  + 'abaixo sao o mesmo PRODUTO: confirme ou derrube cada um. Os marcados REVISAR foram reprovados por ela '
+  + 'apesar de a foto ser a mesma do original: veja o motivo dado e decida se e contradicao real ou so nome '
+  + 'diferente no titulo.\n'
   + 'Cada vendedor faz a propria foto: fundo, angulo, montagem, textos, selos e enfeites NAO contam, nem detalhe '
   + 'que so nao aparece na foto. Liste em diferencas o que CONTRADIZ o original no produto: outra marca, outra cor '
   + 'ou borda, outro material ou formato, outro modelo compativel, outro tamanho ou volume, outra quantidade, '
   + 'acessorio vendido junto (pelicula, cabo).\n'
+  + REGRA_NOMES
   + 'igual=true somente sem nenhuma contradicao. Contradicao real na duvida: igual=false.\n'
-  + 'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":true,"confianca":0-100,"motivo":"curto"}]}';
+  + 'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":true,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}';
 
 /* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */
 function lerVereditosIA(lista, total) {
@@ -645,7 +667,11 @@ function lerVereditosIA(lista, total) {
       const igual = c.igual === true && dif.length === 0;
       /* Nao igual: o motivo e O QUE MUDA (aviso dos parecidos no site). */
       const motivo = (!igual && dif.length) ? dif.join('; ') : (String(c.motivo || '') || dif.join('; '));
-      return { indice: c.indice, igual, parecido: !igual && (c.parecido === true || c.igual === true),
+      const sem = Number(c.semelhanca);
+      return { indice: c.indice, igual,
+               parecido: !igual && (c.parecido === true || c.igual === true || c.mesma_foto === true),
+               mesmaFoto: c.mesma_foto === true,
+               semelhanca: Number.isFinite(sem) ? Math.max(0, Math.min(100, Math.round(sem))) : null,
                confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)), motivo: motivo.slice(0, 140) };
     });
 }
@@ -709,21 +735,30 @@ async function mesmoProdutoPelaGemini(original, lista) {
         }
       }
       const positivos = avaliacao.filter(a => a.igual && !a.semFoto);
-      if (positivos.length) {
+      /* Revisao: reprovado com a MESMA foto vai junto para a segunda opiniao. */
+      const revisar = avaliacao.filter(a => !a.igual && a.mesmaFoto && !a.semFoto)
+        .sort((x, y) => (y.semelhanca || 0) - (x.semelhanca || 0)).slice(0, MAX_REVISAO_IA);
+      const paraSegunda = [...positivos, ...revisar];
+      if (paraSegunda.length) {
         /* Segunda opiniao; sem ela, nada entra (a segunda volta refaz). */
         const desc = String(obj.descricao_original || '').slice(0, 400);
         const conf = [{ text: PEDIDO_CONFIRMACAO },
           { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') + (desc ? '\nDescricao da foto do original: ' + desc : '') }, imgOrig];
-        positivos.forEach((a, k) => { conf.push({ text: 'CANDIDATO ' + k + ': ' + (itens[a.indice].titulo || '(sem titulo)') }); conf.push(fotos[a.indice]); });
+        paraSegunda.forEach((a, k) => {
+          conf.push({ text: 'CANDIDATO ' + k + ': ' + (itens[a.indice].titulo || '(sem titulo)')
+            + (k >= positivos.length ? ' (REVISAR; a primeira conferencia disse: ' + String(a.motivo || '').slice(0, 120) + ')' : '') });
+          conf.push(fotos[a.indice]);
+        });
         const outro = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest'].find(m => m !== r.modelo) || null;
         const r2 = resta() > 9000 ? await geminiLocal(conf, outro) : { ok: false, status: 504, erro: 'sem tempo' };
         const obj2 = r2.ok ? jsonDaIA(r2.texto) : null;
-        if (!obj2 || !Array.isArray(obj2.candidatos)) {
+        if ((!obj2 || !Array.isArray(obj2.candidatos)) && positivos.length) {
           erros.push('extensao: confirmacao ' + (r2.ok ? 'JSON invalido' : (r2.status + ' ' + (r2.erro || ''))));
           ultimaIA = { indisponivel: true, erros };
           return null;
         }
-        const segunda = new Map(lerVereditosIA(obj2.candidatos, positivos.length).map(v => [v.indice, v]));
+        const segunda = new Map(obj2 && Array.isArray(obj2.candidatos)
+          ? lerVereditosIA(obj2.candidatos, paraSegunda.length).map(v => [v.indice, v]) : []);
         positivos.forEach((a, k) => {
           const v = segunda.get(k);
           if (v && v.igual && v.confianca >= confiancaMinimaIA(r2.modelo)) {
@@ -733,6 +768,17 @@ async function mesmoProdutoPelaGemini(original, lista) {
             a.igual = false;
             a.parecido = v ? v.parecido : true;
             a.motivo = ((v && v.motivo) || 'a segunda conferencia nao confirmou').slice(0, 140);
+          }
+        });
+        revisar.forEach((a, n) => {
+          const v = segunda.get(positivos.length + n);
+          if (!v) return;
+          if (v.semelhanca != null) a.semelhanca = Math.max(a.semelhanca || 0, v.semelhanca);
+          if (v.igual && v.mesmaFoto && v.confianca >= Math.max(CONFIANCA_REVISAO_IA, confiancaMinimaIA(r2.modelo))) {
+            a.igual = true;
+            a.parecido = false;
+            a.confianca = v.confianca;
+            a.motivo = ('mesma foto; ' + String(v.motivo || '').slice(0, 80) + ' | revisto (' + r2.modelo + ')').slice(0, 140);
           }
         });
       }
@@ -2727,6 +2773,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
       return c && c.preco != null && c.item !== itemAtual
         ? { item: c.item, url: c.url || null, titulo: c.titulo || null, imagem: c.imagem || null,
             preco: c.preco, muda: String(a.motivo || '').slice(0, 140),
+            mesmaFoto: a.mesmaFoto === true, semelhanca: a.semelhanca != null ? a.semelhanca : null,
             freteGratis: c.freteGratis != null ? c.freteGratis : null }
         : null;
     })
@@ -3618,7 +3665,12 @@ async function atenderPedidos() {
                 ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });
                 buscaFora.vistos = Array.isArray(busca.todas) ? busca.todas.length : 0;
                 if (busca.todas && Array.isArray(busca.todas.parecidos)) {
-                  parecidos = busca.todas.parecidos.slice().sort((x, y) => x.preco - y.preco).slice(0, 5)
+                  /* Os MAIS SEMELHANTES primeiro (Weslei, 27/09: "a melhor alternativa e
+                     mais semelhante"): mesma foto, depois semelhanca, depois preco. */
+                  parecidos = busca.todas.parecidos.slice().sort((x, y) =>
+                    (y.mesmaFoto === true) - (x.mesmaFoto === true)
+                    || (y.semelhanca ?? -1) - (x.semelhanca ?? -1)
+                    || x.preco - y.preco).slice(0, 5)
                     .map(x => ({ ...x, diferenca: a.preco != null ? Math.round((x.preco - a.preco) * 100) / 100 : null }));
                 }
                 buscaFora.leitura = busca.diag || null;

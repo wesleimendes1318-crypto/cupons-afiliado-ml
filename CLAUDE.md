@@ -15,6 +15,17 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   - A foto não precisa ser idêntica (cada vendedor faz a sua): conta o PRODUTO.
     Diferença é o que contradiz o original (marca, cor/borda, modelo, tamanho,
     quantidade, acessório junto), não fundo/ângulo/montagem.
+  - Contradição é o que os DOIS anúncios dizem de forma diferente. Nome de
+    linha/abreviação que só um título tem não reprova ("Basic 3s" x "Woven 3
+    Listras", mesma foto oficial: a loja R$ 83 mais barata tinha ido para
+    Parecidos, 27/09). Roupa: peças, cor de cada parte, listras/estampa, logo,
+    gola/capuz/zíper, modelagem, gênero; tecido só se os dois informam; tamanho
+    da grade não conta. A IA diz mesma_foto e semelhança (0-100). Reprovado com
+    a MESMA foto é revisto na segunda conferência (outro modelo) e só vira
+    igual com igual + mesma foto + confiança >= 90. Vereditos guardados antes
+    de 28/09 00:00 UTC não valem.
+  - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
+    aviso "Mesma foto do anúncio colado" quando for o caso.
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
     SEPARADOS, com aviso "não é o mesmo produto" e o que muda, cada um com o
     link de afiliado (Weslei, 25/09).

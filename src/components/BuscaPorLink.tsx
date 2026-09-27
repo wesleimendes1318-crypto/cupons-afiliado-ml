@@ -240,6 +240,8 @@ type Analise = {
     preco: number;
     diferenca?: number | null;
     muda?: string | null;
+    /* Mesma foto do anúncio colado (mesma sessão de fotos): o mais parecido. */
+    mesmaFoto?: boolean | null;
     link?: string | null;
     url?: string | null;
     semAfiliado?: boolean | null;
@@ -2093,6 +2095,11 @@ function Parecidos({
                 {p.freteGratis === false && (
                   <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                     Sem frete grátis
+                  </p>
+                )}
+                {p.mesmaFoto && (
+                  <p className="text-[10px] font-semibold text-secondary-ink">
+                    Mesma foto do anúncio colado
                   </p>
                 )}
                 {p.muda && (
