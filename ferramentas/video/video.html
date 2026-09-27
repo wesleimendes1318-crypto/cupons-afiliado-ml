@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Melhor Escolha — vídeo</title>
+<style>
+@font-face { font-family: Inter; font-weight: 400; src: url("node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 600; src: url("node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 800; src: url("node_modules/@fontsource/inter/files/inter-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 900; src: url("node_modules/@fontsource/inter/files/inter-latin-900-normal.woff2") format("woff2"); }
+:root {
+  --roxo1: #5b6ee8; --roxo2: #a66ad4; --tinta: #16172b; --cinza: #5f6378;
+  --verde: #0f9a55; --verde-claro: #e3f6ec; --ambar: #b8730a; --ambar-claro: #fff4dc;
+  --vermelho: #c2352b; --azul: #3d5fe0; --linha: #e4e6ef; --fundo-tela: #f4f6fb;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-serif; }
+#stage { position: relative; overflow: hidden; color: #fff; }
+#stage.v { width: 1080px; height: 1920px; }
+#stage.h { width: 1920px; height: 1080px; }
+.bg { position: absolute; inset: 0; background: linear-gradient(160deg, var(--roxo1), var(--roxo2)); }
+.bg::after { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 20% 15%, rgba(255,255,255,.18), transparent 45%),
+              radial-gradient(circle at 85% 90%, rgba(255,255,255,.12), transparent 40%); }
+.marca { position: absolute; display: flex; align-items: center; gap: 16px; font-weight: 800; letter-spacing: -.01em; }
+.v .marca { top: 64px; left: 72px; font-size: 38px; }
+.h .marca { top: 48px; left: 96px; font-size: 32px; }
+.marca .selo { width: 58px; height: 58px; border-radius: 16px; background: #fff; color: var(--roxo1);
+  display: grid; place-items: center; font-size: 34px; font-weight: 900; }
+.marca small { font-weight: 600; opacity: .85; font-size: .8em; }
+
+/* legendas */
+.cap { position: absolute; opacity: 0; }
+.v .cap { left: 72px; right: 72px; top: 170px; }
+.h .cap { left: 96px; width: 820px; top: 50%; transform: translateY(-50%); }
+.cap h1 { font-weight: 900; line-height: 1.06; letter-spacing: -.02em; }
+.v .cap h1 { font-size: 84px; }
+.h .cap h1 { font-size: 80px; }
+.cap p { font-weight: 600; line-height: 1.3; opacity: .95; margin-top: 22px; }
+.v .cap p { font-size: 42px; }
+.h .cap p { font-size: 38px; }
+.cap .tag { display: inline-block; margin-top: 22px; padding: 8px 18px; border-radius: 999px;
+  background: rgba(255,255,255,.2); font-weight: 700; font-size: 28px; }
+.cap b { color: #fff3a8; }
+
+/* celular */
+.phone { position: absolute; width: 720px; height: 1220px; border-radius: 64px; background: #0e0f1d;
+  box-shadow: 0 40px 90px rgba(10,10,40,.45); padding: 20px; transform-origin: top left; }
+.v .phone { left: 180px; top: 600px; }
+.h .phone { left: 1180px; top: 70px; transform: scale(.76); }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 46px; overflow: hidden;
+  background: var(--fundo-tela); color: var(--tinta); }
+.topo { height: 104px; background: linear-gradient(120deg, var(--roxo1), var(--roxo2)); color: #fff;
+  display: flex; align-items: flex-end; padding: 0 34px 20px; font-weight: 800; font-size: 30px; gap: 12px; }
+.topo .s { width: 40px; height: 40px; border-radius: 11px; background: #fff; color: var(--roxo1);
+  display: grid; place-items: center; font-weight: 900; font-size: 24px; }
+.scr { position: absolute; left: 0; right: 0; top: 104px; bottom: 0; padding: 34px 30px; opacity: 0; }
+.scr > * { zoom: 1.22; }
+.card { background: #fff; border: 2px solid var(--linha); border-radius: 26px; padding: 26px; }
+.row { display: flex; align-items: center; gap: 20px; }
+.foto { width: 112px; height: 112px; border-radius: 20px; background: #eef0f7; display: grid; place-items: center;
+  font-size: 64px; flex: none; }
+.tit { font-weight: 700; font-size: 27px; line-height: 1.25; }
+.preco { font-weight: 900; font-size: 44px; letter-spacing: -.02em; }
+.mut { color: var(--cinza); font-size: 23px; font-weight: 600; }
+.btn { display: block; text-align: center; border-radius: 18px; padding: 24px; font-weight: 800; font-size: 30px; color: #fff; }
+.btn.verde { background: var(--verde); }
+.btn.azul { background: var(--azul); }
+.btn.contorno { background: #fff; color: var(--verde); border: 3px solid var(--verde); }
+.campo { background: #fff; border: 3px solid var(--azul); border-radius: 18px; padding: 22px; font-size: 25px;
+  font-weight: 600; color: var(--tinta); min-height: 132px; word-break: break-all; line-height: 1.35; }
+.cursor { display: inline-block; width: 3px; height: 30px; background: var(--azul); vertical-align: -5px; margin-left: 2px; }
+.lista .item { display: flex; align-items: center; gap: 18px; padding: 20px 22px; border-radius: 18px; background: #fff;
+  border: 2px solid var(--linha); margin-bottom: 14px; font-size: 26px; font-weight: 700; opacity: .25; }
+.lista .item .ok { margin-left: auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 26px; color: #fff; background: var(--verde); transform: scale(0); }
+.barra { height: 16px; border-radius: 99px; background: #e2e5f0; overflow: hidden; margin-top: 18px; }
+.barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--azul), var(--roxo2)); }
+.melhor { background: var(--verde-claro); border: 3px solid var(--verde); border-radius: 26px; padding: 26px; }
+.selo-v { display: inline-block; background: var(--verde); color: #fff; border-radius: 10px; padding: 6px 14px;
+  font-weight: 800; font-size: 22px; }
+.economia { margin-top: 18px; font-size: 30px; font-weight: 800; color: var(--verde); }
+.tabela { margin-top: 22px; border-radius: 20px; overflow: hidden; border: 2px solid var(--linha); background: #fff; }
+.tabela .l { display: flex; align-items: center; padding: 18px 22px; font-size: 24px; font-weight: 700; gap: 12px;
+  border-left: 8px solid transparent; }
+.tabela .l:nth-child(even) { background: #f6f7fb; }
+.tabela .l .p { margin-left: auto; font-weight: 900; font-size: 28px; }
+.tabela .l.best { background: var(--verde-claro); border-left-color: var(--verde); }
+.tabela .l.best .p { color: var(--verde); }
+.tabela .l.col { background: var(--ambar-claro); border-left-color: #e6a21a; }
+.fg { font-size: 19px; color: var(--verde); font-weight: 700; display: block; }
+.sfg { font-size: 19px; color: var(--ambar); font-weight: 700; display: block; }
+.mais { font-size: 20px; color: var(--vermelho); font-weight: 800; display: block; text-align: right; }
+.x { color: var(--vermelho); }
+.parecidos { background: var(--ambar-claro); border: 3px solid #e6b44a; border-radius: 26px; padding: 26px; }
+.parecidos h3 { font-size: 32px; font-weight: 900; }
+.parecidos .aviso { color: #9a5a00; font-weight: 700; font-size: 23px; margin-top: 6px; }
+.parecidos .it { display: flex; gap: 18px; align-items: center; background: #fff; border-radius: 18px; padding: 18px; margin-top: 16px; }
+.parecidos .muda { color: #9a5a00; font-weight: 700; font-size: 21px; margin-top: 4px; }
+.gratis { font-size: 150px; font-weight: 900; color: var(--verde); text-align: center; letter-spacing: -.03em; }
+
+/* chamada final */
+.cta { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; opacity: 0; padding: 80px; }
+.cta .dom { font-weight: 900; letter-spacing: -.03em; background: #fff; color: var(--roxo1); border-radius: 36px; }
+.v .cta .dom { font-size: 104px; padding: 26px 48px; }
+.h .cta .dom { font-size: 110px; padding: 22px 56px; }
+.cta .frase { font-weight: 800; margin-top: 46px; line-height: 1.15; }
+.v .cta .frase { font-size: 64px; }
+.h .cta .frase { font-size: 58px; }
+.cta .passos { display: flex; gap: 22px; margin-top: 46px; flex-wrap: wrap; justify-content: center; }
+.cta .passos span { background: rgba(255,255,255,.2); border-radius: 999px; padding: 14px 28px; font-weight: 700; font-size: 32px; }
+.cta .legal { position: absolute; bottom: 70px; left: 80px; right: 80px; font-size: 24px; font-weight: 600; opacity: .85; line-height: 1.4; }
+.h .cta .legal { bottom: 44px; font-size: 22px; }
+
+.prog { position: absolute; left: 0; bottom: 0; height: 10px; background: rgba(255,255,255,.85); width: 0; }
+</style>
+</head>
+<body>
+<div id="stage" class="v">
+  <div class="bg"></div>
+  <div class="marca" id="marca"><div class="selo">M</div><div>Melhor Escolha <small>· melhorescolha.io</small></div></div>
+
+  <!-- legendas -->
+  <div class="cap" data-s="0"><h1>Vai comprar no Mercado&nbsp;Livre?</h1><p>O <b>mesmo produto</b> pode sair mais barato em outra loja.</p></div>
+  <div class="cap" data-s="1"><h1>1. Copie o link do anúncio</h1><p>Cole no <b>melhorescolha.io</b> e toque em Comparar preços.</p></div>
+  <div class="cap" data-s="2"><h1>2. Eu procuro o mesmo produto</h1><p>Em outras lojas, conferindo pela foto que é <b>o mesmo</b>. Em menos de 1 minuto.</p></div>
+  <div class="cap" data-s="3"><h1>3. Você vê a melhor escolha</h1><p>Todas as lojas lado a lado, do menor preço ao maior.</p><span class="tag">Exemplo real · 26/09/2026</span></div>
+  <div class="cap" data-s="4"><h1>Frete conta</h1><p>Loja que <b>cobra frete</b> nunca vira recomendação, mesmo com preço menor.</p><span class="tag">Exemplo real · 26/09/2026</span></div>
+  <div class="cap" data-s="5"><h1>Não tem igual?</h1><p>Mostro os <b>parecidos</b>, separados, dizendo o que muda.</p></div>
+  <div class="cap" data-s="6"><h1>Grátis para você</h1><p>O preço é o mesmo da loja. A compra é feita no <b>site oficial</b>, com pagamento protegido.</p></div>
+
+  <!-- celular -->
+  <div class="phone" id="phone"><div class="screen">
+    <div class="topo"><div class="s">M</div>Melhor Escolha</div>
+
+    <div class="scr" data-s="0">
+      <div class="card"><div class="row"><div class="foto">🐈</div>
+        <div><div class="tit">Antipulgas para gatos até 4 kg · 3 pipetas</div><div class="preco" style="margin-top:10px">R$ 147,81</div>
+        <div class="mut">no anúncio que você achou</div></div></div></div>
+      <div style="text-align:center;margin-top:70px;font-size:150px;font-weight:900;color:var(--roxo1)" id="q">?</div>
+      <div style="text-align:center;font-size:30px;font-weight:800;color:var(--cinza)">Será que tem mais barato?</div>
+    </div>
+
+    <div class="scr" data-s="1">
+      <div style="font-size:34px;font-weight:900">Cole o link do produto</div>
+      <div class="mut" style="margin:8px 0 22px">Procuro o mesmo produto em outras lojas.</div>
+      <div class="campo" id="campo"></div>
+      <div class="btn azul" id="btnComparar" style="margin-top:22px">Comparar preços</div>
+      <div class="mut" style="margin-top:40px;text-align:center">Funciona com link do app ou do navegador.</div>
+    </div>
+
+    <div class="scr lista" data-s="2">
+      <div style="font-size:32px;font-weight:900;margin-bottom:20px">Comparando…</div>
+      <div class="item">🛒 Loja A <div class="ok">✓</div></div>
+      <div class="item">🛒 Loja B <div class="ok">✓</div></div>
+      <div class="item">🛒 Loja C <div class="ok">✓</div></div>
+      <div class="item">📷 Conferindo a foto <div class="ok">✓</div></div>
+      <div class="item">🚚 Conferindo o frete <div class="ok">✓</div></div>
+      <div class="barra"><i id="barra"></i></div>
+      <div class="mut" style="text-align:center;margin-top:16px" id="seg">0 s</div>
+    </div>
+
+    <div class="scr" data-s="3">
+      <div class="melhor">
+        <span class="selo-v">Melhor opção</span>
+        <div class="row" style="margin-top:14px"><div class="foto" style="width:96px;height:96px;font-size:54px">🐈</div>
+          <div><div class="preco" style="color:var(--verde)">R$ 119,90</div><div class="fg" style="font-size:22px">Frete grátis</div></div></div>
+        <div class="economia" id="eco">Você economiza R$ 0,00</div>
+        <div class="btn verde" style="margin-top:18px">Comprar com segurança</div>
+      </div>
+      <div class="tabela" id="tab">
+        <div class="l best">Loja A<span class="fg">Frete grátis</span><span class="p">R$ 119,90</span></div>
+        <div class="l">Loja B<span class="fg">Frete grátis</span><span class="p">R$ 137,65</span></div>
+        <div class="l col">Anúncio colado<span class="p">R$ 147,81</span></div>
+        <div class="l" style="justify-content:center;color:var(--cinza);font-size:21px">+ outras lojas comparadas</div>
+      </div>
+    </div>
+
+    <div class="scr" data-s="4">
+      <div class="tit" style="font-size:28px">Pretinho para pneus 500 ml</div>
+      <div class="mut" style="margin-bottom:22px">Anúncio colado: R$ 86,90</div>
+      <div class="card" id="pago" style="border-color:#f0b9b4">
+        <div class="row"><div class="foto">🚗</div><div><div class="preco">R$ 57,00</div>
+          <div class="sfg" style="font-size:24px;color:var(--vermelho)">+ frete cobrado</div></div>
+          <div style="margin-left:auto;font-size:64px" class="x" id="xis">✕</div></div>
+        <div class="mut" style="margin-top:12px">Parece mais barato, mas o frete muda a conta.</div>
+      </div>
+      <div class="melhor" id="gratisCard" style="margin-top:24px">
+        <span class="selo-v">Melhor opção</span>
+        <div class="row" style="margin-top:12px"><div class="foto">🚗</div><div><div class="preco" style="color:var(--verde)">R$ 75,54</div>
+          <div class="fg" style="font-size:24px">Frete grátis</div></div>
+          <div style="margin-left:auto;font-size:60px;color:var(--verde)">✓</div></div>
+      </div>
+    </div>
+
+    <div class="scr" data-s="5">
+      <div class="card" style="padding:20px"><div class="row"><div class="foto" style="width:90px;height:90px;font-size:50px">💡</div>
+        <div><div class="tit" style="font-size:24px">Barra de LED inflável, modelo A</div><div class="mut">Só uma loja vende este modelo</div></div></div></div>
+      <div class="parecidos" style="margin-top:22px">
+        <h3>Parecidos</h3>
+        <div class="aviso">Não é o mesmo produto: veja o que muda.</div>
+        <div class="it" id="p1"><div class="foto" style="width:84px;height:84px;font-size:46px">💡</div>
+          <div><div class="tit" style="font-size:23px">Barra de LED inflável, outra marca</div><div class="muda">Muda: marca e modelo</div></div></div>
+        <div class="it" id="p2"><div class="foto" style="width:84px;height:84px;font-size:46px">💡</div>
+          <div><div class="tit" style="font-size:23px">Bastão de LED colorido</div><div class="muda">Muda: tipo de luz (RGB)</div></div></div>
+      </div>
+    </div>
+
+    <div class="scr" data-s="6">
+      <div class="gratis" id="zero">R$ 0</div>
+      <div style="text-align:center;font-size:32px;font-weight:800;margin-top:-6px">para comparar</div>
+      <div class="btn verde" style="margin-top:60px">🔒 Comprar com segurança</div>
+      <div class="btn contorno" style="margin-top:20px">Compartilhar no WhatsApp</div>
+      <div class="mut" style="text-align:center;margin-top:30px">Abre no site oficial, com pagamento protegido.</div>
+    </div>
+  </div></div>
+
+  <!-- chamada final -->
+  <div class="cta" id="cta">
+    <div class="dom">melhorescolha.io</div>
+    <div class="frase">Cole o link.<br>Veja a melhor escolha.</div>
+    <div class="passos"><span>Grátis</span><span>Mesmo produto</span><span>Frete conferido</span></div>
+    <div class="legal">Site independente, sem vínculo com o Mercado Livre. Recebo uma comissão da loja quando você compra pelo link, sem custo para você. Exemplos reais medidos em 26/09/2026; preços e frete mudam.</div>
+  </div>
+
+  <div class="prog" id="prog"></div>
+</div>
+
+<script>
+/* Linha do tempo (segundos). Tudo depende só de t: cada quadro é determinístico. */
+const CENAS = [[0, 4.6], [4.6, 10.6], [10.6, 16.4], [16.4, 25.4], [25.4, 31.8], [31.8, 37.2], [37.2, 42.4]];
+const CTA = [42.4, 49];
+const TOTAL = 49;
+const LINK = "https://www.mercadolivre.com.br/antipulga-para-gatos-advocate-elanco-ate-4kg-3-pipetas/p/MLB27569962";
+
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = x => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const out = x => 1 - Math.pow(1 - cl(x), 3);
+function janela(t, [a, b], ent = .5, sai = .45) {
+  if (t < a || t > b) return 0;
+  return Math.min(out((t - a) / ent), out((b - t) / sai));
+}
+const brl = n => "R$ " + n.toFixed(2).replace(".", ",");
+
+window.render = function (t) {
+  document.querySelectorAll(".cap").forEach(el => {
+    const s = +el.dataset.s, k = janela(t, CENAS[s]);
+    el.style.opacity = k;
+    const dy = (1 - k) * 40;
+    el.style.transform = (document.getElementById("stage").classList.contains("h") ? "translateY(-50%) " : "") + `translateY(${dy}px)`;
+  });
+  document.querySelectorAll(".scr").forEach(el => {
+    const s = +el.dataset.s, k = janela(t, CENAS[s]);
+    el.style.opacity = k;
+    el.style.transform = `translateX(${(1 - k) * 60}px)`;
+  });
+
+  const kPhone = 1 - out((t - CTA[0]) / .5);
+  const phone = document.getElementById("phone");
+  const h = document.getElementById("stage").classList.contains("h");
+  phone.style.opacity = t < CTA[0] ? out(t / .6) : kPhone;
+  phone.style.transform = (h ? "scale(.76) " : "") + `translateY(${(1 - (t < CTA[0] ? out(t / .6) : kPhone)) * 80}px)`;
+
+  // cena 0: interrogação pulsando
+  document.getElementById("q").style.transform = `scale(${1 + .08 * Math.sin(t * 5)})`;
+
+  // cena 1: digitando o link e tocando no botão
+  const l1 = t - CENAS[1][0];
+  const n = Math.floor(cl((l1 - .6) / 2.6) * LINK.length);
+  const campo = document.getElementById("campo");
+  campo.innerHTML = (n ? LINK.slice(0, n) : '<span style="color:#9aa0b8">Cole aqui o link do anúncio</span>') +
+    (Math.floor(t * 2) % 2 && n < LINK.length ? '<span class="cursor"></span>' : "");
+  const toque = l1 > 3.8 && l1 < 4.3 ? .94 : 1;
+  const bt = document.getElementById("btnComparar");
+  bt.style.transform = `scale(${toque})`;
+  bt.style.boxShadow = l1 > 3.6 ? `0 0 0 ${Math.round(10 * Math.abs(Math.sin((l1 - 3.6) * 3)))}px rgba(61,95,224,.25)` : "none";
+
+  // cena 2: lojas conferidas uma a uma
+  const l2 = t - CENAS[2][0];
+  document.querySelectorAll(".lista .item").forEach((el, i) => {
+    const k = cl((l2 - .3 - i * .75) / .35);
+    el.style.opacity = .25 + .75 * k;
+    el.querySelector(".ok").style.transform = `scale(${out(k)})`;
+  });
+  document.getElementById("barra").style.width = `${cl((l2 - .2) / 4.4) * 100}%`;
+  document.getElementById("seg").textContent = `${Math.round(cl((l2 - .2) / 4.4) * 18)} s`;
+
+  // cena 3: economia subindo e tabela entrando
+  const l3 = t - CENAS[3][0];
+  const eco = 147.81 - 119.90;
+  document.getElementById("eco").textContent = "Você economiza " + brl(eco * ease((l3 - .8) / 1.6));
+  document.querySelectorAll("#tab .l").forEach((el, i) => {
+    const k = out((l3 - 2.4 - i * .35) / .4);
+    el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * 20}px)`;
+  });
+
+  // cena 4: frete pago riscado
+  const l4 = t - CENAS[4][0];
+  const kx = out((l4 - 1.4) / .4);
+  document.getElementById("xis").style.transform = `scale(${kx})`;
+  document.getElementById("pago").style.opacity = 1 - .45 * kx;
+  const kg = out((l4 - 2.4) / .5);
+  const gc = document.getElementById("gratisCard");
+  gc.style.opacity = kg; gc.style.transform = `translateY(${(1 - kg) * 30}px)`;
+
+  // cena 5: parecidos entrando
+  const l5 = t - CENAS[5][0];
+  ["p1", "p2"].forEach((id, i) => {
+    const k = out((l5 - 1 - i * .5) / .4);
+    const el = document.getElementById(id);
+    el.style.opacity = k; el.style.transform = `translateX(${(1 - k) * 40}px)`;
+  });
+
+  // cena 6: R$ 0
+  const l6 = t - CENAS[6][0];
+  document.getElementById("zero").style.transform = `scale(${.6 + .4 * out((l6 - .3) / .5)})`;
+
+  // chamada final
+  const kc = t < CTA[0] ? 0 : out((t - CTA[0] - .2) / .6);
+  const cta = document.getElementById("cta");
+  cta.style.opacity = kc; cta.style.transform = `scale(${.94 + .06 * kc})`;
+  document.getElementById("marca").style.opacity = 1 - kc;
+
+  document.getElementById("prog").style.width = `${cl(t / TOTAL) * 100}%`;
+};
+window.TOTAL = TOTAL;
+document.getElementById("stage").className = new URLSearchParams(location.search).get("f") === "h" ? "h" : "v";
+window.render(0);
+</script>
+</body>
+</html>
