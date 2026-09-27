@@ -73,8 +73,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Vídeo "Como funciona" (27/09): comercial de 28 s junto da caixa do link.
   1º acesso toca sozinho (mudo, com "Ativar som"); depois vira botão. UM
   exemplo só no vídeo (kit com 2 óleos capilares, 25/09: R$ 428,90 → R$ 291,95,
-  economia R$ 72,62 já contando o cupom de 15% do anúncio) para não misturar
-  preços. Sem marca do produto e com link ilustrativo (direitos de marca).
+  "R$ 136,95 a menos") para não misturar preços. Sem citar cupom (Weslei,
+  27/09), sem marca do produto e com link ilustrativo (direitos de marca).
+  Mesmo estilo e trilha do comercial; só os exemplos mudam.
   Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
   public/video/ (WebM + MP4, 720p).
 

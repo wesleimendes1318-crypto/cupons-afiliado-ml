@@ -7,6 +7,11 @@
     PAGINA=comercial.html AUDIO=trilha.wav node render.js <ffmpeg-com-libx264> v comercial-vertical.mp4
     PAGINA=comercial.html AUDIO=trilha.wav node render.js <ffmpeg-com-libx264> h comercial-horizontal.mp4
 
+Alta qualidade para baixar e postar (1080p, 60 quadros/s, quadros PNG sem perda):
+
+    PAGINA=comercial.html AUDIO=trilha.wav FPS=60 CRF=14 HQ=1 node render.js <ffmpeg> v comercial-vertical-1080p60.mp4
+    PAGINA=comercial.html AUDIO=trilha.wav FPS=60 CRF=14 HQ=1 node render.js <ffmpeg> h comercial-horizontal-1080p60.mp4
+
 Roteiro e legenda: `roteiro-comercial.md`.
 
 ## Tutorial longo (49 s, sem áudio) — primeira versão

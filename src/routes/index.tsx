@@ -130,10 +130,10 @@ export const Route = createFileRoute("/")({
           name: "Como funciona o Melhor Escolha, comparador de preços",
           description:
             "Em 28 segundos: cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, com o frete conferido. Exemplo real de 25/09/2026.",
-          thumbnailUrl: ["https://melhorescolha.io/video/como-funciona-v2-horizontal.jpg"],
+          thumbnailUrl: ["https://melhorescolha.io/video/como-funciona-v3-horizontal.jpg"],
           uploadDate: "2026-09-27",
           duration: "PT28S",
-          contentUrl: "https://melhorescolha.io/video/como-funciona-v2-horizontal.mp4",
+          contentUrl: "https://melhorescolha.io/video/como-funciona-v3-horizontal.mp4",
           inLanguage: "pt-BR",
         }),
       },

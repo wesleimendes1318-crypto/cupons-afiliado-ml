@@ -5,7 +5,10 @@ const FFMPEG = process.argv[2];
 const formato = process.argv[3] || 'v';
 const saida = process.argv[4];
 const soQuadro = process.argv[5]; // opcional: segundo para PNG de teste
-const FPS = 30;
+// Alta qualidade (para baixar e postar): FPS=60 CRF=14 HQ=1 (quadros PNG sem perda, preset slow).
+const FPS = +(process.env.FPS || 30);
+const CRF = process.env.CRF || '19';
+const HQ = process.env.HQ === '1';
 (async () => {
   const [w, h] = formato === 'h' ? [1920, 1080] : [1080, 1920];
   const browser = await chromium.launch();
@@ -22,12 +25,15 @@ const FPS = 30;
   const total = await page.evaluate(() => window.TOTAL);
   const ff = spawn(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
     ...(process.env.AUDIO ? ['-i', process.env.AUDIO] : ['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo']), '-shortest',
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p', '-r', String(FPS),
-    '-c:a', 'aac', '-b:a', process.env.AUDIO ? '192k' : '64k', '-movflags', '+faststart', saida], { stdio: ['pipe', 'inherit', 'inherit'] });
+    '-c:v', 'libx264', '-preset', HQ ? 'slow' : 'medium', '-crf', CRF, ...(HQ ? ['-tune', 'animation'] : []),
+    '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
+    '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-r', String(FPS),
+    '-c:a', 'aac', '-b:a', process.env.AUDIO ? (HQ ? '320k' : '192k') : '64k', '-movflags', '+faststart', saida], { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round(total * FPS);
   for (let i = 0; i < n; i++) {
     await page.evaluate(x => window.render(x), i / FPS);
-    const buf = await page.screenshot({ type: 'jpeg', quality: 93, clip: { x: 0, y: 0, width: w, height: h } });
+    const buf = await page.screenshot(HQ ? { type: 'png', clip: { x: 0, y: 0, width: w, height: h } }
+      : { type: 'jpeg', quality: 93, clip: { x: 0, y: 0, width: w, height: h } });
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
   }
   ff.stdin.end();

@@ -5,8 +5,8 @@
    - Depois: fica um botão compacto; o vídeo só toca se o cliente pedir.
    - Some quando a comparação começa (quem controla é BuscaPorLink).
    - Um exemplo só no vídeo (kit com 2 óleos capilares, 25/09: R$ 428,90 →
-     R$ 291,95), para não misturar preços de produtos diferentes; link
-     ilustrativo e sem marca do produto (direitos de marca).
+     R$ 291,95), para não misturar preços de produtos diferentes; sem citar
+     cupom, link ilustrativo e sem marca do produto (direitos de marca).
    - Quem pede menos movimento no sistema não recebe o vídeo tocando sozinho.
    - Celular: vídeo vertical. Tela larga: horizontal. */
 
@@ -16,14 +16,14 @@ import { Play, Volume2, X } from "lucide-react";
 const CHAVE_VISTO = "me_video_como_funciona_v2";
 const VIDEO = {
   vertical: {
-    webm: "/video/como-funciona-v2-vertical.webm",
-    mp4: "/video/como-funciona-v2-vertical.mp4",
-    poster: "/video/como-funciona-v2-vertical.jpg",
+    webm: "/video/como-funciona-v3-vertical.webm",
+    mp4: "/video/como-funciona-v3-vertical.mp4",
+    poster: "/video/como-funciona-v3-vertical.jpg",
   },
   horizontal: {
-    webm: "/video/como-funciona-v2-horizontal.webm",
-    mp4: "/video/como-funciona-v2-horizontal.mp4",
-    poster: "/video/como-funciona-v2-horizontal.jpg",
+    webm: "/video/como-funciona-v3-horizontal.webm",
+    mp4: "/video/como-funciona-v3-horizontal.mp4",
+    poster: "/video/como-funciona-v3-horizontal.jpg",
   },
 };
 
