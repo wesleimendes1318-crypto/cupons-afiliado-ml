@@ -10,7 +10,7 @@ const FPS = 30;
   const [w, h] = formato === 'h' ? [1920, 1080] : [1080, 1920];
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
-  await page.goto('file://' + path.resolve('video.html') + '?f=' + formato);
+  await page.goto('file://' + path.resolve(process.env.PAGINA || 'video.html') + '?f=' + formato);
   await page.evaluate(() => document.fonts.ready);
   if (soQuadro) {
     for (const t of soQuadro.split(',')) {
@@ -21,9 +21,9 @@ const FPS = 30;
   }
   const total = await page.evaluate(() => window.TOTAL);
   const ff = spawn(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
-    '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-shortest',
+    ...(process.env.AUDIO ? ['-i', process.env.AUDIO] : ['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo']), '-shortest',
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p', '-r', String(FPS),
-    '-c:a', 'aac', '-b:a', '64k', '-movflags', '+faststart', saida], { stdio: ['pipe', 'inherit', 'inherit'] });
+    '-c:a', 'aac', '-b:a', process.env.AUDIO ? '192k' : '64k', '-movflags', '+faststart', saida], { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round(total * FPS);
   for (let i = 0; i < n; i++) {
     await page.evaluate(x => window.render(x), i / FPS);

@@ -1,4 +1,15 @@
-# Vídeo de divulgação (27/09/2026)
+# Vídeos de divulgação (27/09/2026)
+
+## Comercial (28 s, estilo Apple) — o principal
+
+    cd ferramentas/video && npm install
+    python3 trilha.py trilha.wav        # trilha original (precisa de numpy)
+    PAGINA=comercial.html AUDIO=trilha.wav node render.js <ffmpeg-com-libx264> v comercial-vertical.mp4
+    PAGINA=comercial.html AUDIO=trilha.wav node render.js <ffmpeg-com-libx264> h comercial-horizontal.mp4
+
+Roteiro e legenda: `roteiro-comercial.md`.
+
+## Tutorial longo (49 s, sem áudio) — primeira versão
 
 Vídeo de 49 s em dois formatos, gerado quadro a quadro a partir de `video.html`
 (tudo depende só do tempo, então o resultado é sempre igual).

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Melhor Escolha — comercial</title>
+<style>
+@font-face { font-family: Inter; font-weight: 500; src: url("node_modules/@fontsource/inter/files/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 600; src: url("node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 700; src: url("node_modules/@fontsource/inter/files/inter-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 800; src: url("node_modules/@fontsource/inter/files/inter-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-weight: 900; src: url("node_modules/@fontsource/inter/files/inter-latin-900-normal.woff2") format("woff2"); }
+:root {
+  --branco: #fbfbfd; --tinta: #1d1d1f; --cinza: #6e6e73; --cinza2: #86868b;
+  --verde: #0a9a50; --verde2: #e6f6ed; --roxo1: #5b6ee8; --roxo2: #a66ad4; --vermelho: #e0352b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-serif; -webkit-font-smoothing: antialiased; }
+#stage { position: relative; overflow: hidden; background: var(--branco); color: var(--tinta); }
+#stage.v { width: 1080px; height: 1920px; }
+#stage.h { width: 1920px; height: 1080px; }
+.sc { position: absolute; inset: 0; display: none; }
+.centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.w { display: inline-block; overflow: hidden; vertical-align: bottom; padding: 0 .04em .08em; margin-bottom: -.08em; }
+.w > i { display: inline-block; font-style: normal; will-change: transform; }
+.mega { font-weight: 900; letter-spacing: -.045em; line-height: .98; }
+.v .mega { font-size: 148px; }
+.h .mega { font-size: 168px; }
+.titulo { font-weight: 800; letter-spacing: -.035em; line-height: 1.02; }
+.v .titulo { font-size: 104px; }
+.h .titulo { font-size: 92px; }
+.sub { font-weight: 600; color: var(--cinza); letter-spacing: -.01em; line-height: 1.25; }
+.v .sub { font-size: 44px; margin-top: 30px; }
+.h .sub { font-size: 38px; margin-top: 24px; }
+.miudo { font-weight: 600; color: var(--cinza2); font-size: 26px; letter-spacing: .01em; }
+
+/* cena 1: preto */
+#s1 { background: #000; color: #f5f5f7; }
+/* cena 2: preço */
+.preco-velho { position: relative; font-weight: 800; letter-spacing: -.04em; color: var(--tinta); }
+.preco-velho .risco { position: absolute; left: -2%; top: 52%; height: .07em; width: 0; background: var(--vermelho); border-radius: 99px; transform: rotate(-4deg); }
+.preco-novo { font-weight: 900; letter-spacing: -.05em; color: var(--verde); }
+.v .preco-velho { font-size: 150px; }
+.h .preco-velho { font-size: 120px; }
+.v .preco-novo { font-size: 230px; }
+.h .preco-novo { font-size: 210px; }
+
+/* celular */
+.cena-celular .cab { position: absolute; }
+.v .cena-celular .cab { top: 190px; left: 60px; right: 60px; text-align: center; }
+.h .cena-celular .cab { left: 170px; width: 860px; top: 50%; transform: translateY(-50%); text-align: left; }
+.cab .linha { position: absolute; left: 0; right: 0; }
+.h .cab .linha { top: 50%; transform: translateY(-50%); }
+.phone-wrap { position: absolute; perspective: 2200px; }
+.v .phone-wrap { left: 50%; top: 560px; width: 600px; height: 1220px; margin-left: -300px; }
+.h .phone-wrap { left: 1150px; top: 70px; width: 600px; height: 1220px; transform-origin: top left; }
+.phone { width: 600px; height: 1220px; border-radius: 86px; background: linear-gradient(145deg, #2b2c33, #0b0b0f);
+  padding: 16px; box-shadow: 0 60px 120px rgba(20,20,40,.28), 0 20px 40px rgba(20,20,40,.18), inset 0 0 0 3px #3a3b44;
+  transform-style: preserve-3d; will-change: transform; transform-origin: 50% 12%; }
+.tela { position: relative; width: 100%; height: 100%; border-radius: 72px; overflow: hidden; background: #f4f5f9; }
+.ilha { position: absolute; top: 22px; left: 50%; width: 170px; height: 48px; margin-left: -85px; border-radius: 30px; background: #000; z-index: 5; }
+.topo { height: 176px; background: linear-gradient(120deg, var(--roxo1), var(--roxo2)); color: #fff; display: flex; align-items: flex-end;
+  padding: 0 36px 26px; font-weight: 800; font-size: 32px; gap: 14px; letter-spacing: -.01em; }
+.topo .s { width: 46px; height: 46px; border-radius: 13px; background: #fff; color: var(--roxo1); display: grid; place-items: center; font-weight: 900; font-size: 28px; }
+.pag { position: absolute; left: 0; right: 0; top: 176px; bottom: 0; padding: 38px 32px; opacity: 0; }
+#pg1 > *, #pg2 > * { zoom: 1.14; }
+.pag h4 { font-size: 38px; font-weight: 800; letter-spacing: -.02em; }
+.pag .m { color: var(--cinza); font-size: 25px; font-weight: 600; margin-top: 8px; }
+.campo { margin-top: 28px; background: #fff; border: 3px solid #3d5fe0; border-radius: 22px; padding: 24px; font-size: 26px; font-weight: 600;
+  min-height: 148px; word-break: break-all; line-height: 1.35; color: var(--tinta); }
+.cursor { display: inline-block; width: 3px; height: 30px; background: #3d5fe0; vertical-align: -5px; }
+.botao { margin-top: 24px; border-radius: 22px; padding: 28px; text-align: center; font-weight: 800; font-size: 31px; color: #fff; background: #3d5fe0; position: relative; overflow: hidden; }
+.ripple { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: rgba(255,255,255,.45); transform: scale(0); }
+.item { display: flex; align-items: center; gap: 18px; background: #fff; border-radius: 20px; padding: 24px 24px; margin-top: 16px;
+  font-size: 28px; font-weight: 700; box-shadow: 0 2px 0 #e8e9ef; }
+.item .ok { margin-left: auto; width: 46px; height: 46px; border-radius: 50%; background: var(--verde); color: #fff; display: grid; place-items: center; font-size: 26px; font-weight: 900; }
+.barra { height: 14px; border-radius: 99px; background: #e3e5ee; overflow: hidden; margin-top: 26px; }
+.barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3d5fe0, var(--roxo2)); }
+.melhor { background: var(--verde2); border: 3px solid var(--verde); border-radius: 30px; padding: 28px; }
+.selo { display: inline-block; background: var(--verde); color: #fff; font-weight: 800; font-size: 23px; border-radius: 11px; padding: 7px 15px; }
+.lin { display: flex; align-items: center; gap: 20px; margin-top: 16px; }
+.foto { width: 104px; height: 104px; border-radius: 22px; background: #fff; display: grid; place-items: center; font-size: 60px; flex: none; }
+.pv { font-size: 58px; font-weight: 900; color: var(--verde); letter-spacing: -.03em; }
+.fg { color: var(--verde); font-weight: 700; font-size: 24px; }
+.eco { margin-top: 20px; font-size: 33px; font-weight: 800; color: var(--verde); letter-spacing: -.01em; }
+.comprar { margin-top: 20px; background: var(--verde); color: #fff; border-radius: 20px; padding: 24px; text-align: center; font-weight: 800; font-size: 29px; }
+.tab { margin-top: 24px; background: #fff; border-radius: 24px; overflow: hidden; }
+.tab .l { display: flex; align-items: center; padding: 22px 24px; font-size: 26px; font-weight: 700; border-left: 8px solid transparent; }
+.tab .l:nth-child(even) { background: #f6f7fb; }
+.tab .l .p { margin-left: auto; font-weight: 900; font-size: 30px; }
+.tab .l.b { background: var(--verde2); border-left-color: var(--verde); }
+.tab .l.b .p { color: var(--verde); }
+.tab .l.c { background: #fff4dc; border-left-color: #e6a21a; }
+
+/* cena frete */
+.cartoes { display: flex; gap: 34px; margin-top: 70px; }
+.v .cartoes { flex-direction: column; gap: 30px; }
+.cartao { width: 640px; border-radius: 40px; padding: 40px 44px; background: #fff; box-shadow: 0 30px 70px rgba(20,20,50,.10); text-align: left; position: relative; }
+.h .cartao { width: 600px; }
+.cartao .val { font-size: 96px; font-weight: 900; letter-spacing: -.045em; }
+.cartao .obs { font-size: 34px; font-weight: 700; margin-top: 6px; }
+.cartao.pago .obs { color: var(--vermelho); }
+.cartao.ok { border: 4px solid var(--verde); }
+.cartao.ok .val, .cartao.ok .obs { color: var(--verde); }
+.cartao .marca-x { position: absolute; right: 44px; top: 50%; transform: translateY(-50%); font-size: 110px; color: var(--vermelho); font-weight: 900; }
+.cartao .marca-v { position: absolute; right: 44px; top: 50%; transform: translateY(-50%); font-size: 100px; color: var(--verde); font-weight: 900; }
+
+/* cena palavras */
+.palavra { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; letter-spacing: -.05em; }
+.v .palavra { font-size: 220px; }
+.h .palavra { font-size: 240px; }
+
+/* final */
+.logo { width: 170px; height: 170px; border-radius: 46px; background: linear-gradient(135deg, var(--roxo1), var(--roxo2)); color: #fff;
+  display: grid; place-items: center; font-weight: 900; font-size: 110px; letter-spacing: -.04em; box-shadow: 0 30px 60px rgba(91,110,232,.35); }
+.dom { font-weight: 900; letter-spacing: -.045em; margin-top: 54px; }
+.v .dom { font-size: 118px; }
+.h .dom { font-size: 128px; margin-top: 40px; }
+.legal { position: absolute; left: 90px; right: 90px; bottom: 80px; text-align: center; font-size: 25px; font-weight: 500; color: var(--cinza2); line-height: 1.45; }
+.h .legal { bottom: 44px; font-size: 22px; left: 200px; right: 200px; }
+</style>
+</head>
+<body>
+<div id="stage" class="v">
+
+  <!-- 0–2 s -->
+  <div class="sc" id="s1"><div class="centro">
+    <div class="mega"><span class="w"><i>Mesmo</i></span> <span class="w"><i>produto.</i></span></div>
+    <div class="mega" style="margin-top:8px"><span class="w"><i>Outro</i></span> <span class="w"><i>preço.</i></span></div>
+  </div></div>
+
+  <!-- 2–4 s -->
+  <div class="sc" id="s2"><div class="centro">
+    <div class="miudo" id="s2tag">Exemplo real · 26/09/2026</div>
+    <div class="preco-velho" id="velho" style="margin-top:30px">R$ 147,81<span class="risco" id="risco"></span></div>
+    <div class="preco-novo" id="novo">R$ 119,90</div>
+    <div class="sub" id="s2sub" style="margin-top:10px">Mesmo produto. Outra loja do Mercado Livre.</div>
+  </div></div>
+
+  <!-- 4–6 s -->
+  <div class="sc" id="s3"><div class="centro">
+    <div class="titulo"><span class="w"><i>Sem</i></span> <span class="w"><i>garimpar</i></span></div>
+    <div class="titulo" style="color:var(--cinza2)"><span class="w"><i>loja</i></span> <span class="w"><i>por</i></span> <span class="w"><i>loja.</i></span></div>
+  </div></div>
+
+  <!-- 6–18 s: celular -->
+  <div class="sc cena-celular" id="s4">
+    <div class="cab">
+      <div class="linha" data-a="6" data-b="10"><div class="titulo">Cole o link.</div><div class="sub">Do app ou do navegador.</div></div>
+      <div class="linha" data-a="10" data-b="14"><div class="titulo">Eu comparo o mesmo produto.</div><div class="sub">Em outras lojas, conferido pela foto.</div></div>
+      <div class="linha" data-a="14" data-b="18"><div class="titulo">Você vê a melhor escolha.</div><div class="sub">Em menos de 1 minuto.</div></div>
+    </div>
+    <div class="phone-wrap" id="pw"><div class="phone" id="phone"><div class="tela">
+      <div class="ilha"></div>
+      <div class="topo"><div class="s">M</div>Melhor Escolha</div>
+
+      <div class="pag" id="pg1">
+        <h4>Cole o link do produto</h4>
+        <div class="m">Procuro o mesmo produto em outras lojas.</div>
+        <div class="campo" id="campo"></div>
+        <div class="botao" id="botao">Comparar preços<span class="ripple" id="ripple"></span></div>
+      </div>
+
+      <div class="pag" id="pg2">
+        <h4>Comparando…</h4>
+        <div class="item">🛒 Loja A <span class="ok">✓</span></div>
+        <div class="item">🛒 Loja B <span class="ok">✓</span></div>
+        <div class="item">🛒 Loja C <span class="ok">✓</span></div>
+        <div class="item">📷 Mesma foto? <span class="ok">✓</span></div>
+        <div class="item">🚚 Frete <span class="ok">✓</span></div>
+        <div class="barra"><i id="barra"></i></div>
+      </div>
+
+      <div class="pag" id="pg3">
+        <div class="melhor">
+          <span class="selo">Melhor opção</span>
+          <div class="lin"><div class="foto">🐈</div><div><div class="pv">R$ 119,90</div><div class="fg">Frete grátis</div></div></div>
+          <div class="eco" id="eco">Você economiza R$ 0,00</div>
+          <div class="comprar">Comprar com segurança</div>
+        </div>
+        <div class="tab" id="tab">
+          <div class="l b">Loja A<span class="p">R$ 119,90</span></div>
+          <div class="l">Loja B<span class="p">R$ 137,65</span></div>
+          <div class="l c">Anúncio colado<span class="p">R$ 147,81</span></div>
+        </div>
+      </div>
+    </div></div></div>
+  </div>
+
+  <!-- 18–21 s: frete -->
+  <div class="sc" id="s7"><div class="centro">
+    <div class="titulo"><span class="w"><i>O</i></span> <span class="w"><i>frete</i></span> <span class="w"><i>entra</i></span> <span class="w"><i>na</i></span> <span class="w"><i>conta.</i></span></div>
+    <div class="cartoes">
+      <div class="cartao pago" id="c1"><div class="val">R$ 57,00</div><div class="obs">+ frete cobrado</div><div class="marca-x" id="cx">✕</div></div>
+      <div class="cartao ok" id="c2"><div class="val">R$ 75,54</div><div class="obs">Frete grátis · melhor opção</div><div class="marca-v" id="cv">✓</div></div>
+    </div>
+    <div class="miudo" id="s7tag" style="margin-top:40px">Exemplo real · 26/09/2026</div>
+  </div></div>
+
+  <!-- 21–24 s: palavras -->
+  <div class="sc" id="s8">
+    <div class="palavra" id="p1" style="background:var(--verde)">Grátis.</div>
+    <div class="palavra" id="p2" style="background:#3d5fe0">Rápido.</div>
+    <div class="palavra" id="p3" style="background:#1d1d1f">Seguro.</div>
+  </div>
+
+  <!-- 24–28 s: final -->
+  <div class="sc" id="s9"><div class="centro">
+    <div class="logo" id="logo">M</div>
+    <div class="dom" id="dom">melhorescolha.io</div>
+    <div class="sub" id="tag" style="color:var(--tinta);font-weight:700">Cole o link. Veja a melhor escolha.</div>
+    <div class="legal" id="legal">Site independente, sem vínculo com o Mercado Livre. Exemplos reais de 26/09/2026; preços e frete mudam. Recebo comissão da loja quando você compra pelo link, sem custo para você.</div>
+  </div></div>
+</div>
+
+<script>
+const TOTAL = 28;
+const LINK = "https://www.mercadolivre.com.br/antipulga-para-gatos-advocate-elanco-ate-4kg-3-pipetas/p/MLB27569962";
+const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+/* curva "Apple": sai rápido e assenta devagar */
+const eo = x => { x = cl(x); return x === 1 ? 1 : 1 - Math.pow(2, -10 * x); };
+const eio = x => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const p = (t, t0, d) => eo((t - t0) / d);
+const brl = n => "R$ " + n.toFixed(2).replace(".", ",");
+const $ = id => document.getElementById(id);
+const H = () => document.getElementById("stage").classList.contains("h");
+
+/* palavras com máscara: cada .w > i sobe, uma depois da outra */
+function palavras(root, t, t0, passo, dur = .5) {
+  root.querySelectorAll(".w > i").forEach((el, k) => {
+    const q = p(t, t0 + k * passo, dur);
+    el.style.transform = `translateY(${(1 - q) * 105}%)`;
+    el.style.filter = `blur(${(1 - q) * 6}px)`;
+  });
+}
+function mostra(id, t, a, b) { $(id).style.display = t >= a && t < b ? "block" : "none"; return t >= a && t < b; }
+
+window.render = function (t) {
+  const h = H();
+  const stage = $("stage");
+
+  // 1. preto: Mesmo produto. Outro preço.
+  if (mostra("s1", t, 0, 2)) {
+    palavras($("s1"), t, .15, .38);
+    const z = 1 + .05 * eio(t / 2);
+    $("s1").firstElementChild.style.transform = `scale(${z})`;
+  }
+
+  // 2. preço riscado e preço novo
+  if (mostra("s2", t, 2, 4)) {
+    const l = t - 2;
+    const a = p(l, 0, .45);
+    $("velho").style.opacity = a * (1 - .55 * p(l, .95, .4));
+    $("velho").style.transform = `scale(${(1.12 - .12 * a) * (1 - .25 * p(l, .95, .45))}) translateY(${-30 * p(l, .95, .45)}px)`;
+    $("velho").style.filter = `blur(${(1 - a) * 10}px)`;
+    $("risco").style.width = `${104 * p(l, .45, .35)}%`;
+    const n = p(l, .95, .5);
+    $("novo").style.opacity = n;
+    $("novo").style.transform = `translateY(${(1 - n) * 120}px) scale(${.9 + .1 * n})`;
+    $("novo").style.filter = `blur(${(1 - n) * 12}px)`;
+    $("s2sub").style.opacity = p(l, 1.3, .4);
+    $("s2tag").style.opacity = p(l, .2, .4);
+  }
+
+  // 3. Sem garimpar loja por loja.
+  if (mostra("s3", t, 4, 6)) {
+    palavras($("s3"), t, 4.1, .16);
+    $("s3").firstElementChild.style.transform = `scale(${1.04 - .04 * eio((t - 4) / 2)})`;
+  }
+
+  // 4–6. celular
+  if (mostra("s4", t, 6, 18)) {
+    document.querySelectorAll("#s4 .linha").forEach(el => {
+      const a = +el.dataset.a, b = +el.dataset.b;
+      const k = t >= a && t < b ? p(t, a + .05, .5) * (1 - p(t, b - .25, .25)) : 0;
+      el.style.opacity = k;
+      el.style.transform = (h ? "translateY(-50%) " : "") + `translateY(${(1 - k) * 36}px)`;
+      el.style.filter = `blur(${(1 - k) * 8}px)`;
+    });
+    // entrada 3D + flutuação + empurrão de câmera no resultado
+    const ent = p(t, 6, .9);
+    const flut = Math.sin(t * 1.4) * 6;
+    let rx = 24 * (1 - ent), ry = -28 * (1 - ent), ty = 420 * (1 - ent) + flut, s = .88 + .12 * ent;
+    ry += 6 * eio((t - 10) / 1.2) - 6 * eio((t - 14) / 1.2);       // leve giro na comparação
+    const push = eio((t - 16.3) / 1.2);                              // câmera chega na economia
+    s *= 1 + .12 * push;
+    $("phone").style.transform = `translateY(${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
+    $("pw").style.transform = h ? "scale(.76)" : "none";
+    $("pw").style.opacity = ent;
+
+    // página 1: colando o link
+    const k1 = t < 10 ? 1 : 1 - p(t, 10, .3);
+    $("pg1").style.opacity = t < 10.3 ? k1 : 0;
+    const n = Math.floor(cl((t - 6.8) / 1.4) * LINK.length);
+    $("campo").innerHTML = (n ? LINK.slice(0, n) : '<span style="color:#9aa0b8">Cole aqui o link do anúncio</span>') +
+      (n < LINK.length && Math.floor(t * 3) % 2 ? '<span class="cursor"></span>' : "");
+    const toque = t > 8.9 && t < 9.15 ? .95 : 1;
+    $("botao").style.transform = `scale(${toque})`;
+    const r = cl((t - 8.95) / .6);
+    $("ripple").style.transform = `scale(${r * 40})`;
+    $("ripple").style.opacity = r > 0 ? 1 - r : 0;
+
+    // página 2: comparando
+    $("pg2").style.opacity = t >= 10 && t < 14 ? p(t, 10.05, .3) * (1 - p(t, 13.8, .2)) : 0;
+    document.querySelectorAll("#pg2 .item").forEach((el, i) => {
+      const q = p(t, 10.4 + i * .5, .35);
+      el.style.opacity = .3 + .7 * q;
+      el.querySelector(".ok").style.transform = `scale(${q})`;
+    });
+    $("barra").style.width = `${cl((t - 10.3) / 3.2) * 100}%`;
+
+    // página 3: resultado
+    $("pg3").style.opacity = t >= 14 ? p(t, 14.05, .3) : 0;
+    $("eco").textContent = "Você economiza " + brl((147.81 - 119.90) * eio((t - 14.5) / 1.3));
+    document.querySelectorAll("#tab .l").forEach((el, i) => {
+      const q = p(t, 15.2 + i * .22, .4);
+      el.style.opacity = q; el.style.transform = `translateY(${(1 - q) * 24}px)`;
+    });
+  }
+
+  // 7. frete
+  if (mostra("s7", t, 18, 21)) {
+    palavras($("s7"), t, 18.05, .1);
+    const c1 = p(t, 18.4, .5), c2 = p(t, 18.65, .5);
+    $("c1").style.opacity = c1 * (1 - .5 * p(t, 19.5, .4));
+    $("c1").style.transform = `translateY(${(1 - c1) * 80}px) scale(${1 - .06 * p(t, 19.5, .4)})`;
+    $("cx").style.transform = `translateY(-50%) scale(${p(t, 19.4, .3)})`;
+    $("c2").style.opacity = c2;
+    $("c2").style.transform = `translateY(${(1 - c2) * 80}px) scale(${1 + .06 * p(t, 19.7, .4)})`;
+    $("cv").style.transform = `translateY(-50%) scale(${p(t, 19.8, .3)})`;
+    $("s7tag").style.opacity = p(t, 19.9, .4);
+  }
+
+  // 8. Grátis. Rápido. Seguro.
+  if (mostra("s8", t, 21, 24)) {
+    ["p1", "p2", "p3"].forEach((id, i) => {
+      const a = 21 + i, on = t >= a && t < a + 1;
+      $(id).style.display = on ? "flex" : "none";
+      if (on) {
+        const q = p(t, a, .35);
+        $(id).style.transform = `scale(${1.35 - .35 * q})`;
+        $(id).style.filter = `blur(${(1 - q) * 14}px)`;
+      }
+    });
+  }
+
+  // 9. final
+  if (mostra("s9", t, 24, TOTAL + 1)) {
+    const l = p(t, 24.05, .7);
+    $("logo").style.transform = `scale(${.4 + .6 * l}) rotate(${(1 - l) * -12}deg)`;
+    $("logo").style.opacity = l;
+    const d = p(t, 24.45, .7);
+    $("dom").style.opacity = d;
+    $("dom").style.letterSpacing = `${-.045 + .12 * (1 - d)}em`;
+    $("dom").style.filter = `blur(${(1 - d) * 10}px)`;
+    $("tag").style.opacity = p(t, 25.1, .5);
+    $("tag").style.transform = `translateY(${(1 - p(t, 25.1, .5)) * 20}px)`;
+    $("legal").style.opacity = p(t, 25.6, .6);
+  }
+};
+window.TOTAL = TOTAL;
+document.getElementById("stage").className = new URLSearchParams(location.search).get("f") === "h" ? "h" : "v";
+window.render(0);
+</script>
+</body>
+</html>
