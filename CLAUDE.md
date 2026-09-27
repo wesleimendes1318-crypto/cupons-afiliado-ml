@@ -70,6 +70,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (monetização: diretrizes do Google Ads e do programa de afiliados).
 - Guias com exemplos REAIS (dados medidos nos pedidos, com data), sem nome de
   vendedor.
+- Vídeo "Como funciona" (27/09): comercial de 28 s junto da caixa do link.
+  1º acesso toca sozinho (mudo, com "Ativar som"); depois vira botão. UM
+  exemplo só no vídeo (pretinho para pneus, 26/09) para não misturar preços.
+  Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
+  public/video/ (WebM + MP4, 720p).
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.

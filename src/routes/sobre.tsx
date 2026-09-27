@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { VideoComoFuncionaEstatico } from "@/components/ComoFunciona";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 
 const URL = "https://melhorescolha.io/sobre";
@@ -43,6 +44,7 @@ function Sobre() {
       </p>
 
       <h2>Como funciona</h2>
+      <VideoComoFuncionaEstatico />
       <ul>
         <li>Você cola o link do anúncio do produto que quer comprar.</li>
         <li>

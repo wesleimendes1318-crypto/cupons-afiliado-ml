@@ -90,6 +90,8 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
 .tab .l.b { background: var(--verde2); border-left-color: var(--verde); }
 .tab .l.b .p { color: var(--verde); }
 .tab .l.c { background: #fff4dc; border-left-color: #e6a21a; }
+.tab .sf { font-size: 19px; font-weight: 700; color: #b8730a; margin-left: 12px; }
+.tab .fgt { font-size: 19px; font-weight: 700; color: var(--verde); margin-left: 12px; }
 
 /* cena frete */
 .cartoes { display: flex; gap: 34px; margin-top: 70px; }
@@ -130,9 +132,9 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
 
   <!-- 2–4 s -->
   <div class="sc" id="s2"><div class="centro">
-    <div class="miudo" id="s2tag">Exemplo real · 26/09/2026</div>
-    <div class="preco-velho" id="velho" style="margin-top:30px">R$ 147,81<span class="risco" id="risco"></span></div>
-    <div class="preco-novo" id="novo">R$ 119,90</div>
+    <div class="miudo" id="s2tag">Pretinho para pneus 500 ml · exemplo real de 26/09/2026</div>
+    <div class="preco-velho" id="velho" style="margin-top:30px">R$ 86,90<span class="risco" id="risco"></span></div>
+    <div class="preco-novo" id="novo">R$ 75,54</div>
     <div class="sub" id="s2sub" style="margin-top:10px">Mesmo produto. Outra loja do Mercado Livre.</div>
   </div></div>
 
@@ -173,14 +175,15 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
       <div class="pag" id="pg3">
         <div class="melhor">
           <span class="selo">Melhor opção</span>
-          <div class="lin"><div class="foto">🐈</div><div><div class="pv">R$ 119,90</div><div class="fg">Frete grátis</div></div></div>
+          <div class="lin"><div class="foto">🚗</div><div><div class="pv">R$ 75,54</div><div class="fg">Frete grátis</div></div></div>
           <div class="eco" id="eco">Você economiza R$ 0,00</div>
           <div class="comprar">Comprar com segurança</div>
         </div>
         <div class="tab" id="tab">
-          <div class="l b">Loja A<span class="p">R$ 119,90</span></div>
-          <div class="l">Loja B<span class="p">R$ 137,65</span></div>
-          <div class="l c">Anúncio colado<span class="p">R$ 147,81</span></div>
+          <div class="l">Loja C<span class="sf">Sem frete grátis</span><span class="p" style="color:var(--cinza2)">R$ 57,00</span></div>
+          <div class="l b">Loja A<span class="fgt">Frete grátis</span><span class="p">R$ 75,54</span></div>
+          <div class="l">Loja B<span class="fgt">Frete grátis</span><span class="p">R$ 80,00</span></div>
+          <div class="l c">Anúncio colado<span class="p">R$ 86,90</span></div>
         </div>
       </div>
     </div></div></div>
@@ -193,7 +196,7 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
       <div class="cartao pago" id="c1"><div class="val">R$ 57,00</div><div class="obs">+ frete cobrado</div><div class="marca-x" id="cx">✕</div></div>
       <div class="cartao ok" id="c2"><div class="val">R$ 75,54</div><div class="obs">Frete grátis · melhor opção</div><div class="marca-v" id="cv">✓</div></div>
     </div>
-    <div class="miudo" id="s7tag" style="margin-top:40px">Exemplo real · 26/09/2026</div>
+    <div class="miudo" id="s7tag" style="margin-top:40px">Mesmo pretinho para pneus · 26/09/2026</div>
   </div></div>
 
   <!-- 21–24 s: palavras -->
@@ -208,13 +211,13 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
     <div class="logo" id="logo">M</div>
     <div class="dom" id="dom">melhorescolha.io</div>
     <div class="sub" id="tag" style="color:var(--tinta);font-weight:700">Cole o link. Veja a melhor escolha.</div>
-    <div class="legal" id="legal">Site independente, sem vínculo com o Mercado Livre. Exemplos reais de 26/09/2026; preços e frete mudam. Recebo comissão da loja quando você compra pelo link, sem custo para você.</div>
+    <div class="legal" id="legal">Site independente, sem vínculo com o Mercado Livre. Exemplo real de 26/09/2026; preços e frete mudam. Recebo comissão da loja quando você compra pelo link, sem custo para você.</div>
   </div></div>
 </div>
 
 <script>
 const TOTAL = 28;
-const LINK = "https://www.mercadolivre.com.br/antipulga-para-gatos-advocate-elanco-ate-4kg-3-pipetas/p/MLB27569962";
+const LINK = "https://www.mercadolivre.com.br/baba-black-pretinho-prova-dagua-500-ml-cor-preto/p/MLB39273202";
 const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 /* curva "Apple": sai rápido e assenta devagar */
 const eo = x => { x = cl(x); return x === 1 ? 1 : 1 - Math.pow(2, -10 * x); };
@@ -310,7 +313,7 @@ window.render = function (t) {
 
     // página 3: resultado
     $("pg3").style.opacity = t >= 14 ? p(t, 14.05, .3) : 0;
-    $("eco").textContent = "Você economiza " + brl((147.81 - 119.90) * eio((t - 14.5) / 1.3));
+    $("eco").textContent = "Você economiza " + brl((86.90 - 75.54) * eio((t - 14.5) / 1.3));
     document.querySelectorAll("#tab .l").forEach((el, i) => {
       const q = p(t, 15.2 + i * .22, .4);
       el.style.opacity = q; el.style.transform = `translateY(${(1 - q) * 24}px)`;

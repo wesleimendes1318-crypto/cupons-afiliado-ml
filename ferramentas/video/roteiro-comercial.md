@@ -7,11 +7,11 @@ Se preferir uma música do próprio Instagram ou TikTok, é só trocar o som na 
 | Tempo | Tomada |
 |---|---|
 | 0–2 s | Fundo preto: "Mesmo produto. Outro preço." |
-| 2–4 s | R$ 147,81 riscado → R$ 119,90 (exemplo real, 26/09/2026) |
+| 2–4 s | R$ 86,90 riscado → R$ 75,54 (pretinho para pneus 500 ml, exemplo real de 26/09/2026) |
 | 4–6 s | "Sem garimpar loja por loja." |
 | 6–10 s | Celular entra em 3D: "Cole o link." |
 | 10–14 s | "Eu comparo o mesmo produto." (conferido pela foto) |
-| 14–18 s | "Você vê a melhor escolha." · "Você economiza R$ 27,91" |
+| 14–18 s | "Você vê a melhor escolha." · "Você economiza R$ 11,36" (tabela: R$ 57,00 sem frete grátis, R$ 75,54, R$ 80,00, anúncio colado R$ 86,90) |
 | 18–21 s | "O frete entra na conta." R$ 57,00 + frete ✕ / R$ 75,54 frete grátis ✓ |
 | 21–24 s | "Grátis." "Rápido." "Seguro." |
 | 24–28 s | melhorescolha.io · "Cole o link. Veja a melhor escolha." + aviso legal |
@@ -25,7 +25,9 @@ Grátis. Link na bio.
 Site independente, sem vínculo com o Mercado Livre. Recebo uma comissão da loja quando você compra pelo link, sem custo para você.
 #comparadordeprecos #menorpreco #economia #melhorescolha
 
-## Números (medidos em 26/09/2026)
-- Antipulgas para gatos até 4 kg, 3 pipetas: R$ 147,81 no anúncio colado; R$ 119,90 com frete grátis em outra loja; economia R$ 27,91.
-- Pretinho para pneus 500 ml: loja de R$ 57,00 cobrava frete (fora da recomendação); melhor opção R$ 75,54 com frete grátis.
-Lojas sem nome no vídeo. Preços mudam: a data aparece na tela.
+## Um exemplo só (medido em 26/09/2026)
+O vídeo inteiro usa o MESMO produto, para não misturar preços (Weslei, 27/09):
+pretinho para pneus 500 ml. Anúncio colado R$ 86,90; melhor opção R$ 75,54 com
+frete grátis (economia R$ 11,36); outra loja R$ 80,00; e a loja de R$ 57,00 que
+cobra frete, fora da recomendação. Lojas sem nome no vídeo. Preços mudam: a data
+aparece na tela.

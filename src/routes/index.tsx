@@ -126,6 +126,21 @@ export const Route = createFileRoute("/")({
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
+          "@type": "VideoObject",
+          name: "Como funciona o Melhor Escolha, comparador de preços",
+          description:
+            "Em 28 segundos: cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, com o frete conferido. Exemplo real de 26/09/2026.",
+          thumbnailUrl: ["https://melhorescolha.io/video/como-funciona-horizontal.jpg"],
+          uploadDate: "2026-09-27",
+          duration: "PT28S",
+          contentUrl: "https://melhorescolha.io/video/como-funciona-horizontal.mp4",
+          inLanguage: "pt-BR",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
           "@type": "FAQPage",
           mainEntity: PERGUNTAS.map((p) => ({
             "@type": "Question",

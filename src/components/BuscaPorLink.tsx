@@ -21,6 +21,8 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import { ComoFunciona } from "@/components/ComoFunciona";
 import { History, LoaderCircle, Package, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
@@ -878,6 +880,9 @@ export default function BuscaPorLink() {
       </div>
 
       {erro && <p className="mt-3 text-sm font-medium text-danger">{erro}</p>}
+
+      {/* Como funciona (vídeo de 28 s): só com a caixa parada, antes de comparar. */}
+      {fase === "parado" && !pedido && <ComoFunciona />}
 
       {carregando && (
         <Espera fase={fase} demorando={demorando} inicio={inicio} estimativa={estimativa} />
