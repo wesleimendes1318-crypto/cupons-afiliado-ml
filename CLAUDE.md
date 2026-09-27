@@ -83,8 +83,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   ver_pedido(id, chave). A vitrine é gravada só pelo gatilho do banco.
   Ver o que os outros pesquisaram é PÚBLICO de propósito (Weslei, 27/09):
   vitrine e consultar_pedido abertos para leitura, SEM prazo (toda pesquisa
-  fica registrada). A tela mostra "Comparado há X" e, passada 1 hora, pede para
-  atualizar ("Atualizar comparação"). Proteger só a GRAVAÇÃO.
+  fica registrada). A tela mostra "Comparado há X" SEMPRE com o botão
+  "Atualizar comparação" (compara de novo na hora); passada 1 hora, o texto pede
+  para atualizar antes de comprar. Proteger só a GRAVAÇÃO.
 
 ## Garantia (obrigatório a cada versão)
 - O cliente SEMPRE recebe: produto, preço, o link de afiliado e a comparação

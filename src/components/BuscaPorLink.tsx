@@ -625,7 +625,9 @@ export default function BuscaPorLink() {
   useEffect(() => limparTimers, [limparTimers]);
 
   const buscar = useCallback(
-    async (bruta: string) => {
+    /* nova: "Atualizar comparação" — compara de novo mesmo com resultado
+       recente (Weslei, 27/09: o botão fica sempre). */
+    async (bruta: string, nova = false) => {
       const alvo = bruta.trim();
       if (!alvo) return;
 
@@ -674,7 +676,7 @@ export default function BuscaPorLink() {
          com a chave, não com o número sequencial. */
       const { data: pedidoNovo, error } = await supabase.rpc(
         "pedir_comparacao" as never,
-        { p_url: limpo } as never,
+        { p_url: limpo, p_nova: nova } as never,
       );
       const id = (pedidoNovo as { id?: number } | null)?.id ?? null;
       const chave = (pedidoNovo as { chave?: string } | null)?.chave ?? null;
@@ -882,7 +884,10 @@ export default function BuscaPorLink() {
       )}
 
       {fase === "pronto" && pedido && (
-        <IdadeDaComparacao em={pedido.comparado_em ?? null} atualizar={() => buscar(url)} />
+        <IdadeDaComparacao
+          em={pedido.comparado_em ?? null}
+          atualizar={() => void buscar(url, true)}
+        />
       )}
       {fase === "pronto" && pedido && (
         <Resultado
@@ -1378,19 +1383,18 @@ function Foto({ src, className }: { src: string | null | undefined; className: s
   );
 }
 
-/* Há quanto tempo foi comparado. Até 1 hora: só informa. Depois disso, pede
-   para atualizar antes de comprar (preço e estoque mudam), com o botão que
-   compara de novo (Weslei, 27/09). */
+/* Há quanto tempo foi comparado, SEMPRE com o botão que compara de novo
+   (Weslei, 27/09). Passada 1 hora, o texto pede para atualizar antes de
+   comprar (preço e estoque mudam); passado 1 dia, em destaque. */
 function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: () => void }) {
   const [agora, setAgora] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setAgora(Date.now()), 60_000);
     return () => clearInterval(t);
   }, []);
-  if (!em) return null;
-  const quando = new Date(em).getTime();
-  if (!Number.isFinite(quando)) return null;
-  const min = Math.max(0, Math.round((agora - quando) / 60_000));
+  const quando = em ? new Date(em).getTime() : Number.NaN;
+  /* Sem a data (resposta antiga): mostra "agora" e o botão do mesmo jeito. */
+  const min = Number.isFinite(quando) ? Math.max(0, Math.round((agora - quando) / 60_000)) : 0;
   const texto =
     min < 1
       ? "agora"
@@ -1399,9 +1403,6 @@ function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: ()
         : min < 60 * 24
           ? `há ${Math.round(min / 60)} h`
           : `há ${Math.round(min / 1440)} ${Math.round(min / 1440) === 1 ? "dia" : "dias"}`;
-  if (min < 60) {
-    return <p className="mt-3 text-xs text-secondary-ink">Comparado {texto}.</p>;
-  }
   const velho = min >= 60 * 24;
   return (
     <div
@@ -1414,7 +1415,9 @@ function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: ()
         <span className="font-semibold">Comparado {texto}.</span>{" "}
         {velho
           ? "Preço e estoque provavelmente mudaram: atualize antes de comprar."
-          : "Os preços podem ter mudado desde então."}
+          : min >= 60
+            ? "Os preços podem ter mudado desde então."
+            : ""}
       </span>
       <button
         type="button"
