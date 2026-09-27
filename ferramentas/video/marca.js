@@ -1,7 +1,7 @@
 // Logo e artes das redes sociais (Weslei, 27/09). Uso: mkdir -p marca && node marca.js
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const path = require('path');
-const itens = [['simbolo',1024,1024,true],['perfil',1080,1080,false],['horizontal',2000,560,true],['youtube',2560,1440,false],['facebook',1640,624,false],['post',1080,1350,false]];
+const itens = [['simbolo',1024,1024,true],['perfil',1080,1080,false],['horizontal',2000,560,true],['youtube',2560,1440,false],['facebook',1640,624,false],['post',1080,1350,false],['facebook2',1640,924,false]];
 (async () => {
   const b = await chromium.launch();
   for (const [id,w,h,transp] of itens) {
