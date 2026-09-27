@@ -297,6 +297,9 @@ type Pedido = {
   codigo: string | null;
   erro: string | null;
   analise: Analise | null;
+  /* Quando a comparação foi feita. Toda pesquisa fica registrada, sem prazo
+     (Weslei, 27/09); a tela diz há quanto tempo foi. */
+  comparado_em?: string | null;
 };
 
 type Fase = "parado" | "enviando" | "na-fila" | "outras-lojas" | "lendo" | "pronto" | "offline";
@@ -879,6 +882,9 @@ export default function BuscaPorLink() {
       )}
 
       {fase === "pronto" && pedido && (
+        <IdadeDaComparacao em={pedido.comparado_em ?? null} atualizar={() => buscar(url)} />
+      )}
+      {fase === "pronto" && pedido && (
         <Resultado
           pedido={pedido}
           copiar={copiar}
@@ -1369,6 +1375,55 @@ function Foto({ src, className }: { src: string | null | undefined; className: s
       onError={() => setTentativa((t) => t + 1)}
       className={`${className} bg-white object-contain`}
     />
+  );
+}
+
+/* Há quanto tempo foi comparado. Até 1 hora: só informa. Depois disso, pede
+   para atualizar antes de comprar (preço e estoque mudam), com o botão que
+   compara de novo (Weslei, 27/09). */
+function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: () => void }) {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!em) return null;
+  const quando = new Date(em).getTime();
+  if (!Number.isFinite(quando)) return null;
+  const min = Math.max(0, Math.round((agora - quando) / 60_000));
+  const texto =
+    min < 1
+      ? "agora"
+      : min < 60
+        ? `há ${min} min`
+        : min < 60 * 24
+          ? `há ${Math.round(min / 60)} h`
+          : `há ${Math.round(min / 1440)} ${Math.round(min / 1440) === 1 ? "dia" : "dias"}`;
+  if (min < 60) {
+    return <p className="mt-3 text-xs text-secondary-ink">Comparado {texto}.</p>;
+  }
+  const velho = min >= 60 * 24;
+  return (
+    <div
+      className={
+        "mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm " +
+        (velho ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : "border-border bg-muted/50")
+      }
+    >
+      <span>
+        <span className="font-semibold">Comparado {texto}.</span>{" "}
+        {velho
+          ? "Preço e estoque provavelmente mudaram: atualize antes de comprar."
+          : "Os preços podem ter mudado desde então."}
+      </span>
+      <button
+        type="button"
+        onClick={atualizar}
+        className="shrink-0 rounded-md bg-ml-blue px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
+      >
+        Atualizar comparação
+      </button>
+    </div>
   );
 }
 

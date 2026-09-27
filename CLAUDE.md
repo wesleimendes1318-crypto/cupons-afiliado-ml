@@ -82,7 +82,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   pedir_link_da_loja (limite: 15 pedidos novos/min, 150/h) e lê o resultado com
   ver_pedido(id, chave). A vitrine é gravada só pelo gatilho do banco.
   Ver o que os outros pesquisaram é PÚBLICO de propósito (Weslei, 27/09):
-  vitrine e consultar_pedido abertos para leitura. Proteger só a GRAVAÇÃO.
+  vitrine e consultar_pedido abertos para leitura, SEM prazo (toda pesquisa
+  fica registrada). A tela mostra "Comparado há X" e, passada 1 hora, pede para
+  atualizar ("Atualizar comparação"). Proteger só a GRAVAÇÃO.
 
 ## Garantia (obrigatório a cada versão)
 - O cliente SEMPRE recebe: produto, preço, o link de afiliado e a comparação
