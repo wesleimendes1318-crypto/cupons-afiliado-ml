@@ -154,8 +154,17 @@ BEGIN
   RETURN 'pedido';
 END $function$;
 
--- Depois da publicacao do site novo: as versoes antigas (so numero) deixam de
--- ser publicas. A bateria de testes usa pedir_link_novo (sem acesso publico).
-REVOKE EXECUTE ON FUNCTION public.pedir_link(text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.pedir_link_loja(text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.consultar_pedido(bigint) FROM PUBLIC, anon, authenticated;
+-- Transicao sem quebrar nada (Weslei, 27/09): abas abertas antes da
+-- atualizacao ainda chamam pedir_link / consultar_pedido. pedir_link e
+-- pedir_link_loja seguem publicas (ja tem o limite de pedidos). consultar_pedido
+-- responde so ate 28/09 03:00; depois, so ver_pedido(id, chave).
+CREATE OR REPLACE FUNCTION public.consultar_pedido(p_id bigint)
+ RETURNS TABLE(status text, link text, codigo text, erro text, analise jsonb)
+ LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $function$
+  SELECT p.status, p.link, p.codigo, p.erro, p.analise FROM public.pedidos_link p
+   WHERE p.id = p_id AND p.criado_em > now() - interval '2 hours'
+     AND now() < timestamptz '2026-09-28 03:00:00-03';
+$function$;
+GRANT EXECUTE ON FUNCTION public.pedir_link(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.pedir_link_loja(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.consultar_pedido(bigint) TO anon, authenticated;
