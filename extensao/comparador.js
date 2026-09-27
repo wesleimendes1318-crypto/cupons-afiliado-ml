@@ -728,8 +728,13 @@ export function fatosDoOriginal(detalhes, extras = {}) {
   if (extras.dominio) partes.push('Tipo: ' + extras.dominio.replace(/^MLB-/, '').replace(/_/g, ' ').toLowerCase());
   if (extras.condicao) partes.push('Condicao: ' + ({ new: 'novo', used: 'usado', refurbished: 'recondicionado' }[extras.condicao] || extras.condicao));
   for (const c of (detalhes && detalhes.caracteristicas) || []) {
-    if (partes.join('; ').length > 700) break;
+    if (partes.join('; ').length > 560) break;
     partes.push(c.nome + ': ' + c.valor);
   }
-  return partes.length ? partes.join('; ').slice(0, 780) : null;
+  /* Comeco da descricao do anuncio (o site diz que confere pela foto,
+     descricao e caracteristicas). */
+  const desc = String((detalhes && detalhes.descricao) || '').replace(/\s+/g, ' ').trim();
+  const cabe = 860 - partes.join('; ').length - 13;
+  if (desc && cabe > 60) partes.push('Descricao: ' + desc.slice(0, Math.min(cabe, 300)));
+  return partes.length ? partes.join('; ').slice(0, 880) : null;
 }

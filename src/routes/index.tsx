@@ -1782,12 +1782,12 @@ function Index() {
               </p>
 
               <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
-                Cole o link do produto. Eu mostro o mesmo produto em outras lojas, do mais barato ao
-                mais caro.
+                Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do Mercado
+                Livre, do mais barato ao mais caro e com a loja oficial (quando houver).
               </p>
               <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
-                Confiro pela foto que é o mesmo produto. Parecidos aparecem separados, com o que
-                muda.
+                Confiro pela foto, descrição e características para encontrar o mesmo produto.
+                Parecidos aparecem separados, com a descrição do que muda.
               </p>
 
               <div className="mt-7 flex flex-wrap items-center gap-2.5">
