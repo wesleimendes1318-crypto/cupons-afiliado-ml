@@ -577,8 +577,9 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     return p;
   };
   const todos = lista.map((_, i) => i);
-  const metade = Math.ceil(todos.length / 2);
-  const lotes = todos.length > 4 ? [todos.slice(0, metade), todos.slice(metade)] : [todos];
+  /* Lotes de ate 4 em paralelo (12 candidatos = 3 chamadas; garimpo, 27/09). */
+  const lotes: number[][] = [];
+  for (let k = 0; k < todos.length; k += 4) lotes.push(todos.slice(k, k + 4));
   const prazo1 = Math.max(4_000, 13_000 - (Date.now() - t0));
   const respostas = await Promise.all(lotes.map((idx) => gerar(lote(idx), { prazo: prazo1 })));
   const falha = respostas.find((x) => !x.ok);

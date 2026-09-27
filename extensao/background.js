@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal, itemDaCompra, escolherParaConferir,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -327,8 +327,8 @@ async function resolverVendedorAgora(id, url) {
   try {
     const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`);
     nomes = nomesDoHtml(html);
-    oficial = lojaOficialDoHtml(html);
-    condicao = condicaoDoHtml(html);
+    oficial = lojaOficialDoHtml(html, id);
+    condicao = condicaoDoHtml(html, id);
     amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
   oficialPorItem.set(id, oficial);
@@ -1160,8 +1160,10 @@ function extrairAnuncio(t, finalUrl, status) {
 
   const detalhes = detalhesDoAnuncio(t);
   if (!detalhes) amostraDosDetalhes(t, finalUrl);
-  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: lojaOficialDoHtml(t),
-           detalhes, condicao: condicaoDoHtml(t), dominio: dominioDoHtml(t),
+  /* Selo, condicao e tipo do PROPRIO anuncio (a pagina traz outras lojas). */
+  const itemAqui = itemDoUrl(finalUrl || '') || itemDaCompra(t);
+  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: lojaOficialDoHtml(t, itemAqui),
+           detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
@@ -2781,30 +2783,45 @@ async function achadosPeloGoogle(lista, precoRef, itemAtual, original, soCandida
    que tinha 2 lojas iguais, voltou vazio. Agora os candidatos das duas fontes
    sao juntados (ate 8) e a Gemini confere todos de uma vez, com o tempo que
    sobra da consulta. */
+/* BUSCA NAS LOJAS OFICIAIS (Weslei, 27/09: "pode pesquisar na loja oficial
+   dentro do Mercado Livre"): a mesma busca com o filtro "Lojas oficiais" do
+   proprio site (_Loja_all). Os achados entram na frente da conferencia pela
+   foto; o selo "Loja oficial" continua vindo so da pagina de cada anuncio. */
+async function buscaNasLojasOficiais(titulo, precoRef) {
+  const url = urlDeBusca(titulo) + '_Loja_all';
+  const d = { url };
+  try {
+    const html = await lerCatalogo(url, 3000000);
+    const achados = ofertasDaBusca(html, titulo, precoRef, d);
+    const lista = [...achados, ...(achados.outros || [])];
+    lista.diag = { url, cartoes: d.cartoes, comPreco: d.comPreco, naFaixa: d.naFaixa, usados: lista.length };
+    return lista;
+  } catch (e) {
+    const v = []; v.diag = { url, erro: String(e.message || e).slice(0, 120) }; return v;
+  }
+}
+
 async function achadosCombinados(titulo, precoRef, itemAtual, original, google) {
   const vazioCom = d => { const v = []; v.diag = d; return v; };
-  const [doGoogle, daBusca] = await Promise.all([
+  const [doGoogle, daBusca, dasOficiais] = await Promise.all([
     Array.isArray(google) && google.length && original
       ? achadosPeloGoogle(google, precoRef, itemAtual, original, true).catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) }))
       : Promise.resolve(vazioCom(null)),
     achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original, true)
-      .catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) }))
+      .catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) })),
+    original ? buscaNasLojasOficiais(titulo, precoRef) : Promise.resolve(vazioCom(null))
   ]);
-  const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null };
+  const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null, oficiais: dasOficiais.diag || null };
   /* Frete do anuncio colado, se ele apareceu na busca. */
   if (Array.isArray(daBusca.freteAtual)) diag.freteAtual = daBusca.freteAtual[0];
   const vistos = new Set();
-  let candidatos = [];
-  /* Alterna as fontes para as duas terem vez nos 8 conferidos. */
-  const g = [...doGoogle], b = [...daBusca];
-  while ((g.length || b.length) && candidatos.length < MAX_CANDIDATOS_IA) {
-    for (const fonte of [g, b]) {
-      const c = fonte.shift();
-      if (c && c.item && c.item !== itemAtual && !vistos.has(c.item) && candidatos.length < MAX_CANDIDATOS_IA) {
-        vistos.add(c.item); candidatos.push(c);
-      }
-    }
-  }
+  /* GARIMPO (27/09): mais baratos que o colado primeiro, achados nas lojas
+     oficiais na frente, depois o titulo mais parecido; sobra vaga para os
+     demais (tabela de todas as lojas). Ver escolherParaConferir. */
+  const semOutros = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca] },
+    precoRef, itemAtual, MAX_CANDIDATOS_IA);
+  let candidatos = semOutros;
+  for (const c of candidatos) vistos.add(c.item);
   diag.candidatos = candidatos.length;
   /* SEMPRE comparacao com outras lojas (Weslei, 26/09): as vagas que sobram
      na conferencia vao para os OUTROS anuncios da mesma busca, na faixa de
@@ -2824,11 +2841,13 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
     }
     if (!extras.length || !original) return vazioCom(diag);
   }
-  for (const c of extras) {
-    if (candidatos.length >= MAX_CANDIDATOS_IA) break;
-    vistos.add(c.item); candidatos.push(c);
-  }
-  diag.extras = candidatos.length - diag.candidatos;
+  /* Os OUTROS da busca (titulo pouco parecido) disputam as vagas com os
+     demais pelo preco: o mais barato de verdade pode estar escrito de outro
+     jeito (agasalho "Woven 3 Listras" x "Basic 3s", 27/09). */
+  candidatos = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], outros: extras },
+    precoRef, itemAtual, MAX_CANDIDATOS_IA);
+  for (const c of candidatos) vistos.add(c.item);
+  diag.extras = candidatos.filter(c => c.origem === 'outros').length;
   diag.candidatos = candidatos.length;
   ultimaIA = null;
   const t0 = Date.now();
@@ -2856,7 +2875,10 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
     .filter(Boolean);
   diag.parecidos = parecidos.length;
   /* Regra: so o que a Gemini confirmou pela foto aparece. */
-  const aprovados = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true })) : [];
+  /* Mais baratos primeiro: sao eles que viram a recomendacao; os demais
+     completam a tabela (ate 5 lojas lidas). */
+  const aprovados = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true }))
+    .sort((x, y) => x.preco - y.preco) : [];
   if (!aprovados.length) { const v = vazioCom(diag); v.parecidos = parecidos; return v; }
   let achados = await avaliarCandidatos(aprovados.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
   /* CONDICAO (27/09): novo x usado/recondicionado nunca e o mesmo produto.
@@ -2883,6 +2905,9 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
 }
 
 async function achadosNaBusca(titulo, precoRef, itemAtual, original = null) {
+  /* Com o original para conferir, o garimpo e o mesmo do caminho combinado
+     (busca normal + lojas oficiais + outros da busca, mais baratos primeiro). */
+  if (original) return achadosCombinados(titulo, precoRef, itemAtual, original, []);
   const primeira = await achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original);
   if (primeira.length || !original || resta() < 22000) return primeira;
   const termo = await termoDeBuscaPelaGemini(original);

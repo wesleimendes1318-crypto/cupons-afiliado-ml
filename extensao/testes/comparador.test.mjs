@@ -345,15 +345,20 @@ test('frete: "gratis" no cartao vale; has_free_shipping false nao prova frete pa
   assert.equal(freteGratisDaBusca('<ol>' + html + '</ol>').get('MLB4222222222'), true);
 });
 
-test('loja oficial pelo evento do vendedor na página (27/09)', async () => {
-  const { lojaOficialDoHtml } = await import('../comparador.js');
-  const oficial = '"track":{"melidata_event":{"path":"/upp","event_data":{"seller_id":451403353,"seller_name":"adidas","reputation_level":"5_green","power_seller_status":"platinum","official_store_id":3154,"subtitle_types":["SOLD_QUANTITY"],"compats_info":{"status":"NOT_SUPPORTED"}}}}';
-  const comum = '"track":{"melidata_event":{"path":"/upp","event_data":{"seller_id":3042004896,"seller_name":"SHOPMASPBC","reputation_level":"5_green","power_seller_status":"silver","subtitle_types":["SOLD_QUANTITY"],"compats_info":{"status":"NOT_SUPPORTED"},"official_store_id":999}}}';
-  const escapado = oficial.replace(/"/g, '\\"');
-  assert.equal(lojaOficialDoHtml(oficial), true);
-  assert.equal(lojaOficialDoHtml(comum), false);
-  assert.equal(lojaOficialDoHtml(escapado), true);
-  assert.equal(lojaOficialDoHtml('<html>sem evento</html>'), null);
+test('loja oficial pelo evento do PRÓPRIO anúncio (27/09)', async () => {
+  const { lojaOficialDoHtml, itemDaCompra, condicaoDoHtml } = await import('../comparador.js');
+  /* Página da SHOPMASP que também traz o evento da loja oficial adidas. */
+  const adidas = '"melidata_event":{"path":"/upp","event_data":{"seller_id":451403353,"seller_name":"adidas","official_store_id":3154,"compats_info":{},"item_id":"MLB6209821274"}}';
+  const shop = '"melidata_event":{"path":"/upp","event_data":{"seller_id":3042004896,"seller_name":"SHOPMASP","power_seller_status":"silver","compats_info":{},"item_condition":"new","item_id":"MLB4680649229"}}';
+  const compra = '"melidata_event":{"path":"/vip/buy_action","event_data":{"item_id":"MLB4680649229","item_condition":"new","seller_id":3042004896}}';
+  const pagina = adidas + ',' + shop + ',' + compra;
+  assert.equal(lojaOficialDoHtml(pagina, 'MLB4680649229'), false);
+  assert.equal(lojaOficialDoHtml(pagina, 'MLB6209821274'), true);
+  assert.equal(lojaOficialDoHtml(pagina.replace(/"/g, '\\"'), 'MLB6209821274'), true);
+  assert.equal(lojaOficialDoHtml(pagina, 'MLB999999999'), null);
+  assert.equal(lojaOficialDoHtml(pagina, null), null);
+  assert.equal(itemDaCompra(pagina), 'MLB4680649229');
+  assert.equal(condicaoDoHtml(pagina, 'MLB4680649229'), 'new');
 });
 
 test('detalhes, condicao e dominio do anuncio (27/09)', async () => {
@@ -373,4 +378,26 @@ test('detalhes, condicao e dominio do anuncio (27/09)', async () => {
   const json = '{"id":"Cor","text":"Preto"},{"id":"Modelo","text":"Basic 3S Woven"}';
   assert.deepEqual(detalhesDoAnuncio(json).caracteristicas, [{ nome: 'Cor', valor: 'Preto' }, { nome: 'Modelo', valor: 'Basic 3S Woven' }]);
   assert.equal(detalhesDoAnuncio('<html></html>'), null);
+});
+
+test('garimpo: mais baratos primeiro, busca de lojas oficiais antes (27/09)', async () => {
+  const { escolherParaConferir } = await import('../comparador.js');
+  const busca = Array.from({ length: 10 }, (_, i) => ({ item: 'MLB10' + i, preco: 430 + i * 3, nota: 0.8 }));
+  const outros = [
+    { item: 'MLB6209821274', preco: 353.69, nota: 0.3, titulo: 'Conjunto De Agasalho Masculino Woven 3 Listras Adidas' },
+    { item: 'MLB2', preco: 300, nota: 0.2 },
+  ];
+  const oficiais = [{ item: 'MLB6209821274', preco: 353.69, nota: 0.3 }, { item: 'MLB3', preco: 420, nota: 0.5 }];
+  const r = escolherParaConferir({ oficiais, google: [], busca, outros }, 436.91, 'MLB4680649229', 8);
+  assert.equal(r.length, 8);
+  /* Os achados na busca de lojas oficiais vêm na frente. */
+  assert.deepEqual(r.slice(0, 2).map(c => c.origem), ['oficiais', 'oficiais']);
+  assert.ok(r.slice(0, 2).some(c => c.item === 'MLB6209821274'));
+  /* Todos os mais baratos que o colado entram (cabem nas vagas). */
+  for (const it of ['MLB6209821274', 'MLB3', 'MLB100']) assert.ok(r.some(c => c.item === it), it);
+  /* E sobram vagas para os mais caros (tabela de todas as lojas). */
+  assert.ok(r.filter(c => c.preco > 436.91).length >= 4);
+  /* Com 12 vagas (o normal), todos os mais baratos entram. */
+  const r12 = escolherParaConferir({ oficiais, google: [], busca, outros }, 436.91, 'MLB4680649229');
+  assert.equal(r12.filter(c => c.preco <= 436.41).length, 6);
 });

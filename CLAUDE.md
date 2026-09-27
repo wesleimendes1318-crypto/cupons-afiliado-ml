@@ -150,6 +150,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   possível. Cada etapa tem plano B: leitura do código da página → aba logada →
   leitura da TELA (preço/loja/título/foto como a pessoa vê).
   Nunca tela vazia: sem dado, o site mostra o que tem com o botão do link.
+- GARIMPO DE VERDADE (Weslei, 27/09: "sempre a melhor opção de verdade, esse
+  é meu diferencial"): a conferência pela foto olha 12 anúncios (lotes de 4 em
+  paralelo no servidor), escolhidos por escolherParaConferir: PRIMEIRO os mais
+  baratos que o colado (achados da busca nas lojas oficiais na frente, depois
+  título mais parecido), com 4 vagas para os mais caros (tabela). Busca extra
+  só entre lojas oficiais (urlDeBusca + "_Loja_all"). Dos aprovados, os 5
+  mais baratos são abertos: até 5 lojas do mesmo produto na tabela. Caso real:
+  agasalho "Basic 3s" x "Woven 3 Listras" da adidas oficial, R$ 83 mais
+  barato, sumia em metade das consultas por título pouco parecido.
+- Selo "Loja oficial" IGUAL ao do Mercado Livre: só o evento do PRÓPRIO
+  anúncio ("item_id" do anúncio) vale; a página traz eventos de outras lojas
+  (a SHOPMASP saiu como oficial por causa do evento da adidas, 27/09).
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
 - SEMPRE comparação com outras lojas para qualquer produto (Weslei, 26/09):

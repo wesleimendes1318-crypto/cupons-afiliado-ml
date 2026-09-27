@@ -161,10 +161,41 @@ function enderecoDoCartao(pedaco) {
 
 /* Quantos anuncios da busca sao abertos para ler a loja: os MAIS BARATOS entre
    os que parecem o mesmo produto (cada um e uma leitura de pagina). */
-export const MAX_CANDIDATOS_BUSCA = 4;
+/* 5 lojas do mesmo produto na tabela (Weslei, 27/09: "as outras lojas
+   tendem a custar mais, e a minha recomendacao reitera a melhor escolha"). */
+export const MAX_CANDIDATOS_BUSCA = 5;
 /* Quantos parecidos vao para a Gemini conferir pela foto antes de escolher
    os MAX_CANDIDATOS_BUSCA mais baratos entre os aprovados. */
-export const MAX_CANDIDATOS_IA = 8;
+export const MAX_CANDIDATOS_IA = 12;
+
+/* GARIMPO DE VERDADE (Weslei, 27/09: "precisa sempre trazer a melhor opcao
+   de verdade"). O agasalho "Basic 3s" tinha, na mesma busca, o "Conjunto ...
+   Woven 3 Listras" da loja oficial adidas R$ 83 mais barato; com o titulo
+   pouco parecido, ele so entrava na conferencia quando sobrava vaga entre os
+   8, e sumia em metade das consultas. Agora a conferencia pela foto olha
+   PRIMEIRO os anuncios mais baratos que o colado (so eles podem ser a melhor
+   opcao), os achados na busca de lojas oficiais antes, e os de titulo mais
+   parecido; as vagas que sobram vao para os demais (tabela de todas as lojas). */
+export function escolherParaConferir(fontes, precoRef, itemAtual, max = MAX_CANDIDATOS_IA) {
+  const vistos = new Set();
+  const todos = [];
+  for (const [origem, lista] of Object.entries(fontes || {})) {
+    for (const c of lista || []) {
+      if (!c || !c.item || c.item === itemAtual || vistos.has(c.item) || c.preco == null) continue;
+      vistos.add(c.item);
+      todos.push({ ...c, origem: c.origem || origem });
+    }
+  }
+  const nota = c => (c.nota ?? 0) + (c.origem === 'oficiais' ? 1 : 0) + (c.origem === 'google' ? 0.2 : 0);
+  const porNota = (a, b) => nota(b) - nota(a) || a.preco - b.preco;
+  const baratos = precoRef != null ? todos.filter(c => c.preco <= precoRef - 0.5).sort(porNota) : [];
+  const resto = todos.filter(c => !baratos.includes(c)).sort(porNota);
+  /* 4 vagas para os mais caros: sao eles que mostram que a recomendacao e
+     de fato a melhor (tabela com 5 lojas, 27/09). */
+  const reservaResto = Math.min(4, resto.length);
+  const escolhidos = [...baratos.slice(0, Math.max(0, max - reservaResto)), ...resto];
+  return escolhidos.slice(0, max);
+}
 
 /* Foto do cartao: o primeiro endereco de imagem do Mercado Livre no bloco,
    normalizado para a versao grande (-O.webp). Serve para a Gemini conferir. */
@@ -656,25 +687,48 @@ export function polycards(limpo) {
    da adidas). A pagina do anuncio traz, no evento de medicao do vendedor,
    "seller_name":"adidas",...,"official_store_id":3154 (medido nas amostras
    de 27/09). Numero = loja oficial; null = nao; sem o campo = nao sei. */
-export function lojaOficialDoHtml(html) {
-  if (!html) return null;
+/* Trechos da pagina que falam DESTE anuncio: os eventos de medicao
+   ("melidata_event") que trazem "item_id":"<item>". A pagina tambem traz
+   eventos de OUTRAS lojas (27/09: a pagina da SHOPMASP tinha o evento da loja
+   oficial adidas e o selo saiu errado). */
+function eventosDoItem(html, item) {
+  if (!html || !item) return [];
   const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
-  /* Loja comum nao tem o campo: vem seller_name, reputation_level,
-     power_seller_status e depois o primeiro objeto (compats_info). */
-  const m = /"event_data"\s*:\s*\{"seller_id"\s*:\s*\d+\s*,\s*"seller_name"\s*:\s*"[^"]{1,80}"([^{}]{0,400})/.exec(t);
-  if (!m) return null;
-  return /"official_store_id"\s*:\s*\d+/.test(m[1]);
+  const alvo = '"item_id":"' + String(item).toUpperCase() + '"';
+  return t.split('"melidata_event"').slice(1).map(seg => seg.slice(0, 6000))
+    .filter(seg => seg.replace(/\s+/g, '').includes(alvo));
+}
+
+/* Anuncio principal da pagina (quando o endereco nao traz o item_id): o do
+   botao "Comprar agora" ("/vip/buy_action" ou "/pdp/buy_action"). */
+export function itemDaCompra(html) {
+  const t = String(html || '').replace(/\\u002F/gi, '/').replace(/\\+"/g, '"');
+  const m = /"path"\s*:\s*"\/(?:vip|pdp|upp)\/buy_action"\s*,\s*"event_data"\s*:\s*\{\s*"item_id"\s*:\s*"(MLB\d{6,})"/.exec(t);
+  return m ? m[1] : null;
+}
+
+/* LOJA OFICIAL, igual ao que o Mercado Livre mostra: so vale o evento do
+   PROPRIO anuncio. Numero em official_store_id = loja oficial; eventos do
+   anuncio sem o campo = loja comum; sem evento do anuncio = nao sei. */
+export function lojaOficialDoHtml(html, item) {
+  const segs = eventosDoItem(html, item);
+  if (!segs.length) return null;
+  return segs.some(seg => /"official_store_id"\s*:\s*\d+/.test(seg));
 }
 
 /* CONDICAO e DOMINIO do anuncio (27/09): o evento de compra da pagina traz
    "item_condition":"new|used|refurbished" e "domain_id":"MLB-CLOTHING".
    Condicao diferente nunca e o mesmo produto (novo x usado). */
-export function condicaoDoHtml(html) {
-  const m = /"item_condition"\s*:\s*"(new|used|refurbished)"/.exec(String(html || '').replace(/\\+"/g, '"'));
+export function condicaoDoHtml(html, item) {
+  const re = /"item_condition"\s*:\s*"(new|used|refurbished)"/;
+  for (const seg of eventosDoItem(html, item)) { const m = re.exec(seg); if (m) return m[1]; }
+  const m = re.exec(String(html || '').replace(/\\+"/g, '"'));
   return m ? m[1] : null;
 }
-export function dominioDoHtml(html) {
-  const m = /"domain_id"\s*:\s*"(MLB-[A-Z0-9_]{2,60})"/.exec(String(html || '').replace(/\\+"/g, '"'));
+export function dominioDoHtml(html, item) {
+  const re = /"domain_id"\s*:\s*"(MLB-[A-Z0-9_]{2,60})"/;
+  for (const seg of eventosDoItem(html, item)) { const m = re.exec(seg); if (m) return m[1]; }
+  const m = re.exec(String(html || '').replace(/\\+"/g, '"'));
   return m ? m[1] : null;
 }
 
