@@ -50,6 +50,38 @@ export const REGRA_NOMES =
   "ou manequim, mesma pose, mesmo produto), mesmo recortada, com outro fundo ou outro enquadramento. Com " +
   "mesma_foto=true e nada na foto contradizendo, so contradicao EXPLICITA nos dois titulos derruba o igual.\n" +
   "semelhanca de 0 a 100: quanto o produto do candidato se parece com o do original (100 = identico).\n";
+/* O que muda e o que NAO muda o produto, por categoria do marketplace
+   (Weslei, 27/09: "considere todas as categorias"). */
+export const REGRA_CATEGORIAS =
+  "NUNCA sao diferenca (nao mudam o produto): loja, frete, prazo, garantia da loja, forma de pagamento, palavras de venda " +
+  "(original como propaganda, lancamento, envio imediato, promocao, nota fiscal), ordem das palavras, sinonimos, portugues x ingles, " +
+  "codigo do vendedor, embalagem nova do mesmo produto, lote ou validade, foto de caixa x foto do produto, marca dagua, " +
+  "e variacao a escolha no anuncio (cor, tamanho, voltagem) quando inclui a do original.\n" +
+  "SEMPRE sao diferenca, em qualquer categoria: condicao (novo x usado, seminovo, recondicionado, vitrine, mostruario, " +
+  "avariado, sem caixa, tester), original x replica, similar, compativel ou generico, outra marca, e kit x unidade, par " +
+  "ou quantidade diferente.\n" +
+  "O que decide em cada categoria (conta so se os dois informam e diferem):\n" +
+  "Celulares e informatica: modelo e geracao, armazenamento, RAM, cor, 4G x 5G, chip, teclado ABNT2 x US, polegadas.\n" +
+  "Eletrodomesticos, eletronicos, ferramentas, agro e industria: voltagem (110/127, 220, bivolt), potencia, capacidade em " +
+  "litros ou kg, com ou sem bateria/carregador, acessorios inclusos, monofasico x trifasico, cor/acabamento (inox x branco).\n" +
+  "Acessorios para veiculos e pecas: veiculo, ano e motor compativeis, lado (esquerdo x direito), dianteiro x traseiro, " +
+  "medida (aro, pneu 175/70 R14, indices de carga e velocidade), par x unidade.\n" +
+  "Beleza, perfumaria e cuidado pessoal: volume ou peso, concentracao (parfum, EDP, EDT, colonia), tom ou cor da " +
+  "maquiagem, refil x com frasco, itens do kit.\n" +
+  "Alimentos, bebidas, suplementos e saude: sabor, peso ou volume, quantidade de unidades, versao (zero, sem lactose, " +
+  "integral), dosagem ou concentracao.\n" +
+  "Pet: faixa de peso ou porte do animal, idade (filhote x adulto), sabor, quantidade (pipetas, comprimidos).\n" +
+  "Bebes: tamanho e quantidade de fraldas, faixa de idade ou peso.\n" +
+  "Calcados, bolsas e joias: modelo, cor, material (ouro 18k x folheado, couro x sintetico); numeracao da grade nao conta; " +
+  "tamanho da bolsa ou aro do anel informado no titulo conta.\n" +
+  "Casa, moveis, decoracao, colchoes e construcao: medidas, tamanho (solteiro, casal, queen, king), cor e acabamento, " +
+  "material, quantidade de pecas, densidade, bitola, comprimento.\n" +
+  "Esportes, brinquedos, festas e papelaria: peso (halter), tamanho, cor, numero de pecas, tema ou personagem, gramatura, " +
+  "quantidade.\n" +
+  "Games, livros, musica e filmes: plataforma (PS5 x PS4), midia fisica x digital, edicao (padrao, deluxe, capa dura x " +
+  "brochura), idioma, volume, formato (CD, vinil, Blu-ray); reimpressao nao conta.\n" +
+  "Cameras e instrumentos: so corpo x kit com lente, modelo, canhoto x destro, numero de cordas.\n" +
+  "Item unico (veiculo, imovel, ingresso, servico, usado unico, antiguidade): so e igual se for o mesmo item.\n";
 /* Revisao de quem teve a MESMA foto mas foi reprovado: so vira igual com a
    segunda conferencia (de preferencia outro modelo) dizendo igual, sem
    diferenca, tambem com mesma_foto e com confianca >= 90. */
@@ -482,6 +514,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
       "outra quantidade, acessorio vendido junto (ex.: pelicula). Anuncio que atende varios modelos so e igual se " +
       "citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n" +
       REGRA_NOMES +
+      REGRA_CATEGORIAS +
       "Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n" +
       "parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma " +
       "compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so " +
@@ -594,6 +627,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
             "ou borda, outro material ou formato, outro modelo compativel, outro tamanho ou volume, outra quantidade, " +
             "acessorio vendido junto (pelicula, cabo).\n" +
             REGRA_NOMES +
+            REGRA_CATEGORIAS +
             "igual=true somente sem nenhuma contradicao. Contradicao real na duvida: igual=false.\n" +
             'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":true,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}',
         },

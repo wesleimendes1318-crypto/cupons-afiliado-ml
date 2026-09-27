@@ -24,6 +24,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     a MESMA foto é revisto na segunda conferência (outro modelo) e só vira
     igual com igual + mesma foto + confiança >= 90. Vereditos guardados antes
     de 28/09 00:00 UTC não valem.
+  - Regra por categoria (REGRA_CATEGORIAS, servidor e extensão iguais,
+    27/09): NUNCA diferença = loja, frete, garantia da loja, palavras de venda,
+    sinônimos, embalagem nova, lote/validade, foto de caixa, variação à escolha
+    que inclui a do original. SEMPRE diferença = condição (usado,
+    recondicionado, vitrine, sem caixa, tester), réplica/compatível, outra
+    marca, kit x unidade. Em cada categoria só conta o que os dois informam e
+    difere (voltagem, capacidade, compatibilidade do veículo, lado, volume,
+    concentração do perfume, tom, sabor, peso do pet, tamanho da fralda,
+    plataforma do jogo, edição do livro...). Item único: só o mesmo item.
   - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
     aviso "Mesma foto do anúncio colado" quando for o caso.
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
