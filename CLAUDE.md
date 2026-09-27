@@ -72,7 +72,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   vendedor.
 - Vídeo "Como funciona" (27/09): comercial de 28 s junto da caixa do link.
   1º acesso toca sozinho (mudo, com "Ativar som"); depois vira botão. UM
-  exemplo só no vídeo (pretinho para pneus, 26/09) para não misturar preços.
+  exemplo só no vídeo (kit com 2 óleos capilares, 25/09: R$ 428,90 → R$ 291,95,
+  economia R$ 72,62 já contando o cupom de 15% do anúncio) para não misturar
+  preços. Sem marca do produto e com link ilustrativo (direitos de marca).
   Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
   public/video/ (WebM + MP4, 720p).
 

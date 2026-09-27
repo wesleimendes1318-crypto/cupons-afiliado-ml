@@ -4,25 +4,26 @@
      começar sozinho se estiver mudo), com "Ativar som" e "Fechar".
    - Depois: fica um botão compacto; o vídeo só toca se o cliente pedir.
    - Some quando a comparação começa (quem controla é BuscaPorLink).
-   - Um exemplo só no vídeo (pretinho para pneus, 26/09), para não misturar
-     preços de produtos diferentes.
+   - Um exemplo só no vídeo (kit com 2 óleos capilares, 25/09: R$ 428,90 →
+     R$ 291,95), para não misturar preços de produtos diferentes; link
+     ilustrativo e sem marca do produto (direitos de marca).
    - Quem pede menos movimento no sistema não recebe o vídeo tocando sozinho.
    - Celular: vídeo vertical. Tela larga: horizontal. */
 
 import { useEffect, useRef, useState } from "react";
 import { Play, Volume2, X } from "lucide-react";
 
-const CHAVE_VISTO = "me_video_como_funciona_v1";
+const CHAVE_VISTO = "me_video_como_funciona_v2";
 const VIDEO = {
   vertical: {
-    webm: "/video/como-funciona-vertical.webm",
-    mp4: "/video/como-funciona-vertical.mp4",
-    poster: "/video/como-funciona-vertical.jpg",
+    webm: "/video/como-funciona-v2-vertical.webm",
+    mp4: "/video/como-funciona-v2-vertical.mp4",
+    poster: "/video/como-funciona-v2-vertical.jpg",
   },
   horizontal: {
-    webm: "/video/como-funciona-horizontal.webm",
-    mp4: "/video/como-funciona-horizontal.mp4",
-    poster: "/video/como-funciona-horizontal.jpg",
+    webm: "/video/como-funciona-v2-horizontal.webm",
+    mp4: "/video/como-funciona-v2-horizontal.mp4",
+    poster: "/video/como-funciona-v2-horizontal.jpg",
   },
 };
 
@@ -154,7 +155,7 @@ export function ComoFunciona() {
         </button>
       </div>
       <figcaption className="mt-1.5 text-center text-[11px] text-secondary-ink">
-        Exemplo real de 26/09/2026. Preços e frete mudam.
+        Exemplo real de 25/09/2026, com link ilustrativo. Preços mudam.
       </figcaption>
     </figure>
   );
@@ -176,7 +177,7 @@ export function VideoComoFuncionaEstatico() {
         <source src={VIDEO.horizontal.mp4} type="video/mp4" />
       </video>
       <figcaption className="mt-1.5 text-center text-xs text-secondary-ink">
-        Como funciona, em 28 segundos. Exemplo real de 26/09/2026; preços e frete mudam.
+        Como funciona, em 28 segundos. Exemplo real de 25/09/2026, com link ilustrativo; preços mudam.
       </figcaption>
     </figure>
   );
