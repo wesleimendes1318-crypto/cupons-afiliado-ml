@@ -32,7 +32,7 @@ function Divulgacao() {
       etiqueta="Transparência"
       titulo="Divulgação de afiliados"
       resumo="A relação comercial deste site, declarada por inteiro e em português claro."
-      atualizacao="23/09/2026"
+      atualizacao="27/09/2026"
     >
       <h2>Participação em programa de afiliados</h2>
       <p>
@@ -66,8 +66,8 @@ function Divulgacao() {
       <h2>Como escolhemos o que aparece aqui</h2>
       <ul>
         <li>
-          Uma loja aparece na comparação porque vende o mesmo produto, conferido pela foto — não
-          porque paga mais comissão.
+          Uma loja aparece na comparação porque vende o mesmo produto, conferido pela foto,
+          descrição e características — não porque paga mais comissão.
         </li>
         <li>
           Todas as lojas encontradas aparecem, da mais barata à mais cara, inclusive quando o

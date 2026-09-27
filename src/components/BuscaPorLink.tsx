@@ -862,7 +862,8 @@ export default function BuscaPorLink() {
         <h2 className="font-semibold">Cole o link do produto</h2>
       </div>
       <p className="mb-2 text-xs text-secondary-ink">
-        Procuro o mesmo produto em outras lojas e mostro onde sai mais barato.
+        Procuro o mesmo produto em outras lojas dentro do Mercado Livre e mostro onde sai mais
+        barato.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -2481,7 +2482,7 @@ function OutraLojaComCupom({
           <p className="text-xs tabular-nums text-secondary-ink">
             <span className="text-sm font-bold text-success">{brl(oferta.final)}</span>
             {diferenca != null && diferenca > 0 ? ` · ${brl(diferenca)} a menos` : ""}
-            {oferta.verificadoIA ? " · ✓ conferido pela foto" : ""}
+            {oferta.verificadoIA ? " · ✓ mesmo produto conferido" : ""}
           </p>
         </div>
         {oferta.link ? (
@@ -2528,7 +2529,7 @@ function OutraLojaComCupom({
         <Foto src={oferta.imagem} className="size-14 shrink-0 rounded" />
         {oferta.verificadoIA && (
           <span className="rounded bg-card px-2 py-1 text-xs font-semibold text-success">
-            ✓ Mesmo produto: foto e título conferidos
+            ✓ Mesmo produto: foto e anúncio conferidos
           </span>
         )}
       </div>

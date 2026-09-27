@@ -33,7 +33,7 @@ function Sobre() {
     <LayoutConteudo
       etiqueta="Quem somos"
       titulo="Sobre o site"
-      resumo="Um comparador de preços independente: você cola o link de um produto e vê o mesmo produto em outras lojas, do mais barato ao mais caro."
+      resumo="Um site independente que compara os preços dos produtos vendidos no Mercado Livre: você cola o link de um produto e vê o mesmo produto em outras lojas de lá, do mais barato ao mais caro, com a loja oficial quando houver."
       atualizacao="27/09/2026"
     >
       <h2>Por que este site existe</h2>
@@ -48,16 +48,17 @@ function Sobre() {
       <ul>
         <li>Você cola o link do anúncio do produto que quer comprar.</li>
         <li>
-          O site procura o mesmo produto em outras lojas e confere marca, modelo, foto e título de
-          cada anúncio. Todo resultado igual passa por uma segunda conferência.
+          O site procura o mesmo produto em outras lojas dentro do Mercado Livre e confere pela
+          foto, descrição e características. Todo resultado igual passa por uma segunda conferência.
         </li>
         <li>
-          Em menos de dois minutos aparece a tabela com todas as lojas do mesmo produto, da mais barata à
-          mais cara, cada uma com o botão de compra segura.
+          Em menos de dois minutos aparece a tabela com todas as lojas do mesmo produto, da mais
+          barata à mais cara, com a loja oficial marcada quando houver e o botão de compra segura em
+          cada uma.
         </li>
         <li>
-          Anúncios apenas parecidos (outra marca ou outro detalhe) aparecem separados, com o aviso
-          do que muda.
+          Anúncios apenas parecidos (outra marca ou outro detalhe) aparecem separados, com a
+          descrição do que muda.
         </li>
       </ul>
 

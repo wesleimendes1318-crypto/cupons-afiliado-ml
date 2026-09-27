@@ -97,6 +97,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Nunca parecer ferramenta DO Mercado Livre (Weslei, 27/09): o site compara os
   produtos que estão lá. Título: "Melhor Escolha: compare preços de produtos
   vendidos no Mercado Livre" (não "comparador de preços do Mercado Livre").
+- MENSAGEM ÚNICA do site (Weslei, 27/09: "todo site precisa estar coeso"):
+  "Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do
+  Mercado Livre, do mais barato ao mais caro e com a loja oficial (quando
+  houver). Confiro pela foto, descrição e características para encontrar o
+  mesmo produto. Parecidos aparecem separados, com a descrição do que muda."
+  Topo, perguntas, Sobre, guias, divulgação, rodapé e títulos de busca dizem
+  isso. Comissão: "do programa de afiliados" (não "do vendedor").
 - "Mercado Livre" só de forma DESCRITIVA e com moderação (Weslei, 26/09, para
   a busca no Google), sempre com o
   aviso de site independente, sem vínculo. Nunca logo, cores ou visual da marca,

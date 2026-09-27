@@ -41,7 +41,7 @@ export const GUIAS: Guia[] = [
         itens: [
           "Abra o anúncio do produto que você quer comprar e copie o endereço (o link).",
           "Cole o link na caixa da página inicial e toque em Comparar preços.",
-          "Em menos de dois minutos aparece a tabela com todas as lojas que vendem o mesmo produto, do mais barato ao mais caro.",
+          "Em menos de dois minutos aparece a tabela com todas as lojas que vendem o mesmo produto dentro do Mercado Livre, do mais barato ao mais caro, com a loja oficial marcada quando houver.",
           "Escolha a loja e compre pelo botão, direto no site oficial, com pagamento protegido.",
         ],
       },
@@ -102,7 +102,7 @@ export const GUIAS: Guia[] = [
       {
         pergunta: "Pago mais caro comprando pelo botão do site?",
         resposta:
-          "Não. O preço é o mesmo da loja. O site recebe uma comissão do vendedor, nunca de quem compra.",
+          "Não. O preço é o mesmo da loja. O site recebe uma comissão do programa de afiliados, nunca de quem compra.",
       },
     ],
   },
@@ -112,7 +112,7 @@ export const GUIAS: Guia[] = [
     resumo:
       "Foto diferente não quer dizer produto diferente, e título igual não quer dizer produto igual. O que realmente conta.",
     tempo: "4 min de leitura",
-    atualizacao: "25/09/2026",
+    atualizacao: "27/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -141,7 +141,7 @@ export const GUIAS: Guia[] = [
         tipo: "destaque",
         titulo: "Como o site confere",
         texto:
-          "Cada anúncio encontrado é comparado com o que você colou: marca, modelo, foto e título. Todo resultado igual passa por uma segunda conferência. Só entra na tabela de lojas o que é o mesmo produto. O que é apenas parecido aparece separado, com o que muda escrito.",
+          "Cada anúncio encontrado é comparado com o que você colou pela foto, descrição e características (marca, modelo, cor, tamanho, voltagem, condição). Todo resultado igual passa por uma segunda conferência. Só entra na tabela de lojas o que é o mesmo produto. O que é apenas parecido aparece separado, com a descrição do que muda.",
       },
       { tipo: "h2", texto: "Exemplos reais" },
       {

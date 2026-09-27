@@ -56,12 +56,12 @@ const PERGUNTAS = [
   {
     pergunta: "O que é a Melhor Escolha?",
     resposta:
-      "Um comparador de preços gratuito para produtos do Mercado Livre. Você cola o link de um anúncio e eu mostro o mesmo produto em outras lojas, do menor preço ao maior.",
+      "Um site gratuito e independente que compara os preços dos produtos vendidos no Mercado Livre. Você cola o link de um anúncio e eu mostro o mesmo produto em outras lojas dentro do Mercado Livre, do menor preço ao maior, com a loja oficial quando houver.",
   },
   {
     pergunta: "Como achar o menor preço de um produto no Mercado Livre?",
     resposta:
-      "Cole aqui o link do anúncio. Eu procuro o mesmo produto em outras lojas, confiro pela foto que é o mesmo e mostro a melhor escolha, já com o frete grátis indicado.",
+      "Cole aqui o link do anúncio. Eu procuro o mesmo produto em outras lojas dentro do Mercado Livre, confiro pela foto, descrição e características que é o mesmo e mostro a melhor escolha, com o frete grátis indicado e a loja oficial marcada quando houver.",
   },
   {
     pergunta: "O site mostra cupom de desconto?",
@@ -92,7 +92,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, do menor preço ao maior, com frete grátis e desconto conferidos. Grátis.",
+          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas de lá, do menor preço ao maior, com o frete grátis indicado e a loja oficial quando houver. Grátis e independente.",
       },
       {
         property: "og:title",
@@ -101,7 +101,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "O mesmo produto em outras lojas, do menor preço ao maior. Cole o link e veja a melhor escolha.",
+          "O mesmo produto em outras lojas dentro do Mercado Livre, do menor preço ao maior, com a loja oficial quando houver. Cole o link e veja a melhor escolha.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://melhorescolha.io/" },
@@ -119,7 +119,7 @@ export const Route = createFileRoute("/")({
           url: "https://melhorescolha.io/",
           inLanguage: "pt-BR",
           description:
-            "Comparador de preços independente para produtos do Mercado Livre: o mesmo produto em outras lojas, do menor preço ao maior.",
+            "Site independente que compara os preços dos produtos vendidos no Mercado Livre: o mesmo produto em outras lojas de lá, do menor preço ao maior, com a loja oficial quando houver.",
         }),
       },
       {
@@ -1828,18 +1828,18 @@ function Index() {
                     aria-hidden="true"
                     className="mt-0.5 size-4 shrink-0 text-ml-yellow"
                   />
-                  Comparo o mesmo produto, conferido pela foto
+                  Comparo o mesmo produto: foto, descrição e características
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Mostro todas as lojas, até as mais caras
+                  Mostro todas as lojas, até as mais caras, e a oficial quando houver
                 </li>
                 <li className="flex items-start gap-2.5">
                   <ShieldAlert
                     aria-hidden="true"
                     className="mt-0.5 size-4 shrink-0 text-ml-yellow"
                   />
-                  Parecido só aparece separado, com o que muda
+                  Parecido só aparece separado, com a descrição do que muda
                 </li>
               </ul>
               <p className="mt-4 border-t border-white/20 pt-3 text-xs leading-relaxed text-white/75">
@@ -1893,7 +1893,8 @@ function Index() {
               { icone: Link2, texto: "Você cola o link do produto que quer comprar" },
               {
                 icone: Search,
-                texto: "O site procura o mesmo produto em outras lojas e compara os preços",
+                texto:
+                  "O site procura o mesmo produto em outras lojas dentro do Mercado Livre e confere pela foto, descrição e características",
               },
               {
                 icone: ShieldCheck,
@@ -1909,7 +1910,7 @@ function Index() {
             ))}
           </ol>
           <p className="mt-3 text-xs text-secondary-ink">
-            Sem custo para você. Recebo comissão do vendedor — não de quem compra.
+            Sem custo para você. Recebo comissão do programa de afiliados — não de quem compra.
           </p>
         </div>
       </section>
@@ -2824,15 +2825,16 @@ function Index() {
       <footer className="mt-10 border-t border-border py-8">
         <div className="mx-auto grid max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-bold">Mesmo produto, conferido pela foto</p>
+            <p className="text-sm font-bold">Mesmo produto: foto, descrição e características</p>
             <p className="mt-1 text-xs text-secondary-ink">
-              Loja só entra na comparação quando é o mesmo produto. Parecido aparece separado.
+              Loja só entra na comparação quando é o mesmo produto. Parecido aparece separado, com a
+              descrição do que muda.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Sem custo para você</p>
             <p className="mt-1 text-xs text-secondary-ink">
-              Recebo comissão do vendedor, nunca de quem compra. O preço é o mesmo.
+              Recebo comissão do programa de afiliados, nunca de quem compra. O preço é o mesmo.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card p-4">

@@ -85,12 +85,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Melhor Escolha — compare preços de produtos do Mercado Livre" },
       {
         name: "description",
-        content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",
+        content:
+          "O mesmo produto em outras lojas dentro do Mercado Livre, do mais barato ao mais caro, com a loja oficial quando houver.",
       },
-      { property: "og:title", content: "Melhor Escolha — comparador de preços" },
+      {
+        property: "og:title",
+        content: "Melhor Escolha — compare preços de produtos do Mercado Livre",
+      },
       {
         property: "og:description",
-        content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",
+        content:
+          "O mesmo produto em outras lojas dentro do Mercado Livre, do mais barato ao mais caro, com a loja oficial quando houver.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
