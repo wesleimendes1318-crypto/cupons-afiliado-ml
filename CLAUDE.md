@@ -80,7 +80,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Banco (27/09): função que GRAVA e é pública exige a senha da extensão
   (p_token) ou fica só para o banco. O site pede com pedir_comparacao /
   pedir_link_da_loja (limite: 15 pedidos novos/min, 150/h) e lê o resultado com
-  ver_pedido(id, chave aleatória). A vitrine é gravada só pelo gatilho do banco.
+  ver_pedido(id, chave). A vitrine é gravada só pelo gatilho do banco.
+  Ver o que os outros pesquisaram é PÚBLICO de propósito (Weslei, 27/09):
+  vitrine e consultar_pedido abertos para leitura. Proteger só a GRAVAÇÃO.
 
 ## Garantia (obrigatório a cada versão)
 - O cliente SEMPRE recebe: produto, preço, o link de afiliado e a comparação

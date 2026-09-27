@@ -157,13 +157,14 @@ END $function$;
 -- Transicao sem quebrar nada (Weslei, 27/09): abas abertas antes da
 -- atualizacao ainda chamam pedir_link / consultar_pedido. pedir_link e
 -- pedir_link_loja seguem publicas (ja tem o limite de pedidos). consultar_pedido
--- responde so ate 28/09 03:00; depois, so ver_pedido(id, chave).
+-- segue publico: ver o que os outros pesquisaram faz parte do site.
 CREATE OR REPLACE FUNCTION public.consultar_pedido(p_id bigint)
  RETURNS TABLE(status text, link text, codigo text, erro text, analise jsonb)
  LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $function$
+  -- Publico de proposito (Weslei, 27/09): qualquer um pode ver o que os outros
+  -- pesquisaram. So leitura; nada aqui grava.
   SELECT p.status, p.link, p.codigo, p.erro, p.analise FROM public.pedidos_link p
-   WHERE p.id = p_id AND p.criado_em > now() - interval '2 hours'
-     AND now() < timestamptz '2026-09-28 03:00:00-03';
+   WHERE p.id = p_id AND p.criado_em > now() - interval '2 hours';
 $function$;
 GRANT EXECUTE ON FUNCTION public.pedir_link(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.pedir_link_loja(text) TO anon, authenticated;
