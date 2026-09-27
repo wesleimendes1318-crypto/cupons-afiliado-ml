@@ -667,15 +667,24 @@ export default function BuscaPorLink() {
         return;
       }
 
-      const { data: id, error } = await supabase.rpc("pedir_link", { p_url: limpo });
+      /* Número + chave aleatória do pedido (27/09): o resultado só é lido
+         com a chave, não com o número sequencial. */
+      const { data: pedidoNovo, error } = await supabase.rpc(
+        "pedir_comparacao" as never,
+        { p_url: limpo } as never,
+      );
+      const id = (pedidoNovo as { id?: number } | null)?.id ?? null;
+      const chave = (pedidoNovo as { chave?: string } | null)?.chave ?? null;
 
-      if (error || id == null) {
+      if (error || id == null || !chave) {
         limparTimers();
         setFase("offline");
         setErro(
           /link invalido/i.test(error?.message ?? "")
             ? "Esse link não é de um anúncio válido. Cole o endereço do produto."
-            : null,
+            : /fila cheia/i.test(error?.message ?? "")
+              ? "Muitas comparações ao mesmo tempo agora. Em 1 minuto a fila libera."
+              : null,
         );
         return;
       }
@@ -700,7 +709,10 @@ export default function BuscaPorLink() {
 
       const consultar = async () => {
         if (atual.current !== id) return;
-        const { data } = await supabase.rpc("consultar_pedido", { p_id: id });
+        const { data } = await supabase.rpc(
+          "ver_pedido" as never,
+          { p_id: id, p_chave: chave } as never,
+        );
         if (atual.current !== id) return;
         // O tipo gerado do RPC devolve status como string solta; aqui a gente
         // sabe o formato porque a funcao no banco e nossa.
@@ -1842,11 +1854,13 @@ function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
         /item_id(?:%3A|:)(MLB)-?(\d{6,})/i.exec(url) ??
         /(?<!\/p)\/(MLB)-?(\d{9,})(?:[-_/?#]|$)/i.exec(url);
       const alvo = item ? `https://produto.mercadolivre.com.br/MLB-${item[2]}` : url;
-      const { data: id, error } = await supabase.rpc(
-        "pedir_link_loja" as never,
+      const { data: pedidoNovo, error } = await supabase.rpc(
+        "pedir_link_da_loja" as never,
         { p_url: alvo } as never,
       );
-      if (error || id == null) throw new Error("falhou");
+      const id = (pedidoNovo as { id?: number } | null)?.id ?? null;
+      const chave = (pedidoNovo as { chave?: string } | null)?.chave ?? null;
+      if (error || id == null || !chave) throw new Error("falhou");
       try {
         window.postMessage(
           { de: "cupons-afiliado-ml", tipo: "pedido-novo", id },
@@ -1857,7 +1871,10 @@ function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
       }
       for (let volta = 0; volta < 45; volta++) {
         await new Promise((ok) => setTimeout(ok, volta < 10 ? 1200 : 2500));
-        const { data } = await supabase.rpc("consultar_pedido", { p_id: Number(id) });
+        const { data } = await supabase.rpc(
+          "ver_pedido" as never,
+          { p_id: Number(id), p_chave: chave } as never,
+        );
         const linha = (Array.isArray(data) ? data[0] : data) as {
           status?: string;
           link?: string | null;
