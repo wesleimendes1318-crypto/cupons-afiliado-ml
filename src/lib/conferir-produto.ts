@@ -26,12 +26,9 @@ type Resultado =
 /* Cada modelo tem a sua cota gratuita (medido em 25/09: 2.5-flash e
    flash-latest em 429 o resto do dia depois das baterias). O 2.5-flash-lite
    entra como mais uma cota; modelo que a chave nao tem (404) e pulado. */
-const MODELOS = [
-  "gemini-flash-lite-latest",
-  "gemini-2.5-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-flash-latest",
-];
+/* gemini-2.5-flash-lite saiu (27/09: 404 "no longer available to new
+   users") e so gastava a vaga do segundo modelo. */
+const MODELOS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"];
 const CONFIANCA_MINIMA = 80;
 
 /* ROUPA E FOTO IGUAL (Weslei, 27/09): o agasalho "Basic 3s" colado e o
@@ -470,44 +467,71 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     ...lista.map((c) => imagem(c.imagem)),
   ]);
 
-  const partes: Parte[] = [
-    {
-      text:
-        "Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL " +
-        "e so pode ver outra loja como mesmo produto se o PRODUTO for o mesmo. Cada vendedor faz a propria foto: " +
-        "fundo, angulo, montagem, textos, selos, enfeites e quantas unidades aparecem na foto NAO importam.\n" +
-        "Passo 1: descreva o PRODUTO do original (foto e titulo): tipo, marca e modelo, cor e acabamento do proprio " +
-        "produto, material, formato, tamanho/volume, compatibilidade (modelo do celular, voltagem) e quantidade do kit.\n" +
-        "Passo 2: para cada CANDIDATO, use a foto e o titulo dele. E o mesmo produto quando tipo, marca/modelo (se o " +
-        "original tem marca), cor e acabamento do produto, tamanho, compatibilidade e quantidade batem. Detalhe que so " +
-        "nao aparece na foto do candidato NAO e diferenca (ex.: gravacao pequena que o angulo nao mostra), se o titulo " +
-        "e o resto confirmam. Diferenca e o que CONTRADIZ o original: outra marca, outra cor ou borda do produto " +
-        "(capinha transparente com borda preta x capinha toda transparente), outro modelo compativel, outro tamanho, " +
-        "outra quantidade, acessorio vendido junto (ex.: pelicula). Anuncio que atende varios modelos so e igual se " +
-        "citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n" +
-        REGRA_NOMES +
-        "Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n" +
-        "parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma " +
-        "compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so " +
-        "marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n" +
-        'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}',
-    },
-    { text: "ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)") },
-  ];
-  if (fotoOriginal) partes.push(fotoOriginal);
-  lista.forEach((c, i) => {
-    partes.push({
-      text: `CANDIDATO ${i}: ${c.titulo ?? "(sem titulo)"}${fotos[i] ? "" : " (sem foto)"}`,
-    });
-    const f = fotos[i];
-    if (f) partes.push(f);
-  });
+  const pedido: Parte = {
+    text:
+      "Voce confere anuncios para um comparador de precos. O cliente vai comprar o produto do ANUNCIO ORIGINAL " +
+      "e so pode ver outra loja como mesmo produto se o PRODUTO for o mesmo. Cada vendedor faz a propria foto: " +
+      "fundo, angulo, montagem, textos, selos, enfeites e quantas unidades aparecem na foto NAO importam.\n" +
+      "Passo 1: descreva o PRODUTO do original (foto e titulo): tipo, marca e modelo, cor e acabamento do proprio " +
+      "produto, material, formato, tamanho/volume, compatibilidade (modelo do celular, voltagem) e quantidade do kit.\n" +
+      "Passo 2: para cada CANDIDATO, use a foto e o titulo dele. E o mesmo produto quando tipo, marca/modelo (se o " +
+      "original tem marca), cor e acabamento do produto, tamanho, compatibilidade e quantidade batem. Detalhe que so " +
+      "nao aparece na foto do candidato NAO e diferenca (ex.: gravacao pequena que o angulo nao mostra), se o titulo " +
+      "e o resto confirmam. Diferenca e o que CONTRADIZ o original: outra marca, outra cor ou borda do produto " +
+      "(capinha transparente com borda preta x capinha toda transparente), outro modelo compativel, outro tamanho, " +
+      "outra quantidade, acessorio vendido junto (ex.: pelicula). Anuncio que atende varios modelos so e igual se " +
+      "citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n" +
+      REGRA_NOMES +
+      "Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n" +
+      "parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma " +
+      "compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so " +
+      "marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n" +
+      'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}',
+  };
 
-  const r = await gerar(partes, { prazo: Math.max(4_000, 13_000 - (Date.now() - t0)) });
-  if (!r.ok) return r;
-  const obj = lerJson<{ descricao_original?: string; candidatos?: VereditoIA[] }>(r.texto);
-  if (!obj || !Array.isArray(obj.candidatos))
-    return { ok: false, status: 502, erro: "JSON invalido da IA", modelo: r.modelo };
+  /* Dois lotes em paralelo (27/09): 8 candidatos de uma vez passaram do
+     prazo de 13 s com a regra de roupa/mesma foto; metade em cada chamada
+     responde bem antes. Cada lote leva o original e os seus candidatos. */
+  const lote = (idx: number[]): Parte[] => {
+    const p: Parte[] = [
+      pedido,
+      {
+        text: "ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)"),
+      },
+    ];
+    if (fotoOriginal) p.push(fotoOriginal);
+    idx.forEach((i, k) => {
+      p.push({
+        text: `CANDIDATO ${k}: ${lista[i]?.titulo ?? "(sem titulo)"}${fotos[i] ? "" : " (sem foto)"}`,
+      });
+      const f = fotos[i];
+      if (f) p.push(f);
+    });
+    return p;
+  };
+  const todos = lista.map((_, i) => i);
+  const metade = Math.ceil(todos.length / 2);
+  const lotes = todos.length > 4 ? [todos.slice(0, metade), todos.slice(metade)] : [todos];
+  const prazo1 = Math.max(4_000, 13_000 - (Date.now() - t0));
+  const respostas = await Promise.all(lotes.map((idx) => gerar(lote(idx), { prazo: prazo1 })));
+  const falha = respostas.find((x) => !x.ok);
+  if (falha && !falha.ok) return falha;
+  const r = respostas[0] as Extract<Resultado, { ok: true }>;
+  const vereditos: VereditoIA[] = [];
+  let descricaoIA: string | undefined;
+  for (let n = 0; n < lotes.length; n++) {
+    const rn = respostas[n] as Extract<Resultado, { ok: true }>;
+    const on = lerJson<{ descricao_original?: string; candidatos?: VereditoIA[] }>(rn.texto);
+    if (!on || !Array.isArray(on.candidatos))
+      return { ok: false, status: 502, erro: "JSON invalido da IA", modelo: rn.modelo };
+    descricaoIA ??= on.descricao_original;
+    const idx = lotes[n] as number[];
+    for (const c of on.candidatos) {
+      const g = Number.isInteger(c.indice) ? idx[c.indice as number] : undefined;
+      if (g !== undefined) vereditos.push({ ...c, indice: g });
+    }
+  }
+  const obj = { descricao_original: descricaoIA, candidatos: vereditos };
 
   const avaliacao = lerVereditos(obj.candidatos, lista.length).map((a) => ({
     ...a,

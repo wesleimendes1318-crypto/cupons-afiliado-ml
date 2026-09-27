@@ -533,9 +533,9 @@ async function geminiLocal(partes, primeiro = null) {
   /* Medido em 25/09: o Flash-Lite respondeu e julgou certo (borda roxa x
      preta, Edge 70 x 70 Fusion+); o 2.5 Flash estourou o prazo. */
   /* primeiro: a segunda opiniao comeca por OUTRO modelo. */
-  /* 2.5-flash-lite: mais uma cota gratuita (modelo que a chave nao tem = 404, pula). */
+  /* 2.5-flash-lite saiu (27/09: 404 "no longer available"). */
   /* Gemma (autorizado pelo Weslei em 25/09): so depois de todos os Gemini. */
-  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', geminiModel,
+  const modelos = [...new Set([primeiro, 'gemini-flash-lite-latest', 'gemini-2.5-flash', geminiModel,
                                ...MODELOS_GEMMA].filter(Boolean))];
   const inicio = Date.now();
   let ultimo = { ok: false, status: 0, erro: 'sem resposta' };
@@ -749,7 +749,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
             + (k >= positivos.length ? ' (REVISAR; a primeira conferencia disse: ' + String(a.motivo || '').slice(0, 120) + ')' : '') });
           conf.push(fotos[a.indice]);
         });
-        const outro = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest'].find(m => m !== r.modelo) || null;
+        const outro = ['gemini-2.5-flash', 'gemini-flash-lite-latest'].find(m => m !== r.modelo) || null;
         const r2 = resta() > 9000 ? await geminiLocal(conf, outro) : { ok: false, status: 504, erro: 'sem tempo' };
         const obj2 = r2.ok ? jsonDaIA(r2.texto) : null;
         if ((!obj2 || !Array.isArray(obj2.candidatos)) && positivos.length) {
