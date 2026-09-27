@@ -651,3 +651,17 @@ export function polycards(limpo) {
   }
   return saida;
 }
+
+/* LOJA OFICIAL (Weslei, 27/09: a mais barata do agasalho era a loja oficial
+   da adidas). A pagina do anuncio traz, no evento de medicao do vendedor,
+   "seller_name":"adidas",...,"official_store_id":3154 (medido nas amostras
+   de 27/09). Numero = loja oficial; null = nao; sem o campo = nao sei. */
+export function lojaOficialDoHtml(html) {
+  if (!html) return null;
+  const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
+  /* Loja comum nao tem o campo: vem seller_name, reputation_level,
+     power_seller_status e depois o primeiro objeto (compats_info). */
+  const m = /"event_data"\s*:\s*\{"seller_id"\s*:\s*\d+\s*,\s*"seller_name"\s*:\s*"[^"]{1,80}"([^{}]{0,400})/.exec(t);
+  if (!m) return null;
+  return /"official_store_id"\s*:\s*\d+/.test(m[1]);
+}

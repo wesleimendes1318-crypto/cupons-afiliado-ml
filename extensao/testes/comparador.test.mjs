@@ -344,3 +344,14 @@ test('frete: "gratis" no cartao vale; has_free_shipping false nao prova frete pa
     .replace('</li>', '<span class="poly-component__shipping">Frete gr&aacute;tis</span></li>');
   assert.equal(freteGratisDaBusca('<ol>' + html + '</ol>').get('MLB4222222222'), true);
 });
+
+test('loja oficial pelo evento do vendedor na página (27/09)', async () => {
+  const { lojaOficialDoHtml } = await import('../comparador.js');
+  const oficial = '"track":{"melidata_event":{"path":"/upp","event_data":{"seller_id":451403353,"seller_name":"adidas","reputation_level":"5_green","power_seller_status":"platinum","official_store_id":3154,"subtitle_types":["SOLD_QUANTITY"],"compats_info":{"status":"NOT_SUPPORTED"}}}}';
+  const comum = '"track":{"melidata_event":{"path":"/upp","event_data":{"seller_id":3042004896,"seller_name":"SHOPMASPBC","reputation_level":"5_green","power_seller_status":"silver","subtitle_types":["SOLD_QUANTITY"],"compats_info":{"status":"NOT_SUPPORTED"},"official_store_id":999}}}';
+  const escapado = oficial.replace(/"/g, '\\"');
+  assert.equal(lojaOficialDoHtml(oficial), true);
+  assert.equal(lojaOficialDoHtml(comum), false);
+  assert.equal(lojaOficialDoHtml(escapado), true);
+  assert.equal(lojaOficialDoHtml('<html>sem evento</html>'), null);
+});

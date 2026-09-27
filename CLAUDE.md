@@ -73,6 +73,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   "escolha esta loja em Outras opções de compra" (semAfiliado), e a
   recomendação é a mais barata com link PRÓPRIO e frete grátis (Weslei, 26/09).
   O cadastro não chama o gerador de novo para anúncio recusado há menos de 24 h.
+- Loja oficial (Weslei, 27/09: a mais barata do agasalho era a loja oficial
+  da adidas): selo "Loja oficial" na tabela, no anúncio colado e na
+  recomendação ("Vendido pela loja oficial X"). Fonte: official_store_id da
+  lista oficial de ofertas e, na página do anúncio, o evento do vendedor
+  ("seller_name"... "official_store_id"; sem o campo = loja comum). Em empate
+  de preço (< R$ 0,50) a oficial vem primeiro.
 - Economia sempre contra o preço que a página mostra ao cliente (a API pode
   trazer outro: Advocate R$ 169,90 na API x R$ 147,81 na página).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de

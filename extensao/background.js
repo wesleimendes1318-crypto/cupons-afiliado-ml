@@ -8,7 +8,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
-import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl,
+import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -250,6 +250,8 @@ function nomesDoHtml(buf) {
 }
 
 const cacheMem = new Map();
+/* item -> true (loja oficial), false, null (nao sei). */
+const oficialPorItem = new Map();
 
 /* Leituras em andamento: a busca adianta a leitura das lojas enquanto a
    Gemini confere as fotos, e quem pedir o mesmo anuncio depois espera a
@@ -287,22 +289,26 @@ function amostraDoVendedor(id, html) {
 
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
-  if (m && Date.now() - m.ts < TTL_VEND) return m.nomes;
+  if (m && Date.now() - m.ts < TTL_VEND) { oficialPorItem.set(id, m.oficial ?? null); return m.nomes; }
 
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
-  const chave = 'v2_' + id;
+  /* v3: guarda tambem se e loja oficial. */
+  const chave = 'v3_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
-  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); return g.nomes; }
+  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); return g.nomes; }
 
   let nomes = [];
+  let oficial = null;
   try {
     const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`);
     nomes = nomesDoHtml(html);
+    oficial = lojaOficialDoHtml(html);
     amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
+  oficialPorItem.set(id, oficial);
 
-  const reg = { nomes, ts: Date.now() };
+  const reg = { nomes, oficial, ts: Date.now() };
   if (nomes.length) { cacheMem.set(id, reg); chrome.storage.local.set({ [chave]: reg }); }
   return nomes;
 }
@@ -1120,7 +1126,7 @@ function extrairAnuncio(t, finalUrl, status) {
                trechoPreco: perto(/price|preco|money-amount/i), trechoLoja: perto(/Vendido por|seller|vendedor/i) };
   }
 
-  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou,
+  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: lojaOficialDoHtml(t),
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
@@ -2357,6 +2363,7 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
       minimo: vale ? aval.minimo : null,
       teto: vale ? aval.teto : null,
       final: Math.round((c.preco - economia) * 100) / 100,
+      lojaOficial: oficialPorItem.has(c.item) ? oficialPorItem.get(c.item) : null,
       ...extra
     });
   }
@@ -3654,6 +3661,7 @@ async function atenderPedidos() {
                 motivo: o.motivo, achadoNaBusca: !!o.achadoNaBusca,
                 freteGratis: o.freteGratis != null ? o.freteGratis : null,
                 mesmaLoja: !!o.mesmaLoja,
+                lojaOficial: o.lojaOficial != null ? o.lojaOficial : null,
                 imagem: o.imagem || null, titulo: o.nomeCatalogo || null,
                 minimo: o.cupom ? o.cupom.minimo : null, teto: o.cupom ? o.cupom.teto : null,
                 cupom: o.cupom ? { id: o.cupom.id, titulo: o.cupom.titulo, vence: o.cupom.vence } : null
@@ -3742,6 +3750,7 @@ async function atenderPedidos() {
                     referencias.push({ vendedor: t.vendedor || null, preco: t.preco, final: t.final, url: t.url || null,
                       imagem: t.imagem || null, verificadoIA: !!t.verificadoIA,
                       freteGratis: t.freteGratis != null ? t.freteGratis : null,
+                      lojaOficial: t.lojaOficial != null ? t.lojaOficial : null,
                       mesmaLoja,
                       diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
                       cupom: t.cupom ? t.cupom.titulo : null });
@@ -3901,6 +3910,7 @@ async function atenderPedidos() {
                   verificadoIA: !!alt.verificadoIA || (verificacaoIA && !verificacaoIA.indisponivel && !!alt.achadoNaBusca),
                   freteGratis: alt.freteGratis != null ? alt.freteGratis : null,
                   mesmaLoja: !!alt.mesmaLoja,
+                  lojaOficial: alt.lojaOficial != null ? alt.lojaOficial : null,
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,
@@ -4008,6 +4018,8 @@ async function atenderPedidos() {
               bloqueado: aval ? aval.bloqueado : null
             } : null,
             lojaLida: !!(a.nomes && a.nomes.length),
+            /* Loja oficial da marca (selo no site; Weslei, 27/09). */
+            lojaOficial: a.lojaOficial != null ? a.lojaOficial : null,
             recusados111: recusados111.length ? recusados111 : null,
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
           });

@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ComoFunciona } from "@/components/ComoFunciona";
-import { History, LoaderCircle, Package, Share2 } from "lucide-react";
+import { BadgeCheck, History, LoaderCircle, Package, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -164,6 +164,9 @@ function compartilharWhatsApp(texto: string) {
    nunca um parecido, e só quando sai mais barato que o anúncio colado. */
 type OutraLoja = {
   freteGratis?: boolean | null;
+  /* Loja oficial da marca (Weslei, 27/09: a mais barata do agasalho era a
+     loja oficial da adidas). Selo na tabela e na recomendação. */
+  lojaOficial?: boolean | null;
   /* Outro anúncio da mesma loja do link colado, mais barato. */
   mesmaLoja?: boolean | null;
   cupomId?: number | null;
@@ -260,6 +263,7 @@ type Analise = {
   linksPendentes?: boolean | null;
   /* Frete do anúncio colado: true grátis, false pago, null não sei. */
   freteGratis?: boolean | null;
+  lojaOficial?: boolean | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
   imagem?: string | null;
   buscaFora?: {
@@ -293,6 +297,7 @@ type Referencia = {
   semAfiliado?: boolean | null;
   freteGratis?: boolean | null;
   mesmaLoja?: boolean | null;
+  lojaOficial?: boolean | null;
 };
 
 type Pedido = {
@@ -1518,6 +1523,7 @@ function Resultado({
         imagem: r.imagem ?? null,
         freteGratis: r.freteGratis ?? null,
         mesmaLoja: r.mesmaLoja ?? null,
+        lojaOficial: r.lojaOficial ?? null,
         verificadoIA: true,
         achadoNaBusca: true,
         motivo: "mais_barata",
@@ -1532,7 +1538,12 @@ function Resultado({
         Boolean(c.o.link || c.o.url) &&
         (precoColado == null ? (c.o.ganho ?? 0) > 0 : c.o.final <= precoColado - 0.5),
     )
-    .sort((x, y) => (x.o.final ?? 0) - (y.o.final ?? 0));
+    /* Mesmo preço (diferença menor que R$ 0,50): a loja oficial vem primeiro. */
+    .sort((x, y) => {
+      const d = (x.o.final ?? 0) - (y.o.final ?? 0);
+      if (Math.abs(d) >= 0.5) return d;
+      return (y.o.lojaOficial === true ? 1 : 0) - (x.o.lojaOficial === true ? 1 : 0) || d;
+    });
   const recomendada = candidatas[0] ?? null;
   const trocar = recomendada != null;
 
@@ -1575,6 +1586,7 @@ function Resultado({
             url: semLink ? urlColada : null,
             colado: true,
             freteGratis: a?.freteGratis ?? null,
+            lojaOficial: a?.lojaOficial ?? null,
           },
         ]
       : []),
@@ -1589,6 +1601,7 @@ function Resultado({
       })(),
       freteGratis: o.freteGratis ?? null,
       mesmaLoja: o.mesmaLoja ?? null,
+      lojaOficial: o.lojaOficial ?? null,
       ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
@@ -1600,6 +1613,7 @@ function Resultado({
       diferenca: r.diferenca,
       freteGratis: r.freteGratis ?? null,
       mesmaLoja: r.mesmaLoja ?? null,
+      lojaOficial: r.lojaOficial ?? null,
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
@@ -1637,6 +1651,7 @@ function Resultado({
             )}
             {a?.temCupom && <span> · sem o cupom</span>}
             {a?.vendedor && <span> · {a.vendedor}</span>}
+            {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
           </p>
         </div>
       </div>
@@ -2014,9 +2029,24 @@ type LinhaLoja = {
   /* true frete grátis, false frete pago, null/undefined não sei. */
   freteGratis?: boolean | null;
   mesmaLoja?: boolean | null;
+  lojaOficial?: boolean | null;
   /* Link abre a página geral do produto: escolher a loja em "Outras opções". */
   mesmaPagina?: boolean | null;
 };
+
+/* Selo de loja oficial da marca, lido na página do anúncio ou na lista
+   oficial de ofertas (official_store_id). */
+function SeloLojaOficial({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={
+        "items-center gap-0.5 text-[10px] font-bold leading-tight text-ml-blue " + className
+      }
+    >
+      <BadgeCheck className="inline size-3 align-[-2px]" aria-hidden="true" /> Loja oficial
+    </span>
+  );
+}
 
 /* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
    igual). Tabela separada, âmbar (atenção), com o que muda em cada um. */
@@ -2207,6 +2237,7 @@ function TodasAsLojas({
                   <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
                   <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
                     {l.colado ? "Anúncio colado" : l.nome}
+                    {l.lojaOficial === true && <SeloLojaOficial className="block" />}
                     {l.mesmaPagina && !l.colado && (
                       <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                         Na página, escolha esta loja em "Outras opções de compra"
@@ -2398,6 +2429,12 @@ function OutraLojaComCupom({
                 : `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
               : "Achei o mesmo produto mais barato em outra loja"}
       </p>
+      {oferta.lojaOficial === true && (
+        <p className="mt-0.5 text-xs font-semibold text-ml-blue">
+          <BadgeCheck className="inline size-3.5 align-[-3px]" aria-hidden="true" /> Vendido pela
+          loja oficial{oferta.vendedor ? ` ${oferta.vendedor}` : ""}
+        </p>
+      )}
       <div className="mt-2 flex items-center gap-2">
         <Foto src={oferta.imagem} className="size-14 shrink-0 rounded" />
         {oferta.verificadoIA && (

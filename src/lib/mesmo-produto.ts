@@ -212,6 +212,10 @@ export type Opcao = {
   freteGratis: boolean | null;
   /* Outro anúncio da MESMA loja do link colado, mais barato. */
   mesmaLoja?: boolean;
+  /* Loja oficial da marca no marketplace (official_store_id na lista de
+     ofertas). O site mostra o selo (Weslei, 27/09: adidas oficial era a
+     mais barata do agasalho). */
+  lojaOficial?: boolean | null;
 };
 
 export type Comparacao = {
@@ -223,6 +227,7 @@ export type Comparacao = {
     preco: number | null;
     vendedor: string | null;
     freteGratis?: boolean | null;
+    lojaOficial?: boolean | null;
   } | null;
   opcoes: Opcao[];
   fonte: "api-oficial";
@@ -244,6 +249,7 @@ export type Comparacao = {
     porNome: boolean;
     freteGratis: boolean | null;
     mesmaLoja?: boolean;
+    lojaOficial?: boolean | null;
   }[];
   /* true quando o produto de catálogo foi achado pelo NOME (palpite forte),
      e não por estar ligado ao anúncio. O site avisa o cliente. */
@@ -262,6 +268,7 @@ type Candidato = {
   achadoNaBusca: boolean;
   catalogo: string;
   freteGratis: boolean | null;
+  lojaOficial: boolean | null;
 };
 
 /* O que a extensão já sabe do anúncio (ela lê a página que o CLIENTE colou).
@@ -652,6 +659,7 @@ export async function compararMesmoProduto(
           /* FRETE (Weslei, 25/09): R$ 57 com frete pago saía mais caro que
              R$ 86,90 com frete grátis. */
           freteGratis: freteDaOferta(o),
+          lojaOficial: "official_store_id" in o ? o["official_store_id"] != null : null,
         });
       }
     }
@@ -697,6 +705,7 @@ export async function compararMesmoProduto(
       preco,
       vendedor: vendedorAqui,
       freteGratis: freteAqui,
+      lojaOficial: minha?.lojaOficial ?? null,
     };
     const item = minha ? { id: minha.item, seller_id: minha.sellerId } : null;
     const ehMinhaLoja = (sellerId: number) =>
@@ -763,6 +772,7 @@ export async function compararMesmoProduto(
         nomeCatalogo: fichas.get(c.catalogo)?.nome ?? null,
         freteGratis: c.freteGratis,
         mesmaLoja: Boolean(ehMinhaLoja(c.sellerId)),
+        lojaOficial: c.lojaOficial,
       };
       const atual = porLoja.get(c.sellerId);
       if (!atual || opcao.final < atual.final) porLoja.set(c.sellerId, opcao);
@@ -788,6 +798,7 @@ export async function compararMesmoProduto(
         porNome: c.achadoNaBusca,
         freteGratis: c.freteGratis,
         mesmaLoja: Boolean(ehMinhaLoja(c.sellerId)),
+        lojaOficial: c.lojaOficial,
         diferenca: Math.round((final - finalAtual) * 100) / 100,
         cupom: economiaDoCupom(cupom, c.preco) ? (cupom?.desconto ?? null) : null,
       });
