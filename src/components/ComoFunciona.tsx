@@ -16,14 +16,14 @@ import { Play, Volume2, X } from "lucide-react";
 const CHAVE_VISTO = "me_video_como_funciona_v2";
 const VIDEO = {
   vertical: {
-    webm: "/video/como-funciona-v3-vertical.webm",
-    mp4: "/video/como-funciona-v3-vertical.mp4",
-    poster: "/video/como-funciona-v3-vertical.jpg",
+    webm: "/video/como-funciona-v4-vertical.webm",
+    mp4: "/video/como-funciona-v4-vertical.mp4",
+    poster: "/video/como-funciona-v4-vertical.jpg",
   },
   horizontal: {
-    webm: "/video/como-funciona-v3-horizontal.webm",
-    mp4: "/video/como-funciona-v3-horizontal.mp4",
-    poster: "/video/como-funciona-v3-horizontal.jpg",
+    webm: "/video/como-funciona-v4-horizontal.webm",
+    mp4: "/video/como-funciona-v4-horizontal.mp4",
+    poster: "/video/como-funciona-v4-horizontal.jpg",
   },
 };
 

@@ -34,7 +34,7 @@ function Sobre() {
       etiqueta="Quem somos"
       titulo="Sobre o site"
       resumo="Um comparador de preços independente: você cola o link de um produto e vê o mesmo produto em outras lojas, do mais barato ao mais caro."
-      atualizacao="25/09/2026"
+      atualizacao="27/09/2026"
     >
       <h2>Por que este site existe</h2>
       <p>
@@ -52,7 +52,7 @@ function Sobre() {
           cada anúncio. Todo resultado igual passa por uma segunda conferência.
         </li>
         <li>
-          Em até um minuto aparece a tabela com todas as lojas do mesmo produto, da mais barata à
+          Em menos de dois minutos aparece a tabela com todas as lojas do mesmo produto, da mais barata à
           mais cara, cada uma com o botão de compra segura.
         </li>
         <li>

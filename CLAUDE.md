@@ -26,8 +26,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Sempre mostrar a "Melhor opção", mesmo quando é o próprio anúncio colado.
 - Mostrar TODAS as lojas comparadas (tabela zebrada), cada uma com o link de
   afiliado próprio (gerado pelo endereço do anúncio da loja, não da ficha).
-- A consulta do cliente deve terminar em até 1 minuto. Previsões de tempo na tela
-  vêm de medição real (função tempo_estimado), nunca inventadas.
+- A consulta do cliente deve terminar em até 1 minuto (meta interna). Para o
+  público o texto é "em menos de 2 minutos" (Weslei, 27/09: não prometer 1
+  minuto; medido 24–27/09 nos pedidos do site com tempo registrado: 89 de 91
+  com o 1º resultado em menos de 2 min, metade em até 32 s). Previsões de tempo na tela vêm de medição real (função
+  tempo_estimado), nunca inventadas.
 
 - Frete conta: loja com frete PAGO nunca vira "mais barata"/recomendação
   (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90 com frete grátis).
@@ -73,9 +76,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Vídeo "Como funciona" (27/09): comercial de 28 s junto da caixa do link.
   1º acesso toca sozinho (mudo, com "Ativar som"); depois vira botão. UM
   exemplo só no vídeo (kit com 2 óleos capilares, 25/09: R$ 428,90 → R$ 291,95,
-  "R$ 136,95 a menos") para não misturar preços. Sem citar cupom (Weslei,
-  27/09), sem marca do produto e com link ilustrativo (direitos de marca).
-  Mesmo estilo e trilha do comercial; só os exemplos mudam.
+  "R$ 136,95 a menos") para não misturar preços. No vídeo (Weslei, 27/09):
+  sem citar cupom, sem citar Mercado Livre, "em menos de 2 minutos", sem marca
+  do produto e link ilustrativo em example.com (domínio reservado). Frete:
+  "Frete pago não passa na frente / Frete grátis conta a favor" (vale em todo
+  caso do código). Mesmo estilo e trilha; só os exemplos mudam.
   Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
   public/video/ (WebM + MP4, 720p).
 

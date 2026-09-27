@@ -135,7 +135,7 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
     <div class="miudo" id="s2tag">Kit com 2 óleos capilares · exemplo real de 25/09/2026</div>
     <div class="preco-velho" id="velho" style="margin-top:30px">R$ 428,90<span class="risco" id="risco"></span></div>
     <div class="preco-novo" id="novo">R$ 291,95</div>
-    <div class="sub" id="s2sub" style="margin-top:10px">Mesmo produto. Outra loja do Mercado Livre.</div>
+    <div class="sub" id="s2sub" style="margin-top:10px">Mesmo produto. Outra loja.</div>
   </div></div>
 
   <!-- 4–6 s -->
@@ -149,7 +149,7 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
     <div class="cab">
       <div class="linha" data-a="6" data-b="10"><div class="titulo">Cole o link.</div><div class="sub">Do app ou do navegador.</div></div>
       <div class="linha" data-a="10" data-b="14"><div class="titulo">Eu comparo o mesmo produto.</div><div class="sub">Em outras lojas, conferido pela foto.</div></div>
-      <div class="linha" data-a="14" data-b="18"><div class="titulo">Você vê a melhor escolha.</div><div class="sub">Em menos de 1 minuto.</div></div>
+      <div class="linha" data-a="14" data-b="18"><div class="titulo">Você vê a melhor escolha.</div><div class="sub">Em menos de 2 minutos.</div></div>
     </div>
     <div class="phone-wrap" id="pw"><div class="phone" id="phone"><div class="tela">
       <div class="ilha"></div>
@@ -192,8 +192,8 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
   <div class="sc" id="s7"><div class="centro">
     <div class="titulo"><span class="w"><i>O</i></span> <span class="w"><i>frete</i></span> <span class="w"><i>entra</i></span> <span class="w"><i>na</i></span> <span class="w"><i>conta.</i></span></div>
     <div class="cartoes">
-      <div class="cartao pago" id="c1"><div class="val">Frete pago</div><div class="obs">fica fora da recomendação</div><div class="marca-x" id="cx">✕</div></div>
-      <div class="cartao ok" id="c2"><div class="val">Frete grátis</div><div class="obs">entra na melhor opção</div><div class="marca-v" id="cv">✓</div></div>
+      <div class="cartao pago" id="c1"><div class="val">Frete pago</div><div class="obs">não passa na frente</div><div class="marca-x" id="cx">✕</div></div>
+      <div class="cartao ok" id="c2"><div class="val">Frete grátis</div><div class="obs">conta a favor</div><div class="marca-v" id="cv">✓</div></div>
     </div>
     <div class="miudo" id="s7tag" style="margin-top:40px">Regra do comparador</div>
   </div></div>
@@ -210,13 +210,13 @@ html, body { background: #000; font-family: Inter, "Noto Color Emoji", sans-seri
     <div class="logo" id="logo">M</div>
     <div class="dom" id="dom">melhorescolha.io</div>
     <div class="sub" id="tag" style="color:var(--tinta);font-weight:700">Cole o link. Veja a melhor escolha.</div>
-    <div class="legal" id="legal">Site independente, sem vínculo com o Mercado Livre. Exemplo real de 25/09/2026, link ilustrativo; preços e frete mudam. Recebo comissão da loja quando você compra pelo link, sem custo para você.</div>
+    <div class="legal" id="legal">Site independente, sem vínculo com as lojas ou marcas. Exemplo real de 25/09/2026, link ilustrativo; preços e frete mudam. Recebo comissão quando você compra pelo link, sem custo extra para você.</div>
   </div></div>
 </div>
 
 <script>
 const TOTAL = 28;
-const LINK = "https://www.exemplo.com.br/kit-oleo-capilar-2-frascos";  // link ilustrativo (não é um anúncio real)
+const LINK = "https://www.example.com/kit-oleo-capilar-2-frascos";  // link ilustrativo: example.com é reservado para exemplos (RFC 2606)
 const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 /* curva "Apple": sai rápido e assenta devagar */
 const eo = x => { x = cl(x); return x === 1 ? 1 : 1 - Math.pow(2, -10 * x); };

@@ -28,7 +28,7 @@ export const GUIAS: Guia[] = [
     resumo:
       "O mesmo produto costuma ser vendido por várias lojas com preços diferentes. Veja como achar e ler essa comparação.",
     tempo: "3 min de leitura",
-    atualizacao: "25/09/2026",
+    atualizacao: "27/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -41,7 +41,7 @@ export const GUIAS: Guia[] = [
         itens: [
           "Abra o anúncio do produto que você quer comprar e copie o endereço (o link).",
           "Cole o link na caixa da página inicial e toque em Comparar preços.",
-          "Em até um minuto aparece a tabela com todas as lojas que vendem o mesmo produto, do mais barato ao mais caro.",
+          "Em menos de dois minutos aparece a tabela com todas as lojas que vendem o mesmo produto, do mais barato ao mais caro.",
           "Escolha a loja e compre pelo botão, direto no site oficial, com pagamento protegido.",
         ],
       },
