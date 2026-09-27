@@ -355,3 +355,22 @@ test('loja oficial pelo evento do vendedor na página (27/09)', async () => {
   assert.equal(lojaOficialDoHtml(escapado), true);
   assert.equal(lojaOficialDoHtml('<html>sem evento</html>'), null);
 });
+
+test('detalhes, condicao e dominio do anuncio (27/09)', async () => {
+  const { detalhesDoAnuncio, condicaoDoHtml, dominioDoHtml, fatosDoOriginal } = await import('../comparador.js');
+  const html = '<table><tr><th class="andes-table__header"><div>Marca</div></th><td class="andes-table__column"><span>adidas</span></td></tr>'
+    + '<tr><th>Gênero</th><td>Masculino</td></tr></table>'
+    + '<ul><li class="ui-vpp-highlighted-specs__features-list-item">Tecido leve &amp; resistente</li></ul>'
+    + '<p class="ui-pdp-description__content">Conjunto com jaqueta<br>e calça.</p>'
+    + '"event_data":{"item_condition":"new","domain_id":"MLB-CLOTHING"}';
+  const d = detalhesDoAnuncio(html);
+  assert.deepEqual(d.caracteristicas, [{ nome: 'Marca', valor: 'adidas' }, { nome: 'Gênero', valor: 'Masculino' }]);
+  assert.deepEqual(d.destaques, ['Tecido leve & resistente']);
+  assert.equal(d.descricao, 'Conjunto com jaqueta\ne calça.');
+  assert.equal(condicaoDoHtml(html), 'new');
+  assert.equal(dominioDoHtml(html), 'MLB-CLOTHING');
+  assert.equal(fatosDoOriginal(d, { dominio: 'MLB-CLOTHING', condicao: 'new' }), 'Tipo: clothing; Condicao: novo; Marca: adidas; Gênero: Masculino');
+  const json = '{"id":"Cor","text":"Preto"},{"id":"Modelo","text":"Basic 3S Woven"}';
+  assert.deepEqual(detalhesDoAnuncio(json).caracteristicas, [{ nome: 'Cor', valor: 'Preto' }, { nome: 'Modelo', valor: 'Basic 3S Woven' }]);
+  assert.equal(detalhesDoAnuncio('<html></html>'), null);
+});

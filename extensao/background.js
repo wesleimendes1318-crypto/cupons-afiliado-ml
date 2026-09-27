@@ -9,6 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -252,6 +253,8 @@ function nomesDoHtml(buf) {
 const cacheMem = new Map();
 /* item -> true (loja oficial), false, null (nao sei). */
 const oficialPorItem = new Map();
+/* item -> 'new' | 'used' | 'refurbished' | null (lido na pagina do anuncio). */
+const condicaoPorItem = new Map();
 
 /* Leituras em andamento: a busca adianta a leitura das lojas enquanto a
    Gemini confere as fotos, e quem pedir o mesmo anuncio depois espera a
@@ -267,6 +270,26 @@ function resolverVendedor(id, url) {
 /* Amostra da pagina do vendedor (ate 3 por dia) para estudar os dados de
    reputacao antes de mostrar selo ao cliente: nada e exibido sem conferir o
    formato real. */
+/* Pagina com ficha tecnica em que a leitura dos detalhes nao achou nada:
+   guarda os trechos (3 por dia) para ajustar a leitura com a pagina real. */
+let amostrasDetalhes = { dia: '', n: 0 };
+function amostraDosDetalhes(html, url) {
+  try {
+    const dia = new Date().toISOString().slice(0, 10);
+    if (amostrasDetalhes.dia !== dia) amostrasDetalhes = { dia, n: 0 };
+    if (amostrasDetalhes.n >= 3 || !html) return;
+    const t = String(html);
+    const marcas = ['Características', 'technical_spec', 'highlighted-specs', 'ui-pdp-description', 'andes-table', '"attributes"', '"specs"'];
+    const achou = marcas.map(m => [m, t.indexOf(m)]);
+    if (!achou.some(([, i]) => i >= 0)) return;
+    amostrasDetalhes.n++;
+    const trechos = achou.filter(([, i]) => i >= 0).slice(0, 4).map(([m, i]) => ({ m, trecho: t.slice(Math.max(0, i - 200), i + 1800) }));
+    chrome.storage.local.get('sincToken').then(({ sincToken }) =>
+      gravarDiagnostico(sincToken, 'detalhes-amostra', { url: String(url || '').slice(0, 200), bytes: t.length, marcas: achou, trechos }))
+      .catch(() => {});
+  } catch (e) { /* so diagnostico */ }
+}
+
 let amostrasVendedor = { dia: '', n: 0 };
 function amostraDoVendedor(id, html) {
   try {
@@ -289,26 +312,29 @@ function amostraDoVendedor(id, html) {
 
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
-  if (m && Date.now() - m.ts < TTL_VEND) { oficialPorItem.set(id, m.oficial ?? null); return m.nomes; }
+  if (m && Date.now() - m.ts < TTL_VEND) { oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); return m.nomes; }
 
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
   /* v3: guarda tambem se e loja oficial. */
   const chave = 'v3_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
-  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); return g.nomes; }
+  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); return g.nomes; }
 
   let nomes = [];
   let oficial = null;
+  let condicao = null;
   try {
     const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`);
     nomes = nomesDoHtml(html);
     oficial = lojaOficialDoHtml(html);
+    condicao = condicaoDoHtml(html);
     amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
   oficialPorItem.set(id, oficial);
+  condicaoPorItem.set(id, condicao);
 
-  const reg = { nomes, oficial, ts: Date.now() };
+  const reg = { nomes, oficial, condicao, ts: Date.now() };
   if (nomes.length) { cacheMem.set(id, reg); chrome.storage.local.set({ [chave]: reg }); }
   return nomes;
 }
@@ -716,6 +742,12 @@ function lerVereditosIA(lista, total) {
     });
 }
 
+/* Categoria e ficha do anuncio original, no texto da conferencia. */
+function fatosParaIA(original) {
+  return (original.categoria ? '\nCategoria: ' + original.categoria : '')
+    + (original.fatos ? '\nFicha do anuncio original: ' + original.fatos : '');
+}
+
 /* Ultima conferencia feita, para gravar no pedido: por onde passou, qual
    modelo, o que a IA viu na foto e por que reprovou cada um. */
 let ultimaIA = null;
@@ -741,7 +773,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
     /* chave = codigo do anuncio: o servidor reaproveita vereditos ja dados
        para o mesmo par (nao gasta cota da Gemini de novo). */
     original: { titulo: original.titulo || null, imagem: original.imagem || null, preco: original.preco ?? null,
-                chave: original.item || null },
+                chave: original.item || null, categoria: original.categoria || null, fatos: original.fatos || null },
     candidatos: itens.map(c => ({ titulo: c.titulo || null, imagem: c.imagem || null, preco: c.preco ?? null,
                                   chave: c.item || null }))
   });
@@ -757,7 +789,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
   const imgOrig = await imagemParaGemini(original.imagem);
   const fotos = await Promise.all(itens.map(c => imagemParaGemini(c.imagem)));
   if (imgOrig) {
-    const partes = [{ text: PEDIDO_CONFERENCIA }, { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') }, imgOrig];
+    const partes = [{ text: PEDIDO_CONFERENCIA }, { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') + fatosParaIA(original) }, imgOrig];
     itens.forEach((c, i) => {
       partes.push({ text: 'CANDIDATO ' + i + ': ' + (c.titulo || '(sem titulo)') + (fotos[i] ? '' : ' (sem foto)') });
       if (fotos[i]) partes.push(fotos[i]);
@@ -783,7 +815,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
         /* Segunda opiniao; sem ela, nada entra (a segunda volta refaz). */
         const desc = String(obj.descricao_original || '').slice(0, 400);
         const conf = [{ text: PEDIDO_CONFIRMACAO },
-          { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') + (desc ? '\nDescricao da foto do original: ' + desc : '') }, imgOrig];
+          { text: 'ANUNCIO ORIGINAL: ' + (original.titulo || '') + fatosParaIA(original) + (desc ? '\nDescricao da foto do original: ' + desc : '') }, imgOrig];
         paraSegunda.forEach((a, k) => {
           conf.push({ text: 'CANDIDATO ' + k + ': ' + (itens[a.indice].titulo || '(sem titulo)')
             + (k >= positivos.length ? ' (REVISAR; a primeira conferencia disse: ' + String(a.motivo || '').slice(0, 120) + ')' : '') });
@@ -1126,7 +1158,10 @@ function extrairAnuncio(t, finalUrl, status) {
                trechoPreco: perto(/price|preco|money-amount/i), trechoLoja: perto(/Vendido por|seller|vendedor/i) };
   }
 
+  const detalhes = detalhesDoAnuncio(t);
+  if (!detalhes) amostraDosDetalhes(t, finalUrl);
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: lojaOficialDoHtml(t),
+           detalhes, condicao: condicaoDoHtml(t), dominio: dominioDoHtml(t),
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
@@ -2823,7 +2858,21 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   /* Regra: so o que a Gemini confirmou pela foto aparece. */
   const aprovados = ok ? candidatos.filter((_, i) => ok.has(i)).map(c => ({ ...c, verificadoIA: true })) : [];
   if (!aprovados.length) { const v = vazioCom(diag); v.parecidos = parecidos; return v; }
-  const achados = await avaliarCandidatos(aprovados.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
+  let achados = await avaliarCandidatos(aprovados.slice(0, MAX_CANDIDATOS_BUSCA), itemAtual, { achadoNaBusca: true });
+  /* CONDICAO (27/09): novo x usado/recondicionado nunca e o mesmo produto.
+     A pagina de cada loja diz a condicao; diferente da do original vai para
+     "Parecidos" com o que muda. */
+  if (original && original.condicao) {
+    const nomeCond = { new: 'novo', used: 'usado', refurbished: 'recondicionado' };
+    const fora = achados.filter(a => condicaoPorItem.get(a.item) && condicaoPorItem.get(a.item) !== original.condicao);
+    for (const a of fora) {
+      const c = aprovados.find(x => x.item === a.item) || {};
+      parecidos.push({ item: a.item, url: a.url || null, titulo: c.titulo || null, imagem: c.imagem || null, preco: a.preco,
+        muda: 'Condição diferente (' + (nomeCond[condicaoPorItem.get(a.item)] || condicaoPorItem.get(a.item)) + ')',
+        freteGratis: c.freteGratis != null ? c.freteGratis : null });
+    }
+    if (fora.length) { diag.condicaoDiferente = fora.map(a => a.item); achados = achados.filter(a => !fora.includes(a)); }
+  }
   for (const a of achados) {
     const c = aprovados.find(x => x.item === a.item);
     if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; if (c.freteGratis != null) a.freteGratis = c.freteGratis; }
@@ -3701,7 +3750,12 @@ async function atenderPedidos() {
                      gasta leitura de pagina repetindo o que ja foi visto. */
                   soBusca: !!(api && api.procurou) || !!(api && Array.isArray(api.google) && api.google.length),
                   google: (api && Array.isArray(api.google)) ? api.google : [],
-                  original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco, item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null }
+                  original: { titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem || null, preco: a.preco, item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
+                              /* Categoria e ficha do anuncio: a conferencia usa a regra da
+                                 categoria e os fatos do original (Weslei, 27/09). */
+                              categoria: (a.categorias || []).join(' > ') || null,
+                              fatos: fatosDoOriginal(a.detalhes, { dominio: a.dominio, condicao: a.condicao }),
+                              condicao: a.condicao || null }
                 }),
                   new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })
                 ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });
@@ -4020,6 +4074,10 @@ async function atenderPedidos() {
             lojaLida: !!(a.nomes && a.nomes.length),
             /* Loja oficial da marca (selo no site; Weslei, 27/09). */
             lojaOficial: a.lojaOficial != null ? a.lojaOficial : null,
+            /* Caracteristicas, destaques e descricao do anuncio: botao "Ver
+               detalhes do produto" no site (Weslei, 27/09). */
+            detalhes: a.detalhes || null,
+            condicao: a.condicao || null,
             recusados111: recusados111.length ? recusados111 : null,
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
           });

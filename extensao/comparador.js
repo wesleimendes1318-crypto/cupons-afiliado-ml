@@ -665,3 +665,71 @@ export function lojaOficialDoHtml(html) {
   if (!m) return null;
   return /"official_store_id"\s*:\s*\d+/.test(m[1]);
 }
+
+/* CONDICAO e DOMINIO do anuncio (27/09): o evento de compra da pagina traz
+   "item_condition":"new|used|refurbished" e "domain_id":"MLB-CLOTHING".
+   Condicao diferente nunca e o mesmo produto (novo x usado). */
+export function condicaoDoHtml(html) {
+  const m = /"item_condition"\s*:\s*"(new|used|refurbished)"/.exec(String(html || '').replace(/\\+"/g, '"'));
+  return m ? m[1] : null;
+}
+export function dominioDoHtml(html) {
+  const m = /"domain_id"\s*:\s*"(MLB-[A-Z0-9_]{2,60})"/.exec(String(html || '').replace(/\\+"/g, '"'));
+  return m ? m[1] : null;
+}
+
+/* DETALHES DO PRODUTO (Weslei, 27/09: "descricao e caracteristicas de acordo
+   com o que tem no anuncio", num botao para nao poluir a tela). Le a tabela
+   de caracteristicas, a lista "O que voce precisa saber" e a descricao da
+   pagina, em mais de um formato (HTML e JSON da pagina). */
+const semTags = s => desescapar(String(s || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' '))
+  .replace(/[ \t ]+/g, ' ').replace(/ *\n */g, '\n').trim();
+export function detalhesDoAnuncio(html) {
+  const t = String(html || '');
+  const j = t.replace(/\\u002F/gi, '/').replace(/\\+"/g, '"');
+  const caracteristicas = [];
+  const visto = new Set();
+  const add = (nome, valor) => {
+    nome = semTags(nome).replace(/:$/, '').slice(0, 60);
+    valor = semTags(valor).slice(0, 160);
+    if (!nome || !valor || nome.length < 2 || /^[A-Z0-9_]+$/.test(nome)) return;
+    const k = nome.toLowerCase();
+    if (visto.has(k) || caracteristicas.length >= 30) return;
+    visto.add(k);
+    caracteristicas.push({ nome, valor });
+  };
+  /* 1. Tabela da pagina: <th>Marca</th><td>adidas</td>. */
+  for (const m of t.matchAll(/<th\b[^>]*>([\s\S]{1,300}?)<\/th>\s*<td\b[^>]*>([\s\S]{1,600}?)<\/td>/gi)) add(m[1], m[2]);
+  /* 2. JSON da ficha tecnica: {"id":"Marca","text":"adidas"}. */
+  for (const m of j.matchAll(/\{"id"\s*:\s*"([^"{}]{2,60})"\s*,\s*"text"\s*:\s*"([^"{}]{1,200})"/g)) add(m[1], m[2]);
+  /* 3. Atributos: "name":"Marca", ... "value_name":"adidas". */
+  for (const m of j.matchAll(/"name"\s*:\s*"([^"{}]{2,60})"\s*,\s*"value_id"\s*:\s*[^,{}]*,\s*"value_name"\s*:\s*"([^"{}]{1,160})"/g)) add(m[1], m[2]);
+  const destaques = [];
+  for (const m of t.matchAll(/<li\b[^>]*class="[^"]*highlighted-specs__features-list-item[^"]*"[^>]*>([\s\S]{2,600}?)<\/li>/gi)) {
+    const x = semTags(m[1]).slice(0, 200);
+    if (x && !destaques.includes(x) && destaques.length < 8) destaques.push(x);
+  }
+  let descricao = null;
+  const d = /<p\b[^>]*class="[^"]*ui-pdp-description__content[^"]*"[^>]*>([\s\S]{10,20000}?)<\/p>/i.exec(t);
+  if (d) descricao = semTags(d[1]);
+  if (!descricao) {
+    const dj = /"description"\s*:\s*\{[^{}]*?"content"\s*:\s*"((?:[^"\\]|\\.){20,8000})"/.exec(t);
+    if (dj) { try { descricao = semTags(JSON.parse('"' + dj[1] + '"')); } catch (e) { descricao = null; } }
+  }
+  if (descricao) descricao = descricao.slice(0, 1500);
+  if (!caracteristicas.length && !destaques.length && !descricao) return null;
+  return { caracteristicas, destaques, descricao };
+}
+
+/* Fatos do original para a conferencia pela foto: as caracteristicas que
+   decidem se e o mesmo produto (marca, modelo, cor, tamanho, voltagem...). */
+export function fatosDoOriginal(detalhes, extras = {}) {
+  const partes = [];
+  if (extras.dominio) partes.push('Tipo: ' + extras.dominio.replace(/^MLB-/, '').replace(/_/g, ' ').toLowerCase());
+  if (extras.condicao) partes.push('Condicao: ' + ({ new: 'novo', used: 'usado', refurbished: 'recondicionado' }[extras.condicao] || extras.condicao));
+  for (const c of (detalhes && detalhes.caracteristicas) || []) {
+    if (partes.join('; ').length > 700) break;
+    partes.push(c.nome + ': ' + c.valor);
+  }
+  return partes.length ? partes.join('; ').slice(0, 780) : null;
+}

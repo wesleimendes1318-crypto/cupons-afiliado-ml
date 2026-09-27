@@ -543,3 +543,38 @@
     background: var(--urgency-warning);
   }
 }
+
+/* MELHOR ESCOLHA EM DESTAQUE (Weslei, 27/09): foguinho em movimento na
+   recomendação e no selo da tabela, e o botão da recomendação pulsando, para
+   não haver dúvida de qual é a melhor opção. Desliga com prefers-reduced-motion. */
+@keyframes fogo {
+  0%, 100% { transform: translateY(0) scale(1) rotate(-4deg); filter: drop-shadow(0 0 2px #ff9800); }
+  25%      { transform: translateY(-1px) scale(1.14) rotate(3deg); filter: drop-shadow(0 0 6px #ff5722); }
+  50%      { transform: translateY(0) scale(0.95) rotate(-2deg); filter: drop-shadow(0 0 3px #ffb300); }
+  75%      { transform: translateY(-1.5px) scale(1.1) rotate(4deg); filter: drop-shadow(0 0 7px #ff7043); }
+}
+
+@utility animate-fogo {
+  display: inline-block;
+  transform-origin: 50% 90%;
+  animation: fogo 0.9s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes botao-destaque {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 60%, transparent); transform: scale(1); }
+  50%  { transform: scale(1.025); }
+  70%  { box-shadow: 0 0 0 10px color-mix(in oklab, var(--success) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 0%, transparent); transform: scale(1); }
+}
+
+@utility animate-botao-destaque {
+  animation: botao-destaque 1.6s ease-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

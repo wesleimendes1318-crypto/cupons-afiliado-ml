@@ -33,6 +33,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     difere (voltagem, capacidade, compatibilidade do veículo, lado, volume,
     concentração do perfume, tom, sabor, peso do pet, tamanho da fralda,
     plataforma do jogo, edição do livro...). Item único: só o mesmo item.
+  - A conferência recebe a categoria (breadcrumb) e a ficha do original
+    (tipo, condição, características lidas na página). Condição diferente
+    (usado, recondicionado, vitrine...) nunca é igual: pelo título (servidor)
+    e pela página de cada loja (item_condition, extensão) vai para Parecidos.
   - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
     aviso "Mesma foto do anúncio colado" quando for o caso.
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
@@ -90,10 +94,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 ## Texto e visual
 - Botão de compra NUNCA leva o nome da loja: usar texto de compra segura
   ("Comprar com segurança"). Sempre oferecer compartilhar no WhatsApp.
+- Nunca parecer ferramenta DO Mercado Livre (Weslei, 27/09): o site compara os
+  produtos que estão lá. Título: "Melhor Escolha: compare preços de produtos
+  vendidos no Mercado Livre" (não "comparador de preços do Mercado Livre").
 - "Mercado Livre" só de forma DESCRITIVA e com moderação (Weslei, 26/09, para
-  a busca no Google: "comparador de preços do Mercado Livre"), sempre com o
+  a busca no Google), sempre com o
   aviso de site independente, sem vínculo. Nunca logo, cores ou visual da marca,
   nem em botão de compra.
+- Melhor escolha em destaque (Weslei, 27/09): 🔥 em movimento no selo da
+  tabela e na recomendação, e o botão da recomendação pulsando
+  (animate-fogo, animate-botao-destaque; desligam com prefers-reduced-motion).
+- "Ver detalhes do produto": características, destaques e descrição lidos no
+  anúncio colado, fechados num botão (não poluir a tela).
 - Textos curtos. Não prometer cupom. Sempre mostrar foto do produto.
 - Não citar IA/inteligência artificial nos textos do site nem nos guias
   (monetização: diretrizes do Google Ads e do programa de afiliados).

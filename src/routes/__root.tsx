@@ -82,7 +82,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Melhor Escolha — comparador de preços do Mercado Livre" },
+      { title: "Melhor Escolha — compare preços de produtos do Mercado Livre" },
       {
         name: "description",
         content: "O mesmo produto em outras lojas, do mais barato ao mais caro.",

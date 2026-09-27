@@ -264,6 +264,12 @@ type Analise = {
   /* Frete do anúncio colado: true grátis, false pago, null não sei. */
   freteGratis?: boolean | null;
   lojaOficial?: boolean | null;
+  /* Características, destaques e descrição lidos no anúncio (27/09). */
+  detalhes?: {
+    caracteristicas?: Array<{ nome: string; valor: string }> | null;
+    destaques?: string[] | null;
+    descricao?: string | null;
+  } | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
   imagem?: string | null;
   buscaFora?: {
@@ -1653,6 +1659,7 @@ function Resultado({
             {a?.vendedor && <span> · {a.vendedor}</span>}
             {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
           </p>
+          <DetalhesDoProduto detalhes={a?.detalhes} />
         </div>
       </div>
 
@@ -1873,7 +1880,7 @@ function MelhorOpcao({
     <div className="mt-3 rounded-lg border border-success/50 bg-success/10 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded bg-success px-1.5 py-0.5 text-[11px] font-bold text-white">
-          Melhor opção
+          <Fogo /> Melhor opção
         </span>
         <span className="text-sm font-semibold">{vendedor ?? "Loja do anúncio"}</span>
         <span className="ml-auto text-base font-bold tabular-nums">
@@ -1905,7 +1912,7 @@ function MelhorOpcao({
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+          className="animate-botao-destaque mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
         >
           {textoDoBotao(dispositivo, "Comprar com segurança")}
         </a>
@@ -2033,6 +2040,83 @@ type LinhaLoja = {
   /* Link abre a página geral do produto: escolher a loja em "Outras opções". */
   mesmaPagina?: boolean | null;
 };
+
+/* DETALHES DO PRODUTO (Weslei, 27/09): características, destaques e
+   descrição do anúncio, fechados num botão para não poluir a tela. */
+function DetalhesDoProduto({ detalhes }: { detalhes: Analise["detalhes"] | undefined }) {
+  const [aberto, setAberto] = useState(false);
+  const [descricaoToda, setDescricaoToda] = useState(false);
+  const carac = detalhes?.caracteristicas ?? [];
+  const dest = detalhes?.destaques ?? [];
+  const descricao = detalhes?.descricao?.trim() || "";
+  if (!carac.length && !dest.length && !descricao) return null;
+  const longa = descricao.length > 280;
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={() => setAberto((x) => !x)}
+        aria-expanded={aberto}
+        className="inline-flex items-center gap-1 text-xs font-bold text-ml-blue hover:underline"
+      >
+        {aberto ? "Fechar detalhes do produto" : "Ver detalhes do produto"}
+        <span aria-hidden="true">{aberto ? "▴" : "▾"}</span>
+      </button>
+      {aberto && (
+        <div className="mt-1.5 space-y-2 rounded-md border border-border bg-card p-2 text-xs">
+          {dest.length > 0 && (
+            <ul className="list-disc space-y-0.5 pl-4">
+              {dest.map((d, i) => (
+                <li key={i}>{d}</li>
+              ))}
+            </ul>
+          )}
+          {carac.length > 0 && (
+            <table className="w-full border-collapse">
+              <tbody>
+                {carac.map((c, i) => (
+                  <tr key={i} className={i % 2 ? "bg-muted/40" : ""}>
+                    <th className="w-2/5 px-1.5 py-0.5 text-left align-top font-semibold text-secondary-ink">
+                      {c.nome}
+                    </th>
+                    <td className="px-1.5 py-0.5 align-top [overflow-wrap:anywhere]">{c.valor}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {descricao && (
+            <div>
+              <p className="font-semibold">Descrição do anúncio</p>
+              <p className="mt-0.5 whitespace-pre-line leading-snug text-secondary-ink">
+                {longa && !descricaoToda ? descricao.slice(0, 280).trimEnd() + "…" : descricao}
+              </p>
+              {longa && (
+                <button
+                  type="button"
+                  onClick={() => setDescricaoToda((x) => !x)}
+                  className="mt-0.5 font-bold text-ml-blue hover:underline"
+                >
+                  {descricaoToda ? "Mostrar menos" : "Ler descrição completa"}
+                </button>
+              )}
+            </div>
+          )}
+          <p className="text-[10px] text-secondary-ink">Informações copiadas do anúncio colado.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Foguinho em movimento da melhor escolha (Weslei, 27/09). */
+function Fogo() {
+  return (
+    <span className="animate-fogo" aria-hidden="true">
+      🔥
+    </span>
+  );
+}
 
 /* Selo de loja oficial da marca, lido na página do anúncio ou na lista
    oficial de ofertas (official_store_id). */
@@ -2275,6 +2359,7 @@ function TodasAsLojas({
                   if (i === melhorIdx)
                     return (
                       <span className="mt-0.5 inline-block rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        <Fogo />{" "}
                         {(haMaisBarata ? "Melhor opção" : "Mais barato") +
                           (l.colado ? " · você colou" : "")}
                       </span>
@@ -2308,9 +2393,13 @@ function TodasAsLojas({
                     href={l.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                    className={
+                      i === melhorIdx && menor != null
+                        ? "animate-botao-destaque inline-block rounded bg-success px-2 py-1 text-[11px] font-bold text-white hover:brightness-95"
+                        : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                    }
                   >
-                    Abrir
+                    {i === melhorIdx && menor != null ? "Comprar" : "Abrir"}
                   </a>
                 ) : l.url ? (
                   <VerNaLoja url={l.url} />
@@ -2415,7 +2504,7 @@ function OutraLojaComCupom({
     <div className="mt-3 rounded-lg border border-success/50 bg-success/10 p-3">
       {principal && (
         <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
-          Minha recomendação
+          <Fogo /> Minha recomendação
         </p>
       )}
       <p className="text-sm font-bold text-success">
@@ -2541,7 +2630,10 @@ function OutraLojaComCupom({
           href={oferta.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+          className={
+            (principal ? "animate-botao-destaque " : "") +
+            "mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+          }
         >
           {/* Regra do Weslei: nunca o nome da loja no botão; texto de compra segura. */}
           {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(

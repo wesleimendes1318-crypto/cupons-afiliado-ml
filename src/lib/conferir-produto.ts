@@ -12,6 +12,8 @@
 
 export type Anuncio = {
   titulo?: string | null | undefined;
+  categoria?: string | null | undefined;
+  fatos?: string | null | undefined;
   imagem?: string | null | undefined;
   preco?: number | null | undefined;
 };
@@ -82,6 +84,24 @@ export const REGRA_CATEGORIAS =
   "brochura), idioma, volume, formato (CD, vinil, Blu-ray); reimpressao nao conta.\n" +
   "Cameras e instrumentos: so corpo x kit com lente, modelo, canhoto x destro, numero de cordas.\n" +
   "Item unico (veiculo, imovel, ingresso, servico, usado unico, antiguidade): so e igual se for o mesmo item.\n";
+/* Categoria e ficha do original no texto da conferencia (27/09): a IA aplica
+   a regra da categoria e compara com os fatos do anuncio, nao so o titulo. */
+function fatosDoOriginal(original: Anuncio): string {
+  return (
+    (original.categoria ? "\nCategoria: " + original.categoria.slice(0, 300) : "") +
+    (original.fatos ? "\nFicha do anuncio original: " + original.fatos.slice(0, 900) : "")
+  );
+}
+
+/* CONDICAO pelo titulo (27/09): usado, recondicionado, vitrine... nunca e o
+   mesmo produto que um novo, diga a IA o que disser. */
+const RE_CONDICAO =
+  /\b(usad[oa]s?|seminov[oa]s?|semi-nov[oa]s?|recondicionad[oa]s?|vitrine|mostru[aá]rio|open ?box|avariad[oa]s?|sem caixa|tester|refurbished|used)\b/i;
+export function condicaoDoTitulo(t: string | null | undefined): string | null {
+  const m = RE_CONDICAO.exec(String(t ?? ""));
+  return m ? (m[1] ?? "").toLowerCase() : null;
+}
+
 /* Revisao de quem teve a MESMA foto mas foi reprovado: so vira igual com a
    segunda conferencia (de preferencia outro modelo) dizendo igual, sem
    diferenca, tambem com mesma_foto e com confianca >= 90. */
@@ -475,6 +495,16 @@ export async function conferirMesmoProduto(
     }
     await guardarVereditos(chaveOriginal, paraGuardar, novo.modelo);
   }
+  /* Condicao diferente no titulo (usado x novo) derruba o igual. */
+  const condOriginal = condicaoDoTitulo(original.titulo);
+  for (const a of avaliacao) {
+    const cond = condicaoDoTitulo(lista[a.indice]?.titulo);
+    if (a.igual && cond && cond !== condOriginal) {
+      a.igual = false;
+      a.parecido = true;
+      a.motivo = `Condição diferente (${cond})`;
+    }
+  }
   const iguais = avaliacao
     .filter((a) => a.igual && a.confianca >= CONFIANCA_MINIMA && !a.semFoto)
     .map((a) => a.indice);
@@ -529,7 +559,11 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     const p: Parte[] = [
       pedido,
       {
-        text: "ANUNCIO ORIGINAL: " + (original.titulo ?? "") + (fotoOriginal ? "" : " (sem foto)"),
+        text:
+          "ANUNCIO ORIGINAL: " +
+          (original.titulo ?? "") +
+          (fotoOriginal ? "" : " (sem foto)") +
+          fatosDoOriginal(original),
       },
     ];
     if (fotoOriginal) p.push(fotoOriginal);
@@ -635,6 +669,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
           text:
             "ANUNCIO ORIGINAL: " +
             (original.titulo ?? "") +
+            fatosDoOriginal(original) +
             (descricao ? "\nDescricao da foto do original: " + descricao : ""),
         },
         fotoOriginal,

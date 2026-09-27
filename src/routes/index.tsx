@@ -88,7 +88,7 @@ const PERGUNTAS = [
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Comparador de preços do Mercado Livre: menor preço | Melhor Escolha" },
+      { title: "Compare preços de produtos do Mercado Livre: menor preço | Melhor Escolha" },
       {
         name: "description",
         content:
@@ -96,7 +96,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "Melhor Escolha: comparador de preços do Mercado Livre",
+        content: "Melhor Escolha: compare preços de produtos vendidos no Mercado Livre",
       },
       {
         property: "og:description",
@@ -1767,7 +1767,7 @@ function Index() {
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Melhor Escolha: comparador de preços do Mercado Livre
+                Melhor Escolha: compare preços de produtos vendidos no Mercado Livre
               </h1>
               <p className="mt-2 text-sm font-semibold text-white/85">
                 por{" "}

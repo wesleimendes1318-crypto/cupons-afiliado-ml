@@ -13,6 +13,9 @@ const anuncio = z.object({
   imagem: z.string().max(600).nullish(),
   preco: z.number().nullish().catch(null),
   chave: z.string().max(120).nullish(),
+  /* Categoria e ficha do anuncio original (27/09). */
+  categoria: z.string().max(300).nullish(),
+  fatos: z.string().max(900).nullish(),
 });
 const entradaSchema = z.object({
   tipo: z.enum(["conferir", "busca"]),
