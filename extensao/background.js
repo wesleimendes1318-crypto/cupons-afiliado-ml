@@ -1047,6 +1047,7 @@ function anuncioComSufixo(url, item) {
 async function gerarVariosNaAba(tabId, urls, tag = TAG_PADRAO, recusados = null) {
   const mapa = {};
   if (!urls.length) return mapa;
+  tabId = await abaViva(tabId);
   const [saida] = await chrome.scripting.executeScript({
     target: { tabId }, world: 'MAIN', func: chamadaVariosNaPagina, args: [ROTA_CRIAR, urls, tag]
   });
@@ -1450,7 +1451,7 @@ async function urlDaAba(tabId) {
   catch (e) { return ''; }
 }
 
-async function abaDoGerador() {
+async function abaDoGerador(excluir = null) {
   /* SO a pagina do proprio gerador serve.
 
      Antes servia qualquer aba em /afiliados/*, e isso quebrou de verdade: o
@@ -1461,7 +1462,8 @@ async function abaDoGerador() {
      que era a errada. */
   const abertas = await chrome.tabs.query({ url: PAGINA_GERADOR + '*' });
   for (const aba of (abertas || [])) {
-    if (aba.status === 'complete' && HOST_OK.test(aba.url || '')
+    if (excluir && excluir.has(aba.id)) continue;
+    if (aba.status === 'complete' && !aba.discarded && HOST_OK.test(aba.url || '')
         && (aba.url || '').startsWith(PAGINA_GERADOR)) {
       return { tabId: aba.id, nossa: false };
     }
@@ -1483,6 +1485,40 @@ async function abaDoGerador() {
   return { tabId: t.id, nossa: true };
 }
 
+/* ABA VIVA (28/09, grave: das 19:36 em diante nenhum link saiu, "No tab with
+   id: 135978213"). A fila inteira roda numa aba só; quando ela some (fechada,
+   descartada pelo Chrome, navegou para fora), todo pedido seguinte falhava.
+   Antes de cada uso a aba é conferida; morta, outra é aberta na hora e a
+   troca vale para o resto da fila. */
+const abaTrocada = new Map();   // id morto -> id novo
+const abasAbertasNaTroca = new Set();
+async function abaViva(tabId) {
+  let id = tabId;
+  for (let i = 0; i < 10 && abaTrocada.has(id); i++) id = abaTrocada.get(id);
+  try {
+    const t = await chrome.tabs.get(id);
+    if (t && !t.discarded && HOST_OK.test(t.url || '')) return id;
+  } catch (e) { /* aba sumiu */ }
+  const nova = await abaDoGerador(new Set([tabId, id]));
+  abaTrocada.set(id, nova.tabId);
+  if (id !== tabId) abaTrocada.set(tabId, nova.tabId);
+  if (nova.nossa) abasAbertasNaTroca.add(nova.tabId);
+  console.warn('[aba] trocada', id, '->', nova.tabId);
+  return nova.tabId;
+}
+
+/* Plano C do link: abre uma aba nova do gerador, gera e fecha. */
+async function gerarEmAbaNova(url, tag = TAG_PADRAO) {
+  const t = await chrome.tabs.create({ url: PAGINA_GERADOR, active: false });
+  try {
+    await esperarCarregar(t.id);
+    if (!HOST_OK.test(await urlDaAba(t.id))) throw new Error('a aba nova do gerador nao abriu no Mercado Livre');
+    return await gerarNaAbaSemCadastro(t.id, url, tag);
+  } finally {
+    try { await chrome.tabs.remove(t.id); } catch (e) {}
+  }
+}
+
 /* Abre (ou reaproveita) UMA aba e roda a tarefa inteira nela.
    Antes abria uma aba por link gerado, o que piscava na tela do usuario. */
 async function comAbaML(tarefa) {
@@ -1497,10 +1533,14 @@ async function comAbaML(tarefa) {
     return await tarefa(tabId);
   } finally {
     if (nossa) { try { await chrome.tabs.remove(tabId); } catch (e) {} }
+    for (const id of abasAbertasNaTroca) { try { await chrome.tabs.remove(id); } catch (e) {} }
+    abasAbertasNaTroca.clear();
+    abaTrocada.clear();
   }
 }
 
 async function vitrineDoCupom(tabId, id) {
+  tabId = await abaViva(tabId);
   const [saida] = await chrome.scripting.executeScript({
     target: { tabId }, world: 'MAIN', func: vitrineNaPagina, args: [id]
   });
@@ -1511,6 +1551,7 @@ async function vitrineDoCupom(tabId, id) {
 }
 
 async function gerarNaAbaSemCadastro(tabId, url, tag = TAG_PADRAO) {
+  tabId = await abaViva(tabId);
   const [saida] = await chrome.scripting.executeScript({
     target: { tabId }, world: 'MAIN', func: chamadaNaPagina, args: [ROTA_CRIAR, url, tag]
   });
@@ -2266,6 +2307,7 @@ async function gerarEtiquetas(limite = 20, filaPronta = null) {
     let recarregou = false;
 
     const criar = async (tabId, id, sufixo) => {
+      tabId = await abaViva(tabId);
       const [r] = await chrome.scripting.executeScript({
         target: { tabId }, world: 'MAIN', func: etiquetaNaPagina, args: [id, sufixo]
       });
@@ -3679,9 +3721,9 @@ async function atenderPedidos() {
              pegaria um produto qualquer da vitrine, ou insistiria no muro. */
           if (!a.perfilSocial && !a.captcha && (!a.ok || !(a.nomes && a.nomes.length))) {
             /* A leitura pela pagina nao tinha prazo nenhum. */
-            const [saida] = await comPrazo(chrome.scripting.executeScript({
-              target: { tabId }, world: 'MAIN', func: analiseNaPagina, args: [url]
-            }), 10000, [null]);
+            const [saida] = await comPrazo(abaViva(tabId).then(id => chrome.scripting.executeScript({
+              target: { tabId: id }, world: 'MAIN', func: analiseNaPagina, args: [url]
+            })).catch(() => [null]), 10000, [null]);
             const b = (saida && saida.result) || null;
             if (b && b.ok && b.nomes && b.nomes.length) a = b;
             else if (!a.ok && b && b.ok) a = b;
@@ -3799,6 +3841,14 @@ async function atenderPedidos() {
                 const r2 = await gerarNaAbaSemCadastro(tabId, alvo2, TAG_PADRAO);
                 if (r2 && r2.link) { r = r2; linkFalhou = null; }
               } catch (e2) { linkFalhou += ' | 2a tentativa: ' + (e2.message || e2); }
+              /* 3a tentativa (28/09, "crie sempre alternativas"): numa aba NOVA
+                 do gerador, aberta só para isso e fechada no fim. */
+              if (!r.link) {
+                try {
+                  const r3 = await gerarEmAbaNova(a.ok ? alvoDoLink : url);
+                  if (r3 && r3.link) { r = r3; linkFalhou = null; }
+                } catch (e3) { linkFalhou += ' | 3a tentativa (aba nova): ' + (e3.message || e3); }
+              }
             }
           }
 

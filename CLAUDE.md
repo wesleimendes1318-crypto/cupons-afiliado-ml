@@ -98,6 +98,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   na tabela (Advocate, 26/09: tabela e recomendação apontavam lojas diferentes).
 - SEMPRE o link de afiliado do Weslei em todo botão (26/09: "foi para isso
   que eu criei o site"). Nunca endereço sem afiliado.
+- LINK NUNCA PODE PARAR (28/09, grave: das 19:36 em diante nenhum link saiu,
+  "No tab with id"; a fila inteira usava uma aba só e ela sumiu). Toda chamada
+  ao gerador passa por abaViva (aba morta, descartada ou fora do domínio →
+  outra aba na hora, vale para o resto da fila). Link do anúncio colado: 1ª
+  tentativa, 2ª com o endereço do anúncio, 3ª numa aba NOVA do gerador
+  (gerarEmAbaNova). Vigia de hora em hora: pedido pronto sem link na última
+  hora = alerta ao Weslei.
 - Link RÁPIDO da recomendação (Weslei, 28/09; Kokeshi, pedido 506): antes de
   gravar a análise, a extensão gera o link da loja que vira a recomendação
   (mais barata que o colado, sem frete pago, inclusive da lista do catálogo)
