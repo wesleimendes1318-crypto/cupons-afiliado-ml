@@ -91,5 +91,5 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 - [ ] Atualizar README.md (ainda descreve o app de cupons)
 
 ## P3 — futuro
-- [ ] Monitoramento de preço dos produtos vistos
+- [ ] Monitoramento de preço — TESTE no ar em 28/09 (Acompanhar preço, /meus-precos, extensão 1.133.0); validar: leituras/dia, captcha, cliques de afiliado vindos de /meus-precos
 - [ ] Expansão (outras lojas/categorias)

@@ -7,7 +7,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -4552,6 +4552,43 @@ async function vigiarFila() {
   } finally { vigiando = false; }
 }
 
+/* ACOMPANHAR PRECO (Weslei, 28/09, modelo de teste): UMA leitura por alarme
+   de 10 min, so com a extensao parada (sem pedido em atendimento) e sem freio
+   de captcha. Abre so a pagina do produto e le o preco (Pix, cheio,
+   parcelado): nenhuma busca, nenhuma SerpAPI. O banco decide quando cada
+   produto volta (3 h a 12 h) e reaproveita as pesquisas do site. */
+let monitorando = false;
+async function monitorarPrecos() {
+  if (monitorando || atendendo) return;
+  /* No maximo uma leitura a cada 10 min (guardado no storage: o worker do
+     Chrome pode reiniciar a qualquer momento). */
+  const { sincToken, monitorUltimo } = await chrome.storage.local.get(['sincToken', 'monitorUltimo']);
+  if (!sincToken || (monitorUltimo && Date.now() - monitorUltimo < 10 * 60000)) return;
+  if (await freioLigado('leitura')) return;
+  monitorando = true;
+  await chrome.storage.local.set({ monitorUltimo: Date.now() });
+  try {
+    const alvo = await proximoMonitor(sincToken).catch(() => null);
+    if (!alvo || !alvo.url || atendendo) return;
+    const a = await lerAnuncioNoWorker(alvo.url);
+    if (!a || !a.ok) {
+      await gravarMonitor(sincToken, alvo.id, { erro: (a && a.falha) || 'leitura falhou' });
+      return;
+    }
+    const p = a.precos || {};
+    const indisponivel = /indispon|pausad|finalizad|sem estoque/i.test(String(a.aviso || ''));
+    await gravarMonitor(sincToken, alvo.id, {
+      preco: a.preco ?? null, pix: p.pix ?? null, cheio: p.cheio ?? null,
+      parcelas: p.parcelas ?? null, disponivel: !indisponivel,
+      erro: a.preco == null ? 'preco nao lido' : null
+    });
+  } catch (e) {
+    console.warn('[monitor]', e.message);
+  } finally {
+    monitorando = false;
+  }
+}
+
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
     chrome.alarms.create(nome, { periodInMinutes });
@@ -4574,6 +4611,7 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.alarms.onAlarm.addListener(async a => {
   if (a.name === 'pedidos') {
     sinalDeVida().catch(() => {});
+    monitorarPrecos().catch(() => {});
     vigiarFila().catch(() => {});
     completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.

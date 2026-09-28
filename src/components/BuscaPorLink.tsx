@@ -22,6 +22,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
+import { AcompanharPreco } from "@/components/AcompanharPreco";
 import { ComoFunciona } from "@/components/ComoFunciona";
 import { BadgeCheck, History, LoaderCircle, Package, Share2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -1918,6 +1919,10 @@ function Resultado({
             cb={podeSerAlternativa(alternativa, baseAlt).cb}
             dispositivo={dispositivo}
           />
+        )}
+
+        {!leituraFalhou && pedidoId != null && !semLink && (
+          <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
         )}
 
         {!leituraFalhou && (

@@ -14,6 +14,7 @@ import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as DivulgacaoDeAfiliadosRouteImport } from './routes/divulgacao-de-afiliados'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MeusPrecosRouteImport } from './routes/meus-precos'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
 import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
@@ -59,6 +60,11 @@ const LoginRoute = LoginRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeusPrecosRoute = MeusPrecosRouteImport.update({
+  id: '/meus-precos',
+  path: '/meus-precos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/meus-precos': typeof MeusPrecosRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/meus-precos': typeof MeusPrecosRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/meus-precos': typeof MeusPrecosRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/divulgacao-de-afiliados'
     | '/login'
     | '/mcp'
+    | '/meus-precos'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/divulgacao-de-afiliados'
     | '/login'
     | '/mcp'
+    | '/meus-precos'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/divulgacao-de-afiliados'
     | '/login'
     | '/mcp'
+    | '/meus-precos'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   DivulgacaoDeAfiliadosRoute: typeof DivulgacaoDeAfiliadosRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  MeusPrecosRoute: typeof MeusPrecosRoute
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meus-precos': {
+      id: '/meus-precos'
+      path: '/meus-precos'
+      fullPath: '/meus-precos'
+      preLoaderRoute: typeof MeusPrecosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-cookies': {
@@ -563,6 +583,7 @@ const rootRouteChildren: RootRouteChildren = {
   DivulgacaoDeAfiliadosRoute: DivulgacaoDeAfiliadosRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  MeusPrecosRoute: MeusPrecosRoute,
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,

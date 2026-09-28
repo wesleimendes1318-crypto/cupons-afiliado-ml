@@ -514,3 +514,20 @@ export async function vitrineCompletar(token, chave, imagem, categoria) {
       { p_token: token, p_chave: chave, p_imagem: imagem || '', p_categoria: categoria || '' });
   } catch (e) { /* tenta na proxima rodada */ }
 }
+
+/* ACOMPANHAR PRECO (28/09, teste): o banco entrega um produto por vez para
+   conferir e recebe o preco lido. Nada de SerpAPI nem de comparacao. */
+export async function proximoMonitor(token) {
+  if (!token) return null;
+  const r = await chamarRpc(SUPABASE + '/rest/v1/rpc/proximo_monitor', { p_token: token });
+  return Array.isArray(r) && r.length ? r[0] : null;
+}
+
+export async function gravarMonitor(token, id, leitura) {
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_monitor', {
+    p_token: token, p_id: id,
+    p_preco: leitura.preco ?? null, p_pix: leitura.pix ?? null, p_cheio: leitura.cheio ?? null,
+    p_parcelas: leitura.parcelas ?? null, p_disponivel: leitura.disponivel ?? null,
+    p_erro: leitura.erro ? String(leitura.erro).slice(0, 200) : null
+  });
+}

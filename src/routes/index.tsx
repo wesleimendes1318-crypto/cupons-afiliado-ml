@@ -1794,6 +1794,7 @@ function Index() {
                     ...(MOSTRAR_CUPONS
                       ? [{ para: "/categorias" as const, texto: "Categorias" }]
                       : []),
+                    { para: "/meus-precos" as const, texto: "Meus preços" },
                     { para: "/guias" as const, texto: "Guias" },
                     { para: "/sobre" as const, texto: "Sobre" },
                   ].map((item) => (

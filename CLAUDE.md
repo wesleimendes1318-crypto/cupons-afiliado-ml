@@ -189,6 +189,20 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
   public/video/ (WebM + MP4, 720p).
 
+## Acompanhar preço (teste, 28/09)
+- Botão "Acompanhar preço" no resultado (preço-alvo opcional) e página
+  /meus-precos (histórico, "caiu R$ X", "chegou no seu preço", link de
+  afiliado). Sem cadastro: id aleatório do navegador (lib/navegador.ts),
+  limite de 20 por navegador e 200 produtos no total; aviso só no site.
+- SEM SerpAPI e sem pedido de comparação (Weslei: "não gaste meus créditos da
+  api do serpapi"): a extensão (monitorarPrecos) abre só a página do produto,
+  no máximo 1 leitura a cada 10 min, com a extensão parada e sem freio de
+  captcha. O banco (proximo_monitor/gravar_monitor) decide o intervalo: 3 h
+  se mexeu ou está perto do alvo, 6 h parado, 12 h parado 3 vezes, 2 h com
+  erro; pesquisa do site nas últimas 3 h conta como leitura (precos_vistos).
+- Liga/desliga: sinc_config.monitor_ativo. Tabelas monitor_precos e
+  monitor_seguidores (só funções security definer; leitura pelo navegador).
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em
