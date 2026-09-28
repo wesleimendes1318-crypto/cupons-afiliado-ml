@@ -7,7 +7,7 @@
    Google ficam de fora no próprio banco (função vitrine). */
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, TrendingDown } from "lucide-react";
+import { BadgeCheck, RefreshCw, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,10 @@ type ItemVitrine = {
   alt_titulo: string | null;
   alt_link: string | null;
   alt_loja: string | null;
+  alt_oficial: boolean | null;
+  alt_vantagem: string | null;
+  alt_frete_gratis: boolean | null;
+  alt_muda: string | null;
 };
 
 /* Maior economia que a comparação achou: a do mesmo produto ou, quando maior,
@@ -127,9 +131,7 @@ export function Vitrine() {
   const lista = useMemo(() => {
     let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
     if (aba === "economias")
-      l = l
-        .filter((i) => maiorEconomia(i) > 0)
-        .sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
+      l = l.filter((i) => maiorEconomia(i) > 0).sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
     return l.slice(0, categoria == null ? 120 : 48);
   }, [itens, aba, categoria]);
@@ -303,16 +305,13 @@ function Cartao({ i }: { i: ItemVitrine }) {
             <>na {i.loja ?? "loja"}</>
           )}
         </p>
-        {temAlternativa && (
-          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-success">
-            Parecido por {brl(i.alt_preco)}
-            {i.alt_loja ? ` na ${i.alt_loja}` : ""} (não é idêntico)
-          </p>
-        )}
+        {temAlternativa && <Alternativa i={i} />}
         {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
         <p className="mt-0.5 text-[11px] text-secondary-ink/80">
           visto em {quando(i.visto_em)}
-          {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} ${i.lojas_comparadas === 1 ? "loja comparada" : "lojas comparadas"}` : ""}
+          {(i.lojas_comparadas ?? 0) > 0
+            ? ` · ${i.lojas_comparadas} ${i.lojas_comparadas === 1 ? "loja comparada" : "lojas comparadas"}`
+            : ""}
         </p>
         <div className="mt-auto flex flex-col gap-1 pt-2">
           {destino && (
@@ -341,4 +340,63 @@ function Cartao({ i }: { i: ItemVitrine }) {
       </div>
     </li>
   );
+}
+
+/* Melhor alternativa no cartão (Weslei, 28/09): parecido mais barato, com as
+   vantagens conferidas na comparação e o aviso de que não é idêntico. */
+function Alternativa({ i }: { i: ItemVitrine }) {
+  const completo = maisCompleto(i.alt_vantagem, i.alt_muda);
+  const vantagens = [
+    i.alt_oficial === true ? "Loja oficial da marca" : null,
+    completo ? "Mais completo" : null,
+    i.alt_frete_gratis === true ? "Frete grátis" : null,
+  ].filter((v): v is string => v != null);
+  return (
+    <div className="mt-1.5 rounded-md border border-success/40 bg-success/5 p-1.5">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-success">
+        Alternativa parecida
+      </p>
+      <p className="text-sm font-extrabold tabular-nums text-success">{brl(i.alt_preco)}</p>
+      {i.alt_loja && (
+        <p className="truncate text-[10px] text-secondary-ink">
+          Vendido por <strong className="text-foreground">{i.alt_loja}</strong>
+        </p>
+      )}
+      {vantagens.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-1">
+          {vantagens.map((v) => (
+            <li
+              key={v}
+              className="inline-flex items-center gap-0.5 rounded-full bg-success/15 px-1.5 py-px text-[10px] font-semibold text-success"
+            >
+              {v === "Loja oficial da marca" && (
+                <BadgeCheck className="size-2.5" aria-hidden="true" />
+              )}
+              {v}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-secondary-ink">
+        Não é idêntico{i.alt_muda ? `. Muda: ${i.alt_muda}` : ""}
+      </p>
+      {i.alt_link && (
+        <a
+          href={i.alt_link}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          className="mt-1 block text-[11px] font-bold text-success underline underline-offset-2 hover:brightness-90"
+        >
+          Ver alternativa
+        </a>
+      )}
+    </div>
+  );
+}
+
+/* "Mais completo": a vantagem que a conferência apontou ou, sem ela, o que
+   muda quando é algo A MAIS ("acessório adicional incluso", "brinde"). */
+function maisCompleto(vantagem: string | null, muda: string | null): boolean {
+  if (vantagem) return true;
+  return /\b(adicional|inclus[oa]|acompanha|brinde|a mais)\b/i.test(muda ?? "");
 }

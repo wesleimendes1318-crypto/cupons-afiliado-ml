@@ -249,6 +249,8 @@ type Analise = {
     /* 0-100: quanto se parece com o anúncio colado (conferência pela foto). */
     semelhanca?: number | null;
     lojaOficial?: boolean | null;
+    /* Achado na busca com o filtro "Lojas oficiais" (_Loja_all): é loja oficial. */
+    daBuscaOficial?: boolean | null;
     /* O que tem A MAIS que o anúncio colado (conjunto completo, kit maior). */
     vantagem?: string | null;
     /* Loja que vende (sempre que lida) e selo MercadoLíder dela. */
@@ -2224,10 +2226,14 @@ function MelhorAlternativa({
       {/* Por que vale a pena (Weslei, 28/09): mais completo, custo reduzido,
           loja oficial da marca. Só o que foi conferido aparece. */}
       <ul className="mb-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
-        {p.vantagem && (
+        {p.vantagem ? (
           <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
             Mais completo: {p.vantagem}
           </li>
+        ) : (
+          /\b(adicional|inclus[oa]|acompanha|brinde|a mais)\b/i.test(p.muda ?? "") && (
+            <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">Mais completo</li>
+          )
         )}
         {menos != null && menos >= 0.5 && (
           <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
@@ -2247,10 +2253,10 @@ function MelhorAlternativa({
             Mesma foto do anúncio colado
           </li>
         )}
-        {p.lojaOficial === true && (
+        {(p.lojaOficial === true || p.daBuscaOficial === true) && (
           <li className="rounded-full bg-ml-blue/10 px-2 py-0.5 text-ml-blue">
             <BadgeCheck className="mr-0.5 inline size-3 align-[-2px]" aria-hidden="true" />
-            Loja oficial
+            Loja oficial da marca
           </li>
         )}
       </ul>
@@ -2263,7 +2269,9 @@ function MelhorAlternativa({
           {p.vendedor && (
             <p className="text-xs text-secondary-ink">
               Vendido por <strong className="text-foreground">{p.vendedor}</strong>
-              {p.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
+              {(p.lojaOficial === true || p.daBuscaOficial === true) && (
+                <SeloLojaOficial className="ml-1.5 inline-flex" />
+              )}
               <SeloLider nivel={p.mercadoLider} className="ml-1.5 inline-flex" />
             </p>
           )}
@@ -2424,7 +2432,9 @@ function Parecidos({
                 {p.vendedor && (
                   <p className="text-[10px] text-secondary-ink">
                     Vendido por <strong className="text-foreground">{p.vendedor}</strong>
-                    {p.lojaOficial === true && <SeloLojaOficial className="ml-1 inline-flex" />}
+                    {(p.lojaOficial === true || p.daBuscaOficial === true) && (
+                      <SeloLojaOficial className="ml-1 inline-flex" />
+                    )}
                     <SeloLider nivel={p.mercadoLider} className="ml-1 inline-flex" />
                   </p>
                 )}
