@@ -748,7 +748,8 @@ export function detalhesDoAnuncio(html) {
   const add = (nome, valor) => {
     nome = semTags(nome).replace(/:$/, '').slice(0, 60);
     valor = semTags(valor).slice(0, 160);
-    if (!nome || !valor || nome.length < 2 || /^[A-Z0-9_]+$/.test(nome)) return;
+    /* Codigos internos ("BRAND", "fae" das avaliacoes) nao sao caracteristicas. */
+    if (!nome || !valor || nome.length < 2 || /^[A-Z0-9_]+$/.test(nome) || /^[a-z0-9_]{2,8}$/.test(nome)) return;
     const k = nome.toLowerCase();
     if (visto.has(k) || caracteristicas.length >= 30) return;
     visto.add(k);

@@ -375,7 +375,7 @@ test('detalhes, condicao e dominio do anuncio (27/09)', async () => {
   assert.equal(condicaoDoHtml(html), 'new');
   assert.equal(dominioDoHtml(html), 'MLB-CLOTHING');
   assert.equal(fatosDoOriginal(d, { dominio: 'MLB-CLOTHING', condicao: 'new' }), 'Tipo: clothing; Condicao: novo; Marca: adidas; Gênero: Masculino; Descricao: Conjunto com jaqueta e calça.');
-  const json = '{"id":"Cor","text":"Preto"},{"id":"Modelo","text":"Basic 3S Woven"}';
+  const json = '{"id":"Cor","text":"Preto"},{"id":"fae","text":"Perfeito para 100%"},{"id":"Modelo","text":"Basic 3S Woven"}';
   assert.deepEqual(detalhesDoAnuncio(json).caracteristicas, [{ nome: 'Cor', valor: 'Preto' }, { nome: 'Modelo', valor: 'Basic 3S Woven' }]);
   assert.equal(detalhesDoAnuncio('<html></html>'), null);
 });
