@@ -66,7 +66,8 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 
 ## P0 — confiabilidade do que já existe
 - [x] P0-1 Parecidos conferidos sumiam no caminho do catálogo (10 de 72 pedidos recentes) — `juntarAchados`, extensão 1.130.1, teste e meta na bateria
-- [ ] P0-2 Caminho do catálogo pula a busca quando a ficha já tem loja (regra: a busca roda SEMPRE) — medir com marca no diag, depois corrigir
+  - Conferido na 1.131.0 (28/09, pedidos 478-487): 10 de 10 com parecidos na tela quando a leitura achou; capinha 0 → 5
+- [ ] P0-2 Caminho do catálogo pula a busca quando a ficha já tem loja (regra: a busca roda SEMPRE) — corrigido na 1.132.0 (busca com prazo próprio, diag.catalogoAchou/buscaRodou); falta conferir na bateria
 - [ ] P0-3 Classificar as 16 leituras de anúncio sem diagnóstico (lojaLida=false) e dar plano B a cada causa
 - [ ] P0-4 Cauda de tempo (máx. 118 s; meta 60 s): onde o tempo vai nos pedidos acima de 60 s
 - [ ] P0-5 Medir a segunda volta quando a IA de conferência cai (27 em 4 dias): quantas se recuperam

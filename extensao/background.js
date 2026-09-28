@@ -3225,14 +3225,25 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
   let escolha = escolherAlternativas(achados, { ...ctx, itemAtual });
   let todas = achados;
   let diag = null;
-  if (!escolha.length && titulo) {
+  /* A BUSCA RODA SEMPRE (regra, 26/09; P0-2 do roadmap, 28/09): antes, com
+     loja mais barata na ficha, a busca nem rodava e sumiam os parecidos, as
+     lojas oficiais e o menor preço fora da ficha. Com o catálogo já achado,
+     só roda se ainda houver tempo (o resultado do catálogo nunca se perde). */
+  const catalogoAchou = escolha.length > 0;
+  if (titulo && (!catalogoAchou || resta() > 25000)) {
     let daBusca = [];
-    try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null); }
+    try {
+      const busca = achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null);
+      /* Com o catálogo já achado, a busca tem prazo próprio: estourando,
+         fica o que o catálogo achou. */
+      daBusca = catalogoAchou ? await comPrazo(busca, Math.max(5000, resta() - 5000), []) : await busca;
+    }
     catch (e) { if (!achados.length) throw e; }
-    diag = daBusca.diag || null;
-    todas = juntarAchados(achados, daBusca);
+    diag = (daBusca && daBusca.diag) || null;
+    todas = juntarAchados(achados, daBusca || []);
     escolha = escolherAlternativas(todas, { ...ctx, itemAtual });
   }
+  if (catalogoAchou) diag = { ...(diag || {}), catalogoAchou: true, buscaRodou: diag != null };
   escolha.todas = todas;
   escolha.diag = diag;
   return escolha;
