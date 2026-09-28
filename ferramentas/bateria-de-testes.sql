@@ -1,7 +1,7 @@
 -- BATERIA DE TESTES OBRIGATORIA (antes de dizer ao Weslei que uma versao esta pronta)
 -- 1) Enfileirar os 8 casos reais que ja deram problema:
 select pedir_link_novo('https://www.mercadolivre.com.br/capa-case-anti-impacto-para-motorola-transparente-acrilico/up/MLBU4043026373?pdp_filters=item_id%3AMLB4739054961');
-select pedir_link_novo('https://www.mercadolivre.com.br/up/MLBU4376053139?pdp_filters=item_id%3AMLB4927955109');
+-- travesseiro (MLBU4376053139) saiu em 28/09: anuncio removido (HTTP 404) e recusado pelo programa (erro 111)
 select pedir_link_novo('https://www.mercadolivre.com.br/eudora-sige-diamond-shampoo-condicionador-nutricao-profunda/p/MLB37269970');
 select pedir_link_novo('https://www.mercadolivre.com.br/disco-freio-roda-traseira-honda-nx4-falcon-1999-2000-a-2008/p/MLB2090773060');
 select pedir_link_novo('https://www.mercadolivre.com.br/monitor-gamer-portatil-156-1080p-fhd-ips-com-hdmi-usb/up/MLBU3228796835?pdp_filters=deal%3AMLB779362-1');  -- pagina de oferta (deal): preco e loja precisam ser lidos
