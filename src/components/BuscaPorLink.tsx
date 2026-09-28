@@ -25,7 +25,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ComoFunciona } from "@/components/ComoFunciona";
 import { BadgeCheck, History, LoaderCircle, Package, Share2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { naoEAlternativa } from "@/lib/alternativa";
+import { naoEAlternativa, notaDeAlternativa } from "@/lib/alternativa";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -1630,7 +1630,7 @@ function Resultado({
           )
           .sort(
             (x, y) =>
-              (y.semelhanca ?? (y.mesmaFoto ? 90 : 0)) - (x.semelhanca ?? (x.mesmaFoto ? 90 : 0)) ||
+              notaDeAlternativa(y, a?.titulo) - notaDeAlternativa(x, a?.titulo) ||
               x.preco - y.preco,
           )[0] ?? null);
   /* Parecido com a MESMA foto do anúncio colado: sinal de que a foto do

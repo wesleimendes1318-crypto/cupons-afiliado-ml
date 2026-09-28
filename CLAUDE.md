@@ -54,6 +54,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     cabides" x 30, "1un" x 3 pipetas): lista MUDA_NAO_E_ALTERNATIVA no site =
     muda_nao_e_alternativa() no banco. Na vitrine o produto com alternativa
     ganha o selo "Até R$ X de desconto" (contra o preço do anúncio colado).
+    Escolha entre vários: nota = semelhança + 10 x parte do título colado no
+    título do parecido ("3s" = "3 listras"), depois o mais barato
+    (notaDeAlternativa = alternativa_da_analise; 28/09: o Linear R$ 3,70 mais
+    barato tomou o lugar do Woven, o modelo mais próximo).
   - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
     aviso "Mesma foto do anúncio colado" quando for o caso.
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
