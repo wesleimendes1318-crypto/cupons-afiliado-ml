@@ -31,7 +31,12 @@ export type RespostaGpt =
   { ok: true; texto: string; modelo: string } | { ok: false; status: number; erro: string };
 
 /** Uma pergunta que responde em JSON. Modelo inexistente passa ao próximo. */
-export async function perguntarAoGpt(prompt: string, prazo = 15_000): Promise<RespostaGpt> {
+export async function perguntarAoGpt(
+  prompt: string,
+  prazo = 15_000,
+  /* Fotos (endereços do mlstatic), anexadas na ordem, em baixa resolução. */
+  imagens: string[] = [],
+): Promise<RespostaGpt> {
   const chave = chaveGpt();
   if (!chave) return { ok: false, status: 503, erro: "sem chave do GPT nos secrets" };
   const fim = Date.now() + prazo;
@@ -45,7 +50,20 @@ export async function perguntarAoGpt(prompt: string, prazo = 15_000): Promise<Re
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${chave}` },
         body: JSON.stringify({
           model: modelo,
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            {
+              role: "user",
+              content: imagens.length
+                ? [
+                    { type: "text", text: prompt },
+                    ...imagens.map((url) => ({
+                      type: "image_url",
+                      image_url: { url: url.replace(/\.webp$/i, ".jpg"), detail: "low" },
+                    })),
+                  ]
+                : prompt,
+            },
+          ],
           response_format: { type: "json_object" },
         }),
         signal: AbortSignal.timeout(resta),

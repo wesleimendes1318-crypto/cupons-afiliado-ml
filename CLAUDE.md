@@ -52,7 +52,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     Mais barato porque vem MENOS (quantidade, kit x unidade, tamanho, volume,
     sem acessório) ou para outro uso/condição NÃO é alternativa (28/09: "10
     cabides" x 30, "1un" x 3 pipetas): lista MUDA_NAO_E_ALTERNATIVA no site =
-    muda_nao_e_alternativa() no banco. Na vitrine o produto com alternativa
+    muda_nao_e_alternativa() no banco. Quantidade diferente VALE (Weslei,
+    28/09: "pode haver variação em quantidade, mas precisa analisar a
+    semelhança e custo-benefício") quando os dois títulos trazem a medida e o
+    preço por unidade/litro/kg sai >= 2% menor (podeSerAlternativa; cartão
+    mostra "Custo-benefício: R$ X por unidade (você colou R$ Y)"), com 5
+    pontos a menos na nota para a mesma quantidade vir na frente. Condição,
+    compatibilidade, voltagem, réplica e "sem" nunca. A vitrine (banco)
+    continua só com a mesma quantidade (o selo é desconto no total). Na vitrine o produto com alternativa
     ganha o selo "Até R$ X de desconto" (contra o preço do anúncio colado).
     Escolha entre vários: nota = semelhança + 10 x parte do título colado no
     título do parecido ("3s" = "3 listras"), depois o mais barato
@@ -150,8 +157,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   detalhes próprios mostra a ficha do colado com o aviso de onde veio.
 - "Ficou em dúvida?" (Weslei, 28/09): "Comparar lado a lado" (preço, frete,
   loja, mesmo/parecido, características; em amarelo o que muda) e "Me ajude a
-  escolher" (/api/public/ajudar-escolher: pesa valor, frete, loja oficial,
-  características, vantagens e diferenças; uma análise por pedido guardada em
+  escolher" (/api/public/ajudar-escolher: olha as FOTOS (até 7), descrição,
+  características, preço no Pix e parcelado, custo por unidade, frete, loja
+  oficial, vantagens e diferenças; objetivo: o mais próximo do colado pelo
+  melhor custo-benefício; uma análise por pedido guardada em
   ajuda_escolha). A resposta SEMPRE traz o botão com o link de afiliado; só
   entram opções com link próprio. Parecido só é escolhido se for mais barato
   que o melhor mesmo produto, sem frete pago e sem "vem menos". Sem modelo, a

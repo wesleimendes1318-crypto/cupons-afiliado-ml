@@ -65,3 +65,89 @@ export function notaDeAlternativa(
 ) {
   return (p.semelhanca ?? (p.mesmaFoto ? 90 : 0)) + 10 * coberturaDoTitulo(tituloColado, p.titulo);
 }
+
+/* ------------------------------------------------ custo-benefício
+   Weslei, 28/09: "tente sempre manter o mais próximo do produto indicado,
+   pode haver variação em quantidade, mas precisa analisar a semelhança e
+   custo-benefício". Quantidade diferente só vale como alternativa quando os
+   dois títulos trazem a medida (kit, unidades, ml, g) e o preço por unidade
+   (ou por litro/kg) sai menor. Sem medida nos dois, continua fora. */
+export type Medida = { qtd: number; tipo: "un" | "ml" | "g" };
+
+function decodificar(t: string) {
+  return t
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
+    .replace(/&amp;/g, "&");
+}
+
+export function medidaDoTitulo(titulo: string | null | undefined): Medida | null {
+  const t = decodificar(titulo ?? "").toLowerCase();
+  if (!t) return null;
+  const num = (x: string) => Number(x.replace(",", "."));
+  const kit =
+    /\b(?:kit|c\/|com)\s*(\d{1,4})\b/.exec(t) ??
+    /\b(\d{1,4})\s*(?:unidades|unid\.?|un\.?|pe[cç]as|p[cç]s|pares|pipetas?|c[aá]psulas?|sach[eê]s?|rolos?|pacotes?|latas?|frascos?|comprimidos?|refis|refil)\b/.exec(
+      t,
+    );
+  const vezes = kit ? num(kit[1] ?? "1") : 1;
+  const vol = /\b(\d+(?:[.,]\d+)?)\s*(ml|l|litros?)\b/.exec(t);
+  if (vol) {
+    const v = num(vol[1] ?? "0") * (vol[2] === "ml" ? 1 : 1000);
+    return v > 0 ? { qtd: v * vezes, tipo: "ml" } : null;
+  }
+  const peso = /\b(\d+(?:[.,]\d+)?)\s*(g|kg|gramas?)\b/.exec(t);
+  if (peso) {
+    const g = num(peso[1] ?? "0") * (peso[2] === "kg" ? 1000 : 1);
+    return g > 0 ? { qtd: g * vezes, tipo: "g" } : null;
+  }
+  return kit && vezes >= 1 ? { qtd: vezes, tipo: "un" } : null;
+}
+
+export type CustoBeneficio = {
+  tipo: Medida["tipo"];
+  /* Preço por unidade, por litro ou por kg. */
+  unitColado: number;
+  unitOutro: number;
+  /* true = o outro sai pelo menos 2% mais barato por unidade. */
+  melhor: boolean;
+};
+
+/** Só quando a quantidade muda e os dois títulos trazem a medida. */
+export function custoBeneficio(
+  colado: { preco: number | null | undefined; titulo: string | null | undefined },
+  outro: { preco: number | null | undefined; titulo: string | null | undefined },
+): CustoBeneficio | null {
+  if (colado.preco == null || outro.preco == null) return null;
+  const a = medidaDoTitulo(colado.titulo);
+  const b = medidaDoTitulo(outro.titulo);
+  if (!a || !b || a.tipo !== b.tipo || a.qtd === b.qtd) return null;
+  const f = a.tipo === "un" ? 1 : 1000;
+  const unitColado = (colado.preco / a.qtd) * f;
+  const unitOutro = (outro.preco / b.qtd) * f;
+  return { tipo: a.tipo, unitColado, unitOutro, melhor: unitOutro <= unitColado * 0.98 };
+}
+
+export function rotuloDaUnidade(tipo: Medida["tipo"]) {
+  return tipo === "ml" ? "por litro" : tipo === "g" ? "por kg" : "por unidade";
+}
+
+/* Diferenças que nunca viram alternativa, mesmo com custo-benefício melhor:
+   condição, compatibilidade, voltagem, réplica, "sem" (acessório/caixa). */
+const MUDA_OUTRO_MOTIVO =
+  /(compat|voltagem|condi[cç][aã]o|usad[oa]|recondicion|vitrine|r[eé]plica|\bsem\b)/i;
+
+/** Pode ser a Melhor alternativa? Quantidade diferente vale pelo custo por
+ *  unidade; sem medida nos dois títulos, "vem menos" continua fora. */
+export function podeSerAlternativa(
+  p: { preco: number | null | undefined; titulo?: string | null; muda?: string | null },
+  base: { preco: number | null | undefined; titulo: string | null | undefined },
+): { ok: boolean; cb: CustoBeneficio | null } {
+  if (p.preco == null || base.preco == null) return { ok: false, cb: null };
+  const cb = custoBeneficio(base, { preco: p.preco, titulo: p.titulo });
+  if (cb) {
+    const texto = (p.muda ?? "").replace(/(^|[^\p{L}])mesm[oa]s?(?![\p{L}])[^,.;]*/giu, "$1");
+    return { ok: cb.melhor && !MUDA_OUTRO_MOTIVO.test(texto), cb };
+  }
+  return { ok: p.preco <= base.preco - 2 && !naoEAlternativa(p.muda), cb: null };
+}

@@ -4,8 +4,8 @@
    afiliado do Weslei, e o botão da resposta leva a esse link. Sem modelo
    (cota, fora do ar), a escolha é calculada: nunca fica sem resposta. */
 
-import { naoEAlternativa } from "@/lib/alternativa";
-import { gerarComModelos, lerJson } from "@/lib/conferir-produto";
+import { custoBeneficio, podeSerAlternativa, rotuloDaUnidade } from "@/lib/alternativa";
+import { baixarFoto, gerarComModelos, lerJson } from "@/lib/conferir-produto";
 import { perguntarAoGpt } from "@/lib/gpt";
 
 type Detalhes = {
@@ -29,6 +29,9 @@ export type Opcao = {
   vantagem: string | null;
   semelhanca: number | null;
   detalhes: Detalhes;
+  /* Foto do anúncio e { cheio, pix, parcelas } lidos na página (28/09). */
+  imagem: string | null;
+  precos: Bruto | null;
 };
 
 export type Ajuda = {
@@ -69,6 +72,8 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       vantagem: null,
       semelhanca: 100,
       detalhes: detalhesColado,
+      imagem: txt(a["imagem"]),
+      precos: (a["precos"] as Bruto) ?? null,
     });
   }
   const vistos = new Set(out.map((o) => o.link));
@@ -101,6 +106,8 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       vantagem: null,
       semelhanca: 100,
       detalhes: (o["detalhes"] as Detalhes) ?? null,
+      imagem: txt(o["imagem"]),
+      precos: (o["precos"] as Bruto) ?? null,
     });
   }
   const parecidos = [...((a["parecidos"] as Bruto[] | undefined) ?? [])]
@@ -129,6 +136,8 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       vantagem: txt(p["vantagem"]),
       semelhanca: num(p["semelhanca"]),
       detalhes: (p["detalhes"] as Detalhes) ?? null,
+      imagem: txt(p["imagem"]),
+      precos: (p["precos"] as Bruto) ?? null,
     });
   }
   return out.slice(0, 12);
@@ -164,9 +173,23 @@ export function escolhaCalculada(opcoes: Opcao[]): Ajuda | null {
   };
 }
 
-function resumoDaOpcao(o: Opcao) {
+function resumoDaOpcao(o: Opcao, colado: Opcao | null, foto: number | null) {
   const d = o.detalhes;
+  const pr = o.precos;
+  const pix = pr ? num(pr["pix"]) : null;
+  const cheio = pr ? num(pr["cheio"]) : null;
+  const parc = (pr?.["parcelas"] as Bruto | null) ?? null;
+  const cb = colado && o !== colado ? custoBeneficio(colado, o) : null;
   return {
+    foto,
+    preco_no_pix: pix,
+    preco_cheio_cartao: cheio,
+    parcelado: parc
+      ? `${num(parc["vezes"])}x de ${num(parc["valor"])}${parc["semJuros"] === true ? " sem juros" : " com juros"}`
+      : null,
+    custo_por_unidade: cb
+      ? `${cb.unitOutro.toFixed(2)} ${rotuloDaUnidade(cb.tipo)} (colado: ${cb.unitColado.toFixed(2)})`
+      : null,
     n: o.n,
     tipo:
       o.tipo === "colado"
@@ -198,21 +221,38 @@ type Resposta = {
 export async function ajudarAEscolher(opcoes: Opcao[]): Promise<Ajuda | null> {
   const calculada = escolhaCalculada(opcoes);
   if (opcoes.length < 2) return calculada;
-  const prompt = `Voce e um consultor de compras honesto. Um cliente colou o link de um produto e o comparador achou as opcoes abaixo (JSON). Ajude-o a decidir a MELHOR ESCOLHA pesando: preco final, frete (frete pago pesa contra; "nao informado" nao pesa), loja oficial da marca, caracteristicas, vantagens (o que tem a mais) e diferencas (o_que_muda) em relacao ao anuncio colado.
+  const colado = opcoes.find((o) => o.tipo === "colado") ?? null;
+  /* FOTOS (Weslei, 28/09: "veja a foto, descrição, detalhes,
+     características, preço"): até 7, o colado primeiro; a foto N do pedido é
+     a opção de "foto": N. */
+  const comFoto = opcoes.filter((o) => o.imagem).slice(0, 7);
+  const fotoDe = new Map(comFoto.map((o, i) => [o.n, i + 1] as const));
+  const prompt = `Voce e um consultor de compras honesto e criterioso. Um cliente colou o link de um produto e o comparador achou as opcoes abaixo (JSON, com FOTOS anexadas na ordem do campo "foto"). Objetivo do cliente: o produto MAIS PROXIMO possivel do que ele colou, pelo melhor custo-beneficio.
+Analise, para cada opcao: a foto (modelo, cor, pecas, acessorios, estado), a descricao, as caracteristicas, o preco (no Pix e parcelado quando houver), o frete (pago pesa contra; "nao informado" nao pesa), a loja oficial da marca e o que muda em relacao ao anuncio colado.
 Regras:
-- Use SO o que esta nos dados. Nunca invente caracteristica, garantia, prazo ou beneficio.
-- "MESMO produto" e o mesmo item do anuncio colado. "PARECIDO" NAO e o mesmo produto: so escolha um parecido se ele for claramente melhor para o cliente (mais barato E sem diferenca que piore o produto, ou com vantagem real), e diga o que muda.
-- Mais barato porque vem MENOS (menos unidades, menor tamanho/volume, sem acessorio) nao e vantagem.
+- Use SO o que esta nos dados e nas fotos. Nunca invente caracteristica, garantia, prazo ou beneficio. Na duvida, diga que nao da para confirmar.
+- "MESMO produto" e o mesmo item do anuncio colado. "PARECIDO" NAO e o mesmo produto: so escolha um parecido se ele for quase igual ao colado (a foto e as caracteristicas confirmam) e sair mais barato, ou tiver vantagem real; diga o que muda.
+- Quantidade diferente: compare o custo_por_unidade. Mais barato no total mas mais caro por unidade nao e vantagem; mais caro no total e mais barato por unidade pode ser, se o cliente precisar da quantidade (diga isso).
+- Compare o preco no Pix com o preco no Pix e o parcelado com o parcelado.
 - Portugues do Brasil, frases curtas, sem exagero, sem caixa alta, sem citar inteligencia artificial.
-Responda SO com JSON: {"escolha": n da opcao, "resumo": "ate 220 caracteres explicando por que e a melhor escolha", "pontos": [{"n": n, "a_favor": "ate 90 caracteres", "contra": "ate 90 caracteres ou vazio"}]} com ate 4 pontos (inclua a escolhida e o anuncio colado).
-Opcoes: ${JSON.stringify(opcoes.map(resumoDaOpcao))}`;
+Responda SO com JSON: {"escolha": n da opcao, "resumo": "ate 240 caracteres explicando por que e a melhor escolha", "pontos": [{"n": n, "a_favor": "ate 90 caracteres", "contra": "ate 90 caracteres ou vazio"}]} com ate 4 pontos (inclua a escolhida e o anuncio colado).
+Opcoes: ${JSON.stringify(opcoes.map((o) => resumoDaOpcao(o, colado, fotoDe.get(o.n) ?? null)))}`;
   /* GPT primeiro (chave própria, não gasta a cota gratuita da Gemini que a
-     conferência pela foto usa); sem ele, a fila Gemini/Gemma. */
+     conferência pela foto usa); sem ele, a fila Gemini/Gemma, com as fotos. */
   let texto: string | null = null;
-  const gpt = await perguntarAoGpt(prompt, 15_000);
+  const gpt = await perguntarAoGpt(
+    prompt,
+    20_000,
+    comFoto.map((o) => o.imagem as string),
+  );
   if (gpt.ok) texto = gpt.texto;
   else {
-    const r = await gerarComModelos([{ text: prompt }], { prazo: 18_000 });
+    const fotos = (await Promise.all(comFoto.map((o) => baixarFoto(o.imagem)))).filter(
+      (f): f is NonNullable<typeof f> => f != null,
+    );
+    const partes =
+      fotos.length === comFoto.length ? [{ text: prompt }, ...fotos] : [{ text: prompt }];
+    const r = await gerarComModelos(partes, { prazo: 20_000 });
     if (r.ok) texto = r.texto;
   }
   if (!texto) return calculada;
@@ -225,9 +265,11 @@ Opcoes: ${JSON.stringify(opcoes.map(resumoDaOpcao))}`;
   if (
     calculada &&
     escolha.tipo === "parecido" &&
-    (escolha.preco >= calculada.escolha.preco ||
-      escolha.freteGratis === false ||
-      naoEAlternativa(escolha.muda))
+    (escolha.freteGratis === false ||
+      !podeSerAlternativa(escolha, {
+        preco: calculada.escolha.preco,
+        titulo: colado?.titulo ?? calculada.escolha.titulo,
+      }).ok)
   )
     return calculada;
   if (

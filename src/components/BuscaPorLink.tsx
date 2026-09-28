@@ -25,7 +25,14 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ComoFunciona } from "@/components/ComoFunciona";
 import { BadgeCheck, History, LoaderCircle, Package, Share2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { naoEAlternativa, notaDeAlternativa } from "@/lib/alternativa";
+import {
+  medidaDoTitulo,
+  notaDeAlternativa,
+  podeSerAlternativa,
+  rotuloDaUnidade,
+  type CustoBeneficio,
+  type Medida,
+} from "@/lib/alternativa";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -1615,24 +1622,25 @@ function Resultado({
   /* Mais barato porque vem MENOS (28/09: "Kit 10 cabides" x 30, "1un" x 3
      pipetas) ou serve para outra coisa não é alternativa: fica em Parecidos.
      Mesma lista da função muda_nao_e_alternativa do banco (vitrine). */
+  /* Quantidade diferente vale pelo custo por unidade (Weslei, 28/09: "pode
+     haver variação em quantidade, mas precisa analisar a semelhança e
+     custo-benefício"); com 5 pontos a menos, para a mesma quantidade vir
+     na frente quando o resto empata. */
+  const baseAlt = { preco: precoDoMesmo, titulo: a?.titulo };
+  const notaAlt = (p: NonNullable<Analise["parecidos"]>[number]) =>
+    notaDeAlternativa(p, a?.titulo) - (podeSerAlternativa(p, baseAlt).cb ? 5 : 0);
   const alternativa =
     precoDoMesmo == null
       ? null
       : ([...(a?.parecidos ?? [])]
           .filter(
             (p) =>
-              p.preco != null &&
-              p.preco <= precoDoMesmo - 2 &&
               p.freteGratis !== false &&
               Boolean(p.link || p.url) &&
               ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true) &&
-              !naoEAlternativa(p.muda),
+              podeSerAlternativa(p, baseAlt).ok,
           )
-          .sort(
-            (x, y) =>
-              notaDeAlternativa(y, a?.titulo) - notaDeAlternativa(x, a?.titulo) ||
-              x.preco - y.preco,
-          )[0] ?? null);
+          .sort((x, y) => notaAlt(y) - notaAlt(x) || x.preco - y.preco)[0] ?? null);
   /* Parecido com a MESMA foto do anúncio colado: sinal de que a foto do
      anúncio mostra outro produto. */
   /* Variantes da mesma linha (armazenamento, cor, tamanho, voltagem) usam a
@@ -1891,7 +1899,12 @@ function Resultado({
         )}
 
         {alternativa && !leituraFalhou && (
-          <MelhorAlternativa p={alternativa} precoBase={precoDoMesmo} dispositivo={dispositivo} />
+          <MelhorAlternativa
+            p={alternativa}
+            precoBase={precoDoMesmo}
+            cb={podeSerAlternativa(alternativa, baseAlt).cb}
+            dispositivo={dispositivo}
+          />
         )}
 
         {!leituraFalhou && (
@@ -2394,8 +2407,10 @@ function PainelDetalhes({ detalhes, nota }: { detalhes: Detalhes; nota: string }
 function MelhorAlternativa({
   p,
   precoBase,
+  cb = null,
   dispositivo,
 }: {
+  cb?: CustoBeneficio | null;
   p: NonNullable<Analise["parecidos"]>[number];
   precoBase: number | null;
   dispositivo: Dispositivo;
@@ -2418,10 +2433,18 @@ function MelhorAlternativa({
             <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">Mais completo</li>
           )
         )}
-        {menos != null && menos >= 0.5 && (
+        {cb ? (
           <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
-            Custo reduzido: {brl(menos)} a menos
+            Custo-benefício: {brl(cb.unitOutro)} {rotuloDaUnidade(cb.tipo)} (você colou{" "}
+            {brl(cb.unitColado)})
           </li>
+        ) : (
+          menos != null &&
+          menos >= 0.5 && (
+            <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
+              Custo reduzido: {brl(menos)} a menos
+            </li>
+          )
         )}
         {p.freteGratis === true && (
           <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">Frete grátis</li>
@@ -2548,27 +2571,6 @@ function SeloLojaOficial({ className = "" }: { className?: string }) {
 /* PREÇO POR UNIDADE: com quantidade diferente (kit de 30 x kit de 20, 500 ml
    x 1 L) o preço do anúncio engana; o que compara é o preço por unidade, por
    litro ou por kg. Só aparece quando os dois títulos trazem a medida. */
-type Medida = { qtd: number; tipo: "un" | "ml" | "g" };
-function medidaDoTitulo(titulo: string | null | undefined): Medida | null {
-  const t = semEntidades(titulo)?.toLowerCase() ?? "";
-  if (!t) return null;
-  const num = (x: string) => Number(x.replace(",", "."));
-  const kit =
-    /\b(?:kit|c\/|com)\s*(\d{1,4})\b/.exec(t) ??
-    /\b(\d{1,4})\s*(?:unidades|unid\.?|un\.?|pe[cç]as|p[cç]s|pares)\b/.exec(t);
-  const vezes = kit ? num(kit[1] ?? "1") : 1;
-  const vol = /\b(\d+(?:[.,]\d+)?)\s*(ml|l|litros?)\b/.exec(t);
-  if (vol) {
-    const v = num(vol[1] ?? "0") * (vol[2] === "ml" ? 1 : 1000);
-    return v > 0 ? { qtd: v * vezes, tipo: "ml" } : null;
-  }
-  const peso = /\b(\d+(?:[.,]\d+)?)\s*(g|kg|gramas?)\b/.exec(t);
-  if (peso) {
-    const g = num(peso[1] ?? "0") * (peso[2] === "kg" ? 1000 : 1);
-    return g > 0 ? { qtd: g * vezes, tipo: "g" } : null;
-  }
-  return kit && vezes > 1 ? { qtd: vezes, tipo: "un" } : null;
-}
 function precoPorMedida(preco: number, m: Medida) {
   if (m.tipo === "ml") return `${brl((preco / m.qtd) * 1000)} por litro`;
   if (m.tipo === "g") return `${brl((preco / m.qtd) * 1000)} por kg`;

@@ -928,4 +928,4 @@ export async function termoDeBusca(
 
 /* Mesma fila de modelos (Gemini e, sem cota, Gemma) para a "Ajuda para
    escolher" do resultado (28/09). */
-export { gerar as gerarComModelos, lerJson };
+export { gerar as gerarComModelos, imagem as baixarFoto, lerJson };
