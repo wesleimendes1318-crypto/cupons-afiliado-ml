@@ -778,6 +778,19 @@ export function detalhesDoAnuncio(html) {
   return { caracteristicas, destaques, descricao };
 }
 
+/* Junta listas de achados SEM perder o que vem pendurado nelas (parecidos,
+   diag). Array.concat devolve lista nova sem essas propriedades: no caminho
+   do catalogo os parecidos conferidos pela foto sumiam (28/09: 10 de 72
+   pedidos, capinha 474 com 11 parecidos e a tela so com o anuncio colado). */
+export function juntarAchados(...listas) {
+  const todas = [].concat(...listas.map(l => Array.isArray(l) ? l : []));
+  const parecidos = listas.flatMap(l => (l && Array.isArray(l.parecidos)) ? l.parecidos : []);
+  if (parecidos.length) todas.parecidos = parecidos;
+  const diag = listas.map(l => l && l.diag).filter(Boolean);
+  if (diag.length) todas.diag = diag.length === 1 ? diag[0] : Object.assign({}, ...diag);
+  return todas;
+}
+
 /* Detalhes de uma loja ou parecido, enxutos para caber na analise: o site
    mostra em "Ver detalhes" e usa para comparar lado a lado (28/09). */
 export function detalhesResumidos(d) {

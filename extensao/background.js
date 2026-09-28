@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -3223,7 +3223,7 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
     try { daBusca = await achadosNaBusca(titulo, finalAtual, itemAtual, ctx.original || null); }
     catch (e) { if (!achados.length) throw e; }
     diag = daBusca.diag || null;
-    todas = achados.concat(daBusca);
+    todas = juntarAchados(achados, daBusca);
     escolha = escolherAlternativas(todas, { ...ctx, itemAtual });
   }
   escolha.todas = todas;

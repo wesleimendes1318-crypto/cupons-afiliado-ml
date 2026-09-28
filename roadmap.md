@@ -57,3 +57,38 @@
 - [x] Padronizar o card de cupom da home em todas as secoes (categorias etc.)
 
 - [ ] Manter os cupons mais vantajosos primeiro e os menos vantajosos no final
+
+# Roadmap — Comparação por máxima semelhança e menor custo
+
+Princípio: preservar → medir → melhorar → validar → ativar aos poucos.
+Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
+(tabelas, RPCs e campos continuam; nada é removido sem prova de que ninguém usa).
+
+## P0 — confiabilidade do que já existe
+- [x] P0-1 Parecidos conferidos sumiam no caminho do catálogo (10 de 72 pedidos recentes) — `juntarAchados`, extensão 1.130.1, teste e meta na bateria
+- [ ] P0-2 Caminho do catálogo pula a busca quando a ficha já tem loja (regra: a busca roda SEMPRE) — medir com marca no diag, depois corrigir
+- [ ] P0-3 Classificar as 16 leituras de anúncio sem diagnóstico (lojaLida=false) e dar plano B a cada causa
+- [ ] P0-4 Cauda de tempo (máx. 118 s; meta 60 s): onde o tempo vai nos pedidos acima de 60 s
+- [ ] P0-5 Medir a segunda volta quando a IA de conferência cai (27 em 4 dias): quantas se recuperam
+- [ ] P0-6 Conferir a geração de link afiliado nos parecidos e nas lojas da tabela (links que ficam sem gerar)
+
+## P1 — matching V2 (sempre em shadow mode, atrás de flag)
+- [ ] Benchmark rotulado com casos reais (mesmo produto, parecido certo, parecido inadequado, quantidade, capacidade, modelo, condição, mesma foto/outro produto, título diferente/mesmo produto)
+- [ ] Medir a V1 contra o benchmark (falso positivo de "mesmo produto" é o erro mais grave)
+- [ ] Atributos estruturados por categoria (essenciais, importantes, secundários) extraídos da ficha (`detalhes`) + "desconhecido" explícito
+- [ ] Restrições rígidas determinísticas (capacidade, quantidade/kit, voltagem, condição, lado, veículo)
+- [ ] Separar semelhança de confiança da análise
+- [ ] Score V2 gravado ao lado do V1 (campos novos na análise: `matching_version`, `similarity_v2`, `confidence_v2`, `matched_attributes`, `different_attributes`, `unknown_attributes`), sem mudar a tela
+- [ ] Ranking semelhança × economia (sem alternativas dominadas; pesos documentados e configuráveis)
+- [ ] Explicação: mantém / muda / perde / ganha / economiza
+- [ ] Gate de promoção: benchmark sem regressão, falso positivo não aumenta, tempo aceitável, afiliado ok, flag de volta à V1
+
+## P2 — experiência e medição
+- [ ] Métricas V1×V2 (falso positivo/negativo, precisão dos parecidos, economia, cliques de afiliado, falhas, duração), sem dados pessoais
+- [ ] Orientar na tela quando o link colado é de perfil/loja
+- [ ] Feedback do cliente ("esta alternativa serve?")
+- [ ] Atualizar README.md (ainda descreve o app de cupons)
+
+## P3 — futuro
+- [ ] Monitoramento de preço dos produtos vistos
+- [ ] Expansão (outras lojas/categorias)

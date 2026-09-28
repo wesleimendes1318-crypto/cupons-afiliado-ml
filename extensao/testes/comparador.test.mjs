@@ -422,3 +422,20 @@ test('detalhes resumidos de cada loja encontrada (28/09)', async () => {
   const d = detalhesResumidos(detalhesDoAnuncio('<table><tr><th>Marca</th><td>adidas</td></tr></table>'));
   assert.deepEqual(d.caracteristicas, [{ nome: 'Marca', valor: 'adidas' }]);
 });
+
+test('juntar achados nao perde os parecidos (28/09, capinha 474)', async () => {
+  const { juntarAchados } = await import('../comparador.js');
+  const doCatalogo = [{ item: 'MLB1' }];
+  const daBusca = [{ item: 'MLB2' }];
+  daBusca.parecidos = [{ item: 'MLB3', muda: 'cor' }];
+  daBusca.diag = { conferidos: 12 };
+  const t = juntarAchados(doCatalogo, daBusca);
+  assert.deepEqual(t.map(x => x.item), ['MLB1', 'MLB2']);
+  assert.equal(t.parecidos.length, 1);
+  assert.equal(t.diag.conferidos, 12);
+  /* Sem parecidos em lugar nenhum: nao inventa a propriedade. */
+  assert.equal(juntarAchados([], []).parecidos, undefined);
+  /* So a busca, vazia de iguais, com parecidos (caso real da capinha). */
+  const vazio = []; vazio.parecidos = [{ item: 'MLB9' }];
+  assert.equal(juntarAchados([], vazio).parecidos.length, 1);
+});

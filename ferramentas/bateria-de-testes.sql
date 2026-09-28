@@ -24,6 +24,7 @@ select id, status,
        analise->>'final' as final,                                             -- meta: true depois de ~3 min (segunda volta terminou)
        analise->>'voltas' as voltas,
        jsonb_array_length(coalesce(analise->'parecidos','[]')) as parecidos,
+       coalesce((analise->'buscaFora'->'leitura'->>'parecidos')::int, 0) as parecidos_lidos,  -- meta: parecidos > 0 sempre que parecidos_lidos > 0 (28/09: sumiam no caminho do catalogo)
        analise->>'freteGratis' as frete_colado,
        (select count(*) from jsonb_array_elements(coalesce(analise->'outrasLojas','[]')) o where o->>'freteGratis' = 'false') as recomendou_frete_pago  -- meta: 0
   from pedidos_link where id >= 100 order by id;
