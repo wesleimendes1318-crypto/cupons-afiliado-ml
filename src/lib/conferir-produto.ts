@@ -134,6 +134,37 @@ function proximaVoltaDaCota(): number {
   const volta = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 8, 0, 0);
   return volta > Date.now() ? volta : volta + 86_400_000;
 }
+/* A cota esgotada fica tambem no banco (ia_cotas), para todas as instancias
+   do servidor; a leitura e guardada por 1 minuto. */
+let cotasLidasEm = 0;
+async function carregarCotas() {
+  if (Date.now() - cotasLidasEm < 60_000) return;
+  cotasLidasEm = Date.now();
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("ia_cotas" as never)
+      .select("modelo,ate")
+      .gt("ate" as never, new Date().toISOString() as never);
+    for (const l of (data ?? []) as Array<{ modelo: string; ate: string }>)
+      cotaAcabou.set(l.modelo, Date.parse(l.ate));
+  } catch {
+    /* sem banco: fica so a memoria */
+  }
+}
+async function marcarCotaAcabou(modelo: string) {
+  const ate = proximaVoltaDaCota();
+  cotaAcabou.set(modelo, ate);
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("ia_cotas" as never)
+      .upsert({ modelo, ate: new Date(ate).toISOString() } as never);
+  } catch {
+    /* so memoria */
+  }
+}
+
 function modeloDisponivel(m: string): boolean {
   const ate = cotaAcabou.get(m);
   if (!ate) return true;
@@ -165,6 +196,18 @@ function paraBase64(buf: ArrayBuffer): string {
    qualquer que venha no pedido. */
 async function imagem(url: string | null | undefined): Promise<Parte | null> {
   if (!url || !/^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(url)) return null;
+  /* JPEG em vez de WEBP (28/09): o Gemma nunca respondeu a conferencia (500
+     com a foto webp). O mlstatic serve a mesma foto em .jpg; sem ela, usa a
+     original. */
+  const jpg = /\.webp$/i.test(url) ? url.replace(/\.webp$/i, ".jpg") : null;
+  if (jpg) {
+    const parte = await baixarImagem(jpg);
+    if (parte) return parte;
+  }
+  return baixarImagem(url);
+}
+
+async function baixarImagem(url: string): Promise<Parte | null> {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(6_000) });
     if (!r.ok) return null;
@@ -237,7 +280,7 @@ async function chamarModelo(
       const cota = v?.quotaId
         ? `cota ${v.quotaId}${v.quotaValue ? " limite " + v.quotaValue : ""}`
         : "cota esgotada";
-      if (/PerDay/i.test(v?.quotaId ?? "")) cotaAcabou.set(modelo, proximaVoltaDaCota());
+      if (/PerDay/i.test(v?.quotaId ?? "")) void marcarCotaAcabou(modelo);
       return {
         ok: false,
         status: 429,
@@ -265,7 +308,7 @@ const ESCALONA_MS = 5_000;
 
 async function gerar(
   partes: Parte[],
-  opcoes: { ordem?: string[]; prazo?: number } = {},
+  opcoes: { ordem?: string[]; prazo?: number; iniciais?: number } = {},
 ): Promise<Resultado> {
   const chave = process.env["GEMINI_API_KEY"];
   if (!chave) return { ok: false, status: 503, erro: "GEMINI_API_KEY ausente nos secrets" };
@@ -309,7 +352,9 @@ async function gerar(
       });
       return true;
     };
-    lancar();
+    /* iniciais > 1: varios modelos saem juntos (segunda conferencia com o
+       Gemma desde o inicio, 28/09); vale a primeira resposta boa. */
+    for (let k = 0; k < Math.max(1, opcoes.iniciais ?? 1); k++) lancar();
     escalona = setTimeout(() => lancar(), ESCALONA_MS);
   });
 }
@@ -450,6 +495,7 @@ export async function conferirMesmoProduto(
   original: Anuncio & { chave?: string | null | undefined },
   candidatos: Array<Anuncio & { chave?: string | null | undefined }>,
 ): Promise<Conferencia & { guardados?: number }> {
+  await carregarCotas();
   const lista = candidatos.slice(0, 12);
   const chaveOriginal = (original.chave ?? "").trim();
   const guardados = await vereditosGuardados(
@@ -743,7 +789,14 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
         ...base.filter((m) => m !== r.modelo && ehGemma(m)),
         r.modelo,
       ];
-      r2 = await gerar(confirmacao, { ordem: outroPrimeiro, prazo: Math.min(9_000, resta) });
+      /* Dois modelos saem juntos: com os outros Gemini sem cota, sao o Gemma e
+         o proximo da fila, e o Gemma tem o prazo inteiro (antes entrava no
+         fim e nunca chegou a responder). */
+      r2 = await gerar(confirmacao, {
+        ordem: outroPrimeiro,
+        prazo: Math.min(9_000, resta),
+        iniciais: 2,
+      });
       if (!r2.ok && positivos.length) return semConfirmar(`${r2.status} ${r2.erro}`);
     }
     const obj2 = r2 && r2.ok ? lerJson<{ candidatos?: VereditoIA[] }>(r2.texto) : null;

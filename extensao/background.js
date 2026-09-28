@@ -557,6 +557,15 @@ async function completarVitrine() {
    ================================================================ */
 async function imagemParaGemini(url) {
   if (!url || !/^https:\/\//.test(url)) return null;
+  /* JPEG em vez de WEBP (28/09): o Gemma nao respondia com a foto webp. */
+  if (/mlstatic\.com\/.*\.webp$/i.test(url)) {
+    const jpg = await imagemParaGeminiDe(url.replace(/\.webp$/i, '.jpg'));
+    if (jpg) return jpg;
+  }
+  return imagemParaGeminiDe(url);
+}
+
+async function imagemParaGeminiDe(url) {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 8000);
@@ -2939,6 +2948,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
             preco: c.preco, muda: String(a.motivo || '').slice(0, 140),
             mesmaFoto: a.mesmaFoto === true, semelhanca: a.semelhanca != null ? a.semelhanca : null,
             vantagem: a.vantagem || null, daBuscaOficial: c.origem === 'oficiais',
+            lojaOficial: c.origem === 'oficiais' ? true : null,
             freteGratis: c.freteGratis != null ? c.freteGratis : null }
         : null;
     })
@@ -2968,6 +2978,10 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   for (const a of achados) {
     const c = aprovados.find(x => x.item === a.item);
     if (c) { a.imagem = c.imagem || null; a.verificadoIA = true; if (c.freteGratis != null) a.freteGratis = c.freteGratis; }
+    /* LOJA OFICIAL pela busca com o filtro "Lojas oficiais" do proprio site
+       (conferido em 28/09, pedido 461: veio a adidas MLB6209821274 e nenhum
+       anuncio da SHOPMASP). So marca true; o resto fica "nao sei". */
+    if (c && c.origem === 'oficiais') a.lojaOficial = true;
   }
   achados.diag = diag;
   achados.parecidos = parecidos;

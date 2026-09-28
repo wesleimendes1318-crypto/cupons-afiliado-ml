@@ -1585,6 +1585,10 @@ function Resultado({
               (y.semelhanca ?? (y.mesmaFoto ? 90 : 0)) - (x.semelhanca ?? (x.mesmaFoto ? 90 : 0)) ||
               x.preco - y.preco,
           )[0] ?? null);
+  /* Parecido com a MESMA foto do anúncio colado: sinal de que a foto do
+     anúncio mostra outro produto. */
+  const fotoDeOutro =
+    (a?.parecidos ?? []).find((p) => p.mesmaFoto === true && (p.semelhanca ?? 0) >= 90) ?? null;
   const parecidosSemAlternativa = alternativa
     ? (a?.parecidos ?? []).filter((p) => p !== alternativa)
     : (a?.parecidos ?? null);
@@ -1685,13 +1689,23 @@ function Resultado({
               O anúncio informa: {a.aviso}
             </p>
           )}
-          {a?.buscaFora?.leitura?.ia?.alertaOriginal && (
+          {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
             <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
               <strong>Atenção: neste anúncio a foto e o texto não batem.</strong>{" "}
               {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele envia
               antes de comprar.
             </p>
-          )}
+          ) : fotoDeOutro ? (
+            /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
+               foto com foto): o cliente precisa saber antes de comprar (28/09,
+               agasalho da SHOPMASP com a foto do conjunto Woven). */
+            <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              <strong>Atenção:</strong> a foto deste anúncio é a mesma de outro produto (
+              {semEntidades(fotoDeOutro.titulo)}
+              {fotoDeOutro.muda ? `; muda: ${fotoDeOutro.muda}` : ""}). Confirme com o vendedor qual
+              produto ele envia antes de comprar.
+            </p>
+          ) : null}
           <p className="mt-0.5 text-xs text-secondary-ink">
             {a?.preco != null && (
               <span className="text-base font-bold tabular-nums text-foreground">
@@ -2202,7 +2216,7 @@ function MelhorAlternativa({
         {p.lojaOficial === true && (
           <li className="rounded-full bg-ml-blue/10 px-2 py-0.5 text-ml-blue">
             <BadgeCheck className="mr-0.5 inline size-3 align-[-2px]" aria-hidden="true" />
-            Loja oficial da marca
+            Loja oficial
           </li>
         )}
       </ul>

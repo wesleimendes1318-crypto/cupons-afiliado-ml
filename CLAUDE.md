@@ -11,8 +11,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     preferência por outro modelo) e qualquer diferença listada reprova.
   - Gemma (mesma chave) quando a Gemini não der (cota, fora do ar, tempo),
     sempre com confiança mínima de 90 (autorizado pelo Weslei em 25/09). Na
-    SEGUNDA conferência ele vem logo depois dos outros Gemini com cota, antes
-    do mesmo modelo da primeira (Weslei, 28/09: "lembre de usar o Gemma").
+    SEGUNDA conferência ele sai JUNTO desde o início (2 modelos de uma vez),
+    antes do mesmo modelo da primeira (Weslei, 28/09: "lembre de usar o
+    Gemma"). Fotos vão em JPEG (o Gemma não respondia com webp: em 4 dias, 1
+    tentativa e erro 500). Cota diária esgotada fica na tabela ia_cotas até
+    08:00 UTC, para todas as instâncias do servidor.
   - A foto não precisa ser idêntica (cada vendedor faz a sua): conta o PRODUTO.
     Diferença é o que contradiz o original (marca, cor/borda, modelo, tamanho,
     quantidade, acessório junto), não fundo/ângulo/montagem.
@@ -181,9 +184,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Anúncio colado que se contradiz (foto de um produto, texto de outro; caso da
   SHOPMASP: foto do conjunto Woven, descrição "malha macia" do Basic 3S
   tricot): o site avisa "a foto e o texto não batem, confirme com o vendedor"
-  (original_contradiz da conferência). Nunca escolher sozinho um dos dois.
-- Selo "Loja oficial" IGUAL ao do Mercado Livre. Hoje só vem da lista oficial
-  de ofertas (API, official_store_id). A leitura pela página está DESLIGADA
+  (original_contradiz da conferência) ou, sem isso, "a foto deste anúncio é a
+  mesma de outro produto (...)" quando um parecido tem a MESMA foto.
+  Nunca escolher sozinho um dos dois.
+- Selo "Loja oficial" IGUAL ao do Mercado Livre. Vem da lista oficial de
+  ofertas (API, official_store_id) e dos anúncios achados na busca com o
+  filtro "Lojas oficiais" (_Loja_all; conferido em 28/09, pedido 461: veio a
+  adidas e nenhum anúncio da SHOPMASP). A leitura pela página está DESLIGADA
   (28/09: a SHOPMASP saiu como oficial duas vezes, mesmo lendo só o evento do
   próprio anúncio); a extensão guarda amostras ("loja-oficial-amostra") para
   acertar a leitura antes de religar. Selo errado é pior que nenhum.
