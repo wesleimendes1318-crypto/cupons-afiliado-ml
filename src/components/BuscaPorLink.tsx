@@ -1573,6 +1573,9 @@ function Resultado({
      BARATO que o melhor preço do mesmo produto, muito parecido (semelhança
      >= 85 ou a mesma foto) e sem frete pago. */
   const precoDoMesmo = recomendada?.o.final ?? a?.preco ?? null;
+  /* Mais barato porque vem MENOS (28/09: "Kit 10 cabides" x 30, "1un" x 3
+     pipetas) ou serve para outra coisa não é alternativa: fica em Parecidos.
+     Mesma lista da função muda_nao_e_alternativa do banco (vitrine). */
   const alternativa =
     precoDoMesmo == null
       ? null
@@ -1583,7 +1586,8 @@ function Resultado({
               p.preco <= precoDoMesmo - 2 &&
               p.freteGratis !== false &&
               Boolean(p.link || p.url) &&
-              ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true),
+              ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true) &&
+              !naoEAlternativa(p.muda),
           )
           .sort(
             (x, y) =>
@@ -2193,6 +2197,15 @@ function DetalhesDoProduto({ detalhes }: { detalhes: Analise["detalhes"] | undef
 /* Cartão da MELHOR ALTERNATIVA: não é o mesmo produto (diz o que muda), mas é
    mais barato, muito parecido e sem frete pago. Leva o foguinho e o botão
    animado: é a opção de maior benefício para o cliente (Weslei, 28/09). */
+const MUDA_NAO_E_ALTERNATIVA =
+  /(quantidade|\bkits?\b|unidade|\bpe[cç]as?\b|\bmenor\b|\bmenos\b|\bsem\b|apenas|somente|tamanho|volume|capacidade|compat|voltagem|\bml\b|gramas|\bkg\b|pipeta|condi[cç][aã]o|usad[oa]|recondicion|vitrine|r[eé]plica|mililitr|litros?\b)/i;
+
+/* "Mesma marca e volume, mas o nome..." não conta: o trecho "mesmo(a)..." sai antes. */
+function naoEAlternativa(muda: string | null | undefined): boolean {
+  const texto = (muda ?? "").replace(/(^|[^\p{L}])mesm[oa]s?(?![\p{L}])[^,.;]*/giu, "$1");
+  return MUDA_NAO_E_ALTERNATIVA.test(texto);
+}
+
 function MelhorAlternativa({
   p,
   precoBase,

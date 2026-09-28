@@ -49,6 +49,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     (vantagem que a conferência aponta), "Custo reduzido" (calculado) e "Loja
     oficial da marca" (só com selo confirmado). Sempre com "Não é idêntico ao
     anúncio que você colou. Muda: ...". Nunca vai para a tabela do mesmo produto.
+    Mais barato porque vem MENOS (quantidade, kit x unidade, tamanho, volume,
+    sem acessório) ou para outro uso/condição NÃO é alternativa (28/09: "10
+    cabides" x 30, "1un" x 3 pipetas): lista MUDA_NAO_E_ALTERNATIVA no site =
+    muda_nao_e_alternativa() no banco. Na vitrine o produto com alternativa
+    ganha o selo "Até R$ X de desconto" (contra o preço do anúncio colado).
   - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
     aviso "Mesma foto do anúncio colado" quando for o caso.
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem

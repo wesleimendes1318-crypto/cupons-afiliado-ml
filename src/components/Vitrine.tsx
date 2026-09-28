@@ -36,7 +36,17 @@ type ItemVitrine = {
   visto_em: string;
   cupom_codigo: string | null;
   cupom_desconto: string | null;
+  /* Melhor alternativa: parecido mais barato e muito parecido (não é idêntico). */
+  alt_preco: number | null;
+  alt_economia: number | null;
+  alt_titulo: string | null;
+  alt_link: string | null;
+  alt_loja: string | null;
 };
+
+/* Maior economia que a comparação achou: a do mesmo produto ou, quando maior,
+   a da melhor alternativa (parecido), que o selo diz "Até R$ X de desconto". */
+const maiorEconomia = (i: ItemVitrine) => Math.max(i.economia ?? 0, i.alt_economia ?? 0);
 
 /* Código de cupom já gerado da loja, pronto para copiar. */
 function CupomDaLoja({ codigo, desconto }: { codigo: string; desconto: string | null }) {
@@ -118,8 +128,8 @@ export function Vitrine() {
     let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
     if (aba === "economias")
       l = l
-        .filter((i) => (i.economia ?? 0) > 0)
-        .sort((a, b) => (b.economia ?? 0) - (a.economia ?? 0));
+        .filter((i) => maiorEconomia(i) > 0)
+        .sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
     return l.slice(0, categoria == null ? 120 : 48);
   }, [itens, aba, categoria]);
@@ -243,6 +253,9 @@ export function Vitrine() {
 function Cartao({ i }: { i: ItemVitrine }) {
   const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
   const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
+  /* Alternativa parecida que economiza mais que o mesmo produto: o selo vira
+     "Até R$ X de desconto" (não é idêntico, por isso o "Até"). */
+  const temAlternativa = (i.alt_economia ?? 0) > (temEconomia ? (i.economia ?? 0) : 0);
   return (
     <li
       key={i.chave}
@@ -262,11 +275,18 @@ function Cartao({ i }: { i: ItemVitrine }) {
             {NOME_CATEGORIA[i.categoria_site ?? "outros"] ?? "Produto comparado"}
           </div>
         )}
-        {temEconomia && (
+        {temAlternativa ? (
           <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-success px-1 py-0.5 text-[10px] font-bold text-white">
             <TrendingDown className="size-3" aria-hidden="true" />
-            {brl(i.economia)} a menos
+            Até {brl(i.alt_economia)} de desconto
           </span>
+        ) : (
+          temEconomia && (
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-success px-1 py-0.5 text-[10px] font-bold text-white">
+              <TrendingDown className="size-3" aria-hidden="true" />
+              {brl(i.economia)} a menos
+            </span>
+          )
         )}
       </div>
       <div className="flex flex-1 flex-col p-2">
@@ -283,10 +303,16 @@ function Cartao({ i }: { i: ItemVitrine }) {
             <>na {i.loja ?? "loja"}</>
           )}
         </p>
+        {temAlternativa && (
+          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-success">
+            Parecido por {brl(i.alt_preco)}
+            {i.alt_loja ? ` na ${i.alt_loja}` : ""} (não é idêntico)
+          </p>
+        )}
         {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
         <p className="mt-0.5 text-[11px] text-secondary-ink/80">
           visto em {quando(i.visto_em)}
-          {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} lojas comparadas` : ""}
+          {(i.lojas_comparadas ?? 0) > 0 ? ` · ${i.lojas_comparadas} ${i.lojas_comparadas === 1 ? "loja comparada" : "lojas comparadas"}` : ""}
         </p>
         <div className="mt-auto flex flex-col gap-1 pt-2">
           {destino && (
