@@ -123,10 +123,33 @@ const ehGemma = (modelo: string | undefined) => /^gemma/i.test(modelo ?? "");
 const confiancaMinima = (modelo: string | undefined) =>
   ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA;
 
+/* COTA DO DIA (28/09): 2.5-flash e flash-latest tem 20 pedidos por dia na
+   cota gratuita. Depois do 429 de cota DIARIA, o modelo sai da fila ate a
+   cota voltar (meia-noite do Pacifico = 07:00 UTC, com folga), em vez de
+   gastar o tempo da segunda conferencia a cada consulta. Vale enquanto o
+   servidor estiver de pe (memoria). */
+const cotaAcabou = new Map<string, number>();
+function proximaVoltaDaCota(): number {
+  const d = new Date();
+  const volta = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 8, 0, 0);
+  return volta > Date.now() ? volta : volta + 86_400_000;
+}
+function modeloDisponivel(m: string): boolean {
+  const ate = cotaAcabou.get(m);
+  if (!ate) return true;
+  if (Date.now() >= ate) {
+    cotaAcabou.delete(m);
+    return true;
+  }
+  return false;
+}
+
 function ordemDosModelos(): string[] {
   const escolhido = (process.env["GEMINI_MODEL"] ?? "").trim();
   const gemini = escolhido ? [escolhido, ...MODELOS.filter((m) => m !== escolhido)] : MODELOS;
-  return [...gemini.filter((m) => !ehGemma(m)), ...MODELOS_GEMMA];
+  const todos = [...gemini.filter((m) => !ehGemma(m)), ...MODELOS_GEMMA];
+  const livres = todos.filter(modeloDisponivel);
+  return livres.length ? livres : todos;
 }
 
 function paraBase64(buf: ArrayBuffer): string {
@@ -214,6 +237,7 @@ async function chamarModelo(
       const cota = v?.quotaId
         ? `cota ${v.quotaId}${v.quotaValue ? " limite " + v.quotaValue : ""}`
         : "cota esgotada";
+      if (/PerDay/i.test(v?.quotaId ?? "")) cotaAcabou.set(modelo, proximaVoltaDaCota());
       return {
         ok: false,
         status: 429,
