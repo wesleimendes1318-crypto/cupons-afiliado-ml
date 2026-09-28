@@ -333,6 +333,7 @@ export type Conferencia =
       ok: true;
       modelo: string;
       descricaoOriginal: string | null;
+      alertaOriginal?: string | null;
       iguais: number[];
       avaliacao: Array<{
         indice: number;
@@ -538,6 +539,7 @@ export async function conferirMesmoProduto(
     ok: true,
     modelo: novo && novo.ok ? novo.modelo : "guardado",
     descricaoOriginal: novo && novo.ok ? novo.descricaoOriginal : null,
+    alertaOriginal: novo && novo.ok ? (novo.alertaOriginal ?? null) : null,
     iguais,
     avaliacao,
     guardados: guardados.size,
@@ -571,10 +573,13 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
       REGRA_NOMES +
       REGRA_CATEGORIAS +
       "Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n" +
+      "original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro " +
+      "produto que o titulo, a ficha ou a descricao descrevem (outro modelo, cor, tecido, quantidade); vazio quando " +
+      "batem. Foto ilustrativa, angulo ou fundo nao contam.\n" +
       "parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma " +
       "compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so " +
       "marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n" +
-      'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}',
+      'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}',
   };
 
   /* Dois lotes em paralelo (27/09): 8 candidatos de uma vez passaram do
@@ -615,12 +620,22 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
   const r = boas[0] as Extract<Resultado, { ok: true }>;
   const vereditos: VereditoIA[] = [];
   let descricaoIA: string | undefined;
+  /* ANUNCIO QUE SE CONTRADIZ (28/09, agasalho da SHOPMASP: foto do conjunto
+     Woven, descricao "malha macia" do Basic 3S tricot). O site avisa o
+     cliente em vez de fingir certeza. */
+  let alertaOriginal: string | null = null;
   for (let n = 0; n < lotes.length; n++) {
     const rn = respostas[n] as Resultado;
     if (!rn.ok) continue;
-    const on = lerJson<{ descricao_original?: string; candidatos?: VereditoIA[] }>(rn.texto);
+    const on = lerJson<{
+      descricao_original?: string;
+      original_contradiz?: string;
+      candidatos?: VereditoIA[];
+    }>(rn.texto);
     if (!on || !Array.isArray(on.candidatos)) continue;
     descricaoIA ??= on.descricao_original;
+    const contradiz = String(on.original_contradiz ?? "").trim();
+    if (!alertaOriginal && contradiz.length >= 12) alertaOriginal = contradiz.slice(0, 220);
     const idx = lotes[n] as number[];
     for (const c of on.candidatos) {
       const g = Number.isInteger(c.indice) ? idx[c.indice as number] : undefined;
@@ -715,11 +730,13 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
       });
       /* Outro Gemini primeiro; o mesmo Gemini depois; Gemma so no fim. */
       const base = ordemDosModelos();
+      /* Segunda opiniao de OUTRO modelo: os outros Gemini com cota, depois o
+         Gemma (Weslei, 28/09: "lembre de usar o Gemma"; cota propria, minimo
+         90) e so no fim o mesmo modelo da primeira conferencia. */
       const outroPrimeiro = [
         ...base.filter((m) => m !== r.modelo && !ehGemma(m)),
-        ...(ehGemma(r.modelo) ? [] : [r.modelo]),
         ...base.filter((m) => m !== r.modelo && ehGemma(m)),
-        ...(ehGemma(r.modelo) ? [r.modelo] : []),
+        r.modelo,
       ];
       r2 = await gerar(confirmacao, { ordem: outroPrimeiro, prazo: Math.min(9_000, resta) });
       if (!r2.ok && positivos.length) return semConfirmar(`${r2.status} ${r2.erro}`);
@@ -770,6 +787,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     ok: true,
     modelo: r.modelo,
     descricaoOriginal: descricao,
+    alertaOriginal,
     iguais,
     avaliacao,
   };

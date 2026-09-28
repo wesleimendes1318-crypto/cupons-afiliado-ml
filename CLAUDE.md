@@ -9,9 +9,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Produto parecido apresentado como igual é o pior erro possível.
   - Todo "igual" passa por DUAS conferências (a segunda foto com foto, de
     preferência por outro modelo) e qualquer diferença listada reprova.
-  - Gemma (mesma chave) só quando a Gemini não der (cota, fora do ar, tempo),
-    sempre depois de todos os Gemini e com confiança mínima de 90
-    (autorizado pelo Weslei em 25/09).
+  - Gemma (mesma chave) quando a Gemini não der (cota, fora do ar, tempo),
+    sempre com confiança mínima de 90 (autorizado pelo Weslei em 25/09). Na
+    SEGUNDA conferência ele vem logo depois dos outros Gemini com cota, antes
+    do mesmo modelo da primeira (Weslei, 28/09: "lembre de usar o Gemma").
   - A foto não precisa ser idêntica (cada vendedor faz a sua): conta o PRODUTO.
     Diferença é o que contradiz o original (marca, cor/borda, modelo, tamanho,
     quantidade, acessório junto), não fundo/ângulo/montagem.
@@ -159,8 +160,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   é meu diferencial"): a conferência pela foto olha 12 anúncios (lotes de 4 em
   paralelo no servidor), escolhidos por escolherParaConferir: PRIMEIRO os mais
   baratos que o colado (achados da busca nas lojas oficiais na frente, depois
-  título mais parecido), com 4 vagas para os mais caros (tabela). Busca extra
-  só entre lojas oficiais (urlDeBusca + "_Loja_all"). Dos aprovados, os 5
+  título mais parecido), com 4 vagas para os mais caros (tabela). Buscas
+  extras: só entre lojas oficiais (urlDeBusca + "_Loja_all") e pelo menor
+  preço na faixa do produto ("_OrderId_PRICE_PriceRange_min-max", 28/09). Dos aprovados, os 5
   mais baratos são abertos: até 5 lojas do mesmo produto na tabela. Caso real:
   agasalho "Basic 3s" x "Woven 3 Listras" da adidas oficial, R$ 83 mais
   barato, sumia em metade das consultas por título pouco parecido.
@@ -168,6 +170,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   mais uma fonte de candidatos (relacionadosDaPagina), com a mesma conferência
   pela foto: só entram na tabela se forem o mesmo produto (Weslei, 27/09:
   "somente quando for útil de verdade").
+- Anúncio colado que se contradiz (foto de um produto, texto de outro; caso da
+  SHOPMASP: foto do conjunto Woven, descrição "malha macia" do Basic 3S
+  tricot): o site avisa "a foto e o texto não batem, confirme com o vendedor"
+  (original_contradiz da conferência). Nunca escolher sozinho um dos dois.
 - Selo "Loja oficial" IGUAL ao do Mercado Livre. Hoje só vem da lista oficial
   de ofertas (API, official_store_id). A leitura pela página está DESLIGADA
   (28/09: a SHOPMASP saiu como oficial duas vezes, mesmo lendo só o evento do

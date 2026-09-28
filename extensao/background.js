@@ -727,10 +727,13 @@ const PEDIDO_CONFERENCIA =
   + REGRA_NOMES
   + REGRA_CATEGORIAS
   + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n'
+  + 'original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro '
+  + 'produto que o titulo, a ficha ou a descricao descrevem (outro modelo, cor, tecido, quantidade); vazio quando '
+  + 'batem. Foto ilustrativa, angulo ou fundo nao contam.\n'
   + 'parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma '
   + 'compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so '
   + 'marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n'
-  + 'Responda so JSON: {"descricao_original":"...","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}';
+  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}';
 
 /* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
    foto com foto, de preferencia por outro modelo. */
@@ -803,6 +806,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
   });
   if (sv && sv.ok && Array.isArray(sv.iguais)) {
     ultimaIA = { via: 'servidor', guardados: sv.guardados || 0, modelo: sv.modelo, descricao: sv.descricaoOriginal || null,
+                 alertaOriginal: sv.alertaOriginal || null,
                  avaliacao: (sv.avaliacao || []).map(a => ({ ...a, titulo: String((itens[a.indice] || {}).titulo || '').slice(0, 70) })) };
     return new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
   }
@@ -879,7 +883,9 @@ async function mesmoProdutoPelaGemini(original, lista) {
         });
       }
       const iguais = avaliacao.filter(a => a.igual && a.confianca >= CONFIANCA_MINIMA_IA && !a.semFoto).map(a => a.indice);
+      const contradiz = String(obj.original_contradiz || '').trim();
       ultimaIA = { via: 'extensao', modelo: r.modelo, erros, descricao: String(obj.descricao_original || '').slice(0, 300),
+                   alertaOriginal: contradiz.length >= 12 ? contradiz.slice(0, 220) : null,
                    avaliacao: avaliacao.map(a => ({ ...a, titulo: String(itens[a.indice].titulo || '').slice(0, 70) })) };
       return new Set(iguais);
     }
@@ -2834,19 +2840,40 @@ async function buscaNasLojasOficiais(titulo, precoRef) {
   }
 }
 
+/* BUSCA PELO MENOR PRECO (Weslei, 28/09: "garimpo impecavel e assertivo"):
+   a mesma busca ordenada do mais barato ao mais caro, so na faixa de preco do
+   produto (40% ate o preco colado). Na busca por relevancia o mais barato de
+   verdade pode ficar fora das primeiras dezenas de anuncios. */
+async function buscaPeloMenorPreco(titulo, precoRef) {
+  if (precoRef == null || !(precoRef > 0)) { const v = []; v.diag = null; return v; }
+  const url = urlDeBusca(titulo) + '_OrderId_PRICE_PriceRange_' + Math.floor(precoRef * 0.4) + '-' + Math.ceil(precoRef) + '_NoIndex_True';
+  const d = { url };
+  try {
+    const html = await lerCatalogo(url, 3000000);
+    const achados = ofertasDaBusca(html, titulo, precoRef, d);
+    const lista = [...achados, ...(achados.outros || [])];
+    lista.diag = { url, comPreco: d.comPreco, naFaixa: d.naFaixa, usados: lista.length };
+    return lista;
+  } catch (e) {
+    const v = []; v.diag = { url, erro: String(e.message || e).slice(0, 120) }; return v;
+  }
+}
+
 async function achadosCombinados(titulo, precoRef, itemAtual, original, google) {
   const vazioCom = d => { const v = []; v.diag = d; return v; };
-  const [doGoogle, daBusca, dasOficiais] = await Promise.all([
+  const [doGoogle, daBusca, dasOficiais, peloPreco] = await Promise.all([
     Array.isArray(google) && google.length && original
       ? achadosPeloGoogle(google, precoRef, itemAtual, original, true).catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) }))
       : Promise.resolve(vazioCom(null)),
     achadosNaBuscaUmaVez(titulo, precoRef, itemAtual, original, true)
       .catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) })),
-    original ? buscaNasLojasOficiais(titulo, precoRef) : Promise.resolve(vazioCom(null))
+    original ? buscaNasLojasOficiais(titulo, precoRef) : Promise.resolve(vazioCom(null)),
+    original ? buscaPeloMenorPreco(titulo, precoRef) : Promise.resolve(vazioCom(null))
   ]);
   /* Produtos relacionados da pagina colada (lidos junto com o anuncio). */
   const relacionados = original && Array.isArray(original.relacionados) ? original.relacionados : [];
   const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null, oficiais: dasOficiais.diag || null,
+                 porPreco: peloPreco.diag || null,
                  relacionados: relacionados.length };
   /* Frete do anuncio colado, se ele apareceu na busca. */
   if (Array.isArray(daBusca.freteAtual)) diag.freteAtual = daBusca.freteAtual[0];
@@ -2854,7 +2881,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   /* GARIMPO (27/09): mais baratos que o colado primeiro, achados nas lojas
      oficiais na frente, depois o titulo mais parecido; sobra vaga para os
      demais (tabela de todas as lojas). Ver escolherParaConferir. */
-  const semOutros = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], relacionados },
+  const semOutros = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], relacionados, porPreco: [...peloPreco] },
     precoRef, itemAtual, MAX_CANDIDATOS_IA);
   let candidatos = semOutros;
   for (const c of candidatos) vistos.add(c.item);
@@ -2880,7 +2907,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   /* Os OUTROS da busca (titulo pouco parecido) disputam as vagas com os
      demais pelo preco: o mais barato de verdade pode estar escrito de outro
      jeito (agasalho "Woven 3 Listras" x "Basic 3s", 27/09). */
-  candidatos = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], relacionados, outros: extras },
+  candidatos = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], relacionados, porPreco: [...peloPreco], outros: extras },
     precoRef, itemAtual, MAX_CANDIDATOS_IA);
   for (const c of candidatos) vistos.add(c.item);
   diag.extras = candidatos.filter(c => c.origem === 'outros').length;

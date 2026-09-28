@@ -281,6 +281,8 @@ type Analise = {
         conferidos?: number | null;
         iguais?: number | null;
         indisponivel?: boolean | null;
+        /* O proprio anuncio colado se contradiz (foto x texto), 28/09. */
+        alertaOriginal?: string | null;
       } | null;
     } | null;
   } | null;
@@ -1648,6 +1650,13 @@ function Resultado({
           {a?.aviso && (
             <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
               O anúncio informa: {a.aviso}
+            </p>
+          )}
+          {a?.buscaFora?.leitura?.ia?.alertaOriginal && (
+            <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              <strong>Atenção: neste anúncio a foto e o texto não batem.</strong>{" "}
+              {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele envia
+              antes de comprar.
             </p>
           )}
           <p className="mt-0.5 text-xs text-secondary-ink">
