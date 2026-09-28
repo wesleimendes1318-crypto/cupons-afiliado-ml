@@ -170,9 +170,23 @@ type Detalhes = {
   descricao?: string | null;
 };
 
+/* Preço cheio, no Pix e parcelado, lidos no evento do próprio anúncio
+   (Weslei, 28/09: "cuidado com o valor à vista e parcelado"). */
+type Precos = {
+  cheio: number | null;
+  pix: number | null;
+  parcelas?: {
+    vezes: number;
+    valor: number | null;
+    total: number | null;
+    semJuros: boolean;
+  } | null;
+};
+
 type OutraLoja = {
   /* Detalhes lidos na página do anúncio desta loja (28/09). */
   detalhes?: Detalhes | null;
+  precos?: Precos | null;
   freteGratis?: boolean | null;
   /* Loja oficial da marca (Weslei, 27/09: a mais barata do agasalho era a
      loja oficial da adidas). Selo na tabela e na recomendação. */
@@ -271,6 +285,7 @@ type Analise = {
     semAfiliado?: boolean | null;
     freteGratis?: boolean | null;
     detalhes?: Detalhes | null;
+    precos?: Precos | null;
   }> | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
   aviso?: string | null;
@@ -286,6 +301,7 @@ type Analise = {
   /* Frete do anúncio colado: true grátis, false pago, null não sei. */
   freteGratis?: boolean | null;
   lojaOficial?: boolean | null;
+  precos?: Precos | null;
   /* Características, destaques e descrição lidos no anúncio (27/09). */
   detalhes?: {
     caracteristicas?: Array<{ nome: string; valor: string }> | null;
@@ -330,6 +346,7 @@ type Referencia = {
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
   detalhes?: Detalhes | null;
+  precos?: Precos | null;
 };
 
 type Pedido = {
@@ -879,7 +896,12 @@ export default function BuscaPorLink() {
   return (
     <section
       id="colar-link"
-      className="mx-auto max-w-3xl rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-3 sm:p-4"
+      className={
+        "mx-auto rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-3 transition-[max-width] sm:p-4 " +
+        /* Com resultado, usa a largura da tela (Weslei, 28/09: "aproveite
+           melhor o espaço"); sem resultado, a caixa do link fica enxuta. */
+        (fase === "pronto" && pedido ? "max-w-3xl lg:max-w-6xl" : "max-w-3xl")
+      }
     >
       <div className="mb-1 flex items-center gap-2">
         <span aria-hidden="true" className="text-lg">
@@ -1613,11 +1635,31 @@ function Resultado({
           )[0] ?? null);
   /* Parecido com a MESMA foto do anúncio colado: sinal de que a foto do
      anúncio mostra outro produto. */
+  /* Variantes da mesma linha (armazenamento, cor, tamanho, voltagem) usam a
+     MESMA foto oficial: não é sinal de foto trocada (28/09, iPhone 256 GB x
+     1 TB). O aviso fica para diferença de produto (modelo, tecido...). */
+  const soVariante = (m: string | null | undefined) =>
+    /armazenamento|capacidade|mem[oó]ria|\b\d+\s?(gb|tb)\b|\bcor\b|tamanho|voltagem/i.test(m ?? "");
   const fotoDeOutro =
-    (a?.parecidos ?? []).find((p) => p.mesmaFoto === true && (p.semelhanca ?? 0) >= 90) ?? null;
-  const parecidosSemAlternativa = alternativa
-    ? (a?.parecidos ?? []).filter((p) => p !== alternativa)
-    : (a?.parecidos ?? null);
+    (a?.parecidos ?? []).find(
+      (p) => p.mesmaFoto === true && (p.semelhanca ?? 0) >= 90 && !soVariante(p.muda),
+    ) ?? null;
+  /* MENOR DIFERENÇA PRIMEIRO (Weslei, 28/09: "menor diferença sempre acima
+     do mais gritante"; iPhone: a mesma versão em outra cor, +R$ 31, ficava
+     abaixo das de 1 TB e 2 TB, +R$ 3-4 mil, por terem a mesma foto). Muito
+     parecidos (semelhança >= 85) na frente; dentro de cada grupo, a menor
+     diferença de preço para o anúncio colado. */
+  const ordenarParecidos = (lista: NonNullable<Analise["parecidos"]>) =>
+    [...lista].sort((x, y) => {
+      const gx = (x.semelhanca ?? (x.mesmaFoto ? 90 : 0)) >= 85 ? 0 : 1;
+      const gy = (y.semelhanca ?? (y.mesmaFoto ? 90 : 0)) >= 85 ? 0 : 1;
+      if (gx !== gy) return gx - gy;
+      const base = a?.preco ?? 0;
+      return Math.abs(x.preco - base) - Math.abs(y.preco - base);
+    });
+  const parecidosSemAlternativa = ordenarParecidos(
+    alternativa ? (a?.parecidos ?? []).filter((p) => p !== alternativa) : (a?.parecidos ?? []),
+  );
 
   /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
@@ -1660,6 +1702,7 @@ function Resultado({
             freteGratis: a?.freteGratis ?? null,
             lojaOficial: a?.lojaOficial ?? null,
             detalhes: a?.detalhes ?? null,
+            precos: a?.precos ?? null,
           },
         ]
       : []),
@@ -1678,6 +1721,7 @@ function Resultado({
       mercadoLider: o.mercadoLider ?? null,
       detalhes: o.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !o.detalhes,
+      precos: o.precos ?? null,
       ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
@@ -1693,6 +1737,7 @@ function Resultado({
       mercadoLider: r.mercadoLider ?? null,
       detalhes: r.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !r.detalhes,
+      precos: r.precos ?? null,
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
@@ -1779,6 +1824,9 @@ function Resultado({
               <span className="text-base font-bold tabular-nums text-foreground">
                 {brl(a.preco)}
               </span>
+            )}
+            {textoDoPagamento(a?.preco, a?.precos) && (
+              <span className="font-medium"> {textoDoPagamento(a?.preco, a?.precos)}</span>
             )}
             {a?.temCupom && <span> · sem o cupom</span>}
             {a?.vendedor && <span> · {a.vendedor}</span>}
@@ -2198,10 +2246,44 @@ type LinhaLoja = {
      (é o mesmo produto) com o aviso de onde veio. */
   detalhes?: Detalhes | null;
   detalhesDoColado?: boolean;
+  precos?: Precos | null;
 };
 
 /* DETALHES DO PRODUTO (Weslei, 27/09): características, destaques e
    descrição do anúncio, fechados num botão para não poluir a tela. */
+/* Como o preço mostrado se paga: "no Pix" e o parcelado, quando o anúncio
+   informa. Sem a informação, nada é afirmado. */
+function textoDoPagamento(preco: number | null | undefined, p: Precos | null | undefined) {
+  if (!p || preco == null) return null;
+  const perto = (x: number | null | undefined) => x != null && Math.abs(x - preco) < 0.5;
+  const parcelado = p.parcelas
+    ? `${brl(p.parcelas.total ?? p.cheio)} em ${p.parcelas.vezes}x${p.parcelas.semJuros ? " sem juros" : ""}`
+    : p.cheio != null && !perto(p.cheio)
+      ? `${brl(p.cheio)} no cartão`
+      : null;
+  if (p.pix != null && perto(p.pix)) return parcelado ? `no Pix · ou ${parcelado}` : "no Pix";
+  if (p.pix != null && perto(p.cheio)) return `${brl(p.pix)} no Pix`;
+  return p.parcelas
+    ? `em até ${p.parcelas.vezes}x${p.parcelas.semJuros ? " sem juros" : ""}`
+    : null;
+}
+
+function FormaDePagamento({
+  preco,
+  precos,
+  className = "",
+}: {
+  preco: number | null | undefined;
+  precos: Precos | null | undefined;
+  className?: string;
+}) {
+  const t = textoDoPagamento(preco, precos);
+  if (!t) return null;
+  return (
+    <span className={"block text-[10px] font-medium text-secondary-ink " + className}>{t}</span>
+  );
+}
+
 function temDetalhes(d: Detalhes | null | undefined): d is Detalhes {
   return Boolean(
     d &&
@@ -2378,6 +2460,7 @@ function MelhorAlternativa({
           )}
           <p className="mt-0.5 tabular-nums">
             <span className="text-base font-bold text-success">{brl(p.preco)}</span>
+            <FormaDePagamento preco={p.preco} precos={p.precos} className="text-xs" />
           </p>
         </div>
       </div>
@@ -2578,6 +2661,7 @@ function Parecidos({
               </div>
               <div className="shrink-0 text-right tabular-nums">
                 <span className="block text-sm font-bold">{brl(p.preco)}</span>
+                <FormaDePagamento preco={p.preco} precos={p.precos} />
                 {porMedida && (
                   <span className="block text-[10px] text-secondary-ink">{porMedida}</span>
                 )}
@@ -2718,6 +2802,7 @@ function TodasAsLojas({
                   >
                     {brl(l.final)}
                   </span>
+                  <FormaDePagamento preco={l.final} precos={l.precos} />
                   {(() => {
                     const extra = menor != null && l.final != null ? l.final - menor : null;
                     if (i === melhorIdx)

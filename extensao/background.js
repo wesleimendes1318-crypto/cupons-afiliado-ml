@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -276,13 +276,16 @@ const liderPorItem = new Map();
 /* item -> detalhes resumidos (caracteristicas, destaques, descricao) da
    pagina do anuncio: "Ver detalhes" de cada produto encontrado (28/09). */
 const detalhesPorItem = new Map();
+/* item -> { cheio, pix, parcelas } do evento do proprio anuncio (28/09). */
+const precosPorItem = new Map();
 /* Coloca os detalhes ja lidos em cada linha (tabela, parecidos), no proprio
    objeto: o lote de links muda estas mesmas linhas depois. */
 function comDetalhes(lista) {
   for (const x of lista || []) {
-    if (!x || x.detalhes) continue;
+    if (!x || (x.detalhes && x.precos)) continue;
     const it = x.item || (x.url ? itemDoUrl(x.url) : null) || (x.link && /mercadoli[vb]re/.test(x.link) ? itemDoUrl(x.link) : null);
     if (it && detalhesPorItem.has(it)) x.detalhes = detalhesPorItem.get(it);
+    if (it && !x.precos && precosPorItem.has(it)) x.precos = precosPorItem.get(it);
   }
   return lista;
 }
@@ -364,25 +367,26 @@ function amostraDoVendedor(id, html) {
 
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
-  if (m && Date.now() - m.ts < TTL_VEND) { if (m.detalhes) detalhesPorItem.set(id, m.detalhes); oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); return m.nomes; }
+  if (m && Date.now() - m.ts < TTL_VEND) { if (m.detalhes) detalhesPorItem.set(id, m.detalhes); if (m.precos) precosPorItem.set(id, m.precos); oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); return m.nomes; }
 
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
   /* v3: guarda tambem se e loja oficial. */
   const chave = 'v3_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
-  if (g && Date.now() - g.ts < TTL_VEND) { if (g.detalhes) detalhesPorItem.set(id, g.detalhes); cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
+  if (g && Date.now() - g.ts < TTL_VEND) { if (g.detalhes) detalhesPorItem.set(id, g.detalhes); if (g.precos) precosPorItem.set(id, g.precos); cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
 
   let nomes = [];
   let oficial = null;
   let condicao = null;
   try {
     const aoTerminar = full => {
+      const pr = precosDoItem(full, id);
+      if (pr) precosPorItem.set(id, pr);
       const d = detalhesResumidos(detalhesDoAnuncio(full));
-      if (!d) return;
-      detalhesPorItem.set(id, d);
+      if (d) detalhesPorItem.set(id, d);
       const r = cacheMem.get(id);
-      if (r) { r.detalhes = d; chrome.storage.local.set({ [chave]: r }); }
+      if (r && (d || pr)) { if (d) r.detalhes = d; if (pr) r.precos = pr; chrome.storage.local.set({ [chave]: r }); }
     };
     const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`, aoTerminar);
     nomes = nomesDoHtml(html);
@@ -397,7 +401,8 @@ async function resolverVendedorAgora(id, url) {
   oficialPorItem.set(id, oficial);
   condicaoPorItem.set(id, condicao);
 
-  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null, detalhes: detalhesPorItem.get(id) ?? null, ts: Date.now() };
+  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null, detalhes: detalhesPorItem.get(id) ?? null,
+                precos: precosPorItem.get(id) ?? null, ts: Date.now() };
   if (nomes.length) { cacheMem.set(id, reg); chrome.storage.local.set({ [chave]: reg }); }
   return nomes;
 }
@@ -1254,6 +1259,8 @@ function extrairAnuncio(t, finalUrl, status) {
   amostraDaLojaOficial(t, itemAqui, lojaOficialDoHtml(t, itemAqui), 'colado');
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: null,
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
+           /* Cheio, Pix e parcelado do proprio anuncio (28/09). */
+           precos: precosDoItem(t, itemAqui),
            relacionados, relacionadosDiag: relacionados.diag || null,
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
@@ -4244,6 +4251,8 @@ async function atenderPedidos() {
             /* Caracteristicas, destaques e descricao do anuncio: botao "Ver
                detalhes do produto" no site (Weslei, 27/09). */
             detalhes: a.detalhes || null,
+            /* { cheio, pix, parcelas }: o site mostra "no Pix" e o parcelado. */
+            precos: a.precos || null,
             condicao: a.condicao || null,
             recusados111: recusados111.length ? recusados111 : null,
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')

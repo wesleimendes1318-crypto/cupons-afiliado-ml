@@ -1769,18 +1769,6 @@ function Index() {
               <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
                 Melhor Escolha: compare preços de produtos vendidos no Mercado Livre
               </h1>
-              <p className="mt-2 text-sm font-semibold text-white/85">
-                por{" "}
-                <a
-                  href="https://www.instagram.com/wslmendes/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-ml-yellow decoration-2 underline-offset-4 hover:opacity-80"
-                >
-                  @WSLMENDES
-                </a>
-              </p>
-
               <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
                 Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do Mercado
                 Livre, do mais barato ao mais caro e com a loja oficial (quando houver).

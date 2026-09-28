@@ -439,3 +439,22 @@ test('juntar achados nao perde os parecidos (28/09, capinha 474)', async () => {
   const vazio = []; vazio.parecidos = [{ item: 'MLB9' }];
   assert.equal(juntarAchados([], vazio).parecidos.length, 1);
 });
+
+test('precos a vista (Pix) e parcelado do proprio anuncio (28/09, iPhone)', async () => {
+  const { precosDoItem } = await import('../comparador.js');
+  const ev = (item, extra) => '"melidata_event":{"path":"/pdp","event_data":{"item_id":"' + item + '",' + extra + '}}';
+  const pagina = ev('MLB2', '"price":100,"original_price":120')
+    + ev('MLB1', '"price":9757.11,"original_price":12499,"credit_view_components":{"pricing":{"original_price":12499,"actual_price":9757.11,'
+      + '"recommended_methods":[{"id":"visa","installments":15,"installment_amount":650.47,"installments_total":9757.05,"is_free_installment":true}]},'
+      + '"campaigns":[{"id":"1","type":"PIX","price_breakdown_label":"Desconto no Pix","amount":{"index":0,"type":"price","value":975.71,"currency":{"id":"BRL"}}}]}');
+  const p = precosDoItem(pagina, 'MLB1');
+  assert.equal(p.cheio, 9757.11);
+  assert.equal(p.pix, 8781.4);
+  assert.deepEqual(p.parcelas, { vezes: 15, valor: 650.47, total: 9757.05, semJuros: true });
+  /* Outro anuncio da mesma pagina nao vaza para este. */
+  assert.deepEqual(precosDoItem(pagina, 'MLB2'), { cheio: 100, pix: null, parcelas: null });
+  assert.equal(precosDoItem(pagina, 'MLB9'), null);
+  /* Escapado dentro de JSON (como vem no HTML). */
+  const esc = pagina.replace(/"/g, '\\"');
+  assert.equal(precosDoItem(esc, 'MLB1').pix, 8781.4);
+});

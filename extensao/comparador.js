@@ -701,6 +701,37 @@ function eventosDoItem(html, item) {
     .filter(seg => seg.replace(/\s+/g, '').includes(alvo));
 }
 
+/* PRECOS DO PROPRIO ANUNCIO (Weslei, 28/09: "cuidado com o valor a vista e
+   parcelado"; iPhone 17 Pro Max: R$ 8.781,40 no Pix, R$ 9.757,11 em 15x).
+   O evento do anuncio traz o preco cheio (pricing.actual_price ou "price"
+   junto de "original_price"), o desconto do Pix (campaigns tipo PIX) e o
+   parcelamento recomendado. A meta itemprop="price" da pagina ja e o preco
+   no Pix quando ha desconto. Sem o evento do anuncio: nao sei (null). */
+export function precosDoItem(html, item) {
+  if (!html || !item) return null;
+  const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
+  const alvo = '"item_id":"' + String(item).toUpperCase() + '"';
+  const n = x => { const v = parseFloat(x); return v > 0 && v < 1e7 ? Math.round(v * 100) / 100 : null; };
+  for (const bruto of t.split('"melidata_event"').slice(1)) {
+    const seg = bruto.slice(0, 30000);
+    if (!seg.replace(/\s+/g, '').includes(alvo)) continue;
+    const a = /"actual_price"\s*:\s*(\d+(?:\.\d+)?)/.exec(seg)
+      || /"price"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"original_price"/.exec(seg);
+    const cheio = a ? n(a[1]) : null;
+    if (cheio == null) continue;
+    const px = /"type"\s*:\s*"PIX"[^{}]{0,200}?"amount"\s*:\s*\{[^{}]*?"value"\s*:\s*(\d+(?:\.\d+)?)/.exec(seg);
+    const desc = px ? n(px[1]) : null;
+    /* Desconto de Pix acima de 40% nao e desconto de Pix: ignora. */
+    const pix = desc != null && desc < cheio * 0.4 ? Math.round((cheio - desc) * 100) / 100 : null;
+    const pc = /"installments"\s*:\s*(\d{1,2})\s*,\s*"installment_amount"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"installments_total"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"is_free_installment"\s*:\s*(true|false)/.exec(seg);
+    const parcelas = pc && Number(pc[1]) > 1
+      ? { vezes: Number(pc[1]), valor: n(pc[2]), total: n(pc[3]), semJuros: pc[4] === 'true' }
+      : null;
+    return { cheio, pix, parcelas };
+  }
+  return null;
+}
+
 /* Anuncio principal da pagina (quando o endereco nao traz o item_id): o do
    botao "Comprar agora" ("/vip/buy_action" ou "/pdp/buy_action"). */
 export function itemDaCompra(html) {

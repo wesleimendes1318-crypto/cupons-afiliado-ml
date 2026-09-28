@@ -100,6 +100,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   lista oficial de ofertas e, na página do anúncio, o evento do vendedor
   ("seller_name"... "official_store_id"; sem o campo = loja comum). Em empate
   de preço (< R$ 0,50) a oficial vem primeiro.
+- À vista x parcelado (Weslei, 28/09): o preço da página (meta itemprop) é
+  o do Pix quando há desconto no Pix. A extensão lê do evento do PRÓPRIO
+  anúncio (precosDoItem) o cheio, o Pix e o parcelamento, e o site mostra
+  "no Pix · ou R$ X em Nx" onde souber (colado, tabela, parecidos,
+  alternativa). Sem a informação, não afirma.
+- Parecidos: menor diferença primeiro (semelhança >= 85 na frente; dentro do
+  grupo, a menor diferença de preço). Mesma foto em variante (armazenamento,
+  cor, tamanho, voltagem) não gera o aviso de "foto de outro produto".
 - Economia sempre contra o preço que a página mostra ao cliente (a API pode
   trazer outro: Advocate R$ 169,90 na API x R$ 147,81 na página).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
