@@ -1749,8 +1749,9 @@ function Index() {
   return (
     <div className="min-h-screen fundo-conteudo text-foreground">
       <header className="faixa-conteudo w-full">
-        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
-          <div className="animate-conteudo grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
+        {/* Topo compacto (Weslei, 28/09: "está ocupando muito espaço da tela"). */}
+        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+          <div className="animate-conteudo grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
@@ -1766,22 +1767,24 @@ function Index() {
                 )}
               </div>
 
-              <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+              <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
                 Melhor Escolha: compare preços de produtos vendidos no Mercado Livre
               </h1>
-              <p className="mt-4 max-w-[52ch] text-base font-medium leading-relaxed text-white/90 sm:text-lg">
-                Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do Mercado
-                Livre, do mais barato ao mais caro e com a loja oficial (quando houver).
-              </p>
-              <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-white/85 sm:text-base">
-                Confiro pela foto, descrição e características para encontrar o mesmo produto.
-                Parecidos aparecem separados, com a descrição do que muda.
+              <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-white/90 sm:text-base">
+                <span className="font-medium">
+                  Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do
+                  Mercado Livre, do mais barato ao mais caro e com a loja oficial (quando houver).
+                </span>{" "}
+                <span className="text-white/80">
+                  Confiro pela foto, descrição e características para encontrar o mesmo produto.
+                  Parecidos aparecem separados, com a descrição do que muda.
+                </span>
               </p>
 
-              <div className="mt-7 flex flex-wrap items-center gap-2.5">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Button
                   onClick={irParaColarLink}
-                  className="h-auto min-h-12 bg-ml-yellow px-6 py-3 text-base font-bold text-ml-yellow-foreground shadow-lg shadow-black/10 hover:bg-ml-yellow/90"
+                  className="h-auto min-h-10 bg-ml-yellow px-5 py-2 text-sm font-bold text-ml-yellow-foreground shadow-lg shadow-black/10 hover:bg-ml-yellow/90 sm:text-base"
                 >
                   <Link2 className="size-5" aria-hidden="true" />
                   Colar o link do produto
@@ -1797,7 +1800,7 @@ function Index() {
                     <Link
                       key={item.para}
                       to={item.para}
-                      className="inline-flex min-h-12 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
+                      className="inline-flex min-h-10 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
                     >
                       {item.texto}
                     </Link>
@@ -1806,11 +1809,12 @@ function Index() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm">
+            {/* No celular fica de fora: a faixa "1. 2. 3." logo abaixo diz o mesmo. */}
+            <div className="hidden min-w-0 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm lg:block">
               <p className="text-xs font-bold uppercase tracking-wide text-ml-yellow">
                 Meu compromisso com você
               </p>
-              <ul className="mt-3 space-y-3 text-sm leading-relaxed text-white/90">
+              <ul className="mt-2 space-y-1.5 text-[13px] leading-snug text-white/90">
                 <li className="flex items-start gap-2.5">
                   <ShieldCheck
                     aria-hidden="true"
@@ -1830,7 +1834,7 @@ function Index() {
                   Parecido só aparece separado, com a descrição do que muda
                 </li>
               </ul>
-              <p className="mt-4 border-t border-white/20 pt-3 text-xs leading-relaxed text-white/75">
+              <p className="mt-2.5 border-t border-white/20 pt-2 text-xs leading-relaxed text-white/75">
                 Comprando pelos meus links o preço é o mesmo para você.
               </p>
             </div>
