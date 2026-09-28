@@ -43,7 +43,8 @@ const CONFIANCA_MINIMA = 80;
 export const REGRA_NOMES =
   "Contradicao so existe quando os DOIS anuncios dizem coisas diferentes sobre o mesmo ponto. Palavra que so um " +
   "dos titulos tem (nome de linha, apelido, abreviacao, basic, essentials, tipo de tecido) NAO e contradicao quando " +
-  "a foto e o resto batem; abreviacoes equivalem (3s = 3 Stripes = 3 Listras; WV = Woven).\n" +
+  "a foto e o resto batem; abreviacoes equivalem (3s = 3 Stripes = 3 Listras; WV = Woven). Tecidos: malha = " +
+  "tricot = knit = moletom leve; woven = tecido plano = tactel = microfibra; malha x woven e diferenca.\n" +
   "Roupa, calcado e acessorio de moda: compare as pecas (conjunto jaqueta + calca x so jaqueta), a cor de cada " +
   "parte, listras ou estampa e onde ficam, logo, gola, capuz, ziper, bolsos, modelagem e genero; tecido so conta " +
   "quando os dois informam e sao diferentes (tricot x woven). Tamanho da grade (P, M, G, 40, 42) NAO e diferenca: " +
@@ -582,16 +583,19 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
   for (let k = 0; k < todos.length; k += 4) lotes.push(todos.slice(k, k + 4));
   const prazo1 = Math.max(4_000, 13_000 - (Date.now() - t0));
   const respostas = await Promise.all(lotes.map((idx) => gerar(lote(idx), { prazo: prazo1 })));
-  const falha = respostas.find((x) => !x.ok);
-  if (falha && !falha.ok) return falha;
-  const r = respostas[0] as Extract<Resultado, { ok: true }>;
+  /* Um lote que falhou (cota, tempo) nao derruba os outros (28/09: um dos 3
+     lotes passou do prazo e a consulta inteira ficou sem conferencia). Os
+     candidatos dele so ficam sem veredito. Todos falharam: devolve a falha. */
+  const boas = respostas.filter((x): x is Extract<Resultado, { ok: true }> => x.ok);
+  if (!boas.length) return respostas[0] as Extract<Resultado, { ok: false }>;
+  const r = boas[0] as Extract<Resultado, { ok: true }>;
   const vereditos: VereditoIA[] = [];
   let descricaoIA: string | undefined;
   for (let n = 0; n < lotes.length; n++) {
-    const rn = respostas[n] as Extract<Resultado, { ok: true }>;
+    const rn = respostas[n] as Resultado;
+    if (!rn.ok) continue;
     const on = lerJson<{ descricao_original?: string; candidatos?: VereditoIA[] }>(rn.texto);
-    if (!on || !Array.isArray(on.candidatos))
-      return { ok: false, status: 502, erro: "JSON invalido da IA", modelo: rn.modelo };
+    if (!on || !Array.isArray(on.candidatos)) continue;
     descricaoIA ??= on.descricao_original;
     const idx = lotes[n] as number[];
     for (const c of on.candidatos) {

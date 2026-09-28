@@ -152,6 +152,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   possível. Cada etapa tem plano B: leitura do código da página → aba logada →
   leitura da TELA (preço/loja/título/foto como a pessoa vê).
   Nunca tela vazia: sem dado, o site mostra o que tem com o botão do link.
+- Conferência em lotes de até 4 em paralelo; lote que falha (cota, tempo) não
+  derruba os outros. Cota gratuita da Gemini: 2.5-flash e flash-latest têm 20
+  pedidos/dia (28/09); o flash-lite segura o dia a dia.
 - GARIMPO DE VERDADE (Weslei, 27/09: "sempre a melhor opção de verdade, esse
   é meu diferencial"): a conferência pela foto olha 12 anúncios (lotes de 4 em
   paralelo no servidor), escolhidos por escolherParaConferir: PRIMEIRO os mais
@@ -165,9 +168,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   mais uma fonte de candidatos (relacionadosDaPagina), com a mesma conferência
   pela foto: só entram na tabela se forem o mesmo produto (Weslei, 27/09:
   "somente quando for útil de verdade").
-- Selo "Loja oficial" IGUAL ao do Mercado Livre: só o evento do PRÓPRIO
-  anúncio ("item_id" do anúncio) vale; a página traz eventos de outras lojas
-  (a SHOPMASP saiu como oficial por causa do evento da adidas, 27/09).
+- Selo "Loja oficial" IGUAL ao do Mercado Livre. Hoje só vem da lista oficial
+  de ofertas (API, official_store_id). A leitura pela página está DESLIGADA
+  (28/09: a SHOPMASP saiu como oficial duas vezes, mesmo lendo só o evento do
+  próprio anúncio); a extensão guarda amostras ("loja-oficial-amostra") para
+  acertar a leitura antes de religar. Selo errado é pior que nenhum.
 - A busca em outras lojas roda SEMPRE (catálogo oficial + Google/busca), e os
   resultados são juntados. Nunca pular a busca porque o catálogo já achou algo.
 - SEMPRE comparação com outras lojas para qualquer produto (Weslei, 26/09):

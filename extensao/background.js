@@ -272,6 +272,27 @@ function resolverVendedor(id, url) {
    formato real. */
 /* Pagina com ficha tecnica em que a leitura dos detalhes nao achou nada:
    guarda os trechos (3 por dia) para ajustar a leitura com a pagina real. */
+/* Amostras para acertar o selo "Loja oficial" (igual ao Mercado Livre):
+   trechos dos eventos do anuncio e de onde a pagina escreve "Loja oficial". */
+let amostrasOficial = { dia: '', n: 0 };
+function amostraDaLojaOficial(html, item, palpite, origem) {
+  try {
+    const dia = new Date().toISOString().slice(0, 10);
+    if (amostrasOficial.dia !== dia) amostrasOficial = { dia, n: 0 };
+    if (amostrasOficial.n >= 6 || !html) return;
+    amostrasOficial.n++;
+    const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"').replace(/\\u002F/gi, '/');
+    const perto = (re, max) => { const out = []; let m; const r = new RegExp(re.source, 'gi');
+      while ((m = r.exec(t)) && out.length < max) { out.push(t.slice(Math.max(0, m.index - 400), m.index + 400)); r.lastIndex = m.index + 400; } return out; };
+    chrome.storage.local.get('sincToken').then(({ sincToken }) =>
+      gravarDiagnostico(sincToken, 'loja-oficial-amostra', { origem, item, palpite, bytes: t.length,
+        doItem: item ? perto(new RegExp('"item_id"\\s*:\\s*"' + item + '"'), 4) : [],
+        oficial: perto(/"official_store_id"\s*:\s*\d+/, 4),
+        texto: perto(/Loja oficial/, 4) }))
+      .catch(() => {});
+  } catch (e) { /* so diagnostico */ }
+}
+
 let amostrasDetalhes = { dia: '', n: 0 };
 function amostraDosDetalhes(html, url) {
   try {
@@ -327,7 +348,9 @@ async function resolverVendedorAgora(id, url) {
   try {
     const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`);
     nomes = nomesDoHtml(html);
-    oficial = lojaOficialDoHtml(html, id);
+    /* Selo pela pagina desligado (28/09): so amostra. */
+    amostraDaLojaOficial(html, id, lojaOficialDoHtml(html, id), 'loja');
+    oficial = null;
     condicao = condicaoDoHtml(html, id);
     amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
@@ -644,7 +667,8 @@ function confiancaMinimaIA(modelo) { return ehGemma(modelo) ? CONFIANCA_MINIMA_G
 const REGRA_NOMES =
   'Contradicao so existe quando os DOIS anuncios dizem coisas diferentes sobre o mesmo ponto. Palavra que so um '
   + 'dos titulos tem (nome de linha, apelido, abreviacao, basic, essentials, tipo de tecido) NAO e contradicao quando '
-  + 'a foto e o resto batem; abreviacoes equivalem (3s = 3 Stripes = 3 Listras; WV = Woven).\n'
+  + 'a foto e o resto batem; abreviacoes equivalem (3s = 3 Stripes = 3 Listras; WV = Woven). Tecidos: malha = '
+  + 'tricot = knit = moletom leve; woven = tecido plano = tactel = microfibra; malha x woven e diferenca.\n'
   + 'Roupa, calcado e acessorio de moda: compare as pecas (conjunto jaqueta + calca x so jaqueta), a cor de cada '
   + 'parte, listras ou estampa e onde ficam, logo, gola, capuz, ziper, bolsos, modelagem e genero; tecido so conta '
   + 'quando os dois informam e sao diferentes (tricot x woven). Tamanho da grade (P, M, G, 40, 42) NAO e diferenca: '
@@ -1165,7 +1189,12 @@ function extrairAnuncio(t, finalUrl, status) {
   /* Produtos relacionados da propria pagina: candidatos a mesmo produto. */
   let relacionados = [];
   try { relacionados = relacionadosDaPagina(t, titulo, preco, itemAqui); } catch (e) { relacionados = []; }
-  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: lojaOficialDoHtml(t, itemAqui),
+  /* Selo pela pagina DESLIGADO (28/09): a SHOPMASP saiu como oficial de novo
+     mesmo lendo so o evento do proprio anuncio. Ate a leitura ser conferida
+     com paginas reais, o selo vem so da lista oficial de ofertas (API); aqui
+     so se guarda a amostra. */
+  amostraDaLojaOficial(t, itemAqui, lojaOficialDoHtml(t, itemAqui), 'colado');
+  return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: null,
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
            relacionados, relacionadosDiag: relacionados.diag || null,
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
