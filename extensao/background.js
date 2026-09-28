@@ -4177,9 +4177,9 @@ async function atenderPedidos() {
           const faltamLinks = () => [...referencias, ...parecidos].filter(x => !x.link && x.url && !x.semAfiliado).length;
           /* limite: quantos links nesta chamada (lotes pequenos deixam cliente
              novo passar na frente entre um lote e outro). */
-          const linksDaTabela = async (limite = Infinity) => {
+          const linksDaTabela = async (limite = Infinity, soEstes = null) => {
             try {
-              const semLink = [...referencias, ...parecidos]
+              const semLink = (soEstes || [...referencias, ...parecidos])
                 .filter(x => !x.link && x.url && !x.semAfiliado).slice(0, limite);
               if (semLink.length && !(await freioLigado('link'))) {
                 const alvos = semLink.map(x => enderecoDoAnuncio(x.url, null));
@@ -4209,7 +4209,30 @@ async function atenderPedidos() {
               }
             } catch (e) { console.warn('[links em lote]', e.message); }
           };
+          /* LINK RÁPIDO DA RECOMENDAÇÃO (Weslei, 28/09: "as recomendações devem
+             ter o link rápido"; Kokeshi, pedido 506: a loja recomendada veio da
+             lista do catálogo e o botão ficou em "Gerando..." até o lote da
+             tabela, que roda depois da fila). Antes de gravar, gera o link da
+             loja que vira a recomendação (mais barata que o colado, sem frete
+             pago) e da provável Melhor alternativa (parecido muito parecido e
+             mais barato). No máximo 2 links; o resto fica para o lote. */
+          const linksDaRecomendacao = async () => {
+            const base = a.preco ?? null;
+            const mais = x => x.final ?? x.preco ?? null;
+            const recomendada = referencias
+              .filter(x => !x.link && x.url && !x.semAfiliado && x.freteGratis !== false && mais(x) != null
+                && (base == null || mais(x) <= base - 0.5))
+              .sort((x, y) => mais(x) - mais(y))[0];
+            const alternativa = parecidos
+              .filter(x => !x.link && x.url && x.freteGratis !== false && x.preco != null
+                && (base == null || x.preco <= base - 2) && ((x.semelhanca ?? 0) >= 85 || x.mesmaFoto === true))
+              .sort((x, y) => (y.semelhanca ?? 0) - (x.semelhanca ?? 0) || x.preco - y.preco)[0];
+            const alvos = [recomendada, alternativa].filter(Boolean);
+            if (alvos.length) await comPrazo(linksDaTabela(2, alvos), 15000, null);
+            marcar('linkRecomendada');
+          };
           await compararAgora();
+          await linksDaRecomendacao();
 
           const montarAnalise = (nomeTempo) => ({
             titulo: a.titulo ?? null,
@@ -4310,6 +4333,7 @@ async function atenderPedidos() {
                 volta = n;
                 const t0v = Date.now();
                 await compararAgora();
+                if (!interromperVolta) await linksDaRecomendacao();
                 if (!interromperVolta) await linksDaTabela();
                 const an = montarAnalise('fim');
                 an.tempos = { ...temposPrimeira, ['volta' + n]: Math.round((Date.now() - t0v) / 100) / 10 };

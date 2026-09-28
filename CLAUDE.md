@@ -98,6 +98,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   na tabela (Advocate, 26/09: tabela e recomendação apontavam lojas diferentes).
 - SEMPRE o link de afiliado do Weslei em todo botão (26/09: "foi para isso
   que eu criei o site"). Nunca endereço sem afiliado.
+- Link RÁPIDO da recomendação (Weslei, 28/09; Kokeshi, pedido 506): antes de
+  gravar a análise, a extensão gera o link da loja que vira a recomendação
+  (mais barata que o colado, sem frete pago, inclusive da lista do catálogo)
+  e da provável Melhor alternativa (linksDaRecomendacao, no máximo 2, 15 s).
+  O resto da tabela e dos parecidos continua no lote depois da fila.
 - Anúncio que o programa recusa ("URL not allowed", erro 111): pela ficha o
   gerador devolve o mesmo link do anúncio colado (um link por ficha), que abre
   na oferta principal (medido em 26/09, Advocate). A extensão tenta a forma
