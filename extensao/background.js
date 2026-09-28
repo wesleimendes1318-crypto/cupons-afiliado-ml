@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal, itemDaCompra, escolherParaConferir,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -1162,8 +1162,12 @@ function extrairAnuncio(t, finalUrl, status) {
   if (!detalhes) amostraDosDetalhes(t, finalUrl);
   /* Selo, condicao e tipo do PROPRIO anuncio (a pagina traz outras lojas). */
   const itemAqui = itemDoUrl(finalUrl || '') || itemDaCompra(t);
+  /* Produtos relacionados da propria pagina: candidatos a mesmo produto. */
+  let relacionados = [];
+  try { relacionados = relacionadosDaPagina(t, titulo, preco, itemAqui); } catch (e) { relacionados = []; }
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: lojaOficialDoHtml(t, itemAqui),
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
+           relacionados, relacionadosDiag: relacionados.diag || null,
            titulo: titulo, preco: preco, canonica: canonica, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
@@ -2811,14 +2815,17 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
       .catch(e => vazioCom({ erro: String(e.message || e).slice(0, 120) })),
     original ? buscaNasLojasOficiais(titulo, precoRef) : Promise.resolve(vazioCom(null))
   ]);
-  const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null, oficiais: dasOficiais.diag || null };
+  /* Produtos relacionados da pagina colada (lidos junto com o anuncio). */
+  const relacionados = original && Array.isArray(original.relacionados) ? original.relacionados : [];
+  const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null, oficiais: dasOficiais.diag || null,
+                 relacionados: relacionados.length };
   /* Frete do anuncio colado, se ele apareceu na busca. */
   if (Array.isArray(daBusca.freteAtual)) diag.freteAtual = daBusca.freteAtual[0];
   const vistos = new Set();
   /* GARIMPO (27/09): mais baratos que o colado primeiro, achados nas lojas
      oficiais na frente, depois o titulo mais parecido; sobra vaga para os
      demais (tabela de todas as lojas). Ver escolherParaConferir. */
-  const semOutros = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca] },
+  const semOutros = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], relacionados },
     precoRef, itemAtual, MAX_CANDIDATOS_IA);
   let candidatos = semOutros;
   for (const c of candidatos) vistos.add(c.item);
@@ -2844,7 +2851,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   /* Os OUTROS da busca (titulo pouco parecido) disputam as vagas com os
      demais pelo preco: o mais barato de verdade pode estar escrito de outro
      jeito (agasalho "Woven 3 Listras" x "Basic 3s", 27/09). */
-  candidatos = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], outros: extras },
+  candidatos = escolherParaConferir({ oficiais: [...dasOficiais], google: [...doGoogle], busca: [...daBusca], relacionados, outros: extras },
     precoRef, itemAtual, MAX_CANDIDATOS_IA);
   for (const c of candidatos) vistos.add(c.item);
   diag.extras = candidatos.filter(c => c.origem === 'outros').length;
@@ -3780,7 +3787,8 @@ async function atenderPedidos() {
                                  categoria e os fatos do original (Weslei, 27/09). */
                               categoria: (a.categorias || []).join(' > ') || null,
                               fatos: fatosDoOriginal(a.detalhes, { dominio: a.dominio, condicao: a.condicao }),
-                              condicao: a.condicao || null }
+                              condicao: a.condicao || null,
+                              relacionados: Array.isArray(a.relacionados) ? a.relacionados : [] }
                 }),
                   new Promise((_, falha) => { prazo = setTimeout(() => falha(new Error('tempo esgotado (45s) na busca em outras lojas')), 45000); })
                 ]).finally(() => { clearTimeout(prazo); prazoConsulta = 0; });

@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ComoFunciona } from "@/components/ComoFunciona";
-import { BadgeCheck, History, LoaderCircle, Package, Share2 } from "lucide-react";
+import { BadgeCheck, History, LoaderCircle, Package, Share2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -1915,6 +1915,7 @@ function MelhorOpcao({
           rel="noopener noreferrer"
           className="animate-botao-destaque mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
         >
+          <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
           {textoDoBotao(dispositivo, "Comprar com segurança")}
         </a>
       ) : urlColada ? (
@@ -2400,7 +2401,17 @@ function TodasAsLojas({
                         : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
                     }
                   >
-                    {i === melhorIdx && menor != null ? "Comprar" : "Abrir"}
+                    {i === melhorIdx && menor != null ? (
+                      <>
+                        <ShieldCheck
+                          className="mr-0.5 inline size-3 align-[-2px]"
+                          aria-hidden="true"
+                        />
+                        Comprar
+                      </>
+                    ) : (
+                      "Abrir"
+                    )}
                   </a>
                 ) : l.url ? (
                   <VerNaLoja url={l.url} />
@@ -2637,6 +2648,7 @@ function OutraLojaComCupom({
           }
         >
           {/* Regra do Weslei: nunca o nome da loja no botão; texto de compra segura. */}
+          <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
           {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(
             " pelo app",
             " no app",

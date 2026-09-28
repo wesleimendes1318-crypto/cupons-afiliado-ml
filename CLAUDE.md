@@ -109,8 +109,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   aviso de site independente, sem vínculo. Nunca logo, cores ou visual da marca,
   nem em botão de compra.
 - Melhor escolha em destaque (Weslei, 27/09): 🔥 em movimento no selo da
-  tabela e na recomendação, e o botão da recomendação pulsando
-  (animate-fogo, animate-botao-destaque; desligam com prefers-reduced-motion).
+  tabela e na recomendação; o botão da recomendação com animação que passa
+  SEGURANÇA (Weslei, 27/09): brilho verde que respira devagar + reflexo de luz
+  de vez em quando + escudo ✓, nada de pulsar (animate-fogo,
+  animate-botao-destaque; desligam com prefers-reduced-motion).
 - "Ver detalhes do produto": características, destaques e descrição lidos no
   anúncio colado, fechados num botão (não poluir a tela).
 - Textos curtos. Não prometer cupom. Sempre mostrar foto do produto.
@@ -159,6 +161,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   mais baratos são abertos: até 5 lojas do mesmo produto na tabela. Caso real:
   agasalho "Basic 3s" x "Woven 3 Listras" da adidas oficial, R$ 83 mais
   barato, sumia em metade das consultas por título pouco parecido.
+- Produtos relacionados da página colada (carrosséis do Mercado Livre) viram
+  mais uma fonte de candidatos (relacionadosDaPagina), com a mesma conferência
+  pela foto: só entram na tabela se forem o mesmo produto (Weslei, 27/09:
+  "somente quando for útil de verdade").
 - Selo "Loja oficial" IGUAL ao do Mercado Livre: só o evento do PRÓPRIO
   anúncio ("item_id" do anúncio) vale; a página traz eventos de outras lojas
   (a SHOPMASP saiu como oficial por causa do evento da adidas, 27/09).

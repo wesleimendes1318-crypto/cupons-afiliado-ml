@@ -186,7 +186,9 @@ export function escolherParaConferir(fontes, precoRef, itemAtual, max = MAX_CAND
       todos.push({ ...c, origem: c.origem || origem });
     }
   }
-  const nota = c => (c.nota ?? 0) + (c.origem === 'oficiais' ? 1 : 0) + (c.origem === 'google' ? 0.2 : 0);
+  /* Relacionados da propria pagina: o Mercado Livre ja os liga ao produto. */
+  const nota = c => (c.nota ?? 0) + (c.origem === 'oficiais' ? 1 : 0) + (c.origem === 'google' ? 0.2 : 0)
+    + (c.origem === 'relacionados' ? 0.3 : 0);
   const porNota = (a, b) => nota(b) - nota(a) || a.preco - b.preco;
   const baratos = precoRef != null ? todos.filter(c => c.preco <= precoRef - 0.5).sort(porNota) : [];
   const resto = todos.filter(c => !baratos.includes(c)).sort(porNota);
@@ -791,4 +793,17 @@ export function fatosDoOriginal(detalhes, extras = {}) {
   const cabe = 860 - partes.join('; ').length - 13;
   if (desc && cabe > 60) partes.push('Descricao: ' + desc.slice(0, Math.min(cabe, 300)));
   return partes.length ? partes.join('; ').slice(0, 880) : null;
+}
+
+/* PRODUTOS RELACIONADOS da pagina colada (Weslei, 27/09: "aproveite a
+   tecnologia do Mercado Livre em Produtos relacionados, somente quando for
+   util de verdade"). Os cartoes dos carrosseis da pagina do anuncio viram
+   mais uma fonte de candidatos: passam pela MESMA conferencia pela foto e so
+   entram na tabela se forem o mesmo produto (parecidos ficam separados). */
+export function relacionadosDaPagina(html, titulo, preco, itemAtual) {
+  const d = {};
+  const r = ofertasDaBusca(html, titulo, preco, d);
+  const lista = [...r, ...(r.outros || [])].filter(c => c.item && c.item !== itemAtual).slice(0, 20);
+  lista.diag = { cartoes: d.cartoes || 0, comPreco: d.comPreco || 0, usados: lista.length };
+  return lista;
 }
