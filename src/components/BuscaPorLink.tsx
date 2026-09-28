@@ -245,6 +245,11 @@ type Analise = {
     muda?: string | null;
     /* Mesma foto do anúncio colado (mesma sessão de fotos): o mais parecido. */
     mesmaFoto?: boolean | null;
+    /* 0-100: quanto se parece com o anúncio colado (conferência pela foto). */
+    semelhanca?: number | null;
+    lojaOficial?: boolean | null;
+    /* O que tem A MAIS que o anúncio colado (conjunto completo, kit maior). */
+    vantagem?: string | null;
     link?: string | null;
     url?: string | null;
     semAfiliado?: boolean | null;
@@ -1556,6 +1561,34 @@ function Resultado({
   const recomendada = candidatas[0] ?? null;
   const trocar = recomendada != null;
 
+  /* MELHOR ALTERNATIVA (Weslei, 28/09: conjunto Woven da loja oficial adidas,
+     R$ 83 abaixo do anúncio colado, "a opção de melhor benefício para o
+     cliente"). Não é o mesmo produto, então nunca vai para a tabela nem é
+     chamado de igual: aparece em destaque, com o que muda, quando é MAIS
+     BARATO que o melhor preço do mesmo produto, muito parecido (semelhança
+     >= 85 ou a mesma foto) e sem frete pago. */
+  const precoDoMesmo = recomendada?.o.final ?? a?.preco ?? null;
+  const alternativa =
+    precoDoMesmo == null
+      ? null
+      : ([...(a?.parecidos ?? [])]
+          .filter(
+            (p) =>
+              p.preco != null &&
+              p.preco <= precoDoMesmo - 2 &&
+              p.freteGratis !== false &&
+              Boolean(p.link || p.url) &&
+              ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true),
+          )
+          .sort(
+            (x, y) =>
+              (y.semelhanca ?? (y.mesmaFoto ? 90 : 0)) - (x.semelhanca ?? (x.mesmaFoto ? 90 : 0)) ||
+              x.preco - y.preco,
+          )[0] ?? null);
+  const parecidosSemAlternativa = alternativa
+    ? (a?.parecidos ?? []).filter((p) => p !== alternativa)
+    : (a?.parecidos ?? null);
+
   /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
      nao um link de afiliado gerado. Prometer comissao ali seria falso, e se a
      pessoa tiver colado o link de afiliado de outra pessoa a venda vai para
@@ -1681,7 +1714,11 @@ function Resultado({
               melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
             />
           )}
-          <Parecidos lista={a?.parecidos} tituloColado={a?.titulo} precoColado={a?.preco} />
+          <Parecidos
+            lista={parecidosSemAlternativa}
+            tituloColado={a?.titulo}
+            precoColado={a?.preco}
+          />
         </div>
       )}
 
@@ -1697,6 +1734,7 @@ function Resultado({
             precoAqui={a?.preco ?? null}
             titulo={a?.titulo ?? null}
             principal={trocar && i === 0}
+            semAnimacao={alternativa != null}
             compacto={i > 0}
             lojaAquiTemCupom={a?.temCupom === true}
           />
@@ -1718,7 +1756,12 @@ function Resultado({
             olhados={a?.buscaFora?.leitura?.comPreco ?? null}
             conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
             iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
+            semAnimacao={alternativa != null}
           />
+        )}
+
+        {alternativa && !leituraFalhou && (
+          <MelhorAlternativa p={alternativa} precoBase={precoDoMesmo} dispositivo={dispositivo} />
         )}
 
         {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
@@ -1865,7 +1908,9 @@ function MelhorOpcao({
   urlColada,
   comparou = true,
   completando = false,
+  semAnimacao = false,
 }: {
+  semAnimacao?: boolean;
   vendedor: string | null;
   preco: number | null;
   link: string | null;
@@ -1922,7 +1967,10 @@ function MelhorOpcao({
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="animate-botao-destaque mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+          className={
+            (semAnimacao ? "" : "animate-botao-destaque ") +
+            "mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+          }
         >
           <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
           {textoDoBotao(dispositivo, "Comprar com segurança")}
@@ -2116,6 +2164,87 @@ function DetalhesDoProduto({ detalhes }: { detalhes: Analise["detalhes"] | undef
           <p className="text-[10px] text-secondary-ink">Informações copiadas do anúncio colado.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/* Cartão da MELHOR ALTERNATIVA: não é o mesmo produto (diz o que muda), mas é
+   mais barato, muito parecido e sem frete pago. Leva o foguinho e o botão
+   animado: é a opção de maior benefício para o cliente (Weslei, 28/09). */
+function MelhorAlternativa({
+  p,
+  precoBase,
+  dispositivo,
+}: {
+  p: NonNullable<Analise["parecidos"]>[number];
+  precoBase: number | null;
+  dispositivo: Dispositivo;
+}) {
+  const menos = precoBase != null ? Math.round((precoBase - p.preco) * 100) / 100 : null;
+  return (
+    <div className="mt-3 rounded-lg border-2 border-success/60 bg-success/5 p-3">
+      <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
+        <Fogo /> Melhor alternativa
+      </p>
+      {/* Por que vale a pena (Weslei, 28/09): mais completo, custo reduzido,
+          loja oficial da marca. Só o que foi conferido aparece. */}
+      <ul className="mb-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
+        {p.vantagem && (
+          <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
+            Mais completo: {p.vantagem}
+          </li>
+        )}
+        {menos != null && menos >= 0.5 && (
+          <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
+            Custo reduzido: {brl(menos)} a menos
+          </li>
+        )}
+        {p.lojaOficial === true && (
+          <li className="rounded-full bg-ml-blue/10 px-2 py-0.5 text-ml-blue">
+            <BadgeCheck className="mr-0.5 inline size-3 align-[-2px]" aria-hidden="true" />
+            Loja oficial da marca
+          </li>
+        )}
+      </ul>
+      <div className="flex items-start gap-2.5">
+        <Foto src={p.imagem} className="size-14 shrink-0 rounded" />
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug">
+            {semEntidades(p.titulo)}
+          </p>
+          <p className="mt-0.5 tabular-nums">
+            <span className="text-base font-bold text-success">{brl(p.preco)}</span>
+          </p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] font-semibold">
+            {p.freteGratis === true && <span className="text-success">Frete grátis</span>}
+            {p.mesmaFoto && (
+              <span className="text-secondary-ink">Mesma foto do anúncio colado</span>
+            )}
+          </p>
+        </div>
+      </div>
+      <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs leading-snug text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <strong>Não é idêntico ao anúncio que você colou.</strong>
+        {p.muda ? ` Muda: ${p.muda}.` : ""}
+      </p>
+      {p.link ? (
+        <a
+          href={p.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="animate-botao-destaque mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+        >
+          <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
+          {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(p.preco)}`).replace(
+            " pelo app",
+            " no app",
+          )}
+        </a>
+      ) : p.url ? (
+        <div className="mt-2">
+          <VerNaLoja url={p.url} grande />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2456,9 +2585,11 @@ function OutraLojaComCupom({
   precoAqui,
   titulo,
   principal,
+  semAnimacao = false,
   compacto,
   lojaAquiTemCupom,
 }: {
+  semAnimacao?: boolean;
   oferta: OutraLoja;
   dispositivo: Dispositivo;
   vendedorAqui: string | null;
@@ -2652,7 +2783,7 @@ function OutraLojaComCupom({
           target="_blank"
           rel="noopener noreferrer"
           className={
-            (principal ? "animate-botao-destaque " : "") +
+            (principal && !semAnimacao ? "animate-botao-destaque " : "") +
             "mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
           }
         >

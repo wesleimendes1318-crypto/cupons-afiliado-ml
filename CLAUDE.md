@@ -38,6 +38,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     (tipo, condição, características lidas na página). Condição diferente
     (usado, recondicionado, vitrine...) nunca é igual: pelo título (servidor)
     e pela página de cada loja (item_condition, extensão) vai para Parecidos.
+  - MELHOR ALTERNATIVA (Weslei, 28/09: conjunto Woven da loja oficial adidas,
+    "opção de melhor benefício para o cliente"): um parecido MAIS BARATO que o
+    melhor preço do mesmo produto (>= R$ 2), muito parecido (semelhança >= 85
+    ou mesma foto) e sem frete pago ganha cartão próprio abaixo da Melhor
+    opção, com 🔥, botão animado e os motivos conferidos: "Mais completo"
+    (vantagem que a conferência aponta), "Custo reduzido" (calculado) e "Loja
+    oficial da marca" (só com selo confirmado). Sempre com "Não é idêntico ao
+    anúncio que você colou. Muda: ...". Nunca vai para a tabela do mesmo produto.
   - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
     aviso "Mesma foto do anúncio colado" quando for o caso.
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem

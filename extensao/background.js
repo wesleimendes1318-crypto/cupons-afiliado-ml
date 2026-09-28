@@ -727,13 +727,15 @@ const PEDIDO_CONFERENCIA =
   + REGRA_NOMES
   + REGRA_CATEGORIAS
   + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n'
+  + 'vantagem: o que o candidato oferece A MAIS que o original, de forma objetiva e curta (conjunto completo x so '
+  + 'uma peca, kit com mais unidades, volume maior, versao superior); vazio quando nao ha.\n'
   + 'original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro '
   + 'produto que o titulo, a ficha ou a descricao descrevem (outro modelo, cor, tecido, quantidade); vazio quando '
   + 'batem. Foto ilustrativa, angulo ou fundo nao contam.\n'
   + 'parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma '
   + 'compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so '
   + 'marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n'
-  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}';
+  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","confianca":0-100,"motivo":"curto"}]}';
 
 /* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
    foto com foto, de preferencia por outro modelo. */
@@ -765,6 +767,7 @@ function lerVereditosIA(lista, total) {
                parecido: !igual && (c.parecido === true || c.igual === true || c.mesma_foto === true),
                mesmaFoto: c.mesma_foto === true,
                semelhanca: Number.isFinite(sem) ? Math.max(0, Math.min(100, Math.round(sem))) : null,
+               vantagem: String(c.vantagem || '').trim().slice(0, 90) || null,
                confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)), motivo: motivo.slice(0, 140) };
     });
 }
@@ -2833,7 +2836,10 @@ async function buscaNasLojasOficiais(titulo, precoRef) {
     const html = await lerCatalogo(url, 3000000);
     const achados = ofertasDaBusca(html, titulo, precoRef, d);
     const lista = [...achados, ...(achados.outros || [])];
-    lista.diag = { url, cartoes: d.cartoes, comPreco: d.comPreco, naFaixa: d.naFaixa, usados: lista.length };
+    /* Titulos e itens: para conferir se o filtro "Lojas oficiais" funciona
+       (a SHOPMASP nao pode aparecer aqui; a adidas MLB6209821274 sim). */
+    lista.diag = { url, cartoes: d.cartoes, comPreco: d.comPreco, naFaixa: d.naFaixa, usados: lista.length,
+                   titulos: (d.titulosVistos || []).slice(0, 10), itens: lista.slice(0, 20).map(c => c.item) };
     return lista;
   } catch (e) {
     const v = []; v.diag = { url, erro: String(e.message || e).slice(0, 120) }; return v;
@@ -2932,6 +2938,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
         ? { item: c.item, url: c.url || null, titulo: c.titulo || null, imagem: c.imagem || null,
             preco: c.preco, muda: String(a.motivo || '').slice(0, 140),
             mesmaFoto: a.mesmaFoto === true, semelhanca: a.semelhanca != null ? a.semelhanca : null,
+            vantagem: a.vantagem || null, daBuscaOficial: c.origem === 'oficiais',
             freteGratis: c.freteGratis != null ? c.freteGratis : null }
         : null;
     })
