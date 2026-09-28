@@ -925,3 +925,7 @@ export async function termoDeBusca(
   if (busca.length < 6) return { ok: false, status: 502, erro: "busca vazia" };
   return { ok: true, busca: busca.slice(0, 90), modelo: r.modelo };
 }
+
+/* Mesma fila de modelos (Gemini e, sem cota, Gemma) para a "Ajuda para
+   escolher" do resultado (28/09). */
+export { gerar as gerarComModelos, lerJson };

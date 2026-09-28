@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -182,38 +182,54 @@ const RE_SLUG_G  = /\\u002F(?:pagina|perfil)\\u002F([A-Za-z0-9._%-]{2,60})|\/(?:
 
 /* Anuncio de OUTRA loja: primeiro sem cookie nenhum, depois na janela
    anonima, e so por ultimo com a sessao (e nunca com o freio ligado). */
-async function lerParcial(url) {
+/* aoTerminar (28/09, detalhes de TODOS os produtos encontrados): a loja sai
+   assim que aparece (nada fica mais lento) e a leitura continua em segundo
+   plano ate o fim da pagina, para as caracteristicas e a descricao. */
+async function lerParcial(url, aoTerminar) {
   try {
-    const t = await comPrazo(lerParcialCom(url, 'omit'), 5000, '');
+    const t = await comPrazo(lerParcialCom(url, 'omit', aoTerminar), 5000, '');
     if (RE_LABEL.test(t) || nomesDoHtml(t).length) return t;
   } catch (e) { /* segue para a janela anonima */ }
   const anon = await lerNaJanelaAnonima(url);
-  if (anon.html) return anon.html;
+  if (anon.html) { if (aoTerminar) try { aoTerminar(anon.html); } catch (e) { /* so detalhes */ } return anon.html; }
   if (await freioLigado('leitura')) return '';
-  return lerParcialCom(url, 'include');
+  return lerParcialCom(url, 'include', aoTerminar);
 }
 
-async function lerParcialCom(url, credenciais) {
+async function lerParcialCom(url, credenciais, aoTerminar) {
   const ctrl = new AbortController();
   const r = await fetch(url, { credentials: credenciais, redirect: 'follow', signal: ctrl.signal });
   if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
 
   const leitor = r.body.getReader();
   const dec = new TextDecoder();
-  let buf = '', bytes = 0;
+  let buf = '', bytes = 0, achou = false;
+  let cedo = null;
+  const jaTemLoja = new Promise(res => { cedo = res; });
+  /* Leitura em segundo plano nunca passa de 15 s. */
+  const corte = aoTerminar ? setTimeout(() => ctrl.abort(), 15000) : null;
 
-  try {
-    while (true) {
-      const { done, value } = await leitor.read();
-      if (done) break;
-      bytes += value.length;
-      buf += dec.decode(value, { stream: true });
-      if (RE_LABEL.test(buf)) { ctrl.abort(); break; }   // achou: para tudo
-      if (bytes > MAX_BYTES) { ctrl.abort(); break; }
-    }
-  } catch (e) { /* abort gera excecao, esperado */ }
+  const tudo = (async () => {
+    try {
+      while (true) {
+        const { done, value } = await leitor.read();
+        if (done) break;
+        bytes += value.length;
+        buf += dec.decode(value, { stream: true });
+        if (!achou && RE_LABEL.test(buf)) {
+          achou = true;
+          if (!aoTerminar) { ctrl.abort(); break; }   // achou: para tudo
+          cedo(buf);                                  // loja ja sai; segue lendo
+        }
+        if (bytes > MAX_BYTES) { ctrl.abort(); break; }
+      }
+    } catch (e) { /* abort gera excecao, esperado */ }
+    if (corte) clearTimeout(corte);
+    if (aoTerminar) try { aoTerminar(buf); } catch (e) { /* so detalhes */ }
+    return buf;
+  })();
 
-  return buf;
+  return Promise.race([jaTemLoja, tudo]);
 }
 
 /* Junta TODOS os nomes que o anuncio revela, nao so o primeiro.
@@ -257,6 +273,19 @@ const oficialPorItem = new Map();
 const condicaoPorItem = new Map();
 /* item -> 'platinum' | 'gold' | 'silver' | null (MercadoLider do vendedor). */
 const liderPorItem = new Map();
+/* item -> detalhes resumidos (caracteristicas, destaques, descricao) da
+   pagina do anuncio: "Ver detalhes" de cada produto encontrado (28/09). */
+const detalhesPorItem = new Map();
+/* Coloca os detalhes ja lidos em cada linha (tabela, parecidos), no proprio
+   objeto: o lote de links muda estas mesmas linhas depois. */
+function comDetalhes(lista) {
+  for (const x of lista || []) {
+    if (!x || x.detalhes) continue;
+    const it = x.item || (x.url ? itemDoUrl(x.url) : null) || (x.link && /mercadoli[vb]re/.test(x.link) ? itemDoUrl(x.link) : null);
+    if (it && detalhesPorItem.has(it)) x.detalhes = detalhesPorItem.get(it);
+  }
+  return lista;
+}
 
 /* Leituras em andamento: a busca adianta a leitura das lojas enquanto a
    Gemini confere as fotos, e quem pedir o mesmo anuncio depois espera a
@@ -335,20 +364,27 @@ function amostraDoVendedor(id, html) {
 
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
-  if (m && Date.now() - m.ts < TTL_VEND) { oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); return m.nomes; }
+  if (m && Date.now() - m.ts < TTL_VEND) { if (m.detalhes) detalhesPorItem.set(id, m.detalhes); oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); return m.nomes; }
 
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
   /* v3: guarda tambem se e loja oficial. */
   const chave = 'v3_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
-  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
+  if (g && Date.now() - g.ts < TTL_VEND) { if (g.detalhes) detalhesPorItem.set(id, g.detalhes); cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
 
   let nomes = [];
   let oficial = null;
   let condicao = null;
   try {
-    const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`);
+    const aoTerminar = full => {
+      const d = detalhesResumidos(detalhesDoAnuncio(full));
+      if (!d) return;
+      detalhesPorItem.set(id, d);
+      const r = cacheMem.get(id);
+      if (r) { r.detalhes = d; chrome.storage.local.set({ [chave]: r }); }
+    };
+    const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`, aoTerminar);
     nomes = nomesDoHtml(html);
     /* Selo pela pagina desligado (28/09): so amostra. */
     amostraDaLojaOficial(html, id, lojaOficialDoHtml(html, id), 'loja');
@@ -361,7 +397,7 @@ async function resolverVendedorAgora(id, url) {
   oficialPorItem.set(id, oficial);
   condicaoPorItem.set(id, condicao);
 
-  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null, ts: Date.now() };
+  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null, detalhes: detalhesPorItem.get(id) ?? null, ts: Date.now() };
   if (nomes.length) { cacheMem.set(id, reg); chrome.storage.local.set({ [chave]: reg }); }
   return nomes;
 }
@@ -4166,7 +4202,7 @@ async function atenderPedidos() {
             outraLoja: outra,
             /* Ate duas lojas, a mais barata primeiro. outraLoja continua
                existindo (e a primeira desta lista) para telas antigas. */
-            outrasLojas: outras,
+            outrasLojas: comDetalhes(outras),
             /* true = procurei o mesmo produto nas outras lojas. Com outraLoja
                null, isso quer dizer "procurei e esta e a melhor". Sem isso, a
                tela mentia por omissao. */
@@ -4181,9 +4217,9 @@ async function atenderPedidos() {
             imagem: a.imagem || null,
             categoria: (a.categorias && a.categorias[0]) || null,
             categorias: a.categorias || [],
-            referencias: referencias,
+            referencias: comDetalhes(referencias),
             /* Nao e o mesmo produto: o site mostra separado, com "muda". */
-            parecidos: parecidos,
+            parecidos: comDetalhes(parecidos),
             freteGratis: freteAqui,
             verificacaoIA: verificacaoIA,
             buscaFora: buscaFora.rodou ? buscaFora

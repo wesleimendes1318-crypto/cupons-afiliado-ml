@@ -131,7 +131,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   de vez em quando + escudo ✓, nada de pulsar (animate-fogo,
   animate-botao-destaque; desligam com prefers-reduced-motion).
 - "Ver detalhes do produto": características, destaques e descrição lidos no
-  anúncio colado, fechados num botão (não poluir a tela).
+  anúncio colado, fechados num botão (não poluir a tela). Vale para TODOS os
+  produtos encontrados (Weslei, 28/09): a extensão lê os detalhes nas páginas
+  das lojas e dos parecidos que já abre (a loja sai na hora; a leitura segue
+  em segundo plano, lerParcial com aoTerminar). Loja do mesmo produto sem
+  detalhes próprios mostra a ficha do colado com o aviso de onde veio.
+- "Ficou em dúvida?" (Weslei, 28/09): "Comparar lado a lado" (preço, frete,
+  loja, mesmo/parecido, características; em amarelo o que muda) e "Me ajude a
+  escolher" (/api/public/ajudar-escolher: pesa valor, frete, loja oficial,
+  características, vantagens e diferenças; uma análise por pedido guardada em
+  ajuda_escolha). A resposta SEMPRE traz o botão com o link de afiliado; só
+  entram opções com link próprio. Parecido só é escolhido se for mais barato
+  que o melhor mesmo produto, sem frete pago e sem "vem menos". Sem modelo, a
+  escolha é calculada. GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
+  variações; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de
+  reserva; a conferência pela foto continua na Gemini. Última falha do GPT em
+  sinc_config.gpt_diagnostico.
 - Textos curtos. Não prometer cupom. Sempre mostrar foto do produto.
 - Não citar IA/inteligência artificial nos textos do site nem nos guias
   (monetização: diretrizes do Google Ads e do programa de afiliados).
@@ -227,5 +242,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.
+  Sem o deploy_project o site continua na versão anterior (28/09: a vitrine
+  ficou sem o selo novo e parecia que a melhoria tinha sumido).
 - Mudança na extensão sobe a versão em extensao/manifest.json; o Weslei
   atualiza rodando ferramentas/ATUALIZAR-EXTENSAO.bat.

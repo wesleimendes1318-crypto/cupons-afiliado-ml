@@ -778,6 +778,17 @@ export function detalhesDoAnuncio(html) {
   return { caracteristicas, destaques, descricao };
 }
 
+/* Detalhes de uma loja ou parecido, enxutos para caber na analise: o site
+   mostra em "Ver detalhes" e usa para comparar lado a lado (28/09). */
+export function detalhesResumidos(d) {
+  if (!d) return null;
+  const caracteristicas = (d.caracteristicas || []).slice(0, 15);
+  const destaques = (d.destaques || []).slice(0, 5);
+  const descricao = d.descricao ? String(d.descricao).slice(0, 700) : null;
+  if (!caracteristicas.length && !destaques.length && !descricao) return null;
+  return { caracteristicas, destaques, descricao };
+}
+
 /* Fatos do original para a conferencia pela foto: as caracteristicas que
    decidem se e o mesmo produto (marca, modelo, cor, tamanho, voltagem...). */
 export function fatosDoOriginal(detalhes, extras = {}) {

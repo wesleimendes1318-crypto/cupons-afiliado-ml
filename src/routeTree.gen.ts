@@ -25,6 +25,7 @@ import { Route as CategoriasSlugRouteImport } from './routes/categorias.$slug'
 import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
@@ -116,6 +117,11 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAjudarEscolherRoute = ApiPublicAjudarEscolherRouteImport.update({
+  id: '/api/public/ajudar-escolher',
+  path: '/api/public/ajudar-escolher',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
   id: '/api/public/classificar',
   path: '/api/public/classificar',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByTo {
   '/categorias': typeof CategoriasIndexRoute
   '/guias': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -235,6 +243,7 @@ export interface FileRoutesById {
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/categorias/'
     | '/guias/'
     | '/.lovable/oauth/consent'
+    | '/api/public/ajudar-escolher'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/categorias'
     | '/guias'
     | '/.lovable/oauth/consent'
+    | '/api/public/ajudar-escolher'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/categorias/'
     | '/guias/'
     | '/.lovable/oauth/consent'
+    | '/api/public/ajudar-escolher'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -346,6 +358,7 @@ export interface RootRouteChildren {
   CategoriasIndexRoute: typeof CategoriasIndexRoute
   GuiasIndexRoute: typeof GuiasIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiPublicAjudarEscolherRoute: typeof ApiPublicAjudarEscolherRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
@@ -471,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ajudar-escolher': {
+      id: '/api/public/ajudar-escolher'
+      path: '/api/public/ajudar-escolher'
+      fullPath: '/api/public/ajudar-escolher'
+      preLoaderRoute: typeof ApiPublicAjudarEscolherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/classificar': {
       id: '/api/public/classificar'
       path: '/api/public/classificar'
@@ -555,6 +575,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriasIndexRoute: CategoriasIndexRoute,
   GuiasIndexRoute: GuiasIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiPublicAjudarEscolherRoute: ApiPublicAjudarEscolherRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,

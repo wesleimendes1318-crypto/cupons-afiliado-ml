@@ -20,11 +20,12 @@
    depender de o Weslei estar online para responder.
 */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import { ComoFunciona } from "@/components/ComoFunciona";
 import { BadgeCheck, History, LoaderCircle, Package, Share2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { naoEAlternativa } from "@/lib/alternativa";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -162,7 +163,16 @@ function compartilharWhatsApp(texto: string) {
 /* A mesma coisa que a pessoa quer comprar, vendida por OUTRA loja que tem
    cupom. Só chega aqui quando é o mesmo produto de catálogo do Mercado Livre,
    nunca um parecido, e só quando sai mais barato que o anúncio colado. */
+/* Características, destaques e descrição lidos na página de um anúncio. */
+type Detalhes = {
+  caracteristicas?: Array<{ nome: string; valor: string }> | null;
+  destaques?: string[] | null;
+  descricao?: string | null;
+};
+
 type OutraLoja = {
+  /* Detalhes lidos na página do anúncio desta loja (28/09). */
+  detalhes?: Detalhes | null;
   freteGratis?: boolean | null;
   /* Loja oficial da marca (Weslei, 27/09: a mais barata do agasalho era a
      loja oficial da adidas). Selo na tabela e na recomendação. */
@@ -260,6 +270,7 @@ type Analise = {
     url?: string | null;
     semAfiliado?: boolean | null;
     freteGratis?: boolean | null;
+    detalhes?: Detalhes | null;
   }> | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
   aviso?: string | null;
@@ -318,6 +329,7 @@ type Referencia = {
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
+  detalhes?: Detalhes | null;
 };
 
 type Pedido = {
@@ -929,6 +941,7 @@ export default function BuscaPorLink() {
           copiado={copiado}
           urlColada={melhorLinkML(url) ?? null}
           completando={completando}
+          pedidoId={atual.current}
         />
       )}
 
@@ -1469,7 +1482,9 @@ function Resultado({
   copiado,
   urlColada,
   completando = false,
+  pedidoId = null,
 }: {
+  pedidoId?: number | null;
   pedido: Pedido;
   copiar: (t: string, m: string) => void;
   copiado: string | null;
@@ -1644,6 +1659,7 @@ function Resultado({
             colado: true,
             freteGratis: a?.freteGratis ?? null,
             lojaOficial: a?.lojaOficial ?? null,
+            detalhes: a?.detalhes ?? null,
           },
         ]
       : []),
@@ -1660,6 +1676,8 @@ function Resultado({
       mesmaLoja: o.mesmaLoja ?? null,
       lojaOficial: o.lojaOficial ?? null,
       mercadoLider: o.mercadoLider ?? null,
+      detalhes: o.detalhes ?? a?.detalhes ?? null,
+      detalhesDoColado: !o.detalhes,
       ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
@@ -1673,10 +1691,47 @@ function Resultado({
       mesmaLoja: r.mesmaLoja ?? null,
       lojaOficial: r.lojaOficial ?? null,
       mercadoLider: r.mercadoLider ?? null,
+      detalhes: r.detalhes ?? a?.detalhes ?? null,
+      detalhesDoColado: !r.detalhes,
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
   ];
+  /* Tudo o que a comparação achou, para comparar lado a lado ou pedir ajuda
+     para escolher (28/09). Só entra o que tem link de compra. */
+  const opcoesEscolha: OpcaoEscolha[] = [
+    ...linhasLojas.map((l) => ({
+      chave: l.chave,
+      tipo: (l.colado ? "colado" : "mesmo") as OpcaoEscolha["tipo"],
+      titulo: a?.titulo ?? null,
+      loja: l.colado ? (a?.vendedor ?? null) : l.nome,
+      preco: l.final as number,
+      imagem: l.imagem,
+      freteGratis: l.freteGratis ?? null,
+      lojaOficial: l.lojaOficial === true,
+      link: l.link,
+      url: l.url,
+      detalhes: l.detalhes ?? null,
+      detalhesDoColado: l.detalhesDoColado === true,
+      muda: null,
+      vantagem: null,
+    })),
+    ...(a?.parecidos ?? []).slice(0, 8).map((p, i) => ({
+      chave: `par-${i}`,
+      tipo: "parecido" as const,
+      titulo: p.titulo,
+      loja: p.vendedor ?? null,
+      preco: p.preco,
+      imagem: p.imagem,
+      freteGratis: p.freteGratis ?? null,
+      lojaOficial: p.lojaOficial === true || p.daBuscaOficial === true,
+      link: p.link ?? null,
+      url: p.url ?? null,
+      detalhes: p.detalhes ?? null,
+      muda: p.muda ?? null,
+      vantagem: p.vantagem ?? null,
+    })),
+  ].filter((o) => o.preco != null && Boolean(o.link || o.url));
   const mostraTabela =
     (a?.procurouOutra === true || alternativas.length > 0) &&
     !leituraFalhou &&
@@ -1789,6 +1844,19 @@ function Resultado({
 
         {alternativa && !leituraFalhou && (
           <MelhorAlternativa p={alternativa} precoBase={precoDoMesmo} dispositivo={dispositivo} />
+        )}
+
+        {!leituraFalhou && (
+          <CompareEEscolha
+            key={pedidoId ?? "sem-pedido"}
+            opcoes={opcoesEscolha}
+            padrao={
+              recomendada?.chave ??
+              (alternativa ? `par-${(a?.parecidos ?? []).indexOf(alternativa)}` : null)
+            }
+            pedidoId={pedidoId}
+            dispositivo={dispositivo}
+          />
         )}
 
         {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
@@ -2126,72 +2194,114 @@ type LinhaLoja = {
   mercadoLider?: "platinum" | "gold" | "silver" | null;
   /* Link abre a página geral do produto: escolher a loja em "Outras opções". */
   mesmaPagina?: boolean | null;
+  /* Detalhes da página desta loja; sem eles, a ficha do anúncio colado
+     (é o mesmo produto) com o aviso de onde veio. */
+  detalhes?: Detalhes | null;
+  detalhesDoColado?: boolean;
 };
 
 /* DETALHES DO PRODUTO (Weslei, 27/09): características, destaques e
    descrição do anúncio, fechados num botão para não poluir a tela. */
-function DetalhesDoProduto({ detalhes }: { detalhes: Analise["detalhes"] | undefined }) {
+function temDetalhes(d: Detalhes | null | undefined): d is Detalhes {
+  return Boolean(
+    d &&
+    ((d.caracteristicas?.length ?? 0) > 0 || (d.destaques?.length ?? 0) > 0 || d.descricao?.trim()),
+  );
+}
+
+function DetalhesDoProduto({
+  detalhes,
+  nota = "Informações copiadas do anúncio colado.",
+  rotulo = "detalhes do produto",
+}: {
+  detalhes: Detalhes | null | undefined;
+  nota?: string;
+  rotulo?: string;
+}) {
   const [aberto, setAberto] = useState(false);
-  const [descricaoToda, setDescricaoToda] = useState(false);
-  const carac = detalhes?.caracteristicas ?? [];
-  const dest = detalhes?.destaques ?? [];
-  const descricao = detalhes?.descricao?.trim() || "";
-  if (!carac.length && !dest.length && !descricao) return null;
-  const longa = descricao.length > 280;
+  if (!temDetalhes(detalhes)) return null;
   return (
     <div className="mt-1.5">
-      <button
-        type="button"
-        onClick={() => setAberto((x) => !x)}
-        aria-expanded={aberto}
-        className="inline-flex items-center gap-1 text-xs font-bold text-ml-blue hover:underline"
-      >
-        {aberto ? "Fechar detalhes do produto" : "Ver detalhes do produto"}
-        <span aria-hidden="true">{aberto ? "▴" : "▾"}</span>
-      </button>
-      {aberto && (
-        <div className="mt-1.5 space-y-2 rounded-md border border-border bg-card p-2 text-xs">
-          {dest.length > 0 && (
-            <ul className="list-disc space-y-0.5 pl-4">
-              {dest.map((d, i) => (
-                <li key={i}>{d}</li>
-              ))}
-            </ul>
+      <BotaoDetalhes aberto={aberto} alternar={() => setAberto((x) => !x)} rotulo={rotulo} />
+      {aberto && <PainelDetalhes detalhes={detalhes} nota={nota} />}
+    </div>
+  );
+}
+
+function BotaoDetalhes({
+  aberto,
+  alternar,
+  rotulo = "detalhes do produto",
+  pequeno = false,
+}: {
+  aberto: boolean;
+  alternar: () => void;
+  rotulo?: string;
+  pequeno?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      aria-expanded={aberto}
+      className={
+        "inline-flex items-center gap-1 text-left font-bold text-ml-blue hover:underline " +
+        (pequeno ? "mt-0.5 text-[10px]" : "text-xs")
+      }
+    >
+      {aberto ? `Fechar ${rotulo}` : `Ver ${rotulo}`}
+      <span aria-hidden="true">{aberto ? "▴" : "▾"}</span>
+    </button>
+  );
+}
+
+function PainelDetalhes({ detalhes, nota }: { detalhes: Detalhes; nota: string }) {
+  const [descricaoToda, setDescricaoToda] = useState(false);
+  const carac = detalhes.caracteristicas ?? [];
+  const dest = detalhes.destaques ?? [];
+  const descricao = detalhes.descricao?.trim() || "";
+  const longa = descricao.length > 280;
+  return (
+    <div className="mt-1.5 space-y-2 rounded-md border border-border bg-card p-2 text-left text-xs font-normal">
+      {dest.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-4">
+          {dest.map((d, i) => (
+            <li key={i}>{d}</li>
+          ))}
+        </ul>
+      )}
+      {carac.length > 0 && (
+        <table className="w-full border-collapse">
+          <tbody>
+            {carac.map((c, i) => (
+              <tr key={i} className={i % 2 ? "bg-muted/40" : ""}>
+                <th className="w-2/5 px-1.5 py-0.5 text-left align-top font-semibold text-secondary-ink">
+                  {c.nome}
+                </th>
+                <td className="px-1.5 py-0.5 align-top [overflow-wrap:anywhere]">{c.valor}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {descricao && (
+        <div>
+          <p className="font-semibold">Descrição do anúncio</p>
+          <p className="mt-0.5 whitespace-pre-line leading-snug text-secondary-ink">
+            {longa && !descricaoToda ? descricao.slice(0, 280).trimEnd() + "…" : descricao}
+          </p>
+          {longa && (
+            <button
+              type="button"
+              onClick={() => setDescricaoToda((x) => !x)}
+              className="mt-0.5 font-bold text-ml-blue hover:underline"
+            >
+              {descricaoToda ? "Mostrar menos" : "Ler descrição completa"}
+            </button>
           )}
-          {carac.length > 0 && (
-            <table className="w-full border-collapse">
-              <tbody>
-                {carac.map((c, i) => (
-                  <tr key={i} className={i % 2 ? "bg-muted/40" : ""}>
-                    <th className="w-2/5 px-1.5 py-0.5 text-left align-top font-semibold text-secondary-ink">
-                      {c.nome}
-                    </th>
-                    <td className="px-1.5 py-0.5 align-top [overflow-wrap:anywhere]">{c.valor}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {descricao && (
-            <div>
-              <p className="font-semibold">Descrição do anúncio</p>
-              <p className="mt-0.5 whitespace-pre-line leading-snug text-secondary-ink">
-                {longa && !descricaoToda ? descricao.slice(0, 280).trimEnd() + "…" : descricao}
-              </p>
-              {longa && (
-                <button
-                  type="button"
-                  onClick={() => setDescricaoToda((x) => !x)}
-                  className="mt-0.5 font-bold text-ml-blue hover:underline"
-                >
-                  {descricaoToda ? "Mostrar menos" : "Ler descrição completa"}
-                </button>
-              )}
-            </div>
-          )}
-          <p className="text-[10px] text-secondary-ink">Informações copiadas do anúncio colado.</p>
         </div>
       )}
+      <p className="text-[10px] text-secondary-ink">{nota}</p>
     </div>
   );
 }
@@ -2199,15 +2309,6 @@ function DetalhesDoProduto({ detalhes }: { detalhes: Analise["detalhes"] | undef
 /* Cartão da MELHOR ALTERNATIVA: não é o mesmo produto (diz o que muda), mas é
    mais barato, muito parecido e sem frete pago. Leva o foguinho e o botão
    animado: é a opção de maior benefício para o cliente (Weslei, 28/09). */
-const MUDA_NAO_E_ALTERNATIVA =
-  /(quantidade|\bkits?\b|unidade|\bpe[cç]as?\b|\bmenor\b|\bmenos\b|\bsem\b|apenas|somente|tamanho|volume|capacidade|compat|voltagem|\bml\b|gramas|\bkg\b|pipeta|condi[cç][aã]o|usad[oa]|recondicion|vitrine|r[eé]plica|mililitr|litros?\b)/i;
-
-/* "Mesma marca e volume, mas o nome..." não conta: o trecho "mesmo(a)..." sai antes. */
-function naoEAlternativa(muda: string | null | undefined): boolean {
-  const texto = (muda ?? "").replace(/(^|[^\p{L}])mesm[oa]s?(?![\p{L}])[^,.;]*/giu, "$1");
-  return MUDA_NAO_E_ALTERNATIVA.test(texto);
-}
-
 function MelhorAlternativa({
   p,
   precoBase,
@@ -2284,6 +2385,10 @@ function MelhorAlternativa({
         <strong>Não é idêntico ao anúncio que você colou.</strong>
         {p.muda ? ` Muda: ${p.muda}.` : ""}
       </p>
+      <DetalhesDoProduto
+        detalhes={p.detalhes}
+        nota={`Informações copiadas do anúncio${p.vendedor ? ` de ${p.vendedor}` : " desta loja"}.`}
+      />
       {p.link ? (
         <a
           href={p.link}
@@ -2396,6 +2501,7 @@ function Parecidos({
   tituloColado?: string | null | undefined;
   precoColado?: number | null | undefined;
 }) {
+  const [aberto, setAberto] = useState<number | null>(null);
   if (!lista || !lista.length) return null;
   const mColado = medidaDoTitulo(tituloColado);
   /* Só mostra por unidade quando algum parecido tem quantidade diferente. */
@@ -2453,6 +2559,22 @@ function Parecidos({
                     Muda: {p.muda}
                   </p>
                 )}
+                {temDetalhes(p.detalhes) && (
+                  <>
+                    <BotaoDetalhes
+                      aberto={aberto === i}
+                      alternar={() => setAberto((x) => (x === i ? null : i))}
+                      rotulo="detalhes"
+                      pequeno
+                    />
+                    {aberto === i && (
+                      <PainelDetalhes
+                        detalhes={p.detalhes}
+                        nota={`Informações copiadas do anúncio${p.vendedor ? ` de ${p.vendedor}` : " desta loja"}.`}
+                      />
+                    )}
+                  </>
+                )}
               </div>
               <div className="shrink-0 text-right tabular-nums">
                 <span className="block text-sm font-bold">{brl(p.preco)}</span>
@@ -2499,6 +2621,7 @@ function TodasAsLojas({
   linhas: LinhaLoja[];
   melhorChave?: string | null;
 }) {
+  const [aberta, setAberta] = useState<string | null>(null);
   if (linhas.length < 2) return null;
   const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
   /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
@@ -2531,124 +2654,149 @@ function TodasAsLojas({
           <tr className="bg-muted/70 text-left text-xs text-secondary-ink">
             <th className="px-2 py-1.5 font-semibold">Loja</th>
             <th className="w-[38%] px-2 py-1.5 text-right font-semibold">Preço</th>
-            <th className="w-16 px-1 py-1.5" />
+            <th className="w-[5.5rem] px-1 py-1.5" />
           </tr>
         </thead>
         <tbody className="tabular-nums">
           {ordem.map((l, i) => (
-            <tr
-              key={l.chave}
-              className={
-                i === melhorIdx && menor != null
-                  ? "border-l-4 border-l-success bg-success/15"
-                  : l.colado
-                    ? "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/30"
-                    : i % 2
-                      ? "border-l-4 border-l-transparent bg-muted/40"
-                      : "border-l-4 border-l-transparent bg-card"
-              }
-            >
-              <td className="px-2 py-1">
-                <span className="flex items-center gap-2">
-                  <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
-                  <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
-                    {l.colado ? "Anúncio colado" : l.nome}
-                    {l.lojaOficial === true && <SeloLojaOficial className="block" />}
-                    {!l.colado && <SeloLider nivel={l.mercadoLider} className="block" />}
-                    {l.mesmaPagina && !l.colado && (
-                      <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                        Na página, escolha esta loja em "Outras opções de compra"
-                      </span>
-                    )}
-                    {l.mesmaLoja && (
-                      <span className="block text-[10px] font-semibold text-ml-blue">
-                        Mesma loja, outro anúncio
-                      </span>
-                    )}
-                    {l.freteGratis === true && (
-                      <span className="block text-[10px] font-semibold text-success">
-                        Frete grátis
-                      </span>
-                    )}
-                    {l.freteGratis === false && (
-                      <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                        Sem frete grátis
-                      </span>
-                    )}
+            <Fragment key={l.chave}>
+              <tr
+                className={
+                  i === melhorIdx && menor != null
+                    ? "border-l-4 border-l-success bg-success/15"
+                    : l.colado
+                      ? "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/30"
+                      : i % 2
+                        ? "border-l-4 border-l-transparent bg-muted/40"
+                        : "border-l-4 border-l-transparent bg-card"
+                }
+              >
+                <td className="px-2 py-1">
+                  <span className="flex items-center gap-2">
+                    <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
+                    <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
+                      {l.colado ? "Anúncio colado" : l.nome}
+                      {l.lojaOficial === true && <SeloLojaOficial className="block" />}
+                      {!l.colado && <SeloLider nivel={l.mercadoLider} className="block" />}
+                      {l.mesmaPagina && !l.colado && (
+                        <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                          Na página, escolha esta loja em "Outras opções de compra"
+                        </span>
+                      )}
+                      {l.mesmaLoja && (
+                        <span className="block text-[10px] font-semibold text-ml-blue">
+                          Mesma loja, outro anúncio
+                        </span>
+                      )}
+                      {l.freteGratis === true && (
+                        <span className="block text-[10px] font-semibold text-success">
+                          Frete grátis
+                        </span>
+                      )}
+                      {l.freteGratis === false && (
+                        <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                          Sem frete grátis
+                        </span>
+                      )}
+                      {temDetalhes(l.detalhes) && (
+                        <BotaoDetalhes
+                          aberto={aberta === l.chave}
+                          alternar={() => setAberta((x) => (x === l.chave ? null : l.chave))}
+                          rotulo="detalhes"
+                          pequeno
+                        />
+                      )}
+                    </span>
                   </span>
-                </span>
-              </td>
-              <td className="px-2 py-1 text-right">
-                <span
-                  className={
-                    "block font-bold " +
-                    (i === melhorIdx ? "text-base text-success" : "text-foreground")
-                  }
-                >
-                  {brl(l.final)}
-                </span>
-                {(() => {
-                  const extra = menor != null && l.final != null ? l.final - menor : null;
-                  if (i === melhorIdx)
+                </td>
+                <td className="px-2 py-1 text-right">
+                  <span
+                    className={
+                      "block font-bold " +
+                      (i === melhorIdx ? "text-base text-success" : "text-foreground")
+                    }
+                  >
+                    {brl(l.final)}
+                  </span>
+                  {(() => {
+                    const extra = menor != null && l.final != null ? l.final - menor : null;
+                    if (i === melhorIdx)
+                      return (
+                        <span className="mt-0.5 inline-block rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          <Fogo />{" "}
+                          {(haMaisBarata ? "Melhor opção" : "Mais barato") +
+                            (l.colado ? " · você colou" : "")}
+                        </span>
+                      );
+                    if (extra != null && extra <= -0.5)
+                      return (
+                        <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                          {brl(-extra)} a menos
+                          {l.freteGratis === false ? " + frete" : ""}
+                        </span>
+                      );
+                    if (l.freteGratis === false && extra != null && extra < 0.5)
+                      return (
+                        <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                          + frete
+                          {l.colado ? " · você colou" : ""}
+                        </span>
+                      );
                     return (
-                      <span className="mt-0.5 inline-block rounded bg-success px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        <Fogo />{" "}
-                        {(haMaisBarata ? "Melhor opção" : "Mais barato") +
-                          (l.colado ? " · você colou" : "")}
-                      </span>
-                    );
-                  if (extra != null && extra <= -0.5)
-                    return (
-                      <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                        {brl(-extra)} a menos
+                      <span className="block text-[11px] font-bold text-red-700 dark:text-red-400">
+                        {extra != null && extra >= 0.5 ? `+${brl(extra)} a mais` : "mesmo preço"}
                         {l.freteGratis === false ? " + frete" : ""}
-                      </span>
-                    );
-                  if (l.freteGratis === false && extra != null && extra < 0.5)
-                    return (
-                      <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                        + frete
                         {l.colado ? " · você colou" : ""}
                       </span>
                     );
-                  return (
-                    <span className="block text-[11px] font-bold text-red-700 dark:text-red-400">
-                      {extra != null && extra >= 0.5 ? `+${brl(extra)} a mais` : "mesmo preço"}
-                      {l.freteGratis === false ? " + frete" : ""}
-                      {l.colado ? " · você colou" : ""}
-                    </span>
-                  );
-                })()}
-              </td>
-              <td className="px-2 py-1 text-right">
-                {l.link ? (
-                  <a
-                    href={l.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={
-                      i === melhorIdx && menor != null
-                        ? "animate-botao-destaque inline-block rounded bg-success px-2 py-1 text-[11px] font-bold text-white hover:brightness-95"
-                        : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
-                    }
-                  >
-                    {i === melhorIdx && menor != null ? (
-                      <>
-                        <ShieldCheck
-                          className="mr-0.5 inline size-3 align-[-2px]"
-                          aria-hidden="true"
-                        />
-                        Comprar
-                      </>
-                    ) : (
-                      "Abrir"
-                    )}
-                  </a>
-                ) : l.url ? (
-                  <VerNaLoja url={l.url} />
-                ) : null}
-              </td>
-            </tr>
+                  })()}
+                </td>
+                <td className="px-2 py-1 text-right">
+                  {l.link ? (
+                    <a
+                      href={l.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={
+                        i === melhorIdx && menor != null
+                          ? "animate-botao-destaque inline-block whitespace-nowrap rounded bg-success px-2 py-1 text-[11px] font-bold text-white hover:brightness-95"
+                          : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+                      }
+                    >
+                      {i === melhorIdx && menor != null ? (
+                        <>
+                          <ShieldCheck
+                            className="mr-0.5 inline size-3 align-[-2px]"
+                            aria-hidden="true"
+                          />
+                          Comprar
+                        </>
+                      ) : (
+                        "Abrir"
+                      )}
+                    </a>
+                  ) : l.url ? (
+                    <VerNaLoja url={l.url} />
+                  ) : null}
+                </td>
+              </tr>
+              {aberta === l.chave && temDetalhes(l.detalhes) && (
+                <tr className="bg-card">
+                  <td colSpan={3} className="px-2 pb-2">
+                    <PainelDetalhes
+                      detalhes={l.detalhes}
+                      nota={
+                        l.colado
+                          ? "Informações copiadas do anúncio colado."
+                          : l.detalhesDoColado
+                            ? "Mesmo produto: ficha lida no anúncio colado. Confira os detalhes da loja na página."
+                            : `Informações copiadas do anúncio de ${l.nome}.`
+                      }
+                    />
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>
@@ -3153,6 +3301,465 @@ function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | nul
       >
         Tentar de novo
       </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------ comparar e escolher
+   Weslei, 28/09: detalhes de TODOS os produtos encontrados e a opção de
+   comparar lado a lado ou pedir ajuda para decidir a melhor escolha (valor,
+   características, vantagens e diferenças contra o anúncio colado). Todo
+   botão de compra leva o link de afiliado; sem link pronto, o botão gera o
+   link no clique (VerNaLoja). */
+
+type OpcaoEscolha = {
+  chave: string;
+  tipo: "colado" | "mesmo" | "parecido";
+  titulo: string | null;
+  loja: string | null;
+  preco: number;
+  imagem: string | null | undefined;
+  freteGratis: boolean | null;
+  lojaOficial: boolean;
+  link: string | null;
+  url: string | null;
+  detalhes: Detalhes | null;
+  detalhesDoColado?: boolean;
+  muda: string | null;
+  vantagem: string | null;
+};
+
+type RespostaAjuda = {
+  escolha: {
+    tipo: "colado" | "mesmo" | "parecido";
+    titulo: string;
+    loja: string | null;
+    preco: number;
+    freteGratis: boolean | null;
+    lojaOficial: boolean;
+    muda: string | null;
+    link: string;
+  };
+  resumo: string;
+  pontos: {
+    n: number;
+    titulo: string;
+    loja: string | null;
+    preco: number;
+    aFavor: string;
+    contra: string;
+  }[];
+};
+
+function rotuloDaOpcao(o: OpcaoEscolha) {
+  const quem = o.tipo === "colado" ? "Anúncio colado" : (o.loja ?? "Outra loja");
+  return `${quem} · ${brl(o.preco)}${o.tipo === "parecido" ? " · parecido" : ""}`;
+}
+
+function textoDoFrete(f: boolean | null) {
+  return f === true ? "Frete grátis" : f === false ? "Frete pago" : "Não informado";
+}
+
+function CompareEEscolha({
+  opcoes,
+  pedidoId,
+  dispositivo,
+  padrao = null,
+}: {
+  padrao?: string | null;
+  opcoes: OpcaoEscolha[];
+  pedidoId: number | null;
+  dispositivo: Dispositivo;
+}) {
+  const [modo, setModo] = useState<"nenhum" | "comparar" | "ajuda">("nenhum");
+  if (opcoes.length < 2) return null;
+  return (
+    <section
+      aria-label="Compare e escolha"
+      className="mt-3 rounded-lg border border-ml-blue/30 bg-ml-blue/5 p-3"
+    >
+      <p className="text-sm font-bold">Ficou em dúvida?</p>
+      <p className="text-xs leading-snug text-secondary-ink">
+        Compare lado a lado ou receba uma análise da melhor escolha pelo preço, frete,
+        características, vantagens e diferenças.
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setModo((m) => (m === "comparar" ? "nenhum" : "comparar"))}
+          aria-expanded={modo === "comparar"}
+          className={
+            "rounded-md border px-2 py-2 text-xs font-bold transition-colors " +
+            (modo === "comparar"
+              ? "border-ml-blue bg-ml-blue text-white"
+              : "border-ml-blue bg-card text-ml-blue hover:bg-ml-blue/5")
+          }
+        >
+          Comparar lado a lado
+        </button>
+        {pedidoId != null && (
+          <button
+            type="button"
+            onClick={() => setModo((m) => (m === "ajuda" ? "nenhum" : "ajuda"))}
+            aria-expanded={modo === "ajuda"}
+            className={
+              "rounded-md border px-2 py-2 text-xs font-bold transition-colors " +
+              (modo === "ajuda"
+                ? "border-success bg-success text-white"
+                : "border-success bg-card text-success hover:bg-success/5")
+            }
+          >
+            Me ajude a escolher
+          </button>
+        )}
+      </div>
+      {modo === "comparar" && <LadoALado opcoes={opcoes} padrao={padrao} />}
+      {modo === "ajuda" && pedidoId != null && (
+        <AjudaParaEscolher pedidoId={pedidoId} dispositivo={dispositivo} />
+      )}
+    </section>
+  );
+}
+
+function SeletorOpcao({
+  opcoes,
+  valor,
+  mudar,
+  nome,
+}: {
+  opcoes: OpcaoEscolha[];
+  valor: string;
+  mudar: (v: string) => void;
+  nome: string;
+}) {
+  return (
+    <select
+      aria-label={nome}
+      value={valor}
+      onChange={(e) => mudar(e.target.value)}
+      className="w-full min-w-0 rounded border border-border bg-card px-1 py-1 text-[11px] font-semibold"
+    >
+      {opcoes.map((o) => (
+        <option key={o.chave} value={o.chave}>
+          {rotuloDaOpcao(o)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function LinhaLadoALado({
+  nome,
+  a,
+  b,
+  difere = false,
+}: {
+  nome: string;
+  a: React.ReactNode;
+  b: React.ReactNode;
+  difere?: boolean;
+}) {
+  return (
+    <tr className="border-t border-border align-top">
+      <th className="px-1.5 py-1 text-left text-[11px] font-semibold text-secondary-ink">{nome}</th>
+      <td
+        className={
+          "px-1.5 py-1 text-[11px] [overflow-wrap:anywhere] " +
+          (difere ? "bg-amber-50 dark:bg-amber-950/30" : "")
+        }
+      >
+        {a}
+      </td>
+      <td
+        className={
+          "px-1.5 py-1 text-[11px] [overflow-wrap:anywhere] " +
+          (difere ? "bg-amber-50 dark:bg-amber-950/30" : "")
+        }
+      >
+        {b}
+      </td>
+    </tr>
+  );
+}
+
+function ProdutoDaOpcao({ o }: { o: OpcaoEscolha }) {
+  return o.tipo === "parecido" ? (
+    <span className="text-amber-800 dark:text-amber-300">
+      Parecido{o.muda ? `: muda ${o.muda}` : ""}
+    </span>
+  ) : o.tipo === "colado" ? (
+    <span>O que você colou</span>
+  ) : (
+    <span className="text-success">Mesmo produto</span>
+  );
+}
+
+function ComprarOpcao({ o }: { o: OpcaoEscolha }) {
+  return o.link ? (
+    <a
+      href={o.link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-0.5 rounded bg-success px-2 py-1 text-[11px] font-bold text-white hover:brightness-95"
+    >
+      <ShieldCheck className="size-3" aria-hidden="true" />
+      Comprar
+    </a>
+  ) : o.url ? (
+    <VerNaLoja url={o.url} />
+  ) : null;
+}
+
+function LadoALado({ opcoes, padrao }: { opcoes: OpcaoEscolha[]; padrao?: string | null }) {
+  const colado = opcoes.find((o) => o.tipo === "colado") ?? opcoes[0]!;
+  const outras = opcoes.filter((o) => o !== colado);
+  /* Abre comparando com a recomendação (ou a Melhor alternativa); sem ela,
+     com a outra opção mais barata. */
+  const maisBarata =
+    outras.find((o) => o.chave === padrao) ??
+    [...outras].sort((x, y) => x.preco - y.preco)[0] ??
+    opcoes[1]!;
+  const [chaveA, setChaveA] = useState(colado.chave);
+  const [chaveB, setChaveB] = useState(maisBarata.chave);
+  const A = opcoes.find((o) => o.chave === chaveA) ?? colado;
+  const B = opcoes.find((o) => o.chave === chaveB) ?? maisBarata;
+
+  /* Características dos dois, pelo nome; em amarelo o que difere. */
+  const mapa = (d: Detalhes | null) =>
+    new Map((d?.caracteristicas ?? []).map((c) => [c.nome.toLowerCase(), c] as const));
+  const ca = mapa(A.detalhes);
+  const cb = mapa(B.detalhes);
+  const nomes = [...new Set([...ca.keys(), ...cb.keys()])].slice(0, 18);
+  const norm = (v: string | undefined) => (v ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  const barato = A.preco === B.preco ? null : A.preco < B.preco ? "A" : "B";
+
+  const fichaDoColado = (A.detalhesDoColado || B.detalhesDoColado) && nomes.length > 0;
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-md border border-border bg-card">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[26%]" />
+          <col />
+          <col />
+        </colgroup>
+        <thead>
+          <tr className="bg-muted/60">
+            <th className="px-1.5 py-1.5 text-left text-[11px] font-semibold">Comparar</th>
+            <th className="px-1 py-1.5">
+              <SeletorOpcao
+                opcoes={opcoes}
+                valor={A.chave}
+                mudar={setChaveA}
+                nome="Primeira opção"
+              />
+            </th>
+            <th className="px-1 py-1.5">
+              <SeletorOpcao
+                opcoes={opcoes}
+                valor={B.chave}
+                mudar={setChaveB}
+                nome="Segunda opção"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <LinhaLadoALado
+            nome="Produto"
+            a={
+              <span className="flex items-start gap-1.5">
+                <Foto src={A.imagem} className="size-9 shrink-0 rounded" />
+                <span className="line-clamp-3">{semEntidades(A.titulo)}</span>
+              </span>
+            }
+            b={
+              <span className="flex items-start gap-1.5">
+                <Foto src={B.imagem} className="size-9 shrink-0 rounded" />
+                <span className="line-clamp-3">{semEntidades(B.titulo)}</span>
+              </span>
+            }
+          />
+          <LinhaLadoALado
+            nome="Preço"
+            a={
+              <strong className={"text-sm " + (barato === "A" ? "text-success" : "")}>
+                {brl(A.preco)}
+              </strong>
+            }
+            b={
+              <strong className={"text-sm " + (barato === "B" ? "text-success" : "")}>
+                {brl(B.preco)}
+              </strong>
+            }
+            difere={barato != null}
+          />
+          <LinhaLadoALado
+            nome="Frete"
+            a={textoDoFrete(A.freteGratis)}
+            b={textoDoFrete(B.freteGratis)}
+            difere={A.freteGratis !== B.freteGratis}
+          />
+          <LinhaLadoALado
+            nome="Loja"
+            a={
+              <>
+                {A.loja ?? "—"}
+                {A.lojaOficial && <SeloLojaOficial className="flex" />}
+              </>
+            }
+            b={
+              <>
+                {B.loja ?? "—"}
+                {B.lojaOficial && <SeloLojaOficial className="flex" />}
+              </>
+            }
+          />
+          <LinhaLadoALado
+            nome="É o mesmo?"
+            a={<ProdutoDaOpcao o={A} />}
+            b={<ProdutoDaOpcao o={B} />}
+            difere={A.tipo === "parecido" || B.tipo === "parecido"}
+          />
+          {(A.vantagem || B.vantagem) && (
+            <LinhaLadoALado nome="Tem a mais" a={A.vantagem ?? "—"} b={B.vantagem ?? "—"} difere />
+          )}
+          {nomes.map((n) => {
+            const x = ca.get(n);
+            const y = cb.get(n);
+            return (
+              <LinhaLadoALado
+                key={n}
+                nome={(x ?? y)!.nome}
+                a={x?.valor ?? "—"}
+                b={y?.valor ?? "—"}
+                difere={Boolean(x && y && norm(x.valor) !== norm(y.valor))}
+              />
+            );
+          })}
+          <tr className="border-t border-border">
+            <td className="px-1.5 py-1.5" />
+            <td className="px-1.5 py-1.5">
+              <ComprarOpcao o={A} />
+            </td>
+            <td className="px-1.5 py-1.5">
+              <ComprarOpcao o={B} />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="border-t border-border px-2 py-1 text-[10px] text-secondary-ink">
+        {nomes.length
+          ? "Em amarelo, o que muda entre os dois."
+          : "Sem ficha técnica lida nestes anúncios: confira os detalhes na página antes de comprar."}
+        {fichaDoColado ? " Lojas do mesmo produto usam a ficha lida no anúncio colado." : ""}
+      </p>
+    </div>
+  );
+}
+
+function AjudaParaEscolher({
+  pedidoId,
+  dispositivo,
+}: {
+  pedidoId: number;
+  dispositivo: Dispositivo;
+}) {
+  const [estado, setEstado] = useState<"carregando" | "erro" | RespostaAjuda>("carregando");
+  useEffect(() => {
+    let vivo = true;
+    setEstado("carregando");
+    void fetch("/api/public/ajudar-escolher", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pedido: pedidoId }),
+    })
+      .then(async (r) => {
+        const j = (await r.json().catch(() => null)) as RespostaAjuda | null;
+        if (!vivo) return;
+        setEstado(r.ok && j?.escolha?.link ? j : "erro");
+      })
+      .catch(() => vivo && setEstado("erro"));
+    return () => {
+      vivo = false;
+    };
+  }, [pedidoId]);
+
+  if (estado === "carregando")
+    return (
+      <p
+        className="mt-2 flex items-center gap-2 rounded-md bg-card p-2 text-xs text-secondary-ink"
+        role="status"
+      >
+        <LoaderCircle className="size-4 animate-spin text-success" aria-hidden="true" />
+        Pesando preço, frete, características e diferenças…
+      </p>
+    );
+  if (estado === "erro")
+    return (
+      <p className="mt-2 rounded-md bg-card p-2 text-xs text-secondary-ink" role="status">
+        A análise não ficou pronta agora. A melhor opção desta comparação é a que está em destaque
+        acima, com o link de compra.
+      </p>
+    );
+  const e = estado.escolha;
+  return (
+    <div className="mt-2 rounded-md border-2 border-success/60 bg-card p-2.5" role="status">
+      <p className="inline-block rounded bg-success px-2 py-0.5 text-[11px] font-bold text-white">
+        <Fogo /> Melhor escolha para você
+      </p>
+      <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug">
+        {semEntidades(e.titulo)}
+      </p>
+      <p className="text-xs text-secondary-ink">
+        {e.loja && (
+          <>
+            Vendido por <strong className="text-foreground">{e.loja}</strong>
+          </>
+        )}
+        {e.lojaOficial && <SeloLojaOficial className="ml-1.5 inline-flex" />}
+        {e.freteGratis === true && (
+          <span className="ml-1.5 font-semibold text-success">Frete grátis</span>
+        )}
+      </p>
+      <p className="mt-0.5 text-base font-bold tabular-nums text-success">{brl(e.preco)}</p>
+      <p className="mt-1 text-xs leading-snug">{estado.resumo}</p>
+      {e.tipo === "parecido" && (
+        <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-[11px] leading-snug text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <strong>Não é idêntico ao anúncio que você colou.</strong>
+          {e.muda ? ` Muda: ${e.muda}.` : ""}
+        </p>
+      )}
+      {estado.pontos.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {estado.pontos.map((p) => (
+            <li key={p.n} className="rounded bg-muted/40 px-2 py-1 text-[11px] leading-snug">
+              <span className="font-semibold">
+                {p.loja ?? "Loja"} · {brl(p.preco)}
+              </span>
+              {p.aFavor && <span className="block text-success">✓ {p.aFavor}</span>}
+              {p.contra && (
+                <span className="block text-red-700 dark:text-red-400">✗ {p.contra}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <a
+        href={e.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="animate-botao-destaque mt-2 block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+      >
+        <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
+        {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(e.preco)}`).replace(
+          " pelo app",
+          " no app",
+        )}
+      </a>
+      <p className="mt-1 text-[10px] text-secondary-ink">
+        Análise feita com os preços e as informações desta comparação.
+      </p>
     </div>
   );
 }

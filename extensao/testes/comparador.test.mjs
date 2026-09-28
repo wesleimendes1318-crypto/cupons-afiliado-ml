@@ -410,3 +410,15 @@ test('selo MercadoLider do proprio anuncio, com o nome da loja conferido (28/09)
   assert.equal(seloDoVendedor(pagina, 'MLB2', ['outra loja']), null);
   assert.deepEqual(seloDoVendedor(pagina, 'MLB1'), { nome: 'adidas', mercadoLider: 'platinum' });
 });
+
+test('detalhes resumidos de cada loja encontrada (28/09)', async () => {
+  const { detalhesResumidos, detalhesDoAnuncio } = await import('../comparador.js');
+  assert.equal(detalhesResumidos(null), null);
+  const muitas = Array.from({ length: 25 }, (_, i) => ({ nome: 'C' + i + 'x', valor: 'v' }));
+  const r = detalhesResumidos({ caracteristicas: muitas, destaques: ['a', 'b', 'c', 'd', 'e', 'f'], descricao: 'x'.repeat(2000) });
+  assert.equal(r.caracteristicas.length, 15);
+  assert.equal(r.destaques.length, 5);
+  assert.equal(r.descricao.length, 700);
+  const d = detalhesResumidos(detalhesDoAnuncio('<table><tr><th>Marca</th><td>adidas</td></tr></table>'));
+  assert.deepEqual(d.caracteristicas, [{ nome: 'Marca', valor: 'adidas' }]);
+});
