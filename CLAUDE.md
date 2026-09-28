@@ -65,8 +65,8 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     título do parecido ("3s" = "3 listras"), depois o mais barato
     (notaDeAlternativa = alternativa_da_analise; 28/09: o Linear R$ 3,70 mais
     barato tomou o lugar do Woven, o modelo mais próximo).
-  - Parecidos em ordem de semelhança (mesma foto, semelhança, preço), com o
-    aviso "Mesma foto do anúncio colado" quando for o caso.
+  - Parecidos com o aviso "Mesma foto do anúncio colado" quando for o caso
+    (ordem: ver "Parecidos" em Texto e visual).
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
     SEPARADOS, com aviso "não é o mesmo produto" e o que muda, cada um com o
     link de afiliado (Weslei, 25/09).
@@ -116,8 +116,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   anúncio (precosDoItem) o cheio, o Pix e o parcelamento, e o site mostra
   "no Pix · ou R$ X em Nx" onde souber (colado, tabela, parecidos,
   alternativa). Sem a informação, não afirma.
-- Parecidos: menor diferença primeiro (semelhança >= 85 na frente; dentro do
-  grupo, a menor diferença de preço). Mesma foto em variante (armazenamento,
+- Parecidos (Weslei, 28/09: "o foco está no mais semelhante com custo
+  reduzido"; "assertivas em relação ao que foi buscado"): semelhança >= 85
+  na frente; dentro disso, os MAIS BARATOS que o colado primeiro, do mais
+  semelhante (semelhança + título) para o menos; depois os mais caros, da
+  menor diferença de preço para a maior. Os menos parecidos (< 85) ficam
+  recolhidos em "Ver N menos parecidos" (sem nenhum muito parecido, mostra
+  todos). Mesma foto em variante (armazenamento,
   cor, tamanho, voltagem) não gera o aviso de "foto de outro produto".
 - Economia sempre contra o preço que a página mostra ao cliente (a API pode
   trazer outro: Advocate R$ 169,90 na API x R$ 147,81 na página).

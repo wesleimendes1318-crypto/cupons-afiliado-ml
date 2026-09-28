@@ -1657,14 +1657,27 @@ function Resultado({
      abaixo das de 1 TB e 2 TB, +R$ 3-4 mil, por terem a mesma foto). Muito
      parecidos (semelhança >= 85) na frente; dentro de cada grupo, a menor
      diferença de preço para o anúncio colado. */
-  const ordenarParecidos = (lista: NonNullable<Analise["parecidos"]>) =>
-    [...lista].sort((x, y) => {
+  /* Weslei, 28/09: "o foco está no mais semelhante com custo reduzido".
+     1) muito parecidos (semelhança >= 85) na frente; 2) dentro deles, os MAIS
+     BARATOS que o colado primeiro, do mais semelhante (nota: semelhança +
+     título) para o menos; 3) depois os mais caros, da menor diferença de
+     preço para a maior. */
+  const ordenarParecidos = (lista: NonNullable<Analise["parecidos"]>) => {
+    const base = a?.preco ?? 0;
+    return [...lista].sort((x, y) => {
       const gx = (x.semelhanca ?? (x.mesmaFoto ? 90 : 0)) >= 85 ? 0 : 1;
       const gy = (y.semelhanca ?? (y.mesmaFoto ? 90 : 0)) >= 85 ? 0 : 1;
       if (gx !== gy) return gx - gy;
-      const base = a?.preco ?? 0;
+      const bx = x.preco < base ? 0 : 1;
+      const by = y.preco < base ? 0 : 1;
+      if (bx !== by) return bx - by;
+      if (bx === 0) {
+        const d = notaDeAlternativa(y, a?.titulo) - notaDeAlternativa(x, a?.titulo);
+        if (Math.abs(d) >= 0.5) return d;
+      }
       return Math.abs(x.preco - base) - Math.abs(y.preco - base);
     });
+  };
   const parecidosSemAlternativa = ordenarParecidos(
     alternativa ? (a?.parecidos ?? []).filter((p) => p !== alternativa) : (a?.parecidos ?? []),
   );
@@ -2587,7 +2600,15 @@ function Parecidos({
   precoColado?: number | null | undefined;
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
+  const [verTodos, setVerTodos] = useState(false);
   if (!lista || !lista.length) return null;
+  /* ASSERTIVO (Weslei, 28/09: "as comparações e recomendações devem ser
+     assertivas em relação ao que foi buscado"): na frente só o que é muito
+     parecido (semelhança >= 85 ou mesma foto); o resto fica recolhido. Sem
+     nenhum muito parecido, mostra todos (nunca lista vazia). */
+  const perto = (p: NonNullable<Analise["parecidos"]>[number]) =>
+    (p.semelhanca ?? (p.mesmaFoto ? 90 : 0)) >= 85;
+  const escondidos = lista.some(perto) ? lista.filter((p) => !perto(p)).length : 0;
   const mColado = medidaDoTitulo(tituloColado);
   /* Só mostra por unidade quando algum parecido tem quantidade diferente. */
   const medidas = lista.map((p) => medidaDoTitulo(p.titulo));
@@ -2597,7 +2618,9 @@ function Parecidos({
     medidas.some((m) => m && m.tipo === mColado.tipo && m.qtd !== mColado.qtd);
   return (
     <div className="mt-3 rounded-md border border-amber-400/70 bg-amber-50/60 p-2 first:sm:mt-0 dark:bg-amber-950/20">
-      <p className="text-sm font-bold">Parecidos ({lista.length})</p>
+      <p className="text-sm font-bold">
+        Parecidos ({escondidos && !verTodos ? lista.length - escondidos : lista.length})
+      </p>
       <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
         Não é o mesmo produto: veja o que muda antes de comprar.
       </p>
@@ -2608,6 +2631,7 @@ function Parecidos({
       )}
       <ul className="mt-1.5 space-y-1.5">
         {lista.map((p, i) => {
+          if (!verTodos && escondidos > 0 && !perto(p)) return null;
           const m = medidas[i];
           const porMedida =
             comparaMedida && m && mColado && m.tipo === mColado.tipo
@@ -2696,6 +2720,18 @@ function Parecidos({
           );
         })}
       </ul>
+      {escondidos > 0 && (
+        <button
+          type="button"
+          onClick={() => setVerTodos((x) => !x)}
+          aria-expanded={verTodos}
+          className="mt-1.5 text-[11px] font-bold text-ml-blue hover:underline"
+        >
+          {verTodos
+            ? "Mostrar só os mais parecidos"
+            : `Ver ${escondidos} menos ${escondidos === 1 ? "parecido" : "parecidos"}`}
+        </button>
+      )}
     </div>
   );
 }
