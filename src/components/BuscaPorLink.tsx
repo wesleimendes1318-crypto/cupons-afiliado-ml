@@ -1898,8 +1898,8 @@ function Resultado({
         {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
         {!leituraFalhou && !semLink && (
           <p className="mt-2 text-center text-[11px] text-secondary-ink">
-            Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão da
-            loja. Obrigado!
+            Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão do
+            programa de afiliados. Obrigado!
           </p>
         )}
       </div>
@@ -2213,6 +2213,19 @@ function MelhorAlternativa({
             Custo reduzido: {brl(menos)} a menos
           </li>
         )}
+        {p.freteGratis === true && (
+          <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">Frete grátis</li>
+        )}
+        {(p.semelhanca ?? 0) >= 95 && (
+          <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
+            {p.semelhanca}% parecido
+          </li>
+        )}
+        {p.mesmaFoto && (
+          <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
+            Mesma foto do anúncio colado
+          </li>
+        )}
         {p.lojaOficial === true && (
           <li className="rounded-full bg-ml-blue/10 px-2 py-0.5 text-ml-blue">
             <BadgeCheck className="mr-0.5 inline size-3 align-[-2px]" aria-hidden="true" />
@@ -2228,12 +2241,6 @@ function MelhorAlternativa({
           </p>
           <p className="mt-0.5 tabular-nums">
             <span className="text-base font-bold text-success">{brl(p.preco)}</span>
-          </p>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] font-semibold">
-            {p.freteGratis === true && <span className="text-success">Frete grátis</span>}
-            {p.mesmaFoto && (
-              <span className="text-secondary-ink">Mesma foto do anúncio colado</span>
-            )}
           </p>
         </div>
       </div>
