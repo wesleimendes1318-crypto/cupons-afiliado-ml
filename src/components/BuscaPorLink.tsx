@@ -167,6 +167,7 @@ type OutraLoja = {
   /* Loja oficial da marca (Weslei, 27/09: a mais barata do agasalho era a
      loja oficial da adidas). Selo na tabela e na recomendação. */
   lojaOficial?: boolean | null;
+  mercadoLider?: "platinum" | "gold" | "silver" | null;
   /* Outro anúncio da mesma loja do link colado, mais barato. */
   mesmaLoja?: boolean | null;
   cupomId?: number | null;
@@ -250,6 +251,9 @@ type Analise = {
     lojaOficial?: boolean | null;
     /* O que tem A MAIS que o anúncio colado (conjunto completo, kit maior). */
     vantagem?: string | null;
+    /* Loja que vende (sempre que lida) e selo MercadoLíder dela. */
+    vendedor?: string | null;
+    mercadoLider?: "platinum" | "gold" | "silver" | null;
     link?: string | null;
     url?: string | null;
     semAfiliado?: boolean | null;
@@ -311,6 +315,7 @@ type Referencia = {
   freteGratis?: boolean | null;
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
+  mercadoLider?: "platinum" | "gold" | "silver" | null;
 };
 
 type Pedido = {
@@ -1648,6 +1653,7 @@ function Resultado({
       freteGratis: o.freteGratis ?? null,
       mesmaLoja: o.mesmaLoja ?? null,
       lojaOficial: o.lojaOficial ?? null,
+      mercadoLider: o.mercadoLider ?? null,
       ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
@@ -1660,6 +1666,7 @@ function Resultado({
       freteGratis: r.freteGratis ?? null,
       mesmaLoja: r.mesmaLoja ?? null,
       lojaOficial: r.lojaOficial ?? null,
+      mercadoLider: r.mercadoLider ?? null,
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
@@ -2110,6 +2117,7 @@ type LinhaLoja = {
   freteGratis?: boolean | null;
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
+  mercadoLider?: "platinum" | "gold" | "silver" | null;
   /* Link abre a página geral do produto: escolher a loja em "Outras opções". */
   mesmaPagina?: boolean | null;
 };
@@ -2239,6 +2247,13 @@ function MelhorAlternativa({
           <p className="line-clamp-2 text-sm font-semibold leading-snug">
             {semEntidades(p.titulo)}
           </p>
+          {p.vendedor && (
+            <p className="text-xs text-secondary-ink">
+              Vendido por <strong className="text-foreground">{p.vendedor}</strong>
+              {p.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
+              <SeloLider nivel={p.mercadoLider} className="ml-1.5 inline-flex" />
+            </p>
+          )}
           <p className="mt-0.5 tabular-nums">
             <span className="text-base font-bold text-success">{brl(p.preco)}</span>
           </p>
@@ -2275,6 +2290,32 @@ function Fogo() {
   return (
     <span className="animate-fogo" aria-hidden="true">
       🔥
+    </span>
+  );
+}
+
+/* Selo MercadoLíder da loja (lido na página do próprio anúncio). */
+function SeloLider({
+  nivel,
+  className = "",
+}: {
+  nivel: string | null | undefined;
+  className?: string;
+}) {
+  if (!nivel) return null;
+  const nome =
+    nivel === "platinum"
+      ? "MercadoLíder Platinum"
+      : nivel === "gold"
+        ? "MercadoLíder Gold"
+        : "MercadoLíder";
+  return (
+    <span
+      className={
+        "items-center gap-0.5 text-[10px] font-bold leading-tight text-success " + className
+      }
+    >
+      <BadgeCheck className="inline size-3 align-[-2px]" aria-hidden="true" /> {nome}
     </span>
   );
 }
@@ -2367,6 +2408,13 @@ function Parecidos({
                 <p className="line-clamp-2 text-xs font-medium leading-tight">
                   {semEntidades(p.titulo)}
                 </p>
+                {p.vendedor && (
+                  <p className="text-[10px] text-secondary-ink">
+                    Vendido por <strong className="text-foreground">{p.vendedor}</strong>
+                    {p.lojaOficial === true && <SeloLojaOficial className="ml-1 inline-flex" />}
+                    <SeloLider nivel={p.mercadoLider} className="ml-1 inline-flex" />
+                  </p>
+                )}
                 {p.freteGratis === false && (
                   <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                     Sem frete grátis
@@ -2483,6 +2531,7 @@ function TodasAsLojas({
                   <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
                     {l.colado ? "Anúncio colado" : l.nome}
                     {l.lojaOficial === true && <SeloLojaOficial className="block" />}
+                    {!l.colado && <SeloLider nivel={l.mercadoLider} className="block" />}
                     {l.mesmaPagina && !l.colado && (
                       <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                         Na página, escolha esta loja em "Outras opções de compra"

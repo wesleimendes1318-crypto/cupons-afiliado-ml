@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
@@ -255,6 +255,8 @@ const cacheMem = new Map();
 const oficialPorItem = new Map();
 /* item -> 'new' | 'used' | 'refurbished' | null (lido na pagina do anuncio). */
 const condicaoPorItem = new Map();
+/* item -> 'platinum' | 'gold' | 'silver' | null (MercadoLider do vendedor). */
+const liderPorItem = new Map();
 
 /* Leituras em andamento: a busca adianta a leitura das lojas enquanto a
    Gemini confere as fotos, e quem pedir o mesmo anuncio depois espera a
@@ -333,14 +335,14 @@ function amostraDoVendedor(id, html) {
 
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
-  if (m && Date.now() - m.ts < TTL_VEND) { oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); return m.nomes; }
+  if (m && Date.now() - m.ts < TTL_VEND) { oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); return m.nomes; }
 
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
   /* v3: guarda tambem se e loja oficial. */
   const chave = 'v3_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
-  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); return g.nomes; }
+  if (g && Date.now() - g.ts < TTL_VEND) { cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
 
   let nomes = [];
   let oficial = null;
@@ -352,12 +354,14 @@ async function resolverVendedorAgora(id, url) {
     amostraDaLojaOficial(html, id, lojaOficialDoHtml(html, id), 'loja');
     oficial = null;
     condicao = condicaoDoHtml(html, id);
+    const selo = seloDoVendedor(html, id, nomes);
+    liderPorItem.set(id, selo ? selo.mercadoLider : null);
     amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
   oficialPorItem.set(id, oficial);
   condicaoPorItem.set(id, condicao);
 
-  const reg = { nomes, oficial, condicao, ts: Date.now() };
+  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null, ts: Date.now() };
   if (nomes.length) { cacheMem.set(id, reg); chrome.storage.local.set({ [chave]: reg }); }
   return nomes;
 }
@@ -2452,6 +2456,7 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
       teto: vale ? aval.teto : null,
       final: Math.round((c.preco - economia) * 100) / 100,
       lojaOficial: oficialPorItem.has(c.item) ? oficialPorItem.get(c.item) : null,
+      mercadoLider: liderPorItem.get(c.item) ?? null,
       ...extra
     });
   }
@@ -2954,6 +2959,20 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
     })
     .filter(Boolean);
   diag.parecidos = parecidos.length;
+  /* LOJA DE CADA PARECIDO (Weslei, 28/09: "deve sempre indicar a loja,
+     maxima transparencia", e o selo quando tiver): os 5 mais parecidos tem a
+     pagina lida (mesmo cache das lojas da tabela), com prazo curto. */
+  {
+    const top = parecidos.slice().sort((x, y) => (y.mesmaFoto === true) - (x.mesmaFoto === true)
+      || (y.semelhanca ?? -1) - (x.semelhanca ?? -1) || x.preco - y.preco).slice(0, 5);
+    const nomesP = await Promise.all(top.map(p =>
+      comPrazo(resolverVendedor(p.item, p.url).catch(() => []), Math.max(2000, Math.min(8000, resta() - 12000)), [])));
+    top.forEach((p, k) => {
+      const n = nomesP[k] || [];
+      if (n[0]) p.vendedor = n[0];
+      p.mercadoLider = liderPorItem.get(p.item) ?? null;
+    });
+  }
   /* Regra: so o que a Gemini confirmou pela foto aparece. */
   /* Mais baratos primeiro: sao eles que viram a recomendacao; os demais
      completam a tabela (ate 5 lojas lidas). */
@@ -3915,6 +3934,7 @@ async function atenderPedidos() {
                       imagem: t.imagem || null, verificadoIA: !!t.verificadoIA,
                       freteGratis: t.freteGratis != null ? t.freteGratis : null,
                       lojaOficial: t.lojaOficial != null ? t.lojaOficial : null,
+                      mercadoLider: t.mercadoLider || null,
                       mesmaLoja,
                       diferenca: finalAqui != null ? Math.round((t.final - finalAqui) * 100) / 100 : null,
                       cupom: t.cupom ? t.cupom.titulo : null });
@@ -4075,6 +4095,7 @@ async function atenderPedidos() {
                   freteGratis: alt.freteGratis != null ? alt.freteGratis : null,
                   mesmaLoja: !!alt.mesmaLoja,
                   lojaOficial: alt.lojaOficial != null ? alt.lojaOficial : null,
+                  mercadoLider: alt.mercadoLider || null,
                   cupomTitulo: alt.cupom ? alt.cupom.titulo : null,
                   vence: alt.cupom ? alt.cupom.vence : null,
                   link: la.link,

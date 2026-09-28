@@ -187,6 +187,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (original_contradiz da conferência) ou, sem isso, "a foto deste anúncio é a
   mesma de outro produto (...)" quando um parecido tem a MESMA foto.
   Nunca escolher sozinho um dos dois.
+- SEMPRE indicar a loja (Weslei, 28/09: "máxima transparência"): tabela,
+  recomendação, Melhor alternativa e Parecidos mostram "Vendido por X" (os 5
+  parecidos mais próximos têm a página lida). Selos do Mercado Livre quando
+  houver: "Loja oficial" e "MercadoLíder Platinum/Gold" (power_seller_status
+  do evento do PRÓPRIO anúncio, só se o nome do vendedor do evento bater com
+  a loja lida).
 - Selo "Loja oficial" IGUAL ao do Mercado Livre. Vem da lista oficial de
   ofertas (API, official_store_id) e dos anúncios achados na busca com o
   filtro "Lojas oficiais" (_Loja_all; conferido em 28/09, pedido 461: veio a

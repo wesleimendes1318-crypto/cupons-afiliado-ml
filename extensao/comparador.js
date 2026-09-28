@@ -808,3 +808,20 @@ export function relacionadosDaPagina(html, titulo, preco, itemAtual) {
   lista.diag = { cartoes: d.cartoes || 0, comPreco: d.comPreco || 0, usados: lista.length };
   return lista;
 }
+
+/* SELO DE VENDEDOR do proprio anuncio (MercadoLider): "power_seller_status"
+   do evento do vendedor que traz o item_id do anuncio. So vale quando o nome
+   do vendedor do evento bate com a loja lida na pagina (a pagina tambem traz
+   eventos de outras lojas; 28/09). */
+export function seloDoVendedor(html, item, nomesDaLoja = []) {
+  const normal = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  const nomes = new Set((nomesDaLoja || []).map(normal).filter(Boolean));
+  for (const seg of eventosDoItem(html, item)) {
+    const n = /"seller_name"\s*:\s*"([^"]{1,80})"/.exec(seg);
+    if (!n) continue;
+    if (nomes.size && !nomes.has(normal(n[1]))) continue;
+    const p = /"power_seller_status"\s*:\s*"(platinum|gold|silver)"/.exec(seg);
+    return { nome: n[1], mercadoLider: p ? p[1] : null };
+  }
+  return null;
+}

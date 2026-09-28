@@ -401,3 +401,12 @@ test('garimpo: mais baratos primeiro, busca de lojas oficiais antes (27/09)', as
   const r12 = escolherParaConferir({ oficiais, google: [], busca, outros }, 436.91, 'MLB4680649229');
   assert.equal(r12.filter(c => c.preco <= 436.41).length, 6);
 });
+
+test('selo MercadoLider do proprio anuncio, com o nome da loja conferido (28/09)', async () => {
+  const { seloDoVendedor } = await import('../comparador.js');
+  const pagina = '"melidata_event":{"path":"/upp","event_data":{"seller_id":1,"seller_name":"adidas","power_seller_status":"platinum","item_id":"MLB1"}},'
+    + '"melidata_event":{"path":"/upp","event_data":{"seller_id":2,"seller_name":"SHOPMASP","power_seller_status":"silver","item_id":"MLB2"}}';
+  assert.deepEqual(seloDoVendedor(pagina, 'MLB2', ['SHOPMASP']), { nome: 'SHOPMASP', mercadoLider: 'silver' });
+  assert.equal(seloDoVendedor(pagina, 'MLB2', ['outra loja']), null);
+  assert.deepEqual(seloDoVendedor(pagina, 'MLB1'), { nome: 'adidas', mercadoLider: 'platinum' });
+});
