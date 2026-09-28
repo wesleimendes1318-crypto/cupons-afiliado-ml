@@ -239,6 +239,21 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_cotas: {
+        Row: {
+          ate: string
+          modelo: string
+        }
+        Insert: {
+          ate: string
+          modelo: string
+        }
+        Update: {
+          ate?: string
+          modelo?: string
+        }
+        Relationships: []
+      }
       ia_vereditos: {
         Row: {
           chave_candidato: string
@@ -246,9 +261,11 @@ export type Database = {
           confianca: number
           criado_em: string
           igual: boolean
+          mesma_foto: boolean
           modelo: string | null
           motivo: string | null
           parecido: boolean | null
+          semelhanca: number | null
         }
         Insert: {
           chave_candidato: string
@@ -256,9 +273,11 @@ export type Database = {
           confianca?: number
           criado_em?: string
           igual: boolean
+          mesma_foto?: boolean
           modelo?: string | null
           motivo?: string | null
           parecido?: boolean | null
+          semelhanca?: number | null
         }
         Update: {
           chave_candidato?: string
@@ -266,9 +285,11 @@ export type Database = {
           confianca?: number
           criado_em?: string
           igual?: boolean
+          mesma_foto?: boolean
           modelo?: string | null
           motivo?: string | null
           parecido?: boolean | null
+          semelhanca?: number | null
         }
         Relationships: []
       }
@@ -291,6 +312,7 @@ export type Database = {
         Row: {
           analise: Json | null
           atendido_em: string | null
+          chave: string
           codigo: string | null
           criado_em: string
           cupom_id: number | null
@@ -308,6 +330,7 @@ export type Database = {
         Insert: {
           analise?: Json | null
           atendido_em?: string | null
+          chave?: string
           codigo?: string | null
           criado_em?: string
           cupom_id?: number | null
@@ -325,6 +348,7 @@ export type Database = {
         Update: {
           analise?: Json | null
           atendido_em?: string | null
+          chave?: string
           codigo?: string | null
           criado_em?: string
           cupom_id?: number | null
@@ -367,6 +391,15 @@ export type Database = {
       }
       produtos_vistos: {
         Row: {
+          alt_economia: number | null
+          alt_frete_gratis: boolean | null
+          alt_link: string | null
+          alt_loja: string | null
+          alt_muda: string | null
+          alt_oficial: boolean | null
+          alt_preco: number | null
+          alt_titulo: string | null
+          alt_vantagem: string | null
           categoria: string | null
           chave: string
           economia: number | null
@@ -385,6 +418,15 @@ export type Database = {
           visto_em: string
         }
         Insert: {
+          alt_economia?: number | null
+          alt_frete_gratis?: boolean | null
+          alt_link?: string | null
+          alt_loja?: string | null
+          alt_muda?: string | null
+          alt_oficial?: boolean | null
+          alt_preco?: number | null
+          alt_titulo?: string | null
+          alt_vantagem?: string | null
           categoria?: string | null
           chave: string
           economia?: number | null
@@ -403,6 +445,15 @@ export type Database = {
           visto_em?: string
         }
         Update: {
+          alt_economia?: number | null
+          alt_frete_gratis?: boolean | null
+          alt_link?: string | null
+          alt_loja?: string | null
+          alt_muda?: string | null
+          alt_oficial?: boolean | null
+          alt_preco?: number | null
+          alt_titulo?: string | null
+          alt_vantagem?: string | null
           categoria?: string | null
           chave?: string
           economia?: number | null
@@ -469,6 +520,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      alternativa_da_analise: {
+        Args: { a: Json; p_base: number }
+        Returns: Json
+      }
       anotar_estado_robo: {
         Args: { p_chave: string; p_token: string; p_valor: string }
         Returns: undefined
@@ -519,6 +574,7 @@ export type Database = {
         Returns: {
           analise: Json
           codigo: string
+          comparado_em: string
           erro: string
           link: string
           status: string
@@ -622,8 +678,10 @@ export type Database = {
           vendedor: string
         }[]
       }
+      muda_nao_e_alternativa: { Args: never; Returns: string }
       normalizar_nome: { Args: { p: string }; Returns: string }
       pedidos_esperando: { Args: { p_token: string }; Returns: number }
+      pedidos_no_limite: { Args: never; Returns: boolean }
       pedidos_pendentes: {
         Args: { p_token: string }
         Returns: {
@@ -633,8 +691,17 @@ export type Database = {
           vendedor: string
         }[]
       }
+      pedir_comparacao: {
+        Args: { p_nova?: boolean; p_url: string }
+        Returns: Json
+      }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
+      pedir_link_base: {
+        Args: { p_reusar: boolean; p_url: string }
+        Returns: number
+      }
+      pedir_link_da_loja: { Args: { p_url: string }; Returns: Json }
       pedir_link_loja: { Args: { p_url: string }; Returns: number }
       pedir_link_novo: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
@@ -683,9 +750,29 @@ export type Database = {
           segundos: number
         }[]
       }
+      ver_pedido: {
+        Args: { p_chave: string; p_id: number }
+        Returns: {
+          analise: Json
+          codigo: string
+          comparado_em: string
+          erro: string
+          link: string
+          status: string
+        }[]
+      }
       vitrine: {
         Args: { p_limite?: number }
         Returns: {
+          alt_economia: number
+          alt_frete_gratis: boolean
+          alt_link: string
+          alt_loja: string
+          alt_muda: string
+          alt_oficial: boolean
+          alt_preco: number
+          alt_titulo: string
+          alt_vantagem: string
           categoria: string
           categoria_site: string
           chave: string
