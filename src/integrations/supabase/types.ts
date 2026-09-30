@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      ajuda_escolha: {
+        Row: {
+          criado_em: string
+          pedido_id: number
+          resposta: Json
+          versao: number
+        }
+        Insert: {
+          criado_em?: string
+          pedido_id: number
+          resposta: Json
+          versao: number
+        }
+        Update: {
+          criado_em?: string
+          pedido_id?: number
+          resposta?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ajuda_escolha_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "pedidos_link"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apelidos_ml: {
         Row: {
           apelido: string | null
@@ -308,6 +337,116 @@ export type Database = {
         }
         Relationships: []
       }
+      monitor_precos: {
+        Row: {
+          ativo: boolean
+          chave: string
+          criado_em: string
+          disponivel: boolean | null
+          erro: string | null
+          id: number
+          imagem: string | null
+          leituras: number
+          link: string | null
+          loja: string | null
+          maior_preco: number | null
+          menor_em: string | null
+          menor_preco: number | null
+          parcelas: Json | null
+          preco_atual: number | null
+          preco_cheio: number | null
+          preco_inicial: number | null
+          preco_pix: number | null
+          proxima_leitura: string
+          sem_mudanca: number
+          titulo: string | null
+          ultima_leitura: string | null
+          url: string
+        }
+        Insert: {
+          ativo?: boolean
+          chave: string
+          criado_em?: string
+          disponivel?: boolean | null
+          erro?: string | null
+          id?: number
+          imagem?: string | null
+          leituras?: number
+          link?: string | null
+          loja?: string | null
+          maior_preco?: number | null
+          menor_em?: string | null
+          menor_preco?: number | null
+          parcelas?: Json | null
+          preco_atual?: number | null
+          preco_cheio?: number | null
+          preco_inicial?: number | null
+          preco_pix?: number | null
+          proxima_leitura?: string
+          sem_mudanca?: number
+          titulo?: string | null
+          ultima_leitura?: string | null
+          url: string
+        }
+        Update: {
+          ativo?: boolean
+          chave?: string
+          criado_em?: string
+          disponivel?: boolean | null
+          erro?: string | null
+          id?: number
+          imagem?: string | null
+          leituras?: number
+          link?: string | null
+          loja?: string | null
+          maior_preco?: number | null
+          menor_em?: string | null
+          menor_preco?: number | null
+          parcelas?: Json | null
+          preco_atual?: number | null
+          preco_cheio?: number | null
+          preco_inicial?: number | null
+          preco_pix?: number | null
+          proxima_leitura?: string
+          sem_mudanca?: number
+          titulo?: string | null
+          ultima_leitura?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      monitor_seguidores: {
+        Row: {
+          criado_em: string
+          monitor_id: number
+          navegador: string
+          preco_alvo: number | null
+          preco_ao_seguir: number | null
+        }
+        Insert: {
+          criado_em?: string
+          monitor_id: number
+          navegador: string
+          preco_alvo?: number | null
+          preco_ao_seguir?: number | null
+        }
+        Update: {
+          criado_em?: string
+          monitor_id?: number
+          navegador?: string
+          preco_alvo?: number | null
+          preco_ao_seguir?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitor_seguidores_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitor_precos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos_link: {
         Row: {
           analise: Json | null
@@ -520,6 +659,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acompanhar_preco: {
+        Args: { p_alvo?: number; p_navegador: string; p_pedido: number }
+        Returns: number
+      }
       alternativa_da_analise: {
         Args: { a: Json; p_base: number }
         Returns: Json
@@ -542,6 +685,11 @@ export type Database = {
       categoria_do_site: {
         Args: { p_categoria: string; p_titulo: string }
         Returns: string
+      }
+      chave_do_produto: { Args: { p_url: string }; Returns: string }
+      cobertura_do_titulo: {
+        Args: { colado: string; outro: string }
+        Returns: number
       }
       completar_pedido: {
         Args: { p_analise: Json; p_id: number; p_token: string }
@@ -600,6 +748,19 @@ export type Database = {
       expirar_pedidos: { Args: never; Returns: undefined }
       gravar_diagnostico: {
         Args: { p_dados: Json; p_tipo: string; p_token: string }
+        Returns: undefined
+      }
+      gravar_monitor: {
+        Args: {
+          p_cheio: number
+          p_disponivel: boolean
+          p_erro: string
+          p_id: number
+          p_parcelas: Json
+          p_pix: number
+          p_preco: number
+          p_token: string
+        }
         Returns: undefined
       }
       iniciar_pedido: {
@@ -678,8 +839,37 @@ export type Database = {
           vendedor: string
         }[]
       }
+      meus_precos: {
+        Args: { p_navegador: string }
+        Returns: {
+          disponivel: boolean
+          historico: Json
+          id: number
+          imagem: string
+          link: string
+          loja: string
+          maior_preco: number
+          menor_em: string
+          menor_preco: number
+          parcelas: Json
+          preco_alvo: number
+          preco_ao_seguir: number
+          preco_atual: number
+          preco_cheio: number
+          preco_pix: number
+          proxima_leitura: string
+          seguindo_desde: string
+          titulo: string
+          ultima_leitura: string
+          url: string
+        }[]
+      }
       muda_nao_e_alternativa: { Args: never; Returns: string }
       normalizar_nome: { Args: { p: string }; Returns: string }
+      parar_de_acompanhar: {
+        Args: { p_monitor: number; p_navegador: string }
+        Returns: undefined
+      }
       pedidos_esperando: { Args: { p_token: string }; Returns: number }
       pedidos_no_limite: { Args: never; Returns: boolean }
       pedidos_pendentes: {
@@ -706,6 +896,14 @@ export type Database = {
       pedir_link_novo: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
       produto_permitido: { Args: { p_texto: string }; Returns: boolean }
+      proximo_monitor: {
+        Args: { p_token: string }
+        Returns: {
+          chave: string
+          id: number
+          url: string
+        }[]
+      }
       registrar_produto_visto: {
         Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
         Returns: undefined
@@ -750,6 +948,7 @@ export type Database = {
           segundos: number
         }[]
       }
+      tokens_do_titulo: { Args: { t: string }; Returns: string[] }
       ver_pedido: {
         Args: { p_chave: string; p_id: number }
         Returns: {

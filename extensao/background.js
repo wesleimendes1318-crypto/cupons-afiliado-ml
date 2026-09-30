@@ -4251,7 +4251,12 @@ async function atenderPedidos() {
                   rec.forEach(o => {
                     const proprio = o.sufixo && mapa2[o.sufixo];
                     if (proprio && proprio !== r.link) { o.x.link = proprio; return; }
-                    o.x.link = mapa2[o.x.url] || r.link || null;
+                    /* NUNCA o link do anuncio colado (r.link) em outro
+                       produto: o botao do parecido abria o anuncio colado e o
+                       cliente via outro preco (pedido 525, 30/09: parecido de
+                       R$ 749 abria o colado de R$ 954). Sem link proprio nem
+                       da ficha, fica sem link e o site mostra "Ver na loja". */
+                    o.x.link = mapa2[o.x.url] || null;
                     o.x.semAfiliado = true;
                     recusados111.push({ vendedor: o.x.vendedor || null, item: o.alvo, sufixo: proprio ? 'mesmo link do anuncio colado' : (o.sufixo ? 'recusado' : null), ficha: mapa2[o.x.url] ? 'link da ficha' : null, lote: true });
                   });
