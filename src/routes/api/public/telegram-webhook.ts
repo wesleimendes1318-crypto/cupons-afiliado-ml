@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
+  boasVindas,
   html,
   linkDoAnuncio,
+  respostaSemModelo,
+  responderConversa,
+  VIDEO_COMO_FUNCIONA,
   mensagemDaComparacao,
   segredoDoWebhook,
   SITE,
@@ -50,26 +54,57 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
             ...extra,
           });
 
-        if (/^\/(start|ajuda|help)\b/i.test(texto)) {
-          await enviar(
-            "👋 <b>Olá! Aqui é o Melhor Escolha.</b>\n\n" +
-              "Me mande o link de um produto vendido no Mercado Livre e eu:\n\n" +
-              "🔎 procuro o mesmo produto em outras lojas;\n" +
-              "📸 confiro pela foto, descrição e características;\n" +
-              "💰 mostro o menor preço e a loja oficial (quando houver);\n" +
-              "🚚 deixo claro o frete;\n" +
-              "🔥 separo parecidos com o que muda.\n\n" +
-              "👉 <b>Cole o link do anúncio aqui.</b>",
+        const nome =
+          typeof msg.from?.first_name === "string" ? msg.from.first_name.slice(0, 40) : null;
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const db = supabaseAdmin as any;
+
+        /* PRIMEIRO ACESSO (Weslei, 02/10): boas-vindas e o vídeo do site só
+           na primeira conversa (e sempre que pedir /start ou /ajuda). */
+        const { data: conversa } = await db
+          .from("telegram_chats")
+          .select("chat_id,ia_dia,ia_usos")
+          .eq("chat_id", chatId)
+          .maybeSingle();
+        const primeiro = !conversa;
+        await db
+          .from("telegram_chats")
+          .upsert(
+            { chat_id: chatId, ultimo_em: new Date().toISOString() },
+            { onConflict: "chat_id" },
           );
-          return new Response("OK");
+        const pediuAjuda = /^\/(start|ajuda|help)\b/i.test(texto);
+        const urlColado = linkDoAnuncio(texto);
+        if (primeiro || pediuAjuda) {
+          await enviar(boasVindas(nome));
+          await telegram(token, "sendVideo", {
+            chat_id: chatId,
+            video: VIDEO_COMO_FUNCIONA,
+            caption: "🎬 Veja em 28 segundos como funciona",
+            supports_streaming: true,
+          });
+          if (!urlColado) {
+            await enviar("👉 <b>Quando quiser, é só colar aqui o link do produto.</b>");
+            return new Response("OK");
+          }
         }
 
-        const urlColado = linkDoAnuncio(texto);
         if (!urlColado) {
-          await enviar(
-            "⚠️ Não achei um link de anúncio na mensagem.\n\nMande o link do produto, por exemplo:\n" +
-              "• https://produto.mercadolivre.com.br/...\n• https://meli.la/...",
-          );
+          /* Sem link: entende a mensagem e responde (até 30 por conversa por
+             dia; depois disso, ou sem modelo, a resposta pronta). */
+          const hoje = new Date().toISOString().slice(0, 10);
+          const usos = conversa?.ia_dia === hoje ? (conversa?.ia_usos ?? 0) : 0;
+          let resposta: string | null = null;
+          if (usos < 30 && texto) {
+            await telegram(token, "sendChatAction", { chat_id: chatId, action: "typing" });
+            resposta = await responderConversa(texto, nome).catch(() => null);
+            await db
+              .from("telegram_chats")
+              .update({ ia_dia: hoje, ia_usos: usos + 1 })
+              .eq("chat_id", chatId);
+          }
+          await enviar(resposta ?? respostaSemModelo(nome));
           return new Response("OK");
         }
 
@@ -77,9 +112,6 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
           "🔍 <b>Recebi o link!</b> Estou comparando com outras lojas. Em geral leva menos de 2 minutos.",
         );
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const db = supabaseAdmin as any;
         const { data: novo, error } = await db.rpc("pedir_comparacao", {
           p_url: urlColado,
           p_nova: false,

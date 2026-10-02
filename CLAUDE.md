@@ -273,6 +273,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (/?link=..., que abre a comparação sozinho).
 - Token em API_TELEGRAM (Secrets). /api/public/telegram-setup registra o
   webhook com um segredo derivado do token; o webhook recusa chamada sem ele.
+- PRIMEIRO ACESSO (Weslei, 02/10): boas-vindas amigáveis com o "como funciona"
+  e o vídeo do site (public/video/como-funciona-v4-vertical.mp4) só na
+  primeira conversa (tabela telegram_chats) e em /start ou /ajuda.
+- Mensagem SEM link: o modelo entende e responde (GPT primeiro; reserva
+  flash-lite/Gemma, que não disputam a cota dos modelos maiores da
+  conferência), curto, sem inventar preço/loja, sem prometer cupom, sem citar
+  IA e sem mandar link (resposta com link é descartada). Até 30 por conversa
+  por dia; sem modelo, resposta pronta pedindo o link e como copiá-lo.
 
 ## Acompanhar preço (teste, 28/09)
 - Botão "Acompanhar preço" no resultado (preço-alvo opcional) e página
