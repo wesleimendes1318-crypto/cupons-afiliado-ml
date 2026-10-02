@@ -515,25 +515,30 @@ function descricaoCupom(cupom: Cupom) {
 }
 
 function mensagemCompartilharCupom(cupom: Cupom, codigo: string, linkLoja: string) {
+  /* Mesmo tom amigável da Melhor opção (Weslei, 02/10): emojis padrão, os
+     dados só quando existem e o passo a passo curto. */
   const linhas = [
-    "Olha o cupom que encontrei 👀",
-    `Loja: ${cupom.vendedor}`,
-    `Desconto: ${percentualTexto(cupom)}`,
+    "🎟️ *Achei um cupom que vale a pena!*",
+    "",
+    `🏪 *${cupom.vendedor}*`,
+    `💸 ${percentualTexto(cupom)}`,
   ];
   const limite = formatarTeto(cupom);
-  if (limite === "sem limite de valor") linhas.push("Limite: sem limite de valor");
-  else if (limite !== "Limite não informado") linhas.push(`Economia máxima: ${limite}`);
+  if (limite === "sem limite de valor") linhas.push("✅ Desconto sem limite de valor");
+  else if (limite !== "Limite não informado") linhas.push(`💸 Economia de até *${limite}*`);
   /* compra_min zero e compra_min ausente sao a mesma coisa para quem le: nao ha
      minimo. Escrever "Compra minima: R$ 0,00" so confunde. */
   if (cupom.compra_min != null && cupom.compra_min > 0) {
-    linhas.push(`Compra mínima: ${brl.format(cupom.compra_min)}`);
+    linhas.push(`🧾 Vale em compras a partir de ${brl.format(cupom.compra_min)}`);
   }
-  if (cupom.vence) linhas.push(`Válido até: ${dataCurta.format(dataDoBanco(cupom.vence))}`);
+  if (cupom.vence) linhas.push(`⏰ Válido até ${dataCurta.format(dataDoBanco(cupom.vence))}`);
   linhas.push(
-    `Ver produtos da loja: ${linkLoja}`,
     "",
-    `No carrinho, use este código: ${codigo}`,
-    "Se o carrinho já vier com um cupom da própria loja, remova ele e coloque este no lugar. O desconto é o mesmo e assim o achado fica registrado para mim.",
+    "🛒 *Como usar:*",
+    `1️⃣ Veja os produtos da loja: ${linkLoja}`,
+    `2️⃣ No carrinho, cole este código: *${codigo}*`,
+    "",
+    "💡 Se o carrinho já vier com um cupom da própria loja, remova e coloque este no lugar. O desconto é o mesmo. 😉",
   );
   return linhas.join("\n");
 }
