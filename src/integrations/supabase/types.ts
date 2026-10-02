@@ -451,6 +451,7 @@ export type Database = {
         Row: {
           analise: Json | null
           atendido_em: string | null
+          cep_destino: string | null
           chave: string
           codigo: string | null
           criado_em: string
@@ -469,6 +470,7 @@ export type Database = {
         Insert: {
           analise?: Json | null
           atendido_em?: string | null
+          cep_destino?: string | null
           chave?: string
           codigo?: string | null
           criado_em?: string
@@ -487,6 +489,7 @@ export type Database = {
         Update: {
           analise?: Json | null
           atendido_em?: string | null
+          cep_destino?: string | null
           chave?: string
           codigo?: string | null
           criado_em?: string
@@ -881,10 +884,12 @@ export type Database = {
           vendedor: string
         }[]
       }
-      pedir_comparacao: {
-        Args: { p_nova?: boolean; p_url: string }
-        Returns: Json
-      }
+      pedir_comparacao:
+        | { Args: { p_nova?: boolean; p_url: string }; Returns: Json }
+        | {
+            Args: { p_cep: string; p_nova: boolean; p_url: string }
+            Returns: Json
+          }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
       pedir_link_base: {
