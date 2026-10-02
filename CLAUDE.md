@@ -99,6 +99,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Frete conta: loja com frete PAGO nunca vira "mais barata"/recomendação
   (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90 com frete grátis).
   Na tabela aparece "Frete grátis" ou "Sem frete grátis".
+  NUNCA juntar valor em reais com "frete" na mesma expressão (02/10, pedido
+  563: "R$ 2.706,58 a menos + frete" parecia frete de R$ 2 mil; era R$ 1,00).
+  A diferença diz "a menos no produto" / "no produto" e o frete vai em linha
+  própria: "(frete de R$ X à parte · total R$ Y)" ou "(frete à parte)".
   Frete é o que o COMPRADOR paga (26/09): free_shipping/has_free_shipping
   false só diz que o vendedor não banca. Fonte certa: shipping.cost da lista
   oficial de ofertas (0 = grátis, > 0 = pago; Baba Black R$ 57 cost 44,92) e o

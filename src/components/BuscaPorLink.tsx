@@ -2917,25 +2917,48 @@ function TodasAsLojas({
                             (l.colado ? " · você colou" : "")}
                         </span>
                       );
+                    /* FRETE SEMPRE EM LINHA PRÓPRIA (02/10, pedido 563: "R$ 2.706,58 a
+                       menos + frete" parecia frete de R$ 2 mil; o frete era R$ 1,00).
+                       Nunca juntar valor em reais com "frete" na mesma expressão. */
+                    const linhaFrete =
+                      l.freteGratis === false ? (
+                        <span className="block text-[10px] font-normal text-secondary-ink">
+                          {l.custoFrete != null && l.custoFrete > 0
+                            ? `(frete de ${brl(l.custoFrete)} à parte · total ${brl((l.final ?? 0) + l.custoFrete)})`
+                            : "(frete à parte)"}
+                        </span>
+                      ) : null;
+                    const voceColou = l.colado ? (
+                      <span className="block text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                        você colou
+                      </span>
+                    ) : null;
                     if (extra != null && extra <= -0.5)
                       return (
-                        <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                          {brl(-extra)} a menos
-                          {l.freteGratis === false ? " + frete" : ""}
-                        </span>
-                      );
-                    if (l.freteGratis === false && extra != null && extra < 0.5)
-                      return (
-                        <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                          + frete
-                          {l.colado ? " · você colou" : ""}
+                        <span className="block leading-tight">
+                          <span className="block text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                            {brl(-extra)} a menos no produto
+                          </span>
+                          {linhaFrete}
+                          {voceColou}
                         </span>
                       );
                     return (
-                      <span className="block text-[11px] font-bold text-red-700 dark:text-red-400">
-                        {extra != null && extra >= 0.5 ? `+${brl(extra)} a mais` : "mesmo preço"}
-                        {l.freteGratis === false ? " + frete" : ""}
-                        {l.colado ? " · você colou" : ""}
+                      <span className="block leading-tight">
+                        <span
+                          className={
+                            "block text-[11px] font-bold " +
+                            (extra != null && extra >= 0.5
+                              ? "text-red-700 dark:text-red-400"
+                              : "text-secondary-ink")
+                          }
+                        >
+                          {extra != null && extra >= 0.5
+                            ? `+${brl(extra)} no produto`
+                            : "mesmo preço no produto"}
+                        </span>
+                        {linhaFrete}
+                        {voceColou}
                       </span>
                     );
                   })()}
