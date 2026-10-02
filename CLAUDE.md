@@ -241,6 +241,17 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   "Muda" (mudaCompleta, src/lib/ficha.ts) e tiram o achismo da conferência
   ("não informa", "pode indicar"). Só acrescenta diferença; a conferência
   continua reprovando toda diferença listada, até a especulativa.
+- O QUE MUDA PARA VOCÊ (Weslei, 02/10: "indicar como muda para o cliente,
+  não somente a diferença técnica"): Parecidos e Melhor alternativa mostram
+  cada diferença como "Campo: o seu X → este Y" + o que significa na compra
+  (src/lib/diferencas.ts: regra fixa por tipo ou conta com os dois números,
+  ex. "Cabe 53 L a menos que o seu"; nunca inventa vantagem), mais preço por
+  unidade (só com quantidade diferente), frete pago e "✓ Igual ao seu" (o que
+  as duas fichas confirmam). Nas características, em amarelo o que difere do
+  colado (compararFichas). A conferência escreve cada diferença como
+  "Campo: original -> candidato" (servidor e extensão). Cartão do parecido:
+  cabeçalho (foto, título, loja, selos) → preço e diferença → o que muda →
+  "Ver características" e "Comprar com segurança".
 - Tabela: preço abaixo de 70% da mediana das lojas ganha o aviso "Preço muito
   abaixo das outras lojas: confira o vendedor antes de comprar". GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
   variações; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de

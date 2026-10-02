@@ -783,7 +783,7 @@ const PEDIDO_CONFERENCIA =
   + 'citar o mesmo modelo do original. Candidato sem foto: igual=false. Ignore preco, loja e propaganda.\n'
   + REGRA_NOMES
   + REGRA_CATEGORIAS
-  + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia.\n'
+  + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia. Escreva cada diferenca como "Campo: valor do original -> valor do candidato" (ex.: "Cor: branco -> preto", "Capacidade: 500 L -> 477 L").\n'
   + 'vantagem: o que o candidato oferece A MAIS que o original, de forma objetiva e curta (conjunto completo x so '
   + 'uma peca, kit com mais unidades, volume maior, versao superior); vazio quando nao ha.\n'
   + 'original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro '
@@ -807,7 +807,7 @@ const PEDIDO_CONFIRMACAO =
   + 'acessorio vendido junto (pelicula, cabo).\n'
   + REGRA_NOMES
   + REGRA_CATEGORIAS
-  + 'igual=true somente sem nenhuma contradicao. Contradicao real na duvida: igual=false.\n'
+  + 'igual=true somente sem nenhuma contradicao. Contradicao real na duvida: igual=false. Escreva cada diferenca como "Campo: valor do original -> valor do candidato" (ex.: "Cor: branco -> preto", "Capacidade: 500 L -> 477 L").\n'
   + 'Responda so JSON: {"candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":true,"mesma_foto":false,"semelhanca":0,"confianca":0-100,"motivo":"curto"}]}';
 
 /* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */

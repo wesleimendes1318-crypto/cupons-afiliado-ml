@@ -31,11 +31,13 @@ const CAMPOS: Record<string, string> = {
 };
 
 function mapa(d: Detalhes) {
-  const m = new Map<string, string>();
+  /* campo -> valor e o nome da característica como o anúncio escreve. */
+  const m = new Map<string, { valor: string; nome: string }>();
   for (const c of d?.caracteristicas ?? []) {
-    const k = semAcento(String(c?.nome ?? ""));
+    const nome = String(c?.nome ?? "").trim();
+    const k = semAcento(nome);
     const v = String(c?.valor ?? "").trim();
-    if (CAMPOS[k] && v && !m.has(CAMPOS[k])) m.set(CAMPOS[k], v);
+    if (CAMPOS[k] && v && !m.has(CAMPOS[k])) m.set(CAMPOS[k], { valor: v, nome });
   }
   return m;
 }
@@ -57,19 +59,29 @@ function iguais(campo: string, a: string, b: string) {
 /** Diferenças confirmadas pelas duas fichas, prontas para a tela:
  *  ["Modelo BRE68AK (o seu: BRE66)", "Capacidade 477 L (o seu: 500 L)"]. */
 export function diferencasDaFicha(colado: Detalhes, outro: Detalhes): string[] {
+  return diferencasDaFichaItens(colado, outro).map((d) => `${d.campo} ${d.este} (o seu: ${d.seu})`);
+}
+
+/** As mesmas diferenças, separadas: campo, valor do colado (seu), valor do
+ *  outro anúncio (este) e o nome da característica no outro anúncio. */
+export function diferencasDaFichaItens(
+  colado: Detalhes,
+  outro: Detalhes,
+): { campo: string; seu: string; este: string; nome: string }[] {
   const a = mapa(colado);
   const b = mapa(outro);
-  const out: string[] = [];
+  const out: { campo: string; seu: string; este: string; nome: string }[] = [];
   for (const [campo, va] of a) {
     const vb = b.get(campo);
-    if (vb && !iguais(campo, va, vb)) out.push(`${campo} ${vb} (o seu: ${va})`);
+    if (vb && !iguais(campo, va.valor, vb.valor))
+      out.push({ campo, seu: va.valor, este: vb.valor, nome: vb.nome });
   }
   return out;
 }
 
 /* Achismo da conferência ("não informa", "pode indicar"): com a ficha
    dizendo o fato, o achismo sai do texto. Mesma lista do servidor. */
-const ESPECULACAO =
+export const ESPECULACAO =
   /(n[aã]o (informa|especifica|menciona|cita|confirma|indica)|sem informa[çc][aã]o|pode (indicar|ser|significar|sugerir)|possivelmente|provavelmente|talvez|n[aã]o confirmado)/i;
 
 /** O que muda, juntando a conferência pela foto e as fichas. */
@@ -84,6 +96,51 @@ export function mudaCompleta(
     .map((p) => p.trim())
     .filter(Boolean)
     .filter((p) => !(ficha.length && ESPECULACAO.test(p)));
-  const todas = [...ficha, ...partes];
+  /* A conferência escreve "Campo: original -> candidato" (02/10). */
+  const todas = [...ficha, ...partes.map((p) => p.replace(/\s*->\s*/g, " → "))];
   return todas.length ? todas.join("; ") : (muda ?? null);
+}
+
+/** Ficha x ficha para a tela: o que é igual nos campos decisivos (mais a
+ *  marca) e os nomes das características do outro anúncio que diferem do
+ *  colado (para destacar em amarelo; aqui a cor também conta). */
+export function compararFichas(
+  colado: Detalhes,
+  outro: Detalhes,
+): { iguais: { campo: string; valor: string }[]; diferentes: string[] } {
+  const iguais: { campo: string; valor: string }[] = [];
+  const diferentes: string[] = [];
+  const doColado = new Map<string, string>();
+  for (const c of colado?.caracteristicas ?? []) {
+    const k = semAcento(String(c?.nome ?? ""));
+    const v = String(c?.valor ?? "").trim();
+    if (k && v && !doColado.has(k)) doColado.set(k, v);
+  }
+  const vistos = new Set<string>();
+  for (const c of outro?.caracteristicas ?? []) {
+    const nome = String(c?.nome ?? "").trim();
+    const k = semAcento(nome);
+    const v = String(c?.valor ?? "").trim();
+    const va = doColado.get(k);
+    if (!k || !v || !va) continue;
+    const campo = CAMPOS[k] ?? (k === "marca" ? "Marca" : k === "cor" ? "Cor" : null);
+    if (!campo) {
+      if (semAcento(va).replace(/\s+/g, "") !== semAcento(v).replace(/\s+/g, ""))
+        diferentes.push(nome);
+      continue;
+    }
+    if (iguais_(campo, va, v)) {
+      if (campo !== "Cor" && !vistos.has(campo)) {
+        vistos.add(campo);
+        iguais.push({ campo, valor: v });
+      }
+    } else diferentes.push(nome);
+  }
+  return { iguais, diferentes };
+}
+
+function iguais_(campo: string, a: string, b: string) {
+  if (campo === "Marca" || campo === "Cor")
+    return semAcento(a).replace(/\s+/g, "") === semAcento(b).replace(/\s+/g, "");
+  return iguais(campo, a, b);
 }
