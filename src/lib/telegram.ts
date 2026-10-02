@@ -193,7 +193,7 @@ export async function responderConversa(texto: string, nome: string | null) {
   else {
     const { gerarComModelos } = await import("@/lib/conferir-produto");
     const r = await gerarComModelos([{ text: prompt }], {
-      ordem: ["gemini-flash-lite-latest", "gemma-3-27b-it", "gemma-4-26b-a4b-it"],
+      ordem: ["gemini-flash-lite-latest", "gemma-4-26b-a4b-it", "gemma-4-31b-it"],
       prazo: 12_000,
     });
     if (r.ok) bruto = r.texto;

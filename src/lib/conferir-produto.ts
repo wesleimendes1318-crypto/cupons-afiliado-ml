@@ -143,7 +143,8 @@ const REGRAS_DESDE = Date.parse("2026-09-28T00:00:00Z");
    Vem sempre DEPOIS de todos os Gemini; modelo que a chave nao tem (404) e
    pulado. Veredito do Gemma precisa de confianca maior (e mais fraco em
    detalhe de foto). */
-const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it", "gemma-3-27b-it"];
+/* gemma-3-27b-it saiu do ar (02/10, pedido 588: 404 "not found"). */
+const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it"];
 const CONFIANCA_MINIMA_GEMMA = 90;
 const ehGemma = (modelo: string | undefined) => /^gemma/i.test(modelo ?? "");
 const confiancaMinima = (modelo: string | undefined) =>
