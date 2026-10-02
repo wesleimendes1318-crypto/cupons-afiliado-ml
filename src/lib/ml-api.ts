@@ -31,7 +31,9 @@ async function lerConfig(chaves: string[]) {
 
 async function gravarConfig(pares: Record<string, string>) {
   const db = await admin();
-  await db.from("sinc_config").upsert(Object.entries(pares).map(([chave, valor]) => ({ chave, valor })));
+  await db
+    .from("sinc_config")
+    .upsert(Object.entries(pares).map(([chave, valor]) => ({ chave, valor })));
 }
 
 let tokenMem: { valor: string; ate: number } | null = null;
@@ -56,7 +58,12 @@ async function tokenDeAcesso(forcarNovo = false): Promise<string | null> {
   const refresh = cfg["ml_refresh_token"] || process.env["ML_REFRESH_TOKEN"] || "";
   const corpo = new URLSearchParams(
     refresh
-      ? { grant_type: "refresh_token", client_id: id, client_secret: segredo, refresh_token: refresh }
+      ? {
+          grant_type: "refresh_token",
+          client_id: id,
+          client_secret: segredo,
+          refresh_token: refresh,
+        }
       : { grant_type: "client_credentials", client_id: id, client_secret: segredo },
   );
   try {
@@ -70,7 +77,11 @@ async function tokenDeAcesso(forcarNovo = false): Promise<string | null> {
       console.warn("[ml-api] token recusado:", r.status);
       return null;
     }
-    const j = (await r.json()) as { access_token?: string; refresh_token?: string; expires_in?: number };
+    const j = (await r.json()) as {
+      access_token?: string;
+      refresh_token?: string;
+      expires_in?: number;
+    };
     if (!j.access_token) return null;
     const novoAte = Date.now() + Math.max(60, (j.expires_in ?? 21_600) - 300) * 1000;
     tokenMem = { valor: j.access_token, ate: novoAte };
@@ -87,7 +98,10 @@ async function tokenDeAcesso(forcarNovo = false): Promise<string | null> {
 }
 
 export class ErroApiMl extends Error {
-  constructor(public status: number, mensagem: string) {
+  constructor(
+    public status: number,
+    mensagem: string,
+  ) {
     super(mensagem);
   }
 }
@@ -97,12 +111,18 @@ export async function mlGet<T>(caminho: string): Promise<T> {
   for (let tentativa = 0; tentativa < 2; tentativa += 1) {
     const token = await tokenDeAcesso(tentativa > 0);
     const r = await fetch(`${API}${caminho}`, {
-      headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       signal: AbortSignal.timeout(8_000),
     });
     if (r.ok) return (await r.json()) as T;
     if (r.status === 401 && tentativa === 0 && token) continue;
-    throw new ErroApiMl(r.status, `API do Mercado Livre respondeu ${r.status} em ${caminho.split("?")[0]}`);
+    throw new ErroApiMl(
+      r.status,
+      `API do Mercado Livre respondeu ${r.status} em ${caminho.split("?")[0]}`,
+    );
   }
   throw new ErroApiMl(401, "sem autorização na API do Mercado Livre");
 }
@@ -121,7 +141,12 @@ export const URL_RETORNO = "https://cupons-afiliado-ml.lovable.app/api/public/ml
 
 export function urlDeAutorizacao(state: string) {
   const id = process.env["ML_CLIENT_ID"] ?? "";
-  const p = new URLSearchParams({ response_type: "code", client_id: id, redirect_uri: URL_RETORNO, state });
+  const p = new URLSearchParams({
+    response_type: "code",
+    client_id: id,
+    redirect_uri: URL_RETORNO,
+    state,
+  });
   return `https://auth.mercadolivre.com.br/authorization?${p.toString()}`;
 }
 
@@ -133,15 +158,25 @@ export async function trocarCodigoPorToken(codigo: string) {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
     body: new URLSearchParams({
-      grant_type: "authorization_code", client_id: id, client_secret: segredo,
-      code: codigo, redirect_uri: URL_RETORNO,
+      grant_type: "authorization_code",
+      client_id: id,
+      client_secret: segredo,
+      code: codigo,
+      redirect_uri: URL_RETORNO,
     }),
     signal: AbortSignal.timeout(10_000),
   });
   const j = (await r.json().catch(() => ({}))) as {
-    access_token?: string; refresh_token?: string; expires_in?: number; message?: string; error?: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    message?: string;
+    error?: string;
   };
-  if (!r.ok || !j.access_token) throw new Error(`o Mercado Livre recusou a troca (${r.status}): ${j.message ?? j.error ?? "sem detalhe"}`);
+  if (!r.ok || !j.access_token)
+    throw new Error(
+      `o Mercado Livre recusou a troca (${r.status}): ${j.message ?? j.error ?? "sem detalhe"}`,
+    );
   const ate = Date.now() + Math.max(60, (j.expires_in ?? 21_600) - 300) * 1000;
   tokenMem = { valor: j.access_token, ate };
   await gravarConfig({
@@ -166,7 +201,10 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
   for (const [nome, caminho] of Object.entries(testes)) {
     try {
       const r = await fetch(`${API}${caminho}`, {
-        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         signal: AbortSignal.timeout(8_000),
       });
       const t = await r.text();
@@ -174,10 +212,14 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
       try {
         const j = JSON.parse(t) as Record<string, unknown>;
         if (nome === "conta") detalhe = `apelido=${String(j["nickname"] ?? "?")}`;
-        else if (nome === "produto_catalogo") detalhe = `buy_box_winner=${j["buy_box_winner"] ? "sim" : "nao"}`;
-        else if (Array.isArray(j["results"])) detalhe = `resultados=${(j["results"] as unknown[]).length}`;
+        else if (nome === "produto_catalogo")
+          detalhe = `buy_box_winner=${j["buy_box_winner"] ? "sim" : "nao"}`;
+        else if (Array.isArray(j["results"]))
+          detalhe = `resultados=${(j["results"] as unknown[]).length}`;
         else if (r.ok) detalhe = "ok";
-      } catch { /* fica o texto cru */ }
+      } catch {
+        /* fica o texto cru */
+      }
       saida[nome] = { status: r.status, detalhe };
     } catch (e) {
       saida[nome] = { status: 0, detalhe: (e as Error).message };
@@ -186,7 +228,10 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
   /* Nome da loja de uma oferta do catalogo: e o que liga a oferta ao cupom. */
   try {
     const r = await fetch(`${API}/products/${exemplos.catalogo}/items?limit=1`, {
-      headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       signal: AbortSignal.timeout(8_000),
     });
     const j = (await r.json()) as { results?: Record<string, unknown>[] };
@@ -195,7 +240,10 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
     saida["campos_oferta"] = { status: r.status, detalhe: Object.keys(o).slice(0, 15).join(",") };
     if (vendedorId) {
       const u = await fetch(`${API}/users/${vendedorId}`, {
-        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         signal: AbortSignal.timeout(8_000),
       });
       const uj = (await u.json().catch(() => ({}))) as { nickname?: string };
@@ -213,8 +261,15 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
     if (id && segredo) {
       const t = await fetch(`${API}/oauth/token`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-        body: new URLSearchParams({ grant_type: "client_credentials", client_id: id, client_secret: segredo }),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: id,
+          client_secret: segredo,
+        }),
         signal: AbortSignal.timeout(10_000),
       });
       const tj = (await t.json().catch(() => ({}))) as { access_token?: string; message?: string };
@@ -226,13 +281,22 @@ export async function diagnosticoApi(exemplos: { item: string; catalogo: string;
           signal: AbortSignal.timeout(8_000),
         });
         const oj = (await o.json().catch(() => ({}))) as { results?: unknown[] };
-        saida["token_do_app"] = { status: o.status, detalhe: `ofertas_catalogo=${oj.results?.length ?? 0}` };
+        saida["token_do_app"] = {
+          status: o.status,
+          detalhe: `ofertas_catalogo=${oj.results?.length ?? 0}`,
+        };
       }
     }
   } catch (e) {
     saida["token_do_app"] = { status: 0, detalhe: (e as Error).message };
   }
-  await gravarConfig({ ml_diagnostico: JSON.stringify({ quando: new Date().toISOString(), comToken: Boolean(token), saida }) });
+  await gravarConfig({
+    ml_diagnostico: JSON.stringify({
+      quando: new Date().toISOString(),
+      comToken: Boolean(token),
+      saida,
+    }),
+  });
   return saida;
 }
 
@@ -244,16 +308,28 @@ export { gravarConfig, lerConfig };
 export async function testarBuscaDeCatalogo(ex: { catalogo: string; up: string; termo: string }) {
   const saida: Record<string, { status: number; detalhe: string }> = {};
   const token = await tokenDeAcesso();
-  const get = async (nome: string, caminho: string, resumo: (j: Record<string, unknown>) => string) => {
+  const get = async (
+    nome: string,
+    caminho: string,
+    resumo: (j: Record<string, unknown>) => string,
+  ) => {
     try {
       const r = await fetch(`${API}${caminho}`, {
-        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         signal: AbortSignal.timeout(10_000),
       });
       const t = await r.text();
       let detalhe = t.slice(0, 140);
       let j: Record<string, unknown> = {};
-      try { j = JSON.parse(t) as Record<string, unknown>; if (r.ok) detalhe = resumo(j); } catch { /* texto cru */ }
+      try {
+        j = JSON.parse(t) as Record<string, unknown>;
+        if (r.ok) detalhe = resumo(j);
+      } catch {
+        /* texto cru */
+      }
       saida[nome] = { status: r.status, detalhe };
       return r.ok ? j : null;
     } catch (e) {
@@ -262,22 +338,75 @@ export async function testarBuscaDeCatalogo(ex: { catalogo: string; up: string; 
     }
   };
 
-  const ficha = await get("ficha", `/products/${ex.catalogo}`, (j) => `nome=${String(j["name"] ?? "?").slice(0, 60)}`);
-  const attrs = (ficha?.["attributes"] as { id?: string; values?: { name?: string }[]; value_name?: string }[] | undefined) ?? [];
+  const ficha = await get(
+    "ficha",
+    `/products/${ex.catalogo}`,
+    (j) => `nome=${String(j["name"] ?? "?").slice(0, 60)}`,
+  );
+  const attrs =
+    (ficha?.["attributes"] as
+      { id?: string; values?: { name?: string }[]; value_name?: string }[] | undefined) ?? [];
   const gtinAttr = attrs.find((a) => a.id === "GTIN");
   const gtin = (gtinAttr?.value_name ?? gtinAttr?.values?.[0]?.name ?? "").replace(/\D/g, "");
-  saida["gtin_da_ficha"] = { status: gtin ? 200 : 0, detalhe: gtin || "a ficha de exemplo nao tem codigo de barras" };
+  saida["gtin_da_ficha"] = {
+    status: gtin ? 200 : 0,
+    detalhe: gtin || "a ficha de exemplo nao tem codigo de barras",
+  };
 
   const resumoBusca = (j: Record<string, unknown>) => {
     const res = (j["results"] as { id?: string }[] | undefined) ?? [];
     return `resultados=${res.length} primeiro=${res[0]?.id ?? "-"}`;
   };
-  if (gtin) await get("busca_por_codigo", `/products/search?status=active&site_id=MLB&product_identifier=${gtin}`, resumoBusca);
-  await get("busca_por_nome", `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(ex.termo)}`, resumoBusca);
-  await get("produto_do_vendedor", `/user-products/${ex.up}`, (j) => `catalogo=${String(j["catalog_product_id"] ?? "nenhum")}`);
-  await get("lojas_da_ficha", `/products/${ex.catalogo}/items?limit=5`, (j) =>
-    `lojas=${((j["results"] as unknown[] | undefined) ?? []).length}`);
+  if (gtin)
+    await get(
+      "busca_por_codigo",
+      `/products/search?status=active&site_id=MLB&product_identifier=${gtin}`,
+      resumoBusca,
+    );
+  await get(
+    "busca_por_nome",
+    `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(ex.termo)}`,
+    resumoBusca,
+  );
+  await get(
+    "produto_do_vendedor",
+    `/user-products/${ex.up}`,
+    (j) => `catalogo=${String(j["catalog_product_id"] ?? "nenhum")}`,
+  );
+  const lojas = await get(
+    "lojas_da_ficha",
+    `/products/${ex.catalogo}/items?limit=5`,
+    (j) => `lojas=${((j["results"] as unknown[] | undefined) ?? []).length}`,
+  );
+  /* FRETE POR CEP (plano do CEP automatico, 02/10): a API oficial simula o
+     frete para um CEP sem tocar em conta nenhuma? Testa SP e Manaus. */
+  const itemFrete = ((lojas?.["results"] as { item_id?: string }[] | undefined) ?? [])[0]?.item_id;
+  const resumoFrete = (j: Record<string, unknown>) => {
+    const op =
+      (j["options"] as { cost?: number; list_cost?: number; name?: string }[] | undefined) ?? [];
+    return `opcoes=${op.length} custos=${op.map((o) => o.cost ?? "?").join("/")}`;
+  };
+  if (itemFrete) {
+    await get(
+      "frete_cep_sp",
+      `/items/${itemFrete}/shipping_options?zip_code=01001000`,
+      resumoFrete,
+    );
+    await get(
+      "frete_cep_manaus",
+      `/items/${itemFrete}/shipping_options?zip_code=69005010`,
+      resumoFrete,
+    );
+  } else {
+    saida["frete_cep_sp"] = { status: 0, detalhe: "sem anuncio da ficha para testar" };
+  }
 
-  await gravarConfig({ ml_teste_busca: JSON.stringify({ quando: new Date().toISOString(), comToken: Boolean(token), saida }) });
+  await gravarConfig({
+    ml_teste_busca: JSON.stringify({
+      quando: new Date().toISOString(),
+      comToken: Boolean(token),
+      saida,
+    }),
+  });
   return saida;
 }

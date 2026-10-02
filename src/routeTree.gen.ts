@@ -36,6 +36,7 @@ import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-
 import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
 import { Route as ApiPublicMlTesteRouteImport } from './routes/api/public/ml-teste'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
+import { Route as ApiPublicRegiaoRouteImport } from './routes/api/public/regiao'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -174,6 +175,11 @@ const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
   path: '/api/public/recomendar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRegiaoRoute = ApiPublicRegiaoRouteImport.update({
+  id: '/api/public/regiao',
+  path: '/api/public/regiao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
+  '/api/public/regiao': typeof ApiPublicRegiaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -232,6 +239,7 @@ export interface FileRoutesByTo {
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
+  '/api/public/regiao': typeof ApiPublicRegiaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
+  '/api/public/regiao': typeof ApiPublicRegiaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
     | '/api/public/recomendar'
+    | '/api/public/regiao'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
     | '/api/public/recomendar'
+    | '/api/public/regiao'
   id:
     | '__root__'
     | '/'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
     | '/api/public/recomendar'
+    | '/api/public/regiao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -381,6 +393,7 @@ export interface RootRouteChildren {
   ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
   ApiPublicMlTesteRoute: typeof ApiPublicMlTesteRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
+  ApiPublicRegiaoRoute: typeof ApiPublicRegiaoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -574,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRecomendarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/regiao': {
+      id: '/api/public/regiao'
+      path: '/api/public/regiao'
+      fullPath: '/api/public/regiao'
+      preLoaderRoute: typeof ApiPublicRegiaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -606,6 +626,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,
   ApiPublicMlTesteRoute: ApiPublicMlTesteRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
+  ApiPublicRegiaoRoute: ApiPublicRegiaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
