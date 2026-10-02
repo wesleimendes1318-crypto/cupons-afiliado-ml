@@ -63,6 +63,9 @@ export const REGRA_CATEGORIAS =
   "SEMPRE sao diferenca, em qualquer categoria: condicao (novo x usado, seminovo, recondicionado, vitrine, mostruario, " +
   "avariado, sem caixa, tester), original x replica, similar, compativel ou generico, outra marca, e kit x unidade, par " +
   "ou quantidade diferente.\n" +
+  "SEMPRE e diferenca, mesmo com foto identica: produto completo (aparelho, eletrodomestico, equipamento) x so " +
+  "uma PARTE dele (carcaca, frontal, tampa, gabinete, moldura, display/tela, refil, peca de reposicao, acessorio " +
+  "avulso). Peca custa muito menos e o vendedor usa a foto do aparelho: confira se o titulo diz que e so a peca.\n" +
   "O que decide em cada categoria (conta so se os dois informam e diferem):\n" +
   "Celulares e informatica: modelo e geracao, armazenamento, RAM, cor, 4G x 5G, chip, teclado ABNT2 x US, polegadas.\n" +
   "Eletrodomesticos, eletronicos, ferramentas, agro e industria: voltagem (110/127, 220, bivolt), potencia, capacidade em " +
@@ -92,6 +95,19 @@ function fatosDoOriginal(original: Anuncio): string {
     (original.categoria ? "\nCategoria: " + original.categoria.slice(0, 300) : "") +
     (original.fatos ? "\nFicha do anuncio original: " + original.fatos.slice(0, 900) : "")
   );
+}
+
+/* Peca no lugar do aparelho (pedido 535, 30/09): mesma regra da extensao
+   (extensao/comparador.js). Original que nao e peca x candidato carcaca,
+   tampa, moldura, frontal, display/tela avulsa, refil ou peca de reposicao. */
+export const RE_PECA_PARTE =
+  /(?<!\bcom )\b(carca[çc]as?|gabinetes?|molduras?|tampas?|painel frontal|frontal (?:de|do|da|para)|telas? touch|touch ?screen|display (?:de|do|da|para|lcd|oled|compat[ií]vel)|refil|refis|pe[çc]as? de reposi[çc][ãa]o|(?:somente|apenas|s[oó]) (?:a )?pe[çc]a|suporte (?:de|para))\b/i;
+export const MUDA_PECA = "Apenas carcaça / peça de reposição (não é o aparelho completo)";
+export function pecaNoLugarDoAparelho(
+  original: string | null | undefined,
+  candidato: string | null | undefined,
+) {
+  return !RE_PECA_PARTE.test(String(original ?? "")) && RE_PECA_PARTE.test(String(candidato ?? ""));
 }
 
 /* CONDICAO pelo titulo (27/09): usado, recondicionado, vitrine... nunca e o
@@ -578,6 +594,14 @@ export async function conferirMesmoProduto(
       a.igual = false;
       a.parecido = true;
       a.motivo = `Condição diferente (${cond})`;
+    }
+  }
+  /* Peca no lugar do aparelho (pedido 535): nunca igual, diga a IA o que disser. */
+  for (const a of avaliacao) {
+    if (pecaNoLugarDoAparelho(original.titulo, lista[a.indice]?.titulo)) {
+      a.igual = false;
+      a.parecido = true;
+      a.motivo = MUDA_PECA;
     }
   }
   const iguais = avaliacao

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   palavrasDoTitulo, pareceMesmoProduto, ofertasDaBusca, ofertasDoCatalogo,
-  precoDoCartao, itemDoUrl, escolherAlternativas, ehCaptcha, urlDeBusca
+  precoDoCartao, itemDoUrl, escolherAlternativas, ehCaptcha, urlDeBusca, pecaNoLugarDoAparelho
 } from '../comparador.js';
 
 test('palavras do titulo mantem os espacos', () => {
@@ -457,4 +457,18 @@ test('precos a vista (Pix) e parcelado do proprio anuncio (28/09, iPhone)', asyn
   /* Escapado dentro de JSON (como vem no HTML). */
   const esc = pagina.replace(/"/g, '\\"');
   assert.equal(precosDoItem(esc, 'MLB1').pix, 8781.4);
+});
+
+test('carcaca nunca e o mesmo produto que o aparelho (pedido 535)', () => {
+  const original = 'Controle De Acesso Senha E Cartão Digiprox Sa203mf Intelbras';
+  const carcaca = 'Carcaça Controle De Acesso Intelbras Senha Cartão Sa 203';
+  assert.equal(pecaNoLugarDoAparelho(original, carcaca), true);
+  assert.equal(pareceMesmoProduto(original, carcaca), false);
+  /* o aparelho inteiro continua passando */
+  assert.equal(pecaNoLugarDoAparelho(original, 'Controle De Acesso Intelbras Sa 203 Mf Senha E Cartão'), false);
+  /* produto completo que cita a parte ("com tampa") nao e peca */
+  assert.equal(pecaNoLugarDoAparelho('Panela Tramontina 24cm', 'Panela Tramontina 24cm Com Tampa De Vidro'), false);
+  /* original que ja e peca: a regra nao se aplica */
+  assert.equal(pecaNoLugarDoAparelho('Refil Purificador Electrolux', 'Refil Para Purificador Electrolux Pe11b'), false);
+  assert.equal(pecaNoLugarDoAparelho('Purificador Electrolux Pe11b', 'Refil Para Purificador Electrolux Pe11b'), true);
 });

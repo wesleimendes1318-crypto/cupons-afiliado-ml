@@ -1627,13 +1627,18 @@ function Resultado({
      haver variação em quantidade, mas precisa analisar a semelhança e
      custo-benefício"); com 5 pontos a menos, para a mesma quantidade vir
      na frente quando o resto empata. */
+  /* Parecido que o programa de afiliados recusou (semAfiliado) não aparece
+     (pedido 525, 30/09: o de R$ 749 mostrava "R$ 205,00 a menos", mas o botão
+     abria o anúncio colado de R$ 954). Sem link próprio, o preço dele não
+     é alcançável pelo botão; nunca endereço sem afiliado. */
+  const parecidosComLink = (a?.parecidos ?? []).filter((p) => p.semAfiliado !== true);
   const baseAlt = { preco: precoDoMesmo, titulo: a?.titulo };
   const notaAlt = (p: NonNullable<Analise["parecidos"]>[number]) =>
     notaDeAlternativa(p, a?.titulo) - (podeSerAlternativa(p, baseAlt).cb ? 5 : 0);
   const alternativa =
     precoDoMesmo == null
       ? null
-      : ([...(a?.parecidos ?? [])]
+      : ([...parecidosComLink]
           .filter(
             (p) =>
               p.freteGratis !== false &&
@@ -1680,7 +1685,7 @@ function Resultado({
     });
   };
   const parecidosSemAlternativa = ordenarParecidos(
-    alternativa ? (a?.parecidos ?? []).filter((p) => p !== alternativa) : (a?.parecidos ?? []),
+    alternativa ? parecidosComLink.filter((p) => p !== alternativa) : parecidosComLink,
   );
 
   /* Quando a leitura falha, o "link" devolvido e o proprio endereco colado, e
@@ -1783,7 +1788,7 @@ function Resultado({
       muda: null,
       vantagem: null,
     })),
-    ...(a?.parecidos ?? []).slice(0, 8).map((p, i) => ({
+    ...parecidosComLink.slice(0, 8).map((p, i) => ({
       chave: `par-${i}`,
       tipo: "parecido" as const,
       titulo: p.titulo,
@@ -1804,7 +1809,7 @@ function Resultado({
     !leituraFalhou &&
     linhasLojas.length >= 2;
   /* Coluna da direita: lojas comparadas e/ou parecidos. */
-  const temColuna = mostraTabela || (!leituraFalhou && (a?.parecidos?.length ?? 0) > 0);
+  const temColuna = mostraTabela || (!leituraFalhou && parecidosComLink.length > 0);
 
   return (
     <div
@@ -1931,7 +1936,7 @@ function Resultado({
             opcoes={opcoesEscolha}
             padrao={
               recomendada?.chave ??
-              (alternativa ? `par-${(a?.parecidos ?? []).indexOf(alternativa)}` : null)
+              (alternativa ? `par-${parecidosComLink.indexOf(alternativa)}` : null)
             }
             pedidoId={pedidoId}
             dispositivo={dispositivo}

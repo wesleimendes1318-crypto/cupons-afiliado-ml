@@ -111,7 +111,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
     });
   }
   const parecidos = [...((a["parecidos"] as Bruto[] | undefined) ?? [])]
-    .filter((p) => txt(p["link"]) && num(p["preco"]) != null)
+    .filter((p) => txt(p["link"]) && num(p["preco"]) != null && p["semAfiliado"] !== true)
     .sort(
       (x, y) =>
         (num(y["semelhanca"]) ?? (y["mesmaFoto"] === true ? 90 : 0)) -

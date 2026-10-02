@@ -12,7 +12,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
-         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes } from './comparador.js';
+         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -741,6 +741,9 @@ const REGRA_CATEGORIAS =
   + 'SEMPRE sao diferenca, em qualquer categoria: condicao (novo x usado, seminovo, recondicionado, vitrine, mostruario, '
   + 'avariado, sem caixa, tester), original x replica, similar, compativel ou generico, outra marca, e kit x unidade, par '
   + 'ou quantidade diferente.\n'
+  + 'SEMPRE e diferenca, mesmo com foto identica: produto completo (aparelho, eletrodomestico, equipamento) x so '
+  + 'uma PARTE dele (carcaca, frontal, tampa, gabinete, moldura, display/tela, refil, peca de reposicao, acessorio '
+  + 'avulso). Peca custa muito menos e o vendedor usa a foto do aparelho: confira se o titulo diz que e so a peca.\n'
   + 'O que decide em cada categoria (conta so se os dois informam e diferem):\n'
   + 'Celulares e informatica: modelo e geracao, armazenamento, RAM, cor, 4G x 5G, chip, teclado ABNT2 x US, polegadas.\n'
   + 'Eletrodomesticos, eletronicos, ferramentas, agro e industria: voltagem (110/127, 220, bivolt), potencia, capacidade em '
@@ -843,6 +846,23 @@ let ultimaIA = null;
    produto. Ela descreve a foto do original, compara cada candidato e so passa
    o que ela der como igual com confianca >= 80. Sem foto nao passa.
    Ordem: chave da extensao (varios modelos) e, se falhar, a do servidor. */
+/* Peca no lugar do aparelho (pedido 535, 30/09): carcaca, tampa, frontal,
+   display avulso, refil... nunca e o mesmo produto que o aparelho completo,
+   diga a IA o que disser. Vira parecido com o aviso do que muda. */
+function barrarPecas(original, itens, iguais) {
+  const tit = original && original.titulo;
+  for (const i of [...iguais]) {
+    if (pecaNoLugarDoAparelho(tit, (itens[i] || {}).titulo)) iguais.delete(i);
+  }
+  for (const a of ((ultimaIA && ultimaIA.avaliacao) || [])) {
+    if (!pecaNoLugarDoAparelho(tit, (itens[a.indice] || {}).titulo)) continue;
+    a.igual = false;
+    a.parecido = true;
+    a.motivo = MUDA_PECA;
+  }
+  return iguais;
+}
+
 async function mesmoProdutoPelaGemini(original, lista) {
   if (!lista || !lista.length) return new Set();
   const itens = lista.slice(0, 12);
@@ -865,7 +885,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
     ultimaIA = { via: 'servidor', guardados: sv.guardados || 0, modelo: sv.modelo, descricao: sv.descricaoOriginal || null,
                  alertaOriginal: sv.alertaOriginal || null,
                  avaliacao: (sv.avaliacao || []).map(a => ({ ...a, titulo: String((itens[a.indice] || {}).titulo || '').slice(0, 70) })) };
-    return new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length));
+    return barrarPecas(original, itens, new Set(sv.iguais.filter(n => Number.isInteger(n) && n >= 0 && n < itens.length)));
   }
   erros.push('servidor: ' + ((sv && (sv.status ? sv.status + ' ' : '') + (sv.modelo ? sv.modelo + ' ' : '') + (sv.erro || '')) || 'sem resposta'));
 
@@ -944,7 +964,7 @@ async function mesmoProdutoPelaGemini(original, lista) {
       ultimaIA = { via: 'extensao', modelo: r.modelo, erros, descricao: String(obj.descricao_original || '').slice(0, 300),
                    alertaOriginal: contradiz.length >= 12 ? contradiz.slice(0, 220) : null,
                    avaliacao: avaliacao.map(a => ({ ...a, titulo: String(itens[a.indice].titulo || '').slice(0, 70) })) };
-      return new Set(iguais);
+      return barrarPecas(original, itens, new Set(iguais));
     }
     erros.push('extensao: ' + (r.ok ? 'JSON invalido' : (r.status + ' ' + (r.modelo || '') + ' ' + (r.erro || ''))));
   } else {
@@ -3231,12 +3251,27 @@ async function mesmoProdutoEmOutrasLojas(urlProduto, ctx) {
         return achados;
       } catch (e) { return []; }
     })();
-    const [daBusca, daPagina] = await Promise.all([
+    const [daBusca, daPaginaLida] = await Promise.all([
       achadosCombinados(titulo, finalAtual, itemAtual, ctx.original || null, ctx.google),
       daPaginaP
     ]);
+    /* As ofertas da pagina TAMBEM passam pela conferencia pela foto (pedido
+       535, 30/09: a "Carcaca ... Sa 203" de R$ 76,63 entrou como o mesmo
+       controle de acesso de R$ 454,35 com a IA fora do ar). Sem conferencia,
+       nao entra. Depois da busca, para nao misturar o ultimaIA dela. */
+    let daPagina = [];
+    const paraConferir = daPaginaLida.filter(x => x.titulo && x.imagem && !daBusca.some(y => y.item === x.item)
+      && !pecaNoLugarDoAparelho(titulo, x.titulo));
+    if (paraConferir.length && ctx.original && resta() > 9000) {
+      const salvo = ultimaIA;
+      const ok = await comPrazo(mesmoProdutoPelaGemini(ctx.original, paraConferir.map(x =>
+        ({ item: x.item, titulo: x.titulo, imagem: x.imagem, preco: x.preco }))), resta() - 7000, null);
+      ultimaIA = salvo;
+      if (ok) daPagina = paraConferir.filter((_, i) => ok.has(i)).map(x => ({ ...x, verificadoIA: true }));
+    }
     const todas = [...daBusca, ...daPagina.filter(x => !daBusca.some(y => y.item === x.item))];
-    todas.diag = daBusca.diag ? { ...daBusca.diag, daPagina: daPagina.length } : { daPagina: daPagina.length };
+    const diagPagina = { daPagina: daPagina.length, daPaginaLidas: daPaginaLida.length };
+    todas.diag = daBusca.diag ? { ...daBusca.diag, ...diagPagina } : diagPagina;
     if (daBusca.parecidos) todas.parecidos = daBusca.parecidos;
     const escolha = escolherAlternativas(todas, { ...ctx, itemAtual });
     /* Todas as lojas vistas, inclusive as mais caras: o site mostra. */

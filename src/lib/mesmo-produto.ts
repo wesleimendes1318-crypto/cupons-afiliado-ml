@@ -13,6 +13,7 @@
 
 import { anunciosPeloGoogle, type AnuncioGoogle } from "@/lib/busca-google";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
+import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 
 /* ------------------------------------------------------------- textos */
 
@@ -59,6 +60,7 @@ function palavras(t: string) {
 
 /** 60% das palavras do original no candidato, e todos os números do original. */
 export function pareceMesmoProduto(original: string, candidato: string) {
+  if (pecaNoLugarDoAparelho(original, candidato)) return false;
   const a = [...new Set(palavras(original))];
   const b = new Set(palavras(candidato));
   if (a.length < 3) return false;

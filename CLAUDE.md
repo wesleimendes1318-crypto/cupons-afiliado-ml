@@ -37,6 +37,16 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     difere (voltagem, capacidade, compatibilidade do veículo, lado, volume,
     concentração do perfume, tom, sabor, peso do pet, tamanho da fralda,
     plataforma do jogo, edição do livro...). Item único: só o mesmo item.
+  - PEÇA NO LUGAR DO APARELHO (30/09, pedido 535: "Carcaça ... Sa 203" de
+    R$ 76,63 saiu como o mesmo controle de acesso de R$ 454,35): original que
+    não é peça x candidato carcaça, tampa, moldura, frontal, display/tela
+    avulsa, refil ou peça de reposição nunca é igual (RE_PECA_PARTE /
+    pecaNoLugarDoAparelho, extensão e servidor iguais; "com tampa" não conta).
+    Vai para Parecidos com "Apenas carcaça / peça de reposição". A regra
+    também está no texto da conferência (REGRA_CATEGORIAS).
+  - Ofertas lidas da própria página do anúncio (/up/) também passam pela
+    conferência pela foto; sem conferência não entram (pedido 535 entrou com
+    a IA fora do ar).
   - A conferência recebe a categoria (breadcrumb) e a ficha do original
     (tipo, condição, características lidas na página). Condição diferente
     (usado, recondicionado, vitrine...) nunca é igual: pelo título (servidor)
@@ -92,6 +102,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   oficial de ofertas (0 = grátis, > 0 = pago; Baba Black R$ 57 cost 44,92) e o
   texto "grátis" no cartão da busca. Sem isso, "não sei" (a tela não afirma).
   Nunca deduzir pela regra geral de R$ 19 (errou no Baba Black).
+- Parecido recusado pelo programa (semAfiliado) não aparece no site, nem
+  como alternativa nem no "Me ajude a escolher" (pedido 525, 30/09: mostrava
+  "R$ 205 a menos" e o botão abria o anúncio colado de R$ 954).
 - Mesma loja do link colado entra na comparação só com OUTRO anúncio dela
   mais barato ("Mesma loja, outro anúncio"; Camelo R$ 78,54 x R$ 86,90).
 - UMA recomendação só: é sempre a mesma linha que leva o selo "Mais barato"
