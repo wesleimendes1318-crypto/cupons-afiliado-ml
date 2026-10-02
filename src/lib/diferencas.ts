@@ -42,8 +42,9 @@ function delta(seu: string | null, este: string | null) {
   const b = numero(este);
   if (!a || !b || a.u !== b.u || a.n === b.n) return null;
   const d = b.n - a.n;
-  const u =
-    b.u === "l" ? " L" : b.u === '"' ? '"' : b.u && b.u !== "un" ? ` ${b.u.toUpperCase()}` : "";
+  /* Unidade como se escreve: L, mL, g, kg, GB, TB, W. */
+  const UN: Record<string, string> = { l: " L", ml: " mL", g: " g", kg: " kg", w: " W", '"': '"' };
+  const u = UN[b.u] ?? (b.u && b.u !== "un" ? ` ${b.u.toUpperCase()}` : "");
   return { d, txt: `${fmt(Math.abs(d))}${u} a ${d > 0 ? "mais" : "menos"}` };
 }
 
@@ -80,9 +81,13 @@ export function significado(
     return dd
       ? `Tela ${fmt(Math.abs(dd.d))}" ${dd.d > 0 ? "maior" : "menor"}.`
       : "Outro tamanho de tela.";
+  if (/(itens|acompanha|acessorio|inclui|vem com|conteudo do kit)/.test(c))
+    return "Muda o que vem na embalagem.";
   if (/(unidade|quantidade|pecas|kit)/.test(c))
     return dd
-      ? `Vem ${dd.txt} que o seu: compare pelo preço por unidade.`
+      ? `Vem ${fmt(Math.abs(dd.d))} ${/peca/.test(c) ? "peças" : "unidades"} a ${
+          dd.d > 0 ? "mais" : "menos"
+        } que o seu: compare pelo preço por unidade.`
       : "Outra quantidade: compare pelo preço por unidade.";
   if (/potencia/.test(c))
     return dd ? `${dd.txt.replace(/^./, (x) => x.toUpperCase())} de potência.` : "Outra potência.";
@@ -111,6 +116,9 @@ const palavras = (s: string) =>
 function noTitulo(valor: string, titulo: string) {
   const v = palavras(valor);
   const t = new Set(palavras(titulo));
+  /* Com número ("279 peças", "500L"), o número decide. */
+  const nums = v.filter((w) => /^\d/.test(w));
+  if (nums.length) return nums.every((w) => t.has(w));
   return v.length > 0 && v.every((w) => t.has(w));
 }
 
