@@ -313,26 +313,22 @@ function Cartao({ i }: { i: ItemVitrine }) {
             ? ` · ${i.lojas_comparadas} ${i.lojas_comparadas === 1 ? "loja comparada" : "lojas comparadas"}`
             : ""}
         </p>
+        {/* UM botão só (Weslei, 02/10): "Ver oferta" levava ao anúncio com o
+            preço antigo/alto; "Comparar de novo" refaz a comparação na hora,
+            com o CEP do cliente, lojas oficiais e alternativas. Sem
+            url_produto, compara pelo link de afiliado. */}
         <div className="mt-auto flex flex-col gap-1 pt-2">
-          {destino && (
-            <a
-              href={destino}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="rounded-md bg-success py-1.5 text-center text-xs font-bold text-white hover:brightness-95"
-            >
-              Ver oferta
-            </a>
-          )}
-          {i.url_produto && (
+          {(i.url_produto || destino) && (
             <button
               type="button"
               onClick={() =>
-                window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url_produto }))
+                window.dispatchEvent(
+                  new CustomEvent("comparar-link", { detail: i.url_produto ?? destino }),
+                )
               }
-              className="inline-flex items-center justify-center gap-1 rounded-md border border-border py-1 text-[11px] font-semibold hover:border-ml-blue"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-success py-1.5 text-xs font-bold text-white hover:brightness-95"
             >
-              <RefreshCw className="size-3" aria-hidden="true" />
+              <RefreshCw className="size-3.5" aria-hidden="true" />
               Comparar de novo
             </button>
           )}
