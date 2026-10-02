@@ -1588,6 +1588,26 @@ function Resultado({
     const l = lk || (semAfiliado ? link || null : null);
     return { link: l, mesmaPagina: Boolean(semAfiliado || (l && l === link)) };
   };
+  /* Total que o cliente paga: produto + frete para o CEP (quando simulado).
+     Frete pago sem valor: null (não dá para afirmar o total). */
+  const totalDaLoja = (o: {
+    final?: number | null;
+    freteGratis?: boolean | null;
+    custoFrete?: number | null;
+  }) =>
+    o.final == null
+      ? null
+      : o.freteGratis === false
+        ? o.custoFrete != null && o.custoFrete > 0
+          ? Math.round((o.final + o.custoFrete) * 100) / 100
+          : null
+        : o.final;
+  const totalColado =
+    precoColado == null
+      ? null
+      : a?.freteGratis === false && a?.custoFrete != null && a.custoFrete > 0
+        ? Math.round((precoColado + a.custoFrete) * 100) / 100
+        : precoColado;
   const candidatas = [
     ...alternativas.map((o, i) => ({
       o: {
@@ -1613,6 +1633,7 @@ function Resultado({
         url: r.url ?? null,
         imagem: r.imagem ?? null,
         freteGratis: r.freteGratis ?? null,
+        custoFrete: r.custoFrete ?? null,
         mesmaLoja: r.mesmaLoja ?? null,
         lojaOficial: r.lojaOficial ?? null,
         verificadoIA: true,
@@ -1621,17 +1642,29 @@ function Resultado({
       } as OutraLoja,
     })),
   ]
+    /* MELHOR ESCOLHA PELO TOTAL (Weslei, 02/10: "use a melhor escolha para o
+       cliente"): com o frete para o CEP conhecido, compara produto + frete
+       (geladeira: R$ 4.699,99 + R$ 33 = R$ 4.732,99 contra R$ 5.051,58 com
+       frete grátis). Frete pago SEM valor conhecido continua fora. */
+    .map((c) => {
+      const t = totalDaLoja(c.o);
+      return t != null && totalColado != null
+        ? { ...c, o: { ...c.o, ganho: Math.round((totalColado - t) * 100) / 100 } }
+        : c;
+    })
     .filter(
       (c) =>
         c.o.final != null &&
-        c.o.freteGratis !== false &&
+        totalDaLoja(c.o) != null &&
         !c.o.mesmaPagina &&
         Boolean(c.o.link || c.o.url) &&
-        (precoColado == null ? (c.o.ganho ?? 0) > 0 : c.o.final <= precoColado - 0.5),
+        (totalColado == null
+          ? (c.o.ganho ?? 0) > 0
+          : (totalDaLoja(c.o) as number) <= totalColado - 0.5),
     )
-    /* Mesmo preço (diferença menor que R$ 0,50): a loja oficial vem primeiro. */
+    /* Mesmo total (diferença menor que R$ 0,50): a loja oficial vem primeiro. */
     .sort((x, y) => {
-      const d = (x.o.final ?? 0) - (y.o.final ?? 0);
+      const d = (totalDaLoja(x.o) ?? 0) - (totalDaLoja(y.o) ?? 0);
       if (Math.abs(d) >= 0.5) return d;
       return (y.o.lojaOficial === true ? 1 : 0) - (x.o.lojaOficial === true ? 1 : 0) || d;
     });
@@ -1644,7 +1677,7 @@ function Resultado({
      chamado de igual: aparece em destaque, com o que muda, quando é MAIS
      BARATO que o melhor preço do mesmo produto, muito parecido (semelhança
      >= 85 ou a mesma foto) e sem frete pago. */
-  const precoDoMesmo = recomendada?.o.final ?? a?.preco ?? null;
+  const precoDoMesmo = (recomendada ? totalDaLoja(recomendada.o) : null) ?? totalColado ?? null;
   /* Mais barato porque vem MENOS (28/09: "Kit 10 cabides" x 30, "1un" x 3
      pipetas) ou serve para outra coisa não é alternativa: fica em Parecidos.
      Mesma lista da função muda_nao_e_alternativa do banco (vitrine). */
@@ -3093,6 +3126,10 @@ function OutraLojaComCupom({
      a loja do link tinha cupom de 15% e ainda assim saia mais cara. Dizer
      "com cupom" ali seria mentira. */
   const temCupomLa = Boolean(oferta.cupomTitulo);
+  /* Frete pago com valor conhecido para o CEP (02/10): a economia já conta
+     o frete, e o card mostra o frete e o total em linha própria. */
+  const freteConhecido =
+    oferta.freteGratis === false && oferta.custoFrete != null && oferta.custoFrete > 0;
   /* Preço final de cada lado (com o cupom de cada um, quando existe). */
   const atual = oferta.finalAtual ?? precoAqui;
   const descontoAqui =
@@ -3147,9 +3184,14 @@ function OutraLojaComCupom({
             : !lojaAquiTemCupom && diferenca != null && diferenca > 0
               ? oferta.mesmaLoja
                 ? `A mesma loja vende este produto por ${brl(diferenca)} a menos em outro anúncio`
-                : `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos`
+                : `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos${freteConhecido ? ", já com o frete" : ""}`
               : "Achei o mesmo produto mais barato em outra loja"}
       </p>
+      {freteConhecido && oferta.final != null && (
+        <p className="mt-0.5 text-xs text-secondary-ink">
+          {`Produto ${brl(oferta.final)} · frete para seu CEP ${brl(oferta.custoFrete as number)} · total ${brl(oferta.final + (oferta.custoFrete as number))}`}
+        </p>
+      )}
       {oferta.lojaOficial === true && (
         <p className="mt-0.5 text-xs font-semibold text-ml-blue">
           <BadgeCheck className="inline size-3.5 align-[-3px]" aria-hidden="true" /> Vendido pela

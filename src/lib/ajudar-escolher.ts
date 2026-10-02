@@ -29,6 +29,8 @@ export type Opcao = {
   loja: string | null;
   preco: number;
   freteGratis: boolean | null;
+  /* Frete para o CEP do cliente, quando simulado (02/10). */
+  custoFrete?: number | null;
   lojaOficial: boolean;
   link: string;
   muda: string | null;
@@ -73,6 +75,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       loja: txt(a["vendedor"]),
       preco,
       freteGratis: (a["freteGratis"] as boolean | null) ?? null,
+      custoFrete: num(a["custoFrete"]),
       lojaOficial: a["lojaOficial"] === true,
       link: linkColado,
       muda: null,
@@ -108,6 +111,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       loja: txt(o["vendedor"]),
       preco: p,
       freteGratis: (o["freteGratis"] as boolean | null) ?? null,
+      custoFrete: num(o["custoFrete"]),
       lojaOficial: o["lojaOficial"] === true,
       link,
       muda: null,
@@ -139,6 +143,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       loja: txt(p["vendedor"]),
       preco: num(p["preco"]) as number,
       freteGratis: (p["freteGratis"] as boolean | null) ?? null,
+      custoFrete: num(p["custoFrete"]),
       lojaOficial: p["lojaOficial"] === true || p["daBuscaOficial"] === true,
       link,
       muda: mudaCompleta(txt(p["muda"]), detalhesColado, (p["detalhes"] as Detalhes) ?? null),
@@ -159,29 +164,42 @@ const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
  *  tela (BuscaPorLink: recomendada + alternativa). Coerência (Weslei, 02/10,
  *  pedido 550: a tela destacava a alternativa de R$ 4.223 e a análise
  *  indicava o anúncio de R$ 5.051,58): a análise nunca contradiz a tela. */
+/** Total que o cliente paga: produto + frete para o CEP (quando simulado);
+ *  frete pago sem valor conhecido: null. Mesma conta da tela. */
+export function totalDaOpcao(o: Opcao): number | null {
+  if (o.freteGratis !== false) return o.preco;
+  return o.custoFrete != null && o.custoFrete > 0
+    ? Math.round((o.preco + o.custoFrete) * 100) / 100
+    : null;
+}
+
 export function decisaoDaTela(opcoes: Opcao[]) {
   const colado = opcoes.find((o) => o.tipo === "colado") ?? null;
+  /* Colado com frete pago e valor desconhecido: compara pelo preço. */
+  const totalColado = colado ? (totalDaOpcao(colado) ?? colado.preco) : null;
   /* Mesmo produto mais barato que o colado (>= R$ 0,50), sem frete pago; em
      empate de preço, a loja oficial. Nenhum: o próprio colado. */
   const mesmo = opcoes
     .filter(
       (o) =>
         o.tipo === "mesmo" &&
-        o.freteGratis !== false &&
-        (colado == null || o.preco <= colado.preco - 0.5),
+        totalDaOpcao(o) != null &&
+        (totalColado == null || (totalDaOpcao(o) as number) <= totalColado - 0.5),
     )
-    .sort((x, y) =>
-      Math.abs(x.preco - y.preco) >= 0.5
-        ? x.preco - y.preco
-        : Number(y.lojaOficial) - Number(x.lojaOficial),
-    );
+    .sort((x, y) => {
+      const d = (totalDaOpcao(x) ?? 0) - (totalDaOpcao(y) ?? 0);
+      return Math.abs(d) >= 0.5 ? d : Number(y.lojaOficial) - Number(x.lojaOficial);
+    });
   const melhorMesmo =
     mesmo[0] ??
     colado ??
     opcoes.filter((o) => o.tipo !== "parecido").sort((x, y) => x.preco - y.preco)[0] ??
     null;
   const tituloColado = colado?.titulo ?? null;
-  const base = { preco: melhorMesmo?.preco ?? null, titulo: tituloColado };
+  const base = {
+    preco: melhorMesmo ? (totalDaOpcao(melhorMesmo) ?? melhorMesmo.preco) : null,
+    titulo: tituloColado,
+  };
   const nota = (o: Opcao) =>
     notaDeAlternativa(o, tituloColado) - (podeSerAlternativa(o, base).cb ? 5 : 0);
   const alternativa =
@@ -212,13 +230,16 @@ export function escolhaCalculada(opcoes: Opcao[]): Ajuda | null {
         ? `o anúncio que você colou, ${moeda(o.preco)}`
         : `${o.loja ?? "outra loja"}, ${moeda(o.preco)}`,
       o.freteGratis === true ? "com frete grátis" : null,
+      o.freteGratis === false && totalDaOpcao(o) != null
+        ? `frete de ${moeda(o.custoFrete as number)} à parte, total ${moeda(totalDaOpcao(o) as number)}`
+        : null,
       o.lojaOficial ? "loja oficial" : null,
     ]
       .filter(Boolean)
       .join(", ");
   let resumo: string;
   if (alternativa && melhorMesmo) {
-    const menos = melhorMesmo.preco - alternativa.preco;
+    const menos = (totalDaOpcao(melhorMesmo) ?? melhorMesmo.preco) - alternativa.preco;
     resumo =
       `Mais em conta: ${moeda(alternativa.preco)}, ${moeda(menos)} a menos que o melhor preço do mesmo produto` +
       `${alternativa.freteGratis === true ? ", com frete grátis" : ""}` +
@@ -226,13 +247,19 @@ export function escolhaCalculada(opcoes: Opcao[]): Ajuda | null {
       `Não é idêntico: ${alternativa.muda ?? "muda um detalhe"}. ` +
       `Se fizer questão de exatamente o que você colou, o melhor é ${frasesDoMesmo(melhorMesmo)}.`;
   } else {
-    const menos = colado && escolha !== colado ? colado.preco - escolha.preco : 0;
+    const tEscolha = totalDaOpcao(escolha) ?? escolha.preco;
+    const tColado = colado ? (totalDaOpcao(colado) ?? colado.preco) : null;
+    const menos = tColado != null && escolha !== colado ? tColado - tEscolha : 0;
+    const comFrete = escolha.freteGratis === false && totalDaOpcao(escolha) != null;
     resumo =
       [
         escolha.tipo === "colado"
           ? "O anúncio que você colou já é o melhor preço do mesmo produto"
-          : `Mesmo produto por ${moeda(escolha.preco)}${menos >= 0.5 ? `, ${moeda(menos)} a menos` : ""}`,
+          : `Mesmo produto por ${moeda(escolha.preco)}${menos >= 0.5 ? `, ${moeda(menos)} a menos${comFrete ? " já com o frete" : ""}` : ""}`,
         escolha.freteGratis === true ? "com frete grátis" : null,
+        comFrete
+          ? `frete de ${moeda(escolha.custoFrete as number)} para o seu CEP à parte (total ${moeda(tEscolha)})`
+          : null,
         escolha.lojaOficial ? "vendido pela loja oficial da marca" : null,
       ]
         .filter(Boolean)
@@ -279,7 +306,14 @@ function resumoDaOpcao(
     titulo: o.titulo,
     loja: o.loja,
     preco: o.preco,
-    frete: o.freteGratis === true ? "gratis" : o.freteGratis === false ? "pago" : "nao informado",
+    frete:
+      o.freteGratis === true
+        ? "gratis"
+        : o.freteGratis === false
+          ? totalDaOpcao(o) != null
+            ? `pago, ${o.custoFrete} para o CEP do cliente (total com frete ${totalDaOpcao(o)})`
+            : "pago, valor nao informado"
+          : "nao informado",
     loja_oficial_da_marca: o.lojaOficial,
     o_que_muda: o.muda,
     vantagem: o.vantagem,

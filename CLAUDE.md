@@ -96,8 +96,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   com o 1º resultado em menos de 2 min, metade em até 32 s). Previsões de tempo na tela vêm de medição real (função
   tempo_estimado), nunca inventadas.
 
-- Frete conta: loja com frete PAGO nunca vira "mais barata"/recomendação
-  (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90 com frete grátis).
+- Frete conta: loja com frete PAGO de valor DESCONHECIDO nunca vira "mais
+  barata"/recomendação (R$ 57 + R$ 32,99 de frete saía mais caro que R$ 86,90
+  com frete grátis). MELHOR ESCOLHA PELO TOTAL (Weslei, 02/10: "use a melhor
+  escolha para o cliente"): com o frete para o CEP conhecido, decide produto
+  + frete (geladeira: R$ 4.699,99 + R$ 33 = R$ 4.732,99 x R$ 5.051,58 com
+  frete grátis -> a de R$ 4.732,99 é a recomendação, "já com o frete", e o
+  card mostra produto, frete e total). Site (totalDaLoja), "Me ajude a
+  escolher" (totalDaOpcao) e extensão (alts e link rápido) usam a mesma conta.
   Na tabela aparece "Frete grátis" ou "Sem frete grátis".
   NUNCA juntar valor em reais com "frete" na mesma expressão (02/10, pedido
   563: "R$ 2.706,58 a menos + frete" parecia frete de R$ 2 mil; era R$ 1,00).

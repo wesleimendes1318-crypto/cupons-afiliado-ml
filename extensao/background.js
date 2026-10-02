@@ -4057,12 +4057,13 @@ async function atenderPedidos() {
                     const atual = porLoja.get(k);
                     if (!atual || (x.final ?? 1e12) < (atual.final ?? 1e12)) porLoja.set(k, x);
                   }
-                  alts = [...porLoja.values()].sort((x, y) => (x.final ?? 1e12) - (y.final ?? 1e12)).slice(0, 3);
+                  alts = [...porLoja.values()].sort((x, y) => (x.final ?? 1e12) - (y.final ?? 1e12)).slice(0, 6);
                   /* FRETE (Weslei, 25/09): loja com frete PAGO nao vira "mais
                      barata" (R$ 57 + R$ 32,99 de frete saia mais caro que os
                      R$ 86,90 com frete gratis). Fica na tabela, marcada. */
                   if (busca.diag && busca.diag.freteAtual != null) freteAqui = busca.diag.freteAtual;
-                  alts = alts.filter(x => !(x.freteGratis === false && freteAqui !== false));
+                  /* O filtro do frete pago fica para depois do frete por CEP
+                     (02/10): com o valor conhecido, decide o total. */
                 }
                 if (Array.isArray(busca.todas)) {
                   const vistos = new Set(referencias.map(x => (x.vendedor || '').toLowerCase()));
@@ -4130,8 +4131,20 @@ async function atenderPedidos() {
                 if (fc && fc.gratis != null) { freteAqui = fc.gratis; custoFreteAqui = fc.custo; }
               }
             }
-            /* Frete pago nunca vira "mais barata" (catalogo ou busca). */
-            alts = alts.filter(x => !(x.freteGratis === false && freteAqui !== false));
+            /* MELHOR ESCOLHA PELO TOTAL (Weslei, 02/10: "use a melhor escolha
+               para o cliente"): frete pago com valor conhecido para o CEP entra
+               se produto + frete sair mais barato que o colado (com o frete
+               dele). Frete pago SEM valor continua fora (so fica se o colado
+               tambem cobra frete). */
+            {
+              const totalAqui = a.preco != null
+                ? a.preco + (freteAqui === false && custoFreteAqui > 0 ? custoFreteAqui : 0) : null;
+              alts = alts.filter(x => {
+                if (x.freteGratis !== false) return true;
+                if (x.custoFrete > 0 && totalAqui != null) return (x.final ?? x.preco) + x.custoFrete <= totalAqui - 0.5;
+                return freteAqui === false;
+              }).slice(0, 3);
+            }
             /* Segunda volta interrompida por cliente novo: resultado descartado. */
             if (volta > 1 && interromperVolta) return;
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
@@ -4347,10 +4360,15 @@ async function atenderPedidos() {
           const linksDaRecomendacao = async () => {
             const base = a.preco ?? null;
             const mais = x => x.final ?? x.preco ?? null;
+            /* Total com o frete para o CEP (02/10); frete pago sem valor: fora. */
+            const total = x => mais(x) == null ? null
+              : x.freteGratis === false ? (x.custoFrete > 0 ? mais(x) + x.custoFrete : null) : mais(x);
+            const baseTotal = base == null ? null
+              : base + (freteAqui === false && custoFreteAqui > 0 ? custoFreteAqui : 0);
             const recomendada = referencias
-              .filter(x => !x.link && x.url && !x.semAfiliado && x.freteGratis !== false && mais(x) != null
-                && (base == null || mais(x) <= base - 0.5))
-              .sort((x, y) => mais(x) - mais(y))[0];
+              .filter(x => !x.link && x.url && !x.semAfiliado && total(x) != null
+                && (baseTotal == null || total(x) <= baseTotal - 0.5))
+              .sort((x, y) => total(x) - total(y))[0];
             const alternativa = parecidos
               .filter(x => !x.link && x.url && x.freteGratis !== false && x.preco != null
                 && (base == null || x.preco <= base - 2) && ((x.semelhanca ?? 0) >= 85 || x.mesmaFoto === true))
