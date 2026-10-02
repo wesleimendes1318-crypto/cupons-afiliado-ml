@@ -106,6 +106,43 @@ export class ErroApiMl extends Error {
   }
 }
 
+/** FRETE PARA UM CEP pela API oficial (CEP automático, 02/10): só leitura,
+ *  com o token do servidor; não usa nem muda endereço de conta nenhuma.
+ *  custo = menor custo entre as opções de envio (0 = grátis). */
+export async function freteParaCep(item: string, cep: string) {
+  const token = await tokenDeAcesso();
+  try {
+    const r = await fetch(
+      `${API}/items/${item}/shipping_options?zip_code=${cep.replace(/\D/g, "")}`,
+      {
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
+    const t = await r.text();
+    if (!r.ok) return { status: r.status, gratis: null, custo: null, detalhe: t.slice(0, 120) };
+    const j = JSON.parse(t) as { options?: { cost?: number; list_cost?: number }[] };
+    const custos = (j.options ?? []).map((o) => Number(o.cost)).filter((n) => Number.isFinite(n));
+    const custo = custos.length ? Math.min(...custos) : null;
+    return {
+      status: r.status,
+      gratis: custo == null ? null : custo === 0,
+      custo,
+      detalhe: `opcoes=${custos.length} custos=${custos.join("/")}`,
+    };
+  } catch (e) {
+    return {
+      status: 0,
+      gratis: null,
+      custo: null,
+      detalhe: String((e as Error)?.message ?? e).slice(0, 120),
+    };
+  }
+}
+
 /** GET na API oficial. Um 401 renova o token e tenta uma vez mais. */
 export async function mlGet<T>(caminho: string): Promise<T> {
   for (let tentativa = 0; tentativa < 2; tentativa += 1) {

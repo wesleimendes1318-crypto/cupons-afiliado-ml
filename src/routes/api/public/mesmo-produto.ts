@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { freteParaCep, gravarConfig } from "@/lib/ml-api";
 import { compararMesmoProduto, idsDoLink } from "@/lib/mesmo-produto";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
@@ -14,24 +15,60 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
    em vez de derrubar a comparacao inteira. */
 const entradaSchema = z.object({
   url: z.string().trim().min(10).max(2000),
-  catalogo: z.string().regex(/^MLB\d{5,}$/i).nullish().catch(null),
-  item: z.string().regex(/^MLB\d{6,}$/i).nullish().catch(null),
+  catalogo: z
+    .string()
+    .regex(/^MLB\d{5,}$/i)
+    .nullish()
+    .catch(null),
+  item: z
+    .string()
+    .regex(/^MLB\d{6,}$/i)
+    .nullish()
+    .catch(null),
   preco: z.number().positive().max(1e7).nullish().catch(null),
   vendedor: z.string().max(160).nullish().catch(null),
   titulo: z.string().max(300).nullish().catch(null),
-  gtin: z.string().regex(/^\d{8,14}$/).nullish().catch(null),
+  gtin: z
+    .string()
+    .regex(/^\d{8,14}$/)
+    .nullish()
+    .catch(null),
   marca: z.string().max(80).nullish().catch(null),
   modelo: z.string().max(80).nullish().catch(null),
-  catalogoPagina: z.string().regex(/^MLB\d{5,}$/i).nullish().catch(null),
+  catalogoPagina: z
+    .string()
+    .regex(/^MLB\d{5,}$/i)
+    .nullish()
+    .catch(null),
   variacao: z.string().max(120).nullish().catch(null),
 });
 const VALIDADE_MS = 6 * 60 * 60 * 1000;
+
+/* SONDA DO FRETE POR CEP (02/10): antes de mostrar "Frete para: Cidade/UF",
+   confirmar que a API oficial simula o frete por CEP. No máximo uma vez a cada
+   20 min por instância; resultado em sinc_config.frete_cep_diag. */
+let ultimaSonda = 0;
+async function sondarFretePorCep(item: string | null) {
+  if (!item || Date.now() - ultimaSonda < 20 * 60_000) return;
+  ultimaSonda = Date.now();
+  const [sp, manaus] = await Promise.all([
+    freteParaCep(item, "01001000"),
+    freteParaCep(item, "69005010"),
+  ]);
+  await gravarConfig({
+    frete_cep_diag: JSON.stringify({ quando: new Date().toISOString(), item, sp, manaus }),
+  }).catch(() => {});
+}
 
 async function tokenValido(request: Request) {
   const enviado = request.headers.get("x-sinc-token");
   if (!enviado) return false;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("sinc_config").select("valor").eq("chave", "token").maybeSingle();
+  const { data } = await supabaseAdmin
+    .from("sinc_config")
+    .select("valor")
+    .eq("chave", "token")
+    .maybeSingle();
   return Boolean(data?.valor) && data?.valor === enviado;
 }
 
@@ -40,12 +77,15 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
     handlers: {
       OPTIONS: async ({ request }) => respostaOptions(request),
       /* Abrir no navegador mostra qual versão da comparação está no ar. */
-      GET: async ({ request }) => json(request, { versao: "2026-09-24 14h (comparador, ver na loja, consent mode)" }),
+      GET: async ({ request }) =>
+        json(request, { versao: "2026-09-24 14h (comparador, ver na loja, consent mode)" }),
       POST: async ({ request }) => {
         const daExtensao = await tokenValido(request);
         if (!daExtensao) {
-          if (!origemPermitida(request)) return json(request, { erro: "Origem da solicitação não permitida." }, 403);
-          if (excedeuLimite(request)) return json(request, { erro: "Muitas solicitações. Aguarde um minuto." }, 429);
+          if (!origemPermitida(request))
+            return json(request, { erro: "Origem da solicitação não permitida." }, 403);
+          if (excedeuLimite(request))
+            return json(request, { erro: "Muitas solicitações. Aguarde um minuto." }, 429);
         }
 
         let entrada: z.infer<typeof entradaSchema>;
@@ -54,16 +94,29 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
         } catch {
           return json(request, { erro: "Informe o link do produto." }, 400);
         }
-        if (!/^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com)\//i.test(entrada.url)) {
+        if (
+          !/^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com)\//i.test(
+            entrada.url,
+          )
+        ) {
           return json(request, { erro: "Só funciona com link do Mercado Livre." }, 400);
         }
 
         const ids = idsDoLink(entrada.url);
+        await sondarFretePorCep(ids.item ?? entrada.item ?? null).catch(() => {});
         /* Link /up/MLBU... sem código de anúncio também ganha chave: sem ela
            a comparação não ficava gravada e não dava para ver o que a API
            respondeu (caso do Wella da Fragranciaria, 24/09). */
         const up = /\/up\/(MLBU\d{5,})/i.exec(entrada.url)?.[1] ?? null;
-        const chave = (ids.item ?? entrada.item ?? ids.catalogo ?? entrada.catalogo ?? up ?? null)?.toUpperCase() ?? null;
+        const chave =
+          (
+            ids.item ??
+            entrada.item ??
+            ids.catalogo ??
+            entrada.catalogo ??
+            up ??
+            null
+          )?.toUpperCase() ?? null;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const tabela = supabaseAdmin.from("comparacoes" as never);
 
@@ -82,15 +135,23 @@ export const Route = createFileRoute("/api/public/mesmo-produto")({
         }
 
         const resultado = await compararMesmoProduto(entrada.url, {
-          catalogo: entrada.catalogo ?? null, item: entrada.item ?? null,
-          preco: entrada.preco ?? null, vendedor: entrada.vendedor ?? null,
+          catalogo: entrada.catalogo ?? null,
+          item: entrada.item ?? null,
+          preco: entrada.preco ?? null,
+          vendedor: entrada.vendedor ?? null,
           titulo: entrada.titulo ?? null,
-          gtin: entrada.gtin ?? null, marca: entrada.marca ?? null,
-          modelo: entrada.modelo ?? null, catalogoPagina: entrada.catalogoPagina ?? null,
+          gtin: entrada.gtin ?? null,
+          marca: entrada.marca ?? null,
+          modelo: entrada.modelo ?? null,
+          catalogoPagina: entrada.catalogoPagina ?? null,
           variacao: entrada.variacao ?? null,
         });
         if (chave) {
-          await tabela.upsert({ chave, resposta: resultado, criado_em: new Date().toISOString() } as never);
+          await tabela.upsert({
+            chave,
+            resposta: resultado,
+            criado_em: new Date().toISOString(),
+          } as never);
         }
         return json(request, resultado);
       },
