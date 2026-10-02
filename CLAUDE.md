@@ -194,9 +194,21 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   oficial, vantagens e diferenças; objetivo: o mais próximo do colado pelo
   melhor custo-benefício; uma análise por pedido guardada em
   ajuda_escolha). A resposta SEMPRE traz o botão com o link de afiliado; só
-  entram opções com link próprio. Parecido só é escolhido se for mais barato
-  que o melhor mesmo produto, sem frete pago e sem "vem menos". Sem modelo, a
-  escolha é calculada. GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
+  entram opções com link próprio. COERÊNCIA (Weslei, 02/10, pedido 550: a
+  tela destacava a alternativa de R$ 4.223 e a análise indicava o anúncio de
+  R$ 5.051,58): a escolha é SEMPRE a da tela (decisaoDaTela, mesma regra da
+  Melhor alternativa): a Melhor alternativa quando há, senão o melhor preço do
+  mesmo produto; o resumo cita o que muda e a opção exata. O modelo só
+  escreve os pontos (e o resumo quando escolheu a mesma). Sem modelo, a
+  escolha é calculada.
+- O QUE MUDA PELA FICHA (02/10, pedido 550): campos decisivos que os dois
+  anúncios informam com valores diferentes (modelo, capacidade, voltagem,
+  armazenamento, RAM, tela, volume, peso, unidades, potência) entram no
+  "Muda" (mudaCompleta, src/lib/ficha.ts) e tiram o achismo da conferência
+  ("não informa", "pode indicar"). Só acrescenta diferença; a conferência
+  continua reprovando toda diferença listada, até a especulativa.
+- Tabela: preço abaixo de 70% da mediana das lojas ganha o aviso "Preço muito
+  abaixo das outras lojas: confira o vendedor antes de comprar". GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
   variações; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de
   reserva; a conferência pela foto continua na Gemini. Última falha do GPT em
   sinc_config.gpt_diagnostico.

@@ -12,7 +12,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
-         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA } from './comparador.js';
+         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 
@@ -815,10 +815,15 @@ function lerVereditosIA(lista, total) {
   return (lista || [])
     .filter(c => Number.isInteger(c.indice) && c.indice >= 0 && c.indice < total)
     .map(c => {
-      const dif = Array.isArray(c.diferencas) ? c.diferencas.map(d => String(d ?? '').trim()).filter(Boolean) : [];
-      const igual = c.igual === true && dif.length === 0;
+      const todas = Array.isArray(c.diferencas) ? c.diferencas.map(d => String(d ?? '').trim()).filter(Boolean) : [];
+      /* Toda diferenca listada reprova, ate a especulativa (02/10, pedido 550:
+         era mesmo outro modelo). Especulacao so muda o TEXTO do que muda. */
+      const dif = todas.filter(d => !soEspeculacao(d));
+      const igual = c.igual === true && todas.length === 0;
       /* Nao igual: o motivo e O QUE MUDA (aviso dos parecidos no site). */
-      const motivo = (!igual && dif.length) ? dif.join('; ') : (String(c.motivo || '') || dif.join('; '));
+      const motivo = (!igual && dif.length) ? dif.join('; ')
+        : (!igual && todas.length) ? 'Não confirmado: ' + todas.join('; ')
+        : (String(c.motivo || '') || dif.join('; '));
       const sem = Number(c.semelhanca);
       return { indice: c.indice, igual,
                parecido: !igual && (c.parecido === true || c.igual === true || c.mesma_foto === true),

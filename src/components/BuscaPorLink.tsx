@@ -34,6 +34,7 @@ import {
   type CustoBeneficio,
   type Medida,
 } from "@/lib/alternativa";
+import { mudaCompleta } from "@/lib/ficha";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -1631,7 +1632,12 @@ function Resultado({
      (pedido 525, 30/09: o de R$ 749 mostrava "R$ 205,00 a menos", mas o botão
      abria o anúncio colado de R$ 954). Sem link próprio, o preço dele não
      é alcançável pelo botão; nunca endereço sem afiliado. */
-  const parecidosComLink = (a?.parecidos ?? []).filter((p) => p.semAfiliado !== true);
+  /* O que muda vem também das FICHAS (02/10, pedido 550: "pode indicar outra
+     capacidade" era Modelo BRE68AK, 477 L): a lista, a Melhor alternativa e o
+     "Me ajude a escolher" usam o mesmo texto (mudaCompleta). */
+  const parecidosComLink = (a?.parecidos ?? [])
+    .filter((p) => p.semAfiliado !== true)
+    .map((p) => ({ ...p, muda: mudaCompleta(p.muda, a?.detalhes, p.detalhes) }));
   const baseAlt = { preco: precoDoMesmo, titulo: a?.titulo };
   const notaAlt = (p: NonNullable<Analise["parecidos"]>[number]) =>
     notaDeAlternativa(p, a?.titulo) - (podeSerAlternativa(p, baseAlt).cb ? 5 : 0);
@@ -2778,6 +2784,13 @@ function TodasAsLojas({
   const haMaisBarata = ordem
     .slice(0, melhorIdx)
     .some((l) => l.final != null && menor != null && l.final <= menor - 0.5);
+  /* Preço muito abaixo do resto (02/10, geladeira de ~R$ 5.000 por R$ 2.345 e
+     R$ 3.400, sem frete grátis): olhar de especialista avisa antes da compra. */
+  const finais = ordem.map((l) => l.final).filter((v): v is number => v != null);
+  const mediana =
+    finais.length >= 3 ? [...finais].sort((x, y) => x - y)[Math.floor(finais.length / 2)] : null;
+  const muitoAbaixo = (l: LinhaLoja) =>
+    !l.colado && mediana != null && l.final != null && l.final < mediana * 0.7;
   return (
     <div className="mt-3 sm:mt-0">
       <p className="text-sm font-bold">Todas as lojas comparadas ({ordem.length})</p>
@@ -2828,6 +2841,11 @@ function TodasAsLojas({
                       {l.freteGratis === false && (
                         <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                           Sem frete grátis
+                        </span>
+                      )}
+                      {muitoAbaixo(l) && (
+                        <span className="block text-[10px] font-semibold text-red-700 dark:text-red-400">
+                          Preço muito abaixo das outras lojas: confira o vendedor antes de comprar
                         </span>
                       )}
                       {temDetalhes(l.detalhes) && (

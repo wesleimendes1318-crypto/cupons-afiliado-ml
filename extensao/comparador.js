@@ -81,6 +81,12 @@ export function pecaNoLugarDoAparelho(original, candidato) {
   return !RE_PECA_PARTE.test(String(original || '')) && RE_PECA_PARTE.test(String(candidato || ''));
 }
 
+/* ESPECULACAO NAO E DIFERENCA (02/10, pedido 550): mesma regra do servidor
+   (src/lib/conferir-produto.ts). */
+export const RE_ESPECULACAO =
+  /\b(n[aã]o (informa|especifica|menciona|cita|confirma|indica)|sem informa[çc][aã]o|pode (indicar|ser|significar|sugerir)|possivelmente|provavelmente|talvez|n[aã]o (é|e) poss[ií]vel (confirmar|saber|verificar|afirmar))\b/i;
+export function soEspeculacao(d) { return RE_ESPECULACAO.test(String(d || '')); }
+
 export function pareceMesmoProduto(original, candidato) {
   if (pecaNoLugarDoAparelho(original, candidato)) return false;
   const a = [...new Set(palavrasDoTitulo(original))];

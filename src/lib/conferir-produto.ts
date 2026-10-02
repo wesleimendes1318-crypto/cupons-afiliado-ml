@@ -110,6 +110,16 @@ export function pecaNoLugarDoAparelho(
   return !RE_PECA_PARTE.test(String(original ?? "")) && RE_PECA_PARTE.test(String(candidato ?? ""));
 }
 
+/* ESPECULACAO NAO E DIFERENCA (02/10, pedido 550: "o candidato nao informa
+   e o '4' do titulo pode indicar outra capacidade" tirou da tabela a mesma
+   geladeira Black Inox da loja oficial Brastemp, com a mesma foto).
+   Contradicao e o que os DOIS anuncios dizem de forma diferente. */
+export const RE_ESPECULACAO =
+  /\b(n[aã]o (informa|especifica|menciona|cita|confirma|indica)|sem informa[çc][aã]o|pode (indicar|ser|significar|sugerir)|possivelmente|provavelmente|talvez|n[aã]o (é|e) poss[ií]vel (confirmar|saber|verificar|afirmar))\b/i;
+export function soEspeculacao(d: string | null | undefined) {
+  return RE_ESPECULACAO.test(String(d ?? ""));
+}
+
 /* CONDICAO pelo titulo (27/09): usado, recondicionado, vitrine... nunca e o
    mesmo produto que um novo, diga a IA o que disser. */
 const RE_CONDICAO =
@@ -895,16 +905,22 @@ function lerVereditos(lista: VereditoIA[], total: number) {
         Number.isInteger(c.indice) && (c.indice as number) >= 0 && (c.indice as number) < total,
     )
     .map((c) => {
-      const diferencas = Array.isArray(c.diferencas)
+      const todas = Array.isArray(c.diferencas)
         ? c.diferencas.map((d) => String(d ?? "").trim()).filter(Boolean)
         : [];
-      const igual = c.igual === true && diferencas.length === 0;
+      /* Toda diferenca listada reprova, ate a especulativa (02/10, pedido 550:
+         "pode indicar outra capacidade" era mesmo outro modelo, BRE68AK 477 L,
+         com a mesma foto). Especulacao so muda o TEXTO do que muda. */
+      const diferencas = todas.filter((d) => !soEspeculacao(d));
+      const igual = c.igual === true && todas.length === 0;
       /* Quando nao e igual, o motivo e O QUE MUDA: e o aviso que o site mostra
-         nos parecidos. */
+         nos parecidos. Sem contradicao confirmada, diz isso. */
       const motivo =
         !igual && diferencas.length
           ? diferencas.join("; ")
-          : String(c.motivo ?? "") || diferencas.join("; ");
+          : !igual && todas.length
+            ? "Não confirmado: " + todas.join("; ")
+            : String(c.motivo ?? "") || diferencas.join("; ");
       const sem = Number(c.semelhanca);
       return {
         indice: c.indice as number,

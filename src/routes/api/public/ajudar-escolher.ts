@@ -40,7 +40,9 @@ export const Route = createFileRoute("/api/public/ajudar-escolher")({
           return json(request, { erro: "Comparação ainda não terminou." }, 409);
 
         const analise = p.analise as Record<string, unknown>;
-        const versao = JSON.stringify(analise).length;
+        /* Versão = tamanho da análise + versão da regra (02/10: a escolha passou
+           a seguir a tela; respostas guardadas antes não valem). */
+        const versao = JSON.stringify(analise).length * 10 + 2;
         /* Tabela nova (fora dos tipos gerados): acesso sem tipo. */
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as any;
