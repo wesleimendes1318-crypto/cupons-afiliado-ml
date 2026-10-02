@@ -264,7 +264,8 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 
 ## Acompanhar preço (teste, 28/09)
 - Botão "Acompanhar preço" no resultado (preço-alvo opcional) e página
-  /meus-precos (histórico, "caiu R$ X", "chegou no seu preço", link de
+  /meus-precos (aba "Meus preços" no topo, de volta em 02/10 a pedido do
+  Weslei; histórico, "caiu R$ X", "chegou no seu preço", link de
   afiliado). Sem cadastro: id aleatório do navegador (lib/navegador.ts),
   limite de 20 por navegador e 200 produtos no total; aviso só no site.
 - SEM SerpAPI e sem pedido de comparação (Weslei: "não gaste meus créditos da
