@@ -575,14 +575,14 @@ function lerHistorico(): ItemHistorico[] {
   try {
     const bruto = window.localStorage.getItem(CHAVE_HISTORICO);
     const lista = bruto ? (JSON.parse(bruto) as ItemHistorico[]) : [];
-    return Array.isArray(lista) ? lista.slice(0, 6) : [];
+    return Array.isArray(lista) ? lista.slice(0, 5) : [];
   } catch {
     return [];
   }
 }
 function gravarHistorico(lista: ItemHistorico[]) {
   try {
-    window.localStorage.setItem(CHAVE_HISTORICO, JSON.stringify(lista.slice(0, 6)));
+    window.localStorage.setItem(CHAVE_HISTORICO, JSON.stringify(lista.slice(0, 5)));
   } catch {
     /* navegador sem armazenamento: segue sem histórico */
   }
@@ -656,7 +656,8 @@ function Historico({
               onClick={() => comparar(h.url)}
               className="shrink-0 rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
             >
-              Ver de novo
+              <span className="sm:hidden">Ver se caiu</span>
+              <span className="hidden sm:inline">Verificar se o preço caiu</span>
             </button>
           </li>
         ))}
@@ -910,7 +911,7 @@ export default function BuscaPorLink() {
     const item = itemDoHistorico(alvo, pedido.analise);
     if (!item) return;
     setHistorico((h) => {
-      const nova = [item, ...h.filter((x) => x.url !== alvo)].slice(0, 6);
+      const nova = [item, ...h.filter((x) => x.url !== alvo)].slice(0, 5);
       gravarHistorico(nova);
       return nova;
     });
@@ -1942,6 +1943,7 @@ function Resultado({
             conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
             iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
             semAnimacao={alternativa != null}
+            precos={a?.precos ?? null}
           />
         )}
 
@@ -2116,10 +2118,13 @@ function MelhorOpcao({
   comparou = true,
   completando = false,
   semAnimacao = false,
+  precos = null,
 }: {
   semAnimacao?: boolean;
   vendedor: string | null;
   preco: number | null;
+  /* Pix x parcelado do anúncio (02/10): "no Pix · ou R$ X em Nx". */
+  precos?: Precos | null;
   link: string | null;
   urlColada?: string | null;
   comparou?: boolean;
@@ -2151,6 +2156,7 @@ function MelhorOpcao({
           ) : (
             <span className="text-xs font-normal">preço no anúncio</span>
           )}
+          <FormaDePagamento preco={preco} precos={precos} className="text-right" />
         </span>
       </div>
       {completando ? (

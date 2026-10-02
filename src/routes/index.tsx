@@ -8,6 +8,7 @@ import {
   Clock3,
   Copy,
   Info,
+  LayoutGrid,
   Link2,
   LoaderCircle,
   Search,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  TrendingDown,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -1911,6 +1913,43 @@ function Index() {
         <BuscaPorLink />
 
         <Vitrine />
+
+        {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
+            da caixa do link. */}
+        <nav aria-label="Acesso rápido" className="mt-8 grid gap-3 sm:grid-cols-3">
+          {[
+            {
+              to: "/meus-precos",
+              icone: TrendingDown,
+              titulo: "Meus preços",
+              texto: "Produtos que você acompanha",
+            },
+            {
+              to: "/guias",
+              icone: BookOpen,
+              titulo: "Guias de compra",
+              texto: "Como escolher sem cair em armadilha",
+            },
+            {
+              to: "/categorias",
+              icone: LayoutGrid,
+              titulo: "Categorias",
+              texto: "Comparações por tipo de produto",
+            },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-ml-blue"
+            >
+              <item.icone className="size-5 shrink-0 text-ml-blue" aria-hidden="true" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{item.titulo}</span>
+                <span className="block text-xs text-secondary-ink">{item.texto}</span>
+              </span>
+            </Link>
+          ))}
+        </nav>
 
         {MOSTRAR_CUPONS && (
           <>
