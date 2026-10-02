@@ -167,7 +167,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   o do Pix quando há desconto no Pix. A extensão lê do evento do PRÓPRIO
   anúncio (precosDoItem) o cheio, o Pix e o parcelamento, e o site mostra
   "no Pix · ou R$ X em Nx" onde souber (colado, tabela, parecidos,
-  alternativa). Sem a informação, não afirma.
+  alternativa, Melhor opção). Sem a informação, não afirma. Parcelado que sai
+  MAIS CARO sempre aparece com o total e a diferença (Weslei, 02/10: "não deve
+  inventar nada, sempre indique o valor parcelado se sai mais caro"):
+  "parcelado: 10x de R$ 359,90 sem juros = R$ 3.599,00 (R$ 180,00 a mais)".
 - Parecidos (Weslei, 28/09: "o foco está no mais semelhante com custo
   reduzido"; "assertivas em relação ao que foi buscado"): semelhança >= 85
   na frente; dentro disso, os MAIS BARATOS que o colado primeiro, do mais

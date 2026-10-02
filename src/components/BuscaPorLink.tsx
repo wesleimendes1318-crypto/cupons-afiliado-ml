@@ -2337,19 +2337,30 @@ type LinhaLoja = {
    descrição do anúncio, fechados num botão para não poluir a tela. */
 /* Como o preço mostrado se paga: "no Pix" e o parcelado, quando o anúncio
    informa. Sem a informação, nada é afirmado. */
+/* PAGAMENTO COMO O ANÚNCIO DIZ (Weslei, 02/10: "não deve inventar nada,
+   sempre indique o valor parcelado se sai mais caro"). Só números lidos do
+   evento do próprio anúncio (precosDoItem: cheio, Pix, parcelas e total).
+   Parcelado que sai mais caro que o preço mostrado sempre aparece com o total
+   e quanto custa a mais; sem o dado, não afirma. */
 function textoDoPagamento(preco: number | null | undefined, p: Precos | null | undefined) {
   if (!p || preco == null) return null;
   const perto = (x: number | null | undefined) => x != null && Math.abs(x - preco) < 0.5;
-  const parcelado = p.parcelas
-    ? `${brl(p.parcelas.total ?? p.cheio)} em ${p.parcelas.vezes}x${p.parcelas.semJuros ? " sem juros" : ""}`
-    : p.cheio != null && !perto(p.cheio)
-      ? `${brl(p.cheio)} no cartão`
-      : null;
-  if (p.pix != null && perto(p.pix)) return parcelado ? `no Pix · ou ${parcelado}` : "no Pix";
-  if (p.pix != null && perto(p.cheio)) return `${brl(p.pix)} no Pix`;
-  return p.parcelas
-    ? `em até ${p.parcelas.vezes}x${p.parcelas.semJuros ? " sem juros" : ""}`
-    : null;
+  const partes: string[] = [];
+  if (p.pix != null && perto(p.pix)) partes.push("no Pix");
+  else if (p.pix != null && p.pix < preco - 0.5) partes.push(`${brl(p.pix)} no Pix`);
+  const pc = p.parcelas;
+  if (pc) {
+    const total = pc.total ?? p.cheio;
+    const cada = pc.valor != null ? `${pc.vezes}x de ${brl(pc.valor)}` : `${pc.vezes}x`;
+    if (total != null && total > preco + 0.5)
+      partes.push(
+        `parcelado: ${cada}${pc.semJuros ? " sem juros" : " com juros"} = ${brl(total)} (${brl(total - preco)} a mais)`,
+      );
+    else partes.push(`ou ${cada}${pc.semJuros ? " sem juros" : ""}`);
+  } else if (p.cheio != null && p.cheio > preco + 0.5) {
+    partes.push(`no cartão: ${brl(p.cheio)} (${brl(p.cheio - preco)} a mais)`);
+  }
+  return partes.length ? partes.join(" · ") : null;
 }
 
 function FormaDePagamento({
