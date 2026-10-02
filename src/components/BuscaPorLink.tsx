@@ -121,29 +121,43 @@ function mensagemMelhorOpcao({
 }) {
   const nome = semEntidades(titulo);
   const linhas: string[] = [];
+
+  /* Tom de amigo indicando uma oportunidade real (Weslei, 02/10), com
+     emojis padrão e espaçamento limpo; o link é sempre o de afiliado. */
   if (economia != null && economia >= 0.5) {
+    linhas.push("🔥 *Olha só o desconto que achei pro mesmo produto!*");
+    linhas.push("");
+    if (nome) linhas.push(`✨ *${nome}*`);
+    linhas.push("");
     linhas.push(
       freteGratis === false
-        ? `💸 Achei o mesmo produto *${brl(economia)} mais barato no produto* (frete à parte)!`
-        : `💸 Achei o mesmo produto *${brl(economia)} mais barato*!`,
+        ? `💸 Economia de *${brl(economia)} a menos no produto* (frete à parte)`
+        : `💸 Economia de *${brl(economia)} a menos*!`,
     );
-    if (nome) linhas.push(`🛒 ${nome}`);
-    if (preco != null)
-      linhas.push(
-        `💰 ${precoOriginal != null ? `De ~${brl(precoOriginal)}~ por ` : ""}*${brl(preco)}*` +
-          (freteGratis === true ? " · frete grátis" : ""),
-      );
+    if (preco != null) {
+      const dePor = precoOriginal != null ? `De ~${brl(precoOriginal)}~ por ` : "";
+      linhas.push(`💰 ${dePor}*${brl(preco)}*`);
+    }
+    if (freteGratis === true) linhas.push("🚚 Frete grátis incluso");
   } else {
-    linhas.push(nome ? `✅ Conferi o preço de *${nome}*` : "✅ Conferi o preço deste produto");
-    if (preco != null)
-      linhas.push(
-        `💰 *${brl(preco)}*` +
-          (comparadas > 0 ? ` · a melhor opção entre ${comparadas + 1} lojas` : "") +
-          (freteGratis === true ? " · frete grátis" : ""),
-      );
+    linhas.push("👀 *Dá uma olhada nessa oferta que conferi!*");
+    linhas.push("");
+    if (nome) linhas.push(`✨ *${nome}*`);
+    linhas.push("");
+    if (preco != null) {
+      const lojasTexto =
+        comparadas > 0 ? ` · Melhor opção entre ${comparadas + 1} lojas pesquisadas` : "";
+      linhas.push(`🏷️ *${brl(preco)}*${lojasTexto}`);
+    }
+    if (freteGratis === true) linhas.push("🚚 Frete grátis incluso");
   }
-  linhas.push("", `👉 Compre com segurança: ${link}`);
-  linhas.push("", "🔎 Compare qualquer produto em melhorescolha.io");
+
+  linhas.push("");
+  linhas.push("🛒 *Garanta o seu com compra segura por aqui:*");
+  linhas.push(`👉 ${link}`);
+  linhas.push("");
+  linhas.push("💡 *Dica:* Compare qualquer produto antes de comprar em melhorescolha.io");
+
   return linhas.join("\n");
 }
 
