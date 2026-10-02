@@ -262,6 +262,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
   public/video/ (WebM + MP4, 720p).
 
+## Bot do Telegram (02/10)
+- /api/public/telegram-webhook: o cliente manda o link (longo ou meli.la) e
+  recebe a comparação com as MESMAS regras da tela (src/lib/telegram.ts usa
+  opcoesDaAnalise + decisaoDaTela): melhor preço do mesmo produto (pelo total
+  com o frete conhecido), Melhor alternativa com o que muda, loja oficial,
+  Pix x parcelado (src/lib/pagamento.ts, igual ao site), frete em linha
+  própria e só links de afiliado. Pedido por pedir_comparacao; espera até
+  ~50 s e, sem resultado, manda o link de afiliado (se já saiu) e o site
+  (/?link=..., que abre a comparação sozinho).
+- Token em API_TELEGRAM (Secrets). /api/public/telegram-setup registra o
+  webhook com um segredo derivado do token; o webhook recusa chamada sem ele.
+
 ## Acompanhar preço (teste, 28/09)
 - Botão "Acompanhar preço" no resultado (preço-alvo opcional) e página
   /meus-precos (aba "Meus preços" no topo, de volta em 02/10 a pedido do

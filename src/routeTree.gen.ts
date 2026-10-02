@@ -38,6 +38,8 @@ import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-r
 import { Route as ApiPublicMlTesteRouteImport } from './routes/api/public/ml-teste'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 import { Route as ApiPublicRegiaoRouteImport } from './routes/api/public/regiao'
+import { Route as ApiPublicTelegramSetupRouteImport } from './routes/api/public/telegram-setup'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -186,6 +188,17 @@ const ApiPublicRegiaoRoute = ApiPublicRegiaoRouteImport.update({
   path: '/api/public/regiao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTelegramSetupRoute = ApiPublicTelegramSetupRouteImport.update({
+  id: '/api/public/telegram-setup',
+  path: '/api/public/telegram-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram-webhook',
+    path: '/api/public/telegram-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -217,6 +230,8 @@ export interface FileRoutesByFullPath {
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
+  '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
+  '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -248,6 +263,8 @@ export interface FileRoutesByTo {
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
+  '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
+  '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -280,6 +297,8 @@ export interface FileRoutesById {
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
+  '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
+  '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -313,6 +332,8 @@ export interface FileRouteTypes {
     | '/api/public/ml-teste'
     | '/api/public/recomendar'
     | '/api/public/regiao'
+    | '/api/public/telegram-setup'
+    | '/api/public/telegram-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -344,6 +365,8 @@ export interface FileRouteTypes {
     | '/api/public/ml-teste'
     | '/api/public/recomendar'
     | '/api/public/regiao'
+    | '/api/public/telegram-setup'
+    | '/api/public/telegram-webhook'
   id:
     | '__root__'
     | '/'
@@ -375,6 +398,8 @@ export interface FileRouteTypes {
     | '/api/public/ml-teste'
     | '/api/public/recomendar'
     | '/api/public/regiao'
+    | '/api/public/telegram-setup'
+    | '/api/public/telegram-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -407,6 +432,8 @@ export interface RootRouteChildren {
   ApiPublicMlTesteRoute: typeof ApiPublicMlTesteRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
   ApiPublicRegiaoRoute: typeof ApiPublicRegiaoRoute
+  ApiPublicTelegramSetupRoute: typeof ApiPublicTelegramSetupRoute
+  ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -614,6 +641,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRegiaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/telegram-setup': {
+      id: '/api/public/telegram-setup'
+      path: '/api/public/telegram-setup'
+      fullPath: '/api/public/telegram-setup'
+      preLoaderRoute: typeof ApiPublicTelegramSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/telegram-webhook': {
+      id: '/api/public/telegram-webhook'
+      path: '/api/public/telegram-webhook'
+      fullPath: '/api/public/telegram-webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -648,6 +689,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMlTesteRoute: ApiPublicMlTesteRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
   ApiPublicRegiaoRoute: ApiPublicRegiaoRoute,
+  ApiPublicTelegramSetupRoute: ApiPublicTelegramSetupRoute,
+  ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
