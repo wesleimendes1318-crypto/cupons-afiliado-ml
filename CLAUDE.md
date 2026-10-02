@@ -109,6 +109,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   oficial de ofertas (0 = grátis, > 0 = pago; Baba Black R$ 57 cost 44,92) e o
   texto "grátis" no cartão da busca. Sem isso, "não sei" (a tela não afirma).
   Nunca deduzir pela regra geral de R$ 19 (errou no Baba Black).
+- Loja do MESMO produto recusada pelo programa (semAfiliado/mesmaPagina) também
+  sai da tabela (02/10, geladeira: R$ 2.345 com "escolha em Outras opções",
+  mas o link da ficha abria o perfil social só com a Magalu de R$ 5.051).
+  Preço que o botão não entrega não aparece.
 - Parecido recusado pelo programa (semAfiliado) não aparece no site, nem
   como alternativa nem no "Me ajude a escolher" (pedido 525, 30/09: mostrava
   "R$ 205 a menos" e o botão abria o anúncio colado de R$ 954).

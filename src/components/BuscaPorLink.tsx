@@ -1744,7 +1744,7 @@ function Resultado({
 
   /* Tabela de todas as lojas. Fica AO LADO do resultado (tela larga) ou logo
      abaixo do produto (celular): o cliente vê tudo sem rolar (Weslei, 25/09). */
-  const linhasLojas: LinhaLoja[] = [
+  const linhasTodas: LinhaLoja[] = [
     ...(a?.preco != null
       ? [
           {
@@ -1802,6 +1802,11 @@ function Resultado({
       url: r.url ?? null,
     })),
   ];
+  /* Loja recusada pelo programa (semAfiliado/mesmaPagina) sai da tabela
+     (02/10, geladeira: "CGDCHEABF36260 R$ 2.345" com o aviso "escolha em
+     Outras opções", mas o link da ficha abre o perfil com só a Magalu de
+     R$ 5.051). Preço que o botão não entrega não aparece. */
+  const linhasLojas = linhasTodas.filter((l) => l.colado || !l.mesmaPagina);
   /* Tudo o que a comparação achou, para comparar lado a lado ou pedir ajuda
      para escolher (28/09). Só entra o que tem link de compra. */
   const opcoesEscolha: OpcaoEscolha[] = [
