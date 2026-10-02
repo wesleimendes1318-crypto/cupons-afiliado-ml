@@ -115,7 +115,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - CEP AUTOMÁTICO E TRANSPARENTE (Weslei, 02/10): região pelo IP
   (/api/public/regiao: request.cf/cabeçalhos cf-* da Cloudflare; CEP da
   capital quando só a UF é conhecida; nada gravado, sem IP na resposta) e
-  guardada no navegador; selo "📍 Frete para: Cidade/UF (CEP) · Alterar"
+  guardada no navegador; sem região pelo IP, referência nacional São Paulo
+  01001-000 marcada "padrão, informe o seu" (não fica salva; 02/10). Selo
+  SEMPRE visível: "📍 Frete para: Cidade/UF (CEP) · Alterar"
   com ViaCEP (src/components/CepDestino.tsx). O CEP vai no pedido
   (pedir_comparacao(p_url, p_nova, p_cep) -> pedidos_link.cep_destino; a
   versão de 2 argumentos continua). O frete para o CEP é simulado no

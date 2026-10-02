@@ -6,7 +6,24 @@ import { useEffect, useState } from "react";
    simulado no servidor pela API oficial: a extensão nunca muda endereço nem
    CEP da conta de afiliado. */
 
-export type Regiao = { cidade: string | null; uf: string | null; cep: string; aproximado: boolean };
+export type Regiao = {
+  cidade: string | null;
+  uf: string | null;
+  cep: string;
+  aproximado: boolean;
+  /* Referência nacional (São Paulo) quando o IP não diz a região. */
+  padrao?: boolean;
+};
+
+/* Sempre há uma região na tela (02/10): sem IP mapeado nem CEP salvo, vale a
+   referência nacional, com o aviso para o cliente informar o dele. */
+const PADRAO: Regiao = {
+  cidade: "São Paulo",
+  uf: "SP",
+  cep: "01001-000",
+  aproximado: true,
+  padrao: true,
+};
 
 const CHAVE = "melhorescolha:cep";
 
@@ -46,7 +63,12 @@ export function useCepDestino(ativo: boolean) {
     fetch("/api/public/regiao")
       .then((r) => (r.ok ? r.json() : null))
       .then((j: Partial<Regiao> | null) => {
-        if (!vivo || !j?.cep) return;
+        if (!vivo) return;
+        if (!j?.cep || j.padrao) {
+          /* Padrão não fica salvo: na próxima visita tenta o IP de novo. */
+          setRegiao(PADRAO);
+          return;
+        }
         const r: Regiao = {
           cidade: j.cidade ?? null,
           uf: j.uf ?? null,
@@ -56,7 +78,9 @@ export function useCepDestino(ativo: boolean) {
         gravar(r);
         setRegiao(r);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (vivo) setRegiao(PADRAO);
+      });
     return () => {
       vivo = false;
     };
@@ -113,7 +137,12 @@ export function SeloCep({
     <div className="mt-2 text-xs text-secondary-ink">
       <span aria-hidden>📍</span> Frete para:{" "}
       <span className="font-semibold text-foreground">{onde}</span>
-      {regiao?.aproximado && <span> · aproximado</span>} ·{" "}
+      {regiao?.padrao ? (
+        <span> · padrão, informe o seu</span>
+      ) : (
+        regiao?.aproximado && <span> · aproximado</span>
+      )}{" "}
+      ·{" "}
       <button
         type="button"
         onClick={() => setAberto((x) => !x)}

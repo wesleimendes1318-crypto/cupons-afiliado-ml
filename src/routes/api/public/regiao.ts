@@ -83,7 +83,8 @@ export function regiaoDoPedido(request: Request) {
   const cf = (request as unknown as { cf?: Record<string, unknown> }).cf ?? {};
   const h = (n: string) => decodificar(request.headers.get(n));
   const pais = (h("cf-ipcountry") ?? (cf["country"] as string | undefined) ?? "").toUpperCase();
-  if (pais && pais !== "BR") return { cidade: null, uf: null, cep: null, aproximado: true };
+  if (pais && pais !== "BR")
+    return { cidade: null, uf: null, cep: null, aproximado: true, padrao: false };
   const cidade = h("cf-ipcity") ?? decodificar(cf["city"] as string | undefined);
   const codigoUf = (
     h("cf-region-code") ??
@@ -102,8 +103,19 @@ export function regiaoDoPedido(request: Request) {
       : uf
         ? (CEP_DA_CAPITAL[uf] ?? null)
         : null;
-  return { cidade: postal.length === 8 ? cidade : uf ? cidade : null, uf, cep, aproximado: true };
+  /* Sem UF ou CEP (cabeçalhos ausentes, IP não mapeado): referência nacional,
+     marcada como padrão para a tela pedir o CEP do cliente (02/10). */
+  if (!uf || !cep) return { ...PADRAO };
+  return {
+    cidade,
+    uf,
+    cep,
+    aproximado: true,
+    padrao: false,
+  };
 }
+
+const PADRAO = { cidade: "São Paulo", uf: "SP", cep: "01001-000", aproximado: true, padrao: true };
 
 export const Route = createFileRoute("/api/public/regiao")({
   server: {
