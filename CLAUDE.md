@@ -107,6 +107,20 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Parecido recusado pelo programa (semAfiliado) não aparece no site, nem
   como alternativa nem no "Me ajude a escolher" (pedido 525, 30/09: mostrava
   "R$ 205 a menos" e o botão abria o anúncio colado de R$ 954).
+- CEP AUTOMÁTICO E TRANSPARENTE (Weslei, 02/10): região pelo IP
+  (/api/public/regiao: request.cf/cabeçalhos cf-* da Cloudflare; CEP da
+  capital quando só a UF é conhecida; nada gravado, sem IP na resposta) e
+  guardada no navegador; selo "📍 Frete para: Cidade/UF (CEP) · Alterar"
+  com ViaCEP (src/components/CepDestino.tsx). O CEP vai no pedido
+  (pedir_comparacao(p_url, p_nova, p_cep) -> pedidos_link.cep_destino; a
+  versão de 2 argumentos continua). O frete para o CEP é simulado no
+  SERVIDOR pela API oficial (/api/public/frete-cep ->
+  /items/{id}/shipping_options?zip_code=, só leitura; conferido em 02/10:
+  capinha grátis para SP, R$ 74,99 para Manaus). A extensão só manda o número
+  do pedido e aplica o resultado (freteGratis, custoFrete, cepDestino): NUNCA
+  muda endereço nem CEP da conta de afiliado. Frete pago continua nunca
+  passando na frente; a tabela mostra "Frete R$ X" e "frete para CEP".
+  Diagnóstico: sinc_config.frete_cep_ultimo e frete_cep_diag.
 - Mesma loja do link colado entra na comparação só com OUTRO anúncio dela
   mais barato ("Mesma loja, outro anúncio"; Camelo R$ 78,54 x R$ 86,90).
 - UMA recomendação só: é sempre a mesma linha que leva o selo "Mais barato"

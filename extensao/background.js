@@ -7,7 +7,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor } from './sincronia.js';
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -3920,6 +3920,9 @@ async function atenderPedidos() {
           let parecidos = [];
           /* Frete do anuncio colado: true gratis, false pago, null nao sei. */
           let freteAqui = null;
+          /* CEP do cliente (02/10) e o custo do frete do colado para ele. */
+          let cepDestino = null;
+          let custoFreteAqui = null;
           /* Registro da busca fora do catalogo, para conferir de longe. */
           let buscaFora = { rodou: false, motivo: null, vistos: 0 };
           let apiAchou = false;
@@ -3942,6 +3945,7 @@ async function atenderPedidos() {
           outra = null; outras = []; outraFalhou = null; recusados111 = [];
           procurouOutra = false; motivoNaoProcurou = null;
           referencias = []; parecidos = []; freteAqui = null; buscaFora = { rodou: false, motivo: null, vistos: 0 };
+          cepDestino = null; custoFreteAqui = null;
           apiAchou = false; verificacaoIA = null; ultimaLeitura = null;
           {
             if (volta === 1) marcarEtapa(sincToken, p.id, 'outras_lojas');
@@ -4105,6 +4109,27 @@ async function atenderPedidos() {
               buscaFora.motivo = !a.ok ? 'anuncio nao lido' : 'leitura pausada (freio de captcha)';
             }
 
+            /* FRETE PARA O CEP DO CLIENTE (Weslei, 02/10): com CEP no pedido, o
+               servidor simula o frete de cada anuncio para ele (API oficial, so
+               leitura). A extensao NUNCA muda endereco nem CEP da conta de
+               afiliado; sem CEP ou sem resposta, fica o frete que ja se sabia. */
+            {
+              const itemColado = itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null;
+              const doItem = x => (x && (x.item || itemDoUrl(x.url || ''))) || null;
+              const lista = [...alts, ...referencias, ...parecidos];
+              const itens = [...new Set([itemColado, ...lista.map(doItem)].filter(Boolean))].slice(0, 24);
+              const fr = itens.length ? await comPrazo(freteNoServidor(sincToken, p.id, itens), 9000, null) : null;
+              if (fr && fr.cep) {
+                cepDestino = fr.cep;
+                const f = fr.fretes || {};
+                for (const x of lista) {
+                  const v = f[doItem(x)];
+                  if (v && v.gratis != null) { x.freteGratis = v.gratis; x.custoFrete = v.custo; x.freteCep = fr.cep; }
+                }
+                const fc = itemColado ? f[itemColado] : null;
+                if (fc && fc.gratis != null) { freteAqui = fc.gratis; custoFreteAqui = fc.custo; }
+              }
+            }
             /* Frete pago nunca vira "mais barata" (catalogo ou busca). */
             alts = alts.filter(x => !(x.freteGratis === false && freteAqui !== false));
             /* Segunda volta interrompida por cliente novo: resultado descartado. */
@@ -4244,6 +4269,7 @@ async function atenderPedidos() {
                   imagem: alt.imagem || null,
                   verificadoIA: !!alt.verificadoIA || (verificacaoIA && !verificacaoIA.indisponivel && !!alt.achadoNaBusca),
                   freteGratis: alt.freteGratis != null ? alt.freteGratis : null,
+                  custoFrete: alt.custoFrete != null ? alt.custoFrete : null,
                   mesmaLoja: !!alt.mesmaLoja,
                   lojaOficial: alt.lojaOficial != null ? alt.lojaOficial : null,
                   mercadoLider: alt.mercadoLider || null,
@@ -4364,6 +4390,9 @@ async function atenderPedidos() {
             /* Nao e o mesmo produto: o site mostra separado, com "muda". */
             parecidos: comDetalhes(parecidos),
             freteGratis: freteAqui,
+            /* CEP do cliente e o frete do colado para ele (02/10). */
+            cepDestino: cepDestino,
+            custoFrete: custoFreteAqui,
             verificacaoIA: verificacaoIA,
             buscaFora: buscaFora.rodou ? buscaFora
               : { rodou: false, vistos: 0, motivo: !a.ok ? 'anuncio nao lido' : 'leitura pausada (freio/captcha) e modo anonimo nao permitido' },

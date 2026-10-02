@@ -30,6 +30,7 @@ import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
+import { Route as ApiPublicFreteCepRouteImport } from './routes/api/public/frete-cep'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
@@ -145,6 +146,11 @@ const ApiPublicConferirProdutoRoute =
     path: '/api/public/conferir-produto',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicFreteCepRoute = ApiPublicFreteCepRouteImport.update({
+  id: '/api/public/frete-cep',
+  path: '/api/public/frete-cep',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicGerarTextoRoute = ApiPublicGerarTextoRouteImport.update({
   id: '/api/public/gerar-texto',
   path: '/api/public/gerar-texto',
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
+  '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
+  '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
+  '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
+    | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
+    | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
+    | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
@@ -387,6 +399,7 @@ export interface RootRouteChildren {
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
+  ApiPublicFreteCepRoute: typeof ApiPublicFreteCepRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicConferirProdutoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/frete-cep': {
+      id: '/api/public/frete-cep'
+      path: '/api/public/frete-cep'
+      fullPath: '/api/public/frete-cep'
+      preLoaderRoute: typeof ApiPublicFreteCepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gerar-texto': {
       id: '/api/public/gerar-texto'
       path: '/api/public/gerar-texto'
@@ -620,6 +640,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
+  ApiPublicFreteCepRoute: ApiPublicFreteCepRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,

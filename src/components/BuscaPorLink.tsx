@@ -34,6 +34,7 @@ import {
   type CustoBeneficio,
   type Medida,
 } from "@/lib/alternativa";
+import { SeloCep, useCepDestino } from "@/components/CepDestino";
 import { mudaCompleta } from "@/lib/ficha";
 import { roboAtivo } from "@/lib/robo";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -197,6 +198,8 @@ type OutraLoja = {
   detalhes?: Detalhes | null;
   precos?: Precos | null;
   freteGratis?: boolean | null;
+  /* Custo do frete para o CEP do cliente (02/10), quando simulado. */
+  custoFrete?: number | null;
   /* Loja oficial da marca (Weslei, 27/09: a mais barata do agasalho era a
      loja oficial da adidas). Selo na tabela e na recomendação. */
   lojaOficial?: boolean | null;
@@ -309,6 +312,10 @@ type Analise = {
   linksPendentes?: boolean | null;
   /* Frete do anúncio colado: true grátis, false pago, null não sei. */
   freteGratis?: boolean | null;
+  /* CEP do cliente (02/10): com ele, o frete de cada loja foi simulado para
+     esse CEP pela API oficial; custoFrete = do anúncio colado. */
+  cepDestino?: string | null;
+  custoFrete?: number | null;
   lojaOficial?: boolean | null;
   precos?: Precos | null;
   /* Características, destaques e descrição lidos no anúncio (27/09). */
@@ -351,6 +358,7 @@ type Referencia = {
   /* Recusado pelo programa de afiliados (erro 111): link da ficha. */
   semAfiliado?: boolean | null;
   freteGratis?: boolean | null;
+  custoFrete?: number | null;
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
@@ -670,6 +678,12 @@ export default function BuscaPorLink() {
   const [completando, setCompletando] = useState(false);
   const [historico, setHistorico] = useState<ItemHistorico[]>([]);
   useEffect(() => setHistorico(lerHistorico()), []);
+  /* CEP do cliente (02/10): região pelo IP, trocável; vai no pedido. */
+  const { regiao, trocar: trocarCep } = useCepDestino(true);
+  const cepRef = useRef<string | null>(null);
+  useEffect(() => {
+    cepRef.current = regiao?.cep ?? null;
+  }, [regiao]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -741,9 +755,12 @@ export default function BuscaPorLink() {
 
       /* Número + chave aleatória do pedido (27/09): o resultado só é lido
          com a chave, não com o número sequencial. */
+      const cepAtual = cepRef.current;
       const { data: pedidoNovo, error } = await supabase.rpc(
         "pedir_comparacao" as never,
-        { p_url: limpo, p_nova: nova } as never,
+        (cepAtual
+          ? { p_url: limpo, p_nova: nova, p_cep: cepAtual }
+          : { p_url: limpo, p_nova: nova }) as never,
       );
       const id = (pedidoNovo as { id?: number } | null)?.id ?? null;
       const chave = (pedidoNovo as { chave?: string } | null)?.chave ?? null;
@@ -949,6 +966,7 @@ export default function BuscaPorLink() {
           {carregando ? "Comparando..." : "Comparar preços"}
         </button>
       </div>
+      <SeloCep regiao={regiao} trocar={trocarCep} />
 
       {erro && <p className="mt-3 text-sm font-medium text-danger">{erro}</p>}
 
@@ -1733,6 +1751,7 @@ function Resultado({
             url: semLink ? urlColada : null,
             colado: true,
             freteGratis: a?.freteGratis ?? null,
+            custoFrete: a?.custoFrete ?? null,
             lojaOficial: a?.lojaOficial ?? null,
             detalhes: a?.detalhes ?? null,
             precos: a?.precos ?? null,
@@ -1749,6 +1768,7 @@ function Resultado({
         return g != null ? -g : null;
       })(),
       freteGratis: o.freteGratis ?? null,
+      custoFrete: o.custoFrete ?? null,
       mesmaLoja: o.mesmaLoja ?? null,
       lojaOficial: o.lojaOficial ?? null,
       mercadoLider: o.mercadoLider ?? null,
@@ -1765,6 +1785,7 @@ function Resultado({
       final: r.final,
       diferenca: r.diferenca,
       freteGratis: r.freteGratis ?? null,
+      custoFrete: r.custoFrete ?? null,
       mesmaLoja: r.mesmaLoja ?? null,
       lojaOficial: r.lojaOficial ?? null,
       mercadoLider: r.mercadoLider ?? null,
@@ -1875,6 +1896,7 @@ function Resultado({
             <TodasAsLojas
               linhas={linhasLojas}
               melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
+              cep={a?.cepDestino ?? null}
             />
           )}
           <Parecidos
@@ -2279,6 +2301,8 @@ type LinhaLoja = {
   colado?: boolean;
   /* true frete grátis, false frete pago, null/undefined não sei. */
   freteGratis?: boolean | null;
+  /* Quanto custa o frete para o CEP do cliente (02/10), quando simulado. */
+  custoFrete?: number | null;
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
@@ -2755,9 +2779,12 @@ function Parecidos({
 function TodasAsLojas({
   linhas,
   melhorChave,
+  cep,
 }: {
   linhas: LinhaLoja[];
   melhorChave?: string | null;
+  /* CEP para o qual o frete foi simulado (02/10). */
+  cep?: string | null;
 }) {
   const [aberta, setAberta] = useState<string | null>(null);
   if (linhas.length < 2) return null;
@@ -2793,7 +2820,10 @@ function TodasAsLojas({
     !l.colado && mediana != null && l.final != null && l.final < mediana * 0.7;
   return (
     <div className="mt-3 sm:mt-0">
-      <p className="text-sm font-bold">Todas as lojas comparadas ({ordem.length})</p>
+      <p className="text-sm font-bold">
+        Todas as lojas comparadas ({ordem.length})
+        {cep && <span className="font-normal text-secondary-ink"> · frete para {cep}</span>}
+      </p>
       <table className="mt-1.5 w-full table-fixed border-collapse overflow-hidden rounded-md border border-border text-sm">
         <thead>
           <tr className="bg-muted/70 text-left text-xs text-secondary-ink">
@@ -2840,7 +2870,9 @@ function TodasAsLojas({
                       )}
                       {l.freteGratis === false && (
                         <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                          Sem frete grátis
+                          {l.custoFrete != null && l.custoFrete > 0
+                            ? `Frete ${brl(l.custoFrete)}`
+                            : "Sem frete grátis"}
                         </span>
                       )}
                       {muitoAbaixo(l) && (

@@ -463,6 +463,26 @@ export async function compararNoServidor(token, url, dica = {}) {
   }
 }
 
+/* FRETE PARA O CEP DO CLIENTE (02/10): o servidor le o CEP gravado no pedido e
+   simula o frete pela API oficial. A extensao nunca muda endereco nem CEP da
+   conta de afiliado. Sem CEP no pedido, volta { cep: null }. */
+export async function freteNoServidor(token, pedido, itens) {
+  if (!token || !pedido || !itens || !itens.length) return null;
+  try {
+    const r = await fetch(SITE + '/api/public/frete-cep', {
+      method: 'POST',
+      credentials: 'omit',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'x-sinc-token': token },
+      body: JSON.stringify({ pedido, itens: itens.slice(0, 24) })
+    });
+    const j = await r.json().catch(() => null);
+    return r.ok && j ? j : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* Gemini do SERVIDOR do site (chave nos secrets do Lovable): confere pela foto
    se os candidatos sao o mesmo produto, ou escreve a busca. Plano B de quando
    a chave da extensao falha (cota, modelo indisponivel). */
