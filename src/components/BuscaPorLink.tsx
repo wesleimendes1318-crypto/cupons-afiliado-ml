@@ -85,15 +85,23 @@ function mensagemProduto({
   codigo: string;
   link: string;
 }) {
-  const linhas = ["Olha o cupom que encontrei 👀"];
-  if (titulo) linhas.push(`Produto: ${titulo}`);
-  if (vendedor) linhas.push(`Loja: ${vendedor}`);
-  if (cupom?.titulo) linhas.push(`Desconto: ${cupom.titulo}`);
-  if (cupom?.teto != null) linhas.push(`Economia máxima: ${brl(cupom.teto)}`);
-  else if (cupom) linhas.push("Limite: sem limite de valor");
-  if (cupom?.minimo != null) linhas.push(`Compra mínima: ${brl(cupom.minimo)}`);
-  if (cupom?.vence) linhas.push(`Válido até: ${dataBR(cupom.vence)}`);
-  linhas.push(`Etiqueta: ${codigo}`, `Link afiliado do produto: ${link}`);
+  /* Mesmo tom amigável da Melhor opção (Weslei, 02/10): emojis padrão e o
+     dado só quando existe — nunca inventar desconto, limite ou validade. */
+  const linhas = ["🎟️ *Achei um cupom pra essa compra!*"];
+  linhas.push("");
+  if (titulo) linhas.push(`✨ *${titulo}*`);
+  if (vendedor) linhas.push(`🏪 Vendido por ${vendedor}`);
+  if (cupom?.titulo) linhas.push(`🏷️ Cupom: *${cupom.titulo}*`);
+  if (cupom?.teto != null) linhas.push(`💸 Economia de até *${brl(cupom.teto)}*`);
+  else if (cupom) linhas.push("💸 Desconto sem limite de valor");
+  if (cupom?.minimo != null) linhas.push(`🧾 Vale em compras a partir de ${brl(cupom.minimo)}`);
+  if (cupom?.vence) linhas.push(`⏰ Válido até ${dataBR(cupom.vence)}`);
+  linhas.push("");
+  linhas.push("🛒 *Como usar:* copie o código e cole no carrinho");
+  linhas.push(`📋 *${codigo}*`);
+  linhas.push("");
+  linhas.push("👉 *Compra segura por aqui:*");
+  linhas.push(link);
   return linhas.join("\n");
 }
 
