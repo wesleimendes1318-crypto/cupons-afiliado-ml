@@ -146,14 +146,8 @@ const REGRAS_DESDE = Date.parse("2026-09-28T00:00:00Z");
 const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it", "gemma-3-27b-it"];
 const CONFIANCA_MINIMA_GEMMA = 90;
 const ehGemma = (modelo: string | undefined) => /^gemma/i.test(modelo ?? "");
-/* MULTI IA (02/10): chave API_KEY_MULTI_IA (OpenRouter, compatível com a
-   OpenAI) entra como reserva quando a Gemini/Gemma não dão (cota, fora do
-   ar). Modelos com prefixo "or:"; mínimo de confiança 90, como o Gemma. */
-const MODELOS_MULTI = ["or:google/gemini-2.5-flash", "or:openai/gpt-4o-mini"];
-const ehMulti = (modelo: string | undefined) => /^or:/.test(modelo ?? "");
-const chaveMulti = () => process.env["API_KEY_MULTI_IA"]?.trim() || null;
 const confiancaMinima = (modelo: string | undefined) =>
-  ehGemma(modelo) || ehMulti(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA;
+  ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA;
 
 /* COTA DO DIA (28/09): 2.5-flash e flash-latest tem 20 pedidos por dia na
    cota gratuita. Depois do 429 de cota DIARIA, o modelo sai da fila ate a
@@ -212,8 +206,7 @@ function ordemDosModelos(): string[] {
   const gemini = escolhido ? [escolhido, ...MODELOS.filter((m) => m !== escolhido)] : MODELOS;
   const todos = [...gemini.filter((m) => !ehGemma(m)), ...MODELOS_GEMMA];
   const livres = todos.filter(modeloDisponivel);
-  const multi = chaveMulti() ? MODELOS_MULTI : [];
-  return [...(livres.length ? livres : todos), ...multi];
+  return livres.length ? livres : todos;
 }
 
 function paraBase64(buf: ArrayBuffer): string {
@@ -259,58 +252,12 @@ async function baixarImagem(url: string): Promise<Parte | null> {
 }
 
 /* Um modelo, uma chamada. */
-async function chamarMulti(modelo: string, partes: Parte[], sinal: AbortSignal): Promise<Resultado> {
-  const chave = chaveMulti();
-  if (!chave) return { ok: false, status: 503, erro: "sem API_KEY_MULTI_IA", modelo };
-  try {
-    const content = partes.map((p) =>
-      "text" in p
-        ? { type: "text", text: p.text }
-        : {
-            type: "image_url",
-            image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` },
-          },
-    );
-    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${chave}`,
-        "HTTP-Referer": "https://www.melhorescolha.io",
-        "X-Title": "Melhor Escolha",
-      },
-      body: JSON.stringify({
-        model: modelo.slice(3),
-        messages: [{ role: "user", content }],
-        temperature: 0,
-        response_format: { type: "json_object" },
-      }),
-      signal: sinal,
-    });
-    const j = (await r.json().catch(() => null)) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      error?: { message?: string };
-    } | null;
-    const texto = j?.choices?.[0]?.message?.content ?? "";
-    if (r.ok && texto) return { ok: true, texto, modelo };
-    return {
-      ok: false,
-      status: r.ok ? 502 : r.status,
-      erro: (j?.error?.message ?? "resposta vazia").slice(0, 160),
-      modelo,
-    };
-  } catch (e) {
-    return { ok: false, status: 504, erro: String((e as Error)?.message ?? e).slice(0, 100), modelo };
-  }
-}
-
 async function chamarModelo(
   chave: string,
   modelo: string,
   partes: Parte[],
   sinal: AbortSignal,
 ): Promise<Resultado> {
-  if (ehMulti(modelo)) return chamarMulti(modelo, partes, sinal);
   try {
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
@@ -389,12 +336,9 @@ async function gerar(
   partes: Parte[],
   opcoes: { ordem?: string[]; prazo?: number; iniciais?: number } = {},
 ): Promise<Resultado> {
-  const chave = process.env["GEMINI_API_KEY"] ?? "";
-  const pedida = opcoes.ordem ?? ordemDosModelos();
-  /* Sem chave da Gemini, só a Multi IA (quando houver). */
-  const ordem = chave ? pedida : pedida.filter(ehMulti);
-  if (!ordem.length)
-    return { ok: false, status: 503, erro: "sem GEMINI_API_KEY nem API_KEY_MULTI_IA nos secrets" };
+  const chave = process.env["GEMINI_API_KEY"];
+  if (!chave) return { ok: false, status: 503, erro: "GEMINI_API_KEY ausente nos secrets" };
+  const ordem = opcoes.ordem ?? ordemDosModelos();
   const prazo = opcoes.prazo ?? 17_000;
   const ctrl = new AbortController();
   return new Promise<Resultado>((fim) => {
