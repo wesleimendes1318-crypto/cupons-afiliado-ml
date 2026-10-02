@@ -183,7 +183,8 @@ Responda SO com JSON: {"resposta": "texto"}.
 Mensagem da pessoa`;
 
 /** Entende a mensagem sem link e responde (GPT primeiro; reserva Gemini
- *  flash-lite/Gemma, que não disputam a cota diária dos modelos maiores). */
+ *  flash-lite, Multi IA e Gemma, que não disputam a cota diária dos
+ *  modelos maiores). */
 export async function responderConversa(texto: string, nome: string | null) {
   const prompt = `${PROMPT_CONVERSA}${nome ? ` (nome: ${nome})` : ""}: ${JSON.stringify(texto.slice(0, 600))}`;
   const { perguntarAoGpt } = await import("@/lib/gpt");
@@ -191,9 +192,9 @@ export async function responderConversa(texto: string, nome: string | null) {
   const gpt = await perguntarAoGpt(prompt, 12_000);
   if (gpt.ok) bruto = gpt.texto;
   else {
-    const { gerarComModelos } = await import("@/lib/conferir-produto");
+    const { gerarComModelos, MODELO_MULTI_TEXTO } = await import("@/lib/conferir-produto");
     const r = await gerarComModelos([{ text: prompt }], {
-      ordem: ["gemini-flash-lite-latest", "gemma-3-27b-it", "gemma-4-26b-a4b-it"],
+      ordem: ["gemini-flash-lite-latest", MODELO_MULTI_TEXTO(), "gemma-4-26b-a4b-it"],
       prazo: 12_000,
     });
     if (r.ok) bruto = r.texto;

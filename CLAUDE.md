@@ -16,6 +16,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     Gemma"). Fotos vão em JPEG (o Gemma não respondia com webp: em 4 dias, 1
     tentativa e erro 500). Cota diária esgotada fica na tabela ia_cotas até
     08:00 UTC, para todas as instâncias do servidor.
+  - MULTI IA (Weslei, 02/10: "outra alternativa de IA, sem pouco limite e
+    muito boa"): chave API_KEY_MULTI_IA (Secrets), padrão OpenRouter (paga por
+    uso, sem a cota diária). Ordem: Gemini com cota → Multi IA → Gemma; sem
+    Gemini livre, Multi IA primeiro. Na segunda conferência é o "outro
+    modelo". Confiança mínima 90. Modelos/endereço trocáveis nos Secrets
+    (MULTI_IA_MODELOS, MULTI_IA_URL). Diagnóstico: sinc_config.multi_ia_diag.
+    gemma-3-27b-it saiu do ar (404, 02/10).
   - A foto não precisa ser idêntica (cada vendedor faz a sua): conta o PRODUTO.
     Diferença é o que contradiz o original (marca, cor/borda, modelo, tamanho,
     quantidade, acessório junto), não fundo/ângulo/montagem.

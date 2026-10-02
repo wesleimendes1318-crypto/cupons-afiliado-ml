@@ -143,15 +143,76 @@ const REGRAS_DESDE = Date.parse("2026-09-28T00:00:00Z");
    Vem sempre DEPOIS de todos os Gemini; modelo que a chave nao tem (404) e
    pulado. Veredito do Gemma precisa de confianca maior (e mais fraco em
    detalhe de foto). */
-const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it", "gemma-3-27b-it"];
+/* gemma-3-27b-it saiu do ar (02/10, pedido 588: 404 "not found"). */
+const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it"];
 const CONFIANCA_MINIMA_GEMMA = 90;
 const ehGemma = (modelo: string | undefined) => /^gemma/i.test(modelo ?? "");
-/* MULTI IA (02/10): chave API_KEY_MULTI_IA (OpenRouter, compatível com a
-   OpenAI) entra como reserva quando a Gemini/Gemma não dão (cota, fora do
-   ar). Modelos com prefixo "or:"; mínimo de confiança 90, como o Gemma. */
-const MODELOS_MULTI = ["or:google/gemini-2.5-flash", "or:openai/gpt-4o-mini"];
+/* MULTI IA (Weslei, 02/10: "outra alternativa de IA, sem pouco limite e
+   muito boa"): chave API_KEY_MULTI_IA (Secrets), padrão OpenRouter (API igual
+   à da OpenAI, paga por uso, sem a cota diária de 20 pedidos). Entra logo
+   depois dos Gemini com cota e ANTES do Gemma (mais fraco em foto). Na
+   segunda conferência é o "outro modelo" natural. Modelos com prefixo "or:";
+   mínimo de confiança 90, como o Gemma. Endereço e modelos podem ser trocados
+   nos Secrets: MULTI_IA_URL e MULTI_IA_MODELOS ("a/b,c/d"). Diagnóstico em
+   sinc_config.multi_ia_diag (nunca grava a chave). */
+const MULTI_IA_URL = () =>
+  (process.env["MULTI_IA_URL"]?.trim() || "https://openrouter.ai/api/v1").replace(/\/+$/, "");
+const modelosMulti = () =>
+  (process.env["MULTI_IA_MODELOS"]?.trim() || "google/gemini-2.5-flash,openai/gpt-4.1-mini")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean)
+    .map((m) => `or:${m}`);
 const ehMulti = (modelo: string | undefined) => /^or:/.test(modelo ?? "");
 const chaveMulti = () => process.env["API_KEY_MULTI_IA"]?.trim() || null;
+export const MODELO_MULTI_TEXTO = () => modelosMulti()[0] ?? "or:google/gemini-2.5-flash";
+
+/* Sonda da Multi IA: no máximo a cada 20 min por instância. Diz se a chave
+   responde, de qual serviço parece ser (pelo começo da chave, sem gravá-la) e
+   o limite/uso da conta quando o serviço informa. */
+let ultimaSondaMulti = 0;
+export async function sondarMultiIA() {
+  const chave = chaveMulti();
+  if (!chave || Date.now() - ultimaSondaMulti < 20 * 60_000) return;
+  ultimaSondaMulti = Date.now();
+  const servico = /^sk-or-/.test(chave) ? "openrouter" : /^sk-/.test(chave) ? "sk-?" : "outro";
+  let conta: unknown = null;
+  let status = 0;
+  try {
+    const r = await fetch(`${MULTI_IA_URL()}/key`, {
+      headers: { Authorization: `Bearer ${chave}` },
+      signal: AbortSignal.timeout(6_000),
+    });
+    status = r.status;
+    const j = (await r.json().catch(() => null)) as { data?: Record<string, unknown> } | null;
+    if (j?.data) {
+      const d = j.data;
+      conta = {
+        limite: d["limit"] ?? null,
+        uso: d["usage"] ?? null,
+        gratis: d["is_free_tier"] ?? null,
+        ritmo: d["rate_limit"] ?? null,
+      };
+    }
+  } catch (e) {
+    conta = String((e as Error)?.message ?? e).slice(0, 80);
+  }
+  try {
+    const { gravarConfig } = await import("@/lib/ml-api");
+    await gravarConfig({
+      multi_ia_diag: JSON.stringify({
+        quando: new Date().toISOString(),
+        servico,
+        url: MULTI_IA_URL(),
+        modelos: modelosMulti(),
+        status,
+        conta,
+      }),
+    });
+  } catch {
+    /* só diagnóstico */
+  }
+}
 const confiancaMinima = (modelo: string | undefined) =>
   ehGemma(modelo) || ehMulti(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA;
 
@@ -212,8 +273,10 @@ function ordemDosModelos(): string[] {
   const gemini = escolhido ? [escolhido, ...MODELOS.filter((m) => m !== escolhido)] : MODELOS;
   const todos = [...gemini.filter((m) => !ehGemma(m)), ...MODELOS_GEMMA];
   const livres = todos.filter(modeloDisponivel);
-  const multi = chaveMulti() ? MODELOS_MULTI : [];
-  return [...(livres.length ? livres : todos), ...multi];
+  const multi = chaveMulti() ? modelosMulti() : [];
+  /* Gemini com cota → Multi IA → Gemma. Sem nenhum livre: Multi IA primeiro. */
+  if (!livres.length) return [...multi, ...todos];
+  return [...livres.filter((m) => !ehGemma(m)), ...multi, ...livres.filter(ehGemma)];
 }
 
 function paraBase64(buf: ArrayBuffer): string {
@@ -259,7 +322,11 @@ async function baixarImagem(url: string): Promise<Parte | null> {
 }
 
 /* Um modelo, uma chamada. */
-async function chamarMulti(modelo: string, partes: Parte[], sinal: AbortSignal): Promise<Resultado> {
+async function chamarMulti(
+  modelo: string,
+  partes: Parte[],
+  sinal: AbortSignal,
+): Promise<Resultado> {
   const chave = chaveMulti();
   if (!chave) return { ok: false, status: 503, erro: "sem API_KEY_MULTI_IA", modelo };
   try {
@@ -271,7 +338,7 @@ async function chamarMulti(modelo: string, partes: Parte[], sinal: AbortSignal):
             image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` },
           },
     );
-    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const r = await fetch(`${MULTI_IA_URL()}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -283,7 +350,10 @@ async function chamarMulti(modelo: string, partes: Parte[], sinal: AbortSignal):
         model: modelo.slice(3),
         messages: [{ role: "user", content }],
         temperature: 0,
-        response_format: { type: "json_object" },
+        /* JSON só quando o pedido pede JSON (a conversa do bot é texto). */
+        ...(partes.some((p) => "text" in p && /json/i.test(p.text))
+          ? { response_format: { type: "json_object" } }
+          : {}),
       }),
       signal: sinal,
     });
@@ -300,7 +370,12 @@ async function chamarMulti(modelo: string, partes: Parte[], sinal: AbortSignal):
       modelo,
     };
   } catch (e) {
-    return { ok: false, status: 504, erro: String((e as Error)?.message ?? e).slice(0, 100), modelo };
+    return {
+      ok: false,
+      status: 504,
+      erro: String((e as Error)?.message ?? e).slice(0, 100),
+      modelo,
+    };
   }
 }
 
@@ -578,6 +653,7 @@ export async function conferirMesmoProduto(
   candidatos: Array<Anuncio & { chave?: string | null | undefined }>,
 ): Promise<Conferencia & { guardados?: number }> {
   await carregarCotas();
+  void sondarMultiIA().catch(() => {});
   const lista = candidatos.slice(0, 12);
   const chaveOriginal = (original.chave ?? "").trim();
   const guardados = await vereditosGuardados(
