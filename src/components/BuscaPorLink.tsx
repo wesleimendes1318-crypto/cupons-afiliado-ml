@@ -2924,7 +2924,7 @@ function TodasAsLojas({
                       l.freteGratis === false ? (
                         <span className="block text-[10px] font-normal text-secondary-ink">
                           {l.custoFrete != null && l.custoFrete > 0
-                            ? `(frete de ${brl(l.custoFrete)} à parte · total ${brl((l.final ?? 0) + l.custoFrete)})`
+                            ? `(frete de ${brl(l.custoFrete)} à parte)`
                             : "(frete à parte)"}
                         </span>
                       ) : null;
@@ -2954,7 +2954,7 @@ function TodasAsLojas({
                           }
                         >
                           {extra != null && extra >= 0.5
-                            ? `+${brl(extra)} no produto`
+                            ? `+${brl(extra)} a mais no produto`
                             : "mesmo preço no produto"}
                         </span>
                         {linhaFrete}
