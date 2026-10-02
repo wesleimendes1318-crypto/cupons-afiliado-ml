@@ -44,9 +44,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     pecaNoLugarDoAparelho, extensão e servidor iguais; "com tampa" não conta).
     Vai para Parecidos com "Apenas carcaça / peça de reposição". A regra
     também está no texto da conferência (REGRA_CATEGORIAS).
-  - Ofertas lidas da própria página do anúncio (/up/) também passam pela
-    conferência pela foto; sem conferência não entram (pedido 535 entrou com
-    a IA fora do ar).
+  - Ofertas lidas da própria página do anúncio (/up/) e fichas de catálogo
+    achadas pelo NOME no servidor (daApi + achadoNaBusca/porNome) também
+    passam pela conferência pela foto; sem conferência não entram (pedidos
+    535 e 551, com a IA fora do ar). Só a lista da ficha do PRÓPRIO anúncio
+    dispensa a conferência. mesmoNome (servidor) recusa ficha de peça.
   - A conferência recebe a categoria (breadcrumb) e a ficha do original
     (tipo, condição, características lidas na página). Condição diferente
     (usado, recondicionado, vitrine...) nunca é igual: pelo título (servidor)

@@ -4136,7 +4136,14 @@ async function atenderPedidos() {
                  26/09, Tomate W12 (/up/) mostrou "Outra loja" R$ 124,99 sem
                  nome, sem foto e sem conferencia (outra cor da mesma pagina).
                  Sem foto a conferencia reprova. */
-              alts.forEach((x, i) => { if (!x.daApi && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem, item: x.item || itemDoUrl(x.url || '') }); });
+              /* Peca no lugar do aparelho (pedido 535): sai antes de tudo. */
+              alts = alts.filter(x => !pecaNoLugarDoAparelho(original.titulo, x.titulo));
+              referencias = referencias.filter(x => !pecaNoLugarDoAparelho(original.titulo, x.nomeCatalogo || x.titulo));
+              /* Ficha de catalogo achada pelo NOME (daApi + achadoNaBusca) tambem
+                 passa pela foto (02/10, pedido 551: a ficha "Carcaca ... Sa 203"
+                 entrou como o mesmo controle de acesso com a IA fora do ar). So a
+                 lista da ficha do PROPRIO anuncio dispensa a conferencia. */
+              alts.forEach((x, i) => { if ((!x.daApi || x.achadoNaBusca) && !x.verificadoIA) conferir.push({ tipo: 'alt', i, titulo: x.titulo, imagem: x.imagem, item: x.item || itemDoUrl(x.url || '') }); });
               referencias.forEach((x, i) => { if ((x.porNome || x.porNome == null) && !x.verificadoIA) conferir.push({ tipo: 'ref', i, titulo: x.nomeCatalogo || x.titulo || null, imagem: x.imagem, item: itemDoUrl(x.url || '') }); });
               if (conferir.length) {
                 ultimaIA = null;

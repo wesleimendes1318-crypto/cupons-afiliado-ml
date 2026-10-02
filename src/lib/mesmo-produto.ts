@@ -353,6 +353,10 @@ const VARIANTES = new Set([
 ]);
 
 export function mesmoNome(tituloAnuncio: string, nomeCatalogo: string) {
+  /* Ficha de PECA (carcaca, tampa, refil...) nunca e o aparelho (02/10,
+     pedido 551: "Carcaca Controle De Acesso Intelbras" passava com a palavra
+     extra "carcaca"). */
+  if (pecaNoLugarDoAparelho(tituloAnuncio, nomeCatalogo)) return false;
   /* Números iguais nos DOIS sentidos (tamanho, volume, modelo). Sem isso,
      "Capa Anti Impacto Motorola" aceitava a capa do Moto E6, do Moto G54 e
      do iPhone 14 (teste de 24/09): o título não tinha número para conferir. */
