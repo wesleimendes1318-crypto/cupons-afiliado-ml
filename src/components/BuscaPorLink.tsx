@@ -122,7 +122,11 @@ function mensagemMelhorOpcao({
   const nome = semEntidades(titulo);
   const linhas: string[] = [];
   if (economia != null && economia >= 0.5) {
-    linhas.push(`💸 Achei o mesmo produto *${brl(economia)} mais barato*!`);
+    linhas.push(
+      freteGratis === false
+        ? `💸 Achei o mesmo produto *${brl(economia)} mais barato no produto* (frete à parte)!`
+        : `💸 Achei o mesmo produto *${brl(economia)} mais barato*!`,
+    );
     if (nome) linhas.push(`🛒 ${nome}`);
     if (preco != null)
       linhas.push(
@@ -296,6 +300,7 @@ type Analise = {
     url?: string | null;
     semAfiliado?: boolean | null;
     freteGratis?: boolean | null;
+    custoFrete?: number | null;
     detalhes?: Detalhes | null;
     precos?: Precos | null;
   }> | null;
@@ -1808,6 +1813,7 @@ function Resultado({
       preco: l.final as number,
       imagem: l.imagem,
       freteGratis: l.freteGratis ?? null,
+      custoFrete: l.custoFrete ?? null,
       lojaOficial: l.lojaOficial === true,
       link: l.link,
       url: l.url,
@@ -1824,6 +1830,7 @@ function Resultado({
       preco: p.preco,
       imagem: p.imagem,
       freteGratis: p.freteGratis ?? null,
+      custoFrete: p.custoFrete ?? null,
       lojaOficial: p.lojaOficial === true || p.daBuscaOficial === true,
       link: p.link ?? null,
       url: p.url ?? null,
@@ -2501,7 +2508,7 @@ function MelhorAlternativa({
           menos != null &&
           menos >= 0.5 && (
             <li className="rounded-full bg-success/15 px-2 py-0.5 text-success">
-              Custo reduzido: {brl(menos)} a menos
+              Custo reduzido: {brl(menos)} a menos no produto
             </li>
           )
         )}
@@ -2701,7 +2708,9 @@ function Parecidos({
                 )}
                 {p.freteGratis === false && (
                   <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                    Sem frete grátis
+                    {p.custoFrete != null && p.custoFrete > 0
+                      ? `Frete ${brl(p.custoFrete)} à parte`
+                      : "Sem frete grátis (frete à parte)"}
                   </p>
                 )}
                 {p.mesmaFoto && (
@@ -2744,7 +2753,9 @@ function Parecidos({
                       (p.diferenca < 0 ? "text-success" : "text-red-700 dark:text-red-400")
                     }
                   >
-                    {p.diferenca < 0 ? `${brl(-p.diferenca)} a menos` : `+${brl(p.diferenca)}`}
+                    {p.diferenca < 0
+                      ? `${brl(-p.diferenca)} a menos no produto`
+                      : `+${brl(p.diferenca)} a mais no produto`}
                   </span>
                 )}
                 <span className="mt-1 block">
@@ -3532,6 +3543,8 @@ type OpcaoEscolha = {
   preco: number;
   imagem: string | null | undefined;
   freteGratis: boolean | null;
+  /* Frete para o CEP do cliente, quando simulado (02/10). */
+  custoFrete?: number | null;
   lojaOficial: boolean;
   link: string | null;
   url: string | null;
@@ -3568,8 +3581,11 @@ function rotuloDaOpcao(o: OpcaoEscolha) {
   return `${quem} · ${brl(o.preco)}${o.tipo === "parecido" ? " · parecido" : ""}`;
 }
 
-function textoDoFrete(f: boolean | null) {
-  return f === true ? "Frete grátis" : f === false ? "Frete pago" : "Não informado";
+function textoDoFrete(f: boolean | null, custo?: number | null) {
+  if (f === true) return "Frete grátis";
+  if (f === false && custo != null && custo > 0) return `Frete ${brl(custo)}`;
+  if (f === false) return "Frete pago";
+  return "Não informado";
 }
 
 function CompareEEscolha({
@@ -3808,8 +3824,8 @@ function LadoALado({ opcoes, padrao }: { opcoes: OpcaoEscolha[]; padrao?: string
           />
           <LinhaLadoALado
             nome="Frete"
-            a={textoDoFrete(A.freteGratis)}
-            b={textoDoFrete(B.freteGratis)}
+            a={textoDoFrete(A.freteGratis, A.custoFrete)}
+            b={textoDoFrete(B.freteGratis, B.custoFrete)}
             difere={A.freteGratis !== B.freteGratis}
           />
           <LinhaLadoALado
