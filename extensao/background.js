@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, soMarcaEModelo,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
@@ -3082,8 +3082,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
     const ordem = parecidos.slice().sort((x, y) => (y.mesmaFoto === true) - (x.mesmaFoto === true)
       || (y.semelhanca ?? -1) - (x.semelhanca ?? -1) || x.preco - y.preco);
     /* + ate 2 sugestoes da pagina mais baratas (as que vao aparecer, 03/10). */
-    const top = [...ordem.slice(0, 5), ...ordem.slice(5).filter(x => x.sugerido && precoRef != null && x.preco < precoRef)
-      .sort((x, y) => x.preco - y.preco).slice(0, 2)];
+    const top = [...ordem.slice(0, 5), ...sugeridosExtras(ordem, ordem.slice(0, 5), precoRef)];
     const nomesP = await Promise.all(top.map(p =>
       comPrazo(resolverVendedor(p.item, p.url).catch(() => []), Math.max(2000, Math.min(8000, resta() - 12000)), [])));
     top.forEach((p, k) => {
@@ -4057,9 +4056,7 @@ async function atenderPedidos() {
                      semelhantes, ate 2 sugeridos pela pagina do anuncio que
                      saem mais baratos que o colado (M-Vave R$ 339,69 x Akai
                      R$ 568) nao ficam de fora por serem de outra marca. */
-                  const sugeridos = ordem.slice(5)
-                    .filter(x => x.sugerido && a.preco != null && x.preco < a.preco)
-                    .sort((x, y) => x.preco - y.preco).slice(0, 2);
+                  const sugeridos = sugeridosExtras(ordem, ordem.slice(0, 5), a.preco);
                   parecidos = [...ordem.slice(0, 5), ...sugeridos]
                     .map(x => ({ ...x, diferenca: a.preco != null ? Math.round((x.preco - a.preco) * 100) / 100 : null }));
                 }

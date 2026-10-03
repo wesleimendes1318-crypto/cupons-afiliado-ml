@@ -500,3 +500,13 @@ test('parecido so por marca/modelo (03/10, M-Vave x Akai)', async () => {
   assert.equal(soMarcaEModelo('Marca: Akai -> X', 40), false);
   assert.equal(soMarcaEModelo('', 90), false);
 });
+
+test('sugeridos extras sem repetir marca (03/10, pedido 613)', async () => {
+  const { sugeridosExtras } = await import('../comparador.js');
+  const P = (t, preco, muda) => ({ titulo: t, preco, muda, sugerido: true });
+  const top = [P('Kfx', 404.99, 'Marca: Akai -> Kfx'), P('AMW 530', 530.99, 'Marca: Akai -> AMW')];
+  const ordem = [...top, P('AMW 321', 321.45, 'Marca: Akai -> AMW'), P('AMW 326', 326.28, 'Marca: Akai Professional -> AMW'),
+    P('M-Vave', 382.1, 'Marca: Akai Professional -> M-vave; Modelo: MPK -> SMK-25'), P('Caro', 700, 'Marca: Akai -> X')];
+  const r = sugeridosExtras(ordem, top, 568);
+  assert.deepEqual(r.map(x => x.titulo), ['M-Vave']);
+});

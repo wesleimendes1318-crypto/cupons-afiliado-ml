@@ -920,3 +920,26 @@ export function soMarcaEModelo(motivo, semelhanca) {
   if (!partes.length || (semelhanca ?? 0) < 60) return false;
   return partes.every(p => /^(marca|modelo|fabricante)\b/i.test(p));
 }
+
+/* Marca do candidato pelo que a conferencia escreveu ("Marca: Akai -> AMW"). */
+export function marcaDoMotivo(motivo) {
+  const m = /marca\s*:[^;]*?->\s*([^;]+)/i.exec(String(motivo || ''));
+  return m ? m[1].trim().toLowerCase().replace(/[^a-z0-9]/g, '') : null;
+}
+
+/* Sugestoes da pagina que entram alem dos mais semelhantes (03/10, pedido
+   613): mais baratas que o colado, do mais barato, e SEM repetir marca que
+   ja esta na lista (tres AMW ocupavam as vagas e o M-Vave ficava de fora). */
+export function sugeridosExtras(ordem, escolhidos, precoRef, max = 2) {
+  const marcas = new Set(escolhidos.map(p => marcaDoMotivo(p.muda)).filter(Boolean));
+  const saida = [];
+  for (const p of ordem.filter(x => x.sugerido && !escolhidos.includes(x) && precoRef != null && x.preco < precoRef)
+    .sort((x, y) => x.preco - y.preco)) {
+    if (saida.length >= max) break;
+    const m = marcaDoMotivo(p.muda);
+    if (m && marcas.has(m)) continue;
+    if (m) marcas.add(m);
+    saida.push(p);
+  }
+  return saida;
+}
