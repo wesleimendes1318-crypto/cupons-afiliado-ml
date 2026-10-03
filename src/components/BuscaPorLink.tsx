@@ -709,7 +709,7 @@ export default function BuscaPorLink() {
   const [historico, setHistorico] = useState<ItemHistorico[]>([]);
   useEffect(() => setHistorico(lerHistorico()), []);
   /* CEP do cliente (02/10): região pelo IP, trocável; vai no pedido. */
-  const { regiao, trocar: trocarCep } = useCepDestino(true);
+  const { regiao, trocar: trocarCep, pedirLocalizacao } = useCepDestino(true);
   const cepRef = useRef<string | null>(null);
   useEffect(() => {
     cepRef.current = regiao?.cep ?? null;
@@ -997,6 +997,7 @@ export default function BuscaPorLink() {
           rows={1}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
+          onFocus={pedirLocalizacao}
           onPaste={(e) => {
             const colado = e.clipboardData.getData("text");
             if (colado && colado.trim().length > 20) {
@@ -1933,7 +1934,7 @@ function Resultado({
     <div
       className={
         "mt-3 rounded-lg border border-border bg-card p-3" +
-        (temColuna ? " sm:grid sm:grid-cols-2 sm:gap-x-4" : "")
+        (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_1fr] sm:gap-x-4" : "")
       }
     >
       <div className="flex items-start gap-3 sm:col-start-1 sm:row-start-1">
@@ -1981,24 +1982,6 @@ function Resultado({
         </div>
       </div>
 
-      {temColuna && (
-        <div className="sm:col-start-2 sm:row-span-2 sm:row-start-1">
-          {mostraTabela && (
-            <TodasAsLojas
-              linhas={linhasLojas}
-              melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
-              cep={a?.cepDestino ?? null}
-            />
-          )}
-          <Parecidos
-            lista={parecidosSemAlternativa}
-            tituloColado={a?.titulo}
-            precoColado={a?.preco}
-            detalhesColado={a?.detalhes ?? null}
-          />
-        </div>
-      )}
-
       <div className="sm:col-start-1 sm:row-start-2">
         {/* Só a melhor em destaque; todas as outras lojas estão na tabela. */}
         {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
@@ -2037,18 +2020,38 @@ function Resultado({
             precos={a?.precos ?? null}
           />
         )}
+      </div>
 
-        {alternativa && !leituraFalhou && (
-          <MelhorAlternativa
-            p={alternativa}
-            precoBase={precoDoMesmo}
-            cb={podeSerAlternativa(alternativa, baseAlt).cb}
-            dispositivo={dispositivo}
-            tituloColado={a?.titulo ?? null}
+      {temColuna && (
+        <div className="sm:col-start-2 sm:row-span-3 sm:row-start-1">
+          {mostraTabela && (
+            <TodasAsLojas
+              linhas={linhasLojas}
+              melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
+              cep={a?.cepDestino ?? null}
+            />
+          )}
+          {/* Melhor alternativa logo acima dos Parecidos (Weslei, 03/10). */}
+          {alternativa && !leituraFalhou && (
+            <MelhorAlternativa
+              p={alternativa}
+              precoBase={precoDoMesmo}
+              cb={podeSerAlternativa(alternativa, baseAlt).cb}
+              dispositivo={dispositivo}
+              tituloColado={a?.titulo ?? null}
+              detalhesColado={a?.detalhes ?? null}
+            />
+          )}
+          <Parecidos
+            lista={parecidosSemAlternativa}
+            tituloColado={a?.titulo}
+            precoColado={a?.preco}
             detalhesColado={a?.detalhes ?? null}
           />
-        )}
+        </div>
+      )}
 
+      <div className="sm:col-start-1 sm:row-start-3">
         {!leituraFalhou && pedidoId != null && !semLink && (
           <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
         )}
@@ -2582,7 +2585,7 @@ function MelhorAlternativa({
     ...(detalhesColado?.caracteristicas ?? []).map((c) => c.valor),
   ].join(" ");
   return (
-    <div className="mt-3 rounded-lg border-2 border-success/60 bg-success/5 p-3">
+    <div className="mt-3 rounded-lg border-2 border-success/60 bg-success/5 p-3 first:sm:mt-0">
       <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
         <Fogo /> Melhor alternativa
       </p>

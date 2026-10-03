@@ -115,9 +115,57 @@ export const formatarCep = (s: string) => {
   return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 };
 
+/* LOCALIZAÇÃO EXATA UMA VEZ (Weslei, 03/10: "solicite a permissão pelo menos
+   uma única vez e guarde"): o navegador pergunta uma vez só (na primeira vez
+   que o cliente toca no campo do link); a região exata fica guardada neste
+   navegador e não se pergunta de novo. Quem já liberou antes tem a
+   localização lida sozinha, sem pergunta. */
+const CHAVE_PEDIU = "melhorescolha:geo-pedido";
+function jaPediu() {
+  try {
+    return localStorage.getItem(CHAVE_PEDIU) === "1";
+  } catch {
+    return true;
+  }
+}
+function marcarPedido() {
+  try {
+    localStorage.setItem(CHAVE_PEDIU, "1");
+  } catch {
+    /* sem armazenamento */
+  }
+}
+async function permissaoDada(): Promise<boolean> {
+  try {
+    const p = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+    return p?.state === "granted";
+  } catch {
+    return false;
+  }
+}
+
 /** Região do cliente: do navegador; senão, a aproximada pelo IP. */
 export function useCepDestino(ativo: boolean) {
   const [regiao, setRegiao] = useState<Regiao | null>(null);
+  const exata = regiao != null && regiao.aproximado === false;
+  /* Já liberou a localização antes e a região guardada não é exata: lê sem
+     perguntar. */
+  useEffect(() => {
+    if (!ativo || exata || regiao == null) return;
+    let vivo = true;
+    void permissaoDada().then(async (ok) => {
+      if (!ok || !vivo) return;
+      const v = await regiaoPeloAparelho();
+      if (v && vivo) {
+        gravar(v);
+        setRegiao(v);
+      }
+    });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ativo, exata, regiao == null]);
   useEffect(() => {
     if (!ativo) return;
     const salva = ler();
@@ -155,7 +203,15 @@ export function useCepDestino(ativo: boolean) {
     gravar(r);
     setRegiao(r);
   };
-  return { regiao, trocar };
+  /** Pede a localização exata uma única vez por navegador. */
+  const pedirLocalizacao = () => {
+    if (!ativo || exata || jaPediu() || !("geolocation" in navigator)) return;
+    marcarPedido();
+    void regiaoPeloAparelho().then((v) => {
+      if (v) trocar(v);
+    });
+  };
+  return { regiao, trocar, pedirLocalizacao };
 }
 
 /** Selo "📍 Frete para: Cidade/UF (CEP) · Alterar", com a troca do CEP. */

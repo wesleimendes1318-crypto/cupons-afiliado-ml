@@ -59,7 +59,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     ou mesma foto) e sem frete pago ganha cartão próprio abaixo da Melhor
     opção, com 🔥, botão animado e os motivos conferidos: "Mais completo"
     (vantagem que a conferência aponta), "Custo reduzido" (calculado) e "Loja
-    oficial da marca" (só com selo confirmado). Sempre com "Não é idêntico ao
+    oficial da marca" (só com selo confirmado). Fica LOGO ACIMA dos Parecidos
+    (Weslei, 03/10; no PC na coluna da tabela, no celular depois da Melhor
+    opção e antes dos Parecidos). Sempre com "Não é idêntico ao
     anúncio que você colou. Muda: ...". Nunca vai para a tabela do mesmo produto.
     Mais barato porque vem MENOS (quantidade, kit x unidade, tamanho, volume,
     sem acessório) ou para outro uso/condição NÃO é alternativa (28/09: "10
@@ -131,7 +133,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   DA CIDADE pelo ViaCEP (busca "Rua", de preferência Centro). Campo "fonte"
   na resposta (hospedagem/ip/padrao). Botão "📍 Usar minha localização"
   (GPS com permissão; OpenStreetMap + ViaCEP no navegador) e o CEP digitado
-  mostram bairro, cidade/UF. Sem nada disso, referência nacional São Paulo
+  mostram bairro, cidade/UF. LOCALIZAÇÃO EXATA UMA VEZ (Weslei, 03/10): o
+  navegador pede a permissão uma única vez (primeiro toque no campo do link;
+  flag melhorescolha:geo-pedido) e a região exata fica guardada no navegador;
+  quem já liberou tem a localização lida sozinha. Sem nada disso, referência
+  nacional São Paulo
   01001-000 marcada "padrão, informe o seu" (não fica salva; 02/10). Selo
   SEMPRE visível: "📍 Frete para: Cidade/UF (CEP) · Alterar"
   com ViaCEP (src/components/CepDestino.tsx). O CEP vai no pedido
