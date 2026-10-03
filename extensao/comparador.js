@@ -354,6 +354,22 @@ export function ofertasDaBusca(html, tituloOriginal, precoRef, diag = null) {
   d.comFrete = frete.size;
   for (const c of [...saida, ...outros]) if (frete.has(c.item)) c.freteGratis = frete.get(c.item);
 
+  /* FOTO QUE O CARTAO NAO TRAZ (03/10, pedido 619): o ultimo cartao do
+     carrossel da pagina (M-Vave SMK-25, R$ 382,10) veio sem endereco de foto
+     (carregamento preguicoso) e a conferencia o marcou "sem foto", fora dos
+     Parecidos. A foto continua nos dados da propria pagina (polycard do mesmo
+     anuncio): sem leitura a mais. */
+  const semFoto = [...saida, ...outros].filter(c => !c.imagem && c.item);
+  d.semFoto = semFoto.length;
+  if (semFoto.length) {
+    const fotos = new Map();
+    for (const p of polycards(texto.replace(/\\u002F/gi, '/').replace(/\\"/g, '"'))) {
+      if (p.imagem && !fotos.has(p.item)) fotos.set(p.item, p.imagem);
+    }
+    for (const c of semFoto) if (fotos.has(c.item)) c.imagem = fotos.get(c.item);
+    d.fotoPelosDados = semFoto.filter(c => c.imagem).length;
+  }
+
   /* A busca vem por relevancia; o que interessa ao cliente e o preco. */
   const ordenada = ordenarParaIA(saida);
   /* Outros da busca: mesmo tipo primeiro, depois o mais barato. */
@@ -889,7 +905,8 @@ export function relacionadosDaPagina(html, titulo, preco, itemAtual) {
   const d = {};
   const r = ofertasDaBusca(html, titulo, preco, d);
   const lista = [...r, ...(r.outros || [])].filter(c => c.item && c.item !== itemAtual).slice(0, 20);
-  lista.diag = { cartoes: d.cartoes || 0, comPreco: d.comPreco || 0, usados: lista.length };
+  lista.diag = { cartoes: d.cartoes || 0, comPreco: d.comPreco || 0, usados: lista.length,
+                 semFoto: d.semFoto || 0, fotoPelosDados: d.fotoPelosDados || 0 };
   return lista;
 }
 

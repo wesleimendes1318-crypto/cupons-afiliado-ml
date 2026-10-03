@@ -510,3 +510,18 @@ test('sugeridos extras sem repetir marca (03/10, pedido 613)', async () => {
   const r = sugeridosExtras(ordem, top, 568);
   assert.deepEqual(r.map(x => x.titulo), ['M-Vave']);
 });
+
+test('cartao sem foto pega a foto nos dados da pagina (pedido 619)', async () => {
+  const { ofertasDaBusca } = await import('../comparador.js');
+  const cartao = '<li class="ui-search-layout__item"><div class="poly-card"><img src="data:image/gif;base64,R0lGOD">'
+    + '<h3><a class="poly-component__title" href="https://produto.mercadolivre.com.br/MLB-5555555555-teclado">'
+    + 'Teclado Midi M-vave Smk-25 De 25 Teclas Bluetooth</a></h3><span class="andes-money-amount__fraction">382</span></div></li>';
+  const dados = '<script>{"polycard":{"metadata":{"id":"MLB5555555555","url":"x"},"pictures":{"pictures":[{"id":"812345-MLA79394039934_092024"}]},'
+    + '"title":{"text":"Teclado Midi M-vave Smk-25"},"current_price":{"value":382.1}}}</script>';
+  const diag = {};
+  const r = ofertasDaBusca(cartao + dados, 'Teclado Midi M-vave Smk-25 De 25 Teclas', 400, diag);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].imagem, 'https://http2.mlstatic.com/D_NQ_NP_812345-MLA79394039934_092024-O.webp');
+  assert.equal(diag.semFoto, 1);
+  assert.equal(diag.fotoPelosDados, 1);
+});
