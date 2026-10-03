@@ -272,6 +272,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   pílula "Comprar com segurança" só com link de afiliado; sem link, sem
   botão); Parecidos em carrossel horizontal com snap, seletor em círculos
   com a foto de cada um e indicador em pílula (no PC continua a lista).
+- COMPARAR COM O SEU (Weslei, 03/10: "comparar cada produto encontrado com
+  o original e resumir para o uso do cliente"): em cada Parecido e na Melhor
+  alternativa, botão "Comparar com o seu" abre o lado a lado (preço, frete em
+  linha própria, loja e as características que os dois informam, diferentes
+  em amarelo; linhasLadoALado) e "Em resumo:" (resumoParaCliente,
+  src/lib/diferencas.ts: preço no produto, frete em frase própria, o que
+  muda e uma orientação fixa por tipo; nunca inventa). Cartão da Melhor
+  alternativa de cima para baixo: selo, "R$ X a menos" grande, produto e
+  preço, motivos com ✓, o que muda, botão, características.
 - Tabela: preço abaixo de 70% da mediana das lojas ganha o aviso "Preço muito
   abaixo das outras lojas: confira o vendedor antes de comprar". GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
   variações; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de

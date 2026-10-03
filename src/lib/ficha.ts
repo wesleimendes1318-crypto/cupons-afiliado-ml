@@ -144,3 +144,35 @@ function iguais_(campo: string, a: string, b: string) {
     return semAcento(a).replace(/\s+/g, "") === semAcento(b).replace(/\s+/g, "");
   return iguais(campo, a, b);
 }
+
+/** Lado a lado pelas fichas: as características que os DOIS anúncios
+ *  informam, primeiro as diferentes (para o "Comparar com o seu"). */
+export function linhasLadoALado(
+  colado: Detalhes,
+  outro: Detalhes,
+  max = 10,
+): { nome: string; seu: string; este: string; igual: boolean }[] {
+  const doColado = new Map<string, { nome: string; valor: string }>();
+  for (const c of colado?.caracteristicas ?? []) {
+    const k = semAcento(String(c?.nome ?? ""));
+    const v = String(c?.valor ?? "").trim();
+    if (k && v && !doColado.has(k)) doColado.set(k, { nome: String(c.nome).trim(), valor: v });
+  }
+  const { diferentes } = compararFichas(colado, outro);
+  const linhas: { nome: string; seu: string; este: string; igual: boolean }[] = [];
+  const vistos = new Set<string>();
+  for (const c of outro?.caracteristicas ?? []) {
+    const k = semAcento(String(c?.nome ?? ""));
+    const v = String(c?.valor ?? "").trim();
+    const a = doColado.get(k);
+    if (!a || !v || vistos.has(k)) continue;
+    vistos.add(k);
+    linhas.push({
+      nome: a.nome,
+      seu: a.valor,
+      este: v,
+      igual: !diferentes.includes(String(c.nome).trim()),
+    });
+  }
+  return [...linhas.filter((l) => !l.igual), ...linhas.filter((l) => l.igual)].slice(0, max);
+}

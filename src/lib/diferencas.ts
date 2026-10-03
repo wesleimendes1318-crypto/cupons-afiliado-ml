@@ -237,3 +237,46 @@ export function diferencasParaCliente(
   }
   return out;
 }
+
+const reais = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
+
+/** RESUMO PARA O CLIENTE (Weslei, 03/10: "comparar cada produto encontrado
+ *  com o original e resumir para o uso do cliente"). Só com o que se sabe:
+ *  diferença de preço no produto, frete em frase própria, o que muda (pela
+ *  conferência e pelas fichas) e uma orientação fixa por tipo de diferença.
+ *  Nunca inventa vantagem. */
+export function resumoParaCliente(opts: {
+  diferenca: number | null | undefined;
+  freteGratis?: boolean | null;
+  custoFrete?: number | null;
+  linhas: DiferencaCliente[];
+}): string {
+  const frases: string[] = [];
+  const d = opts.diferenca;
+  if (d != null) {
+    if (d <= -0.5) frases.push(`Custa ${reais(-d)} a menos no produto.`);
+    else if (d >= 0.5) frases.push(`Custa ${reais(d)} a mais no produto.`);
+    else frases.push("Mesmo preço no produto.");
+  }
+  if (opts.freteGratis === true) frases.push("Frete grátis.");
+  else if (opts.custoFrete != null && opts.custoFrete > 0)
+    frases.push(`Frete de ${reais(opts.custoFrete)} à parte.`);
+  else if (opts.freteGratis === false) frases.push("Frete à parte.");
+  const tipos = new Set(opts.linhas.map((l) => tipo(l.campo ?? l.texto)));
+  const nomes = opts.linhas.map((l) => (l.campo ?? l.texto).toLowerCase()).slice(0, 3);
+  if (!opts.linhas.length)
+    frases.push("Pelas informações dos dois anúncios, não achei diferença no produto.");
+  else frases.push(`Muda: ${nomes.join(", ")}${opts.linhas.length > 3 ? " e mais" : ""}.`);
+  const so = (...ok: string[]) => [...tipos].every((t) => ok.includes(t) || /marca/.test(t));
+  const textoTodo = norm(opts.linhas.map((l) => `${l.campo ?? ""} ${l.texto}`).join(" "));
+  if (/(compativ|voltagem|bivolt|serve)/.test(textoTodo))
+    frases.push("Confira se serve para o seu uso antes de trocar.");
+  else if (/(capacidade|quantidade|unidade|pecas|volume|tamanho|litro|tela)/.test(textoTodo))
+    frases.push("Veja se o tamanho ou a quantidade atende ao que você precisa.");
+  else if (d != null && d <= -0.5 && opts.linhas.length && so("cor", "modelo"))
+    frases.push("Boa troca se a cor, a marca ou o modelo não fizerem diferença para você.");
+  else if (d != null && d >= 0.5)
+    frases.push("Só compensa se essa diferença for importante para você.");
+  return frases.join(" ");
+}
