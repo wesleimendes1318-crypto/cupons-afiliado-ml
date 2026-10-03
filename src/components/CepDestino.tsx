@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
    CEP da conta de afiliado. */
 
 export type Regiao = {
+  /* Bairro: só com CEP informado ou localização do aparelho. */
+  bairro?: string | null;
   cidade: string | null;
   uf: string | null;
   cep: string;
@@ -41,6 +43,70 @@ function gravar(r: Regiao) {
     localStorage.setItem(CHAVE, JSON.stringify(r));
   } catch {
     /* sem armazenamento: vale só nesta visita */
+  }
+}
+
+/** CEP → bairro, cidade e UF (ViaCEP). */
+async function consultarCep(d: string): Promise<Regiao | null> {
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    const j = (await r.json()) as {
+      bairro?: string;
+      localidade?: string;
+      uf?: string;
+      erro?: boolean | string;
+    };
+    if (!r.ok || j.erro) return null;
+    return {
+      bairro: j.bairro?.trim() || null,
+      cidade: j.localidade ?? null,
+      uf: j.uf ?? null,
+      cep: formatarCep(d),
+      aproximado: false,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* LOCALIZAÇÃO DO APARELHO (03/10: "a ideia é o bairro/município/cidade"):
+   só quando o cliente toca no botão e permite. As coordenadas viram endereço
+   no OpenStreetMap (direto do navegador, nada passa pelo servidor) e o CEP é
+   confirmado no ViaCEP. */
+async function regiaoPeloAparelho(): Promise<Regiao | null> {
+  const pos = await new Promise<GeolocationPosition | null>((ok) => {
+    if (!("geolocation" in navigator)) return ok(null);
+    navigator.geolocation.getCurrentPosition(ok, () => ok(null), {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 600000,
+    });
+  });
+  if (!pos) return null;
+  try {
+    const { latitude: lat, longitude: lon } = pos.coords;
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=pt-BR&lat=${lat}&lon=${lon}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    const j = (await r.json()) as {
+      address?: Record<string, string | undefined>;
+    };
+    const a = j.address ?? {};
+    if ((a["country_code"] ?? "").toLowerCase() !== "br") return null;
+    const d = (a["postcode"] ?? "").replace(/\D/g, "");
+    const bairro = a["suburb"] ?? a["neighbourhood"] ?? a["quarter"] ?? a["city_district"] ?? null;
+    const cidade = a["city"] ?? a["town"] ?? a["municipality"] ?? a["village"] ?? null;
+    const uf = (a["ISO3166-2-lvl4"] ?? "").replace(/^BR-/, "") || null;
+    if (d.length === 8) {
+      const v = await consultarCep(d);
+      if (v) return { ...v, bairro: v.bairro || bairro };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -102,7 +168,9 @@ export function SeloCep({
 }) {
   const [aberto, setAberto] = useState(false);
   const [cep, setCep] = useState("");
-  const [estado, setEstado] = useState<"parado" | "buscando" | "erro">("parado");
+  const [estado, setEstado] = useState<"parado" | "buscando" | "erro" | "localizando" | "semLocal">(
+    "parado",
+  );
 
   async function confirmar() {
     const d = cep.replace(/\D/g, "");
@@ -111,27 +179,32 @@ export function SeloCep({
       return;
     }
     setEstado("buscando");
-    try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, {
-        signal: AbortSignal.timeout(6000),
-      });
-      const j = (await r.json()) as { localidade?: string; uf?: string; erro?: boolean | string };
-      if (!r.ok || j.erro) throw new Error("cep");
-      trocar({
-        cidade: j.localidade ?? null,
-        uf: j.uf ?? null,
-        cep: formatarCep(d),
-        aproximado: false,
-      });
-      setAberto(false);
-      setEstado("parado");
-    } catch {
+    const v = await consultarCep(d);
+    if (!v) {
       setEstado("erro");
+      return;
     }
+    trocar(v);
+    setAberto(false);
+    setEstado("parado");
+  }
+
+  async function usarLocalizacao() {
+    setEstado("localizando");
+    const v = await regiaoPeloAparelho();
+    if (!v) {
+      setEstado("semLocal");
+      return;
+    }
+    trocar(v);
+    setAberto(false);
+    setEstado("parado");
   }
 
   const onde = regiao
-    ? `${regiao.cidade && regiao.uf ? `${regiao.cidade}/${regiao.uf} ` : ""}(${regiao.cep})`
+    ? `${regiao.bairro ? `${regiao.bairro}, ` : ""}${
+        regiao.cidade && regiao.uf ? `${regiao.cidade}/${regiao.uf} ` : ""
+      }(${regiao.cep})`
     : "informe seu CEP";
   return (
     <div className="mt-2 text-xs text-secondary-ink">
@@ -181,8 +254,21 @@ export function SeloCep({
           >
             {estado === "buscando" ? "Buscando..." : "Usar este CEP"}
           </button>
+          <button
+            type="button"
+            onClick={() => void usarLocalizacao()}
+            disabled={estado === "localizando"}
+            className="rounded-md border border-ml-blue px-3 py-1 text-xs font-bold text-ml-blue disabled:opacity-60"
+          >
+            {estado === "localizando" ? "Localizando..." : "📍 Usar minha localização"}
+          </button>
           {estado === "erro" && (
             <span className="text-red-700 dark:text-red-400">CEP não encontrado.</span>
+          )}
+          {estado === "semLocal" && (
+            <span className="text-red-700 dark:text-red-400">
+              Não deu para achar sua localização. Digite o CEP.
+            </span>
           )}
         </form>
       )}

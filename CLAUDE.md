@@ -125,7 +125,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - CEP AUTOMÁTICO E TRANSPARENTE (Weslei, 02/10): região pelo IP
   (/api/public/regiao: request.cf/cabeçalhos cf-* da Cloudflare; CEP da
   capital quando só a UF é conhecida; nada gravado, sem IP na resposta) e
-  guardada no navegador; sem região pelo IP, referência nacional São Paulo
+  guardada no navegador. A hospedagem não repassava a localização da
+  Cloudflare (03/10, todos viam São Paulo): sem ela, cidade pelo IP
+  (ipwho.is, reserva ipapi.co; IP não gravado nem devolvido) e um CEP real
+  DA CIDADE pelo ViaCEP (busca "Rua", de preferência Centro). Campo "fonte"
+  na resposta (hospedagem/ip/padrao). Botão "📍 Usar minha localização"
+  (GPS com permissão; OpenStreetMap + ViaCEP no navegador) e o CEP digitado
+  mostram bairro, cidade/UF. Sem nada disso, referência nacional São Paulo
   01001-000 marcada "padrão, informe o seu" (não fica salva; 02/10). Selo
   SEMPRE visível: "📍 Frete para: Cidade/UF (CEP) · Alterar"
   com ViaCEP (src/components/CepDestino.tsx). O CEP vai no pedido

@@ -51,7 +51,8 @@ const CABECALHOS_SEGURANCA: Record<string, string> = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  /* geolocation=(self): botão "Usar minha localização" do CEP (03/10). */
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(self), payment=()",
   "Content-Security-Policy":
     "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app",
 };

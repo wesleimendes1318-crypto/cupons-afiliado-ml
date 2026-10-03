@@ -5,8 +5,9 @@ import { json } from "@/lib/public-ai-api";
 /* REGIAO APROXIMADA DO VISITANTE (CEP automatico, 02/10): so para mostrar
    "Frete simulado para: Cidade/UF" e o visitante trocar se quiser. Le os
    cabecalhos de localizacao da hospedagem (Cloudflare: cf-ipcity, cf-region,
-   cf-postal-code, ou request.cf). Sem esses dados devolve tudo null e a tela
-   pede o CEP: nunca inventa. Nao grava nada e nao devolve o IP. */
+   cf-postal-code, ou request.cf); sem eles, a cidade pelo IP (ipwho.is /
+   ipapi.co) e um CEP real da cidade (ViaCEP). Sem nada, a referencia nacional
+   marcada como padrao. Nao grava nada e nao devolve o IP. */
 
 /* CEP do centro da capital de cada UF (aproximado: o visitante troca). */
 const CEP_DA_CAPITAL: Record<string, string> = {
@@ -79,12 +80,32 @@ function decodificar(v: string | null | undefined) {
   }
 }
 
-export function regiaoDoPedido(request: Request) {
+type Regiao = {
+  cidade: string | null;
+  uf: string | null;
+  cep: string | null;
+  aproximado: boolean;
+  padrao: boolean;
+  /* De onde veio (diagnóstico; nunca o IP). */
+  fonte: "hospedagem" | "ip" | "padrao" | "fora";
+};
+
+const PADRAO: Regiao = {
+  cidade: "São Paulo",
+  uf: "SP",
+  cep: "01001-000",
+  aproximado: true,
+  padrao: true,
+  fonte: "padrao",
+};
+
+const formatar = (d: string) => `${d.slice(0, 5)}-${d.slice(5)}`;
+
+/** Cabeçalhos/objeto de localização da Cloudflare, quando a hospedagem passa. */
+function daHospedagem(request: Request) {
   const cf = (request as unknown as { cf?: Record<string, unknown> }).cf ?? {};
   const h = (n: string) => decodificar(request.headers.get(n));
   const pais = (h("cf-ipcountry") ?? (cf["country"] as string | undefined) ?? "").toUpperCase();
-  if (pais && pais !== "BR")
-    return { cidade: null, uf: null, cep: null, aproximado: true, padrao: false };
   const cidade = h("cf-ipcity") ?? decodificar(cf["city"] as string | undefined);
   const codigoUf = (
     h("cf-region-code") ??
@@ -96,31 +117,117 @@ export function regiaoDoPedido(request: Request) {
     ? codigoUf
     : ((nomeUf ? NOME_DA_UF[semAcento(nomeUf)] : undefined) ?? null);
   const postal = (h("cf-postal-code") ?? String(cf["postalCode"] ?? "")).replace(/\D/g, "");
-  /* CEP completo da hospedagem vale; senao, o da capital da UF. */
-  const cep =
-    postal.length === 8
-      ? `${postal.slice(0, 5)}-${postal.slice(5)}`
-      : uf
-        ? (CEP_DA_CAPITAL[uf] ?? null)
-        : null;
-  /* Sem UF ou CEP (cabeçalhos ausentes, IP não mapeado): referência nacional,
-     marcada como padrão para a tela pedir o CEP do cliente (02/10). */
-  if (!uf || !cep) return { ...PADRAO };
-  return {
-    cidade,
-    uf,
-    cep,
-    aproximado: true,
-    padrao: false,
-  };
+  return { pais, cidade, uf, postal };
 }
 
-const PADRAO = { cidade: "São Paulo", uf: "SP", cep: "01001-000", aproximado: true, padrao: true };
+/* IP do visitante só para perguntar a cidade (não é gravado nem devolvido). */
+function ipDoVisitante(request: Request) {
+  const ip =
+    request.headers.get("cf-connecting-ip") ??
+    request.headers.get("x-real-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "";
+  if (!ip || /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|fe80)/i.test(ip))
+    return null;
+  return ip;
+}
+
+/* Cidade pelo IP (03/10: a hospedagem não repassava a localização da
+   Cloudflare e todo mundo via "São Paulo"). Dois serviços sem chave. */
+async function porIp(ip: string) {
+  try {
+    const r = await fetch(
+      `https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country_code,region_code,city,postal`,
+      { signal: AbortSignal.timeout(3_000) },
+    );
+    const j = (await r.json()) as {
+      success?: boolean;
+      country_code?: string;
+      region_code?: string;
+      city?: string;
+      postal?: string;
+    };
+    if (j.success)
+      return {
+        pais: (j.country_code ?? "").toUpperCase(),
+        cidade: j.city?.trim() || null,
+        uf: (j.region_code ?? "").toUpperCase() || null,
+        postal: String(j.postal ?? "").replace(/\D/g, ""),
+      };
+  } catch {
+    /* tenta o próximo */
+  }
+  try {
+    const r = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
+      signal: AbortSignal.timeout(3_000),
+    });
+    const j = (await r.json()) as {
+      country_code?: string;
+      region_code?: string;
+      city?: string;
+      postal?: string;
+      error?: boolean;
+    };
+    if (!j.error && j.country_code)
+      return {
+        pais: j.country_code.toUpperCase(),
+        cidade: j.city?.trim() || null,
+        uf: (j.region_code ?? "").toUpperCase() || null,
+        postal: String(j.postal ?? "").replace(/\D/g, ""),
+      };
+  } catch {
+    /* sem cidade pelo IP */
+  }
+  return null;
+}
+
+/* Um CEP de verdade da cidade (ViaCEP), de preferência do Centro: o frete é
+   simulado para a cidade do cliente, não para a capital. */
+async function cepDaCidade(uf: string, cidade: string): Promise<string | null> {
+  try {
+    const r = await fetch(
+      `https://viacep.com.br/ws/${uf}/${encodeURIComponent(cidade)}/Rua/json/`,
+      { signal: AbortSignal.timeout(4_000) },
+    );
+    const lista = (await r.json()) as Array<{ cep?: string; bairro?: string; localidade?: string }>;
+    if (!Array.isArray(lista) || !lista.length) return null;
+    const mesma = lista.filter((x) => semAcento(x.localidade ?? "") === semAcento(cidade));
+    const escolha = mesma.find((x) => /centro/i.test(x.bairro ?? "")) ?? mesma[0] ?? null;
+    const d = (escolha?.cep ?? "").replace(/\D/g, "");
+    return d.length === 8 ? formatar(d) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function regiaoDoPedido(request: Request): Promise<Regiao> {
+  let dados = daHospedagem(request);
+  let fonte: Regiao["fonte"] = "hospedagem";
+  if (!dados.uf || !dados.cidade) {
+    const ip = ipDoVisitante(request);
+    const peloIp = ip ? await porIp(ip) : null;
+    if (peloIp) {
+      dados = peloIp;
+      fonte = "ip";
+    }
+  }
+  if (dados.pais && dados.pais !== "BR")
+    return { cidade: null, uf: null, cep: null, aproximado: true, padrao: false, fonte: "fora" };
+  const uf = dados.uf && CEP_DA_CAPITAL[dados.uf] ? dados.uf : null;
+  if (!uf) return { ...PADRAO };
+  /* CEP completo vale; senão um CEP da própria cidade; senão o da capital. */
+  const cep =
+    dados.postal.length === 8
+      ? formatar(dados.postal)
+      : ((dados.cidade ? await cepDaCidade(uf, dados.cidade) : null) ?? CEP_DA_CAPITAL[uf] ?? null);
+  if (!cep) return { ...PADRAO };
+  return { cidade: dados.cidade, uf, cep, aproximado: true, padrao: false, fonte };
+}
 
 export const Route = createFileRoute("/api/public/regiao")({
   server: {
     handlers: {
-      GET: async ({ request }) => json(request, regiaoDoPedido(request)),
+      GET: async ({ request }) => json(request, await regiaoDoPedido(request)),
     },
   },
 });
