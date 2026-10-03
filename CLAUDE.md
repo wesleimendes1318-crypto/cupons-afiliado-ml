@@ -391,7 +391,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   modelo (semelhança >= 60) conta como parecido mesmo com parecido=false da
   conferência (soMarcaEModelo; nunca vira igual). As 2 vagas extras não
   repetem marca já listada (sugeridosExtras; pedido 613: três AMW tiravam o
-  M-Vave).
+  M-Vave). Cartão do carrossel sem foto (carregamento preguiçoso)
+  pega a foto no polycard do mesmo anúncio nos dados da página (pedido 619:
+  o M-Vave saiu "sem foto" e ficou fora; diagnóstico relacionadosDiag.semFoto
+  e fotoPelosDados). A API oficial não serve de reserva (/items dá 403).
 - Anúncio colado que se contradiz (foto de um produto, texto de outro; caso da
   SHOPMASP: foto do conjunto Woven, descrição "malha macia" do Basic 3S
   tricot): o site avisa "a foto e o texto não batem, confirme com o vendedor"
