@@ -909,3 +909,14 @@ export function seloDoVendedor(html, item, nomesDaLoja = []) {
   }
   return null;
 }
+
+/* PARECIDO SO POR MARCA/MODELO (03/10, pedido 607): a conferencia disse
+   parecido=false para o M-Vave SMK-25 (25 teclas, 8 pads) listando so
+   "Marca" e "Modelo" como diferenca, e parecido=true para o AMW de 32 teclas.
+   Pela propria regra (mesmo tipo, muda so marca ou detalhe) isso e parecido.
+   Nunca vira igual: so entra na lista separada, com o que muda. */
+export function soMarcaEModelo(motivo, semelhanca) {
+  const partes = String(motivo || '').split(/;\s*/).map(p => p.trim()).filter(Boolean);
+  if (!partes.length || (semelhanca ?? 0) < 60) return false;
+  return partes.every(p => /^(marca|modelo|fabricante)\b/i.test(p));
+}

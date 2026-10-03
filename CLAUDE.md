@@ -364,7 +364,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   ocupavam todas; nos Parecidos, além dos 5 mais semelhantes, até 2
   sugeridos mais baratos que o colado (sugerido: true), à vista (não
   recolhidos) e com o selo "Sugerido na página do anúncio". Diagnóstico:
-  leitura.relacionadosVistos (título | preço).
+  leitura.relacionadosVistos (título | preço). Conferido no pedido 607: o
+  M-Vave SMK-25 (R$ 382,10) entrou na conferência. Diferença só de marca e
+  modelo (semelhança >= 60) conta como parecido mesmo com parecido=false da
+  conferência (soMarcaEModelo; nunca vira igual).
 - Anúncio colado que se contradiz (foto de um produto, texto de outro; caso da
   SHOPMASP: foto do conjunto Woven, descrição "malha macia" do Basic 3S
   tricot): o site avisa "a foto e o texto não batem, confirme com o vendedor"

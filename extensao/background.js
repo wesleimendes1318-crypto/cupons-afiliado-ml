@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, soMarcaEModelo,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
@@ -3059,7 +3059,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
      servem de alternativa (mesmo tipo e compatibilidade; muda marca ou
      detalhe). Vao para uma lista separada, com o aviso do que muda. */
   const parecidos = (ok && ultimaIA && Array.isArray(ultimaIA.avaliacao) ? ultimaIA.avaliacao : [])
-    .filter(a => a.parecido && !a.igual && !a.semFoto)
+    .filter(a => (a.parecido || soMarcaEModelo(a.motivo, a.semelhanca)) && !a.igual && !a.semFoto)
     .map(a => {
       const c = candidatos[a.indice];
       return c && c.preco != null && c.item !== itemAtual

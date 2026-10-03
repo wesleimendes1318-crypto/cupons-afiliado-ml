@@ -492,3 +492,11 @@ test('carcaca nunca e o mesmo produto que o aparelho (pedido 535)', () => {
   assert.equal(pecaNoLugarDoAparelho('Refil Purificador Electrolux', 'Refil Para Purificador Electrolux Pe11b'), false);
   assert.equal(pecaNoLugarDoAparelho('Purificador Electrolux Pe11b', 'Refil Para Purificador Electrolux Pe11b'), true);
 });
+
+test('parecido so por marca/modelo (03/10, M-Vave x Akai)', async () => {
+  const { soMarcaEModelo } = await import('../comparador.js');
+  assert.equal(soMarcaEModelo('Marca: Akai Professional -> M-vave; Modelo: MPK Mini MK3 -> SMK-25', 70), true);
+  assert.equal(soMarcaEModelo('Marca: Akai -> X; Quantidade de teclas: 25 -> 49', 70), false);
+  assert.equal(soMarcaEModelo('Marca: Akai -> X', 40), false);
+  assert.equal(soMarcaEModelo('', 90), false);
+});
