@@ -215,7 +215,16 @@ export function escolherParaConferir(fontes, precoRef, itemAtual, max = MAX_CAND
   /* 4 vagas para os mais caros: sao eles que mostram que a recomendacao e
      de fato a melhor (tabela com 5 lojas, 27/09). */
   const reservaResto = Math.min(4, resto.length);
-  const escolhidos = [...baratos.slice(0, Math.max(0, max - reservaResto)), ...resto];
+  const vagasBaratos = Math.max(0, max - reservaResto);
+  /* SUGESTOES DO PROPRIO MERCADO LIVRE (Weslei, 03/10: "Quem viu este produto
+     tambem comprou"; Akai MPK Mini R$ 568 x M-Vave SMK-25 R$ 339,69): ate 3
+     vagas dos mais baratos ficam para os relacionados da pagina, do mais
+     barato para o mais caro. Antes as copias do proprio anuncio, de titulo
+     quase igual, ocupavam todas as vagas e a sugestao nunca era conferida. */
+  const sugeridos = baratos.filter(c => c.origem === 'relacionados')
+    .sort((a, b) => a.preco - b.preco).slice(0, Math.min(3, vagasBaratos));
+  const demais = baratos.filter(c => !sugeridos.includes(c)).slice(0, vagasBaratos - sugeridos.length);
+  const escolhidos = [...[...demais, ...sugeridos].sort(porNota), ...resto];
   return escolhidos.slice(0, max);
 }
 

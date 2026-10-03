@@ -402,6 +402,26 @@ test('garimpo: mais baratos primeiro, busca de lojas oficiais antes (27/09)', as
   assert.equal(r12.filter(c => c.preco <= 436.41).length, 6);
 });
 
+test('sugestoes do Mercado Livre ganham vagas na conferencia (03/10, MPK Mini x M-Vave)', async () => {
+  const { escolherParaConferir } = await import('../comparador.js');
+  /* 12 copias do proprio Akai mais baratas, titulo quase igual. */
+  const busca = Array.from({ length: 12 }, (_, i) => ({ item: 'MLB20' + i, preco: 500 + i, nota: 0.95 }));
+  const caros = Array.from({ length: 6 }, (_, i) => ({ item: 'MLB30' + i, preco: 700 + i, nota: 0.9 }));
+  const relacionados = [
+    { item: 'MLB9001', preco: 339.69, nota: 0.4, titulo: 'Teclado Controlador MIDI M-Vave SMK-25 25 Teclas' },
+    { item: 'MLB9002', preco: 495.97, nota: 0.35, titulo: 'Controlador Midi M-vave Smk-37 Pro' },
+    { item: 'MLB9003', preco: 404.99, nota: 0.45, titulo: 'Kfx Mini 25 Teclado Controlador Midi' },
+    { item: 'MLB9004', preco: 420, nota: 0.4, titulo: 'Outro controlador' },
+  ];
+  const r = escolherParaConferir({ oficiais: [], google: [], busca: [...busca, ...caros], relacionados }, 568, 'MLB1');
+  assert.equal(r.length, 12);
+  /* As 3 sugestoes mais baratas entram; a quarta nao. */
+  for (const it of ['MLB9001', 'MLB9003', 'MLB9004']) assert.ok(r.some(c => c.item === it), it);
+  assert.ok(!r.some(c => c.item === 'MLB9002'));
+  /* Continuam 4 vagas para os mais caros. */
+  assert.equal(r.filter(c => c.preco > 568).length, 4);
+});
+
 test('selo MercadoLider do proprio anuncio, com o nome da loja conferido (28/09)', async () => {
   const { seloDoVendedor } = await import('../comparador.js');
   const pagina = '"melidata_event":{"path":"/upp","event_data":{"seller_id":1,"seller_name":"adidas","power_seller_status":"platinum","item_id":"MLB1"}},'

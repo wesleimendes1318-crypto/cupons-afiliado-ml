@@ -315,6 +315,8 @@ type Analise = {
     lojaOficial?: boolean | null;
     /* Achado na busca com o filtro "Lojas oficiais" (_Loja_all): é loja oficial. */
     daBuscaOficial?: boolean | null;
+    /* Sugerido na própria página do anúncio colado (03/10). */
+    sugerido?: boolean | null;
     /* O que tem A MAIS que o anúncio colado (conjunto completo, kit maior). */
     vantagem?: string | null;
     /* Loja que vende (sempre que lida) e selo MercadoLíder dela. */
@@ -2870,8 +2872,11 @@ function Parecidos({
      assertivas em relação ao que foi buscado"): na frente só o que é muito
      parecido (semelhança >= 85 ou mesma foto); o resto fica recolhido. Sem
      nenhum muito parecido, mostra todos (nunca lista vazia). */
+  /* Sugestão da página do anúncio mais barata que o colado também fica à
+     vista (Weslei, 03/10: M-Vave R$ 339,69 x Akai R$ 568). */
   const perto = (p: NonNullable<Analise["parecidos"]>[number]) =>
-    (p.semelhanca ?? (p.mesmaFoto ? 90 : 0)) >= 85;
+    (p.semelhanca ?? (p.mesmaFoto ? 90 : 0)) >= 85 ||
+    (p.sugerido === true && precoColado != null && p.preco < precoColado);
   const escondidos = lista.some(perto) ? lista.filter((p) => !perto(p)).length : 0;
   const mColado = medidaDoTitulo(tituloColado);
   /* Título e ficha do colado: decidem qual lado de "A x B" é o seu. */
@@ -2921,8 +2926,13 @@ function Parecidos({
                       <SeloLider nivel={p.mercadoLider} className="inline-flex" />
                     </p>
                   )}
-                  {(p.mesmaFoto || (p.semelhanca ?? 0) >= 85) && (
+                  {(p.mesmaFoto || (p.semelhanca ?? 0) >= 85 || p.sugerido === true) && (
                     <p className="mt-1 flex flex-wrap gap-1 text-[10px] font-semibold">
+                      {p.sugerido === true && (
+                        <span className="rounded-full bg-ml-blue/10 px-1.5 py-0.5 text-ml-blue">
+                          Sugerido na página do anúncio
+                        </span>
+                      )}
                       {(p.semelhanca ?? 0) >= 85 && (
                         <span className="rounded-full bg-muted px-1.5 py-0.5 text-secondary-ink">
                           {p.semelhanca}% parecido

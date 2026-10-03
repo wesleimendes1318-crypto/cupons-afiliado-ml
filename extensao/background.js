@@ -3004,7 +3004,11 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
   const relacionados = original && Array.isArray(original.relacionados) ? original.relacionados : [];
   const diag = { ...(daBusca.diag || {}), google: doGoogle.diag || null, oficiais: dasOficiais.diag || null,
                  porPreco: peloPreco.diag || null,
-                 relacionados: relacionados.length };
+                 relacionados: relacionados.length,
+                 /* O que a pagina sugeriu (titulo | preco): mostra de longe se
+                    as sugestoes do Mercado Livre foram lidas (03/10). */
+                 relacionadosVistos: relacionados.slice(0, 12)
+                   .map(c => String(c.titulo || '').slice(0, 60) + ' | ' + c.preco) };
   /* Frete do anuncio colado, se ele apareceu na busca. */
   if (Array.isArray(daBusca.freteAtual)) diag.freteAtual = daBusca.freteAtual[0];
   const vistos = new Set();
@@ -3063,6 +3067,8 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
             preco: c.preco, muda: String(a.motivo || '').slice(0, 140),
             mesmaFoto: a.mesmaFoto === true, semelhanca: a.semelhanca != null ? a.semelhanca : null,
             vantagem: a.vantagem || null, daBuscaOficial: c.origem === 'oficiais',
+            /* Veio das sugestoes da propria pagina do anuncio (03/10). */
+            sugerido: c.origem === 'relacionados',
             lojaOficial: c.origem === 'oficiais' ? true : null,
             freteGratis: c.freteGratis != null ? c.freteGratis : null }
         : null;
@@ -3073,8 +3079,11 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
      maxima transparencia", e o selo quando tiver): os 5 mais parecidos tem a
      pagina lida (mesmo cache das lojas da tabela), com prazo curto. */
   {
-    const top = parecidos.slice().sort((x, y) => (y.mesmaFoto === true) - (x.mesmaFoto === true)
-      || (y.semelhanca ?? -1) - (x.semelhanca ?? -1) || x.preco - y.preco).slice(0, 5);
+    const ordem = parecidos.slice().sort((x, y) => (y.mesmaFoto === true) - (x.mesmaFoto === true)
+      || (y.semelhanca ?? -1) - (x.semelhanca ?? -1) || x.preco - y.preco);
+    /* + ate 2 sugestoes da pagina mais baratas (as que vao aparecer, 03/10). */
+    const top = [...ordem.slice(0, 5), ...ordem.slice(5).filter(x => x.sugerido && precoRef != null && x.preco < precoRef)
+      .sort((x, y) => x.preco - y.preco).slice(0, 2)];
     const nomesP = await Promise.all(top.map(p =>
       comPrazo(resolverVendedor(p.item, p.url).catch(() => []), Math.max(2000, Math.min(8000, resta() - 12000)), [])));
     top.forEach((p, k) => {
@@ -4040,10 +4049,18 @@ async function atenderPedidos() {
                 if (busca.todas && Array.isArray(busca.todas.parecidos)) {
                   /* Os MAIS SEMELHANTES primeiro (Weslei, 27/09: "a melhor alternativa e
                      mais semelhante"): mesma foto, depois semelhanca, depois preco. */
-                  parecidos = busca.todas.parecidos.slice().sort((x, y) =>
+                  const ordem = busca.todas.parecidos.slice().sort((x, y) =>
                     (y.mesmaFoto === true) - (x.mesmaFoto === true)
                     || (y.semelhanca ?? -1) - (x.semelhanca ?? -1)
-                    || x.preco - y.preco).slice(0, 5)
+                    || x.preco - y.preco);
+                  /* SUGESTOES DO MERCADO LIVRE (Weslei, 03/10): alem dos 5 mais
+                     semelhantes, ate 2 sugeridos pela pagina do anuncio que
+                     saem mais baratos que o colado (M-Vave R$ 339,69 x Akai
+                     R$ 568) nao ficam de fora por serem de outra marca. */
+                  const sugeridos = ordem.slice(5)
+                    .filter(x => x.sugerido && a.preco != null && x.preco < a.preco)
+                    .sort((x, y) => x.preco - y.preco).slice(0, 2);
+                  parecidos = [...ordem.slice(0, 5), ...sugeridos]
                     .map(x => ({ ...x, diferenca: a.preco != null ? Math.round((x.preco - a.preco) * 100) / 100 : null }));
                 }
                 buscaFora.leitura = busca.diag || null;

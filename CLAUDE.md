@@ -357,7 +357,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Produtos relacionados da página colada (carrosséis do Mercado Livre) viram
   mais uma fonte de candidatos (relacionadosDaPagina), com a mesma conferência
   pela foto: só entram na tabela se forem o mesmo produto (Weslei, 27/09:
-  "somente quando for útil de verdade").
+  "somente quando for útil de verdade"). SUGESTÕES DO MERCADO LIVRE (Weslei,
+  03/10, Akai MPK Mini R$ 568 x M-Vave SMK-25 R$ 339,69 em "Quem viu este
+  produto também comprou"): até 3 das vagas dos mais baratos na conferência
+  são dos relacionados (do mais barato), porque as cópias do próprio anúncio
+  ocupavam todas; nos Parecidos, além dos 5 mais semelhantes, até 2
+  sugeridos mais baratos que o colado (sugerido: true), à vista (não
+  recolhidos) e com o selo "Sugerido na página do anúncio". Diagnóstico:
+  leitura.relacionadosVistos (título | preço).
 - Anúncio colado que se contradiz (foto de um produto, texto de outro; caso da
   SHOPMASP: foto do conjunto Woven, descrição "malha macia" do Basic 3S
   tricot): o site avisa "a foto e o texto não batem, confirme com o vendedor"
