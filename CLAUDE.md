@@ -264,6 +264,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   "Campo: original -> candidato" (servidor e extensão). Cartão do parecido:
   cabeçalho (foto, título, loja, selos) → preço e diferença → o que muda →
   "Ver características" e "Comprar com segurança".
+- VISUAL ESTILO APPLE (Weslei, 03/10): fundo cinza-claro #f5f5f7 e cartões
+  brancos (tokens em src/styles.css), fonte do sistema (SF Pro), raios
+  amplos (rounded-3xl nos cartões principais), sombra leve, azul #0071e3.
+  No celular: barra fixa translúcida no topo ao rolar pelo resultado
+  (BarraFixa: foto, nome curto, melhor preço, frete em linha própria e
+  pílula "Comprar com segurança" só com link de afiliado; sem link, sem
+  botão); Parecidos em carrossel horizontal com snap, seletor em círculos
+  com a foto de cada um e indicador em pílula (no PC continua a lista).
 - Tabela: preço abaixo de 70% da mediana das lojas ganha o aviso "Preço muito
   abaixo das outras lojas: confira o vendedor antes de comprar". GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
   variações; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de

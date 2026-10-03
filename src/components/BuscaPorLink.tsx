@@ -976,7 +976,7 @@ export default function BuscaPorLink() {
     <section
       id="colar-link"
       className={
-        "mx-auto rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-3 transition-[max-width] sm:p-4 " +
+        "mx-auto rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition-[max-width] sm:p-5 " +
         /* Com resultado, usa a largura da tela (Weslei, 28/09: "aproveite
            melhor o espaço"); sem resultado, a caixa do link fica enxuta. */
         (fase === "pronto" && pedido ? "max-w-3xl lg:max-w-6xl" : "max-w-3xl")
@@ -986,7 +986,7 @@ export default function BuscaPorLink() {
         <span aria-hidden="true" className="text-lg">
           🔗
         </span>
-        <h2 className="font-semibold">Cole o link do produto</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Cole o link do produto</h2>
       </div>
       <p className="mb-2 text-xs text-secondary-ink">
         Procuro o mesmo produto em outras lojas dentro do Mercado Livre e mostro onde sai mais
@@ -1932,15 +1932,43 @@ function Resultado({
   /* Coluna da direita: lojas comparadas e/ou parecidos. */
   const temColuna = mostraTabela || (!leituraFalhou && parecidosComLink.length > 0);
 
+  /* Barra fixa do celular: a mesma recomendação da tela, só com link de
+     afiliado (sem link pronto, a barra fica sem botão). */
+  const barra = recomendada
+    ? {
+        link: recomendada.o.link && !recomendada.o.semAfiliado ? recomendada.o.link : null,
+        preco: recomendada.o.final,
+        freteGratis: recomendada.o.freteGratis ?? null,
+        custoFrete: recomendada.o.custoFrete ?? null,
+      }
+    : estaEAMelhor
+      ? {
+          link: semLink ? null : link,
+          preco: a?.preco ?? null,
+          freteGratis: a?.freteGratis ?? null,
+          custoFrete: a?.custoFrete ?? null,
+        }
+      : null;
+
   return (
     <div
       className={
-        "mt-3 rounded-lg border border-border bg-card p-3" +
-        (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_1fr] sm:gap-x-4" : "")
+        "relative mt-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)]" +
+        (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_1fr] sm:gap-x-5" : "")
       }
     >
+      {barra && (
+        <BarraFixa
+          imagem={a?.imagem ?? null}
+          titulo={semEntidades(a?.titulo) ?? null}
+          link={barra.link}
+          preco={barra.preco}
+          freteGratis={barra.freteGratis}
+          custoFrete={barra.custoFrete}
+        />
+      )}
       <div className="flex items-start gap-3 sm:col-start-1 sm:row-start-1">
-        <Foto src={a?.imagem} className="size-16 shrink-0 rounded-md border border-border" />
+        <Foto src={a?.imagem} className="size-16 shrink-0 rounded-2xl border border-border/70" />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
             {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
@@ -2587,7 +2615,7 @@ function MelhorAlternativa({
     ...(detalhesColado?.caracteristicas ?? []).map((c) => c.valor),
   ].join(" ");
   return (
-    <div className="mt-3 rounded-lg border-2 border-success/60 bg-success/5 p-3 first:sm:mt-0">
+    <div className="mt-3 rounded-3xl border border-success/40 bg-success/5 p-4 first:sm:mt-0">
       <p className="mb-1 inline-block rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
         <Fogo /> Melhor alternativa
       </p>
@@ -2695,6 +2723,97 @@ function MelhorAlternativa({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/* BARRA FIXA NO CELULAR (Weslei, 03/10: estilo Apple Store): ao rolar pelo
+   resultado, uma barra translúcida no topo com a foto, o nome curto, o melhor
+   preço (frete em linha própria) e o botão em pílula com o link de afiliado.
+   Some quando o resultado sai da tela. */
+function BarraFixa({
+  imagem,
+  titulo,
+  link,
+  preco,
+  freteGratis,
+  custoFrete,
+}: {
+  imagem: string | null;
+  titulo: string | null;
+  link: string | null;
+  preco: number | null;
+  freteGratis: boolean | null;
+  custoFrete: number | null;
+}) {
+  const marco = useRef<HTMLSpanElement | null>(null);
+  const [visivel, setVisivel] = useState(false);
+  useEffect(() => {
+    let quadro = 0;
+    const medir = () => {
+      quadro = 0;
+      const caixa = marco.current?.parentElement?.getBoundingClientRect();
+      setVisivel(Boolean(caixa && caixa.top < -120 && caixa.bottom > 160));
+    };
+    const aoRolar = () => {
+      if (!quadro) quadro = requestAnimationFrame(medir);
+    };
+    window.addEventListener("scroll", aoRolar, { passive: true });
+    window.addEventListener("resize", aoRolar);
+    medir();
+    return () => {
+      window.removeEventListener("scroll", aoRolar);
+      window.removeEventListener("resize", aoRolar);
+      if (quadro) cancelAnimationFrame(quadro);
+    };
+  }, []);
+  const frete =
+    freteGratis === true
+      ? "Frete grátis"
+      : custoFrete != null && custoFrete > 0
+        ? `Frete ${brl(custoFrete)}`
+        : freteGratis === false
+          ? "Sem frete grátis"
+          : null;
+  return (
+    <>
+      <span ref={marco} aria-hidden="true" className="absolute left-0 top-0 h-px w-px" />
+      <div
+        className={
+          "fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-white/75 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-all duration-300 dark:border-white/10 dark:bg-black/60 sm:hidden " +
+          (visivel
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-full opacity-0")
+        }
+        aria-hidden={!visivel}
+      >
+        <div className="flex items-center gap-2.5 px-4 py-2">
+          <Foto src={imagem} className="size-9 shrink-0 rounded-xl bg-muted object-contain" />
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-[13px] font-semibold tracking-tight">
+              {titulo ?? "Produto"}
+            </p>
+            {preco != null && (
+              <p className="text-[11px] text-secondary-ink">
+                Melhor preço <strong className="text-foreground tabular-nums">{brl(preco)}</strong>
+              </p>
+            )}
+            {frete && <p className="text-[11px] text-secondary-ink">{frete}</p>}
+          </div>
+          {link && (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={visivel ? 0 : -1}
+              className="inline-flex max-w-[52%] shrink-0 items-center gap-1 rounded-full bg-ml-blue px-3 py-1.5 text-center text-[12px] font-semibold leading-tight text-white active:scale-95"
+            >
+              <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
+              <span>Comprar com segurança</span>
+            </a>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -2867,6 +2986,10 @@ function Parecidos({
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
   const [verTodos, setVerTodos] = useState(false);
+  /* CARROSSEL NO CELULAR (Weslei, 03/10: estilo Apple): cartão ativo, para
+     o seletor de fotos e o indicador em pílula. */
+  const trilho = useRef<HTMLUListElement | null>(null);
+  const [ativo, setAtivo] = useState(0);
   if (!lista || !lista.length) return null;
   /* ASSERTIVO (Weslei, 28/09: "as comparações e recomendações devem ser
      assertivas em relação ao que foi buscado"): na frente só o que é muito
@@ -2890,27 +3013,78 @@ function Parecidos({
     mColado != null &&
     precoColado != null &&
     medidas.some((m) => m && m.tipo === mColado.tipo && m.qtd !== mColado.qtd);
+  const visiveis = lista
+    .map((p, i) => ({ p, i }))
+    .filter(({ p }) => verTodos || escondidos === 0 || perto(p));
+  const irPara = (k: number) => {
+    const li = trilho.current?.children[k] as HTMLElement | undefined;
+    li?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  };
+  const aoRolar = () => {
+    const el = trilho.current;
+    const primeiro = el?.children[0] as HTMLElement | undefined;
+    if (!el || !primeiro) return;
+    const passo = primeiro.offsetWidth + 12;
+    setAtivo(Math.min(visiveis.length - 1, Math.max(0, Math.round(el.scrollLeft / passo))));
+  };
   return (
-    <div className="mt-3 rounded-lg border border-amber-400/70 bg-amber-50/60 p-2.5 first:sm:mt-0 dark:bg-amber-950/20">
-      <p className="text-sm font-bold">
-        Parecidos ({escondidos && !verTodos ? lista.length - escondidos : lista.length})
+    <div className="mt-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] first:sm:mt-0">
+      <p className="text-lg font-semibold tracking-tight">
+        Parecidos{" "}
+        <span className="text-secondary-ink">
+          ({escondidos && !verTodos ? lista.length - escondidos : lista.length})
+        </span>
       </p>
-      <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+      <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
         Não é o mesmo produto: veja o que muda antes de comprar.
       </p>
-      <ul className="mt-2 space-y-2">
-        {lista.map((p, i) => {
-          if (!verTodos && escondidos > 0 && !perto(p)) return null;
+      {/* Seletor em círculos (celular): a foto de cada parecido leva ao cartão. */}
+      {visiveis.length > 1 && (
+        <div className="-mx-1 mt-2 flex gap-2.5 overflow-x-auto p-1.5 sm:hidden" role="tablist">
+          {visiveis.map(({ p }, k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={ativo === k}
+              aria-label={`Ver ${semEntidades(p.titulo) ?? "parecido"}`}
+              onClick={() => irPara(k)}
+              className={
+                "size-11 shrink-0 overflow-hidden rounded-full bg-muted ring-offset-2 ring-offset-card transition " +
+                (ativo === k ? "ring-2 ring-ml-blue" : "ring-1 ring-border")
+              }
+            >
+              <Foto src={p.imagem} className="size-full object-contain" />
+            </button>
+          ))}
+        </div>
+      )}
+      <ul
+        ref={trilho}
+        onScroll={aoRolar}
+        className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:block sm:space-y-3 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+      >
+        {visiveis.map(({ p, i }) => {
           const m = medidas[i];
           const porMedida =
             comparaMedida && m && mColado && m.tipo === mColado.tipo
               ? precoPorMedida(p.preco, m)
               : null;
           return (
-            <li key={i} className="rounded-md border border-border bg-card p-2.5">
+            <li
+              key={i}
+              className="w-[86%] shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
+            >
+              {/* Foto em destaque no celular (cartão estilo Apple). */}
+              <div className="mb-3 flex justify-center rounded-2xl bg-muted/50 p-3 sm:hidden">
+                <Foto src={p.imagem} className="h-36 w-36 rounded-xl object-contain" />
+              </div>
               {/* Cabeçalho: foto, título e quem vende. */}
               <div className="flex items-start gap-2.5">
-                <Foto src={p.imagem} className="size-14 shrink-0 rounded border border-border" />
+                <Foto
+                  src={p.imagem}
+                  className="hidden size-14 shrink-0 rounded-xl border border-border sm:block"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-semibold leading-snug">
                     {semEntidades(p.titulo)}
@@ -2926,8 +3100,16 @@ function Parecidos({
                       <SeloLider nivel={p.mercadoLider} className="inline-flex" />
                     </p>
                   )}
-                  {(p.mesmaFoto || (p.semelhanca ?? 0) >= 85 || p.sugerido === true) && (
+                  {(p.mesmaFoto ||
+                    (p.semelhanca ?? 0) >= 85 ||
+                    p.sugerido === true ||
+                    (p.diferenca != null && p.diferenca <= -0.5)) && (
                     <p className="mt-1 flex flex-wrap gap-1 text-[10px] font-semibold">
+                      {p.diferenca != null && p.diferenca <= -0.5 && (
+                        <span className="rounded-full bg-success/15 px-1.5 py-0.5 text-success">
+                          Mais barato que o seu
+                        </span>
+                      )}
                       {p.sugerido === true && (
                         <span className="rounded-full bg-ml-blue/10 px-1.5 py-0.5 text-ml-blue">
                           Sugerido na página do anúncio
@@ -3052,10 +3234,30 @@ function Parecidos({
           );
         })}
       </ul>
+      {/* Indicador em pílula (celular), estilo Apple Highlights. */}
+      {visiveis.length > 1 && (
+        <div className="mt-3 flex justify-center sm:hidden" aria-hidden="true">
+          <div className="flex items-center gap-1.5 rounded-full bg-foreground/5 px-3 py-2 backdrop-blur-md">
+            {visiveis.map((_, k) => (
+              <span
+                key={k}
+                className={
+                  "h-1.5 rounded-full transition-all duration-300 " +
+                  (ativo === k ? "w-6 bg-foreground/70" : "w-1.5 bg-foreground/25")
+                }
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {escondidos > 0 && (
         <button
           type="button"
-          onClick={() => setVerTodos((x) => !x)}
+          onClick={() => {
+            setAtivo(0);
+            trilho.current?.scrollTo({ left: 0 });
+            setVerTodos((x) => !x);
+          }}
           aria-expanded={verTodos}
           className="mt-1.5 text-[11px] font-bold text-ml-blue hover:underline"
         >
