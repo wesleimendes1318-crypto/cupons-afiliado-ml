@@ -90,17 +90,23 @@ export function mensagemDaComparacao(
     );
   }
   if (alternativa && melhorMesmo) {
-    const base = totalDaOpcao(melhorMesmo) ?? melhorMesmo.preco;
+    /* Economia contra o anúncio enviado, no produto (Weslei, 03/10). */
+    const tC = colado ? totalDaOpcao(colado) : null;
+    const tA = totalDaOpcao(alternativa);
+    const comFrete =
+      tC != null &&
+      tA != null &&
+      ((colado?.freteGratis === false && (colado?.custoFrete ?? 0) > 0) ||
+        (alternativa.freteGratis === false && (alternativa.custoFrete ?? 0) > 0));
+    const menosAlt = comFrete
+      ? (tC as number) - (tA as number)
+      : (colado?.preco ?? melhorMesmo.preco) - alternativa.preco;
     linhas.push(
       "",
       "🔥 <b>Melhor alternativa (não é idêntico ao que você enviou)</b>",
       `📌 ${html(alternativa.titulo)}`,
       ...linhasDaOpcao(alternativa),
-      `💸 ${brl(base - alternativa.preco)} a menos que o melhor preço do mesmo produto${
-        melhorMesmo.freteGratis === false && totalDaOpcao(melhorMesmo) != null
-          ? " (já com o frete dele)"
-          : ""
-      }`,
+      `💸 ${brl(menosAlt)} a menos ${comFrete ? "no custo final, já com o frete," : "no produto"} que o anúncio que você enviou`,
       alternativa.muda
         ? `ℹ️ Muda: ${html(alternativa.muda)}`
         : "ℹ️ Muda um detalhe: confira antes de comprar",

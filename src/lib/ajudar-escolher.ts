@@ -239,9 +239,21 @@ export function escolhaCalculada(opcoes: Opcao[]): Ajuda | null {
       .join(", ");
   let resumo: string;
   if (alternativa && melhorMesmo) {
-    const menos = (totalDaOpcao(melhorMesmo) ?? melhorMesmo.preco) - alternativa.preco;
+    /* Economia contra o anúncio colado, no produto (Weslei, 03/10: "a
+       diferença é comparada com o original"; ajuste global). */
+    /* Custo real (03/10): com frete conhecido, produto + frete dos dois. */
+    const tC = colado ? totalDaOpcao(colado) : null;
+    const tA = totalDaOpcao(alternativa);
+    const comFrete =
+      tC != null &&
+      tA != null &&
+      ((colado?.freteGratis === false && (colado?.custoFrete ?? 0) > 0) ||
+        (alternativa.freteGratis === false && (alternativa.custoFrete ?? 0) > 0));
+    const menos = comFrete
+      ? (tC as number) - (tA as number)
+      : (colado?.preco ?? melhorMesmo.preco) - alternativa.preco;
     resumo =
-      `Mais em conta: ${moeda(alternativa.preco)}, ${moeda(menos)} a menos que o melhor preço do mesmo produto` +
+      `Mais em conta: ${moeda(alternativa.preco)}, ${moeda(menos)} a menos ${comFrete ? "no custo final, já com o frete," : "no produto"} que o anúncio que você colou` +
       `${alternativa.freteGratis === true ? ", com frete grátis" : ""}` +
       `${alternativa.lojaOficial ? ", loja oficial da marca" : ""}. ` +
       `Não é idêntico: ${alternativa.muda ?? "muda um detalhe"}. ` +

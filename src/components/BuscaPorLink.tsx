@@ -2063,14 +2063,8 @@ function Resultado({
 
       {temColuna && (
         <div className="sm:col-start-2 sm:row-span-3 sm:row-start-1">
-          {mostraTabela && (
-            <TodasAsLojas
-              linhas={linhasLojas}
-              melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
-              cep={a?.cepDestino ?? null}
-            />
-          )}
-          {/* Melhor alternativa logo acima dos Parecidos (Weslei, 03/10). */}
+          {/* Melhor alternativa no topo da coluna, acima da tabela e dos Parecidos
+              (Weslei, 03/10). */}
           {alternativa && !leituraFalhou && (
             <MelhorAlternativa
               p={alternativa}
@@ -2080,6 +2074,13 @@ function Resultado({
               tituloColado={a?.titulo ?? null}
               detalhesColado={a?.detalhes ?? null}
               colado={coladoResumo}
+            />
+          )}
+          {mostraTabela && (
+            <TodasAsLojas
+              linhas={linhasLojas}
+              melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
+              cep={a?.cepDestino ?? null}
             />
           )}
           <Parecidos
@@ -2622,7 +2623,23 @@ function MelhorAlternativa({
   precoBase: number | null;
   dispositivo: Dispositivo;
 }) {
-  const menos = precoBase != null ? Math.round((precoBase - p.preco) * 100) / 100 : null;
+  /* Economia contra o ANÚNCIO COLADO, só no produto (Weslei, 03/10: "a
+     diferença é comparada com o original", ajuste global; antes era contra
+     o total da melhor loja e misturava o frete: R$ 19,44 em vez de
+     R$ 687,58). precoBase fica só como reserva. */
+  /* CUSTO REAL (Weslei, 03/10: "o preço do frete deve ser descontado, para
+     o cliente ter o custo real"): com o frete conhecido, compara produto +
+     frete dos dois lados (mesma conta de totalDaLoja/totalDaOpcao). */
+  const tColado = colado ? custoFinal(colado.preco, colado.freteGratis, colado.custoFrete) : null;
+  const tAlt = custoFinal(p.preco, p.freteGratis ?? null, p.custoFrete ?? null);
+  const comFrete =
+    tColado != null &&
+    tAlt != null &&
+    ((colado?.freteGratis === false && (colado?.custoFrete ?? 0) > 0) ||
+      (p.freteGratis === false && (p.custoFrete ?? 0) > 0));
+  const base = comFrete ? tColado : (colado?.preco ?? precoBase);
+  const menos =
+    base != null ? Math.round((base - (comFrete ? (tAlt as number) : p.preco)) * 100) / 100 : null;
   const textoDoColado = [
     tituloColado ?? "",
     ...(detalhesColado?.caracteristicas ?? []).map((c) => c.valor),
@@ -2658,7 +2675,9 @@ function MelhorAlternativa({
             {brl(menos)} a menos
           </span>
           <span className="block text-xs text-secondary-ink">
-            no produto, comparado ao melhor preço do mesmo produto
+            {comFrete
+              ? "no custo final, já com o frete dos dois, comparado ao anúncio que você colou"
+              : "no produto, comparado ao anúncio que você colou"}
           </span>
         </p>
       )}
@@ -2917,6 +2936,18 @@ type ColadoResumo = {
   detalhes: Detalhes | null;
 };
 
+/** Produto + frete conhecido (mesma conta de totalDaOpcao): frete grátis
+ *  ou não informado = só o produto; pago sem valor = não dá para saber. */
+function custoFinal(
+  preco: number | null | undefined,
+  gratis: boolean | null | undefined,
+  custo: number | null | undefined,
+): number | null {
+  if (preco == null) return null;
+  if (gratis !== false) return preco;
+  return custo != null && custo > 0 ? Math.round((preco + custo) * 100) / 100 : null;
+}
+
 function textoFrete(gratis: boolean | null | undefined, custo: number | null | undefined) {
   if (gratis === true) return "Frete grátis";
   if (custo != null && custo > 0) return `Frete ${brl(custo) ?? ""}`;
@@ -2994,6 +3025,25 @@ function CompararComOSeu({
                 textoFrete(colado.freteGratis, colado.custoFrete) !==
                   textoFrete(outro.freteGratis, outro.custoFrete),
               )}
+              {(() => {
+                const a = custoFinal(colado.preco, colado.freteGratis, colado.custoFrete);
+                const b = custoFinal(
+                  outro.preco,
+                  outro.freteGratis ?? null,
+                  outro.custoFrete ?? null,
+                );
+                const temFrete =
+                  (colado.freteGratis === false && (colado.custoFrete ?? 0) > 0) ||
+                  (outro.freteGratis === false && (outro.custoFrete ?? 0) > 0);
+                return temFrete
+                  ? linha(
+                      "Custo final",
+                      a != null ? (brl(a) ?? "—") : "—",
+                      b != null ? (brl(b) ?? "—") : "—",
+                      a != null && b != null && Math.abs(a - b) >= 0.5,
+                    )
+                  : null;
+              })()}
               {linha("Loja", colado.vendedor ?? "—", outro.vendedor ?? "—", false)}
               {ficha.map((l) => linha(l.nome, l.seu, l.este, !l.igual))}
             </tbody>
@@ -3446,7 +3496,7 @@ function TodasAsLojas({
   const muitoAbaixo = (l: LinhaLoja) =>
     !l.colado && mediana != null && l.final != null && l.final < mediana * 0.7;
   return (
-    <div className="mt-3 sm:mt-0">
+    <div className="mt-3 first:sm:mt-0">
       <p className="text-sm font-bold">
         Todas as lojas comparadas ({ordem.length})
         {cep && <span className="font-normal text-secondary-ink"> · frete para {cep}</span>}

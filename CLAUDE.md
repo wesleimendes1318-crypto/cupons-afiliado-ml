@@ -59,9 +59,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     ou mesma foto) e sem frete pago ganha cartão próprio abaixo da Melhor
     opção, com 🔥, botão animado e os motivos conferidos: "Mais completo"
     (vantagem que a conferência aponta), "Custo reduzido" (calculado) e "Loja
-    oficial da marca" (só com selo confirmado). Fica LOGO ACIMA dos Parecidos
-    (Weslei, 03/10; no PC na coluna da tabela, no celular depois da Melhor
-    opção e antes dos Parecidos). Sempre com "Não é idêntico ao
+    oficial da marca" (só com selo confirmado). Fica no TOPO da coluna da
+    direita, acima da tabela e dos Parecidos (Weslei, 03/10; no celular
+    depois da Melhor opção). ECONOMIA MOSTRADA (Weslei, 03/10, ajuste global
+    em site, "Me ajude a escolher" e Telegram): contra o ANÚNCIO COLADO, não
+    contra o total da melhor loja (geladeira: R$ 19,44 virava R$ 687,58), e
+    pelo CUSTO REAL: com frete conhecido, produto + frete dos dois lados
+    ("a menos no custo final, já com o frete"); sem frete conhecido, "no
+    produto". A escolha da alternativa continua pela regra acima. Sempre com "Não é idêntico ao
     anúncio que você colou. Muda: ...". Nunca vai para a tabela do mesmo produto.
     Mais barato porque vem MENOS (quantidade, kit x unidade, tamanho, volume,
     sem acessório) ou para outro uso/condição NÃO é alternativa (28/09: "10
