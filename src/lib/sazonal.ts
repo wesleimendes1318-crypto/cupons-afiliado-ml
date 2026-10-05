@@ -13,6 +13,8 @@
    - Natal (25/12): presentes (brinquedos, beleza/perfumes, eletrônicos,
      esportes). */
 
+import { PALETAS, type PaletaCampanha, type TemaVisualId } from "@/lib/campanha-visual";
+
 export type Temporada = {
   id: "criancas" | "black_friday" | "natal";
   nome: string;
@@ -44,36 +46,20 @@ export type Temporada = {
      sazonal): onde a economia de verdade aparece (os mais vendidos baratos
      quase nunca têm o mesmo produto bem mais barato, medido em 05/10). */
   buscas: readonly string[];
-  /* Tema visual da campanha (cores próprias, sem marca de terceiros).
-     Trocar cores e ilustração de uma campanha futura = editar só isto e a
-     arte em src/components/ArteSazonal.tsx. */
+  /* Tema visual CONFIGURADO (ajuste manual; manda sobre a identificação
+     pelo conteúdo). Sem ele, identificarTema decide pelo nome, descrição,
+     categorias e produtos (src/lib/campanha-visual.ts). */
+  temaVisual?: TemaVisualId;
+  /* Textos do destaque (opcionais; sem eles, os do tema). */
+  titulo?: string;
+  tituloDestaque?: string;
+  descricao?: string;
+  /* Paleta (a do tema configurado). */
   tema: TemaCampanha;
 };
 
-export type TemaCampanha = {
-  /* Fundo da seção (degradês, sem imagem). */
-  fundo: string;
-  /* Texto principal e secundário sobre o fundo (contraste AA conferido). */
-  texto: string;
-  textoSuave: string;
-  /* Cor de ação (botões) e o texto sobre ela. */
-  destaque: string;
-  sobreDestaque: string;
-  /* Segunda cor da campanha (detalhes da arte, números grandes). */
-  realce: string;
-  /* Cor de texto pequeno de destaque (selos, contagem) com contraste AA
-     sobre o fundo. */
-  rotulo: string;
-  /* Pílulas e áreas translúcidas sobre o fundo. */
-  superficie: string;
-  borda: string;
-  /* Pontos de luz / decoração. */
-  brilho: string;
-  /* Decoração de fundo: neve, confete ou pontos de luz. */
-  decoracao: "neve" | "confete" | "luzes";
-  /* Compatibilidade (pílula antiga). */
-  chip: string;
-};
+/* Paleta da campanha: vem do sistema visual (src/lib/campanha-visual.ts). */
+export type TemaCampanha = PaletaCampanha;
 
 export const TEMPORADAS: readonly Temporada[] = [
   {
@@ -106,21 +92,8 @@ export const TEMPORADAS: readonly Temporada[] = [
       "playmobil",
       "jogo de tabuleiro estrela",
     ],
-    tema: {
-      fundo:
-        "radial-gradient(90% 85% at 92% 0%, #ffe6a3 0%, rgba(255,230,163,0) 58%), linear-gradient(160deg, #fff9ea 0%, #fff4df 45%, #e6f2ff 100%)",
-      texto: "#1d1d1f",
-      textoSuave: "#4a4a52",
-      destaque: "#0071e3",
-      sobreDestaque: "#ffffff",
-      realce: "#ff7a59",
-      rotulo: "#0058b0",
-      superficie: "rgba(255,255,255,0.78)",
-      borda: "rgba(0,113,227,0.16)",
-      brilho: "#ffc93c",
-      decoracao: "confete",
-      chip: "#ffffff",
-    },
+    temaVisual: "criancas",
+    tema: PALETAS.criancas,
   },
   {
     id: "black_friday",
@@ -150,21 +123,8 @@ export const TEMPORADAS: readonly Temporada[] = [
       "monitor lg 24",
       "aspirador robô xiaomi",
     ],
-    tema: {
-      fundo:
-        "radial-gradient(80% 90% at 88% 0%, rgba(122,92,255,0.42) 0%, rgba(122,92,255,0) 60%), radial-gradient(60% 60% at 0% 100%, rgba(122,92,255,0.18) 0%, rgba(122,92,255,0) 70%), linear-gradient(160deg, #121218 0%, #1a1a23 60%, #14141b 100%)",
-      texto: "#f4f2ff",
-      textoSuave: "rgba(244,242,255,0.74)",
-      destaque: "#7a5cff",
-      sobreDestaque: "#ffffff",
-      realce: "#c8b8ff",
-      rotulo: "#d4c8ff",
-      superficie: "rgba(255,255,255,0.07)",
-      borda: "rgba(160,138,255,0.38)",
-      brilho: "#b9a6ff",
-      decoracao: "luzes",
-      chip: "#26232f",
-    },
+    temaVisual: "black_friday",
+    tema: PALETAS.black_friday,
   },
   {
     id: "natal",
@@ -195,21 +155,8 @@ export const TEMPORADAS: readonly Temporada[] = [
       "tênis nike revolution",
       "fone jbl wave buds",
     ],
-    tema: {
-      fundo:
-        "radial-gradient(85% 90% at 90% 0%, rgba(217,180,90,0.22) 0%, rgba(217,180,90,0) 58%), radial-gradient(70% 70% at 0% 100%, rgba(194,65,59,0.16) 0%, rgba(194,65,59,0) 70%), linear-gradient(160deg, #0b3125 0%, #0f3d2e 55%, #0d3628 100%)",
-      texto: "#f7f0e1",
-      textoSuave: "rgba(247,240,225,0.8)",
-      destaque: "#e2bf66",
-      sobreDestaque: "#1b2a22",
-      realce: "#d2453f",
-      rotulo: "#f0d48a",
-      superficie: "rgba(247,240,225,0.09)",
-      borda: "rgba(226,191,102,0.38)",
-      brilho: "#f6dd94",
-      decoracao: "neve",
-      chip: "#163f31",
-    },
+    temaVisual: "natal",
+    tema: PALETAS.natal,
   },
 ];
 

@@ -8,11 +8,18 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, BadgeCheck, Link2 } from "lucide-react";
 import { useState } from "react";
 
-import { VitrineDeFotos } from "@/components/ArteSazonal";
+import { ArteCampanha } from "@/components/ArteCampanha";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
-import { BotaoTelegram, daTemporada, GradeOfertas, useOfertas } from "@/components/VitrineSazonal";
+import {
+  BotaoTelegram,
+  daTemporada,
+  GradeOfertas,
+  temaDaCampanha,
+  useOfertas,
+} from "@/components/VitrineSazonal";
+import { TEMAS_VISUAIS } from "@/lib/campanha-visual";
 import { antecipada, diasAte, hojeEmBrasilia, TEMPORADAS, type Temporada } from "@/lib/sazonal";
 
 const TEXTO: Record<string, { titulo: string; resumo: string; dicas: string[] }> = {
@@ -47,22 +54,22 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
   const [antes] = useState(() => antecipada(t));
   /* Campanha encerrada (passou o último dia): sem contagem nem compra. */
   const [encerrada] = useState(() => hojeEmBrasilia() > t.fim);
+  /* Tema da campanha (configurado > conteúdo > neutro) e a paleta dele. */
+  const { tema } = temaDaCampanha(t, lista);
+  const p = TEMAS_VISUAIS[tema].paleta;
 
   return (
     <div className="fundo-conteudo min-h-screen">
-      <header
-        className="relative overflow-hidden"
-        style={{ background: t.tema.fundo, color: t.tema.texto }}
-      >
+      <header className="relative overflow-hidden" style={{ background: p.fundo, color: p.texto }}>
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-6 px-4 py-8 sm:px-6 md:grid-cols-[minmax(0,1fr)_340px] md:py-14">
           <div className="campanha-entra min-w-0">
             <Link
               to="/"
               className="campanha-botao inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold focus-visible:outline-2"
               style={{
-                background: t.tema.superficie,
-                color: t.tema.texto,
-                boxShadow: `inset 0 0 0 1px ${t.tema.borda}`,
+                background: p.superficie,
+                color: p.texto,
+                boxShadow: `inset 0 0 0 1px ${p.borda}`,
               }}
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" />
@@ -71,9 +78,9 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
             <p
               className="mt-6 flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
               style={{
-                background: t.tema.superficie,
-                color: t.tema.rotulo,
-                boxShadow: `inset 0 0 0 1px ${t.tema.borda}`,
+                background: p.superficie,
+                color: p.rotulo,
+                boxShadow: `inset 0 0 0 1px ${p.borda}`,
               }}
             >
               <span aria-hidden="true">{t.emoji}</span>
@@ -86,10 +93,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
             <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight sm:text-[40px]">
               {textos.titulo}
             </h1>
-            <p
-              className="mt-3 max-w-2xl text-base leading-relaxed"
-              style={{ color: t.tema.textoSuave }}
-            >
+            <p className="mt-3 max-w-2xl text-base leading-relaxed" style={{ color: p.textoSuave }}>
               {encerrada
                 ? "Esta campanha já passou. Os produtos comparados continuam na vitrine geral do site, e você pode comparar qualquer produto colando o link."
                 : textos.resumo}
@@ -98,15 +102,19 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
               <Link
                 to="/"
                 className="campanha-botao inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2"
-                style={{ background: t.tema.destaque, color: t.tema.sobreDestaque }}
+                style={{ background: p.destaque, color: p.sobreDestaque }}
               >
                 <Link2 className="size-4" aria-hidden="true" />
                 Comparar o meu produto
               </Link>
-              <BotaoTelegram t={t} texto="Receber os achados no Telegram" />
+              <BotaoTelegram p={p} texto="Receber os achados no Telegram" />
             </div>
           </div>
-          <VitrineDeFotos fotos={lista.map((o) => o.imagem)} className="mx-auto" />
+          <ArteCampanha
+            tema={tema}
+            fotos={lista.map((o) => o.imagem)}
+            className="mx-auto h-44 w-full max-w-[420px] sm:h-60 md:h-[300px]"
+          />
         </div>
       </header>
 
@@ -128,11 +136,11 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
                  grade vazia. */
               <div
                 className="relative mt-4 overflow-hidden rounded-[28px] px-5 py-8 text-center sm:px-10"
-                style={{ background: t.tema.fundo, color: t.tema.texto }}
+                style={{ background: p.fundo, color: p.texto }}
               >
                 <div className="relative mx-auto max-w-md">
                   <p className="mt-3 text-base font-bold">Estou conferindo os primeiros achados</p>
-                  <p className="mt-1 text-sm" style={{ color: t.tema.textoSuave }}>
+                  <p className="mt-1 text-sm" style={{ color: p.textoSuave }}>
                     Assim que um produto passar na comparação (mesmo produto, qualidade e desconto
                     real), ele aparece aqui. Enquanto isso, cole o link do que você quer comprar.
                   </p>
@@ -140,18 +148,18 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
                     <Link
                       to="/"
                       className="campanha-botao inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold"
-                      style={{ background: t.tema.destaque, color: t.tema.sobreDestaque }}
+                      style={{ background: p.destaque, color: p.sobreDestaque }}
                     >
                       <Link2 className="size-4" aria-hidden="true" />
                       Comparar o meu produto
                     </Link>
-                    <BotaoTelegram t={t} texto="Avisar no Telegram" />
+                    <BotaoTelegram p={p} texto="Avisar no Telegram" />
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="mt-4 rounded-[28px] p-4 sm:p-6" style={{ background: t.tema.fundo }}>
-                <GradeOfertas t={t} lista={lista} naHome={false} />
+              <div className="mt-4 rounded-[28px] p-4 sm:p-6" style={{ background: p.fundo }}>
+                <GradeOfertas p={p} lista={lista} naHome={false} natal={tema === "natal"} />
               </div>
             )}
           </>

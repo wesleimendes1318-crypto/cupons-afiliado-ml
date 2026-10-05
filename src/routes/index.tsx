@@ -1170,20 +1170,45 @@ export function AcaoDoCupom({
    nome no title/aria-label. */
 function BotaoColarFlutuante({ acima }: { acima: boolean }) {
   const [visivel, setVisivel] = useState(false);
+  const botao = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const alvo = document.getElementById("colar-link");
-    if (!alvo || typeof IntersectionObserver === "undefined") {
-      setVisivel(true);
-      return;
-    }
-    const obs = new IntersectionObserver(([e]) => setVisivel(!e?.isIntersecting), {
-      rootMargin: "0px 0px -20% 0px",
-    });
-    obs.observe(alvo);
-    return () => obs.disconnect();
+    /* Some enquanto o campo do link OU um convite de colar link
+       (data-convite-colar, ex.: "Tem um produto em mente?") está na tela. */
+    let quadro = 0;
+    const naTela = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return r.bottom > 0 && r.top < window.innerHeight * 0.85;
+    };
+    const conferir = () => {
+      quadro = 0;
+      const campo = document.getElementById("colar-link");
+      const convites = Array.from(document.querySelectorAll("[data-convite-colar]"));
+      /* Nunca por cima de cartão, botão ou link (05/10). */
+      let cobre = false;
+      const r = botao.current?.getBoundingClientRect();
+      if (r && r.width) {
+        const embaixo = document
+          .elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+          .find((el) => !botao.current?.contains(el));
+        cobre = !!embaixo?.closest(".campanha-cartao, [data-convite-colar], li, a, button");
+      }
+      setVisivel(!(campo && naTela(campo)) && !convites.some(naTela) && !cobre);
+    };
+    const agendar = () => {
+      if (!quadro) quadro = window.requestAnimationFrame(conferir);
+    };
+    conferir();
+    window.addEventListener("scroll", agendar, { passive: true });
+    window.addEventListener("resize", agendar);
+    return () => {
+      window.removeEventListener("scroll", agendar);
+      window.removeEventListener("resize", agendar);
+      if (quadro) window.cancelAnimationFrame(quadro);
+    };
   }, []);
   return (
     <button
+      ref={botao}
       type="button"
       onClick={irParaColarLink}
       aria-label="Colar link do produto"

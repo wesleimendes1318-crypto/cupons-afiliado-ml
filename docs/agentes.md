@@ -5,9 +5,16 @@ TUDO: segurança, pesquisa, análise de dados, configurações, manutenção, ma
 layout, melhorias" e "mantenha o site totalmente funcionando, validado e com
 segurança do que é mostrado".
 
-Cada agente é uma rotina agendada (Claude Code Routines) que abre uma sessão
-nova neste repositório, lê o CLAUDE.md e este arquivo, faz o seu checklist e
-termina com um relatório curto. Todos seguem as mesmas regras:
+Cada agente é uma rotina agendada (Claude Code Routines) que dispara na
+sessão de trabalho do site (session_016BmUTiRLhMctThes4VX2w1), que tem o
+repositório e o conector do Lovable (banco e publicação); uma sessão nova
+não recebe esse conector. Cada um segue o CLAUDE.md e este arquivo, faz o
+seu checklist e termina com um relatório curto (uma linha quando está tudo
+certo). Rotinas: Guardião trig_01T54UgwjPgup899tBkJrcM2, Pesquisa
+trig_01ADvo7r7DJk5iCr3xvDtRnG, Manutenção trig_01UpybWSTnNGGhrKxNHm9jeP,
+Segurança trig_01HforNfRJa1CyCcZ2FAXHV3, Marca/layout
+trig_015J8SYFexWKBUX81tpu4rq2, Dados trig_01LngMYdexCQsNxHBbwrbzwQ. Todos
+seguem as mesmas regras:
 
 - CLAUDE.md manda. Nunca force-push nem reescrever histórico; branch
   `claude/ml-etiquetas-cupons-k6tgkj` e `main` recebem o mesmo commit; depois

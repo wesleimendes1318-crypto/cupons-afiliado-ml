@@ -16,7 +16,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, Link2, RefreshCw, ShieldCheck } from "lucide-react";
 
-import { VitrineDeFotos } from "@/components/ArteSazonal";
+import { ArteCampanha } from "@/components/ArteCampanha";
+import {
+  identificarTema,
+  TEMAS_VISUAIS,
+  type PaletaCampanha,
+  type TemaVisualId,
+} from "@/lib/campanha-visual";
+import { seloDoMenorPreco } from "@/lib/selos";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
@@ -80,6 +87,8 @@ export type Oferta = {
   lojas?: number | null;
   urlProduto: string | null;
   recente: boolean;
+  /* Quando foi comparado (para "preço de dd/mm"). */
+  vistoEm?: string;
 };
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -119,6 +128,7 @@ export function ofertaDo(i: ItemVitrine): Oferta | null {
     antes: i.preco,
     urlProduto: i.url_produto,
     recente: recente(i.visto_em),
+    vistoEm: i.visto_em,
     ...melhor,
   };
 }
@@ -138,6 +148,7 @@ export function ofertaMenorPreco(i: ItemMenorPreco): Oferta | null {
     lojas: i.lojas_mais_caras,
     urlProduto: i.url_produto,
     recente: recente(i.visto_em),
+    vistoEm: i.visto_em,
   };
 }
 
@@ -192,11 +203,61 @@ export function useOfertas() {
 export const daTemporada = (t: Temporada, ofertas: Oferta[]) =>
   ofertas.filter((o) => combinaComTemporada(t, o.titulo));
 
-function contagem(t: Temporada) {
-  const d = diasAte(t);
-  if (antecipada(t)) return `${t.nome} em ${d} ${d === 1 ? "dia" : "dias"}`;
-  return d === 0 ? `${t.nome} é hoje` : `Faltam ${d} ${d === 1 ? "dia" : "dias"}`;
+/* ------------------------------------------------------------------
+   VITRINE DE CAMPANHAS (Weslei, 05/10: experiência visual encantadora,
+   profissional e alinhada à marca; identificar o tema de cada campanha e
+   adaptar arte, símbolos, cores e composição). O tema vem de
+   identificarTema (configurado > conteúdo > neutro) e a paleta, a arte e os
+   textos, de src/lib/campanha-visual.ts. Títulos, preços, datas e botões
+   ficam no HTML, separados da arte. */
+
+/* Campanha para a vitrine: as temporadas e qualquer campanha futura (outra
+   data, categoria) com o mínimo para identificar o tema e contar os dias. */
+export type CampanhaVitrine = {
+  id: string;
+  nome: string;
+  emoji?: string;
+  inicio: string;
+  fim: string;
+  dia: string;
+  pagina?: string;
+  temaVisual?: TemaVisualId;
+  titulo?: string;
+  tituloDestaque?: string;
+  descricao?: string;
+  descricaoConteudo?: string;
+  categorias?: ReadonlyArray<{ nome: string }>;
+};
+
+/** Tema de UMA campanha (campanhas simultâneas não se misturam). */
+export function temaDaCampanha(c: CampanhaVitrine, lista: Oferta[]) {
+  return identificarTema({
+    temaConfigurado: c.temaVisual ?? null,
+    nome: c.nome,
+    descricao: c.descricaoConteudo ?? c.descricao ?? null,
+    categorias: (c.categorias ?? []).map((x) => x.nome),
+    produtos: lista.map((o) => o.titulo),
+  });
 }
+
+const comoTemporada = (c: CampanhaVitrine) => c as unknown as Temporada;
+
+function contagem(c: CampanhaVitrine) {
+  const t = comoTemporada(c);
+  const d = diasAte(t);
+  const data = `${c.dia.slice(8, 10)}/${c.dia.slice(5, 7)}`;
+  if (antecipada(t)) return `${c.nome} em ${d} ${d === 1 ? "dia" : "dias"} · ${data}`;
+  return d === 0 ? `${c.nome} é hoje` : `Faltam ${d} ${d === 1 ? "dia" : "dias"} · ${data}`;
+}
+
+const dataCurta = (iso?: string) =>
+  iso
+    ? new Date(iso).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      })
+    : null;
 
 /* Ícone do Telegram (avião de papel), desenhado aqui. */
 export function IconeTelegram({ className = "size-4" }: { className?: string }) {
@@ -207,25 +268,22 @@ export function IconeTelegram({ className = "size-4" }: { className?: string }) 
   );
 }
 
-export function BotaoTelegram({ t, texto }: { t: Temporada; texto: string }) {
+export function BotaoTelegram({ p, texto }: { p: PaletaCampanha; texto: string }) {
   return (
     <a
       href={LINK_CANAL}
       target="_blank"
       rel="noopener noreferrer"
       data-origem="sazonal"
-      className="campanha-botao inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2"
+      className="campanha-botao inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
       style={{
-        borderColor: t.tema.borda,
-        color: t.tema.texto,
-        background: t.tema.superficie,
-        outlineColor: t.tema.destaque,
+        borderColor: p.borda,
+        color: p.texto,
+        background: p.superficie,
+        outlineColor: p.destaque,
       }}
     >
-      <span
-        className="grid size-5 place-items-center rounded-full"
-        style={{ background: "#2aabee", color: "#fff" }}
-      >
+      <span className="grid size-5 place-items-center rounded-full bg-[#2aabee] text-white">
         <IconeTelegram className="size-3" />
       </span>
       {texto}
@@ -233,11 +291,46 @@ export function BotaoTelegram({ t, texto }: { t: Temporada; texto: string }) {
   );
 }
 
-const SELO: Record<Oferta["tipo"], { texto: string; classe: string }> = {
-  mesmo: { texto: "Mesmo produto", classe: "bg-[#eef6ff] text-[#0058b0]" },
-  parecido: { texto: "Parecido", classe: "bg-[#f5f5f7] text-[#424245]" },
-  menor: { texto: "Menor preço", classe: "bg-[#e8f5ec] text-[#14692e]" },
-};
+/* Classificação do cartão: o que está sendo comparado, com o dado. */
+function classificacao(o: Oferta) {
+  if (o.tipo === "menor") {
+    const selo = seloDoMenorPreco(o.lojas ?? null, o.preco, o.antes);
+    return {
+      chip: selo?.texto ?? "Melhor preço",
+      chipClasse: "bg-[#e8f1fd] text-[#0058b0]",
+      linha: (
+        <>
+          {selo?.nota ?? "entre as lojas consultadas"} · 2ª loja{" "}
+          <span className="tabular-nums">{brl(o.antes)}</span>
+        </>
+      ),
+    };
+  }
+  const aMenos = (
+    <strong className="font-bold text-[#14692e] tabular-nums">{brl(o.economia)} a menos</strong>
+  );
+  return o.tipo === "parecido"
+    ? {
+        chip: "Parecido",
+        chipClasse: "bg-[#fff4e0] text-[#8a5300]",
+        linha: (
+          <>
+            {aMenos} que o anúncio comparado (
+            <span className="line-through tabular-nums">{brl(o.antes)}</span>). Não é idêntico.
+          </>
+        ),
+      }
+    : {
+        chip: "Mesmo produto",
+        chipClasse: "bg-[#e8f5ec] text-[#14692e]",
+        linha: (
+          <>
+            {aMenos} que em outra loja (
+            <span className="line-through tabular-nums">{brl(o.antes)}</span>)
+          </>
+        ),
+      };
+}
 
 export function CartaoOferta({
   o,
@@ -247,93 +340,87 @@ export function CartaoOferta({
 }: {
   o: Oferta;
   className?: string;
-  /* Fora da home, "Ver o preço de agora" abre a comparação pelo endereço. */
+  /* Fora da home, "Atualizar preço" abre a comparação pelo endereço. */
   naHome?: boolean;
   atraso?: number;
 }) {
-  const selo = SELO[o.tipo];
+  const c = classificacao(o);
+  const quando = o.recente ? "Conferido hoje" : `Preço de ${dataCurta(o.vistoEm) ?? "antes"}`;
+  const atualizar = !o.link || !o.recente;
+  const classeAtualizar = o.link
+    ? "mt-1.5 text-[#0058b0] hover:bg-[#f5f5f7]"
+    : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110";
   return (
     <li
-      className={`campanha-entra campanha-cartao flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_2px_10px_rgba(0,0,0,0.08)] ring-1 ring-black/5 ${className}`}
-      style={{ animationDelay: `${Math.min(atraso, 8) * 60}ms` }}
+      className={`campanha-entra campanha-cartao flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
+      style={{ animationDelay: `${Math.min(atraso, 8) * 50}ms` }}
     >
-      <div className="relative h-36 shrink-0 bg-white sm:h-40">
+      <div className="grid h-40 place-items-center bg-white p-3 sm:h-44">
         {o.imagem ? (
           <img
             src={o.imagem}
             alt={o.titulo}
+            width={200}
+            height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-3"
+            className="max-h-full max-w-full object-contain"
           />
         ) : (
-          <div className="absolute inset-0 grid place-items-center text-[11px] text-[#86868b]">
-            Foto indisponível
-          </div>
+          <span className="text-[11px] text-[#86868b]">Foto indisponível</span>
         )}
-        <span className="absolute left-2 top-2 rounded-full bg-[#14692e] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
-          {o.tipo === "menor"
-            ? `Menor entre ${(o.lojas ?? 2) + 1} lojas`
-            : `${brl(o.economia)} a menos`}
-        </span>
       </div>
-      <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
-        <span
-          className={`self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${selo.classe}`}
-        >
-          {selo.texto}
-        </span>
-        <p className="mt-1.5 line-clamp-2 min-h-[2.5em] text-xs font-medium leading-snug">
+      <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3.5">
+        <p className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-snug">
           {o.titulo}
         </p>
-        <p className="mt-2 text-[17px] font-extrabold leading-none tabular-nums">{brl(o.preco)}</p>
-        <p className="mt-1 min-h-[1.25em] text-[11px] leading-tight text-[#6e6e73] tabular-nums">
-          <span className="line-through">{brl(o.antes)}</span>{" "}
-          {o.tipo === "menor"
-            ? `na 2ª loja mais barata (${brl(o.economia)} a mais)`
-            : o.tipo === "parecido"
-              ? "no anúncio comparado"
-              : "em outra loja"}
+        <p className="mt-2 text-[20px] font-extrabold leading-none tracking-tight tabular-nums">
+          {brl(o.preco)}
         </p>
-        <p className="mt-1 min-h-[1.25em] truncate text-[11px] text-[#6e6e73]">
-          {o.loja ? `Vendido por ${o.loja}` : ""}
+        <span
+          className={`mt-2 self-start rounded-full px-2 py-0.5 text-[10px] font-bold ${c.chipClasse}`}
+        >
+          {c.chip}
+        </span>
+        <p className="mt-1.5 text-[11px] leading-snug text-[#515154]">{c.linha}</p>
+        <p className="mt-1.5 truncate text-[11px] text-[#6e6e73]">
+          {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
-        <div className="mt-auto pt-2.5">
-          {/* Botão direto sempre que houver link de afiliado (Weslei,
-              05/10); preço antigo ganha "Atualizar preço" ao lado. */}
+        <p className="text-[10px] text-[#86868b]">{quando}</p>
+        <div className="mt-auto pt-3">
           {o.link && (
             <a
               href={o.link}
               target="_blank"
               rel="noopener noreferrer sponsored"
               data-origem="sazonal"
-              className="campanha-botao flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
+              className="campanha-botao flex min-h-10 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-2 py-2 text-[12px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
             >
-              <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
+              <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               Comprar com segurança
             </a>
           )}
-          {(!o.link || !o.recente) &&
+          {atualizar &&
             o.urlProduto &&
-            (!naHome ? (
-              <a
-                href={`/?link=${encodeURIComponent(o.urlProduto)}`}
-                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${o.link ? "mt-1.5 text-[#0058b0] hover:bg-[#f5f5f7]" : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110"}`}
-              >
-                <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                {o.link ? "Atualizar preço" : "Ver o preço de agora"}
-              </a>
-            ) : (
+            (naHome ? (
               <button
                 type="button"
                 onClick={() =>
                   window.dispatchEvent(new CustomEvent("comparar-link", { detail: o.urlProduto }))
                 }
-                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${o.link ? "mt-1.5 text-[#0058b0] hover:bg-[#f5f5f7]" : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110"}`}
+                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[12px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${classeAtualizar}`}
               >
                 <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
                 {o.link ? "Atualizar preço" : "Ver o preço de agora"}
               </button>
+            ) : (
+              <a
+                href={`/?link=${encodeURIComponent(o.urlProduto)}`}
+                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[12px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${classeAtualizar}`}
+              >
+                <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
+                {o.link ? "Atualizar preço" : "Ver o preço de agora"}
+              </a>
             ))}
         </div>
       </div>
@@ -341,38 +428,46 @@ export function CartaoOferta({
   );
 }
 
-/* Cartão que completa a grade quando há poucos produtos: convida a colar o
-   link do presente (nada de espaço vazio). */
+/* Convite "Tem um produto em mente?": do tamanho de um cartão, integrado à
+   grade (data-convite-colar esconde o botão flutuante enquanto aparece). */
 function CartaoColar({
-  t,
+  p,
+  natal,
   naHome,
   className = "",
 }: {
-  t: Temporada;
+  p: PaletaCampanha;
+  natal: boolean;
   naHome: boolean;
   className?: string;
 }) {
   const conteudo = (
     <>
       <span
-        className="grid size-10 place-items-center rounded-full"
-        style={{ background: t.tema.destaque, color: t.tema.sobreDestaque }}
+        className="grid size-11 place-items-center rounded-full"
+        style={{ background: p.destaque, color: p.sobreDestaque }}
       >
         <Link2 className="size-5" aria-hidden="true" />
       </span>
-      <span className="mt-3 text-sm font-bold" style={{ color: t.tema.texto }}>
-        {t.id === "natal" ? "Já escolheu o presente?" : "Tem um produto em mente?"}
+      <span className="mt-3 text-[15px] font-bold leading-snug" style={{ color: p.texto }}>
+        {natal ? "Já escolheu o presente?" : "Tem um produto em mente?"}
       </span>
-      <span className="mt-1 text-xs" style={{ color: t.tema.textoSuave }}>
+      <span className="mt-1 text-[12px] leading-snug" style={{ color: p.textoSuave }}>
         Cole o link e eu comparo com as outras lojas em menos de 2 minutos.
+      </span>
+      <span
+        className="mt-4 inline-flex min-h-10 items-center rounded-full px-4 text-[12px] font-bold"
+        style={{ background: p.destaque, color: p.sobreDestaque }}
+      >
+        Colar o link
       </span>
     </>
   );
   const classe =
-    "campanha-cartao flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed p-4 text-center focus-visible:outline-2 w-full";
-  const estilo = { borderColor: t.tema.borda, background: t.tema.superficie };
+    "campanha-cartao flex h-full w-full flex-col items-center justify-center rounded-2xl border p-5 text-center focus-visible:outline-2 focus-visible:outline-offset-2";
+  const estilo = { borderColor: p.borda, background: p.cartao, outlineColor: p.destaque };
   return (
-    <li className={`flex ${className}`}>
+    <li className={`flex ${className}`} data-convite-colar>
       {naHome ? (
         <a href="#colar-link" className={classe} style={estilo}>
           {conteudo}
@@ -386,103 +481,115 @@ function CartaoColar({
   );
 }
 
-/* Grade que se adapta à quantidade real: celular em carrossel (produtos à
-   mão logo abaixo do título); no PC grade de 5, completada pelo convite
-   de colar o link quando há poucos. */
+/* Grade: celular em carrossel (produtos à mão logo abaixo do destaque); PC
+   em 5 colunas, completada pelo convite quando há poucos. */
 export function GradeOfertas({
-  t,
+  p,
   lista,
   naHome = true,
+  natal = false,
 }: {
-  t: Temporada;
+  p: PaletaCampanha;
   lista: Oferta[];
   naHome?: boolean;
+  natal?: boolean;
 }) {
-  const completar = lista.length < 5;
+  const completar = lista.length < 5 || lista.length % 5 !== 0;
+  const largura = "w-[64%] shrink-0 snap-start min-[480px]:w-[42%] sm:w-auto";
   return (
-    <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
+    <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
       {lista.map((o, i) => (
-        <CartaoOferta
-          key={o.chave}
-          o={o}
-          naHome={naHome}
-          atraso={i}
-          className="w-[62%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto"
-        />
+        <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
       ))}
-      {completar && (
-        <CartaoColar
-          t={t}
-          naHome={naHome}
-          className="w-[62%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto"
-        />
-      )}
+      {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
     </ul>
   );
 }
 
-/* Seção de uma campanha com ofertas (ativa ou antecipada). */
-function SecaoCampanha({ t, lista, total }: { t: Temporada; lista: Oferta[]; total: number }) {
+/* Destaque de uma campanha com ofertas: título curto em duas partes,
+   descrição de uma linha, ações e a arte do tema com as fotos reais. */
+export function SecaoCampanha({
+  c,
+  lista,
+  total,
+  naHome = true,
+}: {
+  c: CampanhaVitrine;
+  lista: Oferta[];
+  total: number;
+  naHome?: boolean;
+}) {
+  const { tema } = temaDaCampanha(c, lista);
+  const v = TEMAS_VISUAIS[tema];
+  const p = v.paleta;
+  const titulo = c.titulo ?? v.titulo;
+  const destaque = c.tituloDestaque ?? v.tituloDestaque;
+  const descricao = c.descricao ?? v.descricao;
+  const fotos = lista.map((o) => o.imagem);
   return (
     <section
-      aria-labelledby={`campanha-${t.id}`}
-      className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.10)]"
-      style={{ background: t.tema.fundo, color: t.tema.texto }}
+      aria-labelledby={`campanha-${c.id}`}
+      data-tema={tema}
+      className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
+      style={{ background: p.fundo, color: p.texto }}
     >
-      <div className="relative grid items-center gap-2 px-4 pt-5 sm:px-7 sm:pt-7 md:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] md:gap-6">
-        <div className="relative z-10 min-w-0">
+      <div className="grid items-center gap-2 px-5 pt-6 sm:px-8 sm:pt-8 md:grid-cols-[minmax(0,1fr)_minmax(300px,44%)] md:gap-6">
+        <div className="min-w-0">
           <p
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
             style={{
-              background: t.tema.superficie,
-              color: t.tema.texto,
-              boxShadow: `inset 0 0 0 1px ${t.tema.borda}`,
+              background: p.superficie,
+              color: p.rotulo,
+              boxShadow: `inset 0 0 0 1px ${p.borda}`,
             }}
           >
-            <span aria-hidden="true">{t.emoji}</span>
-            {contagem(t)}
+            {c.emoji && <span aria-hidden="true">{c.emoji}</span>}
+            {contagem(c)}
           </p>
           <h2
-            id={`campanha-${t.id}`}
-            className="mt-3 text-2xl font-extrabold leading-tight tracking-tight sm:text-[28px]"
+            id={`campanha-${c.id}`}
+            className="mt-3 text-[26px] font-extrabold leading-[1.12] tracking-tight sm:text-[34px]"
           >
-            {rotuloDa(t)}
+            {titulo} <span style={{ color: p.realce }}>{destaque}</span>
           </h2>
           <p
-            className="mt-1.5 text-[13px] leading-snug sm:hidden"
-            style={{ color: t.tema.textoSuave }}
+            className="mt-2 max-w-[54ch] text-[14px] leading-relaxed sm:text-[15px]"
+            style={{ color: p.textoSuave }}
           >
-            Já comparados: só desconto real, qualidade igual ou melhor.
+            {descricao}
           </p>
-          <p
-            className="mt-2 hidden max-w-[56ch] text-sm leading-relaxed sm:block"
-            style={{ color: t.tema.textoSuave }}
-          >
-            {t.id === "natal"
-              ? "Comprar antes é economizar. Presentes já comparados com as outras lojas: o mesmo produto mais barato, uma alternativa de qualidade igual ou melhor, ou o menor preço confirmado."
-              : "Produtos já comparados com as outras lojas: o mesmo produto mais barato, uma alternativa de qualidade igual ou melhor, ou o menor preço confirmado."}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
-            {t.pagina && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {c.pagina ? (
               <Link
-                to={t.pagina as "/natal"}
-                className="campanha-botao inline-flex items-center rounded-full px-4 py-2 text-xs font-bold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2"
-                style={{
-                  background: t.tema.destaque,
-                  color: t.tema.sobreDestaque,
-                  outlineColor: t.tema.destaque,
-                }}
+                to={c.pagina as "/natal"}
+                className="campanha-botao inline-flex min-h-10 items-center rounded-full px-5 py-2 text-[13px] font-bold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+                style={{ background: p.destaque, color: p.sobreDestaque, outlineColor: p.destaque }}
               >
-                Ver {total > lista.length ? `todos os ${total}` : "a página"}
+                {total > lista.length ? `Ver todos os ${total}` : `Ver os ${total} achados`}
               </Link>
+            ) : (
+              <a
+                href={`#ofertas-${c.id}`}
+                className="campanha-botao inline-flex min-h-10 items-center rounded-full px-5 py-2 text-[13px] font-bold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+                style={{ background: p.destaque, color: p.sobreDestaque, outlineColor: p.destaque }}
+              >
+                Ver os {total} achados
+              </a>
             )}
-            <BotaoTelegram t={t} texto="Receber no Telegram" />
+            <BotaoTelegram p={p} texto="Receber no Telegram" />
           </div>
         </div>
-        <VitrineDeFotos fotos={lista.map((o) => o.imagem)} className="hidden md:flex" />
+        {/* Celular: só a cena, baixa (as ofertas aparecem logo). PC: cena com
+            as fotos reais dos produtos. */}
+        <ArteCampanha
+          tema={tema}
+          compacta
+          className="mx-auto mt-2 h-32 w-full max-w-[320px] md:hidden"
+        />
+        <ArteCampanha tema={tema} fotos={fotos} className="hidden h-[280px] w-full md:block" />
       </div>
-      <div className="relative px-4 pb-5 pt-4 sm:px-7 sm:pb-7">
-        <GradeOfertas t={t} lista={lista} />
+      <div id={`ofertas-${c.id}`} className="px-4 pb-5 pt-5 sm:px-8 sm:pb-8">
+        <GradeOfertas p={p} lista={lista} naHome={naHome} natal={tema === "natal"} />
       </div>
     </section>
   );
@@ -490,55 +597,56 @@ function SecaoCampanha({ t, lista, total }: { t: Temporada; lista: Oferta[]; tot
 
 /* Campanha sem oferta conferida ainda (ativa) ou futura que só mostra a
    contagem (Black Friday antes da campanha). */
-function CartaoCampanhaCompacta({ t, futura }: { t: Temporada; futura: boolean }) {
-  const d = diasAte(t);
+export function CartaoCampanhaCompacta({ c, futura }: { c: CampanhaVitrine; futura: boolean }) {
+  const { tema } = temaDaCampanha(c, []);
+  const p = TEMAS_VISUAIS[tema].paleta;
+  const d = diasAte(comoTemporada(c));
   return (
     <section
-      aria-labelledby={`campanha-${t.id}`}
-      className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.10)]"
-      style={{ background: t.tema.fundo, color: t.tema.texto }}
+      aria-labelledby={`campanha-${c.id}`}
+      data-tema={tema}
+      className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
+      style={{ background: p.fundo, color: p.texto }}
     >
-      <div className="relative grid items-center gap-4 px-5 py-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-7">
+      <div className="grid items-center gap-4 px-5 py-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-7 md:grid-cols-[auto_minmax(0,1fr)_200px_auto]">
         <div
-          className="grid size-[72px] place-items-center rounded-2xl text-center"
-          style={{ background: t.tema.superficie, boxShadow: `inset 0 0 0 1px ${t.tema.borda}` }}
+          className="grid size-[76px] place-items-center rounded-2xl text-center"
+          style={{ background: p.superficie, boxShadow: `inset 0 0 0 1px ${p.borda}` }}
         >
           <span
-            className="text-[28px] font-extrabold leading-none tabular-nums"
-            style={{ color: t.tema.rotulo }}
+            className="text-[30px] font-extrabold leading-none tabular-nums"
+            style={{ color: p.rotulo }}
           >
             {d}
           </span>
           <span
             className="-mt-4 text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: t.tema.textoSuave }}
+            style={{ color: p.textoSuave }}
           >
             {d === 1 ? "dia" : "dias"}
           </span>
         </div>
-        <div className="relative z-10 min-w-0">
-          <p
-            className="text-[11px] font-bold uppercase tracking-wider"
-            style={{ color: t.tema.rotulo }}
-          >
-            <span aria-hidden="true">{t.emoji} </span>
-            {t.nome} · {t.dia.slice(8, 10)}/{t.dia.slice(5, 7)}
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: p.rotulo }}>
+            {c.emoji && <span aria-hidden="true">{c.emoji} </span>}
+            {c.nome} · {c.dia.slice(8, 10)}/{c.dia.slice(5, 7)}
           </p>
           <h2
-            id={`campanha-${t.id}`}
+            id={`campanha-${c.id}`}
             className="mt-1 text-lg font-extrabold tracking-tight sm:text-xl"
           >
             {d === 0
-              ? `${t.nome} é hoje`
-              : `Faltam ${d} ${d === 1 ? "dia" : "dias"} para a ${t.nome}`}
+              ? `${c.nome} é hoje`
+              : `Faltam ${d} ${d === 1 ? "dia" : "dias"} para a ${c.nome}`}
           </h2>
-          <p className="mt-1 max-w-[60ch] text-sm" style={{ color: t.tema.textoSuave }}>
+          <p className="mt-1 max-w-[60ch] text-sm" style={{ color: p.textoSuave }}>
             {futura
               ? "As ofertas aparecem aqui quando a campanha começar. Até lá, acompanhe o preço do que você quer: na data, você vê se o desconto é de verdade."
               : "Os achados aparecem aqui assim que forem conferidos. Cole o link do produto que você quer e eu comparo agora."}
           </p>
         </div>
-        <BotaoTelegram t={t} texto="Avisar no Telegram" />
+        <ArteCampanha tema={tema} compacta className="hidden h-28 w-full md:block" />
+        <BotaoTelegram p={p} texto="Avisar no Telegram" />
       </div>
     </section>
   );
@@ -576,9 +684,9 @@ export function VitrineSazonal() {
     <div className="mt-8 space-y-6" data-origem="sazonal">
       {secoes.map(({ t, lista, total }) =>
         lista.length > 0 ? (
-          <SecaoCampanha key={t.id} t={t} lista={lista} total={total} />
+          <SecaoCampanha key={t.id} c={t} lista={lista} total={total} />
         ) : carregou ? (
-          <CartaoCampanhaCompacta key={t.id} t={t} futura={false} />
+          <CartaoCampanhaCompacta key={t.id} c={t} futura={false} />
         ) : null,
       )}
 
@@ -587,34 +695,25 @@ export function VitrineSazonal() {
           aria-labelledby="campanha-menor-preco"
           className="campanha-entra overflow-hidden rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-7"
         >
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-[#e8f5ec] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#14692e]">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-[#e8f1fd] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0058b0]">
             <BadgeCheck className="size-3.5" aria-hidden="true" />
             Conferido em várias lojas
           </p>
           <h2 id="campanha-menor-preco" className="mt-3 text-2xl font-extrabold tracking-tight">
-            Já é o menor preço
+            Melhor preço entre as lojas
           </h2>
           <p className="mt-1 max-w-[60ch] text-sm text-secondary-ink">
-            O anúncio já é o mais barato entre as lojas que vendem o mesmo produto. A diferença para
-            a 2ª loja mais barata aparece em cada cartão.
+            O anúncio já é o mais barato entre as lojas consultadas que vendem o mesmo produto. A
+            diferença para a 2ª loja aparece em cada cartão.
           </p>
           <div className="mt-4">
-            <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
-              {menores.map((o, i) => (
-                <CartaoOferta
-                  key={o.chave}
-                  o={o}
-                  atraso={i}
-                  className="w-[62%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto"
-                />
-              ))}
-            </ul>
+            <GradeOfertas p={TEMAS_VISUAIS.neutro.paleta} lista={menores} />
           </div>
         </section>
       )}
 
       {futuras.map((t) => (
-        <CartaoCampanhaCompacta key={t.id} t={t} futura />
+        <CartaoCampanhaCompacta key={t.id} c={t} futura />
       ))}
     </div>
   );

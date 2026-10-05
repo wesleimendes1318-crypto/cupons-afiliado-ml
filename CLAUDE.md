@@ -611,6 +611,40 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   auditoria_exibicao(p_horas) no banco (só serviço). Problema novo que ela não
   pega vira regra nova na função.
 
+## Vitrine de campanhas: sistema visual (05/10, tarde)
+- Weslei, 05/10: "vitrine que identifique o tema de cada campanha e adapte
+  artes, símbolos, cores e composição"; "funcionar também para outras datas,
+  categorias e campanhas"; "sem informação suficiente, composição neutra e
+  elegante da marca".
+- src/lib/campanha-visual.ts: temas (criancas, natal, black_friday,
+  tecnologia, casa, beleza, neutro) com paleta, título em duas partes,
+  descrição, arte e movimento. identificarTema: tema CONFIGURADO
+  (Temporada.temaVisual, ajuste manual) manda; senão conteúdo (nome e
+  descrição 3 pontos, categorias 2, parte dos produtos até 4); calendário só
+  soma 1 ponto ao tema da data em andamento; menos de 3 pontos ou empate =
+  neutro. Uma campanha por vez (simultâneas não se misturam).
+- src/components/ArteCampanha.tsx: cena vetorial própria por tema (volume
+  suave, poucos elementos) e até 2 fotos REAIS em cartões brancos separados
+  (sem corte, dimensões reservadas). Imagem salva por tema em
+  public/campanhas/ (LEIAME.md com os links do Canva gerados em 05/10; o
+  download não sai desta sessão). Entrada suave uma vez; nada contínuo;
+  prefers-reduced-motion desliga.
+- Cartão (CartaoOferta): foto → título → preço → classificação (Mesmo
+  produto / Parecido / Melhor preço / Preço imbatível) com o dado → loja →
+  "Conferido hoje" ou "Preço de dd/mm" → Comprar com segurança (meli.la) e
+  "Atualizar preço". Convite "Tem um produto em mente?" do tamanho de um
+  cartão (data-convite-colar). Botão flutuante some com o campo do link ou
+  um convite na tela e nunca fica sobre cartão, link ou botão.
+- SELOS (src/lib/selos.ts; Weslei, 05/10, "cuidado com as políticas"):
+  Preço imbatível = mais barato do mesmo produto contra 3+ lojas e 2ª loja
+  10%+ acima; Melhor preço = contra 2+ lojas (ou a oferta nova mais barata
+  entre 2+ do catálogo sem loja mais barata); Entre os mais vendidos = lista
+  oficial /highlights. Sempre com "entre N lojas consultadas" e a data.
+  "% OFF" só quando houver o preço original medido (ainda não há).
+- Prévia de conferência: /campanhas/previa (noindex): seções completas de
+  um tema configurado, um identificado pelo conteúdo e um neutro, a contagem
+  da Black Friday e as artes.
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

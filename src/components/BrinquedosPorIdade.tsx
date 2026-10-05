@@ -4,6 +4,7 @@ import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { FAIXAS, faixaPorId } from "@/lib/brinquedos";
+import { SELO_MAIS_VENDIDO, seloDoCatalogo } from "@/lib/selos";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
    API oficial (mais vendidos e buscas por idade) e que JÁ passaram pela
@@ -72,16 +73,18 @@ function cartaoDo(i: Item): Cartao | null {
       detalhe: `${brl(i.preco)} em outra loja`,
       tipo: "desconto",
     };
-  const menor = (i.economia ?? 0) <= 0 && (i.ofertas ?? 0) >= 2;
+  /* "Melhor preço" só com 2+ ofertas novas no catálogo e nenhuma loja mais
+     barata na comparação (src/lib/selos.ts). */
+  const selo = (i.economia ?? 0) <= 0 ? seloDoCatalogo(i.ofertas) : null;
   return {
     item: i,
     preco: i.preco,
     loja: i.loja,
     link: ehLinkDeAfiliado(i.link) ? i.link : null,
     freteGratis: i.frete_gratis,
-    selo: menor ? "Menor preço encontrado" : "Preço conferido",
-    detalhe: menor ? `entre ${i.ofertas} ofertas novas deste produto` : null,
-    tipo: menor ? "menor" : "conferido",
+    selo: selo?.texto ?? "Preço conferido",
+    detalhe: selo?.nota ?? null,
+    tipo: selo ? "menor" : "conferido",
   };
 }
 
@@ -114,6 +117,14 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
         >
           {c.selo}
         </span>
+        {i.em_alta && (
+          <span
+            className="absolute bottom-2 left-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a33c00]"
+            title={SELO_MAIS_VENDIDO.nota}
+          >
+            {SELO_MAIS_VENDIDO.texto}
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col border-t border-border p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0058b0]">
@@ -322,7 +333,7 @@ export function BrinquedosPorIdade({
       ) : (
         <ul
           role="tabpanel"
-          className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5"
+          className="-mx-5 mt-4 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5"
         >
           {lista.slice(0, 15).map((c) => (
             <CartaoBrinquedo key={c.item.produto} c={c} naHome={naHome} />

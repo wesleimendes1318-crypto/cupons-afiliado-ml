@@ -25,6 +25,7 @@ import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as TelegramRouteImport } from './routes/telegram'
 import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as CampanhasPreviaRouteImport } from './routes/campanhas.previa'
 import { Route as CategoriasIndexRouteImport } from './routes/categorias.index'
 import { Route as CategoriasSlugRouteImport } from './routes/categorias.$slug'
 import { Route as GuiasIndexRouteImport } from './routes/guias.index'
@@ -129,6 +130,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const CampanhasPreviaRoute = CampanhasPreviaRouteImport.update({
+  id: '/campanhas/previa',
+  path: '/campanhas/previa',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoriasIndexRoute = CategoriasIndexRouteImport.update({
   id: '/categorias/',
   path: '/categorias/',
@@ -259,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/telegram': typeof TelegramRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/campanhas/previa': typeof CampanhasPreviaRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/categorias/': typeof CategoriasIndexRoute
@@ -299,6 +306,7 @@ export interface FileRoutesByTo {
   '/telegram': typeof TelegramRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/campanhas/previa': typeof CampanhasPreviaRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/categorias': typeof CategoriasIndexRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/telegram': typeof TelegramRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/campanhas/previa': typeof CampanhasPreviaRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/categorias/': typeof CategoriasIndexRoute
@@ -382,6 +391,7 @@ export interface FileRouteTypes {
     | '/telegram'
     | '/termos-de-uso'
     | '/.well-known/oauth-protected-resource'
+    | '/campanhas/previa'
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/categorias/'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/telegram'
     | '/termos-de-uso'
     | '/.well-known/oauth-protected-resource'
+    | '/campanhas/previa'
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/categorias'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/telegram'
     | '/termos-de-uso'
     | '/.well-known/oauth-protected-resource'
+    | '/campanhas/previa'
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/categorias/'
@@ -503,6 +515,7 @@ export interface RootRouteChildren {
   TelegramRoute: typeof TelegramRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  CampanhasPreviaRoute: typeof CampanhasPreviaRoute
   CategoriasSlugRoute: typeof CategoriasSlugRoute
   GuiasSlugRoute: typeof GuiasSlugRoute
   CategoriasIndexRoute: typeof CategoriasIndexRoute
@@ -639,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campanhas/previa': {
+      id: '/campanhas/previa'
+      path: '/campanhas/previa'
+      fullPath: '/campanhas/previa'
+      preLoaderRoute: typeof CampanhasPreviaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/categorias/': {
@@ -816,6 +836,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosDeUsoRoute: TermosDeUsoRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  CampanhasPreviaRoute: CampanhasPreviaRoute,
   CategoriasSlugRoute: CategoriasSlugRoute,
   GuiasSlugRoute: GuiasSlugRoute,
   CategoriasIndexRoute: CategoriasIndexRoute,
