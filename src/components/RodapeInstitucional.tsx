@@ -8,6 +8,7 @@ const PAGINAS = [
   { to: "/guias", rotulo: "Guias" },
   { to: "/natal", rotulo: "Natal" },
   { to: "/dia-das-criancas", rotulo: "Dia das Crianças" },
+  { to: "/brinquedos", rotulo: "Brinquedos por idade" },
   { to: "/telegram", rotulo: "Canal de ofertas" },
   { to: "/divulgacao-de-afiliados", rotulo: "Divulgação de afiliados" },
   { to: "/politica-de-privacidade", rotulo: "Privacidade" },

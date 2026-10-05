@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BrinquedosRouteImport } from './routes/brinquedos'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as DiaDasCriancasRouteImport } from './routes/dia-das-criancas'
 import { Route as DivulgacaoDeAfiliadosRouteImport } from './routes/divulgacao-de-afiliados'
@@ -50,6 +51,11 @@ import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/publi
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrinquedosRoute = BrinquedosRouteImport.update({
+  id: '/brinquedos',
+  path: '/brinquedos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContatoRoute = ContatoRouteImport.update({
@@ -238,6 +244,7 @@ const ApiPublicTelegramWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
@@ -317,6 +325,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
@@ -397,6 +407,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
@@ -436,6 +447,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
@@ -476,6 +488,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrinquedosRoute: typeof BrinquedosRoute
   ContatoRoute: typeof ContatoRoute
   DiaDasCriancasRoute: typeof DiaDasCriancasRoute
   DivulgacaoDeAfiliadosRoute: typeof DivulgacaoDeAfiliadosRoute
@@ -521,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brinquedos': {
+      id: '/brinquedos'
+      path: '/brinquedos'
+      fullPath: '/brinquedos'
+      preLoaderRoute: typeof BrinquedosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contato': {
@@ -780,6 +800,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrinquedosRoute: BrinquedosRoute,
   ContatoRoute: ContatoRoute,
   DiaDasCriancasRoute: DiaDasCriancasRoute,
   DivulgacaoDeAfiliadosRoute: DivulgacaoDeAfiliadosRoute,

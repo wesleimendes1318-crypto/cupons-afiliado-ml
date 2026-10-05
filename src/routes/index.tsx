@@ -33,6 +33,7 @@ import {
 
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
+import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { VitrineSazonal } from "@/components/VitrineSazonal";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
@@ -1942,6 +1943,9 @@ function Index() {
         {/* Temporadas em destaque (Dia das Crianças, Black Friday, Natal):
             seções prioritárias, acima da vitrine geral (05/10). */}
         <VitrineSazonal />
+
+        {/* Brinquedos por idade (05/10): curadoria do agente, já comparada. */}
+        <BrinquedosPorIdade naHome className="mt-8" />
 
         <Vitrine />
 

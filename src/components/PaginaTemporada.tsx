@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { VitrineDeFotos } from "@/components/ArteSazonal";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
+import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { BotaoTelegram, daTemporada, GradeOfertas, useOfertas } from "@/components/VitrineSazonal";
 import { antecipada, diasAte, hojeEmBrasilia, TEMPORADAS, type Temporada } from "@/lib/sazonal";
@@ -156,6 +157,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
           </>
         )}
 
+        {!encerrada && <BrinquedosPorIdade className="mt-10" />}
         {!encerrada && (id === "natal" || id === "criancas") && (
           <BuscaGuiada contexto={id} className="mt-10" />
         )}

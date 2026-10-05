@@ -549,6 +549,35 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   vitrine_frete, src/lib/frete-vitrine.ts). Bot: frete desconhecido sai como
   "Frete não confirmado: confira antes de comprar" (nunca some).
 
+## Brinquedos por idade (05/10)
+- Weslei, 05/10: "aumentar a lista de brinquedos, opções em alta", "faixa
+  etária e recomendação", "menor ticket médio... para doação", "produtos
+  que já estão no menor preço... indicar que foi o menor preço encontrado",
+  "o agente pode realizar buscas diretamente na API... sem depender das
+  buscas dos usuários... já com meu link afiliado".
+- AGENTE (src/lib/curadoria-brinquedos.ts, operacao?tarefa=brinquedos
+  [&alvo=em_alta|bebe|3a5|6a8|9a12|doacao], pg_cron): a cada execução pega o
+  alvo mais desatualizado; "Em alta" = /highlights de Brinquedos (MLB1132)
+  + uma subcategoria em rodízio; faixas = 3 buscas da faixa
+  (src/lib/brinquedos.ts, FAIXAS). Idade pelos atributos do catálogo
+  (idadeDosAtributos) quando existem; idade que não cabe vai para a faixa
+  certa. Oferta NOVA mais barata da lista oficial (/products/{id}/items,
+  até 50), guardando quantas ofertas viu. Fila: pedir_link_novo com
+  pdp_filters=item_id, até 6 por execução, cada produto no máximo a cada
+  48 h; até 24 chamadas à API por execução. Tabela
+  curadoria_brinquedos_itens (só servidor).
+- SITE: BrinquedosPorIdade (home, /dia-das-criancas, /natal e a página
+  /brinquedos, com SSR da lista, JSON-LD CollectionPage/ItemList/FAQ e
+  sitemap). Só aparece produto com comparação pronta e meli.la
+  (curadoria_brinquedos). Selos: "R$ X a menos" (outra loja do mesmo
+  produto com frete grátis confirmado), "Menor preço encontrado" (a mais
+  barata entre N ofertas novas do catálogo e nenhuma loja mais barata na
+  comparação; mostra "entre N ofertas novas deste produto") ou "Preço
+  conferido". Frete sempre em linha própria (grátis / à parte / confira).
+  Abas: Em alta, 0 a 2, 3 a 5, 6 a 8, 9 a 12, Doação (até R$ 30, do mais
+  barato; inclui os baratos das outras faixas). Comprar só com meli.la e
+  comparação < 24 h; senão "Ver o preço de agora".
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

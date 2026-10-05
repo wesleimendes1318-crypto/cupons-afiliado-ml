@@ -7,6 +7,7 @@ import {
   prepararRevalidacao,
   removerPublicacao,
 } from "@/lib/inteligencia";
+import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 
 /* ROTINA DE INTELIGÊNCIA (Weslei, 05/10), chamada pelas tarefas do banco
@@ -18,6 +19,10 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
    - ?tarefa=sazonal[&temporada=criancas|black_friday|natal][&max=N]
                       põe na fila de comparação os produtos do catálogo das
                       buscas da temporada (src/lib/sazonal.ts);
+   - ?tarefa=brinquedos[&alvo=em_alta|bebe|3a5|6a8|9a12|doacao]
+                      curadoria de brinquedos por idade: mapeia na API
+                      oficial e põe na fila de comparação
+                      (src/lib/curadoria-brinquedos.ts);
    - ?tarefa=remover&publicacao=<id> apaga do canal um post registrado em
                       canal_publicacoes (só sob pedido; não é agendado).
    Com sinc_config.operacao_pausada = 'true' não faz nada (pausa). */
@@ -52,6 +57,11 @@ async function executar(request: Request) {
         max: Number.isFinite(max) ? max : 12,
       }),
     );
+    return Response.json(resumo);
+  }
+  if (tarefa === "brinquedos") {
+    const alvo = new URL(request.url).searchParams.get("alvo");
+    const resumo = await registrarExecucao(db, "brinquedos", () => curarBrinquedos(db, { alvo }));
     return Response.json(resumo);
   }
   if (tarefa === "remover") {
