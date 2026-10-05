@@ -175,7 +175,13 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
               </div>
             ) : (
               <div className="mt-4 rounded-[28px] p-4 sm:p-6" style={{ background: p.fundo }}>
-                <GradeOfertas p={p} lista={lista} naHome={false} natal={tema === "natal"} />
+                <GradeOfertas
+                  p={p}
+                  lista={lista}
+                  naHome={false}
+                  natal={tema === "natal"}
+                  fileira={false}
+                />
               </div>
             )}
           </>

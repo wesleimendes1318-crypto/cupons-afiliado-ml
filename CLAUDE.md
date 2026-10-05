@@ -746,7 +746,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (Weslei: "pelo menos 20 itens em cada vitrine sazonal"). Buscas sazonais:
   42 por temporada (Crianças e Natal), termos ampliados (nerf, uno, pokémon,
   boneco, drone; echo dot, air fryer, nespresso, secador, maquiagem,
-  havaianas, panelas, taças, nintendo, ps5...), até 24 cartões por seção.
+  havaianas, panelas, taças, nintendo, ps5...), até 24 cartões por seção
+  numa FILEIRA com rolagem lateral e setas (Weslei: "as vitrines estão muito
+  grande"; GradeOfertas fileira; cartão 206 px no PC, 64% no celular) e
+  destaque mais baixo (230 px no PC, faixa de 128 px no celular). A página
+  da temporada (/natal, /dia-das-criancas) continua com a grade completa.
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.

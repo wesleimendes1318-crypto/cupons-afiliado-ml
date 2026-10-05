@@ -13,9 +13,9 @@
    só com link de afiliado e comparação de menos de 24 h (senão "Ver o
    preço de agora"; preço velho não vira compra, regra de 02/10). */
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { BadgeCheck, Link2, RefreshCw, ShieldCheck } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight, Link2, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { CenarioCampanha } from "@/components/CenarioCampanha";
 import {
@@ -409,7 +409,7 @@ export function CartaoOferta({
               target="_blank"
               rel="noopener noreferrer sponsored"
               data-origem="sazonal"
-              className="campanha-botao flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-2 py-1.5 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
+              className="campanha-botao flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-1.5 py-1.5 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
             >
               <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               Comprar com segurança
@@ -503,21 +503,66 @@ export function GradeOfertas({
   lista,
   naHome = true,
   natal = false,
+  fileira = true,
 }: {
   p: PaletaCampanha;
   lista: Oferta[];
   naHome?: boolean;
   natal?: boolean;
+  /* Uma fileira com rolagem lateral (Weslei, 05/10: "as vitrines estão
+     muito grande"); a página da temporada mostra a grade completa. */
+  fileira?: boolean;
 }) {
-  const completar = lista.length < 5 || lista.length % 5 !== 0;
-  const largura = "w-[56%] shrink-0 snap-start min-[480px]:w-[38%] sm:w-auto";
+  const trilho = useRef<HTMLUListElement>(null);
+  const rolar = (lado: 1 | -1) => {
+    const el = trilho.current;
+    if (el) el.scrollBy({ left: lado * el.clientWidth * 0.85, behavior: "smooth" });
+  };
+  if (!fileira) {
+    const completar = lista.length < 5 || lista.length % 5 !== 0;
+    const largura = "w-[56%] shrink-0 snap-start min-[480px]:w-[38%] sm:w-auto";
+    return (
+      <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
+        {lista.map((o, i) => (
+          <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
+        ))}
+        {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
+      </ul>
+    );
+  }
+  const largura = "w-[64%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-[206px]";
   return (
-    <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
-      {lista.map((o, i) => (
-        <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
-      ))}
-      {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
-    </ul>
+    <div className="relative">
+      <ul
+        ref={trilho}
+        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0"
+      >
+        {lista.map((o, i) => (
+          <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
+        ))}
+        <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />
+      </ul>
+      {lista.length > 4 && (
+        <>
+          <button
+            type="button"
+            onClick={() => rolar(-1)}
+            aria-label="Ver anteriores"
+            className="absolute -left-3 top-[52px] hidden size-10 place-items-center rounded-full bg-white text-[#1d1d1f] shadow-md ring-1 ring-black/5 hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:grid"
+          >
+            <ChevronLeft className="size-5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => rolar(1)}
+            aria-label="Ver mais"
+            className="absolute -right-3 top-[52px] hidden size-10 place-items-center rounded-full bg-white text-[#1d1d1f] shadow-md ring-1 ring-black/5 hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:grid"
+          >
+            <ChevronRight className="size-5" aria-hidden="true" />
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -554,15 +599,15 @@ export function SecaoCampanha({
         tema={tema}
         fundir="baixo"
         cartao={false}
-        className="relative h-44 md:hidden"
+        className="relative h-32 md:hidden"
       />
       <CenarioCampanha
         tema={tema}
         fotos={fotos}
         fundir="ambos"
-        className="absolute right-0 top-0 hidden h-[300px] w-[52%] md:block"
+        className="absolute right-0 top-0 hidden h-[230px] w-[46%] md:block"
       />
-      <div className="relative -mt-8 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[300px] md:items-center md:pt-6">
+      <div className="relative -mt-6 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[230px] md:items-center md:pt-5">
         <div className="min-w-0 md:max-w-[50%]">
           <p
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
