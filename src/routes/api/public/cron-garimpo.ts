@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
 import { naoEAlternativa } from "@/lib/alternativa";
+import { diferencasParaCliente } from "@/lib/diferencas";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -84,13 +85,29 @@ function achadoDoPedido(p: {
   };
 }
 
+/* O que muda, como no site: "Campo: o seu X → este Y", sem repetir o mesmo
+   campo (a conferência e a ficha às vezes dizem a mesma coisa duas vezes). */
+function textoDoMuda(muda: string | null, tituloColado: string) {
+  const itens = diferencasParaCliente(muda, tituloColado)
+    .slice(0, 3)
+    .map((d) =>
+      d.campo && d.seu && d.este
+        ? `${d.campo}: o seu ${d.seu} → este ${d.este}`
+        : d.campo && d.este
+          ? `${d.campo}: ${d.este}`
+          : d.texto,
+    )
+    .filter(Boolean);
+  return itens.length ? itens.join("; ") : muda;
+}
+
 /* Preço e frete em linhas separadas; nunca "R$ X a menos + frete". */
 function mensagem(x: Achado) {
   const linhas = [
     "🔥 <b>Achado conferido há pouco</b>",
     `📦 ${html(x.tipo === "parecido" ? x.tituloOpcao : x.titulo)}`,
     x.tipo === "parecido"
-      ? `⚠️ Parecido com "${html(x.titulo)}", não é idêntico.${x.muda ? ` Muda: ${html(x.muda)}` : ""}`
+      ? `⚠️ Parecido com "${html(x.titulo)}", não é idêntico.${x.muda ? ` Muda: ${html(textoDoMuda(x.muda, x.titulo))}` : ""}`
       : "✅ Mesmo produto, em outra loja",
     `💰 <b>${brl(x.preco)}</b> (anúncio comparado: ${brl(x.precoColado)})`,
     `💸 ${brl(x.economia)} a menos no produto`,
