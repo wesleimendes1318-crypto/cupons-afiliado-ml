@@ -26,6 +26,9 @@ seguem as mesmas regras:
   qualquer dado do painel de afiliados (privado do Weslei).
 - Proteger a conta de afiliado: sem rajadas; respeitar os tetos das tarefas
   (`disparar_operacao`), freio de captcha e um pedido por vez.
+- Cliente primeiro: agente só põe produto na fila por `pedir_link_agente`
+  (teto diário `sinc_config.agentes_teto_dia` e parada sem cota da
+  conferência). Nunca usar `pedir_link_novo` fora da bateria de testes.
 - Todo botão de compra só com `https://meli.la/...`. Nada inventado: preço,
   frete, loja, "menor preço", "mais vendido" só com dado medido.
 - Mudança de código: pequena, validada (tsc, eslint dos arquivos tocados,

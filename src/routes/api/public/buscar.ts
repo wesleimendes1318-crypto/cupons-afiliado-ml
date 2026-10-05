@@ -87,8 +87,11 @@ export const Route = createFileRoute("/api/public/buscar")({
               .gte("criado_em", semana)
               .ilike("url_alvo", `%${r.produto}%`);
             if ((count ?? 0) > 0) continue;
-            const { error } = await db.rpc("pedir_link_novo", { p_url: r.url });
-            if (!error) {
+            const { data: novo, error } = await db.rpc("pedir_link_agente", {
+              p_url: r.url,
+              p_fonte: "busca",
+            });
+            if (!error && novo != null) {
               enfileirados += 1;
               livres -= 1;
             }

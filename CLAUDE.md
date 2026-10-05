@@ -673,6 +673,17 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   salvo; sem ele, a cena vetorial. Mudar o prompt = subir VERSAO_ARTE e
   gerar de novo (custo por imagem; nada é gerado por visita).
 
+## Cliente primeiro e teto dos agentes (05/10, noite)
+- Medido em 05/10: 120 comparações dos agentes x 3 de clientes em 24 h; a
+  cota gratuita da Gemini (flash-lite 500/dia, 2.5-flash 20/dia) acabou e
+  as comparações seguintes saíram só com o link (sem lojas nem parecidos).
+- pedidos_pendentes entrega SEMPRE os pedidos de cliente primeiro; pedido
+  interno (origem 'teste') só quando não há cliente esperando, 2 por vez.
+- Agentes (sazonal, preparar, brinquedos, busca guiada, hub) enfileiram só
+  por pedir_link_agente: teto diário sinc_config.agentes_teto_dia (40, dia
+  de Brasília) e nada enquanto a cota do flash-lite estiver esgotada
+  (ia_cotas). pedir_link_novo fica para a bateria de testes.
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

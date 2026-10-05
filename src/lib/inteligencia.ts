@@ -268,7 +268,10 @@ export async function prepararRevalidacao(db: Db) {
 
   const pedidos: Array<{ url: string; pedido: number | null; ganho: number }> = [];
   for (const c of candidatos) {
-    const { data, error } = await t.rpc("pedir_link_novo", { p_url: c.url_produto });
+    const { data, error } = await t.rpc("pedir_link_agente", {
+      p_url: c.url_produto,
+      p_fonte: "preparar",
+    });
     pedidos.push({
       url: c.url_produto as string,
       pedido: error ? null : typeof data === "number" ? data : null,
@@ -389,7 +392,8 @@ export async function buscarSazonal(
      (pdp_filters=item_id), o link sai. */
   const pedidos: Array<{ produto: string; nome: string | null; pedido: number | null }> = [];
   for (const f of fila) {
-    const { data, error } = await t.rpc("pedir_link_novo", {
+    const { data, error } = await t.rpc("pedir_link_agente", {
+      p_fonte: "sazonal",
       p_url: `https://www.mercadolivre.com.br/p/${f.id}?pdp_filters=item_id%3A${f.item}`,
     });
     pedidos.push({

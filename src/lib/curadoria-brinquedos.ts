@@ -233,7 +233,10 @@ export async function curarBrinquedos(db: Db, opcoes: { alvo?: string | null } =
     let pedido = antes?.pedido_id ?? null;
     let enfileirado = antes?.enfileirado_em ?? null;
     if (velho && enfileirados < FILA_POR_VEZ) {
-      const { data, error } = await t.rpc("pedir_link_novo", { p_url: l.url });
+      const { data, error } = await t.rpc("pedir_link_agente", {
+        p_url: l.url,
+        p_fonte: "brinquedos",
+      });
       if (!error && typeof data === "number") {
         pedido = data;
         enfileirado = agora;
