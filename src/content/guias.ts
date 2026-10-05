@@ -107,6 +107,89 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
+    slug: "geladeira-frost-free-500l-comparativo",
+    titulo: "Geladeira Frost Free 500 L: como comparar lojas e economizar até R$ 800",
+    resumo:
+      "Comparação real entre lojas do mesmo modelo de 500 litros (Branca e Black Inox): diferença de até R$ 799 entre lojas e o peso do frete no preço final.",
+    tempo: "4 min de leitura",
+    atualizacao: "05/10/2026",
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "Geladeira é a compra em que a diferença entre lojas mais pesa no bolso. O mesmo modelo, da mesma marca, aparece em várias lojas com preços que mudam centenas de reais. E, por ser um produto grande, o frete pode virar a conta de cabeça para baixo.",
+      },
+      { tipo: "h2", texto: "Exemplo medido: o mesmo modelo, Branca (02/10/2026)" },
+      {
+        tipo: "conta",
+        titulo:
+          "Geladeira Frost Free Inverse 500 L, Branca, mesmo modelo, frete para Mogi das Cruzes (SP)",
+        linhas: [
+          { rotulo: "Loja mais barata (frete grátis)", valor: "R$ 4.049,00" },
+          { rotulo: "Loja mais cara com frete grátis", valor: "R$ 4.848,39" },
+          { rotulo: "Diferença no mesmo produto", valor: "R$ 799,39" },
+        ],
+        nota: "Seis lojas comparadas. Uma loja oficial anunciava por R$ 4.537,90, mas o frete para o CEP era de R$ 457,94: no total, ficava mais cara que a de frete grátis.",
+      },
+      { tipo: "h2", texto: "Exemplo medido: Black Inox (05/10/2026)" },
+      {
+        tipo: "conta",
+        titulo: "Geladeira Frost Free Inverse 500 L, Black Inox, mesmo modelo",
+        linhas: [
+          { rotulo: "Anúncio comparado (frete grátis)", valor: "R$ 4.799,00" },
+          { rotulo: "Loja oficial, produto", valor: "R$ 4.350,44" },
+          { rotulo: "Loja oficial, frete para o CEP", valor: "R$ 33,00" },
+          { rotulo: "Loja oficial, custo final", valor: "R$ 4.383,44" },
+          { rotulo: "Economia no custo final", valor: "R$ 415,56" },
+        ],
+        nota: "Aqui o frete pago compensou: mesmo pagando o frete, o custo final ficou menor. Em outra loja do mesmo dia, o frete era de R$ 677,35.",
+      },
+      {
+        tipo: "destaque",
+        titulo: "Cor também é outro produto",
+        texto:
+          "No mesmo dia, a versão Branca custava cerca de R$ 1.000 a menos que a Black Inox. Não é o mesmo produto: muda o acabamento. Por isso ela aparece separada, como parecido, com o aviso do que muda.",
+      },
+      { tipo: "h2", texto: "Passo a passo antes de fechar" },
+      {
+        tipo: "passos",
+        itens: [
+          "Confira o código do modelo no título ou nas características. Uma letra muda a cor ou o acabamento (por exemplo, final B, E ou K no mesmo modelo).",
+          "Confira a voltagem: 110 V ou 220 V. Geladeira na voltagem errada precisa de transformador ou não funciona.",
+          "Confira a capacidade em litros nas características, não só no título.",
+          "Informe o seu CEP: o frete de um produto grande muda muito de uma cidade para outra.",
+          "Compare pelo custo final (produto mais frete) e veja se a loja é oficial.",
+        ],
+      },
+      { tipo: "h2", texto: "Como o comparador ajuda" },
+      {
+        tipo: "lista",
+        itens: [
+          "Mostra as lojas que vendem o mesmo modelo, do mais barato ao mais caro, com a loja oficial marcada.",
+          "Calcula o frete para o seu CEP e recomenda pelo custo final. Quando o valor do frete não é conhecido, a loja com frete pago não passa na frente.",
+          "Separa os parecidos (outra cor, outra capacidade) e diz o que muda.",
+        ],
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "Vale pagar frete se o produto é mais barato?",
+        resposta:
+          "Vale quando o custo final (produto mais frete) fica menor. No exemplo de 05/10/2026, a loja com frete de R$ 33 saiu R$ 415,56 mais barata no total.",
+      },
+      {
+        pergunta: "Branca e Black Inox são o mesmo produto?",
+        resposta:
+          "Não. O modelo muda pelo acabamento, e o preço também. O comparador mostra a outra cor como parecido, com o aviso do que muda.",
+      },
+      {
+        pergunta: "O preço do guia ainda vale?",
+        resposta:
+          "Não necessariamente. Os valores são de 02/10 e 05/10/2026. Cole o link do anúncio para ver a comparação de agora.",
+      },
+    ],
+  },
+  {
     slug: "mesmo-produto-ou-parecido",
     titulo: "Mesmo produto ou só parecido? Como diferenciar",
     resumo:

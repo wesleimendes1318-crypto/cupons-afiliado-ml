@@ -32,9 +32,17 @@ export const CATEGORIAS_FOCO = [
   /* Exploratório (05/10): celular e iPhone em alta (2º e 5º termos do
      /trends/MLB), mas o site ainda não achou o mesmo produto mais barato. */
   { id: "MLB1051", nome: "Celulares e Telefones" },
+  /* Consumo técnico e recorrente (Weslei, 05/10: conversão alta no painel
+     de afiliados, dado privado usado só para priorizar). Códigos conferidos
+     na API oficial em 05/10: MLB270252 = Segurança Laboral (EPI),
+     MLB263532 = Ferramentas. */
+  { id: "MLB270252", nome: "Segurança Laboral" },
+  { id: "MLB263532", nome: "Ferramentas" },
 ] as const;
 
-const PRODUTOS_POR_CATEGORIA = 3;
+/* 2 por categoria (05/10): com 7 nichos + 2 da temporada, o total de
+   chamadas fica longe do limite de subrequisições do servidor. */
+const PRODUTOS_POR_CATEGORIA = 2;
 
 type Sinal = {
   fonte: string;
@@ -113,7 +121,7 @@ export async function coletarMercado(db: Db) {
   ];
   for (const cat of categorias) {
     const nome: string = cat.nome;
-    const limiteNomes = cat.temporada ? 2 : PRODUTOS_POR_CATEGORIA;
+    const limiteNomes = cat.temporada ? 1 : PRODUTOS_POR_CATEGORIA;
     try {
       const t = await mlGet<Array<{ keyword?: string; url?: string }>>(`/trends/MLB/${cat.id}`);
       t.slice(0, 20).forEach((x, i) =>

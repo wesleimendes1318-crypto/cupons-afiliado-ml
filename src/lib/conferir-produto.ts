@@ -144,7 +144,8 @@ const REGRAS_DESDE = Date.parse("2026-09-28T00:00:00Z");
    pulado. Veredito do Gemma precisa de confianca maior (e mais fraco em
    detalhe de foto). */
 /* gemma-3-27b-it saiu do ar (02/10, pedido 588: 404 "not found"). */
-const MODELOS_GEMMA = ["gemma-4-31b-it", "gemma-4-26b-a4b-it"];
+/* 26b-a4b primeiro (05/10, diagnostico): o 31b da erro 500 com foto. */
+const MODELOS_GEMMA = ["gemma-4-26b-a4b-it", "gemma-4-31b-it"];
 const CONFIANCA_MINIMA_GEMMA = 90;
 const ehGemma = (modelo: string | undefined) => /^gemma/i.test(modelo ?? "");
 const confiancaMinima = (modelo: string | undefined) =>
@@ -730,24 +731,25 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     });
     return p;
   };
-  const todos = lista.map((_, i) => i);
   /* SO O GEMMA (05/10, cota diaria da Gemini acabou): medido em producao, a
      conferencia com 4 candidatos nao respondia em 12,6 s e a consulta saia
-     sem nenhum parecido. Sem Gemini: lotes de 2, os dois Gemma juntos (o
-     26b-a4b, mais rapido, primeiro) e prazo de 17 s. */
+     sem nenhum parecido. Diagnostico (?diag=1): gemma-4-31b-it da erro 500
+     com foto e passa de 30 s so com texto; gemma-4-26b-a4b-it respondeu com
+     foto em 6,2 s. Sem Gemini: so o 26b, ate 6 candidatos (os primeiros da
+     lista, que ja vem com os mais baratos na frente), lotes de 2 e prazo de
+     20 s. */
   const soGemma = ordemDosModelos().every(ehGemma);
+  const todos = lista.map((_, i) => i).slice(0, soGemma ? 6 : lista.length);
   const porLote = soGemma ? 2 : 4;
   /* Lotes de ate 4 em paralelo (12 candidatos = 3 chamadas; garimpo, 27/09). */
   const lotes: number[][] = [];
   for (let k = 0; k < todos.length; k += porLote) lotes.push(todos.slice(k, k + porLote));
-  const prazo1 = Math.max(4_000, (soGemma ? 17_000 : 13_000) - (Date.now() - t0));
+  const prazo1 = Math.max(4_000, (soGemma ? 20_000 : 13_000) - (Date.now() - t0));
   const respostas = await Promise.all(
     lotes.map((idx) =>
       gerar(
         lote(idx),
-        soGemma
-          ? { prazo: prazo1, ordem: [...MODELOS_GEMMA].reverse(), iniciais: 2 }
-          : { prazo: prazo1 },
+        soGemma ? { prazo: prazo1, ordem: ["gemma-4-26b-a4b-it"] } : { prazo: prazo1 },
       ),
     ),
   );
@@ -818,7 +820,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     : [];
   const paraSegunda = [...positivos, ...revisar];
   if (paraSegunda.length && fotoOriginal) {
-    const resta = (soGemma ? 24_000 : 21_000) - (Date.now() - t0);
+    const resta = (soGemma ? 25_000 : 21_000) - (Date.now() - t0);
     const semConfirmar = (erro: string): Conferencia => ({
       ok: false,
       status: 504,

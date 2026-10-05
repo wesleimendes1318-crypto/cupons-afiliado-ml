@@ -494,11 +494,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   oficial no endereço (pdp_filters=item_id): a página de catálogo pura é
   recusada pelo gerador de links (erro 111) e produto sem oferta ativa
   (/items 404) é pulado.
+- SEM GEMINI = SÓ O GEMMA 26B (05/10, diagnóstico ?diag=1 em
+  /api/public/conferir-produto, só com o token da extensão): gemma-4-31b-it
+  dá erro 500 com foto e passa de 30 s com texto; gemma-4-26b-a4b-it
+  respondeu com foto em 6,2 s. Com a cota diária da Gemini esgotada, a
+  conferência usa só o 26b, até 6 candidatos em lotes de 2, prazo de 20 s
+  (antes: 4 por lote em 12,6 s, nada respondia e a comparação saía sem
+  parecidos). Extensão 1.151.0: a geração dos links da tabela olha a fila a
+  cada link (pedido 747 esperou 56 s).
 - Nichos do 1º ciclo (CATEGORIAS_FOCO, src/lib/inteligencia.ts):
   Eletrodomésticos, Beleza e Cuidado Pessoal, Casa/Decoração, Acessórios
   para Veículos (dados de 21/09-04/10: Beleza 4/5 produtos com o mesmo mais
   barato; Eletrodomésticos ticket médio R$ 2.434). Hipótese, revisar
   semanalmente com mercado_sinais x pedidos.
+  05/10: + Segurança Laboral (MLB270252) e Ferramentas (MLB263532),
+  conferidos na API (os códigos do pedido original eram de Ferramentas e
+  Agro); nomes por categoria 3 -> 2 para caber no limite de chamadas.
 - MEDIÇÃO: cliques em meli.la e t.me contados em eventos_site
   (registrar_evento) só com consentimento de análise, sem IP/cookie/id;
   origem pelo data-origem, pedido pelo data-pedido. Clique não é venda.
