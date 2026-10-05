@@ -4884,8 +4884,17 @@ async function lerHubDeAfiliados() {
           const linhas = (card.innerText || '').split('\n').map(l => l.trim()).filter(l => l && !/ganho/i.test(l));
           const texto = linhas.join('\n');
           const riscado = card.querySelector('s, del, [class*="previous"], [class*="original"]');
-          const precos = linhas.filter(l => /^R\$/.test(l) || /R\$\s*\d/.test(l)).map(num).filter(v => v != null);
-          const precoOriginal = riscado ? num(riscado.innerText) : null;
+          /* O hub quebra o preco em linhas ("R$" / "227" / "," / "38",
+             05/10: nenhum preco lido em 14 cartoes). Junta tudo numa linha
+             antes de ler; a ordem no cartao e: preco anterior (quando ha
+             % OFF), preco atual, parcelas. */
+          const corrido = linhas.join(' ').replace(/\s*,\s*(\d{2})\b/g, ',$1');
+          const precos = [...corrido.matchAll(/R\$\s*([\d.]+)(?:,(\d{2}))?/g)]
+            .map(m => Number(m[1].replace(/\./g, '') + '.' + (m[2] || '00')))
+            .filter(v => v > 0);
+          const comOff = /\d{1,2}%\s*OFF/i.test(corrido);
+          const precoOriginal = (riscado ? num(riscado.innerText.replace(/\s+/g, ' ').replace(/\s*,\s*(\d{2})\b/, ',$1')) : null)
+            ?? (comOff && precos.length >= 2 ? precos[0] : null);
           const preco = precos.find(v => v !== precoOriginal) ?? null;
           const titulo = linhas.filter(l => !/R\$|%|vendid|mais vendido|compartilhar|^\d[.,]\d/i.test(l))
             .sort((x, y) => y.length - x.length)[0] || null;
