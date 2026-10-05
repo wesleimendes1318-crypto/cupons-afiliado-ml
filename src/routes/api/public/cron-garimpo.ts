@@ -173,11 +173,12 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
                   textoDaQualidade({
                     ...x.qualidade,
                     /* Motivo que só repete o "Muda" sai do post. */
-                    motivo: /muda (s[oó]|apenas)|mesmo modelo|mesmo conjunto/i.test(
-                      x.qualidade.motivo ?? "",
-                    )
-                      ? null
-                      : x.qualidade.motivo,
+                    motivo:
+                      /muda (s[oó]|apenas)|mesmo modelo|mesmo conjunto|mesma categoria/i.test(
+                        x.qualidade.motivo ?? "",
+                      ) || (x.qualidade.motivo ?? "").length > 70
+                        ? null
+                        : x.qualidade.motivo,
                   }).replace("à do seu", "à do anúncio comparado"),
                   120,
                 ),
