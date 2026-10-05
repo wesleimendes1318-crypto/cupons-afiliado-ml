@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { TELEGRAM_BOT, TELEGRAM_CANAL } from "@/lib/telegram-publico";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 
@@ -87,12 +88,19 @@ function Divulgacao() {
       </p>
 
       <h2>Canais oficiais de divulgação</h2>
-      <p>
-        Os links de afiliado deste projeto são divulgados apenas nos canais declarados no cadastro
-        do programa de afiliados. No momento, o endereço oficial é{" "}
-        <strong>cupons-afiliado-ml.lovable.app</strong>. Se o site migrar para um domínio próprio, o
-        novo endereço será declarado antes de passar a ser usado.
-      </p>
+      <p>Os links de afiliado deste projeto são divulgados apenas nestes canais oficiais:</p>
+      <ul>
+        <li>
+          o site <strong>melhorescolha.io</strong>;
+        </li>
+        <li>
+          o bot do Telegram <strong>@{TELEGRAM_BOT}</strong>, que compara o link que você manda;
+        </li>
+        <li>
+          o canal de ofertas do Telegram <strong>@{TELEGRAM_CANAL}</strong>.
+        </li>
+      </ul>
+      <p>Um canal novo só passa a ser usado depois de aparecer nesta lista.</p>
 
       <h2>O que não fazemos</h2>
       <ul>

@@ -685,6 +685,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   "Compare antes. / Escolha melhor." (Sua próxima melhor escolha). Banners
   completos com texto (public/sazonal/criancas.jpg, natal.jpg,
   black-friday.jpg) só como og:image.
+- CENÁRIO INTEGRADO (Weslei, 05/10: "deixar as artes mais elaboradas.
+  integre melhor na vitrine. ajuste para as demais vitrines"):
+  src/components/CenarioCampanha.tsx. A arte não fica num quadro: ocupa a
+  lateral do destaque (PC) ou uma faixa no topo (celular) e se funde no
+  fundo por máscara em degradê. Fotos reais num cartão de comparação fora da
+  máscara. Temas sem arte (tecnologia, casa, beleza, marca) usam o mesmo
+  estúdio em CSS (parede ripada, arco, piso, pedestais, cartão com ✓) nas
+  cores do tema, com as fotos reais nos pedestais. Vale para SecaoCampanha,
+  contagem da Black Friday, /natal, /dia-das-criancas e /campanhas/previa.
 
 ## Cliente primeiro e teto dos agentes (05/10, noite)
 - Medido em 05/10: 120 comparações dos agentes x 3 de clientes em 24 h; a

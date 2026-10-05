@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, Link2, RefreshCw, ShieldCheck } from "lucide-react";
 
-import { ArteCampanha } from "@/components/ArteCampanha";
+import { CenarioCampanha } from "@/components/CenarioCampanha";
 import {
   identificarTema,
   TEMAS_VISUAIS,
@@ -537,8 +537,22 @@ export function SecaoCampanha({
       className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
       style={{ background: p.fundo, color: p.texto }}
     >
-      <div className="grid items-center gap-2 px-5 pt-5 sm:px-7 sm:pt-6 md:grid-cols-[minmax(0,1fr)_minmax(240px,36%)] md:gap-6">
-        <div className="min-w-0">
+      {/* Cenário de estúdio: no celular, faixa no topo que some no fundo; no
+          PC, a lateral direita do destaque, fundida no fundo da seção. */}
+      <CenarioCampanha
+        tema={tema}
+        fundir="baixo"
+        cartao={false}
+        className="relative h-44 md:hidden"
+      />
+      <CenarioCampanha
+        tema={tema}
+        fotos={fotos}
+        fundir="ambos"
+        className="absolute right-0 top-0 hidden h-[300px] w-[52%] md:block"
+      />
+      <div className="relative -mt-8 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[300px] md:items-center md:pt-6">
+        <div className="min-w-0 md:max-w-[50%]">
           <p
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
             style={{
@@ -583,14 +597,6 @@ export function SecaoCampanha({
             <BotaoTelegram p={p} texto="Receber no Telegram" />
           </div>
         </div>
-        {/* Celular: só a cena, baixa (as ofertas aparecem logo). PC: cena com
-            as fotos reais dos produtos. */}
-        <ArteCampanha
-          tema={tema}
-          compacta
-          className="mx-auto mt-2 h-40 w-full max-w-[300px] md:hidden"
-        />
-        <ArteCampanha tema={tema} fotos={fotos} className="hidden h-[220px] w-full md:block" />
       </div>
       <div id={`ofertas-${c.id}`} className="px-4 pb-5 pt-4 sm:px-7 sm:pb-6">
         <GradeOfertas p={p} lista={lista} naHome={naHome} natal={tema === "natal"} />
@@ -612,7 +618,13 @@ export function CartaoCampanhaCompacta({ c, futura }: { c: CampanhaVitrine; futu
       className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
       style={{ background: p.fundo, color: p.texto }}
     >
-      <div className="grid items-center gap-4 px-5 py-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-7 md:grid-cols-[auto_minmax(0,1fr)_200px_auto]">
+      <CenarioCampanha
+        tema={tema}
+        fundir="esquerda"
+        cartao={false}
+        className="absolute inset-y-0 right-0 hidden w-[46%] md:block"
+      />
+      <div className="relative grid items-center gap-4 px-5 py-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-7 md:min-h-[150px] md:grid-cols-[auto_minmax(0,1fr)_auto] md:pr-[30%]">
         <div
           className="grid size-[76px] place-items-center rounded-2xl text-center"
           style={{ background: p.superficie, boxShadow: `inset 0 0 0 1px ${p.borda}` }}
@@ -649,7 +661,6 @@ export function CartaoCampanhaCompacta({ c, futura }: { c: CampanhaVitrine; futu
               : "Os achados aparecem aqui assim que forem conferidos. Cole o link do produto que você quer e eu comparo agora."}
           </p>
         </div>
-        <ArteCampanha tema={tema} compacta className="hidden h-28 w-full md:block" />
         <BotaoTelegram p={p} texto="Avisar no Telegram" />
       </div>
     </section>

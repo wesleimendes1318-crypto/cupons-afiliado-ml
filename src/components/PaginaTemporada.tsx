@@ -8,7 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, BadgeCheck, Link2 } from "lucide-react";
 import { useState } from "react";
 
-import { ArteCampanha } from "@/components/ArteCampanha";
+import { CenarioCampanha } from "@/components/CenarioCampanha";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
@@ -65,8 +65,14 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
   return (
     <div className="fundo-conteudo min-h-screen">
       <header className="relative overflow-hidden" style={{ background: p.fundo, color: p.texto }}>
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-6 px-4 py-8 sm:px-6 md:grid-cols-[minmax(0,1fr)_340px] md:py-14">
-          <div className="campanha-entra min-w-0">
+        <CenarioCampanha
+          tema={tema}
+          fotos={lista.map((o) => o.imagem)}
+          fundir="esquerda"
+          className="absolute inset-y-0 right-0 hidden w-[50%] md:block"
+        />
+        <div className="relative mx-auto grid max-w-[1200px] items-center gap-6 px-4 py-8 sm:px-6 md:py-14">
+          <div className="campanha-entra min-w-0 md:max-w-[52%]">
             <Link
               to="/"
               className="campanha-botao inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold focus-visible:outline-2"
@@ -119,10 +125,11 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
               <BotaoTelegram p={p} texto="Receber os achados no Telegram" />
             </div>
           </div>
-          <ArteCampanha
+          <CenarioCampanha
             tema={tema}
-            fotos={lista.map((o) => o.imagem)}
-            className="mx-auto h-44 w-full max-w-[380px] sm:h-52 md:h-[240px]"
+            fundir="vertical"
+            cartao={false}
+            className="relative -mx-4 h-48 sm:-mx-6 md:hidden"
           />
         </div>
       </header>

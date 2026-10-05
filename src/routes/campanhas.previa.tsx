@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { ArteCampanha } from "@/components/ArteCampanha";
+import { CenarioCampanha } from "@/components/CenarioCampanha";
 import {
   CartaoCampanhaCompacta,
   daTemporada,
@@ -151,7 +151,11 @@ function Previa() {
                 color: TEMAS_VISUAIS[id].paleta.texto,
               }}
             >
-              <ArteCampanha tema={id} className="aspect-[6/5] w-full" />
+              <CenarioCampanha
+                tema={id}
+                fundir="nenhuma"
+                className="relative aspect-[6/5] w-full"
+              />
               <p className="px-4 pb-3 text-sm font-semibold">{TEMAS_VISUAIS[id].nome}</p>
             </li>
           ))}
