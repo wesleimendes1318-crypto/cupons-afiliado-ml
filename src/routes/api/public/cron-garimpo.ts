@@ -87,7 +87,7 @@ function achadoDoPedido(p: {
 /* Preço e frete em linhas separadas; nunca "R$ X a menos + frete". */
 function mensagem(x: Achado) {
   const linhas = [
-    "🔥 <b>Achado comparado hoje</b>",
+    "🔥 <b>Achado conferido há pouco</b>",
     `📦 ${html(x.tipo === "parecido" ? x.tituloOpcao : x.titulo)}`,
     x.tipo === "parecido"
       ? `⚠️ Parecido com "${html(x.titulo)}", não é idêntico.${x.muda ? ` Muda: ${html(x.muda)}` : ""}`

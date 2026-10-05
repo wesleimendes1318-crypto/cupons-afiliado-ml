@@ -20,11 +20,16 @@ type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supab
    (Beleza 4 de 5 produtos com o mesmo mais barato; Eletrodomésticos com
    ticket médio de R$ 2.434) e categorias de demanda constante. O nome
    oficial é conferido a cada coleta (/categories/{id}). */
+/* Nomes fixos (sem conferir /categories a cada coleta, para caber no
+   limite de subrequisições); IDs errados aparecem em "erros" da execução. */
 export const CATEGORIAS_FOCO = [
   { id: "MLB5726", nome: "Eletrodomésticos" },
   { id: "MLB1246", nome: "Beleza e Cuidado Pessoal" },
   { id: "MLB1574", nome: "Casa, Móveis e Decoração" },
   { id: "MLB5672", nome: "Acessórios para Veículos" },
+  /* Exploratório (05/10): celular e iPhone em alta (2º e 5º termos do
+     /trends/MLB), mas o site ainda não achou o mesmo produto mais barato. */
+  { id: "MLB1051", nome: "Celulares e Telefones" },
 ] as const;
 
 const PRODUTOS_POR_CATEGORIA = 3;
@@ -43,6 +48,16 @@ type Sinal = {
 const erroCurto = (e: unknown) =>
   e instanceof ErroApiMl ? `${e.status}` : String((e as Error)?.message ?? e).slice(0, 80);
 
+function semEntidades(t: string | null) {
+  if (!t) return t;
+  return t
+    .replace(/&apos;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
 async function googleTrendsBrasil(): Promise<Sinal[]> {
   const r = await fetch("https://trends.google.com/trending/rss?geo=BR", {
     signal: AbortSignal.timeout(8_000),
@@ -52,7 +67,7 @@ async function googleTrendsBrasil(): Promise<Sinal[]> {
   const xml = await r.text();
   const itens = xml.split("<item>").slice(1, 21);
   return itens.map((bloco, i) => {
-    const titulo = /<title>([^<]{1,200})<\/title>/.exec(bloco)?.[1] ?? null;
+    const titulo = semEntidades(/<title>([^<]{1,200})<\/title>/.exec(bloco)?.[1] ?? null);
     const trafego = /<ht:approx_traffic>([^<]{1,30})<\/ht:approx_traffic>/.exec(bloco)?.[1] ?? null;
     return {
       fonte: "google_trends",
@@ -83,13 +98,7 @@ export async function coletarMercado(db: Db) {
   }
 
   for (const cat of CATEGORIAS_FOCO) {
-    let nome: string = cat.nome;
-    try {
-      const c = await mlGet<{ name?: string }>(`/categories/${cat.id}`);
-      if (c.name) nome = c.name;
-    } catch (e) {
-      erros[`categoria_${cat.id}`] = erroCurto(e);
-    }
+    const nome: string = cat.nome;
     try {
       const t = await mlGet<Array<{ keyword?: string; url?: string }>>(`/trends/MLB/${cat.id}`);
       t.slice(0, 20).forEach((x, i) =>

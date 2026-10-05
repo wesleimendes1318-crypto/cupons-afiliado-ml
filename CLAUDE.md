@@ -393,6 +393,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (registrar_evento) só com consentimento de análise, sem IP/cookie/id;
   origem pelo data-origem, pedido pelo data-pedido. Clique não é venda.
   Início da medição: 05/10/2026. Painel: view painel_operacao (30 dias).
+- VITRINE E SEGUNDA VOLTA (05/10): o gatilho pedido_para_vitrine também
+  atualiza a linha da vitrine quando a análise de um pedido já pronto muda
+  (atualizar_produto_visto: melhor loja, alternativa e links da segunda
+  volta, sem contar visita nem preço de novo). Antes, a alternativa da
+  geladeira (pedido 622) aparecia na tela e nunca na vitrine.
 - Sem Google Analytics (VITE_GA_ID não definido) e sem acesso ao Search
   Console nem ao relatório de comissões por API: vendas e comissões só pelo
   painel de afiliados do Mercado Livre.
