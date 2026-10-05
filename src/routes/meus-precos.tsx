@@ -10,6 +10,7 @@ import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
+import { ehLinkDeAfiliado } from "@/lib/afiliado";
 
 export const Route = createFileRoute("/meus-precos")({
   component: MeusPrecos,
@@ -223,7 +224,7 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
         {i.menor_preco != null ? ` · menor preço visto: ${brl(i.menor_preco)}` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
-        {i.link && (
+        {ehLinkDeAfiliado(i.link) && (
           <a
             href={i.link}
             target="_blank"

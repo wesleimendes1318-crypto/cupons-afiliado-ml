@@ -43,10 +43,12 @@ import { registrarInteracaoVisitante } from "@/lib/perfil-visitante";
 import {
   qualidadeAceita,
   qualidadeDoParecido,
+  desvantagensDoParecido,
   textoDaQualidade,
   type Qualidade,
 } from "@/lib/qualidade";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
+import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -331,6 +333,7 @@ type Analise = {
        | inferior | incerta, com o dado que sustenta. */
     qualidade?: string | null;
     qualidadeMotivo?: string | null;
+    desvantagens?: string[] | null;
     /* Loja que vende (sempre que lida) e selo MercadoLíder dela. */
     vendedor?: string | null;
     mercadoLider?: "platinum" | "gold" | "silver" | null;
@@ -341,6 +344,8 @@ type Analise = {
     custoFrete?: number | null;
     detalhes?: Detalhes | null;
     precos?: Precos | null;
+    /* Código do anúncio (MLB...): chave da avaliação do cliente. */
+    item?: string | null;
   }> | null;
   /* Aviso que a página do anúncio mostra (ex.: "indisponível"). */
   aviso?: string | null;
@@ -915,7 +920,12 @@ export default function BuscaPorLink({
         // O tipo gerado do RPC devolve status como string solta; aqui a gente
         // sabe o formato porque a funcao no banco e nossa.
         const bruto = Array.isArray(data) ? data[0] : data;
-        const linha = bruto ? (bruto as unknown as Pedido) : null;
+        const cru = bruto ? (bruto as unknown as Pedido) : null;
+        /* Só link de afiliado (meli.la) chega à tela; o resto vira o botão que
+           gera o link no clique. */
+        const linha = cru
+          ? { ...cru, link: soAfiliado(cru.link), analise: analiseSoComAfiliado(cru.analise) }
+          : null;
 
         if (linha?.status === "processando") {
           const etapa = (linha.analise as { etapa?: string } | null)?.etapa;
@@ -1007,7 +1017,20 @@ export default function BuscaPorLink({
   useEffect(() => {
     let alvo: string | null = null;
     try {
-      alvo = new URLSearchParams(window.location.search).get("link");
+      /* Compartilhado pelo app instalado (share_target, 05/10): o app do
+         Mercado Livre manda o endereço solto no texto ("Olha isto:
+         https://meli.la/..."); vale o primeiro endereço do Mercado Livre em
+         link, texto ou título. */
+      const q = new URLSearchParams(window.location.search);
+      const re =
+        /https?:\/\/(?:[a-z0-9-]+\.)*(?:mercadolivre\.com\.br|mercadolibre\.com|meli\.la)\/[^\s<>"']+/i;
+      for (const v of [q.get("link"), q.get("text"), q.get("title")]) {
+        const m = v ? re.exec(v) : null;
+        if (m) {
+          alvo = m[0];
+          break;
+        }
+      }
     } catch {
       alvo = null;
     }
@@ -1867,7 +1890,8 @@ function Resultado({
           .filter(
             (p) =>
               p.freteGratis !== false &&
-              Boolean(p.link || p.url) &&
+              /* Recomendação só com link de afiliado pronto ou gerado no clique. */
+              (ehLinkDeAfiliado(p.link) || Boolean(p.url)) &&
               ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true) &&
               podeSerAlternativa(p, baseAlt).ok &&
               /* Premissa (Weslei, 05/10): qualidade equivalente ou superior. */
@@ -2190,6 +2214,7 @@ function Resultado({
               tituloColado={a?.titulo ?? null}
               detalhesColado={a?.detalhes ?? null}
               colado={coladoResumo}
+              pedidoId={pedidoId}
             />
           )}
           {mostraTabela && (
@@ -2205,6 +2230,7 @@ function Resultado({
             precoColado={a?.preco}
             detalhesColado={a?.detalhes ?? null}
             colado={coladoResumo}
+            pedidoId={pedidoId}
           />
         </div>
       )}
@@ -2492,7 +2518,7 @@ function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
           status?: string;
           link?: string | null;
         } | null;
-        if (linha?.status === "pronto" && linha.link) {
+        if (linha?.status === "pronto" && ehLinkDeAfiliado(linha.link)) {
           setLink(linha.link);
           return;
         }
@@ -2730,10 +2756,12 @@ function MelhorAlternativa({
   tituloColado = null,
   detalhesColado = null,
   colado = null,
+  pedidoId = null,
 }: {
   tituloColado?: string | null;
   detalhesColado?: Detalhes | null;
   colado?: ColadoResumo | null;
+  pedidoId?: number | null;
   cb?: CustoBeneficio | null;
   p: NonNullable<Analise["parecidos"]>[number];
   precoBase: number | null;
@@ -2844,12 +2872,17 @@ function MelhorAlternativa({
           detalhesOutro={p.detalhes}
           titulo="Não é idêntico ao anúncio que você colou. O que muda para você:"
           qualidade={qualidadeDoParecido(p, { titulo: textoDoColado, detalhes: detalhesColado })}
+          desvantagens={desvantagensDoParecido(p, {
+            titulo: textoDoColado,
+            detalhes: detalhesColado,
+          })}
         />
       ) : (
         <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
           Não é idêntico ao anúncio que você colou.
         </p>
       )}
+      {pedidoId != null && p.item && <AvaliarIndicacao pedidoId={pedidoId} item={p.item} />}
 
       {p.link ? (
         <a
@@ -3193,6 +3226,7 @@ function OQueMuda({
   extras = [],
   titulo = "O que muda para você",
   qualidade = null,
+  desvantagens = [],
 }: {
   muda: string | null | undefined;
   tituloColado: string | null | undefined;
@@ -3201,6 +3235,7 @@ function OQueMuda({
   extras?: LinhaMuda[];
   titulo?: string;
   qualidade?: Qualidade | null;
+  desvantagens?: string[];
 }) {
   const linhas: LinhaMuda[] = [
     ...diferencasParaCliente(muda, tituloColado, detalhesColado),
@@ -3212,7 +3247,7 @@ function OQueMuda({
   const iguais = compararFichas(detalhesColado, detalhesOutro).iguais.filter(
     (i) => !mudam.has(i.campo.toLowerCase()),
   );
-  if (!linhas.length && !qualidade) return null;
+  if (!linhas.length && !qualidade && !desvantagens.length) return null;
   return (
     <div className="mt-2 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
       <p className="font-bold">{titulo}</p>
@@ -3233,6 +3268,20 @@ function OQueMuda({
           </span>
           {textoDaQualidade(qualidade)}
         </p>
+      )}
+      {desvantagens.length > 0 && (
+        /* Desvantagens (Weslei, 05/10): o que este tem pior ou a menos que o seu. */
+        <div className="mt-1.5 rounded bg-red-50 px-2 py-1.5 text-red-900 dark:bg-red-950/40 dark:text-red-100">
+          <p className="font-semibold">Desvantagens em relação ao seu:</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {desvantagens.map((d, k) => (
+              <li key={k} className="leading-snug">
+                <span aria-hidden="true">✗ </span>
+                {d}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {linhas.length > 0 && (
         <ul className="mt-1 divide-y divide-amber-200/70 dark:divide-amber-800/50">
@@ -3298,12 +3347,14 @@ function Parecidos({
   precoColado,
   detalhesColado = null,
   colado = null,
+  pedidoId = null,
 }: {
   lista: Analise["parecidos"];
   tituloColado?: string | null | undefined;
   precoColado?: number | null | undefined;
   detalhesColado?: Detalhes | null;
   colado?: ColadoResumo | null;
+  pedidoId?: number | null;
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
   const [verTodos, setVerTodos] = useState(false);
@@ -3488,6 +3539,10 @@ function Parecidos({
                   titulo: textoDoColado,
                   detalhes: detalhesColado,
                 })}
+                desvantagens={desvantagensDoParecido(p, {
+                  titulo: textoDoColado,
+                  detalhes: detalhesColado,
+                })}
                 extras={[
                   ...(porMedida && m && mColado && m.qtd !== mColado.qtd && precoColado != null
                     ? [
@@ -3522,6 +3577,7 @@ function Parecidos({
                     : []),
                 ]}
               />
+              {pedidoId != null && p.item && <AvaliarIndicacao pedidoId={pedidoId} item={p.item} />}
 
               {/* Rodapé: detalhes à esquerda, compra à direita. */}
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -4800,6 +4856,53 @@ function AjudaParaEscolher({
       <p className="mt-1 text-[10px] text-secondary-ink">
         Análise feita com os preços e as informações desta comparação.
       </p>
+    </div>
+  );
+}
+
+/* APRENDER COM O CLIENTE (Weslei, 05/10: "aprender e melhorar"): "Faz
+   sentido?" em cada parecido. "Não é equivalente" tira a indicação das
+   próximas recomendações (avaliar_indicacao no banco); "Sim" só conta no
+   relatório. Sem identificação de quem respondeu. */
+function AvaliarIndicacao({ pedidoId, item }: { pedidoId: number; item: string }) {
+  const [estado, setEstado] = useState<"parado" | "enviando" | "feito">("parado");
+  async function enviar(util: boolean) {
+    setEstado("enviando");
+    try {
+      await supabase.rpc(
+        "avaliar_indicacao" as never,
+        { p_pedido: pedidoId, p_item: item, p_util: util } as never,
+      );
+    } catch {
+      /* só aprendizado: a tela segue igual */
+    }
+    setEstado("feito");
+  }
+  if (estado === "feito")
+    return (
+      <p className="mt-2 text-[11px] text-secondary-ink">
+        Obrigado! Sua resposta melhora as próximas comparações.
+      </p>
+    );
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-secondary-ink">
+      <span>Esta indicação faz sentido para você?</span>
+      <button
+        type="button"
+        disabled={estado === "enviando"}
+        onClick={() => void enviar(true)}
+        className="rounded-full border border-border px-2 py-0.5 font-semibold hover:bg-muted disabled:opacity-60"
+      >
+        👍 Sim
+      </button>
+      <button
+        type="button"
+        disabled={estado === "enviando"}
+        onClick={() => void enviar(false)}
+        className="rounded-full border border-border px-2 py-0.5 font-semibold hover:bg-muted disabled:opacity-60"
+      >
+        👎 Não é equivalente
+      </button>
     </div>
   );
 }

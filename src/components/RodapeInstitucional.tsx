@@ -32,6 +32,16 @@ export function RodapeInstitucional() {
   return (
     <footer className="mt-12 border-t-2 border-[color-mix(in_oklab,var(--ml-blue)_30%,var(--border))] bg-[color-mix(in_oklab,var(--ml-blue)_5%,var(--card))]">
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+        <Link
+          to="/"
+          className="mb-4 inline-flex items-center gap-2"
+          aria-label="Melhor Escolha, página inicial"
+        >
+          <img src="/logo.png" alt="" width={32} height={32} className="size-8 rounded-[22%]" />
+          <span className="text-sm font-extrabold tracking-tight text-foreground">
+            Melhor Escolha
+          </span>
+        </Link>
         <nav aria-label="Páginas institucionais" className="flex flex-wrap gap-x-5 gap-y-2">
           {PAGINAS.map((pagina) => (
             <Link

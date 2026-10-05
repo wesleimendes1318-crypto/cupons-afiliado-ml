@@ -13,6 +13,7 @@ import {
   telegram,
 } from "@/lib/telegram";
 import { origemDoStart } from "@/lib/telegram-publico";
+import { ehLinkDeAfiliado } from "@/lib/afiliado";
 
 /* BOT DO TELEGRAM (Weslei, 02/10). O cliente manda o link de um anúncio
    (longo ou meli.la) e recebe a mesma comparação do site, pelas MESMAS regras
@@ -173,7 +174,9 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
            comparação completa no site. Nunca link sem afiliado. */
         await enviar(
           "⏳ <b>A comparação ainda está rodando.</b>\n\n" +
-            (linha?.link ? `🛒 Link do anúncio que você enviou:\n👉 ${html(linha.link)}\n\n` : "") +
+            (ehLinkDeAfiliado(linha?.link)
+              ? `🛒 Link do anúncio que você enviou:\n👉 ${html(linha.link)}\n\n`
+              : "") +
             `🔎 Acompanhe o resultado completo (atualiza sozinho):\n${SITE}/?link=${encodeURIComponent(urlColado)}`,
         );
         return new Response("OK");

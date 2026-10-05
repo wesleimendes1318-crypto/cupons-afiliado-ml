@@ -19,6 +19,7 @@ import {
   obterPerfil,
   type ClusterInteresse,
 } from "@/lib/perfil-visitante";
+import { ehLinkDeAfiliado } from "@/lib/afiliado";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -439,7 +440,7 @@ function Alternativa({ i }: { i: ItemVitrine }) {
       <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-secondary-ink">
         Não é idêntico{i.alt_muda ? `. Muda: ${i.alt_muda}` : ""}
       </p>
-      {i.alt_link && (
+      {ehLinkDeAfiliado(i.alt_link) && (
         <a
           href={i.alt_link}
           target="_blank"

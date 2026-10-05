@@ -793,13 +793,17 @@ const PEDIDO_CONFERENCIA =
   + 'nisso; equivalente quando atende o mesmo uso com o mesmo nivel; incerta quando nao da para afirmar. Nunca use '
   + 'o preco para julgar. qualidade_motivo: curto, com o dado que sustenta (ex.: "Resolucao nativa: 1080p -> '
   + '720p", "Mesma linha, muda so a cor").\n'
+  + 'desvantagens: pense como um COMPRADOR cuidadoso que vai usar o produto e olhe TUDO (foto, titulo, ficha, '
+  + 'descricao), nao so a foto. Liste curto o que o candidato tem PIOR ou A MENOS que o original e pesa na compra '
+  + '(ex.: "Sem controle remoto", "Resolucao: 1080p -> 720p", "Material: metal -> plastico", "Marca generica", '
+  + '"Garantia: 12 meses -> 3 meses"). So o que os dados mostram, sem suposicao; [] quando nao ha.\n'
   + 'original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro '
   + 'produto que o titulo, a ficha ou a descricao descrevem (outro modelo, cor, tecido, quantidade); vazio quando '
   + 'batem. Foto ilustrativa, angulo ou fundo nao contam.\n'
   + 'parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma '
   + 'compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so '
   + 'marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n'
-  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","qualidade":"equivalente","qualidade_motivo":"","confianca":0-100,"motivo":"curto"}]}';
+  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","qualidade":"equivalente","qualidade_motivo":"","desvantagens":[],"confianca":0-100,"motivo":"curto"}]}';
 
 /* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
    foto com foto, de preferencia por outro modelo. */
@@ -841,6 +845,9 @@ function lerVereditosIA(lista, total) {
                qualidade: ['superior', 'equivalente', 'inferior', 'incerta'].includes(String(c.qualidade || '').toLowerCase())
                  ? String(c.qualidade).toLowerCase() : null,
                qualidadeMotivo: String(c.qualidade_motivo || '').trim().slice(0, 90) || null,
+               /* Desvantagens para quem compra (05/10): ate 3, curtas. */
+               desvantagens: Array.isArray(c.desvantagens)
+                 ? c.desvantagens.map(d => String(d ?? '').trim().slice(0, 80)).filter(Boolean).slice(0, 3) : [],
                confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)), motivo: motivo.slice(0, 140) };
     });
 }
@@ -3080,6 +3087,7 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
             vantagem: a.vantagem || null, daBuscaOficial: c.origem === 'oficiais',
             /* Qualidade x colado pela conferencia (05/10); a regra final e do site. */
             qualidade: a.qualidade || null, qualidadeMotivo: a.qualidadeMotivo || null,
+            desvantagens: Array.isArray(a.desvantagens) && a.desvantagens.length ? a.desvantagens : null,
             /* Veio das sugestoes da propria pagina do anuncio (03/10). */
             sugerido: c.origem === 'relacionados',
             lojaOficial: c.origem === 'oficiais' ? true : null,

@@ -101,6 +101,19 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     superior, ⚠ inferior, ? não confirmada); canal e bot também. Banco:
     alternativa_da_analise com a mesma premissa (sem comparar fichas).
     Nunca julgar qualidade pelo preço.
+  - DESVANTAGENS (Weslei, 05/10: "precisa ter a indicação de desvantagens,
+    quando houver"; "não deve analisar apenas a foto, deve pensar como um
+    comprador"): a conferência (servidor e extensão) devolve "desvantagens"
+    olhando foto, título, ficha e descrição (guardadas em
+    ia_vereditos.desvantagens); desvantagensDoParecido (src/lib/qualidade.ts)
+    junta com a piora objetiva das fichas, sem repetir assunto e sem frete
+    (frete tem linha própria). Site (bloco vermelho "Desvantagens em relação
+    ao seu"), bot, canal e "Me ajude a escolher" mostram. Nunca inventa.
+  - APRENDER COM O CLIENTE (05/10): "Esta indicação faz sentido para você?"
+    em cada Parecido e na Melhor alternativa (avaliar_indicacao, sem IP/id,
+    60/min). "Não é equivalente" só rebaixa (qualidade 'incerta' no veredito
+    guardado e no pedido; a vitrine se atualiza pelo gatilho); "Sim" nunca
+    promove, só conta (view aprendizado_indicacoes, relatório semanal).
   - Parecidos com o aviso "Mesma foto do anúncio colado" quando for o caso
     (ordem: ver "Parecidos" em Texto e visual).
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
@@ -178,6 +191,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   na tabela (Advocate, 26/09: tabela e recomendação apontavam lojas diferentes).
 - SEMPRE o link de afiliado do Weslei em todo botão (26/09: "foi para isso
   que eu criei o site"). Nunca endereço sem afiliado.
+  Trava no código (05/10, src/lib/afiliado.ts): só https://meli.la/<código>
+  é link de compra; outro endereço é descartado na leitura do pedido
+  (analiseSoComAfiliado) e o botão gera o link no clique (VerNaLoja). Vale
+  para tela, vitrine, Meus preços, bot e "Me ajude a escolher".
 - LINK NUNCA PODE PARAR (28/09, grave: das 19:36 em diante nenhum link saiu,
   "No tab with id"; a fila inteira usava uma aba só e ela sumiu). Toda chamada
   ao gerador passa por abaViva (aba morta, descartada ou fora do domínio →
@@ -323,6 +340,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   caso do código). Mesmo estilo e trilha; só os exemplos mudam.
   Fonte em ferramentas/video/ (comercial.html, trilha.py); arquivos em
   public/video/ (WebM + MP4, 720p).
+
+## Marca e app (05/10)
+- Logo: M branco com selo verde ✓ em degradê roxo/azul. Ícones gerados do
+  arquivo enviado pelo Weslei: public/favicon.ico (16/32/48), favicon.png,
+  apple-touch-icon.png (180), icon-192/512, icon-maskable-512, logo.png e
+  extensao/icones/icone16-128. Logo no topo (link para /) e no rodapé.
+- App instalável: public/manifest.json (start_url /?origem=pwa, standalone,
+  theme #0071e3) com share_target GET (title/text/url -> link): o site pega o
+  1º endereço do Mercado Livre em link, text ou title e compara sozinho.
 
 ## Bot do Telegram (02/10)
 - /api/public/telegram-webhook: o cliente manda o link (longo ou meli.la) e

@@ -1,6 +1,6 @@
 import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
-import { qualidadeDoParecido, textoDaQualidade } from "@/lib/qualidade";
+import { desvantagensDoParecido, qualidadeDoParecido, textoDaQualidade } from "@/lib/qualidade";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
 
@@ -121,6 +121,12 @@ export function mensagemDaComparacao(
           qualidadeDoParecido(alternativa, { titulo: colado?.titulo, detalhes: colado?.detalhes }),
         ),
       ).replace("à do seu", "à do que você enviou")}`,
+      ...desvantagensDoParecido(alternativa, {
+        titulo: colado?.titulo,
+        detalhes: colado?.detalhes,
+      })
+        .slice(0, 3)
+        .map((d, i) => `${i ? "   " : "❌ Desvantagens: "}${html(d)}`),
       `👉 ${html(alternativa.link)}`,
     );
   }

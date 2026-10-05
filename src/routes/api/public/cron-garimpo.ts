@@ -3,7 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
 import { naoEAlternativa } from "@/lib/alternativa";
 import { diferencasParaCliente } from "@/lib/diferencas";
-import { qualidadeDoParecido, textoDaQualidade, type Qualidade } from "@/lib/qualidade";
+import {
+  desvantagensDoParecido,
+  qualidadeDoParecido,
+  textoDaQualidade,
+  type Qualidade,
+} from "@/lib/qualidade";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -51,6 +56,8 @@ type Achado = {
   opcao: Opcao;
   /* Qualidade x o anúncio comparado (premissa de 05/10). */
   qualidade: Qualidade | null;
+  /* O que tem pior ou a menos que o anúncio comparado (05/10). */
+  desvantagens: string[];
 };
 
 function achadoDoPedido(p: {
@@ -89,6 +96,10 @@ function achadoDoPedido(p: {
       escolha.tipo === "parecido"
         ? qualidadeDoParecido(escolha, { titulo: colado.titulo, detalhes: colado.detalhes })
         : null,
+    desvantagens:
+      escolha.tipo === "parecido"
+        ? desvantagensDoParecido(escolha, { titulo: colado.titulo, detalhes: colado.detalhes })
+        : [],
   };
 }
 
@@ -118,6 +129,9 @@ function mensagem(x: Achado) {
       : "✅ Mesmo produto, em outra loja",
     x.qualidade
       ? `${x.qualidade.nivel === "superior" ? "⭐" : "✅"} ${html(textoDaQualidade(x.qualidade))}`
+      : null,
+    x.desvantagens.length
+      ? `❌ Desvantagens: ${html(x.desvantagens.slice(0, 3).join("; "))}`
       : null,
     `💰 <b>${brl(x.preco)}</b> (anúncio comparado: ${brl(x.precoColado)})`,
     `💸 ${brl(x.economia)} a menos no produto`,

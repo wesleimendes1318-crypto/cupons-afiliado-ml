@@ -1764,6 +1764,16 @@ function Index() {
           <div className="animate-conteudo grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
+                {/* Logo da marca (05/10). */}
+                <Link to="/" aria-label="Melhor Escolha, página inicial" className="shrink-0">
+                  <img
+                    src="/logo.png"
+                    alt="Melhor Escolha"
+                    width={48}
+                    height={48}
+                    className="size-9 rounded-[22%] shadow-sm sm:size-12"
+                  />
+                </Link>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
                   <ShieldAlert className="size-3.5" aria-hidden="true" />
                   Comparador independente

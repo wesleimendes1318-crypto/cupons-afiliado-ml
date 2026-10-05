@@ -14,6 +14,7 @@ import { baixarFoto, gerarComModelos, lerJson } from "@/lib/conferir-produto";
 import { mudaCompleta } from "@/lib/ficha";
 import { qualidadeAceita, qualidadeDoParecido } from "@/lib/qualidade";
 import { perguntarAoGpt } from "@/lib/gpt";
+import { ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 
 type Detalhes = {
   caracteristicas?: { nome: string; valor: string }[];
@@ -42,6 +43,7 @@ export type Opcao = {
      inferior | incerta. A regra final é qualidadeDoParecido. */
   qualidade?: string | null;
   qualidadeMotivo?: string | null;
+  desvantagens?: string[] | null;
   detalhes: Detalhes;
   /* Foto do anúncio e { cheio, pix, parcelas } lidos na página (28/09). */
   imagem: string | null;
@@ -72,7 +74,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
   const titulo = txt(a["titulo"]) ?? "Produto do link colado";
   const detalhesColado = (a["detalhes"] as Detalhes) ?? null;
   const preco = num(a["preco"]);
-  if (preco != null && linkColado && a["linkFalhou"] !== true) {
+  if (preco != null && ehLinkDeAfiliado(linkColado) && a["linkFalhou"] !== true) {
     out.push({
       n: 0,
       tipo: "colado",
@@ -98,7 +100,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
     ...((a["referencias"] as Bruto[] | undefined) ?? []),
   ];
   for (const o of mesmo) {
-    const link = txt(o["link"]);
+    const link = soAfiliado(o["link"]);
     const p = num(o["final"]) ?? num(o["preco"]);
     if (
       !link ||
@@ -129,7 +131,9 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
     });
   }
   const parecidos = [...((a["parecidos"] as Bruto[] | undefined) ?? [])]
-    .filter((p) => txt(p["link"]) && num(p["preco"]) != null && p["semAfiliado"] !== true)
+    .filter(
+      (p) => ehLinkDeAfiliado(p["link"]) && num(p["preco"]) != null && p["semAfiliado"] !== true,
+    )
     .sort(
       (x, y) =>
         (num(y["semelhanca"]) ?? (y["mesmaFoto"] === true ? 90 : 0)) -
@@ -157,6 +161,9 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       mesmaFoto: p["mesmaFoto"] === true,
       qualidade: txt(p["qualidade"]),
       qualidadeMotivo: txt(p["qualidadeMotivo"]),
+      desvantagens: Array.isArray(p["desvantagens"])
+        ? (p["desvantagens"] as unknown[]).map((d) => String(d ?? "")).filter(Boolean)
+        : null,
       detalhes: (p["detalhes"] as Detalhes) ?? null,
       imagem: txt(p["imagem"]),
       precos: (p["precos"] as Bruto) ?? null,
@@ -340,6 +347,8 @@ function resumoDaOpcao(
     loja_oficial_da_marca: o.lojaOficial,
     o_que_muda: o.muda,
     vantagem: o.vantagem,
+    desvantagens: o.desvantagens ?? null,
+    qualidade_x_colado: o.qualidade ?? null,
     semelhanca: o.semelhanca,
     caracteristicas: (d?.caracteristicas ?? []).slice(0, 12).map((c) => `${c.nome}: ${c.valor}`),
     destaques: (d?.destaques ?? []).slice(0, 4),
@@ -369,6 +378,7 @@ Analise, para cada opcao: a foto (modelo, cor, pecas, acessorios, estado), a des
 Regras:
 - Use SO o que esta nos dados e nas fotos. Nunca invente caracteristica, garantia, prazo ou beneficio. Na duvida, diga que nao da para confirmar.
 - "MESMO produto" e o mesmo item do anuncio colado. "PARECIDO" NAO e o mesmo produto: so escolha um parecido se ele for quase igual ao colado (a foto e as caracteristicas confirmam) e sair mais barato, ou tiver vantagem real; diga o que muda.
+- Pense como um comprador cuidadoso: olhe tudo (fotos, caracteristicas, descricao, loja, frete, pagamento), nao so o preco nem so a foto. Cite as desvantagens de cada opcao quando houver (campo desvantagens e o que as caracteristicas mostram); nunca invente.
 - Quantidade diferente: compare o custo_por_unidade. Mais barato no total mas mais caro por unidade nao e vantagem; mais caro no total e mais barato por unidade pode ser, se o cliente precisar da quantidade (diga isso).
 - Compare o preco no Pix com o preco no Pix e o parcelado com o parcelado.
 - A tela ja destaca a opcao marcada em papel_na_tela. A escolha e a MELHOR ALTERNATIVA quando ela existe; senao, o MELHOR PRECO DO MESMO PRODUTO. Nos pontos, diga com clareza o que muda e quanto se economiza, e cite a opcao do mesmo produto para quem faz questao de exatamente o que colou.

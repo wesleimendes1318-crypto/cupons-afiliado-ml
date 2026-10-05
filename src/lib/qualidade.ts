@@ -26,6 +26,8 @@ type Parecido = {
   muda?: string | null | undefined;
   qualidade?: string | null | undefined;
   qualidadeMotivo?: string | null | undefined;
+  /* Desvantagens apontadas pela conferência (05/10), olhando tudo como comprador. */
+  desvantagens?: string[] | null | undefined;
   detalhes?: Detalhes;
 };
 type Colado = { titulo?: string | null | undefined; detalhes?: Detalhes };
@@ -82,7 +84,7 @@ function resolucao(titulo: string | null | undefined, ficha: Map<string, string>
 }
 
 /* Piora (ou melhora) objetiva pelos dados dos dois anúncios. */
-function comparacaoObjetiva(p: Parecido, c: Colado): Qualidade | null {
+function pioresEMelhores(p: Parecido, c: Colado) {
   const fp = mapaFicha(p.detalhes);
   const fc = mapaFicha(c.detalhes);
   const piores: string[] = [];
@@ -118,6 +120,11 @@ function comparacaoObjetiva(p: Parecido, c: Colado): Qualidade | null {
     else if (b > a * 1.01 && !melhores.some((x) => x.startsWith(regra[1]))) melhores.push(txt);
   }
 
+  return { piores, melhores };
+}
+
+function comparacaoObjetiva(p: Parecido, c: Colado): Qualidade | null {
+  const { piores, melhores } = pioresEMelhores(p, c);
   if (piores.length) return { nivel: "inferior", motivo: piores.slice(0, 2).join("; ") };
   if (melhores.length && !p.qualidade)
     return { nivel: "superior", motivo: melhores.slice(0, 2).join("; ") };
@@ -161,4 +168,24 @@ export function textoDaQualidade(q: Qualidade): string {
   if (q.nivel === "equivalente") return `Qualidade equivalente à do seu${m}`;
   if (q.nivel === "inferior") return `Qualidade inferior à do seu${m}`;
   return "Qualidade não confirmada como equivalente à do seu";
+}
+
+/* DESVANTAGENS (Weslei, 05/10: "precisa ter a indicação de desvantagens,
+   quando houver"; "pensar como um consumidor"). O que o parecido tem PIOR
+   ou A MENOS que o anúncio colado, só com dado que sustenta: piora objetiva
+   das fichas/títulos, o que a conferência apontou olhando foto, título,
+   ficha e descrição (o frete já aparece em linha própria). Nunca inventa: sem dado, lista vazia. */
+export function desvantagensDoParecido(p: Parecido, colado: Colado): string[] {
+  const out: string[] = [];
+  /* Mesmo assunto pela 1ª palavra ("Resolução nativa" = "Resolucao"). */
+  const campo = (t: string) => norm(t.split(":")[0] ?? t).split(" ")[0];
+  const temCampo = (t: string) => out.some((x) => campo(x) === campo(t));
+  for (const d of pioresEMelhores(p, colado).piores) if (!temCampo(d)) out.push(d);
+  for (const d of p.desvantagens ?? []) {
+    const t = String(d ?? "")
+      .trim()
+      .replace(/\s*->\s*/g, " → ");
+    if (t && t.length <= 90 && !temCampo(t)) out.push(t);
+  }
+  return out.slice(0, 4);
 }
