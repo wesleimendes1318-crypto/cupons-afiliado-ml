@@ -61,6 +61,93 @@ export type Database = {
         }
         Relationships: []
       }
+      avaliacoes_indicacao: {
+        Row: {
+          aplicado: boolean
+          chave_original: string | null
+          criado_em: string
+          id: number
+          item: string
+          motivo: string | null
+          pedido_id: number
+          util: boolean
+        }
+        Insert: {
+          aplicado?: boolean
+          chave_original?: string | null
+          criado_em?: string
+          id?: number
+          item: string
+          motivo?: string | null
+          pedido_id: number
+          util: boolean
+        }
+        Update: {
+          aplicado?: boolean
+          chave_original?: string | null
+          criado_em?: string
+          id?: number
+          item?: string
+          motivo?: string | null
+          pedido_id?: number
+          util?: boolean
+        }
+        Relationships: []
+      }
+      busca_guiada: {
+        Row: {
+          chave: string
+          contexto: string | null
+          criado_em: string
+          enfileirados: number
+          id: number
+          resposta: Json
+        }
+        Insert: {
+          chave: string
+          contexto?: string | null
+          criado_em?: string
+          enfileirados?: number
+          id?: number
+          resposta: Json
+        }
+        Update: {
+          chave?: string
+          contexto?: string | null
+          criado_em?: string
+          enfileirados?: number
+          id?: number
+          resposta?: Json
+        }
+        Relationships: []
+      }
+      campanha_artes: {
+        Row: {
+          bytes: number | null
+          gerada_em: string
+          modelo: string | null
+          tema: string
+          url: string
+          versao: number
+        }
+        Insert: {
+          bytes?: number | null
+          gerada_em?: string
+          modelo?: string | null
+          tema: string
+          url: string
+          versao?: number
+        }
+        Update: {
+          bytes?: number | null
+          gerada_em?: string
+          modelo?: string | null
+          tema?: string
+          url?: string
+          versao?: number
+        }
+        Relationships: []
+      }
       canal_metricas: {
         Row: {
           dia: string
@@ -277,6 +364,63 @@ export type Database = {
         }
         Relationships: []
       }
+      curadoria_brinquedos_itens: {
+        Row: {
+          atualizado_em: string
+          busca: string | null
+          em_alta: boolean
+          enfileirado_em: string | null
+          faixa: string | null
+          frete_gratis_ref: boolean | null
+          idade_texto: string | null
+          imagem: string | null
+          item: string
+          nome: string
+          ofertas: number | null
+          pedido_id: number | null
+          posicao: number | null
+          preco_ref: number | null
+          produto: string
+          url: string
+        }
+        Insert: {
+          atualizado_em?: string
+          busca?: string | null
+          em_alta?: boolean
+          enfileirado_em?: string | null
+          faixa?: string | null
+          frete_gratis_ref?: boolean | null
+          idade_texto?: string | null
+          imagem?: string | null
+          item: string
+          nome: string
+          ofertas?: number | null
+          pedido_id?: number | null
+          posicao?: number | null
+          preco_ref?: number | null
+          produto: string
+          url: string
+        }
+        Update: {
+          atualizado_em?: string
+          busca?: string | null
+          em_alta?: boolean
+          enfileirado_em?: string | null
+          faixa?: string | null
+          frete_gratis_ref?: boolean | null
+          idade_texto?: string | null
+          imagem?: string | null
+          item?: string
+          nome?: string
+          ofertas?: number | null
+          pedido_id?: number | null
+          posicao?: number | null
+          preco_ref?: number | null
+          produto?: string
+          url?: string
+        }
+        Relationships: []
+      }
       diagnosticos: {
         Row: {
           criado_em: string
@@ -364,6 +508,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_recomendados: {
+        Row: {
+          avaliacao: number | null
+          desconto_pct: number | null
+          enfileirado_em: string | null
+          imagem: string | null
+          item: string
+          lido_em: string
+          mais_vendido: boolean
+          pedido_id: number | null
+          posicao: number | null
+          preco: number | null
+          preco_original: number | null
+          titulo: string | null
+          url: string
+          vendidos: string | null
+        }
+        Insert: {
+          avaliacao?: number | null
+          desconto_pct?: number | null
+          enfileirado_em?: string | null
+          imagem?: string | null
+          item: string
+          lido_em?: string
+          mais_vendido?: boolean
+          pedido_id?: number | null
+          posicao?: number | null
+          preco?: number | null
+          preco_original?: number | null
+          titulo?: string | null
+          url: string
+          vendidos?: string | null
+        }
+        Update: {
+          avaliacao?: number | null
+          desconto_pct?: number | null
+          enfileirado_em?: string | null
+          imagem?: string | null
+          item?: string
+          lido_em?: string
+          mais_vendido?: boolean
+          pedido_id?: number | null
+          posicao?: number | null
+          preco?: number | null
+          preco_original?: number | null
+          titulo?: string | null
+          url?: string
+          vendidos?: string | null
+        }
+        Relationships: []
+      }
       ia_cotas: {
         Row: {
           ate: string
@@ -385,6 +580,7 @@ export type Database = {
           chave_original: string
           confianca: number
           criado_em: string
+          desvantagens: Json | null
           igual: boolean
           mesma_foto: boolean
           modelo: string | null
@@ -399,6 +595,7 @@ export type Database = {
           chave_original: string
           confianca?: number
           criado_em?: string
+          desvantagens?: Json | null
           igual: boolean
           mesma_foto?: boolean
           modelo?: string | null
@@ -413,6 +610,7 @@ export type Database = {
           chave_original?: string
           confianca?: number
           criado_em?: string
+          desvantagens?: Json | null
           igual?: boolean
           mesma_foto?: boolean
           modelo?: string | null
@@ -716,15 +914,20 @@ export type Database = {
           categoria: string | null
           chave: string
           economia: number | null
+          frete_gratis: boolean | null
           imagem: string | null
           link: string | null
           loja: string | null
           lojas_comparadas: number | null
+          lojas_mais_caras: number | null
+          melhor_frete_gratis: boolean | null
           melhor_link: string | null
           melhor_loja: string | null
           melhor_preco: number | null
           preco: number | null
           primeiro_em: string
+          segunda_loja: string | null
+          segunda_preco: number | null
           titulo: string
           url_produto: string | null
           vezes: number
@@ -743,15 +946,20 @@ export type Database = {
           categoria?: string | null
           chave: string
           economia?: number | null
+          frete_gratis?: boolean | null
           imagem?: string | null
           link?: string | null
           loja?: string | null
           lojas_comparadas?: number | null
+          lojas_mais_caras?: number | null
+          melhor_frete_gratis?: boolean | null
           melhor_link?: string | null
           melhor_loja?: string | null
           melhor_preco?: number | null
           preco?: number | null
           primeiro_em?: string
+          segunda_loja?: string | null
+          segunda_preco?: number | null
           titulo: string
           url_produto?: string | null
           vezes?: number
@@ -770,15 +978,20 @@ export type Database = {
           categoria?: string | null
           chave?: string
           economia?: number | null
+          frete_gratis?: boolean | null
           imagem?: string | null
           link?: string | null
           loja?: string | null
           lojas_comparadas?: number | null
+          lojas_mais_caras?: number | null
+          melhor_frete_gratis?: boolean | null
           melhor_link?: string | null
           melhor_loja?: string | null
           melhor_preco?: number | null
           preco?: number | null
           primeiro_em?: string
+          segunda_loja?: string | null
+          segunda_preco?: number | null
           titulo?: string
           url_produto?: string | null
           vezes?: number
@@ -857,6 +1070,15 @@ export type Database = {
       }
     }
     Views: {
+      aprendizado_indicacoes: {
+        Row: {
+          fazem_sentido: number | null
+          nao_equivalentes: number | null
+          pedidos: number | null
+          semana: string | null
+        }
+        Relationships: []
+      }
       painel_operacao: {
         Row: {
           cliques_afiliado: number | null
@@ -885,6 +1107,14 @@ export type Database = {
         Args: { p_chave: string; p_token: string; p_valor: string }
         Returns: undefined
       }
+      artes_campanhas: {
+        Args: never
+        Returns: {
+          tema: string
+          url: string
+          versao: number
+        }[]
+      }
       atender_pedido: {
         Args: {
           p_analise?: Json
@@ -899,6 +1129,24 @@ export type Database = {
       atualizar_produto_visto: {
         Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
         Returns: undefined
+      }
+      auditoria_exibicao: {
+        Args: { p_horas?: number }
+        Returns: {
+          detalhe: string
+          gravidade: string
+          pedido_id: number
+          problema: string
+        }[]
+      }
+      avaliar_indicacao: {
+        Args: {
+          p_item: string
+          p_motivo?: string
+          p_pedido: number
+          p_util: boolean
+        }
+        Returns: boolean
       }
       categoria_do_site: {
         Args: { p_categoria: string; p_titulo: string }
@@ -944,6 +1192,31 @@ export type Database = {
           erro: string
           link: string
           status: string
+        }[]
+      }
+      curadoria_brinquedos: {
+        Args: never
+        Returns: {
+          atendido_em: string
+          economia: number
+          em_alta: boolean
+          faixa: string
+          frete_gratis: boolean
+          idade_texto: string
+          imagem: string
+          link: string
+          loja: string
+          lojas_comparadas: number
+          melhor_frete_gratis: boolean
+          melhor_link: string
+          melhor_loja: string
+          melhor_preco: number
+          nome: string
+          ofertas: number
+          posicao: number
+          preco: number
+          produto: string
+          url: string
         }[]
       }
       disparar_operacao: { Args: { p_caminho: string }; Returns: number }
@@ -1022,9 +1295,17 @@ export type Database = {
         Args: { p_etapa: string; p_id: number; p_token: string }
         Returns: boolean
       }
+      marcar_frete_vitrine: {
+        Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
+        Returns: undefined
+      }
       marcar_loja_sem_pagina: {
         Args: { p_token: string; p_vendedor: string }
         Returns: number
+      }
+      marcar_menor_preco: {
+        Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
+        Returns: undefined
       }
       melhor_cupom: {
         Args: { p_token: string; p_vendedor: string }
@@ -1108,6 +1389,10 @@ export type Database = {
           }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       pedir_link: { Args: { p_url: string }; Returns: number }
+      pedir_link_agente: {
+        Args: { p_fonte?: string; p_url: string }
+        Returns: number
+      }
       pedir_link_base: {
         Args: { p_reusar: boolean; p_url: string }
         Returns: number
@@ -1135,6 +1420,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      registrar_hub: { Args: { p_itens: Json; p_token: string }; Returns: Json }
       registrar_produto_visto: {
         Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
         Returns: undefined
@@ -1231,6 +1517,30 @@ export type Database = {
           p_token: string
         }
         Returns: undefined
+      }
+      vitrine_frete: {
+        Args: { p_limite?: number }
+        Returns: {
+          chave: string
+          frete_gratis: boolean
+          melhor_frete_gratis: boolean
+        }[]
+      }
+      vitrine_menor_preco: {
+        Args: { p_limite?: number }
+        Returns: {
+          chave: string
+          imagem: string
+          link: string
+          loja: string
+          lojas_mais_caras: number
+          preco: number
+          segunda_loja: string
+          segunda_preco: number
+          titulo: string
+          url_produto: string
+          visto_em: string
+        }[]
       }
       vitrine_sem_foto: {
         Args: { p_limite?: number; p_token: string }
