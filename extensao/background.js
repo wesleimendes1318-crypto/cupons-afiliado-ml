@@ -786,13 +786,20 @@ const PEDIDO_CONFERENCIA =
   + 'Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia. Escreva cada diferenca como "Campo: valor do original -> valor do candidato" (ex.: "Cor: branco -> preto", "Capacidade: 500 L -> 477 L").\n'
   + 'vantagem: o que o candidato oferece A MAIS que o original, de forma objetiva e curta (conjunto completo x so '
   + 'uma peca, kit com mais unidades, volume maior, versao superior); vazio quando nao ha.\n'
+  + 'qualidade: compare a QUALIDADE do candidato com a do original, pelo que os dois informam (titulo, ficha, '
+  + 'foto) e pelo que se sabe do modelo/linha: inferior quando e objetivamente pior em algo que importa no uso '
+  + '(resolucao nativa menor, menos brilho, capacidade, potencia, memoria ou armazenamento, material inferior, '
+  + 'versao de entrada ou mini da linha, marca generica no lugar de marca reconhecida); superior quando e melhor '
+  + 'nisso; equivalente quando atende o mesmo uso com o mesmo nivel; incerta quando nao da para afirmar. Nunca use '
+  + 'o preco para julgar. qualidade_motivo: curto, com o dado que sustenta (ex.: "Resolucao nativa: 1080p -> '
+  + '720p", "Mesma linha, muda so a cor").\n'
   + 'original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro '
   + 'produto que o titulo, a ficha ou a descricao descrevem (outro modelo, cor, tecido, quantidade); vazio quando '
   + 'batem. Foto ilustrativa, angulo ou fundo nao contam.\n'
   + 'parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma '
   + 'compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so '
   + 'marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n'
-  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","confianca":0-100,"motivo":"curto"}]}';
+  + 'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","qualidade":"equivalente","qualidade_motivo":"","confianca":0-100,"motivo":"curto"}]}';
 
 /* Segunda opiniao (mesma regra do servidor): todo "igual" e conferido de novo,
    foto com foto, de preferencia por outro modelo. */
@@ -830,6 +837,10 @@ function lerVereditosIA(lista, total) {
                mesmaFoto: c.mesma_foto === true,
                semelhanca: Number.isFinite(sem) ? Math.max(0, Math.min(100, Math.round(sem))) : null,
                vantagem: String(c.vantagem || '').trim().slice(0, 90) || null,
+               /* Qualidade x original (05/10): so os 4 valores aceitos. */
+               qualidade: ['superior', 'equivalente', 'inferior', 'incerta'].includes(String(c.qualidade || '').toLowerCase())
+                 ? String(c.qualidade).toLowerCase() : null,
+               qualidadeMotivo: String(c.qualidade_motivo || '').trim().slice(0, 90) || null,
                confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)), motivo: motivo.slice(0, 140) };
     });
 }
@@ -3067,6 +3078,8 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
             preco: c.preco, muda: String(a.motivo || '').slice(0, 140),
             mesmaFoto: a.mesmaFoto === true, semelhanca: a.semelhanca != null ? a.semelhanca : null,
             vantagem: a.vantagem || null, daBuscaOficial: c.origem === 'oficiais',
+            /* Qualidade x colado pela conferencia (05/10); a regra final e do site. */
+            qualidade: a.qualidade || null, qualidadeMotivo: a.qualidadeMotivo || null,
             /* Veio das sugestoes da propria pagina do anuncio (03/10). */
             sugerido: c.origem === 'relacionados',
             lojaOficial: c.origem === 'oficiais' ? true : null,

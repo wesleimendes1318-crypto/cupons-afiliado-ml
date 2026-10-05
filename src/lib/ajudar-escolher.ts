@@ -12,6 +12,7 @@ import {
 } from "@/lib/alternativa";
 import { baixarFoto, gerarComModelos, lerJson } from "@/lib/conferir-produto";
 import { mudaCompleta } from "@/lib/ficha";
+import { qualidadeAceita, qualidadeDoParecido } from "@/lib/qualidade";
 import { perguntarAoGpt } from "@/lib/gpt";
 
 type Detalhes = {
@@ -37,6 +38,10 @@ export type Opcao = {
   vantagem: string | null;
   semelhanca: number | null;
   mesmaFoto: boolean;
+  /* Veredito de qualidade da conferência (05/10): superior | equivalente |
+     inferior | incerta. A regra final é qualidadeDoParecido. */
+  qualidade?: string | null;
+  qualidadeMotivo?: string | null;
   detalhes: Detalhes;
   /* Foto do anúncio e { cheio, pix, parcelas } lidos na página (28/09). */
   imagem: string | null;
@@ -150,6 +155,8 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       vantagem: txt(p["vantagem"]),
       semelhanca: num(p["semelhanca"]),
       mesmaFoto: p["mesmaFoto"] === true,
+      qualidade: txt(p["qualidade"]),
+      qualidadeMotivo: txt(p["qualidadeMotivo"]),
       detalhes: (p["detalhes"] as Detalhes) ?? null,
       imagem: txt(p["imagem"]),
       precos: (p["precos"] as Bruto) ?? null,
@@ -211,7 +218,11 @@ export function decisaoDaTela(opcoes: Opcao[]) {
               o.tipo === "parecido" &&
               o.freteGratis !== false &&
               ((o.semelhanca ?? 0) >= 85 || o.mesmaFoto) &&
-              podeSerAlternativa(o, base).ok,
+              podeSerAlternativa(o, base).ok &&
+              /* Premissa (05/10): qualidade equivalente ou superior. */
+              qualidadeAceita(
+                qualidadeDoParecido(o, { titulo: tituloColado, detalhes: colado?.detalhes }),
+              ),
           )
           .sort((x, y) => nota(y) - nota(x) || x.preco - y.preco)[0] ?? null);
   return { colado, melhorMesmo, alternativa };

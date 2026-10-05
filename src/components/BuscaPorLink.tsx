@@ -40,6 +40,12 @@ import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
 import { roboAtivo } from "@/lib/robo";
 import { registrarInteracaoVisitante } from "@/lib/perfil-visitante";
+import {
+  qualidadeAceita,
+  qualidadeDoParecido,
+  textoDaQualidade,
+  type Qualidade,
+} from "@/lib/qualidade";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -321,6 +327,10 @@ type Analise = {
     sugerido?: boolean | null;
     /* O que tem A MAIS que o anúncio colado (conjunto completo, kit maior). */
     vantagem?: string | null;
+    /* Qualidade x o colado, pela conferência (05/10): superior | equivalente
+       | inferior | incerta, com o dado que sustenta. */
+    qualidade?: string | null;
+    qualidadeMotivo?: string | null;
     /* Loja que vende (sempre que lida) e selo MercadoLíder dela. */
     vendedor?: string | null;
     mercadoLider?: "platinum" | "gold" | "silver" | null;
@@ -1859,7 +1869,9 @@ function Resultado({
               p.freteGratis !== false &&
               Boolean(p.link || p.url) &&
               ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true) &&
-              podeSerAlternativa(p, baseAlt).ok,
+              podeSerAlternativa(p, baseAlt).ok &&
+              /* Premissa (Weslei, 05/10): qualidade equivalente ou superior. */
+              qualidadeAceita(qualidadeDoParecido(p, { titulo: a?.titulo, detalhes: a?.detalhes })),
           )
           .sort((x, y) => notaAlt(y) - notaAlt(x) || x.preco - y.preco)[0] ?? null);
   /* Parecido com a MESMA foto do anúncio colado: sinal de que a foto do
@@ -2824,13 +2836,14 @@ function MelhorAlternativa({
         </ul>
       )}
 
-      {p.muda ? (
+      {p.muda || p.qualidade ? (
         <OQueMuda
           muda={p.muda}
           tituloColado={textoDoColado}
           detalhesColado={detalhesColado}
           detalhesOutro={p.detalhes}
           titulo="Não é idêntico ao anúncio que você colou. O que muda para você:"
+          qualidade={qualidadeDoParecido(p, { titulo: textoDoColado, detalhes: detalhesColado })}
         />
       ) : (
         <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
@@ -3179,6 +3192,7 @@ function OQueMuda({
   detalhesOutro = null,
   extras = [],
   titulo = "O que muda para você",
+  qualidade = null,
 }: {
   muda: string | null | undefined;
   tituloColado: string | null | undefined;
@@ -3186,6 +3200,7 @@ function OQueMuda({
   detalhesOutro?: Detalhes | null | undefined;
   extras?: LinhaMuda[];
   titulo?: string;
+  qualidade?: Qualidade | null;
 }) {
   const linhas: LinhaMuda[] = [
     ...diferencasParaCliente(muda, tituloColado, detalhesColado),
@@ -3197,44 +3212,64 @@ function OQueMuda({
   const iguais = compararFichas(detalhesColado, detalhesOutro).iguais.filter(
     (i) => !mudam.has(i.campo.toLowerCase()),
   );
-  if (!linhas.length) return null;
+  if (!linhas.length && !qualidade) return null;
   return (
     <div className="mt-2 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
       <p className="font-bold">{titulo}</p>
-      <ul className="mt-1 divide-y divide-amber-200/70 dark:divide-amber-800/50">
-        {linhas.map((l, k) => (
-          <li key={k} className="py-1 first:pt-0 last:pb-0">
-            {l.campo && (l.seu || l.este) ? (
-              <p className="flex flex-wrap items-baseline gap-x-1.5 leading-snug">
-                <span className="font-semibold">{l.campo}:</span>
-                {l.seu && (
-                  <span className="whitespace-nowrap">
-                    <span className="text-amber-800/80 dark:text-amber-200/70">o seu</span>{" "}
-                    <strong>{l.seu}</strong>
-                  </span>
-                )}
-                {l.este && (
-                  <span className="whitespace-nowrap">
-                    {l.seu && <span aria-hidden="true">→ </span>}
-                    <span className="text-amber-800/80 dark:text-amber-200/70">este</span>{" "}
-                    <strong>{l.este}</strong>
-                  </span>
-                )}
-              </p>
-            ) : (
-              <p className="leading-snug">
-                <span className="font-semibold">{l.texto ?? l.campo}</span>
-              </p>
-            )}
-            {l.significa && (
-              <p className="mt-0.5 leading-snug text-amber-900/90 dark:text-amber-200/90">
-                <span aria-hidden="true">↳ </span>
-                {l.significa}
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
+      {qualidade && (
+        /* Premissa (05/10): qualidade vem antes do preço na decisão. */
+        <p
+          className={
+            "mt-1 font-semibold leading-snug " +
+            (qualidade.nivel === "inferior"
+              ? "text-danger"
+              : qualidade.nivel === "incerta"
+                ? "text-amber-800 dark:text-amber-200"
+                : "text-success")
+          }
+        >
+          <span aria-hidden="true">
+            {qualidade.nivel === "inferior" ? "⚠ " : qualidade.nivel === "incerta" ? "? " : "✓ "}
+          </span>
+          {textoDaQualidade(qualidade)}
+        </p>
+      )}
+      {linhas.length > 0 && (
+        <ul className="mt-1 divide-y divide-amber-200/70 dark:divide-amber-800/50">
+          {linhas.map((l, k) => (
+            <li key={k} className="py-1 first:pt-0 last:pb-0">
+              {l.campo && (l.seu || l.este) ? (
+                <p className="flex flex-wrap items-baseline gap-x-1.5 leading-snug">
+                  <span className="font-semibold">{l.campo}:</span>
+                  {l.seu && (
+                    <span className="whitespace-nowrap">
+                      <span className="text-amber-800/80 dark:text-amber-200/70">o seu</span>{" "}
+                      <strong>{l.seu}</strong>
+                    </span>
+                  )}
+                  {l.este && (
+                    <span className="whitespace-nowrap">
+                      {l.seu && <span aria-hidden="true">→ </span>}
+                      <span className="text-amber-800/80 dark:text-amber-200/70">este</span>{" "}
+                      <strong>{l.este}</strong>
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="leading-snug">
+                  <span className="font-semibold">{l.texto ?? l.campo}</span>
+                </p>
+              )}
+              {l.significa && (
+                <p className="mt-0.5 leading-snug text-amber-900/90 dark:text-amber-200/90">
+                  <span aria-hidden="true">↳ </span>
+                  {l.significa}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {iguais.length > 0 && (
         <p className="mt-1.5 border-t border-amber-200/70 pt-1.5 leading-snug text-success dark:border-amber-800/50">
           <span aria-hidden="true">✓ </span>
@@ -3449,6 +3484,10 @@ function Parecidos({
                 tituloColado={textoDoColado}
                 detalhesColado={detalhesColado}
                 detalhesOutro={p.detalhes}
+                qualidade={qualidadeDoParecido(p, {
+                  titulo: textoDoColado,
+                  detalhes: detalhesColado,
+                })}
                 extras={[
                   ...(porMedida && m && mColado && m.qtd !== mColado.qtd && precoColado != null
                     ? [

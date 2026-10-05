@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
 import { naoEAlternativa } from "@/lib/alternativa";
 import { diferencasParaCliente } from "@/lib/diferencas";
+import { qualidadeDoParecido, textoDaQualidade, type Qualidade } from "@/lib/qualidade";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -48,6 +49,8 @@ type Achado = {
   muda: string | null;
   link: string;
   opcao: Opcao;
+  /* Qualidade x o anúncio comparado (premissa de 05/10). */
+  qualidade: Qualidade | null;
 };
 
 function achadoDoPedido(p: {
@@ -82,6 +85,10 @@ function achadoDoPedido(p: {
     muda: escolha.muda,
     link: escolha.link,
     opcao: escolha,
+    qualidade:
+      escolha.tipo === "parecido"
+        ? qualidadeDoParecido(escolha, { titulo: colado.titulo, detalhes: colado.detalhes })
+        : null,
   };
 }
 
@@ -109,6 +116,9 @@ function mensagem(x: Achado) {
     x.tipo === "parecido"
       ? `⚠️ Parecido com "${html(x.titulo)}", não é idêntico.${x.muda ? ` Muda: ${html(textoDoMuda(x.muda, x.titulo))}` : ""}`
       : "✅ Mesmo produto, em outra loja",
+    x.qualidade
+      ? `${x.qualidade.nivel === "superior" ? "⭐" : "✅"} ${html(textoDaQualidade(x.qualidade))}`
+      : null,
     `💰 <b>${brl(x.preco)}</b> (anúncio comparado: ${brl(x.precoColado)})`,
     `💸 ${brl(x.economia)} a menos no produto`,
     linhaDoFrete(x.opcao),

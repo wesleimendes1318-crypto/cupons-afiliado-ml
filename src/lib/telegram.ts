@@ -1,5 +1,6 @@
 import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
+import { qualidadeDoParecido, textoDaQualidade } from "@/lib/qualidade";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
 
@@ -114,6 +115,12 @@ export function mensagemDaComparacao(
       alternativa.muda
         ? `ℹ️ Muda: ${html(alternativa.muda)}`
         : "ℹ️ Muda um detalhe: confira antes de comprar",
+      /* Premissa (05/10): a alternativa só existe com qualidade equivalente ou melhor. */
+      `✅ ${html(
+        textoDaQualidade(
+          qualidadeDoParecido(alternativa, { titulo: colado?.titulo, detalhes: colado?.detalhes }),
+        ),
+      ).replace("à do seu", "à do que você enviou")}`,
       `👉 ${html(alternativa.link)}`,
     );
   }

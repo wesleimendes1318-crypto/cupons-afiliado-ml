@@ -417,6 +417,8 @@ export type Conferencia =
         mesmaFoto?: boolean;
         semelhanca?: number | null;
         vantagem?: string | null;
+        qualidade?: string | null;
+        qualidadeMotivo?: string | null;
       }>;
     }
   | {
@@ -436,6 +438,8 @@ export type Conferencia =
         mesmaFoto?: boolean;
         semelhanca?: number | null;
         vantagem?: string | null;
+        qualidade?: string | null;
+        qualidadeMotivo?: string | null;
       }>;
     };
 
@@ -453,6 +457,8 @@ type Veredito = {
   parecido?: boolean;
   mesmaFoto?: boolean;
   semelhanca?: number | null;
+  qualidade?: string | null;
+  qualidadeMotivo?: string | null;
 };
 
 async function vereditosGuardados(original: string, chaves: string[]) {
@@ -462,7 +468,9 @@ async function vereditosGuardados(original: string, chaves: string[]) {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("ia_vereditos" as never)
-      .select("chave_candidato,igual,confianca,motivo,parecido,mesma_foto,semelhanca")
+      .select(
+        "chave_candidato,igual,confianca,motivo,parecido,mesma_foto,semelhanca,qualidade,qualidade_motivo",
+      )
       .eq("chave_original" as never, original as never)
       .in("chave_candidato" as never, chaves as never)
       .gte(
@@ -474,8 +482,12 @@ async function vereditosGuardados(original: string, chaves: string[]) {
         chave_candidato: string;
         mesma_foto?: boolean | null;
         semelhanca?: number | null;
+        qualidade_motivo?: string | null;
       } & Veredito
     >) {
+      /* Parecido guardado antes do veredito de qualidade (05/10) é
+         conferido de novo: sem ele não pode virar recomendação. */
+      if (l.parecido === true && !l.qualidade) continue;
       mapa.set(l.chave_candidato, {
         igual: l.igual,
         confianca: l.confianca,
@@ -483,6 +495,8 @@ async function vereditosGuardados(original: string, chaves: string[]) {
         parecido: l.parecido === true,
         mesmaFoto: l.mesma_foto === true,
         semelhanca: l.semelhanca ?? null,
+        qualidade: l.qualidade ?? null,
+        qualidadeMotivo: l.qualidade_motivo ?? null,
       });
     }
   } catch {
@@ -509,6 +523,8 @@ async function guardarVereditos(
         parecido: l.parecido === true,
         mesma_foto: l.mesmaFoto === true,
         semelhanca: l.semelhanca ?? null,
+        qualidade: l.qualidade ?? null,
+        qualidade_motivo: l.qualidadeMotivo ?? null,
         modelo,
         criado_em: new Date().toISOString(),
       })) as never,
@@ -571,6 +587,8 @@ export async function conferirMesmoProduto(
     mesmaFoto?: boolean;
     semelhanca?: number | null;
     vantagem?: string | null;
+    qualidade?: string | null;
+    qualidadeMotivo?: string | null;
   }> = [];
   lista.forEach((c, i) => {
     const g = guardados.get((c.chave ?? "").trim());
@@ -593,6 +611,8 @@ export async function conferirMesmoProduto(
           parecido: a.parecido === true,
           mesmaFoto: a.mesmaFoto === true,
           semelhanca: a.semelhanca ?? null,
+          qualidade: a.qualidade ?? null,
+          qualidadeMotivo: a.qualidadeMotivo ?? null,
         });
     }
     await guardarVereditos(chaveOriginal, paraGuardar, novo.modelo);
@@ -659,13 +679,20 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
       "Em diferencas liste so essas contradicoes (vazio se nenhuma). igual=true so com diferencas vazia. Escreva cada diferenca como 'Campo: valor do original -> valor do candidato' (ex.: 'Cor: branco -> preto', 'Capacidade: 500 L -> 477 L').\n" +
       "vantagem: o que o candidato oferece A MAIS que o original, de forma objetiva e curta (conjunto completo x so " +
       "uma peca, kit com mais unidades, volume maior, versao superior); vazio quando nao ha.\n" +
+      "qualidade: compare a QUALIDADE do candidato com a do original, pelo que os dois informam (titulo, ficha, " +
+      "foto) e pelo que se sabe do modelo/linha: inferior quando e objetivamente pior em algo que importa no uso " +
+      "(resolucao nativa menor, menos brilho, capacidade, potencia, memoria ou armazenamento, material inferior, " +
+      "versao de entrada ou mini da linha, marca generica no lugar de marca reconhecida); superior quando e melhor " +
+      "nisso; equivalente quando atende o mesmo uso com o mesmo nivel; incerta quando nao da para afirmar. Nunca use " +
+      "o preco para julgar. qualidade_motivo: curto, com o dado que sustenta (ex.: 'Resolucao nativa: 1080p -> " +
+      "720p', 'Mesma linha, muda so a cor').\n" +
       "original_contradiz: texto curto quando o PROPRIO anuncio original se contradiz, com a foto mostrando outro " +
       "produto que o titulo, a ficha ou a descricao descrevem (outro modelo, cor, tecido, quantidade); vazio quando " +
       "batem. Foto ilustrativa, angulo ou fundo nao contam.\n" +
       "parecido=true quando NAO e o mesmo produto mas serve como alternativa: mesmo tipo e mesma funcao, mesma " +
       "compatibilidade (mesmo modelo de celular, mesma voltagem, mesmo tamanho) e quantidade parecida; muda so " +
       "marca, cor, estampa ou detalhe. Outro modelo de celular, outro tamanho ou outro tipo de produto: parecido=false.\n" +
-      'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","confianca":0-100,"motivo":"curto"}]}',
+      'Responda so JSON: {"descricao_original":"...","original_contradiz":"","candidatos":[{"indice":0,"diferencas":["..."],"igual":false,"parecido":false,"mesma_foto":false,"semelhanca":0,"vantagem":"","qualidade":"equivalente","qualidade_motivo":"","confianca":0-100,"motivo":"curto"}]}',
   };
 
   /* Dois lotes em paralelo (27/09): 8 candidatos de uma vez passaram do
@@ -896,7 +923,11 @@ type VereditoIA = {
   mesma_foto?: boolean;
   semelhanca?: number;
   vantagem?: string;
+  qualidade?: string;
+  qualidade_motivo?: string;
 };
+
+const NIVEIS_QUALIDADE = new Set(["superior", "equivalente", "inferior", "incerta"]);
 
 /* Qualquer diferenca listada derruba o "igual", diga a IA o que disser. */
 function lerVereditos(lista: VereditoIA[], total: number) {
@@ -932,6 +963,14 @@ function lerVereditos(lista: VereditoIA[], total: number) {
         semelhanca: Number.isFinite(sem) ? Math.max(0, Math.min(100, Math.round(sem))) : null,
         vantagem:
           String(c.vantagem ?? "")
+            .trim()
+            .slice(0, 90) || null,
+        /* Qualidade x original (05/10): só os 4 valores aceitos. */
+        qualidade: NIVEIS_QUALIDADE.has(String(c.qualidade ?? "").toLowerCase())
+          ? String(c.qualidade).toLowerCase()
+          : null,
+        qualidadeMotivo:
+          String(c.qualidade_motivo ?? "")
             .trim()
             .slice(0, 90) || null,
         confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),

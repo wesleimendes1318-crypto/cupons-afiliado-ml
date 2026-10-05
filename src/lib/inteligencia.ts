@@ -254,3 +254,29 @@ export async function prepararRevalidacao(db: Db) {
   }
   return { ok: true, candidatos: candidatos.length, pedidos };
 }
+
+/* REMOVER POST DO CANAL (05/10): só posts registrados pelo garimpo
+   (canal_publicacoes, com message_id). Usado quando um post deixa de cumprir
+   a premissa (ex.: alternativa sem qualidade equivalente). Fica registrado
+   quando e por quê. */
+export async function removerPublicacao(db: Db, id: number, motivo: string) {
+  const token = process.env["API_TELEGRAM"];
+  const canal = process.env["TELEGRAM_CANAL_ID"];
+  if (!token || !canal) return { ok: false, erro: "canal ou token não configurado" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = db as any;
+  const { data: pub } = await t
+    .from("canal_publicacoes")
+    .select("id,message_id,titulo,removida_em")
+    .eq("id", id)
+    .maybeSingle();
+  if (!pub?.message_id) return { ok: false, erro: "publicação sem message_id" };
+  if (pub.removida_em) return { ok: true, jaRemovida: true };
+  const r = await telegram(token, "deleteMessage", { chat_id: canal, message_id: pub.message_id });
+  if (!r?.ok) return { ok: false, erro: r?.description ?? "sem resposta do Telegram" };
+  await t
+    .from("canal_publicacoes")
+    .update({ removida_em: new Date().toISOString(), removida_motivo: motivo.slice(0, 200) })
+    .eq("id", id);
+  return { ok: true, removida: pub.titulo };
+}

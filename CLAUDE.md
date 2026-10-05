@@ -84,6 +84,23 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
     título do parecido ("3s" = "3 listras"), depois o mais barato
     (notaDeAlternativa = alternativa_da_analise; 28/09: o Linear R$ 3,70 mais
     barato tomou o lugar do Woven, o modelo mais próximo).
+  - PREMISSA DE QUALIDADE (Weslei, 05/10: "a recomendação não deve oferecer
+    somente o menor valor, mas também a melhor qualidade ou equivalente do
+    que foi buscado. Isso é uma premissa"; caso: projetor L018 Full HD x
+    Magcubic HY300 Pro mini/720p pela metade do preço saiu como alternativa e
+    no canal). Melhor alternativa (site, "Me ajude a escolher", bot, canal,
+    vitrine) só com qualidade EQUIVALENTE ou SUPERIOR (src/lib/qualidade.ts,
+    qualidadeDoParecido/qualidadeAceita): 1) piora objetiva veta (resolução
+    nativa menor, menos brilho/capacidade/armazenamento/memória/potência/
+    bateria, versão mini); 2) veredito da conferência (campo qualidade +
+    qualidade_motivo no prompt do servidor e da extensão, guardado em
+    ia_vereditos; parecido guardado sem qualidade é conferido de novo);
+    3) só muda cor/acabamento/estampa -> equivalente; 4) senão "incerta" e
+    não recomenda (continua nos Parecidos com "Qualidade não confirmada").
+    Parecidos e Melhor alternativa mostram a qualidade (✓ equivalente/
+    superior, ⚠ inferior, ? não confirmada); canal e bot também. Banco:
+    alternativa_da_analise com a mesma premissa (sem comparar fichas).
+    Nunca julgar qualidade pelo preço.
   - Parecidos com o aviso "Mesma foto do anúncio colado" quando for o caso
     (ordem: ver "Parecidos" em Texto e visual).
   - "Parecidos" (mesmo tipo e compatibilidade, muda marca/detalhe) aparecem
@@ -373,7 +390,8 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (mais velha = rascunho). Até 2 por chamada, cada achado 1 vez em 7 dias
   (tabela canal_publicacoes, com message_id e versão dos critérios);
   resposta ambígua do Telegram conta como publicada (não repete às cegas).
-  ?simular=1 só lista.
+  ?simular=1 só lista. Remover post: /api/public/operacao?tarefa=remover&
+  publicacao=<id> (só sob pedido; canal_publicacoes.removida_em/motivo).
 
 ## Operação de inteligência (05/10)
 - ROTINA NO BANCO (pg_cron + pg_net, disparar_operacao; horários de
