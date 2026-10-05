@@ -14,6 +14,8 @@ export type Preferencias = {
 
 export const VERSAO_CONSENTIMENTO = 1;
 const CHAVE = "consentimento-cookies";
+/* Mesma chave de src/lib/perfil-visitante.ts. */
+const CHAVE_PERFIL = "melhorescolha_perfil";
 
 const OUVINTES = new Set<(p: Preferencias | null) => void>();
 
@@ -36,7 +38,10 @@ export function lerConsentimento(): Preferencias | null {
   }
 }
 
-export function salvarConsentimento(escolha: { analise: boolean; publicidade: boolean }): Preferencias {
+export function salvarConsentimento(escolha: {
+  analise: boolean;
+  publicidade: boolean;
+}): Preferencias {
   const preferencias: Preferencias = {
     essenciais: true,
     analise: escolha.analise,
@@ -47,6 +52,9 @@ export function salvarConsentimento(escolha: { analise: boolean; publicidade: bo
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(CHAVE, JSON.stringify(preferencias));
+      /* Sem consentimento de análise, o perfil de interesses (perfil-visitante)
+         não pode ficar guardado. */
+      if (!escolha.analise) window.localStorage.removeItem(CHAVE_PERFIL);
     } catch {
       /* navegação privada pode bloquear; a preferência vale só para esta visita */
     }
@@ -59,6 +67,7 @@ export function limparConsentimento() {
   if (typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(CHAVE);
+      window.localStorage.removeItem(CHAVE_PERFIL);
     } catch {
       /* ignora */
     }

@@ -39,6 +39,7 @@ import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
 import { roboAtivo } from "@/lib/robo";
+import { registrarInteracaoVisitante } from "@/lib/perfil-visitante";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -343,6 +344,8 @@ type Analise = {
   linksPendentes?: boolean | null;
   /* Frete do anúncio colado: true grátis, false pago, null não sei. */
   freteGratis?: boolean | null;
+  /* Categoria do anúncio colado (breadcrumb), lida na página. */
+  categoria?: string | null;
   /* CEP do cliente (02/10): com ele, o frete de cada loja foi simulado para
      esse CEP pela API oficial; custoFrete = do anúncio colado. */
   cepDestino?: string | null;
@@ -697,6 +700,62 @@ function Historico({
   );
 }
 
+/* CONTINUAR DE ONDE PAROU (05/10): as últimas comparações do aparelho em
+   atalhos logo abaixo do campo, com a caixa parada. Um toque compara de novo. */
+function ContinuarDeOndeParou({
+  lista,
+  comparar,
+  limpar,
+}: {
+  lista: ItemHistorico[];
+  comparar: (url: string) => void;
+  limpar: () => void;
+}) {
+  if (!lista.length) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-secondary-ink">
+      <span className="inline-flex items-center gap-1 font-medium">
+        <History className="size-3.5" aria-hidden="true" />
+        Continuar de onde parou:
+      </span>
+      {lista.slice(0, 4).map((h) => (
+        <button
+          key={h.url}
+          type="button"
+          onClick={() => comparar(h.url)}
+          title="Comparar de novo com o preço de agora"
+          className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 font-medium text-foreground transition-colors hover:border-ml-blue hover:bg-muted"
+        >
+          <span className="max-w-[140px] truncate">{h.titulo}</span>
+          {h.economia != null && (
+            <span className="shrink-0 font-semibold tabular-nums text-success">
+              {brl(h.economia)} a menos
+            </span>
+          )}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={limpar}
+        className="text-[11px] font-semibold text-secondary-ink hover:underline"
+      >
+        limpar
+      </button>
+    </div>
+  );
+}
+
+/* O que a comparação apontou como melhor saiu com frete grátis? (perfil de
+   interesse: só conta o que foi confirmado, nunca "não sei"). */
+function melhorComFreteGratis(a: Analise): boolean {
+  const gratis = (a.outrasLojas ?? []).filter(
+    (o) => o.freteGratis === true && typeof o.final === "number" && !o.semAfiliado,
+  );
+  const melhor = gratis.length ? Math.min(...gratis.map((o) => o.final as number)) : null;
+  if (melhor != null && (a.preco == null || melhor <= a.preco - 0.5)) return true;
+  return a.freteGratis === true;
+}
+
 export default function BuscaPorLink() {
   const [url, setUrl] = useState("");
   const [fase, setFase] = useState<Fase>("parado");
@@ -725,6 +784,7 @@ export default function BuscaPorLink() {
   const atual = useRef<number | null>(null);
   /* Link (limpo) do pedido acompanhado, para o histórico. */
   const urlDoPedido = useRef<string | null>(null);
+  const perfilRegistrado = useRef<string | null>(null);
 
   const limparTimers = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -962,6 +1022,18 @@ export default function BuscaPorLink() {
     if (fase !== "pronto" || !pedido?.analise || !alvo) return;
     const item = itemDoHistorico(alvo, pedido.analise);
     if (!item) return;
+    /* Perfil de interesse (só com consentimento de análise): uma vez por
+       pedido, mesmo que a segunda volta atualize a análise. */
+    const marca = `${atual.current ?? ""}|${alvo}`;
+    if (perfilRegistrado.current !== marca) {
+      perfilRegistrado.current = marca;
+      registrarInteracaoVisitante({
+        titulo: item.titulo,
+        preco: item.melhor ?? pedido.analise.preco,
+        categoria: pedido.analise.categoria ?? null,
+        freteGratisEscolhido: melhorComFreteGratis(pedido.analise),
+      });
+    }
     setHistorico((h) => {
       const nova = [item, ...h.filter((x) => x.url !== alvo)].slice(0, 5);
       gravarHistorico(nova);
@@ -1021,6 +1093,19 @@ export default function BuscaPorLink() {
         </button>
       </div>
       <SeloCep regiao={regiao} trocar={trocarCep} />
+      {fase === "parado" && !pedido && (
+        <ContinuarDeOndeParou
+          lista={historico}
+          comparar={(alvo) => {
+            setUrl(alvo);
+            void buscar(alvo);
+          }}
+          limpar={() => {
+            gravarHistorico([]);
+            setHistorico([]);
+          }}
+        />
+      )}
 
       {erro && <p className="mt-3 text-sm font-medium text-danger">{erro}</p>}
 
@@ -1050,7 +1135,8 @@ export default function BuscaPorLink() {
 
       {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} motivo={motivo} />}
 
-      {!carregando && (
+      {/* Com a caixa parada as últimas comparações já aparecem em atalhos acima. */}
+      {!carregando && !(fase === "parado" && !pedido) && (
         <Historico
           lista={historico.filter((h) => !(fase === "pronto" && h.url === urlDoPedido.current))}
           comparar={(alvo) => {

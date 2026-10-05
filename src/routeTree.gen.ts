@@ -30,6 +30,7 @@ import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
+import { Route as ApiPublicCronGarimpoRouteImport } from './routes/api/public/cron-garimpo'
 import { Route as ApiPublicFreteCepRouteImport } from './routes/api/public/frete-cep'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
@@ -148,6 +149,11 @@ const ApiPublicConferirProdutoRoute =
     path: '/api/public/conferir-produto',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronGarimpoRoute = ApiPublicCronGarimpoRouteImport.update({
+  id: '/api/public/cron-garimpo',
+  path: '/api/public/cron-garimpo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicFreteCepRoute = ApiPublicFreteCepRouteImport.update({
   id: '/api/public/frete-cep',
   path: '/api/public/frete-cep',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
+  '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
+  '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
+  '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
+    | '/api/public/cron-garimpo'
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
+    | '/api/public/cron-garimpo'
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
+    | '/api/public/cron-garimpo'
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/mesmo-produto'
@@ -424,6 +436,7 @@ export interface RootRouteChildren {
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
+  ApiPublicCronGarimpoRoute: typeof ApiPublicCronGarimpoRoute
   ApiPublicFreteCepRoute: typeof ApiPublicFreteCepRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
@@ -585,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicConferirProdutoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron-garimpo': {
+      id: '/api/public/cron-garimpo'
+      path: '/api/public/cron-garimpo'
+      fullPath: '/api/public/cron-garimpo'
+      preLoaderRoute: typeof ApiPublicCronGarimpoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/frete-cep': {
       id: '/api/public/frete-cep'
       path: '/api/public/frete-cep'
@@ -681,6 +701,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
+  ApiPublicCronGarimpoRoute: ApiPublicCronGarimpoRoute,
   ApiPublicFreteCepRoute: ApiPublicFreteCepRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,

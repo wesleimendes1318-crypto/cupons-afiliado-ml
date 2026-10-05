@@ -45,7 +45,7 @@ export function linkDoAnuncio(texto: string): string | null {
 }
 
 /* Frete sempre em linha própria (pedido 563): nunca "R$ X a menos + frete". */
-function linhaDoFrete(o: Opcao) {
+export function linhaDoFrete(o: Opcao) {
   if (o.freteGratis === true) return "🚚 Frete grátis";
   if (o.freteGratis === false)
     return o.custoFrete != null && o.custoFrete > 0

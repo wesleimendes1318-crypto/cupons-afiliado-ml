@@ -342,6 +342,26 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Liga/desliga: sinc_config.monitor_ativo. Tabelas monitor_precos e
   monitor_seguidores (só funções security definer; leitura pelo navegador).
 
+## Perfil anônimo e garimpo (05/10)
+- PERFIL DE INTERESSE (src/lib/perfil-visitante.ts): só no navegador
+  (localStorage "melhorescolha_perfil"), só com consentimento de análise
+  (sem ele não lê nem grava; recusar apaga). Guarda só contagem por tipo de
+  produto (categoria do anúncio primeiro, depois o título), preço médio e se
+  escolheu frete grátis; nada pessoal. Uma vez por pedido.
+- Vitrine: em "Pesquisados agora" o tipo mais comparado (>= 2 comparações)
+  sobe, e em "Todas" aparece "Do seu interesse" (até 5, maior economia) com
+  "Limpar histórico de interesses".
+- "Continuar de onde parou": atalhos das últimas comparações do aparelho
+  (me_historico_v1) abaixo do campo do link, com a caixa parada.
+- /api/public/cron-garimpo (cabeçalho x-cron-secret = CRON_SECRET ou o token
+  do bot): pedidos prontos das últimas 24 h, mesma decisão da tela
+  (opcoesDaAnalise + decisaoDaTela), economia >= R$ 30 no produto, link
+  meli.la, frete grátis ou com valor conhecido, sem peça no lugar do aparelho
+  nem alternativa que "vem menos", só produto da vitrine. Com
+  TELEGRAM_CANAL_ID publica até 3 por chamada (cada achado 1 vez em 7 dias,
+  sinc_config.garimpo_enviados); ?simular=1 só lista. Diagnóstico em
+  sinc_config.garimpo_ultimo.
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

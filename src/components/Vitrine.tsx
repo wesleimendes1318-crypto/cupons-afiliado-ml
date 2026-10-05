@@ -11,6 +11,14 @@ import { BadgeCheck, RefreshCw, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  EVENTO_PERFIL,
+  clusterPredominante,
+  detectarCluster,
+  limparPerfil,
+  obterPerfil,
+  type ClusterInteresse,
+} from "@/lib/perfil-visitante";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -51,6 +59,9 @@ type ItemVitrine = {
 /* Maior economia que a comparação achou: a do mesmo produto ou, quando maior,
    a da melhor alternativa (parecido), que o selo diz "Até R$ X de desconto". */
 const maiorEconomia = (i: ItemVitrine) => Math.max(i.economia ?? 0, i.alt_economia ?? 0);
+
+const doInteresse = (i: ItemVitrine, c: ClusterInteresse) =>
+  detectarCluster(i.titulo ?? "", i.categoria) === c;
 
 /* Código de cupom já gerado da loja, pronto para copiar. */
 function CupomDaLoja({ codigo, desconto }: { codigo: string; desconto: string | null }) {
@@ -106,6 +117,15 @@ export function Vitrine() {
   const [itens, setItens] = useState<ItemVitrine[]>([]);
   const [aba, setAba] = useState<Aba>("recentes");
   const [categoria, setCategoria] = useState<string | null>(null);
+  /* Interesse principal do visitante (perfil anônimo do navegador, só com
+     consentimento de análise). Lido depois de montar: o servidor não conhece. */
+  const [interesse, setInteresse] = useState<ClusterInteresse | null>(null);
+  useEffect(() => {
+    const ler = () => setInteresse(clusterPredominante(obterPerfil()));
+    ler();
+    window.addEventListener(EVENTO_PERFIL, ler);
+    return () => window.removeEventListener(EVENTO_PERFIL, ler);
+  }, []);
 
   useEffect(() => {
     let vivo = true;
@@ -133,8 +153,24 @@ export function Vitrine() {
     if (aba === "economias")
       l = l.filter((i) => maiorEconomia(i) > 0).sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
+    /* Em "Pesquisados agora", o que é do interesse do visitante sobe; o resto
+       mantém a ordem da aba (o mais recente primeiro). */
+    if (interesse && aba === "recentes")
+      l = [...l].sort(
+        (a, b) => Number(doInteresse(b, interesse)) - Number(doInteresse(a, interesse)),
+      );
     return l.slice(0, categoria == null ? 120 : 48);
-  }, [itens, aba, categoria]);
+  }, [itens, aba, categoria, interesse]);
+
+  /* "Do seu interesse": até 5 do tipo que o visitante mais compara, na aba
+     aberta, com a maior economia primeiro. */
+  const paraVoce = useMemo(() => {
+    if (!interesse || categoria != null) return [];
+    return lista
+      .filter((i) => doInteresse(i, interesse))
+      .sort((a, b) => maiorEconomia(b) - maiorEconomia(a))
+      .slice(0, 5);
+  }, [lista, interesse, categoria]);
 
   if (!itens.length) return null;
 
@@ -210,6 +246,33 @@ export function Vitrine() {
       ) : categoria == null ? (
         /* "Todas": uma seção por categoria, cada uma com seus produtos. */
         <div className="mt-4 space-y-7">
+          {paraVoce.length > 0 && (
+            <div>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold">Do seu interesse</h3>
+                  <p className="text-xs text-secondary-ink">
+                    Recomendações baseadas nas suas últimas pesquisas (ficam só neste navegador).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    limparPerfil();
+                    setInteresse(null);
+                  }}
+                  className="text-xs font-semibold text-secondary-ink hover:underline"
+                >
+                  Limpar histórico de interesses
+                </button>
+              </div>
+              <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
+                {paraVoce.map((i) => (
+                  <Cartao key={i.chave} i={i} />
+                ))}
+              </ul>
+            </div>
+          )}
           {categorias.map((c) => {
             const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
             if (!daCategoria.length) return null;
