@@ -24,7 +24,15 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import { AcompanharPreco } from "@/components/AcompanharPreco";
 import { ComoFunciona } from "@/components/ComoFunciona";
-import { BadgeCheck, History, LoaderCircle, Package, Share2, ShieldCheck } from "lucide-react";
+import {
+  BadgeCheck,
+  History,
+  LoaderCircle,
+  Package,
+  Send,
+  Share2,
+  ShieldCheck,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   medidaDoTitulo,
@@ -206,6 +214,46 @@ function semMarca(t: string | null | undefined) {
 
 function compartilharWhatsApp(texto: string) {
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+}
+
+/* Telegram (05/10): o link de afiliado vai no campo url; o texto é o mesmo
+   da mensagem do WhatsApp, sem repetir o link. */
+function compartilharTelegram(texto: string, url: string) {
+  const semLink = texto
+    .split(url)
+    .join("")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  window.open(
+    `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(semLink)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+/* Compartilhar a indicação: WhatsApp e Telegram, sempre com o link de
+   afiliado (meli.la). */
+function BotoesCompartilhar({ texto, link }: { texto: string; link: string }) {
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => compartilharWhatsApp(texto)}
+        className="flex items-center justify-center gap-1.5 rounded-md border border-[#25D366] py-2 text-sm font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
+      >
+        <Share2 className="size-4" aria-hidden="true" />
+        WhatsApp
+      </button>
+      <button
+        type="button"
+        onClick={() => compartilharTelegram(texto, link)}
+        className="flex items-center justify-center gap-1.5 rounded-md border border-[#229ED9] py-2 text-sm font-semibold text-[#1c7fb0] transition-colors hover:bg-[#229ED9]/10"
+      >
+        <Send className="size-4" aria-hidden="true" />
+        Telegram
+      </button>
+    </div>
+  );
 }
 
 /* A mesma coisa que a pessoa quer comprar, vendida por OUTRA loja que tem
@@ -2335,16 +2383,7 @@ function Resultado({
               freteGratis: melhor ? melhor.freteGratis : a?.freteGratis,
               link: destino,
             });
-            return (
-              <button
-                type="button"
-                onClick={() => compartilharWhatsApp(texto)}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[#25D366] py-2 text-sm font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/10"
-              >
-                <Share2 className="size-4" aria-hidden="true" />
-                Compartilhar no WhatsApp
-              </button>
-            );
+            return <BotoesCompartilhar texto={texto} link={destino} />;
           })()}
 
         {pedido.codigo && (

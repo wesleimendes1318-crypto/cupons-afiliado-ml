@@ -77,7 +77,7 @@ const PERGUNTAS = [
   {
     pergunta: "O frete entra na comparação?",
     resposta:
-      "Sim. Loja sem frete grátis nunca vira a recomendação, mesmo com preço menor, porque o frete pode deixar a compra mais cara.",
+      "Sim. A recomendação olha o custo total: o produto mais o frete para o seu CEP. Se uma loja com frete pago sai mais barata no total do que uma com frete grátis, ela é indicada, e o valor do frete aparece em linha própria. Quando o valor do frete não é conhecido, a loja com frete pago nunca passa na frente.",
   },
   {
     pergunta: "Paguei mais por comprar pelo link do site?",

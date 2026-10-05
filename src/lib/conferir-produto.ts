@@ -731,11 +731,26 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     return p;
   };
   const todos = lista.map((_, i) => i);
+  /* SO O GEMMA (05/10, cota diaria da Gemini acabou): medido em producao, a
+     conferencia com 4 candidatos nao respondia em 12,6 s e a consulta saia
+     sem nenhum parecido. Sem Gemini: lotes de 2, os dois Gemma juntos (o
+     26b-a4b, mais rapido, primeiro) e prazo de 17 s. */
+  const soGemma = ordemDosModelos().every(ehGemma);
+  const porLote = soGemma ? 2 : 4;
   /* Lotes de ate 4 em paralelo (12 candidatos = 3 chamadas; garimpo, 27/09). */
   const lotes: number[][] = [];
-  for (let k = 0; k < todos.length; k += 4) lotes.push(todos.slice(k, k + 4));
-  const prazo1 = Math.max(4_000, 13_000 - (Date.now() - t0));
-  const respostas = await Promise.all(lotes.map((idx) => gerar(lote(idx), { prazo: prazo1 })));
+  for (let k = 0; k < todos.length; k += porLote) lotes.push(todos.slice(k, k + porLote));
+  const prazo1 = Math.max(4_000, (soGemma ? 17_000 : 13_000) - (Date.now() - t0));
+  const respostas = await Promise.all(
+    lotes.map((idx) =>
+      gerar(
+        lote(idx),
+        soGemma
+          ? { prazo: prazo1, ordem: [...MODELOS_GEMMA].reverse(), iniciais: 2 }
+          : { prazo: prazo1 },
+      ),
+    ),
+  );
   /* Um lote que falhou (cota, tempo) nao derruba os outros (28/09: um dos 3
      lotes passou do prazo e a consulta inteira ficou sem conferencia). Os
      candidatos dele so ficam sem veredito. Todos falharam: devolve a falha. */
@@ -803,7 +818,7 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
     : [];
   const paraSegunda = [...positivos, ...revisar];
   if (paraSegunda.length && fotoOriginal) {
-    const resta = 21_000 - (Date.now() - t0);
+    const resta = (soGemma ? 24_000 : 21_000) - (Date.now() - t0);
     const semConfirmar = (erro: string): Conferencia => ({
       ok: false,
       status: 504,

@@ -3684,7 +3684,9 @@ async function segundaVolta(sincToken, atenderUm) {
     if (paraLinks.length) {
       const j = paraLinks[0];
       const antes = j.faltam();
-      await j.gerar(3);
+      /* Um link por vez (05/10, pedido 747 esperou 56 s na fila): entre um e
+         outro o laco olha se chegou cliente. */
+      await j.gerar(1);
       const depois = j.faltam();
       /* Acabou ou nao andou (gerador recusou / freio): encerra; o botao gera
          o link no clique. Sem prazo: com fila cheia o prazo vencia antes do
