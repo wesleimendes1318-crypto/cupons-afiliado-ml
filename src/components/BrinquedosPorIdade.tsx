@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -145,6 +146,15 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
           <p className="mt-0.5 truncate text-[11px] text-secondary-ink">Vendido por {c.loja}</p>
         )}
         <div className="mt-auto pt-3">
+          <VerDetalhesVitrine
+            chave={/item_id(?:%3A|:)(MLB\d+)/i.exec(i.url)?.[1]?.toUpperCase() ?? ""}
+            titulo={i.nome}
+            imagem={i.imagem}
+            preco={c.preco}
+            link={c.link}
+            vistoEm={i.atendido_em}
+            className="mb-1.5 w-full"
+          />
           {podeComprar ? (
             <a
               href={c.link as string}

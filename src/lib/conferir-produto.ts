@@ -1047,3 +1047,45 @@ export async function termoDeBusca(
 /* Mesma fila de modelos (Gemini e, sem cota, Gemma) para a "Ajuda para
    escolher" do resultado (28/09). */
 export { gerar as gerarComModelos, imagem as baixarFoto, lerJson };
+
+/** Diagnostico (05/10): quais modelos Gemma a chave tem e quanto cada um
+ *  demora com texto e com uma foto. So nomes, status e tempos; nunca a chave. */
+export async function diagnosticoModelos(foto: string | null) {
+  const chave = process.env["GEMINI_API_KEY"];
+  if (!chave) return { ok: false, erro: "sem chave" };
+  let lista: string[] = [];
+  try {
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", {
+      headers: { "X-goog-api-key": chave },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const j = (await r.json()) as { models?: Array<{ name?: string }> };
+    lista = (j.models ?? []).map((m) => (m.name ?? "").replace(/^models\//, ""));
+  } catch {
+    /* sem lista */
+  }
+  const gemmas = lista.filter((n) => /^gemma/i.test(n));
+  const parte = foto ? await imagem(foto) : null;
+  const medir = async (modelo: string, comFoto: boolean) => {
+    const t = Date.now();
+    const partes: Parte[] = [
+      { text: 'Responda so JSON: {"ok":true,"cor":"cor principal da foto"}' },
+    ];
+    if (comFoto && parte) partes.push(parte);
+    const ctrl = new AbortController();
+    const corte = setTimeout(() => ctrl.abort(), 30_000);
+    const r = await chamarModelo(chave, modelo, partes, ctrl.signal);
+    clearTimeout(corte);
+    return {
+      modelo,
+      foto: comFoto && !!parte,
+      ok: r.ok,
+      status: r.ok ? 200 : r.status,
+      erro: r.ok ? null : r.erro.slice(0, 120),
+      ms: Date.now() - t,
+    };
+  };
+  const alvos = [...new Set([...MODELOS_GEMMA, ...gemmas.slice(0, 6)])];
+  const testes = await Promise.all(alvos.flatMap((m) => [medir(m, false), medir(m, true)]));
+  return { ok: true, gemmasDaChave: gemmas, testes };
+}

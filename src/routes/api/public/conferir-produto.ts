@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { conferirMesmoProduto, termoDeBusca } from "@/lib/conferir-produto";
+import { conferirMesmoProduto, diagnosticoModelos, termoDeBusca } from "@/lib/conferir-produto";
 import { json, respostaOptions } from "@/lib/public-ai-api";
 
 /* Gemini do servidor para a extensao: confere pela FOTO se cada candidato e o
@@ -39,11 +39,18 @@ export const Route = createFileRoute("/api/public/conferir-produto")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => respostaOptions(request),
-      GET: async ({ request }) =>
-        json(request, {
+      GET: async ({ request }) => {
+        /* ?diag=1 com o token da extensao: mede os modelos Gemma (05/10). */
+        const u = new URL(request.url);
+        if (u.searchParams.get("diag") === "1" && (await tokenValido(request))) {
+          const foto = u.searchParams.get("foto");
+          return json(request, await diagnosticoModelos(foto));
+        }
+        return json(request, {
           versao: "2026-09-25 conferencia por foto",
           chave: Boolean(process.env["GEMINI_API_KEY"]),
-        }),
+        });
+      },
       POST: async ({ request }) => {
         if (!(await tokenValido(request)))
           return json(request, { ok: false, erro: "token invalido" }, 403);

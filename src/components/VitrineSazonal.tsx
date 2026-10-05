@@ -12,6 +12,7 @@
    campanha só com a contagem. Depois, "Já é o menor preço" geral. Compra
    só com link de afiliado e comparação de menos de 24 h (senão "Ver o
    preço de agora"; preço velho não vira compra, regra de 02/10). */
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, Link2, RefreshCw, ShieldCheck } from "lucide-react";
@@ -392,6 +393,15 @@ export function CartaoOferta({
         </p>
         <p className="text-[10px] text-[#86868b]">{quando}</p>
         <div className="mt-auto pt-3">
+          <VerDetalhesVitrine
+            chave={o.chave}
+            titulo={o.titulo}
+            imagem={o.imagem}
+            preco={o.preco}
+            link={o.link}
+            vistoEm={o.vistoEm ?? null}
+            className="mb-0.5"
+          />
           {o.link && (
             <a
               href={o.link}

@@ -6,6 +6,7 @@
    como atual seria enganar o cliente. Categorias proibidas para anúncio do
    Google ficam de fora no próprio banco (função vitrine). */
 
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 
@@ -388,6 +389,15 @@ function Cartao({ i }: { i: ItemVitrine }) {
             preço de quando foi comparado ("visto em"); "Atualizar preço"
             compara de novo na hora. */}
         <div className="mt-auto flex flex-col gap-1 pt-2">
+          <VerDetalhesVitrine
+            chave={i.chave}
+            titulo={i.titulo}
+            imagem={i.imagem}
+            preco={temEconomia ? i.melhor_preco : i.preco}
+            link={destino}
+            vistoEm={i.visto_em}
+            className="mb-0.5"
+          />
           {ehLinkDeAfiliado(destino) && (
             <a
               href={destino}
