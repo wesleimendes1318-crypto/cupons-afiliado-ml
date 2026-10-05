@@ -114,7 +114,7 @@ function textoDoMuda(muda: string | null, tituloColado: string) {
     .slice(0, 3)
     .map((d) =>
       d.campo && d.seu && d.este
-        ? `${d.campo}: o seu ${d.seu} → este ${d.este}`
+        ? `${d.campo}: ${d.seu} → ${d.este}`
         : d.campo && d.este
           ? `${d.campo}: ${d.este}`
           : d.texto,
@@ -145,7 +145,14 @@ function horaDeBrasilia(iso: string | null) {
 
 function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) {
   const pct = Math.round((x.economia / x.precoColado) * 100);
-  const pagamento = textoDoPagamento(x.preco, x.opcao.precos as Precos | null);
+  /* "no Pix" fica junto do preço; o parcelado (com total e diferença) vai
+     em linha própria. */
+  const partes = (textoDoPagamento(x.preco, x.opcao.precos as Precos | null) ?? "")
+    .split(" · ")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const noPix = partes.filter((t) => !/^parcelado|^ou |^no cart/.test(t)).join(" · ");
+  const parcelado = partes.filter((t) => /^parcelado|^ou |^no cart/.test(t)).join(" · ");
   const hora = horaDeBrasilia(x.conferidoEm ?? null);
   const blocos: Array<Array<string | null>> = [
     [`🔥 <b>${html(curto(x.tipo === "parecido" ? x.tituloOpcao : x.titulo, 90))}</b>`],
@@ -154,7 +161,20 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
           `⚠️ Parecido, não idêntico ao anúncio comparado (${html(curto(x.titulo, 60))})`,
           x.muda ? `🔄 Muda: ${html(curto(textoDoMuda(x.muda, x.titulo) ?? "", 160))}` : null,
           x.qualidade
-            ? `${x.qualidade.nivel === "superior" ? "⭐" : "✅"} ${html(curto(textoDaQualidade(x.qualidade), 120))}`
+            ? `${x.qualidade.nivel === "superior" ? "⭐" : "✅"} ${html(
+                curto(
+                  textoDaQualidade({
+                    ...x.qualidade,
+                    /* Motivo que só repete o "Muda" sai do post. */
+                    motivo: /muda (s[oó]|apenas)|mesmo modelo|mesmo conjunto/i.test(
+                      x.qualidade.motivo ?? "",
+                    )
+                      ? null
+                      : x.qualidade.motivo,
+                  }).replace("à do seu", "à do anúncio comparado"),
+                  120,
+                ),
+              )}`
             : null,
           x.desvantagens.length
             ? `❌ Desvantagens: ${html(curto(x.desvantagens.slice(0, 2).join("; "), 120))}`
@@ -162,7 +182,8 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
         ]
       : ["✅ Mesmo produto, em outra loja"],
     [
-      `💰 <b>${brl(x.preco)}</b>${pagamento ? ` ${html(pagamento)}` : ""}`,
+      `💰 <b>${brl(x.preco)}</b>${noPix ? ` ${html(noPix)}` : ""}`,
+      parcelado ? `💳 ${html(parcelado.charAt(0).toUpperCase() + parcelado.slice(1))}` : null,
       `🏷️ Anúncio comparado: <s>${brl(x.precoColado)}</s>`,
       `💸 <b>${brl(x.economia)} a menos no produto</b>${pct >= 1 ? ` (−${pct}%)` : ""}`,
       linhaDoFrete(x.opcao),
