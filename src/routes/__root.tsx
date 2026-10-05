@@ -99,6 +99,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "O mesmo produto em outras lojas dentro do Mercado Livre, do mais barato ao mais caro, com a loja oficial quando houver.",
       },
       { property: "og:type", content: "website" },
+      /* SEO (05/10): imagem, nome e idioma padrão do compartilhamento (cada
+         página pode trocar a imagem). */
+      { property: "og:site_name", content: "Melhor Escolha" },
+      { property: "og:locale", content: "pt_BR" },
+      {
+        property: "og:image",
+        content: "https://melhorescolha.io/video/como-funciona-v4-horizontal.jpg",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       /* App instalável (PWA, 05/10): cor da barra e modo tela cheia no celular. */
       { name: "theme-color", content: "#0071e3" },

@@ -132,6 +132,17 @@ export const Route = createFileRoute("/")({
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Melhor Escolha",
+          url: "https://melhorescolha.io/",
+          logo: "https://melhorescolha.io/logo.png",
+          sameAs: ["https://t.me/melhorescolha_ofertas"],
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
           "@type": "VideoObject",
           name: "Como funciona o Melhor Escolha, comparador de preços",
           description:

@@ -15,9 +15,10 @@ export const Route = createFileRoute("/privacidade")({
       { title: "Política de Privacidade | Conferidor de Cupons" },
       {
         name: "description",
-        content:
-          "O que a extensão Conferidor de Cupons faz e não faz com os seus dados.",
+        content: "O que a extensão Conferidor de Cupons faz e não faz com os seus dados.",
       },
+      /* Página da extensão (05/10): a política do site é /politica-de-privacidade. */
+      { name: "robots", content: "noindex, follow" },
     ],
   }),
 });
@@ -26,9 +27,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   return (
     <section className="mt-8">
       <h2 className="text-lg font-bold">{titulo}</h2>
-      <div className="mt-2 space-y-3 text-sm leading-relaxed text-secondary-ink">
-        {children}
-      </div>
+      <div className="mt-2 space-y-3 text-sm leading-relaxed text-secondary-ink">{children}</div>
     </section>
   );
 }
@@ -43,25 +42,22 @@ function Privacidade() {
       <h1 className="mt-6 text-2xl font-extrabold">
         Política de Privacidade — Conferidor de Cupons
       </h1>
-      <p className="mt-1 text-xs text-secondary-ink">
-        Última atualização: 22 de setembro de 2026
-      </p>
+      <p className="mt-1 text-xs text-secondary-ink">Última atualização: 22 de setembro de 2026</p>
 
       <Secao titulo="Quem somos">
         <p>
-          O Conferidor de Cupons é uma extensão de navegador mantida por Weslei Mendes,
-          participante do programa de afiliados do Mercado Livre. É uma ferramenta
-          independente: <span className="font-semibold text-foreground">não tem vínculo com o
-          Mercado Livre</span>, não é um produto oficial dele e não é endossada por ele.
+          O Conferidor de Cupons é uma extensão de navegador mantida por Weslei Mendes, participante
+          do programa de afiliados do Mercado Livre. É uma ferramenta independente:{" "}
+          <span className="font-semibold text-foreground">não tem vínculo com o Mercado Livre</span>
+          , não é um produto oficial dele e não é endossada por ele.
         </p>
       </Secao>
 
       <Secao titulo="O que a extensão coleta">
         <p className="text-base font-bold text-foreground">Nada sobre você.</p>
         <p>
-          A extensão não coleta, não armazena e não transmite informação pessoal, histórico
-          de navegação, localização, conteúdo de mensagens, credenciais nem dados de
-          pagamento.
+          A extensão não coleta, não armazena e não transmite informação pessoal, histórico de
+          navegação, localização, conteúdo de mensagens, credenciais nem dados de pagamento.
         </p>
       </Secao>
 
@@ -70,12 +66,12 @@ function Privacidade() {
         <ul className="list-disc space-y-1 pl-5">
           <li>Token de sincronização, digitado por você nas opções.</li>
           <li>
-            Chave da API do Gemini, se você optar por usar o recurso de gerar texto de
-            divulgação. Esse recurso vem desligado.
+            Chave da API do Gemini, se você optar por usar o recurso de gerar texto de divulgação.
+            Esse recurso vem desligado.
           </li>
           <li>
-            Cache dos cupons já conferidos e do vendedor de cada anúncio, para não repetir a
-            mesma consulta.
+            Cache dos cupons já conferidos e do vendedor de cada anúncio, para não repetir a mesma
+            consulta.
           </li>
         </ul>
         <p>Removendo a extensão, o navegador apaga tudo isso.</p>
@@ -83,23 +79,23 @@ function Privacidade() {
 
       <Secao titulo="O que a extensão envia para fora">
         <p>
-          Para o banco de dados deste site, apenas dados públicos de comércio: cupons do
-          programa de afiliados (desconto, teto, compra mínima, validade, vendedor), dados
-          públicos de anúncios (título, preço, vendedor) e os links e códigos gerados na
-          conta do próprio usuário. Nada disso identifica pessoa alguma.
+          Para o banco de dados deste site, apenas dados públicos de comércio: cupons do programa de
+          afiliados (desconto, teto, compra mínima, validade, vendedor), dados públicos de anúncios
+          (título, preço, vendedor) e os links e códigos gerados na conta do próprio usuário. Nada
+          disso identifica pessoa alguma.
         </p>
         <p>
-          Para o Google Gemini, somente se você configurar a sua própria chave: título e
-          preço de um produto, para gerar um texto de divulgação. Sem chave configurada,
-          nenhuma requisição é feita.
+          Para o Google Gemini, somente se você configurar a sua própria chave: título e preço de um
+          produto, para gerar um texto de divulgação. Sem chave configurada, nenhuma requisição é
+          feita.
         </p>
       </Secao>
 
       <Secao titulo="Sessão do Mercado Livre">
         <p>
-          A extensão usa a sessão que você já tem aberta no navegador para ler as condições
-          dos cupons e gerar os links da sua própria conta de afiliado. Ela não lê, não copia
-          e não transmite os seus cookies, a sua senha ou qualquer credencial.
+          A extensão usa a sessão que você já tem aberta no navegador para ler as condições dos
+          cupons e gerar os links da sua própria conta de afiliado. Ela não lê, não copia e não
+          transmite os seus cookies, a sua senha ou qualquer credencial.
         </p>
       </Secao>
 
@@ -116,16 +112,15 @@ function Privacidade() {
 
       <Secao titulo="Seus direitos">
         <p>
-          Como não coletamos dados pessoais, não há dados seus para consultar, corrigir ou
-          excluir. Removendo a extensão, todo o armazenamento local é apagado pelo próprio
-          navegador.
+          Como não coletamos dados pessoais, não há dados seus para consultar, corrigir ou excluir.
+          Removendo a extensão, todo o armazenamento local é apagado pelo próprio navegador.
         </p>
       </Secao>
 
       <Secao titulo="Alterações">
         <p>
-          Mudanças nesta política são publicadas nesta mesma página, com a data de
-          atualização no topo.
+          Mudanças nesta política são publicadas nesta mesma página, com a data de atualização no
+          topo.
         </p>
       </Secao>
 
