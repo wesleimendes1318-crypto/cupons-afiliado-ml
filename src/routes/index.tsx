@@ -33,6 +33,7 @@ import {
 
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
+import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Button } from "@/components/ui/button";
 import {
@@ -1222,6 +1223,8 @@ function Index() {
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
   const [vitrine, setVitrine] = useState<"recomendados" | "todos">("recomendados");
+  /* Caixa do link parada (sem comparação na tela): decide o convite do Telegram de baixo. */
+  const [buscaParada, setBuscaParada] = useState(true);
   /* Os filtros nascem abertos: esconde-los fez a lista de lojas, categorias e
      faixas de economia sumirem aos olhos de quem chega. */
   const [painelAberto, setPainelAberto] = useState(true);
@@ -1814,6 +1817,7 @@ function Index() {
                       {item.texto}
                     </Link>
                   ))}
+                  <ConviteTelegram formato="pilula" origem="topo" />
                 </nav>
               </div>
             </div>
@@ -1917,9 +1921,13 @@ function Index() {
       </section>
 
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
-        <BuscaPorLink />
+        <BuscaPorLink aoMudarEstado={setBuscaParada} />
 
         <Vitrine />
+
+        {/* Convite do Telegram na home só com a caixa parada (com resultado,
+            o convite aparece abaixo dele). */}
+        {buscaParada && <ConviteTelegram formato="cartao" origem="home" className="mt-8" />}
 
         {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
             da caixa do link. */}

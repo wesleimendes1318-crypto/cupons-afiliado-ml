@@ -6,6 +6,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { BellRing, LoaderCircle, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
@@ -311,6 +312,8 @@ function MeusPrecos() {
           ))}
         </div>
       )}
+      {/* Sem produtos ou no fim da lista: os achados do canal também servem. */}
+      {itens != null && <ConviteTelegram formato="cartao" origem="meus_precos" />}
       {erro && (
         <p className="text-xs text-red-700">
           Não deu para atualizar agora; tento de novo em 1 minuto.

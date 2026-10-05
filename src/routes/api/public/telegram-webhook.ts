@@ -12,6 +12,7 @@ import {
   SITE,
   telegram,
 } from "@/lib/telegram";
+import { origemDoStart } from "@/lib/telegram-publico";
 
 /* BOT DO TELEGRAM (Weslei, 02/10). O cliente manda o link de um anúncio
    (longo ou meli.la) e recebe a mesma comparação do site, pelas MESMAS regras
@@ -74,7 +75,17 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
             { chat_id: chatId, ultimo_em: new Date().toISOString() },
             { onConflict: "chat_id" },
           );
+        /* Comando pelo primeiro token: "/start", "/start topo" (deep link do
+           site, ?start=<origem>) e "/start@AfiliadosMELI_bot" caem aqui. */
         const pediuAjuda = /^\/(start|ajuda|help)\b/i.test(texto);
+        /* De onde veio a conversa: gravado só no primeiro contato. */
+        const origem = primeiro ? origemDoStart(texto) : null;
+        if (origem)
+          await db
+            .from("telegram_chats")
+            .update({ origem })
+            .eq("chat_id", chatId)
+            .is("origem", null);
         const urlColado = linkDoAnuncio(texto);
         if (primeiro || pediuAjuda) {
           await enviar(boasVindas(nome));

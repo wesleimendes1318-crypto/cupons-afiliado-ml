@@ -40,6 +40,7 @@ import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
 import { roboAtivo } from "@/lib/robo";
 import { registrarInteracaoVisitante } from "@/lib/perfil-visitante";
+import { ConviteTelegram } from "@/components/ConviteTelegram";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -756,7 +757,13 @@ function melhorComFreteGratis(a: Analise): boolean {
   return a.freteGratis === true;
 }
 
-export default function BuscaPorLink() {
+export default function BuscaPorLink({
+  aoMudarEstado,
+}: {
+  /* Avisa a página se a caixa está parada (sem comparação na tela): a home
+     só mostra o convite do Telegram de baixo nesse caso. */
+  aoMudarEstado?: (parada: boolean) => void;
+} = {}) {
   const [url, setUrl] = useState("");
   const [fase, setFase] = useState<Fase>("parado");
   const [erro, setErro] = useState<string | null>(null);
@@ -1043,6 +1050,10 @@ export default function BuscaPorLink() {
 
   const carregando =
     fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
+  const parada = fase === "parado" && !pedido;
+  useEffect(() => {
+    aoMudarEstado?.(parada);
+  }, [parada, aoMudarEstado]);
 
   return (
     <section
@@ -1131,6 +1142,11 @@ export default function BuscaPorLink() {
           completando={completando}
           pedidoId={atual.current}
         />
+      )}
+
+      {/* Convite do Telegram só depois do resultado pronto (nunca carregando). */}
+      {fase === "pronto" && pedido && !completando && (
+        <ConviteTelegram formato="cartao" origem="resultado" className="mt-6" />
       )}
 
       {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} motivo={motivo} />}

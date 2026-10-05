@@ -327,6 +327,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   IA e sem mandar link (resposta com link é descartada). Até 30 por conversa
   por dia; sem modelo, resposta pronta pedindo o link e como copiá-lo.
 
+- CANAL DE OFERTAS (05/10): @melhorescolha_ofertas (Secret
+  TELEGRAM_CANAL_ID); o bot @AfiliadosMELI_bot é admin do canal só com
+  "Publicar mensagens". Posts do garimpo com teclado: "Comprar com segurança"
+  (afiliado) e "Comparar o meu produto" (bot ?start=canal).
+- CONVITE NO SITE: nomes só em src/lib/telegram-publico.ts; componente
+  ConviteTelegram (pilula no topo, cartao abaixo do resultado pronto / na
+  home com a caixa parada / em /meus-precos, linha no rodapé) e página
+  /telegram (no rodapé e no sitemap). Nunca na BarraFixa nem carregando.
+  Deep link t.me/AfiliadosMELI_bot?start=<origem>; origens válidas: topo,
+  home, resultado, meus_precos, rodape, pagina_telegram, canal (gravada em
+  telegram_chats.origem só no primeiro contato).
+
 ## Acompanhar preço (teste, 28/09)
 - Botão "Acompanhar preço" no resultado (preço-alvo opcional) e página
   /meus-precos (aba "Meus preços" no topo, de volta em 02/10 a pedido do

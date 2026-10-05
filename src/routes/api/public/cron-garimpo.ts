@@ -4,6 +4,7 @@ import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/
 import { naoEAlternativa } from "@/lib/alternativa";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
+import { linkDoBot } from "@/lib/telegram-publico";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas das últimas 24 h e
    separa os achados que valem divulgar, com as MESMAS regras da tela
@@ -101,6 +102,17 @@ function mensagem(x: Achado) {
   return linhas.filter((l) => l != null).join("\n");
 }
 
+/* Botões do post: compra (link de afiliado) e, na linha de baixo, a volta
+   para o bot comparar o produto de quem está lendo o canal. */
+function teclado(x: Achado) {
+  return {
+    inline_keyboard: [
+      [{ text: "🛒 Comprar com segurança", url: x.link }],
+      [{ text: "🔎 Comparar o meu produto", url: linkDoBot("canal") }],
+    ],
+  };
+}
+
 async function garimpar(request: Request) {
   const segredo = process.env["CRON_SECRET"] || process.env["API_TELEGRAM"];
   if (!segredo)
@@ -164,6 +176,7 @@ async function garimpar(request: Request) {
         chat_id: canal,
         text: mensagem(x),
         parse_mode: "HTML",
+        reply_markup: teclado(x),
       });
       if (r?.ok) {
         enviados[x.chave] = new Date().toISOString();
@@ -204,6 +217,8 @@ async function garimpar(request: Request) {
       freteGratis: x.opcao.freteGratis,
       custoFrete: x.opcao.custoFrete ?? null,
       link: x.link,
+      mensagem: simular ? mensagem(x) : undefined,
+      teclado: simular ? teclado(x) : undefined,
       publicado: publicados.includes(x.chave),
     })),
   });

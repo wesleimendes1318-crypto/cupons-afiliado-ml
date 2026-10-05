@@ -19,6 +19,7 @@ import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cook
 import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as SobreRouteImport } from './routes/sobre'
+import { Route as TelegramRouteImport } from './routes/telegram'
 import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as CategoriasIndexRouteImport } from './routes/categorias.index'
@@ -90,6 +91,11 @@ const PrivacidadeRoute = PrivacidadeRouteImport.update({
 const SobreRoute = SobreRouteImport.update({
   id: '/sobre',
   path: '/sobre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TelegramRoute = TelegramRouteImport.update({
+  id: '/telegram',
+  path: '/telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/sobre': typeof SobreRoute
+  '/telegram': typeof TelegramRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/sobre': typeof SobreRoute
+  '/telegram': typeof TelegramRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/sobre': typeof SobreRoute
+  '/telegram': typeof TelegramRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/politica-de-privacidade'
     | '/privacidade'
     | '/sobre'
+    | '/telegram'
     | '/termos-de-uso'
     | '/.well-known/oauth-protected-resource'
     | '/categorias/$slug'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/politica-de-privacidade'
     | '/privacidade'
     | '/sobre'
+    | '/telegram'
     | '/termos-de-uso'
     | '/.well-known/oauth-protected-resource'
     | '/categorias/$slug'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/politica-de-privacidade'
     | '/privacidade'
     | '/sobre'
+    | '/telegram'
     | '/termos-de-uso'
     | '/.well-known/oauth-protected-resource'
     | '/categorias/$slug'
@@ -425,6 +437,7 @@ export interface RootRouteChildren {
   PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   SobreRoute: typeof SobreRoute
+  TelegramRoute: typeof TelegramRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CategoriasSlugRoute: typeof CategoriasSlugRoute
@@ -519,6 +532,13 @@ declare module '@tanstack/react-router' {
       path: '/sobre'
       fullPath: '/sobre'
       preLoaderRoute: typeof SobreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/telegram': {
+      id: '/telegram'
+      path: '/telegram'
+      fullPath: '/telegram'
+      preLoaderRoute: typeof TelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/termos-de-uso': {
@@ -689,6 +709,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   SobreRoute: SobreRoute,
+  TelegramRoute: TelegramRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,

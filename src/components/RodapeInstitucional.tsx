@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 
+import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { abrirPreferencias } from "@/lib/consentimento";
 
 const PAGINAS = [
   { to: "/sobre", rotulo: "Sobre o site" },
   { to: "/guias", rotulo: "Guias" },
+  { to: "/telegram", rotulo: "Canal de ofertas" },
   { to: "/divulgacao-de-afiliados", rotulo: "Divulgação de afiliados" },
   { to: "/politica-de-privacidade", rotulo: "Privacidade" },
   { to: "/politica-de-cookies", rotulo: "Cookies" },
@@ -50,6 +52,7 @@ export function RodapeInstitucional() {
         </nav>
 
         <div className="mt-4 space-y-2 border-t border-border pt-4">
+          <ConviteTelegram formato="linha" origem="rodape" />
           <AvisoAfiliado />
           <p className="text-xs text-secondary-ink">
             Site independente, feito por um participante do programa de afiliados. Não é um site
