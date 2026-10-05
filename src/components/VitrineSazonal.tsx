@@ -299,7 +299,9 @@ export function CartaoOferta({
           {o.loja ? `Vendido por ${o.loja}` : ""}
         </p>
         <div className="mt-auto pt-2.5">
-          {o.recente && o.link ? (
+          {/* Botão direto sempre que houver link de afiliado (Weslei,
+              05/10); preço antigo ganha "Atualizar preço" ao lado. */}
+          {o.link && (
             <a
               href={o.link}
               target="_blank"
@@ -310,15 +312,16 @@ export function CartaoOferta({
               <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
               Comprar com segurança
             </a>
-          ) : (
+          )}
+          {(!o.link || !o.recente) &&
             o.urlProduto &&
             (!naHome ? (
               <a
                 href={`/?link=${encodeURIComponent(o.urlProduto)}`}
-                className="campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${o.link ? "mt-1.5 text-[#0058b0] hover:bg-[#f5f5f7]" : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110"}`}
               >
                 <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                Ver o preço de agora
+                {o.link ? "Atualizar preço" : "Ver o preço de agora"}
               </a>
             ) : (
               <button
@@ -326,13 +329,12 @@ export function CartaoOferta({
                 onClick={() =>
                   window.dispatchEvent(new CustomEvent("comparar-link", { detail: o.urlProduto }))
                 }
-                className="campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${o.link ? "mt-1.5 text-[#0058b0] hover:bg-[#f5f5f7]" : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110"}`}
               >
                 <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                Ver o preço de agora
+                {o.link ? "Atualizar preço" : "Ver o preço de agora"}
               </button>
-            ))
-          )}
+            ))}
         </div>
       </div>
     </li>

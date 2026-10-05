@@ -578,6 +578,30 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   barato; inclui os baratos das outras faixas). Comprar só com meli.la e
   comparação < 24 h; senão "Ver o preço de agora".
 
+## Correções graves de 05/10 (tarde)
+- APELIDO DA CONTA NUNCA É LOJA (pedido 716, "Vendido por WESLEI.MENDES"
+  num parecido): a leitura logada de anúncio pausado pegava o "nickname" de
+  quem está logado. Extensão 1.149.0: nomesDoHtml descarta o apelido da
+  conta (APELIDOS_DA_CONTA) e só usa "nickname" quando a página tem o bloco
+  do vendedor (seller_link); cache v4. Site: afiliado.ts (nomeDeLojaValido)
+  apaga esse nome na leitura do pedido.
+- ANÚNCIO INDISPONÍVEL/PAUSADO NÃO APARECE (pedido 716: "Este produto está
+  indisponível no momento"): resolverVendedorAgora marca
+  indisponivelPorItem (RE_INDISPONIVEL); a loja sai da tabela e o parecido
+  sai da lista (diag.parecidosIndisponiveis).
+- BOTÃO DIRETO SEMPRE (Weslei, 05/10: "não tem o botão de consultar os
+  produtos diretamente... eu não vendo nada"): vitrine geral, campanhas e
+  brinquedos mostram "Comprar com segurança" com o link de afiliado sempre
+  que houver (preço de quando foi comparado, com a data), e "Atualizar
+  preço" como ação secundária. Busca guiada: "Comprar com segurança" gera o
+  link de afiliado no clique (VerNaLoja / pedir_link_da_loja) e "Comparar
+  preço" fica secundário. Substitui o "UM botão só" de 02/10.
+- Botão flutuante "Colar link do produto": círculo compacto que só aparece
+  com o campo do link fora da tela (não cobre cartões). "O que muda" quebra
+  linha em valores longos.
+- Comissão ("Ganhos", "Ganhos extras" do hub de afiliados) NUNCA aparece no
+  site, bot ou canal.
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

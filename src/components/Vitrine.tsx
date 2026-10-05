@@ -7,7 +7,7 @@
    Google ficam de fora no próprio banco (função vitrine). */
 
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, RefreshCw, TrendingDown } from "lucide-react";
+import { BadgeCheck, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
@@ -382,11 +382,24 @@ function Cartao({ i }: { i: ItemVitrine }) {
             ? ` · ${i.lojas_comparadas} ${i.lojas_comparadas === 1 ? "loja comparada" : "lojas comparadas"}`
             : ""}
         </p>
-        {/* UM botão só (Weslei, 02/10): "Ver oferta" levava ao anúncio com o
-            preço antigo/alto; "Comparar de novo" refaz a comparação na hora,
-            com o CEP do cliente, lojas oficiais e alternativas. Sem
-            url_produto, compara pelo link de afiliado. */}
+        {/* BOTÃO DIRETO (Weslei, 05/10: "não tem o botão de consultar os
+            produtos diretamente"): compra pelo link de afiliado (a melhor
+            loja com frete grátis confirmado ou o próprio anúncio), com o
+            preço de quando foi comparado ("visto em"); "Atualizar preço"
+            compara de novo na hora. */}
         <div className="mt-auto flex flex-col gap-1 pt-2">
+          {ehLinkDeAfiliado(destino) && (
+            <a
+              href={destino}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              data-origem="vitrine"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-success py-1.5 text-xs font-bold text-white transition hover:brightness-95 active:scale-[0.98]"
+            >
+              <ShieldCheck className="size-3.5" aria-hidden="true" />
+              Comprar com segurança
+            </a>
+          )}
           {(i.url_produto || destino) && (
             <button
               type="button"
@@ -395,10 +408,10 @@ function Cartao({ i }: { i: ItemVitrine }) {
                   new CustomEvent("comparar-link", { detail: i.url_produto ?? destino }),
                 )
               }
-              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-success py-1.5 text-xs font-bold text-white hover:brightness-95"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border py-1.5 text-xs font-semibold text-foreground transition hover:bg-[#f5f5f7]"
             >
               <RefreshCw className="size-3.5" aria-hidden="true" />
-              Comparar de novo
+              Atualizar preço
             </button>
           )}
         </div>

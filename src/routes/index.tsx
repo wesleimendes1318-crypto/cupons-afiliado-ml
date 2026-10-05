@@ -1164,6 +1164,43 @@ export function AcaoDoCupom({
   );
 }
 
+/* BOTÃO FLUTUANTE "COLAR LINK" (05/10, Weslei: o botão cobria os cartões
+   do resultado e o convite "Tem um produto em mente?"). Agora é um círculo
+   compacto, que só aparece quando o campo do link está fora da tela, com o
+   nome no title/aria-label. */
+function BotaoColarFlutuante({ acima }: { acima: boolean }) {
+  const [visivel, setVisivel] = useState(false);
+  useEffect(() => {
+    const alvo = document.getElementById("colar-link");
+    if (!alvo || typeof IntersectionObserver === "undefined") {
+      setVisivel(true);
+      return;
+    }
+    const obs = new IntersectionObserver(([e]) => setVisivel(!e?.isIntersecting), {
+      rootMargin: "0px 0px -20% 0px",
+    });
+    obs.observe(alvo);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <button
+      type="button"
+      onClick={irParaColarLink}
+      aria-label="Colar link do produto"
+      title="Colar link do produto"
+      tabIndex={visivel ? 0 : -1}
+      aria-hidden={!visivel}
+      className={cn(
+        "fixed right-4 z-50 flex size-12 items-center justify-center rounded-full bg-ml-blue text-white shadow-modal transition duration-200 hover:scale-105 hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ml-blue motion-reduce:transition-none sm:size-14",
+        acima ? "bottom-40" : "bottom-6",
+        visivel ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0",
+      )}
+    >
+      <Link2 className="size-6" aria-hidden="true" />
+    </button>
+  );
+}
+
 function irParaColarLink() {
   if (typeof document === "undefined") return;
   document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2878,18 +2915,7 @@ function Index() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={irParaColarLink}
-        aria-label="Ir para o campo de colar o link do produto"
-        className={cn(
-          "fixed right-4 z-50 flex size-14 items-center justify-center rounded-full bg-ml-blue font-bold text-white shadow-modal transition hover:brightness-95 sm:size-auto sm:gap-2 sm:rounded-full sm:px-5 sm:py-3",
-          cupomSelecionados.length > 0 ? "bottom-40" : "bottom-20",
-        )}
-      >
-        <Link2 className="size-7 sm:size-5" aria-hidden="true" />
-        <span className="hidden sm:inline">Colar link do produto</span>
-      </button>
+      <BotaoColarFlutuante acima={cupomSelecionados.length > 0} />
 
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
 

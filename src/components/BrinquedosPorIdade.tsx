@@ -88,7 +88,9 @@ function cartaoDo(i: Item): Cartao | null {
 function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
   const i = c.item;
   const faixa = faixaPorId(i.faixa);
-  const podeComprar = !!c.link && recente(i.atendido_em);
+  /* Botão direto sempre que houver link de afiliado (Weslei, 05/10). */
+  const podeComprar = !!c.link;
+  const antigo = !recente(i.atendido_em);
   return (
     <li className="flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
       <div className="relative flex h-32 items-center justify-center p-3 sm:h-36">
@@ -143,26 +145,31 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
               <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
               Comprar com segurança
             </a>
-          ) : naHome ? (
-            <button
-              type="button"
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url }))
-              }
-              className="flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110"
-            >
-              <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-              Ver o preço de agora
-            </button>
-          ) : (
-            <a
-              href={`/?link=${encodeURIComponent(i.url)}`}
-              className="flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110"
-            >
-              <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-              Ver o preço de agora
-            </a>
-          )}
+          ) : null}
+          {(!podeComprar || antigo) &&
+            (() => {
+              const classe = podeComprar
+                ? "mt-1.5 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-semibold text-[#0058b0] hover:bg-[#f5f5f7]"
+                : "flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110";
+              const texto = podeComprar ? "Atualizar preço" : "Ver o preço de agora";
+              return naHome ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url }))
+                  }
+                  className={classe}
+                >
+                  <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
+                  {texto}
+                </button>
+              ) : (
+                <a href={`/?link=${encodeURIComponent(i.url)}`} className={classe}>
+                  <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
+                  {texto}
+                </a>
+              );
+            })()}
         </div>
       </div>
     </li>

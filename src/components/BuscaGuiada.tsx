@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
+import { VerNaLoja } from "@/components/BuscaPorLink";
 import { ArrowRight, Check, Loader2, Search, Sparkles } from "lucide-react";
 
 /* BUSCA GUIADA (05/10): para quem não tem o link. A pessoa escreve do jeito
@@ -249,11 +250,14 @@ export function BuscaGuiada({
                             </span>
                           </p>
                         ) : null}
-                        <div className="mt-auto pt-3">
+                        <div className="mt-auto space-y-1.5 pt-3">
+                          {/* Direto para a oferta (Weslei, 05/10): o link de
+                              afiliado é gerado no clique. */}
+                          <VerNaLoja url={r.url} grande />
                           <button
                             type="button"
                             onClick={() => comparar(r.url)}
-                            className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-xs font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                            className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
                           >
                             Comparar preço
                             <ArrowRight className="size-3.5" aria-hidden="true" />

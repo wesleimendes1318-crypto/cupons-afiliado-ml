@@ -2480,7 +2480,7 @@ function MelhorOpcao({
 
 /* "Ver na loja": o link de afiliado da loja só é criado quando o cliente pede,
    para ele conferir o preço lá com os próprios olhos. Nada é gerado sem clique. */
-function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
+export function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
   const [estado, setEstado] = useState<"parado" | "gerando" | "falhou">("parado");
   const [link, setLink] = useState<string | null>(null);
 
@@ -3291,13 +3291,13 @@ function OQueMuda({
                 <p className="flex flex-wrap items-baseline gap-x-1.5 leading-snug">
                   <span className="font-semibold">{l.campo}:</span>
                   {l.seu && (
-                    <span className="whitespace-nowrap">
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
                       <span className="text-amber-800/80 dark:text-amber-200/70">o seu</span>{" "}
                       <strong>{l.seu}</strong>
                     </span>
                   )}
                   {l.este && (
-                    <span className="whitespace-nowrap">
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
                       {l.seu && <span aria-hidden="true">→ </span>}
                       <span className="text-amber-800/80 dark:text-amber-200/70">este</span>{" "}
                       <strong>{l.este}</strong>

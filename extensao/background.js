@@ -243,14 +243,33 @@ async function lerParcialCom(url, credenciais, aoTerminar) {
 
    O apelido de verdade aparece no link /perfil/<apelido>, que antes era
    descartado porque a gente parava no primeiro achado. Agora pega todos. */
+/* APELIDO DA PROPRIA CONTA NUNCA E VENDEDOR (05/10, pedido 716: "Vendido
+   por WESLEI.MENDES" num parecido). A pagina lida com a sessao traz o
+   "nickname" de quem esta logado; num anuncio pausado (sem o bloco do
+   vendedor) era o unico nome e virava a loja. Agora: "nickname" so conta
+   quando a pagina tem o bloco do vendedor (seller_link), e o apelido da
+   conta de afiliado e descartado sempre. */
+const APELIDOS_DA_CONTA = new Set(['weslei.mendes', 'wesleimendes']);
+const ehApelidoDaConta = n => APELIDOS_DA_CONTA.has(String(n || '').toLowerCase().replace(/[\s_]/g, '.').replace(/\.+/g, '.'))
+  || APELIDOS_DA_CONTA.has(String(n || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+/* ANUNCIO INDISPONIVEL (05/10, pedido 716: "O Boticario Estojo Lily" pausado
+   aparecia nos Parecidos com preco e botao). Texto da propria pagina, com ou
+   sem os acentos escapados. */
+const RE_INDISPONIVEL = /indispon(?:í|\\u00ed|i)vel no momento|an(?:ú|\\u00fa|u)ncio pausado|publica(?:ç|\\u00e7)(?:ã|\\u00e3)o (?:est(?:á|\\u00e1) )?(?:pausada|finalizada)|an(?:ú|\\u00fa|u)ncio finalizado/i;
+function indisponivelNoHtml(html) { return RE_INDISPONIVEL.test(String(html || '')); }
+
 function nomesDoHtml(buf) {
   const nomes = [];
 
   for (const m of buf.matchAll(RE_LABEL_G)) if (m[1]) nomes.push(m[1]);
+  const temBlocoDoVendedor = nomes.length > 0;
 
   for (const m of buf.matchAll(RE_SLUG_G)) {
     const bruto = m[1] || m[2] || m[3] || m[4];
     if (!bruto) continue;
+    /* "nickname" sem o bloco do vendedor pode ser o de quem esta logado. */
+    if (m[3] && !temBlocoDoVendedor && /"nickname"/.test(m[0])) continue;
     // O slug vem com hifen no lugar do espaco; o apelido vem com sublinhado.
     // A normalizacao tira os dois, entao guardamos como veio.
     try { nomes.push(decodeURIComponent(bruto)); } catch { nomes.push(bruto); }
@@ -258,7 +277,7 @@ function nomesDoHtml(buf) {
 
   const vistos = new Set();
   return nomes.filter(n => {
-    if (!n) return false;
+    if (!n || ehApelidoDaConta(n)) return false;
     const k = norm(n);
     if (!k || vistos.has(k)) return false;
     vistos.add(k);
@@ -273,6 +292,8 @@ const oficialPorItem = new Map();
 const condicaoPorItem = new Map();
 /* item -> 'platinum' | 'gold' | 'silver' | null (MercadoLider do vendedor). */
 const liderPorItem = new Map();
+/* item -> true quando a pagina do anuncio diz que esta indisponivel/pausado. */
+const indisponivelPorItem = new Map();
 /* item -> detalhes resumidos (caracteristicas, destaques, descricao) da
    pagina do anuncio: "Ver detalhes" de cada produto encontrado (28/09). */
 const detalhesPorItem = new Map();
@@ -372,7 +393,9 @@ async function resolverVendedorAgora(id, url) {
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
   /* v3: guarda tambem se e loja oficial. */
-  const chave = 'v3_' + id;
+  /* v4 (05/10): o cache antigo podia guardar o apelido da conta logada como
+     loja (pedido 716); trocar o prefixo descarta tudo aquilo. */
+  const chave = 'v4_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
   if (g && Date.now() - g.ts < TTL_VEND) { if (g.detalhes) detalhesPorItem.set(id, g.detalhes); if (g.precos) precosPorItem.set(id, g.precos); cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
 
@@ -389,7 +412,9 @@ async function resolverVendedorAgora(id, url) {
       if (r && (d || pr)) { if (d) r.detalhes = d; if (pr) r.precos = pr; chrome.storage.local.set({ [chave]: r }); }
     };
     const html = await lerParcial(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`, aoTerminar);
-    nomes = nomesDoHtml(html);
+    const fora = indisponivelNoHtml(html);
+    indisponivelPorItem.set(id, fora);
+    nomes = fora ? [] : nomesDoHtml(html);
     /* Selo pela pagina desligado (28/09): so amostra. */
     amostraDaLojaOficial(html, id, lojaOficialDoHtml(html, id), 'loja');
     oficial = null;
@@ -2565,6 +2590,8 @@ async function avaliarCandidatos(candidatos, itemAtual, extra = {}) {
   for (let k = 0; k < validos.length; k++) {
     const c = validos[k];
     const nomes = nomesDe[k] || [];
+    /* Anuncio pausado/indisponivel nao entra (05/10). */
+    if (indisponivelPorItem.get(c.item) === true) continue;
 
     let cupom = null;
     for (const nome of nomes) {
@@ -3111,6 +3138,11 @@ async function achadosCombinados(titulo, precoRef, itemAtual, original, google) 
       if (n[0]) p.vendedor = n[0];
       p.mercadoLider = liderPorItem.get(p.item) ?? null;
     });
+    /* Parecido com a pagina dizendo "indisponivel"/"pausado" sai da lista
+       (05/10, pedido 716): preco e botao de um anuncio que nao vende. */
+    for (let k = parecidos.length - 1; k >= 0; k--)
+      if (indisponivelPorItem.get(parecidos[k].item) === true) parecidos.splice(k, 1);
+    diag.parecidosIndisponiveis = top.filter(p => indisponivelPorItem.get(p.item) === true).length;
   }
   /* Regra: so o que a Gemini confirmou pela foto aparece. */
   /* Mais baratos primeiro: sao eles que viram a recomendacao; os demais
