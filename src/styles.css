@@ -858,3 +858,8 @@
     display: none;
   }
 }
+
+/* Painel aberto (detalhes da vitrine): o botão flutuante "Colar link" some. */
+body:has(dialog[open]) [data-botao-colar] {
+  display: none;
+}

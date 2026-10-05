@@ -1210,6 +1210,7 @@ function BotaoColarFlutuante({ acima }: { acima: boolean }) {
   return (
     <button
       ref={botao}
+      data-botao-colar
       type="button"
       onClick={irParaColarLink}
       aria-label="Colar link do produto"
