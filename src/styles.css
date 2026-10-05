@@ -804,3 +804,57 @@
     transform: none;
   }
 }
+
+/* Cenário de estúdio das campanhas (artes do Weslei, 05/10): câmera lenta e
+   um reflexo de luz de vez em quando. Só transform/opacity; desligado com
+   prefers-reduced-motion. */
+@keyframes campanha-camera {
+  from {
+    transform: scale(1.002);
+  }
+  to {
+    transform: scale(1.04) translateY(-0.6%);
+  }
+}
+@keyframes campanha-reflexo {
+  0%,
+  18% {
+    transform: translateX(-70%);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  65%,
+  100% {
+    transform: translateX(70%);
+    opacity: 0;
+  }
+}
+.campanha-camera {
+  transform-origin: 60% 58%;
+  animation: campanha-camera 15s ease-in-out infinite alternate;
+}
+.campanha-reflexo {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(255, 255, 255, 0.16) 49%,
+    rgba(255, 255, 255, 0) 53%,
+    transparent 60%
+  );
+  animation: campanha-reflexo 9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .campanha-camera,
+  .campanha-reflexo {
+    animation: none;
+  }
+  .campanha-reflexo {
+    display: none;
+  }
+}

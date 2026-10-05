@@ -588,9 +588,9 @@ export function SecaoCampanha({
         <ArteCampanha
           tema={tema}
           compacta
-          className="mx-auto mt-1 h-24 w-full max-w-[260px] md:hidden"
+          className="mx-auto mt-2 h-40 w-full max-w-[300px] md:hidden"
         />
-        <ArteCampanha tema={tema} fotos={fotos} className="hidden h-[190px] w-full md:block" />
+        <ArteCampanha tema={tema} fotos={fotos} className="hidden h-[220px] w-full md:block" />
       </div>
       <div id={`ofertas-${c.id}`} className="px-4 pb-5 pt-4 sm:px-7 sm:pb-6">
         <GradeOfertas p={p} lista={lista} naHome={naHome} natal={tema === "natal"} />

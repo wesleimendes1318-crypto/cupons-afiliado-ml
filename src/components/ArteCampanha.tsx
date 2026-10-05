@@ -831,17 +831,29 @@ export function ArteCampanha({
       className={`pointer-events-none relative select-none ${t.movimento === "entrada" ? "campanha-arte-entra" : ""} ${className}`}
       aria-hidden="true"
     >
-      {imagem ? (
+      {imagem && t.imagem?.estudio ? (
+        /* Cenário de estúdio: quadro na proporção da arte (sem corte),
+           alinhado à direita no PC e centralizado no celular. */
+        <div
+          className="campanha-estudio relative mx-auto h-full max-w-full overflow-hidden rounded-[22px] shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)] md:ml-auto md:mr-0"
+          style={{ aspectRatio: `${t.imagem.largura} / ${t.imagem.altura}` }}
+        >
+          <img
+            src={imagem}
+            width={t.imagem.largura}
+            height={t.imagem.altura}
+            alt=""
+            className="campanha-camera absolute inset-0 h-full w-full object-cover"
+          />
+          <span className="campanha-reflexo" />
+        </div>
+      ) : imagem ? (
         <img
           src={imagem}
           width={t.imagem?.largura ?? 1536}
           height={t.imagem?.altura ?? 1024}
           alt=""
-          className={
-            t.imagem?.recorte
-              ? "h-full w-full object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.18)]"
-              : "h-full w-full rounded-[22px] object-cover shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)]"
-          }
+          className="h-full w-full rounded-[22px] object-cover shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)]"
         />
       ) : (
         <svg

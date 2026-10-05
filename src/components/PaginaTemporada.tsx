@@ -22,9 +22,12 @@ import {
 import { TEMAS_VISUAIS } from "@/lib/campanha-visual";
 import { antecipada, diasAte, hojeEmBrasilia, TEMPORADAS, type Temporada } from "@/lib/sazonal";
 
-const TEXTO: Record<string, { titulo: string; resumo: string; dicas: string[] }> = {
+/* Títulos das artes do Weslei (05/10: "aproveite ou melhore os textos, eles
+   estão excelentes"); o <title> da página continua com a busca do Google. */
+const TEXTO: Record<string, { titulo: string; slogan: string; resumo: string; dicas: string[] }> = {
   natal: {
-    titulo: "Presentes de Natal com o menor preço conferido",
+    titulo: "Natal: escolhas que viram sorrisos.",
+    slogan: "Compare antes de presentear.",
     resumo:
       "Comprar antes é economizar: perto do Natal os preços sobem e o estoque acaba. Aqui ficam os presentes que já comparei, com o mesmo produto mais barato em outra loja ou com o menor preço confirmado.",
     dicas: [
@@ -34,7 +37,8 @@ const TEXTO: Record<string, { titulo: string; resumo: string; dicas: string[] }>
     ],
   },
   criancas: {
-    titulo: "Dia das Crianças: brinquedos com o menor preço conferido",
+    titulo: "Dia das Crianças: um mundo para brincar.",
+    slogan: "Compare. Escolha. Encante.",
     resumo:
       "Os brinquedos e presentes que já comparei, com o mesmo produto mais barato em outra loja, uma alternativa de qualidade igual ou melhor, ou o menor preço confirmado.",
     dicas: [
@@ -92,6 +96,11 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
             </p>
             <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight sm:text-[40px]">
               {textos.titulo}
+              {!encerrada && (
+                <span className="block" style={{ color: p.realce }}>
+                  {textos.slogan}
+                </span>
+              )}
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-relaxed" style={{ color: p.textoSuave }}>
               {encerrada
@@ -113,7 +122,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
           <ArteCampanha
             tema={tema}
             fotos={lista.map((o) => o.imagem)}
-            className="mx-auto h-32 w-full max-w-[380px] sm:h-44 md:h-[220px]"
+            className="mx-auto h-44 w-full max-w-[380px] sm:h-52 md:h-[240px]"
           />
         </div>
       </header>

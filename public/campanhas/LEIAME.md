@@ -15,10 +15,9 @@ Artes geradas no Canva em 05/10/2026 (abrir e exportar em PNG):
 - Casa e decoração: https://www.canva.com/M/MAHXJ_tNnsI
 - Marca (neutro): https://www.canva.com/M/MAHXJyLrkag
 
-## Artes enviadas pelo Weslei (05/10, noite)
-- criancas.webp, natal.webp, black_friday.webp: recortes sem fundo (render 3D
-  realista), ligados em TEMAS_VISUAIS[tema].imagem com recorte: true
-  (object-contain, sem moldura). Têm prioridade sobre a arte gerada.
-- public/sazonal/natal.jpg e black-friday.jpg: banners 1200x675 com a marca,
-  usados como imagem de compartilhamento (og:image), nunca na vitrine (o texto
-  da arte repetiria o título do HTML).
+## Artes de estúdio (Weslei, 05/10, noite)
+- estudio-criancas.webp, estudio-natal.webp, estudio-black_friday.webp: a parte
+  do estúdio (fundo ripado, pedestais, cartão de comparação) recortada das artes
+  enviadas, sem o texto. Ligadas em TEMAS_VISUAIS[tema].imagem com estudio: true.
+- public/sazonal/*.jpg: as artes completas (com texto e marca), 1200x675, só
+  como imagem de compartilhamento (og:image).

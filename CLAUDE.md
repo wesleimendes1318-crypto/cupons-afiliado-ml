@@ -672,11 +672,19 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   campanha_artes; o site lê artes_campanhas (useArteSalva) e usa o arquivo
   salvo; sem ele, a cena vetorial. Mudar o prompt = subir VERSAO_ARTE e
   gerar de novo (custo por imagem; nada é gerado por visita).
-- ARTES ENVIADAS PELO WESLEI (05/10, noite): recortes sem fundo em
-  public/campanhas/{criancas,natal,black_friday}.webp (imagem.recorte no
-  tema, object-contain, sem moldura) têm prioridade sobre a gerada e a
-  vetorial. Banners com texto (public/sazonal/natal.jpg, black-friday.jpg)
-  só como og:image.
+- ARTES DE ESTÚDIO (Weslei, 05/10, noite: "as artes devem ter como base
+  esses exemplos! cenário que simula um estúdio, com o fundo ripado"; e "os
+  textos estão excelentes"): public/campanhas/estudio-{criancas,natal,
+  black_friday}.webp = a parte do estúdio das artes dele, SEM o texto
+  (imagem.estudio no tema: quadro na proporção da arte, câmera lenta
+  campanha-camera + reflexo campanha-reflexo, desligados com
+  prefers-reduced-motion). Têm prioridade sobre a gerada e a vetorial;
+  temas novos seguem o mesmo estúdio. Crianças em lilás como a arte. Textos
+  das artes nos títulos: "Um mundo para brincar. / Compare. Escolha.
+  Encante.", "Escolhas que viram sorrisos. / Compare antes de presentear.",
+  "Compare antes. / Escolha melhor." (Sua próxima melhor escolha). Banners
+  completos com texto (public/sazonal/criancas.jpg, natal.jpg,
+  black-friday.jpg) só como og:image.
 
 ## Cliente primeiro e teto dos agentes (05/10, noite)
 - Medido em 05/10: 120 comparações dos agentes x 3 de clientes em 24 h; a

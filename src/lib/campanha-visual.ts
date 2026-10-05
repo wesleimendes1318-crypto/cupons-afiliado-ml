@@ -53,9 +53,10 @@ export type TemaVisual = {
   descricao: string;
   /* Arte salva (gerada uma vez e reutilizada nas visitas). Sem ela, a cena
      vetorial do tema. Dimensões reservadas para não deslocar a página. */
-  /* recorte: PNG/WebP sem fundo (enviado pelo Weslei em 05/10), mostrado
-     inteiro sobre o fundo do tema, sem moldura. */
-  imagem?: { src: string; largura: number; altura: number; recorte?: boolean };
+  /* estudio: cenário 3D de estúdio com fundo ripado (Weslei, 05/10: "as
+     artes devem ter como base esses exemplos"), sem texto na imagem, num
+     quadro com a proporção da arte e movimento lento de câmera + reflexo. */
+  imagem?: { src: string; largura: number; altura: number; estudio?: boolean };
   /* Movimento: só a entrada suave da arte e respostas nos botões/cartões;
      nada contínuo disputando com preços. */
   movimento: "entrada" | "nenhum";
@@ -66,17 +67,18 @@ export type TemaVisual = {
 };
 
 const P = {
+  /* Lilás do estúdio da arte (Weslei, 05/10). */
   criancas: {
     fundo:
-      "radial-gradient(70% 90% at 100% 0%, #ffe4a8 0%, rgba(255,228,168,0) 60%), radial-gradient(60% 70% at 0% 100%, #dcecff 0%, rgba(220,236,255,0) 70%), linear-gradient(165deg, #fffaf0 0%, #fff6e6 50%, #eef5ff 100%)",
-    texto: "#1d1d1f",
-    textoSuave: "#4a4a52",
+      "radial-gradient(70% 90% at 100% 0%, #d9ccff 0%, rgba(217,204,255,0) 60%), radial-gradient(60% 70% at 0% 100%, #e6deff 0%, rgba(230,222,255,0) 70%), linear-gradient(165deg, #f6f2ff 0%, #efe9ff 50%, #ebe6fb 100%)",
+    texto: "#24124f",
+    textoSuave: "#4b3f6b",
     destaque: "#0071e3",
     sobreDestaque: "#ffffff",
-    realce: "#e8613f",
-    rotulo: "#0058b0",
-    superficie: "rgba(255,255,255,0.8)",
-    borda: "rgba(0,113,227,0.16)",
+    realce: "#c2410c",
+    rotulo: "#4c2bb3",
+    superficie: "rgba(255,255,255,0.78)",
+    borda: "rgba(108,79,214,0.2)",
     brilho: "#ffc93c",
     decoracao: "confete",
     chip: "#ffffff",
@@ -187,11 +189,11 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     id: "criancas",
     nome: "Brincadeira e imaginação",
     paleta: P.criancas,
-    titulo: "Presentes para encantar.",
-    tituloDestaque: "Comparações para escolher melhor.",
+    titulo: "Um mundo para brincar.",
+    tituloDestaque: "Compare. Escolha. Encante.",
     descricao:
       "Brinquedos já comparados com as outras lojas: o mesmo produto mais barato, alternativa de qualidade igual ou o melhor preço encontrado.",
-    imagem: { src: "/campanhas/criancas.webp", largura: 880, altura: 547, recorte: true },
+    imagem: { src: "/campanhas/estudio-criancas.webp", largura: 760, altura: 703, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(crian[cç]as?|infantil|brinquedos?|bonecas?|lego|pel[uú]cias?|carrinho|hot ?wheels|barbie|jogos? de tabuleiro|quebra[- ]?cabe[cç]a|patinete|massinha|beb[eê]s?|kids)\b/i,
@@ -201,10 +203,10 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     id: "natal",
     nome: "Presentes e luzes",
     paleta: P.natal,
-    titulo: "Presentes que fazem sorrir.",
-    tituloDestaque: "Preço conferido antes de comprar.",
+    titulo: "Escolhas que viram sorrisos.",
+    tituloDestaque: "Compare antes de presentear.",
     descricao: "Ideias de presente já comparadas com as outras lojas. Comprar antes é economizar.",
-    imagem: { src: "/campanhas/natal.webp", largura: 880, altura: 544, recorte: true },
+    imagem: { src: "/campanhas/estudio-natal.webp", largura: 760, altura: 686, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(natal|natalin[oa]|papai noel|amigo secreto|presentes?|panetone|ceia|fim de ano)\b/i,
@@ -214,11 +216,16 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     id: "black_friday",
     nome: "Black Friday",
     paleta: P.black_friday,
-    titulo: "Black Friday de verdade.",
-    tituloDestaque: "Desconto conferido, não prometido.",
+    titulo: "Compare antes.",
+    tituloDestaque: "Escolha melhor.",
     descricao:
-      "Na data, você vê se o desconto existe mesmo: comparação com as outras lojas e histórico do preço.",
-    imagem: { src: "/campanhas/black_friday.webp", largura: 880, altura: 661, recorte: true },
+      "Sua próxima melhor escolha. Na data, você vê se o desconto existe mesmo: comparação com as outras lojas e histórico do preço.",
+    imagem: {
+      src: "/campanhas/estudio-black_friday.webp",
+      largura: 760,
+      altura: 696,
+      estudio: true,
+    },
     movimento: "entrada",
     palavras: /\b(black ?friday|black ?week|cyber ?monday|esquenta black)\b/i,
     calendario: { de: "11-01", ate: "11-30" },
