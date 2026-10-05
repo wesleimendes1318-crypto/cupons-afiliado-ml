@@ -339,20 +339,47 @@ export async function buscarSazonal(
       .filter(Boolean),
   );
   const erros: Record<string, string> = {};
-  const fila: Array<{ id: string; nome: string | null; busca: string; temporada: string }> = [];
-  /* Intercala as temporadas e as buscas para variar os produtos. */
+  /* Produto de catálogo sem oferta ativa (/items 404) não tem anúncio e o
+     programa recusa o link (05/10: 11 de 15): tenta o próximo resultado da
+     mesma busca. Teto de chamadas à API por execução (limite de
+     subrequisições do servidor). */
+  let chamadas = 0;
+  const TETO = 40;
+  const fila: Array<{
+    id: string;
+    item: string;
+    nome: string | null;
+    busca: string;
+    temporada: string;
+  }> = [];
   const pares = temporadas.flatMap((tp) => tp.buscas.map((b, i) => ({ tp, b, i })));
   pares.sort((a, b) => a.i - b.i);
   for (const { tp, b } of pares) {
-    if (fila.length >= max) break;
+    if (fila.length >= max || chamadas >= TETO) break;
     try {
-      const r = await mlGet<{ results?: Array<{ id?: string; name?: string; status?: string }> }>(
-        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(b)}&limit=3`,
+      chamadas += 1;
+      const r = await mlGet<{ results?: Array<{ id?: string; name?: string }> }>(
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(b)}&limit=5`,
       );
       for (const p of r.results ?? []) {
+        if (chamadas >= TETO) break;
         const id = String(p.id ?? "").toUpperCase();
         if (!/^MLB\d+$/.test(id) || jaPedidos.has(id) || fila.some((f) => f.id === id)) continue;
-        fila.push({ id, nome: p.name ?? null, busca: b, temporada: tp.id });
+        /* Anúncio de referência: a primeira oferta da lista oficial do
+           catálogo, na ordem do próprio Mercado Livre (nunca a mais cara,
+           para a economia mostrada ser honesta). */
+        let item: string | null = null;
+        try {
+          chamadas += 1;
+          const o = await mlGet<{ results?: Array<{ item_id?: string }> }>(
+            `/products/${id}/items?limit=1`,
+          );
+          item = o.results?.[0]?.item_id ?? null;
+        } catch {
+          item = null;
+        }
+        if (!item || !/^MLB\d+$/.test(item)) continue;
+        fila.push({ id, item, nome: p.name ?? null, busca: b, temporada: tp.id });
         break; // um produto por busca: mais variedade
       }
     } catch (e) {
@@ -360,29 +387,12 @@ export async function buscarSazonal(
     }
   }
   /* O gerador de links do programa recusa a página de catálogo pura
-     (/p/MLB..., erro 111 "URL not allowed", 05/10: 34 de 49). Com o anúncio
-     no endereço (pdp_filters=item_id), o link sai. Sem anúncio conhecido, o
-     produto fica de fora. */
+     (/p/MLB..., erro 111 "URL not allowed"); com o anúncio no endereço
+     (pdp_filters=item_id), o link sai. */
   const pedidos: Array<{ produto: string; nome: string | null; pedido: number | null }> = [];
   for (const f of fila) {
-    /* Anúncio de referência: a primeira oferta da lista oficial do
-       catálogo, na ordem do próprio Mercado Livre (nunca a mais cara, para a
-       economia mostrada ser honesta). */
-    let item: string | null = null;
-    try {
-      const r = await mlGet<{ results?: Array<{ item_id?: string }> }>(
-        `/products/${f.id}/items?limit=1`,
-      );
-      item = r.results?.[0]?.item_id ?? null;
-    } catch (e) {
-      erros[f.id] = erroCurto(e);
-    }
-    if (!item || !/^MLB\d+$/.test(item)) {
-      erros[f.id] ??= "sem oferta principal";
-      continue;
-    }
     const { data, error } = await t.rpc("pedir_link_novo", {
-      p_url: `https://www.mercadolivre.com.br/p/${f.id}?pdp_filters=item_id%3A${item}`,
+      p_url: `https://www.mercadolivre.com.br/p/${f.id}?pdp_filters=item_id%3A${f.item}`,
     });
     pedidos.push({
       produto: f.id,
