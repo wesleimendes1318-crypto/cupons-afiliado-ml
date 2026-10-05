@@ -318,17 +318,20 @@ export async function buscarSazonal(
   db: Db,
   opcoes: { temporada?: string | null; max?: number } = {},
 ) {
-  const max = Math.min(Math.max(opcoes.max ?? 12, 1), 20);
+  const max = Math.min(Math.max(opcoes.max ?? 12, 1), 15);
   const temporadas = (
     opcoes.temporada ? TEMPORADAS.filter((t) => t.id === opcoes.temporada) : temporadasEmDestaque()
   ).slice(0, 3);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = db as any;
   const desde = new Date(Date.now() - 24 * 3600_000).toISOString();
+  /* Só conta como "já comparado" o que saiu com link de afiliado; o que o
+     programa recusou pela página de catálogo pode voltar pelo anúncio. */
   const { data: recentes } = await t
     .from("pedidos_link")
     .select("url_alvo")
     .gte("criado_em", desde)
+    .not("link", "is", null)
     .limit(500);
   const jaPedidos = new Set(
     ((recentes ?? []) as Array<{ url_alvo: string | null }>)
@@ -356,10 +359,27 @@ export async function buscarSazonal(
       erros[b] = erroCurto(e);
     }
   }
+  /* O gerador de links do programa recusa a página de catálogo pura
+     (/p/MLB..., erro 111 "URL not allowed", 05/10: 34 de 49). Com o anúncio
+     da oferta principal (buy_box_winner) no endereço, o link sai. Sem
+     anúncio conhecido, o produto fica de fora. */
   const pedidos: Array<{ produto: string; nome: string | null; pedido: number | null }> = [];
   for (const f of fila) {
+    let item: string | null = null;
+    try {
+      const prod = await mlGet<{ buy_box_winner?: { item_id?: string } | null }>(
+        `/products/${f.id}`,
+      );
+      item = prod.buy_box_winner?.item_id ?? null;
+    } catch (e) {
+      erros[f.id] = erroCurto(e);
+    }
+    if (!item || !/^MLB\d+$/.test(item)) {
+      erros[f.id] ??= "sem oferta principal";
+      continue;
+    }
     const { data, error } = await t.rpc("pedir_link_novo", {
-      p_url: `https://www.mercadolivre.com.br/p/${f.id}`,
+      p_url: `https://www.mercadolivre.com.br/p/${f.id}?pdp_filters=item_id%3A${item}`,
     });
     pedidos.push({
       produto: f.id,
