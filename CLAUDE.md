@@ -238,6 +238,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   cor, tamanho, voltagem) não gera o aviso de "foto de outro produto".
 - Economia sempre contra o preço que a página mostra ao cliente (a API pode
   trazer outro: Advocate R$ 169,90 na API x R$ 147,81 na página).
+- "Ver detalhes do anúncio" nos cartões da vitrine geral, campanhas e
+  brinquedos (DetalhesVitrine, RPC pública detalhes_da_vitrine(chave)):
+  características, destaques e descrição lidos na comparação, preço com a
+  data, compra só meli.la (Weslei, 05/10).
+- Compartilhar a indicação: WhatsApp e Telegram lado a lado (o link de
+  afiliado vai no campo url do Telegram).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
   captcha/tráfego suspeito e o ritmo de um pedido por vez.
 
@@ -346,6 +352,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   arquivo enviado pelo Weslei: public/favicon.ico (16/32/48), favicon.png,
   apple-touch-icon.png (180), icon-192/512, icon-maskable-512, logo.png e
   extensao/icones/icone16-128. Logo no topo (link para /) e no rodapé.
+- Convite para instalar (InstalarApp, home com a caixa parada):
+  beforeinstallprompt no Android/Chrome (um toque) e instrução do Safari no
+  iPhone; some no modo app ou dispensado (localStorage, só conveniência).
 - App instalável: public/manifest.json (start_url /?origem=pwa, standalone,
   theme #0071e3) com share_target GET (title/text/url -> link): o site pega o
   1º endereço do Mercado Livre em link, text ou title e compara sozinho.
@@ -401,6 +410,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   captcha. O banco (proximo_monitor/gravar_monitor) decide o intervalo: 3 h
   se mexeu ou está perto do alvo, 6 h parado, 12 h parado 3 vezes, 2 h com
   erro; pesquisa do site nas últimas 3 h conta como leitura (precos_vistos).
+- AVISO NO TELEGRAM (05/10): "Avisar no Telegram" no "Acompanhar preço" e em
+  /meus-precos (AvisoTelegram). alerta_telegram(navegador, monitor) só para
+  quem segue o produto -> t.me/AfiliadosMELI_bot?start=alerta_<codigo>; o bot
+  liga (ligar_alerta_telegram, só servidor). Gatilho monitor_para_telegram:
+  preço lido no alvo (ou, sem alvo, 1% abaixo do último aviso) marca
+  pendente e chama operacao?tarefa=alertas (src/lib/alertas-telegram.ts):
+  mensagem com preço agora/antes, alvo, frete "confira no anúncio" em linha
+  própria e botões (compra só meli.la; senão comparar no site). Tabela
+  monitor_telegram (só serviço).
 - Liga/desliga: sinc_config.monitor_ativo. Tabelas monitor_precos e
   monitor_seguidores (só funções security definer; leitura pelo navegador).
 

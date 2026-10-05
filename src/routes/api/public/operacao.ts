@@ -9,6 +9,7 @@ import {
 } from "@/lib/inteligencia";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
+import { enviarAlertas } from "@/lib/alertas-telegram";
 import { gerarArteCampanha } from "@/lib/gerar-arte-campanha";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 
@@ -27,6 +28,8 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
                       (src/lib/curadoria-brinquedos.ts);
    - ?tarefa=arte&tema=<tema>[&forcar=1] gera e salva a arte realista do
                       tema (uma vez; src/lib/gerar-arte-campanha.ts);
+   - ?tarefa=alertas  manda no Telegram os avisos de preço marcados pelo
+                      gatilho do banco (src/lib/alertas-telegram.ts);
    - ?tarefa=remover&publicacao=<id> apaga do canal um post registrado em
                       canal_publicacoes (só sob pedido; não é agendado).
    Com sinc_config.operacao_pausada = 'true' não faz nada (pausa). */
@@ -76,6 +79,10 @@ async function executar(request: Request) {
   if (tarefa === "brinquedos") {
     const alvo = new URL(request.url).searchParams.get("alvo");
     const resumo = await registrarExecucao(db, "brinquedos", () => curarBrinquedos(db, { alvo }));
+    return Response.json(resumo);
+  }
+  if (tarefa === "alertas") {
+    const resumo = await registrarExecucao(db, "alertas", () => enviarAlertas(db));
     return Response.json(resumo);
   }
   if (tarefa === "remover") {

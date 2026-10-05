@@ -1,6 +1,7 @@
 /* ACOMPANHAR PREÇO (Weslei, 28/09, modelo de teste): a pessoa marca o
    produto e vê em "Meus preços" quando o preço cai. A conferência é feita
    de tempos em tempos (3 h a 12 h, conforme o preço mexe); o aviso é no site. */
+import { AvisoTelegram } from "@/components/AvisoTelegram";
 import { Link } from "@tanstack/react-router";
 import { BellRing, Check, LoaderCircle } from "lucide-react";
 import { useState } from "react";
@@ -35,6 +36,7 @@ const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 
 export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: number | null }) {
   const [estado, setEstado] = useState<"parado" | "alvo" | "salvando" | "ok" | "erro">("parado");
+  const [monitorId, setMonitorId] = useState<number | null>(null);
   const [alvo, setAlvo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [chamada] = useState(chamadaDaTemporada);
@@ -50,7 +52,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
     }
     const valor = Number(alvo.replace(/\./g, "").replace(",", "."));
     setEstado("salvando");
-    const { error } = await supabase.rpc(
+    const { data: monitor, error } = await supabase.rpc(
       "acompanhar_preco" as never,
       {
         p_pedido: pedidoId,
@@ -71,6 +73,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
       setEstado("erro");
       return;
     }
+    setMonitorId(typeof monitor === "number" ? monitor : null);
     setEstado("ok");
   }
 
@@ -82,6 +85,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
         <Link to="/meus-precos" className="font-bold text-ml-blue hover:underline">
           Ver meus preços
         </Link>
+        <AvisoTelegram monitorId={monitorId} />
       </p>
     );
 

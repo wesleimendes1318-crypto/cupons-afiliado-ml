@@ -13,6 +13,7 @@ import {
   telegram,
 } from "@/lib/telegram";
 import { origemDoStart } from "@/lib/telegram-publico";
+import { ligarAlerta, RE_START_ALERTA } from "@/lib/alertas-telegram";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 
 /* BOT DO TELEGRAM (Weslei, 02/10). O cliente manda o link de um anúncio
@@ -76,6 +77,12 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
             { chat_id: chatId, ultimo_em: new Date().toISOString() },
             { onConflict: "chat_id" },
           );
+        /* Aviso de preço (05/10): "/start alerta_<codigo>" vindo do site. */
+        const alerta = RE_START_ALERTA.exec(texto);
+        if (alerta?.[1]) {
+          await ligarAlerta(supabaseAdmin, token, chatId, alerta[1].toLowerCase());
+          return new Response("OK");
+        }
         /* Comando pelo primeiro token: "/start", "/start topo" (deep link do
            site, ?start=<origem>) e "/start@AfiliadosMELI_bot" caem aqui. */
         const pediuAjuda = /^\/(start|ajuda|help)\b/i.test(texto);

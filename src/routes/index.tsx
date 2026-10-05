@@ -37,6 +37,7 @@ import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { VitrineSazonal } from "@/components/VitrineSazonal";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
+import { InstalarApp } from "@/components/InstalarApp";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Button } from "@/components/ui/button";
 import {
@@ -2025,6 +2026,7 @@ function Index() {
         {/* Convite do Telegram na home só com a caixa parada (com resultado,
             o convite aparece abaixo dele). */}
         {buscaParada && <ConviteTelegram formato="cartao" origem="home" className="mt-8" />}
+        {buscaParada && <InstalarApp className="mt-4" />}
 
         {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
             da caixa do link. */}

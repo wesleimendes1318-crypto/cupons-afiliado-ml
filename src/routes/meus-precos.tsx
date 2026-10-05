@@ -2,6 +2,7 @@
    acompanha, com o preço de agora, quanto caiu ou subiu desde que começou a
    acompanhar, o menor preço visto e o histórico. Cada botão de compra leva o
    link de afiliado. Atualiza sozinha a cada minuto. */
+import { AvisoTelegram } from "@/components/AvisoTelegram";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BellRing, LoaderCircle, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -235,6 +236,7 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
             Comprar com segurança
           </a>
         )}
+        <AvisoTelegram monitorId={i.id} />
         <button
           type="button"
           onClick={() => parar(i.id)}
