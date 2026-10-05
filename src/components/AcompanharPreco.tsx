@@ -7,6 +7,29 @@ import { useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
+import { diasAte, TEMPORADAS, temporadasAtivas } from "@/lib/sazonal";
+
+/* Chamada da temporada (05/10): antes da Black Friday, o histórico mostra
+   se o desconto é de verdade; no Natal e no Dia das Crianças, acompanhar o
+   presente até a data. Fora disso, o texto de sempre. */
+function chamadaDaTemporada(): string | null {
+  const bf = TEMPORADAS.find((t) => t.id === "black_friday");
+  const ativa = temporadasAtivas();
+  if (bf) {
+    const dias = diasAte(bf);
+    const antes = dias > 0 && dias <= 60;
+    if (antes || ativa.some((t) => t.id === "black_friday"))
+      return dias > 0
+        ? `Black Friday em ${dias} ${dias === 1 ? "dia" : "dias"}? Eu acompanho o preço até lá e você vê se o desconto é de verdade.`
+        : "Black Friday: com o histórico de preço você vê se o desconto é de verdade.";
+  }
+  const t = ativa.find((x) => x.id === "natal" || x.id === "criancas");
+  if (t) {
+    const dias = diasAte(t);
+    return `Presente ${t.id === "natal" ? "de Natal" : "do Dia das Crianças"}${dias > 0 ? ` (faltam ${dias} ${dias === 1 ? "dia" : "dias"})` : ""}? Eu acompanho o preço e mostro quando cair.`;
+  }
+  return null;
+}
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -14,6 +37,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
   const [estado, setEstado] = useState<"parado" | "alvo" | "salvando" | "ok" | "erro">("parado");
   const [alvo, setAlvo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const [chamada] = useState(chamadaDaTemporada);
 
   async function salvar() {
     const navegador = idDoNavegador();
@@ -66,8 +90,14 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
       {estado === "parado" || estado === "erro" ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-secondary-ink">
-            <strong className="text-foreground">Vai comprar depois?</strong> Eu acompanho o preço e
-            mostro quando cair.
+            {chamada ? (
+              <strong className="text-foreground">{chamada}</strong>
+            ) : (
+              <>
+                <strong className="text-foreground">Vai comprar depois?</strong> Eu acompanho o
+                preço e mostro quando cair.
+              </>
+            )}
           </p>
           <button
             type="button"

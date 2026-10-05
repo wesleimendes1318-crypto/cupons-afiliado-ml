@@ -12,6 +12,7 @@
    Poucas chamadas por execução (limite de subrequisições do servidor). */
 
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
+import { temporadaDoProduto, temporadasAtivas } from "@/lib/sazonal";
 import { telegram } from "@/lib/telegram";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -97,8 +98,21 @@ export async function coletarMercado(db: Db) {
     erros["ml_trends"] = erroCurto(e);
   }
 
-  for (const cat of CATEGORIAS_FOCO) {
+  /* Temporada (Dia das Crianças, Black Friday, Natal): até 2 categorias a
+     mais enquanto ela dura, com menos nomes de produto (limite de
+     subrequisições do servidor). */
+  const focoIds = new Set<string>(CATEGORIAS_FOCO.map((c) => c.id));
+  const sazonais = temporadasAtivas()
+    .flatMap((t) => t.categorias.map((c) => ({ ...c, temporada: t.id })))
+    .filter((c, i, l) => !focoIds.has(c.id) && l.findIndex((x) => x.id === c.id) === i)
+    .slice(0, 2);
+  const categorias: Array<{ id: string; nome: string; temporada?: string }> = [
+    ...CATEGORIAS_FOCO,
+    ...sazonais,
+  ];
+  for (const cat of categorias) {
     const nome: string = cat.nome;
+    const limiteNomes = cat.temporada ? 2 : PRODUTOS_POR_CATEGORIA;
     try {
       const t = await mlGet<Array<{ keyword?: string; url?: string }>>(`/trends/MLB/${cat.id}`);
       t.slice(0, 20).forEach((x, i) =>
@@ -109,6 +123,7 @@ export async function coletarMercado(db: Db) {
           posicao: i + 1,
           termo: x.keyword ?? null,
           url: x.url ?? null,
+          extra: cat.temporada ? { temporada: cat.temporada } : null,
         }),
       );
     } catch (e) {
@@ -122,7 +137,7 @@ export async function coletarMercado(db: Db) {
       let nomes = 0;
       for (const item of lista) {
         let termo: string | null = null;
-        if (item.type === "PRODUCT" && item.id && nomes < PRODUTOS_POR_CATEGORIA) {
+        if (item.type === "PRODUCT" && item.id && nomes < limiteNomes) {
           nomes += 1;
           try {
             const p = await mlGet<{ name?: string }>(`/products/${item.id}`);
@@ -142,7 +157,10 @@ export async function coletarMercado(db: Db) {
             item.type === "PRODUCT" && item.id
               ? `https://www.mercadolivre.com.br/p/${item.id}`
               : null,
-          extra: { tipo: item.type ?? null },
+          extra: {
+            tipo: item.type ?? null,
+            ...(cat.temporada ? { temporada: cat.temporada } : {}),
+          },
         });
       }
     } catch (e) {
@@ -231,7 +249,11 @@ export async function prepararRevalidacao(db: Db) {
         /^https:\/\/meli\.la\//.test(v.alt_link ?? "")
           ? Number(v.alt_economia)
           : 0;
-      return { ...v, ganho: Math.max(mesmo, alt) };
+      const ganho = Math.max(mesmo, alt);
+      /* Temporada: produto que combina (brinquedo no Dia das Crianças,
+         presente no Natal) passa na frente com 50% a mais na nota. A regra
+         de economia mínima não muda. */
+      return { ...v, ganho, nota: temporadaDoProduto(v.titulo) ? ganho * 1.5 : ganho };
     })
     .filter(
       (v) =>
@@ -240,7 +262,7 @@ export async function prepararRevalidacao(db: Db) {
         !jaPublicado.has(v.url_produto.split("?")[0]!) &&
         Date.parse(v.visto_em) < recente,
     )
-    .sort((a, b) => b.ganho - a.ganho)
+    .sort((a, b) => b.nota - a.nota)
     .slice(0, PREPARAR_POR_VEZ);
 
   const pedidos: Array<{ url: string; pedido: number | null; ganho: number }> = [];

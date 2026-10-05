@@ -13,6 +13,7 @@ import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
+import { temporadaDoProduto, type Temporada } from "@/lib/sazonal";
 import { linkDoBot } from "@/lib/telegram-publico";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
@@ -61,6 +62,8 @@ type Achado = {
   desvantagens: string[];
   /* Foto do produto da oferta (post com foto grande, 05/10). */
   imagem: string | null;
+  /* Temporada que combina com o produto (Dia das Crianças, Natal...). */
+  temporada: Temporada | null;
 };
 
 function achadoDoPedido(p: {
@@ -104,6 +107,7 @@ function achadoDoPedido(p: {
         ? desvantagensDoParecido(escolha, { titulo: colado.titulo, detalhes: colado.detalhes })
         : [],
     imagem: escolha.imagem ?? colado.imagem ?? null,
+    temporada: temporadaDoProduto(escolha.titulo) ?? temporadaDoProduto(colado.titulo),
   };
 }
 
@@ -155,7 +159,10 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
   const parcelado = partes.filter((t) => /^parcelado|^ou |^no cart/.test(t)).join(" · ");
   const hora = horaDeBrasilia(x.conferidoEm ?? null);
   const blocos: Array<Array<string | null>> = [
-    [`🔥 <b>${html(curto(x.tipo === "parecido" ? x.tituloOpcao : x.titulo, 90))}</b>`],
+    [
+      x.temporada ? `${x.temporada.emoji} <b>${html(x.temporada.rotulo)}</b>` : null,
+      `🔥 <b>${html(curto(x.tipo === "parecido" ? x.tituloOpcao : x.titulo, 90))}</b>`,
+    ],
     x.tipo === "parecido"
       ? [
           `⚠️ Parecido, não idêntico ao anúncio comparado (${html(curto(x.titulo, 60))})`,
@@ -266,7 +273,9 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
         conferidoEm: p.atendido_em ?? null,
       });
   }
-  achados.sort((a, b) => b.economia - a.economia);
+  /* Temporada na frente (50% a mais na nota); as regras não mudam. */
+  const nota = (x: Achado) => x.economia * (x.temporada ? 1.5 : 1);
+  achados.sort((a, b) => nota(b) - nota(a));
 
   /* Já publicados na semana (não repetir). */
   const limite = new Date(Date.now() - DIAS_SEM_REPETIR * 24 * 3600_000).toISOString();
@@ -337,6 +346,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
       pedido: x.pedido,
       tipo: x.tipo,
       titulo: x.tipo === "parecido" ? x.tituloOpcao : x.titulo,
+      temporada: x.temporada?.id ?? null,
       loja: x.loja,
       preco: x.preco,
       precoColado: x.precoColado,

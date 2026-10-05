@@ -435,6 +435,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   ?tarefa=preparar (pedir_link_novo das 2 maiores economias dos últimos 7
   dias ainda não publicadas); 08:47 e 18:47 garimpo. Cada execução em
   operacao_execucoes. PAUSA: sinc_config.operacao_pausada = 'true'.
+- ESTRATÉGIA SAZONAL (Weslei, 05/10: "use estratégias sazonais, em breve
+  haverá Natal"; src/lib/sazonal.ts, docs/inteligencia/sazonal-2026.md):
+  Dia das Crianças (28/09-12/10), Black Friday (01-30/11, dia 27/11) e Natal
+  (15/11-24/12). Na temporada: coleta com até 2 categorias a mais, preparo e
+  garimpo com 50% a mais na nota para o que combina com a data, rótulo no
+  post do canal, seção da temporada na vitrine (2 a 5 já comparados) e
+  convite do "Acompanhar preço" (até 60 dias antes da Black Friday: "veja se
+  o desconto é de verdade"). Só prioridade e rótulo: as regras de economia,
+  qualidade, frete e afiliado não mudam; nada de desconto ou prazo inventado.
 - Nichos do 1º ciclo (CATEGORIAS_FOCO, src/lib/inteligencia.ts):
   Eletrodomésticos, Beleza e Cuidado Pessoal, Casa/Decoração, Acessórios
   para Veículos (dados de 21/09-04/10: Beleza 4/5 produtos com o mesmo mais
