@@ -657,6 +657,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   cada um no máximo a cada 48 h). Diagnóstico: diagnosticos tipo
   'hub-afiliados' (lidos, com preço, amostra sem comissão).
 
+## Artes realistas e tamanhos (05/10, noite)
+- Weslei, 05/10: "ajuste os tamanhos, está desordenado e estão enormes" e
+  "preferência de artes mais reais, como no caso anexo" (render 3D
+  fotorrealista: produtos em pedestais, cartão de comparação com ✓).
+- Foto de produto SEMPRE em caixa de altura fixa com a imagem absoluta e
+  object-contain (max-h-full dentro de grid não limita: as fotos reais
+  estouravam o cartão). Destaque compacto (título 22/28 px, arte 190 px no
+  PC e 96 px no celular), cartões menores (foto 112/128 px).
+- ARTE REALISTA POR TEMA (src/lib/gerar-arte-campanha.ts): tarefa
+  operacao?tarefa=arte&tema=<tema>[&forcar=1] gera UMA vez com gpt-image-1
+  (chave da OpenAI dos Secrets; Gemini de imagem de reserva), sem texto,
+  logotipo ou marca, salva no bucket público "campanhas" e registra em
+  campanha_artes; o site lê artes_campanhas (useArteSalva) e usa o arquivo
+  salvo; sem ele, a cena vetorial. Mudar o prompt = subir VERSAO_ARTE e
+  gerar de novo (custo por imagem; nada é gerado por visita).
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

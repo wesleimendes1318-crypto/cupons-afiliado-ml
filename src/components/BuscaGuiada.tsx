@@ -226,13 +226,13 @@ export function BuscaGuiada({
                       key={r.produto}
                       className="campanha-cartao flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-[#1d1d1f]"
                     >
-                      <div className="flex h-32 items-center justify-center bg-[#f5f5f7] p-2 sm:h-36">
+                      <div className="relative grid h-28 place-items-center overflow-hidden bg-[#f5f5f7] sm:h-32">
                         {r.imagem ? (
                           <img
                             src={r.imagem}
                             alt=""
                             loading="lazy"
-                            className="max-h-full max-w-full object-contain mix-blend-multiply"
+                            className="absolute inset-0 h-full w-full object-contain p-2 mix-blend-multiply"
                           />
                         ) : (
                           <Search className="size-6 text-[#86868b]" aria-hidden="true" />

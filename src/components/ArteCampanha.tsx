@@ -15,6 +15,7 @@
      movimento contínuo (desliga com prefers-reduced-motion). */
 import { useId, type ReactNode } from "react";
 
+import { useArteSalva } from "@/lib/artes-salvas";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 
 type G = (n: string) => string;
@@ -819,6 +820,9 @@ export function ArteCampanha({
   const g: G = (n) => `${id}-${n}`;
   const t = TEMAS_VISUAIS[tema];
   const Cena = CENAS[tema];
+  /* Arte realista salva do tema (gerada uma vez); sem ela, a cena vetorial. */
+  const salva = useArteSalva(tema);
+  const imagem = t.imagem?.src ?? salva;
   const reais = compacta
     ? []
     : fotos.filter((f): f is string => !!f && /^https?:\/\//.test(f)).slice(0, 2);
@@ -827,13 +831,13 @@ export function ArteCampanha({
       className={`pointer-events-none relative select-none ${t.movimento === "entrada" ? "campanha-arte-entra" : ""} ${className}`}
       aria-hidden="true"
     >
-      {t.imagem ? (
+      {imagem ? (
         <img
-          src={t.imagem.src}
-          width={t.imagem.largura}
-          height={t.imagem.altura}
+          src={imagem}
+          width={t.imagem?.largura ?? 1536}
+          height={t.imagem?.altura ?? 1024}
           alt=""
-          className="h-full w-full object-contain"
+          className="h-full w-full rounded-[22px] object-cover shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)]"
         />
       ) : (
         <svg
@@ -849,10 +853,10 @@ export function ArteCampanha({
       {reais.map((src, i) => (
         <span
           key={src}
-          className={`absolute grid aspect-square place-items-center overflow-hidden rounded-2xl bg-white p-2.5 shadow-[0_14px_30px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 ${
+          className={`absolute aspect-square overflow-hidden rounded-2xl bg-white shadow-[0_12px_26px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 ${
             i === 0
-              ? "bottom-[6%] left-[1%] z-10 w-[29%] -rotate-3"
-              : "bottom-[30%] left-[18%] w-[22%] rotate-3"
+              ? "bottom-[6%] left-[2%] z-10 w-[24%] -rotate-3"
+              : "bottom-[34%] left-[17%] w-[18%] rotate-3"
           }`}
         >
           <img
@@ -862,7 +866,7 @@ export function ArteCampanha({
             alt=""
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="max-h-full max-w-full object-contain"
+            className="absolute inset-0 h-full w-full object-contain p-2"
           />
         </span>
       ))}

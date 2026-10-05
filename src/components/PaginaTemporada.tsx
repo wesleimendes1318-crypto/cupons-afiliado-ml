@@ -113,7 +113,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
           <ArteCampanha
             tema={tema}
             fotos={lista.map((o) => o.imagem)}
-            className="mx-auto h-44 w-full max-w-[420px] sm:h-60 md:h-[300px]"
+            className="mx-auto h-32 w-full max-w-[380px] sm:h-44 md:h-[220px]"
           />
         </div>
       </header>

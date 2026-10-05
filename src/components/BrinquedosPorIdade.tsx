@@ -96,14 +96,14 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
   const antigo = !recente(i.atendido_em);
   return (
     <li className="flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
-      <div className="relative flex h-32 items-center justify-center p-3 sm:h-36">
+      <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {i.imagem ? (
           <img
             src={i.imagem}
             alt={i.nome}
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="max-h-full max-w-full object-contain"
+            className="absolute inset-0 h-full w-full object-contain p-2.5"
           />
         ) : null}
         <span

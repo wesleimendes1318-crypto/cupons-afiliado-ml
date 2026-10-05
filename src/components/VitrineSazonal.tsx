@@ -355,7 +355,9 @@ export function CartaoOferta({
       className={`campanha-entra campanha-cartao flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
       style={{ animationDelay: `${Math.min(atraso, 8) * 50}ms` }}
     >
-      <div className="grid h-40 place-items-center bg-white p-3 sm:h-44">
+      {/* Foto sempre dentro da área (05/10: fotos grandes estouravam o
+          cartão): caixa de altura fixa e imagem absoluta com object-contain. */}
+      <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {o.imagem ? (
           <img
             src={o.imagem}
@@ -364,26 +366,28 @@ export function CartaoOferta({
             height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="max-h-full max-w-full object-contain"
+            className="absolute inset-0 h-full w-full object-contain p-2.5"
           />
         ) : (
-          <span className="text-[11px] text-[#86868b]">Foto indisponível</span>
+          <span className="absolute inset-0 grid place-items-center text-[11px] text-[#86868b]">
+            Foto indisponível
+          </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3.5">
-        <p className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-snug">
+      <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
+        <p className="line-clamp-2 min-h-[2.5em] text-[12px] font-semibold leading-snug">
           {o.titulo}
         </p>
-        <p className="mt-2 text-[20px] font-extrabold leading-none tracking-tight tabular-nums">
+        <p className="mt-1.5 text-[17px] font-extrabold leading-none tracking-tight tabular-nums">
           {brl(o.preco)}
         </p>
         <span
-          className={`mt-2 self-start rounded-full px-2 py-0.5 text-[10px] font-bold ${c.chipClasse}`}
+          className={`mt-1.5 self-start rounded-full px-2 py-0.5 text-[10px] font-bold ${c.chipClasse}`}
         >
           {c.chip}
         </span>
-        <p className="mt-1.5 text-[11px] leading-snug text-[#515154]">{c.linha}</p>
-        <p className="mt-1.5 truncate text-[11px] text-[#6e6e73]">
+        <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-[#515154]">{c.linha}</p>
+        <p className="mt-1 truncate text-[11px] text-[#6e6e73]">
           {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
         <p className="text-[10px] text-[#86868b]">{quando}</p>
@@ -394,7 +398,7 @@ export function CartaoOferta({
               target="_blank"
               rel="noopener noreferrer sponsored"
               data-origem="sazonal"
-              className="campanha-botao flex min-h-10 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-2 py-2 text-[12px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
+              className="campanha-botao flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-2 py-1.5 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
             >
               <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               Comprar com segurança
@@ -444,19 +448,19 @@ function CartaoColar({
   const conteudo = (
     <>
       <span
-        className="grid size-11 place-items-center rounded-full"
+        className="grid size-10 place-items-center rounded-full"
         style={{ background: p.destaque, color: p.sobreDestaque }}
       >
         <Link2 className="size-5" aria-hidden="true" />
       </span>
-      <span className="mt-3 text-[15px] font-bold leading-snug" style={{ color: p.texto }}>
+      <span className="mt-2.5 text-[14px] font-bold leading-snug" style={{ color: p.texto }}>
         {natal ? "Já escolheu o presente?" : "Tem um produto em mente?"}
       </span>
       <span className="mt-1 text-[12px] leading-snug" style={{ color: p.textoSuave }}>
         Cole o link e eu comparo com as outras lojas em menos de 2 minutos.
       </span>
       <span
-        className="mt-4 inline-flex min-h-10 items-center rounded-full px-4 text-[12px] font-bold"
+        className="mt-3 inline-flex min-h-9 items-center rounded-full px-4 text-[12px] font-bold"
         style={{ background: p.destaque, color: p.sobreDestaque }}
       >
         Colar o link
@@ -464,7 +468,7 @@ function CartaoColar({
     </>
   );
   const classe =
-    "campanha-cartao flex h-full w-full flex-col items-center justify-center rounded-2xl border p-5 text-center focus-visible:outline-2 focus-visible:outline-offset-2";
+    "campanha-cartao flex h-full w-full flex-col items-center justify-center rounded-2xl border p-4 text-center focus-visible:outline-2 focus-visible:outline-offset-2";
   const estilo = { borderColor: p.borda, background: p.cartao, outlineColor: p.destaque };
   return (
     <li className={`flex ${className}`} data-convite-colar>
@@ -495,9 +499,9 @@ export function GradeOfertas({
   natal?: boolean;
 }) {
   const completar = lista.length < 5 || lista.length % 5 !== 0;
-  const largura = "w-[64%] shrink-0 snap-start min-[480px]:w-[42%] sm:w-auto";
+  const largura = "w-[56%] shrink-0 snap-start min-[480px]:w-[38%] sm:w-auto";
   return (
-    <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
+    <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
       {lista.map((o, i) => (
         <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
       ))}
@@ -533,7 +537,7 @@ export function SecaoCampanha({
       className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
       style={{ background: p.fundo, color: p.texto }}
     >
-      <div className="grid items-center gap-2 px-5 pt-6 sm:px-8 sm:pt-8 md:grid-cols-[minmax(0,1fr)_minmax(300px,44%)] md:gap-6">
+      <div className="grid items-center gap-2 px-5 pt-5 sm:px-7 sm:pt-6 md:grid-cols-[minmax(0,1fr)_minmax(240px,36%)] md:gap-6">
         <div className="min-w-0">
           <p
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
@@ -548,12 +552,12 @@ export function SecaoCampanha({
           </p>
           <h2
             id={`campanha-${c.id}`}
-            className="mt-3 text-[26px] font-extrabold leading-[1.12] tracking-tight sm:text-[34px]"
+            className="mt-2.5 text-[22px] font-extrabold leading-[1.15] tracking-tight sm:text-[28px]"
           >
             {titulo} <span style={{ color: p.realce }}>{destaque}</span>
           </h2>
           <p
-            className="mt-2 max-w-[54ch] text-[14px] leading-relaxed sm:text-[15px]"
+            className="mt-1.5 max-w-[60ch] text-[13px] leading-relaxed sm:text-[14px]"
             style={{ color: p.textoSuave }}
           >
             {descricao}
@@ -584,11 +588,11 @@ export function SecaoCampanha({
         <ArteCampanha
           tema={tema}
           compacta
-          className="mx-auto mt-2 h-32 w-full max-w-[320px] md:hidden"
+          className="mx-auto mt-1 h-24 w-full max-w-[260px] md:hidden"
         />
-        <ArteCampanha tema={tema} fotos={fotos} className="hidden h-[280px] w-full md:block" />
+        <ArteCampanha tema={tema} fotos={fotos} className="hidden h-[190px] w-full md:block" />
       </div>
-      <div id={`ofertas-${c.id}`} className="px-4 pb-5 pt-5 sm:px-8 sm:pb-8">
+      <div id={`ofertas-${c.id}`} className="px-4 pb-5 pt-4 sm:px-7 sm:pb-6">
         <GradeOfertas p={p} lista={lista} naHome={naHome} natal={tema === "natal"} />
       </div>
     </section>

@@ -7,7 +7,9 @@ import {
   prepararRevalidacao,
   removerPublicacao,
 } from "@/lib/inteligencia";
+import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
+import { gerarArteCampanha } from "@/lib/gerar-arte-campanha";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 
 /* ROTINA DE INTELIGÊNCIA (Weslei, 05/10), chamada pelas tarefas do banco
@@ -23,6 +25,8 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
                       curadoria de brinquedos por idade: mapeia na API
                       oficial e põe na fila de comparação
                       (src/lib/curadoria-brinquedos.ts);
+   - ?tarefa=arte&tema=<tema>[&forcar=1] gera e salva a arte realista do
+                      tema (uma vez; src/lib/gerar-arte-campanha.ts);
    - ?tarefa=remover&publicacao=<id> apaga do canal um post registrado em
                       canal_publicacoes (só sob pedido; não é agendado).
    Com sinc_config.operacao_pausada = 'true' não faz nada (pausa). */
@@ -56,6 +60,16 @@ async function executar(request: Request) {
           temporada && /^(criancas|black_friday|natal)$/.test(temporada) ? temporada : null,
         max: Number.isFinite(max) ? max : 12,
       }),
+    );
+    return Response.json(resumo);
+  }
+  if (tarefa === "arte") {
+    const u = new URL(request.url);
+    const tema = u.searchParams.get("tema") as TemaVisualId | null;
+    if (!tema || !TEMAS_VISUAIS[tema])
+      return Response.json({ ok: false, erro: "tema inválido" }, { status: 400 });
+    const resumo = await registrarExecucao(db, "arte", () =>
+      gerarArteCampanha(db, tema, u.searchParams.get("forcar") === "1"),
     );
     return Response.json(resumo);
   }
