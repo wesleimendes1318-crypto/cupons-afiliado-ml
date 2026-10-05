@@ -165,8 +165,8 @@ export function useOfertas() {
     (async () => {
       try {
         const [v, m, fretes] = await Promise.all([
-          supabase.rpc("vitrine" as never, { p_limite: 120 } as never),
-          supabase.rpc("vitrine_menor_preco" as never, { p_limite: 120 } as never),
+          supabase.rpc("vitrine" as never, { p_limite: 300 } as never),
+          supabase.rpc("vitrine_menor_preco" as never, { p_limite: 300 } as never),
           lerFretesDaVitrine(),
         ]);
         if (!vivo) return;
