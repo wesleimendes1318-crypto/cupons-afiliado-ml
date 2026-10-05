@@ -514,6 +514,31 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Console nem ao relatório de comissões por API: vendas e comissões só pelo
   painel de afiliados do Mercado Livre.
 
+## Busca guiada e categorias (05/10)
+- BUSCA GUIADA (Weslei, 05/10: "integre campos de buscas em pontos
+  estratégicos... toda pesquisa ali deve ter o llm/ia como motor"): bloco
+  BuscaGuiada na home (abaixo da caixa do link), em /natal e em
+  /dia-das-criancas, com sugestões por contexto. /api/public/buscar: o
+  modelo (GPT, reserva flash-lite/Gemma) transforma o pedido em até 3 buscas
+  + faixa de preço; catálogo oficial (/products/search + /products/{id}/items,
+  teto de 18 chamadas); sem oferta ativa fica de fora. Botão "Comparar preço"
+  abre a comparação (nunca compra direto). Cache de 6 h (tabela
+  busca_guiada). Texto público não cita IA.
+- "A CADA BUSCA, SE FIZER SENTIDO, DEIXAR NA VITRINE": até 2 produtos por
+  busca não comparados nos últimos 7 dias vão para pedir_link_novo, no máximo
+  8 por hora no site todo (proteger a conta). Entram na vitrine só se
+  passarem nas regras de sempre.
+- BRINQUEDOS x AUTOMOTIVO (Weslei, 05/10): categoria "brinquedos" no site;
+  categoria_do_site decide pela categoria do anúncio (Brinquedos e Hobbies)
+  antes do título, e título infantil (mini moto, carrinho de controle,
+  bicicleta aro 12-16) vai para brinquedos antes da regra de automotivo. Na
+  temporada de Crianças, combinaComTemporada exclui peças e acessórios de
+  veículo (freio, relação, capacete, bateria automotiva...).
+- IDENTIDADE DA MARCA (modelo de arte do Weslei, 05/10): degradê roxo/
+  violeta (#1d0b52 -> #5a2bd8), destaque verde-menta #5ef2b5, produtos em
+  pedestais e cartão com ✓, "Antes de comprar, compare." (usado na busca
+  guiada; ArteMarca em src/components/BuscaGuiada.tsx).
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

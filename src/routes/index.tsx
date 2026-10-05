@@ -33,6 +33,7 @@ import {
 
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
+import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { VitrineSazonal } from "@/components/VitrineSazonal";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
@@ -1933,6 +1934,10 @@ function Index() {
 
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
         <BuscaPorLink aoMudarEstado={setBuscaParada} />
+
+        {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
+            caixa e acima das campanhas. */}
+        <BuscaGuiada contexto="home" naHome className="mt-8" />
 
         {/* Temporadas em destaque (Dia das Crianças, Black Friday, Natal):
             seções prioritárias, acima da vitrine geral (05/10). */}

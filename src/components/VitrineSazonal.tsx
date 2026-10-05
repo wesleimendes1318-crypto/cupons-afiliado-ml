@@ -21,7 +21,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { menorPrecoVale } from "@/lib/menor-preco";
 import { descontoReal } from "@/lib/regra-economia";
-import { antecipada, diasAte, rotuloDa, temporadasEmDestaque, type Temporada } from "@/lib/sazonal";
+import {
+  antecipada,
+  combinaComTemporada,
+  diasAte,
+  rotuloDa,
+  temporadasEmDestaque,
+  type Temporada,
+} from "@/lib/sazonal";
 import { LINK_CANAL } from "@/lib/telegram-publico";
 
 export type ItemVitrine = {
@@ -178,7 +185,7 @@ export function useOfertas() {
 }
 
 export const daTemporada = (t: Temporada, ofertas: Oferta[]) =>
-  ofertas.filter((o) => t.termos.test(o.titulo));
+  ofertas.filter((o) => combinaComTemporada(t, o.titulo));
 
 function contagem(t: Temporada) {
   const d = diasAte(t);
@@ -260,7 +267,9 @@ export function CartaoOferta({
           </div>
         )}
         <span className="absolute left-2 top-2 rounded-full bg-[#14692e] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
-          {brl(o.economia)} a menos
+          {o.tipo === "menor"
+            ? `Menor entre ${(o.lojas ?? 2) + 1} lojas`
+            : `${brl(o.economia)} a menos`}
         </span>
       </div>
       <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
@@ -276,7 +285,7 @@ export function CartaoOferta({
         <p className="mt-1 min-h-[1.25em] text-[11px] leading-tight text-[#6e6e73] tabular-nums">
           <span className="line-through">{brl(o.antes)}</span>{" "}
           {o.tipo === "menor"
-            ? `na 2ª loja mais barata${o.lojas ? ` (de ${o.lojas + 1} lojas)` : ""}`
+            ? `na 2ª loja mais barata (${brl(o.economia)} a mais)`
             : o.tipo === "parecido"
               ? "no anúncio comparado"
               : "em outra loja"}

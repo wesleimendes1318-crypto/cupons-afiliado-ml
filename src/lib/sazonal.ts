@@ -26,6 +26,9 @@ export type Temporada = {
   categorias: ReadonlyArray<{ id: string; nome: string }>;
   /* Produto que combina com a temporada (pelo título). */
   termos: RegExp;
+  /* Nunca entra (Weslei, 05/10: "diferencie automotivo de brinquedos"):
+     peça e acessório de carro/moto não é brinquedo, salvo sinal infantil. */
+  exclui?: RegExp;
   /* Rótulo curto no canal e na vitrine. */
   rotulo: string;
   /* Rótulo antes de a janela abrir (temporada em destaque antecipado). */
@@ -82,7 +85,9 @@ export const TEMPORADAS: readonly Temporada[] = [
     dia: "2026-10-12",
     categorias: [{ id: "MLB1132", nome: "Brinquedos e Hobbies" }],
     termos:
-      /\b(brinquedo|boneca?|carrinho|lego|pista|pel[uú]cia|quebra[- ]?cabe[cç]a|jogo de tabuleiro|patinete|bicicleta infantil|video ?game|console|controle (ps|xbox)|nintendo|massinha|slime|squishy|dinossauro|hot ?wheels|barbie|infantil|kids|playmobil|aro 16|baby alive)\b/i,
+      /\b(brinquedos?|bonecas?|carrinho (de )?(controle|brinquedo|boneca|beb[eê])|carrinho el[eé]trico|lego|pistas? (de )?(carrinho|corrida|hot wheels|dinossauro)|pista hot wheels|pel[uú]cias?|quebra[- ]?cabe[cç]as?|jogos? de tabuleiro|patinetes?|bicicletas? infantil|bicicleta.{0,30}aro 1[246]|video ?games?|consoles?|nintendo|massinha|slime|squishy|hot ?wheels|barbie|infantil|kids|playmobil|baby alive|beyblade|kart el[eé]trico|moto el[eé]trica infantil)\b/i,
+    exclui:
+      /\b(freio|pneus?|rela[cç][aã]o|retentor|amortecedor|farol|retrovisor|para-?choque|palheta|[oó]leo (de )?motor|escapamento|rastreador|bateria automotiva|carregador de bateria|cavalete|capacete|intercomunicador|automotiv[oa]|veicular)\b/i,
     rotulo: "Para o Dia das Crianças",
     rotuloAntecipado: "Antecipe o Dia das Crianças",
     ofertasAntecipadas: true,
@@ -249,7 +254,7 @@ export function temporadaDoProduto(
 ): Temporada | null {
   if (!titulo) return null;
   const lista = temporadasComOfertas(agora);
-  const combina = lista.filter((t) => t.termos.test(titulo));
+  const combina = lista.filter((t) => combinaComTemporada(t, titulo));
   return combina.find((t) => !antecipada(t, agora)) ?? combina[0] ?? null;
 }
 
@@ -258,4 +263,10 @@ export function diasAte(t: Temporada, agora = new Date()) {
   const hoje = Date.parse(`${hojeEmBrasilia(agora)}T12:00:00Z`);
   const dia = Date.parse(`${t.dia}T12:00:00Z`);
   return Math.max(0, Math.round((dia - hoje) / 86_400_000));
+}
+
+/** O título combina com a temporada (termos) e não cai na exclusão
+    (peça/acessório automotivo não é brinquedo). */
+export function combinaComTemporada(t: Temporada, titulo: string) {
+  return t.termos.test(titulo) && !(t.exclui && t.exclui.test(titulo));
 }

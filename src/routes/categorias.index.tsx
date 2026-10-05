@@ -9,6 +9,7 @@ import {
   Sparkles,
   Tv,
   type LucideIcon,
+  Blocks,
 } from "lucide-react";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
@@ -24,6 +25,7 @@ export const ICONE_CATEGORIA: Record<string, LucideIcon> = {
   moda: Shirt,
   beleza: Sparkles,
   automotivo: Car,
+  brinquedos: Blocks,
 };
 
 /** Um tom por categoria, para a página não ser um bloco único de cor. */
@@ -35,6 +37,7 @@ export const TOM_CATEGORIA: Record<string, string> = {
   moda: "oklch(0.62 0.17 350)",
   beleza: "oklch(0.63 0.16 320)",
   automotivo: "oklch(0.60 0.15 40)",
+  brinquedos: "oklch(0.64 0.16 75)",
 };
 
 export const Route = createFileRoute("/categorias/")({
@@ -50,7 +53,8 @@ export const Route = createFileRoute("/categorias/")({
       { property: "og:title", content: "Categorias — como avaliar ofertas" },
       {
         property: "og:description",
-        content: "O que muda na avaliação de uma oferta em eletrônicos, moda, casa, automotivo e mais.",
+        content:
+          "O que muda na avaliação de uma oferta em eletrônicos, moda, casa, automotivo e mais.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: URL },
@@ -69,10 +73,10 @@ function Categorias() {
       trilha={<span>{CATEGORIAS.length} categorias com orientação própria</span>}
     >
       <p>
-        O mesmo cupom rende de formas muito diferentes conforme o que você compra. Em moda,
-        onde a compra é menor, o percentual quase todo se realiza. Em eletrônicos, o teto trava
-        o desconto em poucos reais. Cada página abaixo explica esse comportamento e o que
-        conferir antes de fechar a compra.
+        O mesmo cupom rende de formas muito diferentes conforme o que você compra. Em moda, onde a
+        compra é menor, o percentual quase todo se realiza. Em eletrônicos, o teto trava o desconto
+        em poucos reais. Cada página abaixo explica esse comportamento e o que conferir antes de
+        fechar a compra.
       </p>
 
       <div className="not-prose grid gap-4 sm:grid-cols-2">

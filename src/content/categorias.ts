@@ -126,7 +126,16 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "casa",
     nome: "Casa e utilidades",
-    termos: ["casa", "cozinha", "moveis", "móveis", "decoracao", "decoração", "utilidades", "ferramentas"],
+    termos: [
+      "casa",
+      "cozinha",
+      "moveis",
+      "móveis",
+      "decoracao",
+      "decoração",
+      "utilidades",
+      "ferramentas",
+    ],
     resumo:
       "Itens de casa têm tíquete variado e frete pesado: é onde mais vale conferir a entrega antes do desconto.",
     atualizacao: "23/09/2026",
@@ -160,7 +169,17 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "moda",
     nome: "Moda e calçados",
-    termos: ["moda", "roupa", "roupas", "calcado", "calçado", "tenis", "tênis", "bolsa", "acessorios"],
+    termos: [
+      "moda",
+      "roupa",
+      "roupas",
+      "calcado",
+      "calçado",
+      "tenis",
+      "tênis",
+      "bolsa",
+      "acessorios",
+    ],
     resumo:
       "Tíquete baixo e troca frequente: a categoria em que o cupom com teto mais rende, e onde o tamanho é o risco.",
     atualizacao: "23/09/2026",
@@ -256,6 +275,40 @@ export const CATEGORIAS: Categoria[] = [
         pergunta: "Cupom costuma render em pneu?",
         resposta:
           "Como o valor é alto, o teto trava rápido. Vale mais comparar o preço do jogo completo e o custo de instalação entre vendedores.",
+      },
+    ],
+  },
+  {
+    slug: "brinquedos",
+    nome: "Brinquedos",
+    termos: ["brinquedos", "brinquedo", "infantil", "jogos", "bonecas", "lego"],
+    resumo:
+      "Brinquedos e presentes infantis: o mesmo brinquedo mais barato em outra loja, com idade indicada e segurança conferidas.",
+    atualizacao: "05/10/2026",
+    introducao: [
+      "Brinquedo é a categoria em que o mesmo produto aparece com mais preços diferentes perto do Dia das Crianças e do Natal. Comparar o mesmo item, com a mesma quantidade de peças e a mesma versão, é o que garante a economia de verdade.",
+    ],
+    comoAvaliar: [
+      "Confira a idade indicada na embalagem e no anúncio.",
+      "Em blocos de montar, compare o número de peças e o código do conjunto.",
+      "Em brinquedos elétricos (motos, carrinhos e karts infantis), confira a voltagem da bateria (6 V, 12 V), o peso máximo e o tempo de recarga.",
+      "Procure o selo do Inmetro no anúncio ou na foto da embalagem.",
+    ],
+    cuidados: [
+      "Peças pequenas não são indicadas para menores de 3 anos.",
+      'Réplica ou versão "compatível" não é o mesmo produto da marca.',
+      "Veja o prazo de entrega antes da data do presente.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Moto elétrica infantil é brinquedo ou veículo?",
+        resposta:
+          "É brinquedo: aqui ela fica em Brinquedos, separada das peças e acessórios de carro e moto, que ficam em Automotivo.",
+      },
+      {
+        pergunta: "Vale comprar brinquedo com antecedência?",
+        resposta:
+          "Perto do Dia das Crianças e do Natal a procura sobe. Comparar e comprar antes ajuda a fugir de estoque baixo e de prazo de entrega apertado.",
       },
     ],
   },
