@@ -12,7 +12,12 @@
    Poucas chamadas por execução (limite de subrequisições do servidor). */
 
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
-import { temporadaDoProduto, temporadasAtivas } from "@/lib/sazonal";
+import {
+  TEMPORADAS,
+  temporadaDoProduto,
+  temporadasAtivas,
+  temporadasEmDestaque,
+} from "@/lib/sazonal";
 import { telegram } from "@/lib/telegram";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -301,4 +306,71 @@ export async function removerPublicacao(db: Db, id: number, motivo: string) {
     .update({ removida_em: new Date().toISOString(), removida_motivo: motivo.slice(0, 200) })
     .eq("id", id);
   return { ok: true, removida: pub.titulo };
+}
+
+/* BUSCA SAZONAL (Weslei, 05/10: "já faça buscas interessantes, de
+   qualidade, com desconto real"): para cada busca da temporada, os
+   primeiros produtos do catálogo oficial (/products/search, API do Mercado
+   Livre) entram na fila de comparação (pedir_link_novo). A extensão compara
+   um por vez, com o freio de sempre; o garimpo e a vitrine só mostram o que
+   passar nas regras (economia, qualidade, frete, afiliado). */
+export async function buscarSazonal(
+  db: Db,
+  opcoes: { temporada?: string | null; max?: number } = {},
+) {
+  const max = Math.min(Math.max(opcoes.max ?? 12, 1), 20);
+  const temporadas = (
+    opcoes.temporada ? TEMPORADAS.filter((t) => t.id === opcoes.temporada) : temporadasEmDestaque()
+  ).slice(0, 3);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = db as any;
+  const desde = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const { data: recentes } = await t
+    .from("pedidos_link")
+    .select("url_alvo")
+    .gte("criado_em", desde)
+    .limit(500);
+  const jaPedidos = new Set(
+    ((recentes ?? []) as Array<{ url_alvo: string | null }>)
+      .map((r) => /\/p\/(MLB\d+)/i.exec(r.url_alvo ?? "")?.[1]?.toUpperCase())
+      .filter(Boolean),
+  );
+  const erros: Record<string, string> = {};
+  const fila: Array<{ id: string; nome: string | null; busca: string; temporada: string }> = [];
+  /* Intercala as temporadas e as buscas para variar os produtos. */
+  const pares = temporadas.flatMap((tp) => tp.buscas.map((b, i) => ({ tp, b, i })));
+  pares.sort((a, b) => a.i - b.i);
+  for (const { tp, b } of pares) {
+    if (fila.length >= max) break;
+    try {
+      const r = await mlGet<{ results?: Array<{ id?: string; name?: string; status?: string }> }>(
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(b)}&limit=3`,
+      );
+      for (const p of r.results ?? []) {
+        const id = String(p.id ?? "").toUpperCase();
+        if (!/^MLB\d+$/.test(id) || jaPedidos.has(id) || fila.some((f) => f.id === id)) continue;
+        fila.push({ id, nome: p.name ?? null, busca: b, temporada: tp.id });
+        break; // um produto por busca: mais variedade
+      }
+    } catch (e) {
+      erros[b] = erroCurto(e);
+    }
+  }
+  const pedidos: Array<{ produto: string; nome: string | null; pedido: number | null }> = [];
+  for (const f of fila) {
+    const { data, error } = await t.rpc("pedir_link_novo", {
+      p_url: `https://www.mercadolivre.com.br/p/${f.id}`,
+    });
+    pedidos.push({
+      produto: f.id,
+      nome: f.nome,
+      pedido: error ? null : typeof data === "number" ? data : null,
+    });
+  }
+  return {
+    ok: pedidos.length > 0 || Object.keys(erros).length === 0,
+    temporadas: temporadas.map((x) => x.id),
+    pedidos,
+    erros,
+  };
 }

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
+  buscarSazonal,
   coletarMercado,
   medirCanal,
   prepararRevalidacao,
@@ -14,6 +15,9 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
                       Mercado Livre + Google Trends) e mede o canal;
    - ?tarefa=preparar compara de novo as melhores economias para o garimpo
                       publicar oferta conferida na hora;
+   - ?tarefa=sazonal[&temporada=criancas|black_friday|natal][&max=N]
+                      põe na fila de comparação os produtos do catálogo das
+                      buscas da temporada (src/lib/sazonal.ts);
    - ?tarefa=remover&publicacao=<id> apaga do canal um post registrado em
                       canal_publicacoes (só sob pedido; não é agendado).
    Com sinc_config.operacao_pausada = 'true' não faz nada (pausa). */
@@ -35,6 +39,19 @@ async function executar(request: Request) {
   }
   if (tarefa === "preparar") {
     const resumo = await registrarExecucao(db, "preparar", () => prepararRevalidacao(db));
+    return Response.json(resumo);
+  }
+  if (tarefa === "sazonal") {
+    const q = new URL(request.url).searchParams;
+    const temporada = q.get("temporada");
+    const max = Number(q.get("max") ?? 12);
+    const resumo = await registrarExecucao(db, "sazonal", () =>
+      buscarSazonal(db, {
+        temporada:
+          temporada && /^(criancas|black_friday|natal)$/.test(temporada) ? temporada : null,
+        max: Number.isFinite(max) ? max : 12,
+      }),
+    );
     return Response.json(resumo);
   }
   if (tarefa === "remover") {

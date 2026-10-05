@@ -13,7 +13,7 @@ import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
-import { temporadaDoProduto, type Temporada } from "@/lib/sazonal";
+import { rotuloDa, temporadaDoProduto, type Temporada } from "@/lib/sazonal";
 import { linkDoBot } from "@/lib/telegram-publico";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
@@ -160,7 +160,7 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
   const hora = horaDeBrasilia(x.conferidoEm ?? null);
   const blocos: Array<Array<string | null>> = [
     [
-      x.temporada ? `${x.temporada.emoji} <b>${html(x.temporada.rotulo)}</b>` : null,
+      x.temporada ? `${x.temporada.emoji} <b>${html(rotuloDa(x.temporada))}</b>` : null,
       `🔥 <b>${html(curto(x.tipo === "parecido" ? x.tituloOpcao : x.titulo, 90))}</b>`,
     ],
     x.tipo === "parecido"

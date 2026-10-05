@@ -28,6 +28,14 @@ export type Temporada = {
   termos: RegExp;
   /* Rótulo curto no canal e na vitrine. */
   rotulo: string;
+  /* Rótulo antes de a janela abrir (temporada em destaque antecipado). */
+  rotuloAntecipado: string;
+  /* Buscas de produtos de valor mais alto no catálogo oficial (tarefa
+     sazonal): onde a economia de verdade aparece (os mais vendidos baratos
+     quase nunca têm o mesmo produto bem mais barato, medido em 05/10). */
+  buscas: readonly string[];
+  /* Tema visual da seção no site (cores próprias, sem marca de terceiros). */
+  tema: { fundo: string; texto: string; destaque: string; chip: string };
 };
 
 export const TEMPORADAS: readonly Temporada[] = [
@@ -42,6 +50,27 @@ export const TEMPORADAS: readonly Temporada[] = [
     termos:
       /\b(brinquedo|boneca?|carrinho|lego|pista|pel[uú]cia|quebra[- ]?cabe[cç]a|jogo de tabuleiro|patinete|bicicleta infantil|video ?game|console|controle (ps|xbox)|nintendo|massinha|slime|squishy|dinossauro|hot ?wheels|barbie|infantil|kids)\b/i,
     rotulo: "Para o Dia das Crianças",
+    rotuloAntecipado: "Antecipe o Dia das Crianças",
+    buscas: [
+      "lego",
+      "bicicleta infantil aro 16",
+      "kart elétrico infantil",
+      "moto elétrica infantil",
+      "carrinho de controle remoto",
+      "boneca baby alive",
+      "pista hot wheels",
+      "nintendo switch",
+      "patinete infantil",
+      "piscina de bolinhas",
+      "beyblade",
+      "smartwatch infantil",
+    ],
+    tema: {
+      fundo: "linear-gradient(135deg,#fff6d6 0%,#e3f1ff 100%)",
+      texto: "#1d1d1f",
+      destaque: "#0071e3",
+      chip: "#ffffff",
+    },
   },
   {
     id: "black_friday",
@@ -57,6 +86,23 @@ export const TEMPORADAS: readonly Temporada[] = [
     termos:
       /\b(smart ?tv|tv \d|notebook|celular|smartphone|iphone|galaxy|fone|headphone|airpods?|smartwatch|rel[oó]gio inteligente|tablet|ipad|console|playstation|xbox|air ?fryer|fritadeira|geladeira|refrigerador|lava ?(e seca|roupas)|micro-?ondas|aspirador|ar[- ]condicionado|monitor|ssd|mem[oó]ria)\b/i,
     rotulo: "Black Friday: preço conferido",
+    rotuloAntecipado: "Antes da Black Friday: preço conferido",
+    buscas: [
+      "smart tv 50",
+      "notebook",
+      "air fryer",
+      "geladeira frost free",
+      "fone bluetooth jbl",
+      "smartwatch",
+      "monitor gamer",
+      "aspirador robô",
+    ],
+    tema: {
+      fundo: "linear-gradient(135deg,#0b0b0f 0%,#22222b 100%)",
+      texto: "#f5f5f7",
+      destaque: "#e8c468",
+      chip: "#2c2c35",
+    },
   },
   {
     id: "natal",
@@ -72,6 +118,25 @@ export const TEMPORADAS: readonly Temporada[] = [
     termos:
       /\b(presente|kit|perfume|eau de (parfum|toilette)|col[oô]nia|necessaire|brinquedo|boneca?|lego|pel[uú]cia|fone|smartwatch|rel[oó]gio|carteira|bolsa|mochila|t[eê]nis|caixa de som|jbl|kindle|console|video ?game|panetone|chocolate|vinho|airpods?)\b/i,
     rotulo: "Ideia de presente de Natal",
+    rotuloAntecipado: "Presente de Natal antecipado",
+    buscas: [
+      "perfume masculino",
+      "perfume feminino",
+      "kit natura",
+      "kit boticário",
+      "caixa de som jbl",
+      "kindle",
+      "relógio masculino",
+      "fone de ouvido bluetooth",
+      "lego",
+      "tênis de corrida",
+    ],
+    tema: {
+      fundo: "linear-gradient(135deg,#0f3d2e 0%,#5c1a26 100%)",
+      texto: "#fdf8f0",
+      destaque: "#f2c76e",
+      chip: "#1d4a3a",
+    },
   },
 ];
 
@@ -86,13 +151,32 @@ export function temporadasAtivas(agora = new Date()): Temporada[] {
   return TEMPORADAS.filter((t) => hoje >= t.inicio && hoje <= t.fim);
 }
 
-/** A temporada em andamento que combina com o produto (pelo título), se houver. */
+/** Temporadas em destaque: as em andamento e as que começam em até
+    `diasAntes` dias (antecipadas), na ordem da data. */
+export function temporadasEmDestaque(agora = new Date(), diasAntes = 45): Temporada[] {
+  const hoje = hojeEmBrasilia(agora);
+  const limite = hojeEmBrasilia(new Date(agora.getTime() + diasAntes * 86_400_000));
+  return TEMPORADAS.filter((t) => hoje <= t.fim && t.inicio <= limite).sort((a, b) =>
+    a.dia.localeCompare(b.dia),
+  );
+}
+
+export const antecipada = (t: Temporada, agora = new Date()) => hojeEmBrasilia(agora) < t.inicio;
+
+/** Rótulo certo para hoje (em andamento ou antecipado). */
+export const rotuloDa = (t: Temporada, agora = new Date()) =>
+  antecipada(t, agora) ? t.rotuloAntecipado : t.rotulo;
+
+/** A temporada em destaque que combina com o produto (pelo título), se
+    houver; a em andamento tem preferência. */
 export function temporadaDoProduto(
   titulo: string | null | undefined,
   agora = new Date(),
 ): Temporada | null {
   if (!titulo) return null;
-  return temporadasAtivas(agora).find((t) => t.termos.test(titulo)) ?? null;
+  const lista = temporadasEmDestaque(agora);
+  const combina = lista.filter((t) => t.termos.test(titulo));
+  return combina.find((t) => !antecipada(t, agora)) ?? combina[0] ?? null;
 }
 
 /** Dias até a data (0 no próprio dia). */
