@@ -13,7 +13,7 @@
 
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { descontoReal } from "@/lib/regra-economia";
-import { temporadaDoProduto, temporadasComOfertas } from "@/lib/sazonal";
+import { combinaComTemporada, temporadaDoProduto, temporadasComOfertas } from "@/lib/sazonal";
 import { telegram } from "@/lib/telegram";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -334,14 +334,15 @@ export async function buscarSazonal(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = db as any;
   const desde = new Date(Date.now() - 24 * 3600_000).toISOString();
-  /* Só conta como "já comparado" o que saiu com link de afiliado; o que o
-     programa recusou pela página de catálogo pode voltar pelo anúncio. */
+  /* "Já pedido": o que saiu com link de afiliado e também o que ainda está
+     na fila (05/10: sem isso, duas chamadas seguidas punham o mesmo produto
+     duas vezes). O que falhou pode voltar. */
   const { data: recentes } = await t
     .from("pedidos_link")
     .select("url_alvo")
     .gte("criado_em", desde)
-    .not("link", "is", null)
-    .limit(500);
+    .neq("status", "falhou")
+    .limit(1000);
   const jaPedidos = new Set(
     ((recentes ?? []) as Array<{ url_alvo: string | null }>)
       .map((r) => /\/p\/(MLB\d+)/i.exec(r.url_alvo ?? "")?.[1]?.toUpperCase())
@@ -363,6 +364,10 @@ export async function buscarSazonal(
   }> = [];
   const pares = temporadas.flatMap((tp) => tp.buscas.map((b, i) => ({ tp, b, i })));
   pares.sort((a, b) => a.i - b.i);
+  /* Rodízio (05/10): cada chamada começa num ponto diferente da lista, para
+     o teto de chamadas não ficar sempre nas primeiras buscas. */
+  const giro = pares.length ? Math.floor(Date.now() / 60_000) % pares.length : 0;
+  pares.push(...pares.splice(0, giro));
   for (const { tp, b } of pares) {
     if (fila.length >= max || chamadas >= TETO) break;
     try {
@@ -374,6 +379,9 @@ export async function buscarSazonal(
         if (chamadas >= TETO) break;
         const id = String(p.id ?? "").toUpperCase();
         if (!/^MLB\d+$/.test(id) || jaPedidos.has(id) || fila.some((f) => f.id === id)) continue;
+        /* Só o que entra na seção da temporada (05/10: "bicicleta aro 16"
+           trazia uma aro 26 adulta, que não aparece em Crianças). */
+        if (!combinaComTemporada(tp, String(p.name ?? ""))) continue;
         /* Anúncio de referência: a primeira oferta da lista oficial do
            catálogo, na ordem do próprio Mercado Livre (nunca a mais cara,
            para a economia mostrada ser honesta). */
