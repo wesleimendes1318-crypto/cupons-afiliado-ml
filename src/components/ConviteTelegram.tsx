@@ -26,6 +26,7 @@ export function ConviteTelegram({
       <a
         href={LINK_CANAL}
         {...EXTERNO}
+        data-origem={origem}
         aria-label="Ofertas no Telegram: abrir o canal de ofertas comparadas (abre em nova aba)"
         className={
           "inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white " +
@@ -39,7 +40,7 @@ export function ConviteTelegram({
 
   if (formato === "linha")
     return (
-      <p className={className ?? "text-xs text-secondary-ink"}>
+      <p className={className ?? "text-xs text-secondary-ink"} data-origem={origem}>
         Ofertas comparadas no Telegram:{" "}
         <a
           href={LINK_CANAL}
@@ -64,6 +65,7 @@ export function ConviteTelegram({
   return (
     <section
       aria-label="Ofertas no Telegram"
+      data-origem={origem}
       className={
         "rounded-3xl border border-border bg-card p-5 shadow-[var(--shadow-card)] sm:p-6 " +
         (className ?? "")

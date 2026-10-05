@@ -365,14 +365,37 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   "Limpar histórico de interesses".
 - "Continuar de onde parou": atalhos das últimas comparações do aparelho
   (me_historico_v1) abaixo do campo do link, com a caixa parada.
-- /api/public/cron-garimpo (cabeçalho x-cron-secret = CRON_SECRET ou o token
-  do bot): pedidos prontos das últimas 24 h, mesma decisão da tela
-  (opcoesDaAnalise + decisaoDaTela), economia >= R$ 30 no produto, link
-  meli.la, frete grátis ou com valor conhecido, sem peça no lugar do aparelho
-  nem alternativa que "vem menos", só produto da vitrine. Com
-  TELEGRAM_CANAL_ID publica até 3 por chamada (cada achado 1 vez em 7 dias,
-  sinc_config.garimpo_enviados); ?simular=1 só lista. Diagnóstico em
-  sinc_config.garimpo_ultimo.
+- /api/public/cron-garimpo (x-cron-secret: sinc_config.cron_segredo,
+  CRON_SECRET ou o token do bot): mesma decisão da tela (opcoesDaAnalise +
+  decisaoDaTela), economia >= R$ 30 no produto, link meli.la, frete grátis
+  ou com valor conhecido, sem peça no lugar do aparelho nem alternativa que
+  "vem menos", só produto da vitrine, e SÓ comparação feita nas últimas 3 h
+  (mais velha = rascunho). Até 2 por chamada, cada achado 1 vez em 7 dias
+  (tabela canal_publicacoes, com message_id e versão dos critérios);
+  resposta ambígua do Telegram conta como publicada (não repete às cegas).
+  ?simular=1 só lista.
+
+## Operação de inteligência (05/10)
+- ROTINA NO BANCO (pg_cron + pg_net, disparar_operacao; horários de
+  Brasília): 07:33 /api/public/operacao?tarefa=mercado (API oficial do
+  Mercado Livre /trends/MLB, /trends/MLB/{cat}, /highlights/MLB/category
+  /{cat} + nome pelo /products, Google Trends RSS BR; mede membros do canal
+  por getChatMemberCount -> mercado_sinais, canal_metricas); 07:41 e 17:41
+  ?tarefa=preparar (pedir_link_novo das 2 maiores economias dos últimos 7
+  dias ainda não publicadas); 08:47 e 18:47 garimpo. Cada execução em
+  operacao_execucoes. PAUSA: sinc_config.operacao_pausada = 'true'.
+- Nichos do 1º ciclo (CATEGORIAS_FOCO, src/lib/inteligencia.ts):
+  Eletrodomésticos, Beleza e Cuidado Pessoal, Casa/Decoração, Acessórios
+  para Veículos (dados de 21/09-04/10: Beleza 4/5 produtos com o mesmo mais
+  barato; Eletrodomésticos ticket médio R$ 2.434). Hipótese, revisar
+  semanalmente com mercado_sinais x pedidos.
+- MEDIÇÃO: cliques em meli.la e t.me contados em eventos_site
+  (registrar_evento) só com consentimento de análise, sem IP/cookie/id;
+  origem pelo data-origem, pedido pelo data-pedido. Clique não é venda.
+  Início da medição: 05/10/2026. Painel: view painel_operacao (30 dias).
+- Sem Google Analytics (VITE_GA_ID não definido) e sem acesso ao Search
+  Console nem ao relatório de comissões por API: vendas e comissões só pelo
+  painel de afiliados do Mercado Livre.
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.

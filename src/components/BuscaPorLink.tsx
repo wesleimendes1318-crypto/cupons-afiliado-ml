@@ -1058,6 +1058,8 @@ export default function BuscaPorLink({
   return (
     <section
       id="colar-link"
+      data-origem="resultado"
+      data-pedido={fase === "pronto" && atual.current != null ? String(atual.current) : undefined}
       className={
         "mx-auto rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition-[max-width] sm:p-5 " +
         /* Com resultado, usa a largura da tela (Weslei, 28/09: "aproveite

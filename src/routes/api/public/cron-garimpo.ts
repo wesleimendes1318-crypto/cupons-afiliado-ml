@@ -4,33 +4,34 @@ import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/
 import { naoEAlternativa } from "@/lib/alternativa";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
+import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 import { linkDoBot } from "@/lib/telegram-publico";
 
-/* GARIMPO (Weslei, 05/10): olha as comparações prontas das últimas 24 h e
-   separa os achados que valem divulgar, com as MESMAS regras da tela
-   (opcoesDaAnalise + decisaoDaTela):
+/* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
+   que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
+   decisaoDaTela):
    - economia >= R$ 30 no produto contra o anúncio comparado;
    - link de afiliado (meli.la) da opção escolhida;
    - frete grátis ou com valor conhecido (frete pago desconhecido fica fora);
    - nada de peça no lugar do aparelho nem alternativa que "vem menos";
-   - só produto permitido na vitrine (produtos_vistos já filtra).
-   Com TELEGRAM_CANAL_ID nos Secrets, publica no canal até 3 achados novos
-   por chamada (cada achado uma vez por 7 dias). ?simular=1 só lista.
-   Chamada por agendador externo com o cabeçalho x-cron-secret igual a
-   CRON_SECRET (ou, sem ele, ao token do bot). */
+   - só produto permitido na vitrine (produtos_vistos já filtra);
+   - OFERTA CONFERIDA NA HORA: só publica comparação feita nas últimas 3 h
+     (o preparo, /api/public/operacao?tarefa=preparar, compara de novo as
+     melhores economias ~1 h antes). Mais velha que isso vira rascunho.
+   Publica até 2 por chamada (cada achado uma vez por 7 dias, tabela
+   canal_publicacoes), com pausa em sinc_config.operacao_pausada. Resultado
+   ambíguo do Telegram (sem resposta) conta como publicado, para não repetir
+   às cegas. ?simular=1 só lista. Chamada pelas tarefas do banco (pg_cron)
+   com o cabeçalho x-cron-secret. */
 
 const ECONOMIA_MINIMA = 30;
-const POR_CHAMADA = 3;
+const POR_CHAMADA = 2;
 const DIAS_SEM_REPETIR = 7;
+const FRESCO_MS = 3 * 3600_000;
+const CRITERIOS =
+  "garimpo-v2 (05/10): >= R$ 30 no produto, meli.la, frete conhecido, conferida <= 3 h";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-function mesmoSegredo(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i += 1) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
 
 type Achado = {
   chave: string;
@@ -114,96 +115,98 @@ function teclado(x: Achado) {
 }
 
 async function garimpar(request: Request) {
-  const segredo = process.env["CRON_SECRET"] || process.env["API_TELEGRAM"];
-  if (!segredo)
-    return Response.json({ ok: false, erro: "sem segredo configurado" }, { status: 503 });
-  const enviado = request.headers.get("x-cron-secret") ?? "";
-  if (!mesmoSegredo(enviado, segredo))
-    return Response.json({ ok: false, erro: "não autorizado" }, { status: 403 });
-
-  const simular = new URL(request.url).searchParams.get("simular") === "1";
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  const desde = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const negado = await chamadaAutorizada(request, db);
+  if (negado) return negado;
+  const simular = new URL(request.url).searchParams.get("simular") === "1";
+  if (!simular && (await operacaoPausada(db))) return Response.json({ ok: true, pausada: true });
+  const resumo = await registrarExecucao(db, simular ? "garimpo_simulado" : "garimpo", () =>
+    garimparAgora(db, simular),
+  );
+  return Response.json(resumo, { status: resumo["ok"] === false && resumo["erro"] ? 502 : 200 });
+}
 
+type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
+
+async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, unknown>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = db as any;
+  const desde = new Date(Date.now() - 24 * 3600_000).toISOString();
   const [{ data: pedidos, error: erroPedidos }, { data: vistos }] = await Promise.all([
     db
       .from("pedidos_link")
-      .select("id,url_alvo,link,analise")
+      .select("id,url_alvo,link,analise,atendido_em")
       .eq("status", "pronto")
       .not("link", "is", null)
       .gte("atendido_em", desde)
       .order("id", { ascending: false })
-      .limit(20),
+      .limit(30),
     db.from("produtos_vistos").select("url_produto").gte("visto_em", desde).limit(500),
   ]);
-  if (erroPedidos)
-    return Response.json({ ok: false, erro: "leitura dos pedidos" }, { status: 502 });
+  if (erroPedidos) return { ok: false, erro: "leitura dos pedidos" };
 
   const permitidos = new Set((vistos ?? []).map((v) => v.url_produto).filter(Boolean));
   const vistosAqui = new Set<string>();
-  const achados: Achado[] = [];
+  const achados: Array<Achado & { fresco: boolean }> = [];
   for (const p of pedidos ?? []) {
     if (!p.url_alvo || !permitidos.has(p.url_alvo) || vistosAqui.has(p.url_alvo)) continue;
     vistosAqui.add(p.url_alvo);
     const x = achadoDoPedido(p);
-    if (x) achados.push(x);
+    if (x)
+      achados.push({
+        ...x,
+        fresco: !!p.atendido_em && Date.now() - Date.parse(p.atendido_em) <= FRESCO_MS,
+      });
   }
   achados.sort((a, b) => b.economia - a.economia);
 
-  /* Publicação no canal (opcional), sem repetir o mesmo achado na semana. */
+  /* Já publicados na semana (não repetir). */
+  const limite = new Date(Date.now() - DIAS_SEM_REPETIR * 24 * 3600_000).toISOString();
+  const { data: publicadosAntes } = await t
+    .from("canal_publicacoes")
+    .select("chave")
+    .gte("publicado_em", limite)
+    .limit(500);
+  const jaFoi = new Set(((publicadosAntes ?? []) as Array<{ chave: string }>).map((p) => p.chave));
+
   const canal = process.env["TELEGRAM_CANAL_ID"];
   const token = process.env["API_TELEGRAM"];
   const publicados: string[] = [];
-  if (!simular && canal && token && achados.length) {
-    const { data: cfg } = await db
-      .from("sinc_config")
-      .select("valor")
-      .eq("chave", "garimpo_enviados")
-      .maybeSingle();
-    let enviados: Record<string, string> = {};
-    try {
-      enviados = cfg?.valor ? (JSON.parse(cfg.valor) as Record<string, string>) : {};
-    } catch {
-      enviados = {};
-    }
-    const limite = Date.now() - DIAS_SEM_REPETIR * 24 * 3600_000;
-    for (const [k, quando] of Object.entries(enviados))
-      if (!(Date.parse(quando) > limite)) delete enviados[k];
+  if (!simular && canal && token) {
     for (const x of achados) {
       if (publicados.length >= POR_CHAMADA) break;
-      if (enviados[x.chave]) continue;
+      if (!x.fresco || jaFoi.has(x.chave)) continue;
       const r = await telegram(token, "sendMessage", {
         chat_id: canal,
         text: mensagem(x),
         parse_mode: "HTML",
         reply_markup: teclado(x),
       });
-      if (r?.ok) {
-        enviados[x.chave] = new Date().toISOString();
-        publicados.push(x.chave);
-      }
+      /* Recusado com resposta (ok=false): não publicou, pode tentar depois.
+         Sem resposta: ambíguo, registra para não repetir às cegas. */
+      if (r && r.ok === false) continue;
+      const messageId = (r?.result as { message_id?: number } | undefined)?.message_id ?? null;
+      await t.from("canal_publicacoes").insert({
+        chave: x.chave,
+        pedido_id: x.pedido,
+        tipo: x.tipo,
+        titulo: x.tipo === "parecido" ? x.tituloOpcao : x.titulo,
+        preco: x.preco,
+        economia_produto: x.economia,
+        link: x.link,
+        message_id: messageId,
+        criterios: r ? CRITERIOS : `${CRITERIOS} | resultado ambíguo`,
+      });
+      jaFoi.add(x.chave);
+      publicados.push(x.chave);
     }
-    await db
-      .from("sinc_config")
-      .upsert([{ chave: "garimpo_enviados", valor: JSON.stringify(enviados) }]);
   }
 
-  await db.from("sinc_config").upsert([
-    {
-      chave: "garimpo_ultimo",
-      valor: JSON.stringify({
-        quando: new Date().toISOString(),
-        lidos: pedidos?.length ?? 0,
-        encontrados: achados.length,
-        publicados: publicados.length,
-        canal: Boolean(canal),
-        simular,
-      }),
-    },
-  ]);
-
-  return Response.json({
+  return {
     ok: true,
+    simular,
+    canal: Boolean(canal),
+    lidos: pedidos?.length ?? 0,
     encontrados: achados.length,
     publicados: publicados.length,
     destaques: achados.map((x) => ({
@@ -217,11 +220,17 @@ async function garimpar(request: Request) {
       freteGratis: x.opcao.freteGratis,
       custoFrete: x.opcao.custoFrete ?? null,
       link: x.link,
+      situacao: publicados.includes(x.chave)
+        ? "publicado"
+        : jaFoi.has(x.chave)
+          ? "ja_publicado_na_semana"
+          : x.fresco
+            ? "pronto_para_publicar"
+            : "rascunho_preco_velho",
       mensagem: simular ? mensagem(x) : undefined,
       teclado: simular ? teclado(x) : undefined,
-      publicado: publicados.includes(x.chave),
     })),
-  });
+  };
 }
 
 export const Route = createFileRoute("/api/public/cron-garimpo")({

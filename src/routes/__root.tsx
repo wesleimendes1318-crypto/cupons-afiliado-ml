@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { BannerConsentimento } from "../components/BannerConsentimento";
+import { MedicaoCliques } from "../components/MedicaoCliques";
 import {
   GoogleConsentimento,
   SCRIPT_CONSENTIMENTO_PADRAO,
@@ -146,6 +147,7 @@ function RootComponent() {
       <Outlet />
       <BannerConsentimento />
       <GoogleConsentimento />
+      <MedicaoCliques />
     </QueryClientProvider>
   );
 }

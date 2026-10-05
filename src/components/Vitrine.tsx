@@ -181,7 +181,7 @@ export function Vitrine() {
   ];
 
   return (
-    <section className="mt-8" aria-label="Produtos já comparados">
+    <section className="mt-8" aria-label="Produtos já comparados" data-origem="vitrine">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-xl font-extrabold sm:text-2xl">Produtos que já comparei</h2>

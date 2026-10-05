@@ -1,0 +1,247 @@
+/* INTELIGÊNCIA DE MERCADO (Weslei, 05/10): coleta diária de sinais externos
+   por fontes oficiais, medição do canal e preparo das ofertas do garimpo.
+   Tudo determinístico (sem modelo de linguagem) e registrado no banco
+   (mercado_sinais, canal_metricas, operacao_execucoes).
+
+   Fontes:
+   - API oficial do Mercado Livre: /trends/MLB (termos em alta, geral e por
+     categoria) e /highlights/MLB/category/{id} (mais vendidos), com o nome do
+     produto pelo /products/{id}. Ranking não é volume de vendas nem conversão.
+   - Google Trends "em alta no Brasil" (feed RSS público, diário): assuntos do
+     dia, não intenção de compra; serve só de sinal complementar.
+   Poucas chamadas por execução (limite de subrequisições do servidor). */
+
+import { ErroApiMl, mlGet } from "@/lib/ml-api";
+import { telegram } from "@/lib/telegram";
+
+type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
+
+/* Nichos do 1º ciclo (05/10): onde o site já acha economia de verdade
+   (Beleza 4 de 5 produtos com o mesmo mais barato; Eletrodomésticos com
+   ticket médio de R$ 2.434) e categorias de demanda constante. O nome
+   oficial é conferido a cada coleta (/categories/{id}). */
+export const CATEGORIAS_FOCO = [
+  { id: "MLB5726", nome: "Eletrodomésticos" },
+  { id: "MLB1246", nome: "Beleza e Cuidado Pessoal" },
+  { id: "MLB1574", nome: "Casa, Móveis e Decoração" },
+  { id: "MLB5672", nome: "Acessórios para Veículos" },
+] as const;
+
+const PRODUTOS_POR_CATEGORIA = 3;
+
+type Sinal = {
+  fonte: string;
+  categoria_id?: string | null;
+  categoria_nome?: string | null;
+  posicao?: number | null;
+  termo?: string | null;
+  produto_id?: string | null;
+  url?: string | null;
+  extra?: Record<string, unknown> | null;
+};
+
+const erroCurto = (e: unknown) =>
+  e instanceof ErroApiMl ? `${e.status}` : String((e as Error)?.message ?? e).slice(0, 80);
+
+async function googleTrendsBrasil(): Promise<Sinal[]> {
+  const r = await fetch("https://trends.google.com/trending/rss?geo=BR", {
+    signal: AbortSignal.timeout(8_000),
+    headers: { Accept: "application/rss+xml, text/xml" },
+  });
+  if (!r.ok) throw new Error(`google_trends ${r.status}`);
+  const xml = await r.text();
+  const itens = xml.split("<item>").slice(1, 21);
+  return itens.map((bloco, i) => {
+    const titulo = /<title>([^<]{1,200})<\/title>/.exec(bloco)?.[1] ?? null;
+    const trafego = /<ht:approx_traffic>([^<]{1,30})<\/ht:approx_traffic>/.exec(bloco)?.[1] ?? null;
+    return {
+      fonte: "google_trends",
+      posicao: i + 1,
+      termo: titulo,
+      extra: trafego ? { trafego_aproximado: trafego } : null,
+    };
+  });
+}
+
+/** Coleta os sinais externos do dia. Cada fonte falha sozinha. */
+export async function coletarMercado(db: Db) {
+  const sinais: Sinal[] = [];
+  const erros: Record<string, string> = {};
+
+  try {
+    const geral = await mlGet<Array<{ keyword?: string; url?: string }>>("/trends/MLB");
+    geral.slice(0, 50).forEach((t, i) =>
+      sinais.push({
+        fonte: "ml_trends",
+        posicao: i + 1,
+        termo: t.keyword ?? null,
+        url: t.url ?? null,
+      }),
+    );
+  } catch (e) {
+    erros["ml_trends"] = erroCurto(e);
+  }
+
+  for (const cat of CATEGORIAS_FOCO) {
+    let nome: string = cat.nome;
+    try {
+      const c = await mlGet<{ name?: string }>(`/categories/${cat.id}`);
+      if (c.name) nome = c.name;
+    } catch (e) {
+      erros[`categoria_${cat.id}`] = erroCurto(e);
+    }
+    try {
+      const t = await mlGet<Array<{ keyword?: string; url?: string }>>(`/trends/MLB/${cat.id}`);
+      t.slice(0, 20).forEach((x, i) =>
+        sinais.push({
+          fonte: "ml_trends",
+          categoria_id: cat.id,
+          categoria_nome: nome,
+          posicao: i + 1,
+          termo: x.keyword ?? null,
+          url: x.url ?? null,
+        }),
+      );
+    } catch (e) {
+      erros[`trends_${cat.id}`] = erroCurto(e);
+    }
+    try {
+      const h = await mlGet<{ content?: Array<{ id?: string; position?: number; type?: string }> }>(
+        `/highlights/MLB/category/${cat.id}`,
+      );
+      const lista = (h.content ?? []).slice(0, 20);
+      let nomes = 0;
+      for (const item of lista) {
+        let termo: string | null = null;
+        if (item.type === "PRODUCT" && item.id && nomes < PRODUTOS_POR_CATEGORIA) {
+          nomes += 1;
+          try {
+            const p = await mlGet<{ name?: string }>(`/products/${item.id}`);
+            termo = p.name ?? null;
+          } catch {
+            /* sem nome: fica só o id */
+          }
+        }
+        sinais.push({
+          fonte: "ml_mais_vendidos",
+          categoria_id: cat.id,
+          categoria_nome: nome,
+          posicao: item.position ?? null,
+          termo,
+          produto_id: item.id ?? null,
+          url:
+            item.type === "PRODUCT" && item.id
+              ? `https://www.mercadolivre.com.br/p/${item.id}`
+              : null,
+          extra: { tipo: item.type ?? null },
+        });
+      }
+    } catch (e) {
+      erros[`mais_vendidos_${cat.id}`] = erroCurto(e);
+    }
+  }
+
+  try {
+    sinais.push(...(await googleTrendsBrasil()));
+  } catch (e) {
+    erros["google_trends"] = erroCurto(e);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = db as any;
+  if (sinais.length) {
+    const { error } = await t.from("mercado_sinais").insert(sinais);
+    if (error) erros["gravar"] = String(error.message).slice(0, 120);
+  }
+  const porFonte: Record<string, number> = {};
+  for (const s of sinais) porFonte[s.fonte] = (porFonte[s.fonte] ?? 0) + 1;
+  return { ok: sinais.length > 0, sinais: sinais.length, porFonte, erros };
+}
+
+/** Membros do canal hoje (Bot API getChatMemberCount). */
+export async function medirCanal(db: Db) {
+  const token = process.env["API_TELEGRAM"];
+  const canal = process.env["TELEGRAM_CANAL_ID"];
+  if (!token || !canal) return { ok: false, erro: "canal ou token não configurado" };
+  const r = await telegram(token, "getChatMemberCount", { chat_id: canal });
+  if (!r?.ok || typeof r.result !== "number")
+    return { ok: false, erro: r?.description ?? "sem resposta do Telegram" };
+  const dia = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (db as any)
+    .from("canal_metricas")
+    .upsert({ dia, membros: r.result, medido_em: new Date().toISOString() });
+  return { ok: true, dia, membros: r.result };
+}
+
+/* PREPARO DO GARIMPO: as melhores economias dos últimos 7 dias são
+   comparadas DE NOVO (pedir_link_novo) cerca de 1 h antes da publicação; o
+   garimpo só publica o que foi comparado nas últimas 3 h (oferta conferida
+   na hora, nada de preço velho). Pré-filtro pelos valores da vitrine; a
+   decisão final é a da tela (decisaoDaTela) no garimpo. */
+export const PREPARAR_POR_VEZ = 2;
+const ECONOMIA_MINIMA = 30;
+
+export async function prepararRevalidacao(db: Db) {
+  const desde = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+  const recente = Date.now() - 6 * 3600_000;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = db as any;
+  const [{ data: vistos }, { data: publicados }] = await Promise.all([
+    t
+      .from("produtos_vistos")
+      .select(
+        "url_produto,titulo,economia,melhor_link,alt_economia,alt_link,alt_frete_gratis,visto_em",
+      )
+      .gte("visto_em", desde)
+      .limit(300),
+    t.from("canal_publicacoes").select("chave").gte("publicado_em", desde).limit(500),
+  ]);
+  const jaPublicado = new Set(
+    ((publicados ?? []) as Array<{ chave: string }>).map((p) => p.chave.split("|")[0]),
+  );
+  type Visto = {
+    url_produto: string | null;
+    titulo: string | null;
+    economia: number | null;
+    melhor_link: string | null;
+    alt_economia: number | null;
+    alt_link: string | null;
+    alt_frete_gratis: boolean | null;
+    visto_em: string;
+  };
+  const candidatos = ((vistos ?? []) as Visto[])
+    .map((v) => {
+      const mesmo =
+        (v.economia ?? 0) >= ECONOMIA_MINIMA && /^https:\/\/meli\.la\//.test(v.melhor_link ?? "")
+          ? Number(v.economia)
+          : 0;
+      const alt =
+        (v.alt_economia ?? 0) >= ECONOMIA_MINIMA &&
+        v.alt_frete_gratis === true &&
+        /^https:\/\/meli\.la\//.test(v.alt_link ?? "")
+          ? Number(v.alt_economia)
+          : 0;
+      return { ...v, ganho: Math.max(mesmo, alt) };
+    })
+    .filter(
+      (v) =>
+        v.url_produto &&
+        v.ganho > 0 &&
+        !jaPublicado.has(v.url_produto.split("?")[0]!) &&
+        Date.parse(v.visto_em) < recente,
+    )
+    .sort((a, b) => b.ganho - a.ganho)
+    .slice(0, PREPARAR_POR_VEZ);
+
+  const pedidos: Array<{ url: string; pedido: number | null; ganho: number }> = [];
+  for (const c of candidatos) {
+    const { data, error } = await t.rpc("pedir_link_novo", { p_url: c.url_produto });
+    pedidos.push({
+      url: c.url_produto as string,
+      pedido: error ? null : typeof data === "number" ? data : null,
+      ganho: c.ganho,
+    });
+  }
+  return { ok: true, candidatos: candidatos.length, pedidos };
+}

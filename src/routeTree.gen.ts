@@ -38,6 +38,7 @@ import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/m
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
 import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
 import { Route as ApiPublicMlTesteRouteImport } from './routes/api/public/ml-teste'
+import { Route as ApiPublicOperacaoRouteImport } from './routes/api/public/operacao'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 import { Route as ApiPublicRegiaoRouteImport } from './routes/api/public/regiao'
 import { Route as ApiPublicTelegramSetupRouteImport } from './routes/api/public/telegram-setup'
@@ -190,6 +191,11 @@ const ApiPublicMlTesteRoute = ApiPublicMlTesteRouteImport.update({
   path: '/api/public/ml-teste',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOperacaoRoute = ApiPublicOperacaoRouteImport.update({
+  id: '/api/public/operacao',
+  path: '/api/public/operacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
   id: '/api/public/recomendar',
   path: '/api/public/recomendar',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
+  '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
+  '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
@@ -313,6 +321,7 @@ export interface FileRoutesById {
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
+  '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
@@ -350,6 +359,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
+    | '/api/public/operacao'
     | '/api/public/recomendar'
     | '/api/public/regiao'
     | '/api/public/telegram-setup'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
+    | '/api/public/operacao'
     | '/api/public/recomendar'
     | '/api/public/regiao'
     | '/api/public/telegram-setup'
@@ -420,6 +431,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
+    | '/api/public/operacao'
     | '/api/public/recomendar'
     | '/api/public/regiao'
     | '/api/public/telegram-setup'
@@ -456,6 +468,7 @@ export interface RootRouteChildren {
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
   ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
   ApiPublicMlTesteRoute: typeof ApiPublicMlTesteRoute
+  ApiPublicOperacaoRoute: typeof ApiPublicOperacaoRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
   ApiPublicRegiaoRoute: typeof ApiPublicRegiaoRoute
   ApiPublicTelegramSetupRoute: typeof ApiPublicTelegramSetupRoute
@@ -667,6 +680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMlTesteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/operacao': {
+      id: '/api/public/operacao'
+      path: '/api/public/operacao'
+      fullPath: '/api/public/operacao'
+      preLoaderRoute: typeof ApiPublicOperacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/recomendar': {
       id: '/api/public/recomendar'
       path: '/api/public/recomendar'
@@ -729,6 +749,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
   ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,
   ApiPublicMlTesteRoute: ApiPublicMlTesteRoute,
+  ApiPublicOperacaoRoute: ApiPublicOperacaoRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
   ApiPublicRegiaoRoute: ApiPublicRegiaoRoute,
   ApiPublicTelegramSetupRoute: ApiPublicTelegramSetupRoute,

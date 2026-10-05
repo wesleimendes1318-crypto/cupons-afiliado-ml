@@ -24,7 +24,7 @@ export const Route = createFileRoute("/telegram")({
 });
 
 /* Regras do texto conferidas em src/routes/api/public/cron-garimpo.ts
-   (05/10): até 3 achados por rodada, economia a partir de R$ 30 no produto,
+   (05/10): até 2 achados por rodada, só comparação feita nas últimas 3 h, economia a partir de R$ 30 no produto,
    cada achado no máximo uma vez a cada 7 dias, frete grátis ou com valor
    conhecido. Sem prometer quantidade de posts por dia. */
 function PaginaTelegram() {
@@ -49,7 +49,11 @@ function PaginaTelegram() {
           Frete grátis ou com o valor conhecido, sempre em linha separada do preço. Frete pago de
           valor desconhecido não entra.
         </li>
-        <li>No máximo 3 achados por vez, e cada achado aparece uma vez só na semana.</li>
+        <li>
+          Cada oferta é comparada de novo pouco antes de ir para o canal: preço que não foi
+          conferido na hora não é publicado.
+        </li>
+        <li>No máximo 2 achados por vez, e cada achado aparece uma vez só na semana.</li>
         <li>
           O preço é o de quando foi comparado. Preço e estoque mudam: confira antes de comprar.
         </li>

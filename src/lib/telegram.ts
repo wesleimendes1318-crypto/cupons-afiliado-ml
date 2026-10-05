@@ -23,7 +23,11 @@ export async function telegram(token: string, metodo: string, corpo: Record<stri
       body: JSON.stringify(corpo),
       signal: AbortSignal.timeout(10_000),
     });
-    return (await r.json().catch(() => null)) as { ok?: boolean } | null;
+    return (await r.json().catch(() => null)) as {
+      ok?: boolean;
+      result?: unknown;
+      description?: string;
+    } | null;
   } catch {
     return null;
   }
