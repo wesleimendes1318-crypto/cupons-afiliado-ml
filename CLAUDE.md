@@ -444,6 +444,16 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   convite do "Acompanhar preço" (até 60 dias antes da Black Friday: "veja se
   o desconto é de verdade"). Só prioridade e rótulo: as regras de economia,
   qualidade, frete e afiliado não mudam; nada de desconto ou prazo inventado.
+  SEÇÕES SAZONAIS (Weslei, 05/10: "sessões prioritárias... encantar...
+  design profissional"): VitrineSazonal acima da vitrine geral, uma seção
+  por temporada em destaque (em andamento ou que começa em até 45 dias:
+  "Antes da Black Friday", "Presente de Natal antecipado"), tema próprio
+  (sazonal.ts, tema), contagem de dias, 2 a 10 produtos já comparados com
+  desconto real (mesmo produto ou alternativa da vitrine), botão de compra
+  só com meli.la e comparação < 24 h (senão "Ver o preço de agora").
+  BUSCA SAZONAL: operacao?tarefa=sazonal[&temporada=][&max=] põe na fila os
+  produtos do catálogo oficial (/products/search) das buscas da temporada,
+  1 por busca, até 20 por chamada.
 - Nichos do 1º ciclo (CATEGORIAS_FOCO, src/lib/inteligencia.ts):
   Eletrodomésticos, Beleza e Cuidado Pessoal, Casa/Decoração, Acessórios
   para Veículos (dados de 21/09-04/10: Beleza 4/5 produtos com o mesmo mais

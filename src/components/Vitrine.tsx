@@ -20,7 +20,6 @@ import {
   type ClusterInteresse,
 } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
-import { temporadasAtivas } from "@/lib/sazonal";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -174,19 +173,6 @@ export function Vitrine() {
       .slice(0, 5);
   }, [lista, interesse, categoria]);
 
-  /* Temporada (05/10): produtos já comparados que combinam com a data
-     (brinquedos no Dia das Crianças, presentes no Natal), maior economia
-     primeiro. Só aparece com 2 ou mais. */
-  const [temporada] = useState(() => temporadasAtivas()[0] ?? null);
-  const daTemporada = useMemo(() => {
-    if (!temporada || categoria != null) return [];
-    const l = lista
-      .filter((i) => temporada.termos.test(`${i.titulo} ${i.alt_titulo ?? ""}`))
-      .sort((a, b) => maiorEconomia(b) - maiorEconomia(a))
-      .slice(0, 5);
-    return l.length >= 2 ? l : [];
-  }, [lista, temporada, categoria]);
-
   if (!itens.length) return null;
 
   const abas: { id: Aba; rotulo: string }[] = [
@@ -261,24 +247,6 @@ export function Vitrine() {
       ) : categoria == null ? (
         /* "Todas": uma seção por categoria, cada uma com seus produtos. */
         <div className="mt-4 space-y-7">
-          {temporada && daTemporada.length > 0 && (
-            <div>
-              <div className="mb-2">
-                <h3 className="text-base font-bold">
-                  <span aria-hidden="true">{temporada.emoji} </span>
-                  {temporada.rotulo}
-                </h3>
-                <p className="text-xs text-secondary-ink">
-                  Produtos já comparados que combinam com a data. Preço de quando foi comparado.
-                </p>
-              </div>
-              <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                {daTemporada.map((i) => (
-                  <Cartao key={i.chave} i={i} />
-                ))}
-              </ul>
-            </div>
-          )}
           {paraVoce.length > 0 && (
             <div>
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
