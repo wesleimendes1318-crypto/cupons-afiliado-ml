@@ -7,7 +7,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor } from './sincronia.js';
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -4829,6 +4829,96 @@ async function monitorarPrecos() {
   }
 }
 
+/* RECOMENDADOS DO HUB DE AFILIADOS (Weslei, 05/10: "consulte os principais
+   produtos que o proprio Mercado Livre recomenda" em /afiliados/hub). Uma
+   leitura por dia, so com a extensao parada e sem freio de captcha: abre a
+   pagina numa aba de fundo (logada), rola um pouco para carregar os
+   cartoes e le de cada um so titulo, preco, preco anterior, % OFF, "Mais
+   vendido", nota e vendidos. A comissao ("Ganhos", "Ganhos extras") NUNCA
+   e lida nem enviada (dado privado do Weslei). O banco poe os primeiros na
+   fila de comparacao; o site so mostra depois de comparado, com meli.la. */
+const URL_HUB = 'https://www.mercadolivre.com.br/afiliados/hub';
+let lendoHub = false;
+async function lerHubDeAfiliados() {
+  if (lendoHub || atendendo) return;
+  const { sincToken, hubUltimo } = await chrome.storage.local.get(['sincToken', 'hubUltimo']);
+  if (!sincToken || (hubUltimo && Date.now() - hubUltimo < 24 * 3600e3)) return;
+  if (await freioLigado('leitura')) return;
+  lendoHub = true;
+  await chrome.storage.local.set({ hubUltimo: Date.now() });
+  let aba = null;
+  try {
+    aba = await chrome.tabs.create({ url: URL_HUB, active: false });
+    await esperarCarregar(aba.id, 25000);
+    await sleep(4000);
+    const fim = (await chrome.tabs.get(aba.id)).url || '';
+    if (ehCaptcha('', fim) || !/mercadolivre\.com\.br\/afiliados/i.test(fim)) {
+      await gravarDiagnostico(sincToken, 'hub-afiliados', { ok: false, motivo: 'pagina inesperada', fim: fim.slice(0, 120) });
+      return;
+    }
+    const [saida] = await chrome.scripting.executeScript({
+      target: { tabId: aba.id },
+      func: async () => {
+        const espera = ms => new Promise(r => setTimeout(r, ms));
+        for (let k = 0; k < 4; k++) { window.scrollBy(0, window.innerHeight * 1.5); await espera(900); }
+        const num = t => {
+          const m = /R\$\s*([\d.]+)(?:[,\s]+(\d{2}))?/.exec(t || '');
+          return m ? Number(m[1].replace(/\./g, '') + '.' + (m[2] || '00')) : null;
+        };
+        const itens = new Map();
+        const amostra = [];
+        let pos = 0;
+        for (const a of document.querySelectorAll('a[href]')) {
+          const h = (a.href || '').split('#')[0];
+          const m = /\/p\/(MLB\d+)[^?]*(?:\?[^#]*item_id(?:%3A|:)(MLB\d+))?|MLB-?(\d{8,})/i.exec(h);
+          if (!m) continue;
+          const item = (m[2] || (m[3] ? 'MLB' + m[3] : null) || m[1] || '').toUpperCase();
+          if (!item || itens.has(item)) continue;
+          /* Cartao: o menor ancestral com preco. */
+          let card = a;
+          for (let n = 0; n < 6 && card && !/R\$/.test(card.innerText || ''); n++) card = card.parentElement;
+          if (!card) continue;
+          /* Comissao fora: linhas de "Ganhos" sao descartadas antes de tudo. */
+          const linhas = (card.innerText || '').split('\n').map(l => l.trim()).filter(l => l && !/ganho/i.test(l));
+          const texto = linhas.join('\n');
+          const riscado = card.querySelector('s, del, [class*="previous"], [class*="original"]');
+          const precos = linhas.filter(l => /^R\$/.test(l) || /R\$\s*\d/.test(l)).map(num).filter(v => v != null);
+          const precoOriginal = riscado ? num(riscado.innerText) : null;
+          const preco = precos.find(v => v !== precoOriginal) ?? null;
+          const titulo = linhas.filter(l => !/R\$|%|vendid|mais vendido|compartilhar|^\d[.,]\d/i.test(l))
+            .sort((x, y) => y.length - x.length)[0] || null;
+          const off = /(\d{1,2})%\s*OFF/i.exec(texto);
+          const nota = /(^|\n)\s*(\d[.,]\d)\s*(\||\n|$)/.exec(texto);
+          const vend = /\+?\s*[\d.]+\s*(mil\s*)?vendidos/i.exec(texto);
+          const img = card.querySelector('img');
+          itens.set(item, {
+            item, url: /mercadolivre\.com\.br/.test(h) ? h : 'https://produto.mercadolivre.com.br/' + item.replace(/^MLB/, 'MLB-'),
+            titulo, preco, preco_original: precoOriginal && preco && precoOriginal > preco ? precoOriginal : null,
+            desconto_pct: off ? Number(off[1]) : null, mais_vendido: /mais vendido/i.test(texto),
+            avaliacao: nota ? Number(nota[2].replace(',', '.')) : null, vendidos: vend ? vend[0].replace(/\s+/g, ' ') : null,
+            imagem: img ? (img.currentSrc || img.src || null) : null, posicao: ++pos
+          });
+          if (amostra.length < 3) amostra.push(texto.slice(0, 240));
+          if (itens.size >= 60) break;
+        }
+        return { itens: [...itens.values()], amostra };
+      }
+    });
+    const r = (saida && saida.result) || { itens: [], amostra: [] };
+    const validos = (r.itens || []).filter(x => x.item && x.preco != null);
+    const resp = validos.length ? await registrarHub(sincToken, validos).catch(e => ({ erro: e.message })) : null;
+    await gravarDiagnostico(sincToken, 'hub-afiliados', {
+      ok: true, lidos: (r.itens || []).length, comPreco: validos.length, banco: resp, amostra: r.amostra
+    });
+  } catch (e) {
+    console.warn('[hub]', e.message);
+    try { await gravarDiagnostico(sincToken, 'hub-afiliados', { ok: false, erro: String(e.message).slice(0, 200) }); } catch (x) {}
+  } finally {
+    if (aba) { try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ } }
+    lendoHub = false;
+  }
+}
+
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
     chrome.alarms.create(nome, { periodInMinutes });
@@ -4852,6 +4942,7 @@ chrome.alarms.onAlarm.addListener(async a => {
   if (a.name === 'pedidos') {
     sinalDeVida().catch(() => {});
     monitorarPrecos().catch(() => {});
+    lerHubDeAfiliados().catch(() => {});
     vigiarFila().catch(() => {});
     completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.

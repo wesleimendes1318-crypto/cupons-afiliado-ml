@@ -645,6 +645,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   um tema configurado, um identificado pelo conteúdo e um neutro, a contagem
   da Black Friday e as artes.
 
+## Recomendados do hub de afiliados (05/10)
+- Weslei, 05/10: "consulte os principais produtos que o próprio Mercado
+  Livre recomenda" (https://www.mercadolivre.com.br/afiliados/hub). A
+  página só abre logada: a extensão (1.150.0, lerHubDeAfiliados) lê uma vez
+  por dia, parada e sem freio, numa aba de fundo; de cada cartão só título,
+  preço, preço anterior, % OFF, "Mais vendido", nota e vendidos. "Ganhos"
+  (comissão) é descartado na leitura e nunca sai do navegador. Banco:
+  registrar_hub (senha da extensão) grava em hub_recomendados e põe até 6
+  na fila de comparação por leitura (mais vendidos e maiores descontos;
+  cada um no máximo a cada 48 h). Diagnóstico: diagnosticos tipo
+  'hub-afiliados' (lidos, com preço, amostra sem comissão).
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

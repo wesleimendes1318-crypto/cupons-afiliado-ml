@@ -551,3 +551,11 @@ export async function gravarMonitor(token, id, leitura) {
     p_erro: leitura.erro ? String(leitura.erro).slice(0, 200) : null
   });
 }
+
+/* RECOMENDADOS DO HUB DE AFILIADOS (05/10): produtos que o proprio programa
+   recomenda, SEM a comissao (o campo nem e lido). O banco grava e poe os
+   primeiros na fila de comparacao, com teto. */
+export async function registrarHub(token, itens) {
+  if (!token || !Array.isArray(itens) || !itens.length) return null;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/registrar_hub', { p_token: token, p_itens: itens.slice(0, 80) });
+}
