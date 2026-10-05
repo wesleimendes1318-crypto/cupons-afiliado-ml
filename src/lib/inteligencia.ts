@@ -361,16 +361,19 @@ export async function buscarSazonal(
   }
   /* O gerador de links do programa recusa a página de catálogo pura
      (/p/MLB..., erro 111 "URL not allowed", 05/10: 34 de 49). Com o anúncio
-     da oferta principal (buy_box_winner) no endereço, o link sai. Sem
-     anúncio conhecido, o produto fica de fora. */
+     no endereço (pdp_filters=item_id), o link sai. Sem anúncio conhecido, o
+     produto fica de fora. */
   const pedidos: Array<{ produto: string; nome: string | null; pedido: number | null }> = [];
   for (const f of fila) {
+    /* Anúncio de referência: a primeira oferta da lista oficial do
+       catálogo, na ordem do próprio Mercado Livre (nunca a mais cara, para a
+       economia mostrada ser honesta). */
     let item: string | null = null;
     try {
-      const prod = await mlGet<{ buy_box_winner?: { item_id?: string } | null }>(
-        `/products/${f.id}`,
+      const r = await mlGet<{ results?: Array<{ item_id?: string }> }>(
+        `/products/${f.id}/items?limit=1`,
       );
-      item = prod.buy_box_winner?.item_id ?? null;
+      item = r.results?.[0]?.item_id ?? null;
     } catch (e) {
       erros[f.id] = erroCurto(e);
     }
