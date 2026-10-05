@@ -687,7 +687,7 @@ async function geminiLocal(partes, primeiro = null) {
           headers: { 'Content-Type': 'application/json', 'X-goog-api-key': geminiKey },
           /* Gemma nao tem o modo JSON da Gemini: o texto pede JSON e jsonDaIA le. */
           body: JSON.stringify({ contents: [{ parts: partes }],
-                                 generationConfig: ehGemma(modelo) ? { temperature: 0 } : { responseMimeType: 'application/json', temperature: 0,
+                                 generationConfig: ehGemma(modelo) ? { temperature: 0, thinkingConfig: { thinkingLevel: 'minimal' } } : { responseMimeType: 'application/json', temperature: 0,
                                    ...(/2\.5-flash/.test(modelo) ? { thinkingConfig: { thinkingBudget: 0 } } : {}) } })
         });
         clearTimeout(corta);
@@ -735,7 +735,9 @@ function jsonDaIA(texto) {
 const CONFIANCA_MINIMA_IA = 80;
 /* Gemma: so quando a Gemini nao der, e com confianca maior (mais fraco em
    detalhe de foto). Mesma chave; modelo que a chave nao tem (404) e pulado. */
-const MODELOS_GEMMA = ['gemma-4-31b-it', 'gemma-4-26b-a4b-it', 'gemma-3-27b-it'];
+/* 26b primeiro e com o raciocinio no minimo (05/10, diagnostico no servidor:
+   1,3 s com foto); o 31b da erro 500 com foto. */
+const MODELOS_GEMMA = ['gemma-4-26b-a4b-it', 'gemma-4-31b-it'];
 const CONFIANCA_MINIMA_GEMMA = 90;
 function ehGemma(modelo) { return /^gemma/i.test(modelo || ''); }
 function confiancaMinimaIA(modelo) { return ehGemma(modelo) ? CONFIANCA_MINIMA_GEMMA : CONFIANCA_MINIMA_IA; }

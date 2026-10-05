@@ -270,8 +270,10 @@ async function chamarModelo(
           contents: [{ role: "user", parts: partes }],
           /* Gemma nao tem o modo JSON da Gemini: o pedido ja manda
              responder so JSON e lerJson tira o bloco {} do texto. */
+          /* Raciocinio no minimo (05/10, diagnostico): 1,3 s em vez de 6,4 s
+             com foto e sem tokens de pensamento. */
           generationConfig: ehGemma(modelo)
-            ? { temperature: 0 }
+            ? { temperature: 0, thinkingConfig: { thinkingLevel: "minimal" } }
             : {
                 responseMimeType: "application/json",
                 temperature: 0,
@@ -735,12 +737,13 @@ async function conferirSemGuardar(original: Anuncio, candidatos: Anuncio[]): Pro
      conferencia com 4 candidatos nao respondia em 12,6 s e a consulta saia
      sem nenhum parecido. Diagnostico (?diag=1): gemma-4-31b-it da erro 500
      com foto e passa de 30 s so com texto; gemma-4-26b-a4b-it respondeu com
-     foto em 6,2 s. Sem Gemini: so o 26b, ate 6 candidatos (os primeiros da
-     lista, que ja vem com os mais baratos na frente), lotes de 2 e prazo de
+     foto em 6,2 s, e em 1,3 s com o raciocinio no minimo (thinkingLevel
+     "minimal"). Sem Gemini: so o 26b, ate 9 candidatos (os primeiros da
+     lista, que ja vem com os mais baratos na frente), lotes de 3 e prazo de
      20 s. */
   const soGemma = ordemDosModelos().every(ehGemma);
-  const todos = lista.map((_, i) => i).slice(0, soGemma ? 6 : lista.length);
-  const porLote = soGemma ? 2 : 4;
+  const todos = lista.map((_, i) => i).slice(0, soGemma ? 9 : lista.length);
+  const porLote = soGemma ? 3 : 4;
   /* Lotes de ate 4 em paralelo (12 candidatos = 3 chamadas; garimpo, 27/09). */
   const lotes: number[][] = [];
   for (let k = 0; k < todos.length; k += porLote) lotes.push(todos.slice(k, k + porLote));

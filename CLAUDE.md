@@ -515,8 +515,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - SEM GEMINI = SÓ O GEMMA 26B (05/10, diagnóstico ?diag=1 em
   /api/public/conferir-produto, só com o token da extensão): gemma-4-31b-it
   dá erro 500 com foto e passa de 30 s com texto; gemma-4-26b-a4b-it
-  respondeu com foto em 6,2 s. Com a cota diária da Gemini esgotada, a
-  conferência usa só o 26b, até 6 candidatos em lotes de 2, prazo de 20 s
+  respondeu com foto em 6,2 s, e em 1,3 s com thinkingConfig.thinkingLevel
+  "minimal" (o Gemma 4 vem com raciocínio ligado; thinkingBudget e "low"
+  dão 400). Todo Gemma vai com o raciocínio no mínimo (servidor e extensão
+  1.153.0). Com a cota diária da Gemini esgotada, a conferência usa só o
+  26b, até 9 candidatos em lotes de 3, prazo de 20 s
   (antes: 4 por lote em 12,6 s, nada respondia e a comparação saía sem
   parecidos). Extensão 1.151.0: a geração dos links da tabela olha a fila a
   cada link (pedido 747 esperou 56 s).
