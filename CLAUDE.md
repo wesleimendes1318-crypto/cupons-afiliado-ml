@@ -322,7 +322,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   preço, motivos com ✓, o que muda, botão, características.
 - Tabela: preço abaixo de 70% da mediana das lojas ganha o aviso "Preço muito
   abaixo das outras lojas: confira o vendedor antes de comprar". GPT (chave da OpenAI nos Secrets, OPENAI_API_KEY ou
-  variações; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de
+  variações, inclusive CHAT_GPT_API_KEY, a usada pelo Weslei; modelo em OPENAI_MODEL) responde primeiro, Gemini/Gemma de
   reserva; a conferência pela foto continua na Gemini. Última falha do GPT em
   sinc_config.gpt_diagnostico.
 - Textos curtos. Não prometer cupom. Sempre mostrar foto do produto.
