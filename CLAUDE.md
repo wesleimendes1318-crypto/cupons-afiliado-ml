@@ -374,6 +374,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   TELEGRAM_CANAL_ID); o bot @AfiliadosMELI_bot é admin do canal só com
   "Publicar mensagens". Posts do garimpo com teclado: "Comprar com segurança"
   (afiliado) e "Comparar o meu produto" (bot ?start=canal).
+  POST COM FOTO (Weslei, 05/10: "melhore a mensagem, melhore a disposição
+  da foto"): sendPhoto com a foto grande do produto (mlstatic -O.jpg) e
+  legenda em blocos (produto; mesmo/parecido, muda, qualidade, desvantagens;
+  preço, anúncio comparado riscado, economia no produto com %, frete em
+  linha própria; loja e hora da conferência). Link de afiliado nos botões;
+  foto recusada (ok=false) -> texto com o link e sem prévia; sem resposta
+  -> não reenvia (evita post duplicado).
 - CONVITE NO SITE: nomes só em src/lib/telegram-publico.ts; componente
   ConviteTelegram (pilula no topo, cartao abaixo do resultado pronto / na
   home com a caixa parada / em /meus-precos, linha no rodapé) e página

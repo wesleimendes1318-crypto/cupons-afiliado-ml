@@ -10,6 +10,7 @@ import {
   type Qualidade,
 } from "@/lib/qualidade";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
+import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 import { linkDoBot } from "@/lib/telegram-publico";
@@ -58,6 +59,8 @@ type Achado = {
   qualidade: Qualidade | null;
   /* O que tem pior ou a menos que o anúncio comparado (05/10). */
   desvantagens: string[];
+  /* Foto do produto da oferta (post com foto grande, 05/10). */
+  imagem: string | null;
 };
 
 function achadoDoPedido(p: {
@@ -100,6 +103,7 @@ function achadoDoPedido(p: {
       escolha.tipo === "parecido"
         ? desvantagensDoParecido(escolha, { titulo: colado.titulo, detalhes: colado.detalhes })
         : [],
+    imagem: escolha.imagem ?? colado.imagem ?? null,
   };
 }
 
@@ -119,29 +123,70 @@ function textoDoMuda(muda: string | null, tituloColado: string) {
   return itens.length ? itens.join("; ") : muda;
 }
 
-/* Preço e frete em linhas separadas; nunca "R$ X a menos + frete". */
-function mensagem(x: Achado) {
-  const linhas = [
-    "🔥 <b>Achado conferido há pouco</b>",
-    `📦 ${html(x.tipo === "parecido" ? x.tituloOpcao : x.titulo)}`,
+/* POST DO CANAL (Weslei, 05/10: "melhore a mensagem, melhore a disposição
+   da foto"): foto grande em cima (sendPhoto) e legenda curta em blocos:
+   produto, se é o mesmo ou parecido, preço x anúncio comparado, economia,
+   frete em linha própria e loja. O link de afiliado vai nos botões (e no
+   texto só quando não há foto). Legenda de foto tem limite de 1024
+   caracteres. Nunca "R$ X a menos + frete". */
+const curto = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
+
+function horaDeBrasilia(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? null
+    : d.toLocaleTimeString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
+function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) {
+  const pct = Math.round((x.economia / x.precoColado) * 100);
+  const pagamento = textoDoPagamento(x.preco, x.opcao.precos as Precos | null);
+  const hora = horaDeBrasilia(x.conferidoEm ?? null);
+  const blocos: Array<Array<string | null>> = [
+    [`🔥 <b>${html(curto(x.tipo === "parecido" ? x.tituloOpcao : x.titulo, 90))}</b>`],
     x.tipo === "parecido"
-      ? `⚠️ Parecido com "${html(x.titulo)}", não é idêntico.${x.muda ? ` Muda: ${html(textoDoMuda(x.muda, x.titulo))}` : ""}`
-      : "✅ Mesmo produto, em outra loja",
-    x.qualidade
-      ? `${x.qualidade.nivel === "superior" ? "⭐" : "✅"} ${html(textoDaQualidade(x.qualidade))}`
-      : null,
-    x.desvantagens.length
-      ? `❌ Desvantagens: ${html(x.desvantagens.slice(0, 3).join("; "))}`
-      : null,
-    `💰 <b>${brl(x.preco)}</b> (anúncio comparado: ${brl(x.precoColado)})`,
-    `💸 ${brl(x.economia)} a menos no produto`,
-    linhaDoFrete(x.opcao),
-    x.loja ? `🏪 Vendido por ${html(x.loja)}${x.lojaOficial ? " ⭐ (Loja oficial)" : ""}` : null,
-    "",
-    `🛒 Comprar com segurança: ${x.link}`,
-    "🕒 Preço de quando foi comparado; confira antes de comprar.",
+      ? [
+          `⚠️ Parecido, não idêntico ao anúncio comparado (${html(curto(x.titulo, 60))})`,
+          x.muda ? `🔄 Muda: ${html(curto(textoDoMuda(x.muda, x.titulo) ?? "", 160))}` : null,
+          x.qualidade
+            ? `${x.qualidade.nivel === "superior" ? "⭐" : "✅"} ${html(curto(textoDaQualidade(x.qualidade), 120))}`
+            : null,
+          x.desvantagens.length
+            ? `❌ Desvantagens: ${html(curto(x.desvantagens.slice(0, 2).join("; "), 120))}`
+            : null,
+        ]
+      : ["✅ Mesmo produto, em outra loja"],
+    [
+      `💰 <b>${brl(x.preco)}</b>${pagamento ? ` ${html(pagamento)}` : ""}`,
+      `🏷️ Anúncio comparado: <s>${brl(x.precoColado)}</s>`,
+      `💸 <b>${brl(x.economia)} a menos no produto</b>${pct >= 1 ? ` (−${pct}%)` : ""}`,
+      linhaDoFrete(x.opcao),
+    ],
+    [
+      x.loja ? `🏪 ${html(curto(x.loja, 40))}${x.lojaOficial ? " · ⭐ Loja oficial" : ""}` : null,
+      comLink ? `🛒 Comprar com segurança: ${x.link}` : null,
+      `🕒 Preço conferido${hora ? ` às ${hora}` : ""}; pode mudar. Confira antes de comprar.`,
+    ],
   ];
-  return linhas.filter((l) => l != null).join("\n");
+  return blocos
+    .map((b) => b.filter((l): l is string => l != null).join("\n"))
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/* Foto do Mercado Livre em JPEG e na maior versão (o Telegram não aceita
+   webp por URL em sendPhoto). */
+function fotoGrande(u: string | null) {
+  if (!u || !/^https:\/\//.test(u)) return null;
+  return u
+    .replace(/^http:/, "https:")
+    .replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1")
+    .replace(/\.webp$/i, ".jpg");
 }
 
 /* Botões do post: compra (link de afiliado) e, na linha de baixo, a volta
@@ -188,7 +233,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
 
   const permitidos = new Set((vistos ?? []).map((v) => v.url_produto).filter(Boolean));
   const vistosAqui = new Set<string>();
-  const achados: Array<Achado & { fresco: boolean }> = [];
+  const achados: Array<Achado & { fresco: boolean; conferidoEm: string | null }> = [];
   for (const p of pedidos ?? []) {
     if (!p.url_alvo || !permitidos.has(p.url_alvo) || vistosAqui.has(p.url_alvo)) continue;
     vistosAqui.add(p.url_alvo);
@@ -197,6 +242,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
       achados.push({
         ...x,
         fresco: !!p.atendido_em && Date.now() - Date.parse(p.atendido_em) <= FRESCO_MS,
+        conferidoEm: p.atendido_em ?? null,
       });
   }
   achados.sort((a, b) => b.economia - a.economia);
@@ -217,12 +263,28 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
     for (const x of achados) {
       if (publicados.length >= POR_CHAMADA) break;
       if (!x.fresco || jaFoi.has(x.chave)) continue;
-      const r = await telegram(token, "sendMessage", {
-        chat_id: canal,
-        text: mensagem(x),
-        parse_mode: "HTML",
-        reply_markup: teclado(x),
-      });
+      /* Foto grande com legenda; sem foto (ou recusada), texto sem a
+         prévia pequena do link. */
+      const foto = fotoGrande(x.imagem);
+      let r = foto
+        ? await telegram(token, "sendPhoto", {
+            chat_id: canal,
+            photo: foto,
+            caption: mensagem(x),
+            parse_mode: "HTML",
+            reply_markup: teclado(x),
+          })
+        : null;
+      /* Só tenta o texto quando o Telegram RECUSOU a foto (ok=false); sem
+         resposta é ambíguo e não manda de novo (evita post duplicado). */
+      if (!foto || (r && r.ok === false))
+        r = await telegram(token, "sendMessage", {
+          chat_id: canal,
+          text: mensagem(x, true),
+          parse_mode: "HTML",
+          link_preview_options: { is_disabled: true },
+          reply_markup: teclado(x),
+        });
       /* Recusado com resposta (ok=false): não publicou, pode tentar depois.
          Sem resposta: ambíguo, registra para não repetir às cegas. */
       if (r && r.ok === false) continue;
@@ -269,6 +331,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
             ? "pronto_para_publicar"
             : "rascunho_preco_velho",
       mensagem: simular ? mensagem(x) : undefined,
+      foto: simular ? fotoGrande(x.imagem) : undefined,
       teclado: simular ? teclado(x) : undefined,
     })),
   };
