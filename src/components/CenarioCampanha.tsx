@@ -360,13 +360,13 @@ export function CenarioCampanha({
   tema,
   fotos = [],
   fundir = "esquerda",
-  cartao = true,
   className = "",
 }: {
   tema: TemaVisualId;
   fotos?: Array<string | null | undefined>;
   fundir?: Fusao;
-  /* Cartão com as fotos reais sobre a arte de estúdio (só onde há espaço). */
+  /* Sem efeito desde 05/10 (cartão flutuante removido); aceito para não
+     quebrar quem ainda passa. */
   cartao?: boolean;
   className?: string;
 }) {
@@ -392,16 +392,9 @@ export function CenarioCampanha({
         )}
         <span className="campanha-reflexo" />
       </div>
-      {/* Fotos reais sobre a arte de estúdio: cartão de comparação fora da
-          máscara (sem corte nem transparência). */}
-      {arte && cartao && reais.length > 0 && (
-        <CartaoComparacao
-          fotos={reais}
-          icones={ICONES[tema]}
-          cor={cor}
-          className="campanha-arte-entra bottom-[12%] left-[4%] w-[30%] max-w-[190px]"
-        />
-      )}
+      {/* Sem cartão flutuante sobre a arte (Weslei, 05/10: "remova esses
+          cards, estão estragando a vitrine"); as fotos reais ficam nos
+          cartões de oferta logo abaixo. */}
     </div>
   );
 }

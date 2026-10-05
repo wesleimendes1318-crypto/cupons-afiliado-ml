@@ -721,8 +721,8 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   integre melhor na vitrine. ajuste para as demais vitrines"):
   src/components/CenarioCampanha.tsx. A arte não fica num quadro: ocupa a
   lateral do destaque (PC) ou uma faixa no topo (celular) e se funde no
-  fundo por máscara em degradê. Fotos reais num cartão de comparação fora da
-  máscara. Temas sem arte (tecnologia, casa, beleza, marca) usam o mesmo
+  fundo por máscara em degradê. Sem cartão flutuante sobre a arte (Weslei,
+  05/10: "remova esses cards, estão estragando a vitrine"). Temas sem arte (tecnologia, casa, beleza, marca) usam o mesmo
   estúdio em CSS (parede ripada, arco, piso, pedestais, cartão com ✓) nas
   cores do tema, com as fotos reais nos pedestais. Vale para SecaoCampanha,
   contagem da Black Friday, /natal, /dia-das-criancas e /campanhas/previa.
