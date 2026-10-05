@@ -687,7 +687,9 @@ export function VitrineSazonal() {
       .filter((t) => !antecipada(t) || t.ofertasAntecipadas)
       .map((t) => {
         const todas = daTemporada(t, ofertas).filter((o) => !usados.has(o.chave));
-        const lista = todas.slice(0, 10);
+        /* Até 24 por seção (Weslei, 05/10: "pelo menos 20 itens em cada
+           vitrine sazonal"); só ofertas que passam nas regras de sempre. */
+        const lista = todas.slice(0, 24);
         lista.forEach((o) => usados.add(o.chave));
         return { t, lista, total: todas.length };
       });

@@ -737,6 +737,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   por pedir_link_agente: teto diário sinc_config.agentes_teto_dia (40, dia
   de Brasília) e nada enquanto a cota do flash-lite estiver esgotada
   (ia_cotas). pedir_link_novo fica para a bateria de testes.
+  05/10, noite: com o Gemma 26b conferindo, a fila dos agentes só para
+  quando o flash-lite E o gemma-4-26b-a4b-it estão sem cota; teto 200/dia
+  (Weslei: "pelo menos 20 itens em cada vitrine sazonal"). Buscas sazonais:
+  42 por temporada (Crianças e Natal), termos ampliados (nerf, uno, pokémon,
+  boneco, drone; echo dot, air fryer, nespresso, secador, maquiagem,
+  havaianas, panelas, taças, nintendo, ps5...), até 24 cartões por seção.
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
