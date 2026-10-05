@@ -396,6 +396,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
             preco={temEconomia ? i.melhor_preco : i.preco}
             link={destino}
             vistoEm={i.visto_em}
+            urlProduto={i.url_produto}
             className="mb-0.5"
           />
           {ehLinkDeAfiliado(destino) && (

@@ -153,6 +153,7 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
             preco={c.preco}
             link={c.link}
             vistoEm={i.atendido_em}
+            urlProduto={i.url}
             className="mb-1.5 w-full"
           />
           {podeComprar ? (

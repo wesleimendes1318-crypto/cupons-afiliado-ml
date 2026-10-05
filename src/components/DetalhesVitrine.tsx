@@ -6,7 +6,7 @@
    com link de afiliado (meli.la). Nada é inventado: sem detalhes guardados,
    o painel diz isso e oferece comparar de novo. */
 import { useEffect, useRef, useState } from "react";
-import { Info, LoaderCircle, ShieldCheck, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Images, LoaderCircle, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
@@ -26,6 +26,10 @@ type Resposta = {
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const cache = new Map<string, Resposta | null>();
+const fotosCache = new Map<string, string[]>();
+/* Foto maior do mlstatic (-O) para a galeria. */
+const fotoGrande = (u: string) =>
+  u.replace(/^http:/, "https:").replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1");
 
 const dataCurta = (iso: string | null) =>
   iso
@@ -43,6 +47,7 @@ export function VerDetalhesVitrine({
   preco,
   link,
   vistoEm,
+  urlProduto,
   className = "",
 }: {
   chave: string;
@@ -51,6 +56,8 @@ export function VerDetalhesVitrine({
   preco?: number | null;
   link?: string | null;
   vistoEm?: string | null;
+  /* Endereço do produto: o id do catálogo (/p/MLB...) traz a galeria. */
+  urlProduto?: string | null;
   className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -62,8 +69,8 @@ export function VerDetalhesVitrine({
         onClick={() => setAberto(true)}
         className={`inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
       >
-        <Info className="size-3.5" aria-hidden="true" />
-        Ver detalhes do anúncio
+        <Images className="size-3.5" aria-hidden="true" />
+        Ver fotos e detalhes
       </button>
       {aberto && (
         <Painel
@@ -73,6 +80,7 @@ export function VerDetalhesVitrine({
           preco={preco ?? null}
           link={link ?? null}
           vistoEm={vistoEm ?? null}
+          produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? null}
           fechar={() => setAberto(false)}
         />
       )}
@@ -87,6 +95,7 @@ function Painel({
   preco,
   link,
   vistoEm,
+  produto,
   fechar,
 }: {
   chave: string;
@@ -95,6 +104,7 @@ function Painel({
   preco: number | null;
   link: string | null;
   vistoEm: string | null;
+  produto: string | null;
   fechar: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -122,12 +132,45 @@ function Painel({
     };
   }, [chave]);
 
+  /* Galeria: a foto do anúncio e as do catálogo oficial (quando o produto
+     é de catálogo). */
+  const [doCatalogo, setDoCatalogo] = useState<string[] | null>(
+    produto ? (fotosCache.get(produto) ?? null) : [],
+  );
+  const [atual, setAtual] = useState(0);
+  const trilho = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (!produto || fotosCache.has(produto)) return;
+    let vivo = true;
+    fetch(`/api/public/fotos?produto=${produto}`)
+      .then((r) => r.json())
+      .then((j: { fotos?: string[] }) => {
+        const f = Array.isArray(j.fotos) ? j.fotos : [];
+        fotosCache.set(produto, f);
+        if (vivo) setDoCatalogo(f);
+      })
+      .catch(() => vivo && setDoCatalogo([]));
+    return () => {
+      vivo = false;
+    };
+  }, [produto]);
+
   const det = dados?.detalhes ?? null;
   const carac = (det?.caracteristicas ?? []).filter((c) => c && c.nome && c.valor);
   const dest = (det?.destaques ?? []).filter(Boolean);
   const descricao = (det?.descricao ?? "").trim();
   const longa = descricao.length > 420;
   const foto = imagem ?? dados?.imagem ?? null;
+  const galeria = [
+    ...new Set([foto, ...(doCatalogo ?? [])].filter((u): u is string => !!u).map(fotoGrande)),
+  ];
+  const n = galeria.length;
+  const ir = (k: number) => {
+    const alvo = ((k % n) + n) % n;
+    setAtual(alvo);
+    const el = trilho.current;
+    if (el) el.scrollTo({ left: alvo * el.clientWidth, behavior: "smooth" });
+  };
   const data = dataCurta(vistoEm ?? dados?.comparado_em ?? null);
 
   return (
@@ -178,6 +221,88 @@ function Painel({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-[13px]">
+          {n > 0 && (
+            <section aria-label="Fotos do produto">
+              {/* Carrossel (Weslei, 05/10: "deixe como carrossel"): desliza
+                  com o dedo (scroll-snap), setas e miniaturas acompanham. */}
+              <div className="relative">
+                <ul
+                  ref={trilho}
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    const k = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+                    if (k !== atual) setAtual(k);
+                  }}
+                  className="flex h-64 snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-[#f5f5f7] [scrollbar-width:none] sm:h-80 [&::-webkit-scrollbar]:hidden"
+                  aria-label="Fotos do produto"
+                >
+                  {galeria.map((u, k) => (
+                    <li key={u} className="relative h-full w-full shrink-0 snap-center">
+                      <img
+                        src={u}
+                        alt={`${titulo}: foto ${k + 1} de ${n}`}
+                        loading={k === 0 ? "eager" : "lazy"}
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 h-full w-full object-contain p-3 mix-blend-multiply"
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {n > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => ir(atual - 1)}
+                      aria-label="Foto anterior"
+                      className="absolute left-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow hover:bg-white focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                    >
+                      <ChevronLeft className="size-5" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ir(atual + 1)}
+                      aria-label="Próxima foto"
+                      className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow hover:bg-white focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                    >
+                      <ChevronRight className="size-5" aria-hidden="true" />
+                    </button>
+                    <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">
+                      {Math.min(atual, n - 1) + 1}/{n}
+                    </span>
+                  </>
+                )}
+              </div>
+              {n > 1 && (
+                <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Escolher foto">
+                  {galeria.map((u, k) => (
+                    <li key={u} className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => ir(k)}
+                        aria-label={`Foto ${k + 1}`}
+                        aria-current={k === atual}
+                        className={`relative block size-14 overflow-hidden rounded-xl bg-[#f5f5f7] ring-2 ${k === atual ? "ring-[#0071e3]" : "ring-transparent"}`}
+                      >
+                        <img
+                          src={u}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="absolute inset-0 h-full w-full object-contain p-1 mix-blend-multiply"
+                        />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {produto && doCatalogo === null && (
+                <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
+                  <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+                  Carregando mais fotos…
+                </p>
+              )}
+            </section>
+          )}
           {dados === undefined ? (
             <p className="flex items-center gap-2 text-[#6e6e73]">
               <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />

@@ -400,6 +400,7 @@ export function CartaoOferta({
             preco={o.preco}
             link={o.link}
             vistoEm={o.vistoEm ?? null}
+            urlProduto={o.urlProduto}
             className="mb-0.5"
           />
           {o.link && (

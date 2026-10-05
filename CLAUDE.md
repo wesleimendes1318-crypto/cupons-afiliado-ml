@@ -241,7 +241,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - "Ver detalhes do anúncio" nos cartões da vitrine geral, campanhas e
   brinquedos (DetalhesVitrine, RPC pública detalhes_da_vitrine(chave)):
   características, destaques e descrição lidos na comparação, preço com a
-  data, compra só meli.la (Weslei, 05/10).
+  data, compra só meli.la (Weslei, 05/10). Botão "Ver fotos e detalhes":
+  carrossel de fotos (Weslei: "precisa dar opção de ver as fotos", "deixe
+  como carrossel"; scroll-snap, setas, miniaturas e contador) com a foto do
+  anúncio + a galeria do produto de catálogo (/api/public/fotos?produto=,
+  API oficial /products/{id}, só endereços mlstatic, cache 6 h).
 - Compartilhar a indicação: WhatsApp e Telegram lado a lado (o link de
   afiliado vai no campo url do Telegram).
 - Busca dos links SEM teto diário (o teto era dos cupons). Fica só o freio de
