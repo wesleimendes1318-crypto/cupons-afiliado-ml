@@ -61,6 +61,72 @@ export type Database = {
         }
         Relationships: []
       }
+      canal_metricas: {
+        Row: {
+          dia: string
+          medido_em: string
+          membros: number | null
+        }
+        Insert: {
+          dia: string
+          medido_em?: string
+          membros?: number | null
+        }
+        Update: {
+          dia?: string
+          medido_em?: string
+          membros?: number | null
+        }
+        Relationships: []
+      }
+      canal_publicacoes: {
+        Row: {
+          chave: string
+          criterios: string | null
+          economia_produto: number | null
+          id: number
+          link: string | null
+          message_id: number | null
+          pedido_id: number | null
+          preco: number | null
+          publicado_em: string
+          removida_em: string | null
+          removida_motivo: string | null
+          tipo: string | null
+          titulo: string | null
+        }
+        Insert: {
+          chave: string
+          criterios?: string | null
+          economia_produto?: number | null
+          id?: number
+          link?: string | null
+          message_id?: number | null
+          pedido_id?: number | null
+          preco?: number | null
+          publicado_em?: string
+          removida_em?: string | null
+          removida_motivo?: string | null
+          tipo?: string | null
+          titulo?: string | null
+        }
+        Update: {
+          chave?: string
+          criterios?: string | null
+          economia_produto?: number | null
+          id?: number
+          link?: string | null
+          message_id?: number | null
+          pedido_id?: number | null
+          preco?: number | null
+          publicado_em?: string
+          removida_em?: string | null
+          removida_motivo?: string | null
+          tipo?: string | null
+          titulo?: string | null
+        }
+        Relationships: []
+      }
       comparacoes: {
         Row: {
           chave: string
@@ -232,6 +298,36 @@ export type Database = {
         }
         Relationships: []
       }
+      eventos_site: {
+        Row: {
+          criado_em: string
+          destino: string | null
+          id: number
+          origem: string | null
+          pagina: string | null
+          pedido_id: number | null
+          tipo: string
+        }
+        Insert: {
+          criado_em?: string
+          destino?: string | null
+          id?: number
+          origem?: string | null
+          pagina?: string | null
+          pedido_id?: number | null
+          tipo: string
+        }
+        Update: {
+          criado_em?: string
+          destino?: string | null
+          id?: number
+          origem?: string | null
+          pagina?: string | null
+          pedido_id?: number | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       geracoes: {
         Row: {
           atualizado_em: string
@@ -294,6 +390,8 @@ export type Database = {
           modelo: string | null
           motivo: string | null
           parecido: boolean | null
+          qualidade: string | null
+          qualidade_motivo: string | null
           semelhanca: number | null
         }
         Insert: {
@@ -306,6 +404,8 @@ export type Database = {
           modelo?: string | null
           motivo?: string | null
           parecido?: boolean | null
+          qualidade?: string | null
+          qualidade_motivo?: string | null
           semelhanca?: number | null
         }
         Update: {
@@ -318,6 +418,8 @@ export type Database = {
           modelo?: string | null
           motivo?: string | null
           parecido?: boolean | null
+          qualidade?: string | null
+          qualidade_motivo?: string | null
           semelhanca?: number | null
         }
         Relationships: []
@@ -334,6 +436,45 @@ export type Database = {
         Update: {
           chave?: string
           valor?: number
+        }
+        Relationships: []
+      }
+      mercado_sinais: {
+        Row: {
+          categoria_id: string | null
+          categoria_nome: string | null
+          coletado_em: string
+          extra: Json | null
+          fonte: string
+          id: number
+          posicao: number | null
+          produto_id: string | null
+          termo: string | null
+          url: string | null
+        }
+        Insert: {
+          categoria_id?: string | null
+          categoria_nome?: string | null
+          coletado_em?: string
+          extra?: Json | null
+          fonte: string
+          id?: number
+          posicao?: number | null
+          produto_id?: string | null
+          termo?: string | null
+          url?: string | null
+        }
+        Update: {
+          categoria_id?: string | null
+          categoria_nome?: string | null
+          coletado_em?: string
+          extra?: Json | null
+          fonte?: string
+          id?: number
+          posicao?: number | null
+          produto_id?: string | null
+          termo?: string | null
+          url?: string | null
         }
         Relationships: []
       }
@@ -446,6 +587,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      operacao_execucoes: {
+        Row: {
+          erro: string | null
+          fim: string | null
+          id: number
+          inicio: string
+          ok: boolean | null
+          resumo: Json | null
+          tarefa: string
+        }
+        Insert: {
+          erro?: string | null
+          fim?: string | null
+          id?: number
+          inicio?: string
+          ok?: boolean | null
+          resumo?: Json | null
+          tarefa: string
+        }
+        Update: {
+          erro?: string | null
+          fim?: string | null
+          id?: number
+          inicio?: string
+          ok?: boolean | null
+          resumo?: Json | null
+          tarefa?: string
+        }
+        Relationships: []
       }
       pedidos_link: {
         Row: {
@@ -662,6 +833,7 @@ export type Database = {
           chat_id: number
           ia_dia: string | null
           ia_usos: number
+          origem: string | null
           primeiro_em: string
           ultimo_em: string
         }
@@ -669,6 +841,7 @@ export type Database = {
           chat_id: number
           ia_dia?: string | null
           ia_usos?: number
+          origem?: string | null
           primeiro_em?: string
           ultimo_em?: string
         }
@@ -676,6 +849,7 @@ export type Database = {
           chat_id?: number
           ia_dia?: string | null
           ia_usos?: number
+          origem?: string | null
           primeiro_em?: string
           ultimo_em?: string
         }
@@ -683,7 +857,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      painel_operacao: {
+        Row: {
+          cliques_afiliado: number | null
+          cliques_telegram: number | null
+          com_mais_barata: number | null
+          conversas_bot_novas: number | null
+          dia: string | null
+          membros_canal: number | null
+          pedidos_site: number | null
+          produtos_site: number | null
+          publicacoes_canal: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       acompanhar_preco: {
@@ -707,6 +894,10 @@ export type Database = {
           p_link: string
           p_token: string
         }
+        Returns: undefined
+      }
+      atualizar_produto_visto: {
+        Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
         Returns: undefined
       }
       categoria_do_site: {
@@ -755,6 +946,7 @@ export type Database = {
           status: string
         }[]
       }
+      disparar_operacao: { Args: { p_caminho: string }; Returns: number }
       estado_do_robo: {
         Args: never
         Returns: {
@@ -932,6 +1124,16 @@ export type Database = {
           id: number
           url: string
         }[]
+      }
+      registrar_evento: {
+        Args: {
+          p_destino?: string
+          p_origem?: string
+          p_pagina?: string
+          p_pedido?: number
+          p_tipo: string
+        }
+        Returns: boolean
       }
       registrar_produto_visto: {
         Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
