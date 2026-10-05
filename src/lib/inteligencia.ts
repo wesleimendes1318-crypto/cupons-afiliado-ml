@@ -12,12 +12,7 @@
    Poucas chamadas por execução (limite de subrequisições do servidor). */
 
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
-import {
-  TEMPORADAS,
-  temporadaDoProduto,
-  temporadasAtivas,
-  temporadasEmDestaque,
-} from "@/lib/sazonal";
+import { temporadaDoProduto, temporadasAtivas, temporadasComOfertas } from "@/lib/sazonal";
 import { telegram } from "@/lib/telegram";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -320,7 +315,9 @@ export async function buscarSazonal(
 ) {
   const max = Math.min(Math.max(opcoes.max ?? 12, 1), 15);
   const temporadas = (
-    opcoes.temporada ? TEMPORADAS.filter((t) => t.id === opcoes.temporada) : temporadasEmDestaque()
+    opcoes.temporada
+      ? temporadasComOfertas().filter((t) => t.id === opcoes.temporada)
+      : temporadasComOfertas()
   ).slice(0, 3);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = db as any;

@@ -30,6 +30,11 @@ export type Temporada = {
   rotulo: string;
   /* Rótulo antes de a janela abrir (temporada em destaque antecipado). */
   rotuloAntecipado: string;
+  /* Mostrar e publicar ofertas ANTES da janela abrir? Natal e Dia das
+     Crianças sim (antecedência é economia); Black Friday não (Weslei,
+     05/10: as lojas ainda não entraram na campanha; antes dela, só a
+     contagem de dias). */
+  ofertasAntecipadas: boolean;
   /* Buscas de produtos de valor mais alto no catálogo oficial (tarefa
      sazonal): onde a economia de verdade aparece (os mais vendidos baratos
      quase nunca têm o mesmo produto bem mais barato, medido em 05/10). */
@@ -51,6 +56,7 @@ export const TEMPORADAS: readonly Temporada[] = [
       /\b(brinquedo|boneca?|carrinho|lego|pista|pel[uú]cia|quebra[- ]?cabe[cç]a|jogo de tabuleiro|patinete|bicicleta infantil|video ?game|console|controle (ps|xbox)|nintendo|massinha|slime|squishy|dinossauro|hot ?wheels|barbie|infantil|kids|playmobil|aro 16|baby alive)\b/i,
     rotulo: "Para o Dia das Crianças",
     rotuloAntecipado: "Antecipe o Dia das Crianças",
+    ofertasAntecipadas: true,
     buscas: [
       "lego classic caixa criativa",
       "lego city",
@@ -87,6 +93,7 @@ export const TEMPORADAS: readonly Temporada[] = [
       /\b(smart ?tv|tv \d|notebook|celular|smartphone|iphone|galaxy|fone|headphone|airpods?|smartwatch|rel[oó]gio inteligente|tablet|ipad|console|playstation|xbox|air ?fryer|fritadeira|geladeira|refrigerador|lava ?(e seca|roupas)|micro-?ondas|aspirador|ar[- ]condicionado|monitor|ssd|mem[oó]ria)\b/i,
     rotulo: "Black Friday: preço conferido",
     rotuloAntecipado: "Antes da Black Friday: preço conferido",
+    ofertasAntecipadas: false,
     buscas: [
       "smart tv samsung 50 4k",
       "smart tv lg 50 4k",
@@ -118,9 +125,10 @@ export const TEMPORADAS: readonly Temporada[] = [
       { id: "MLB1000", nome: "Eletrônicos, Áudio e Vídeo" },
     ],
     termos:
-      /\b(presente|kit|perfume|eau de (parfum|toilette)|col[oô]nia|necessaire|brinquedo|boneca?|lego|pel[uú]cia|fone|smartwatch|rel[oó]gio|carteira|bolsa|mochila|t[eê]nis|caixa de som|jbl|kindle|console|video ?game|panetone|chocolate|vinho|airpods?|watch|botic[aá]rio|natura|kaiak|malbec|lily|kindle)\b/i,
+      /\b(presente|kit (de )?(presente|natura|botic[aá]rio|perfume|maquiagem)|perfume|eau de (parfum|toilette)|col[oô]nia|necessaire|brinquedo|boneca?|lego|pel[uú]cia|fone|smartwatch|rel[oó]gio|carteira|bolsa|mochila|t[eê]nis|caixa de som|jbl|kindle|console|video ?game|panetone|chocolate|vinho|airpods?|watch|botic[aá]rio|natura|kaiak|malbec|lily|kindle)\b/i,
     rotulo: "Ideia de presente de Natal",
     rotuloAntecipado: "Presente de Natal antecipado",
+    ofertasAntecipadas: true,
     buscas: [
       "perfume 212 vip men",
       "perfume la vie est belle",
@@ -165,6 +173,12 @@ export function temporadasEmDestaque(agora = new Date(), diasAntes = 45): Tempor
 
 export const antecipada = (t: Temporada, agora = new Date()) => hojeEmBrasilia(agora) < t.inicio;
 
+/** Temporadas que podem ter ofertas hoje: em andamento, ou antecipadas
+    quando a estratégia é antecipar (Natal, Dia das Crianças). */
+export function temporadasComOfertas(agora = new Date()): Temporada[] {
+  return temporadasEmDestaque(agora).filter((t) => !antecipada(t, agora) || t.ofertasAntecipadas);
+}
+
 /** Rótulo certo para hoje (em andamento ou antecipado). */
 export const rotuloDa = (t: Temporada, agora = new Date()) =>
   antecipada(t, agora) ? t.rotuloAntecipado : t.rotulo;
@@ -176,7 +190,7 @@ export function temporadaDoProduto(
   agora = new Date(),
 ): Temporada | null {
   if (!titulo) return null;
-  const lista = temporadasEmDestaque(agora);
+  const lista = temporadasComOfertas(agora);
   const combina = lista.filter((t) => t.termos.test(titulo));
   return combina.find((t) => !antecipada(t, agora)) ?? combina[0] ?? null;
 }

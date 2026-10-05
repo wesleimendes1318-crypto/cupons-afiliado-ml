@@ -119,11 +119,17 @@ export function VitrineSazonal() {
   const secoes = useMemo(() => {
     const usados = new Set<string>();
     return temporadas
+      .filter((t) => !antecipada(t) || t.ofertasAntecipadas)
       .map((t) => {
         const ofertas = itens
           .filter((i) => t.termos.test(`${i.titulo} ${i.alt_titulo ?? ""}`))
           .map(ofertaDo)
-          .filter((o): o is Oferta => o != null && !usados.has(o.chave))
+          /* Desconto que vale a pena: pelo menos R$ 15 e 5% do anúncio
+             comparado (R$ 2 de diferença não encanta ninguém). */
+          .filter(
+            (o): o is Oferta =>
+              o != null && !usados.has(o.chave) && o.economia >= 15 && o.economia >= o.antes * 0.05,
+          )
           .sort((a, b) => b.economia - a.economia)
           .slice(0, 10);
         ofertas.forEach((o) => usados.add(o.chave));
@@ -132,7 +138,11 @@ export function VitrineSazonal() {
       .filter((s) => s.ofertas.length >= 2);
   }, [itens, temporadas]);
 
-  if (!secoes.length) return null;
+  /* Black Friday antes da campanha (Weslei, 05/10: "as lojas ainda não
+     entraram na mesma campanha"): só a contagem de dias, sem ofertas. */
+  const contagens = temporadas.filter((t) => antecipada(t) && !t.ofertasAntecipadas);
+
+  if (!secoes.length && !contagens.length) return null;
 
   return (
     <div className="mt-8 space-y-6" data-origem="sazonal">
@@ -176,19 +186,19 @@ export function VitrineSazonal() {
             {ofertas.map((o) => (
               <li
                 key={o.chave}
-                className="flex w-[72%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-sm min-[480px]:w-[44%] sm:w-auto"
+                className="flex w-[60%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-sm min-[480px]:w-[38%] sm:w-auto"
               >
-                <div className="relative aspect-square bg-white">
+                <div className="relative h-32 shrink-0 bg-white sm:h-36">
                   {o.imagem ? (
                     <img
                       src={o.imagem}
                       alt={o.titulo}
                       loading="lazy"
                       referrerPolicy="no-referrer"
-                      className="h-full w-full object-contain p-3"
+                      className="absolute inset-0 h-full w-full object-contain p-2.5"
                     />
                   ) : null}
-                  <span className="absolute left-2 top-2 rounded-full bg-[#1a7f37] px-2 py-0.5 text-[11px] font-bold text-white">
+                  <span className="absolute left-2 top-2 rounded-full bg-[#1a7f37] px-1.5 py-0.5 text-[10px] font-bold text-white">
                     {brl(o.economia)} a menos
                   </span>
                   {o.parecido && (
@@ -197,9 +207,9 @@ export function VitrineSazonal() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
-                  <p className="line-clamp-2 text-[13px] font-medium leading-snug">{o.titulo}</p>
-                  <p className="mt-2 text-lg font-extrabold leading-none tabular-nums">
+                <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-2.5">
+                  <p className="line-clamp-2 text-xs font-medium leading-snug">{o.titulo}</p>
+                  <p className="mt-1.5 text-base font-extrabold leading-none tabular-nums">
                     {brl(o.preco)}
                   </p>
                   <p className="mt-1 text-[11px] text-[#6e6e73] tabular-nums">
@@ -209,16 +219,16 @@ export function VitrineSazonal() {
                   {o.loja && (
                     <p className="mt-1 truncate text-[11px] text-[#6e6e73]">Vendido por {o.loja}</p>
                   )}
-                  <div className="mt-auto pt-3">
+                  <div className="mt-auto pt-2.5">
                     {o.recente && o.link ? (
                       <a
                         href={o.link}
                         target="_blank"
                         rel="noopener noreferrer sponsored"
                         data-origem="sazonal"
-                        className="flex items-center justify-center gap-1.5 rounded-full bg-[#1a7f37] py-2 text-xs font-bold text-white hover:brightness-95"
+                        className="flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#1a7f37] px-2 py-1.5 text-[11px] font-bold text-white hover:brightness-95"
                       >
-                        <ShieldCheck className="size-3.5" aria-hidden="true" />
+                        <ShieldCheck className="size-3 shrink-0" aria-hidden="true" />
                         Comprar com segurança
                       </a>
                     ) : (
@@ -230,9 +240,9 @@ export function VitrineSazonal() {
                               new CustomEvent("comparar-link", { detail: o.urlProduto }),
                             )
                           }
-                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-[#0071e3] py-2 text-xs font-bold text-white hover:brightness-95"
+                          className="flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-1.5 text-[11px] font-bold text-white hover:brightness-95"
                         >
-                          <RefreshCw className="size-3.5" aria-hidden="true" />
+                          <RefreshCw className="size-3 shrink-0" aria-hidden="true" />
                           Ver o preço de agora
                         </button>
                       )
@@ -242,6 +252,54 @@ export function VitrineSazonal() {
               </li>
             ))}
           </ul>
+        </section>
+      ))}
+      {contagens.map((t) => (
+        <section
+          key={t.id}
+          aria-label={t.nome}
+          className="flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl px-5 py-5 shadow-sm sm:px-6"
+          style={{ background: t.tema.fundo, color: t.tema.texto }}
+        >
+          <div className="flex min-w-0 items-center gap-4">
+            <div
+              className="grid size-16 shrink-0 place-items-center rounded-2xl text-center"
+              style={{ background: t.tema.chip, color: t.tema.destaque }}
+            >
+              <span className="text-2xl font-extrabold leading-none tabular-nums">
+                {diasAte(t)}
+              </span>
+              <span className="-mt-3 text-[10px] font-bold uppercase tracking-wider">
+                {diasAte(t) === 1 ? "dia" : "dias"}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p
+                className="text-[11px] font-bold uppercase tracking-wider"
+                style={{ color: t.tema.destaque }}
+              >
+                <span aria-hidden="true">{t.emoji} </span>
+                {t.nome} · {t.dia.slice(8, 10)}/{t.dia.slice(5, 7)}
+              </p>
+              <h2 className="mt-1 text-lg font-extrabold tracking-tight sm:text-xl">
+                Faltam {diasAte(t)} {diasAte(t) === 1 ? "dia" : "dias"} para a {t.nome}
+              </h2>
+              <p className="mt-1 max-w-[62ch] text-sm opacity-85">
+                As ofertas aparecem aqui quando a campanha começar. Até lá, acompanhe o preço do que
+                você quer: na data, você vê se o desconto é de verdade.
+              </p>
+            </div>
+          </div>
+          <a
+            href={LINK_CANAL}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-origem="sazonal"
+            className="shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition-opacity hover:opacity-80"
+            style={{ borderColor: t.tema.destaque, color: t.tema.destaque }}
+          >
+            Avisar no Telegram
+          </a>
         </section>
       ))}
     </div>

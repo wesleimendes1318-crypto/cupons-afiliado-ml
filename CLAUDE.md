@@ -451,9 +451,19 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (sazonal.ts, tema), contagem de dias, 2 a 10 produtos já comparados com
   desconto real (mesmo produto ou alternativa da vitrine), botão de compra
   só com meli.la e comparação < 24 h (senão "Ver o preço de agora").
+  BLACK FRIDAY SEM OFERTA ANTECIPADA (Weslei, 05/10: "as lojas ainda não
+  entraram na mesma campanha"; Natal e Dia das Crianças são diferentes,
+  "antecedência indica economia"): antes de 01/11 a Black Friday aparece só
+  como cartão de contagem ("Faltam N dias", 27/11), sem produtos, sem busca
+  sazonal, sem prioridade e sem rótulo no canal (ofertasAntecipadas,
+  temporadasComOfertas). Cartões: foto em altura fixa (h-32/h-36), economia
+  mínima de R$ 15 e 5% para entrar na seção.
   BUSCA SAZONAL: operacao?tarefa=sazonal[&temporada=][&max=] põe na fila os
   produtos do catálogo oficial (/products/search) das buscas da temporada,
-  1 por busca, até 20 por chamada.
+  1 por busca, até 15 por chamada, com o anúncio da 1ª oferta da lista
+  oficial no endereço (pdp_filters=item_id): a página de catálogo pura é
+  recusada pelo gerador de links (erro 111) e produto sem oferta ativa
+  (/items 404) é pulado.
 - Nichos do 1º ciclo (CATEGORIAS_FOCO, src/lib/inteligencia.ts):
   Eletrodomésticos, Beleza e Cuidado Pessoal, Casa/Decoração, Acessórios
   para Veículos (dados de 21/09-04/10: Beleza 4/5 produtos com o mesmo mais
