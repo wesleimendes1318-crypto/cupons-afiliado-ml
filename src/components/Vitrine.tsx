@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, RefreshCw, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
+import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
 import { supabase } from "@/integrations/supabase/client";
 import {
   EVENTO_PERFIL,
@@ -132,8 +133,12 @@ export function Vitrine() {
     let vivo = true;
     (async () => {
       try {
-        const { data } = await supabase.rpc("vitrine" as never, { p_limite: 120 } as never);
-        if (vivo && Array.isArray(data)) setItens(data as ItemVitrine[]);
+        const [{ data }, fretes] = await Promise.all([
+          supabase.rpc("vitrine" as never, { p_limite: 120 } as never),
+          lerFretesDaVitrine(),
+        ]);
+        if (vivo && Array.isArray(data))
+          setItens(semEconomiaSemFrete(data as ItemVitrine[], fretes));
       } catch {
         /* sem vitrine: a página segue normal */
       }

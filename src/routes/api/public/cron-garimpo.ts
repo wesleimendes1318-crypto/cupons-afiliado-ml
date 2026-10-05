@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
+import { decisaoDaTela, opcoesDaAnalise, type Opcao } from "@/lib/ajudar-escolher";
 import { naoEAlternativa } from "@/lib/alternativa";
 import { diferencasParaCliente } from "@/lib/diferencas";
 import {
@@ -24,7 +24,7 @@ import { linkDoBot } from "@/lib/telegram-publico";
    - desconto real no produto contra o anúncio comparado (R$ 30, ou R$ 10
      e 20% para produto barato; src/lib/regra-economia.ts);
    - link de afiliado (meli.la) da opção escolhida;
-   - frete grátis ou com valor conhecido (frete pago desconhecido fica fora);
+   - frete grátis CONFIRMADO (desconhecido ou pago fica fora; 05/10);
    - nada de peça no lugar do aparelho nem alternativa que "vem menos";
    - só produto permitido na vitrine (produtos_vistos já filtra);
    - OFERTA CONFERIDA NA HORA: só publica comparação feita nas últimas 3 h
@@ -40,7 +40,7 @@ const POR_CHAMADA = 2;
 const DIAS_SEM_REPETIR = 7;
 const FRESCO_MS = 3 * 3600_000;
 const CRITERIOS =
-  "garimpo-v3 (05/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete conhecido, conferida <= 3 h";
+  "garimpo-v4 (05/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete gratis confirmado, conferida <= 3 h";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -88,7 +88,7 @@ function achadoDoPedido(p: {
        contra pelo menos 2 lojas mais caras, com desconto real contra a 2ª. */
     const m = menorPrecoDoColado(a);
     if (!m || !/^https:\/\/meli\.la\//i.test(colado.link)) return null;
-    if (colado.freteGratis !== true && totalDaOpcao(colado) == null) return null;
+    if (colado.freteGratis !== true) return null;
     return {
       chave: `${p.url_alvo.split("?")[0]}|${colado.link}|menor`,
       pedido: p.id,
@@ -111,7 +111,12 @@ function achadoDoPedido(p: {
     };
   }
   if (!/^https:\/\/meli\.la\//i.test(escolha.link)) return null;
-  if (escolha.freteGratis !== true && totalDaOpcao(escolha) == null) return null;
+  /* FRETE GRÁTIS CONFIRMADO (Weslei, 05/10, "Grave!!! O frete é pago!":
+     Deo Malbec R$ 59,85 saiu sem frete na mensagem e o comprador pagou
+     R$ 11,90). Frete desconhecido não é grátis, e frete pago depende do CEP
+     de cada leitor do canal: só publica com frete grátis confirmado na
+     comparação (shipping.cost 0 da lista oficial ou "grátis" no anúncio). */
+  if (escolha.freteGratis !== true) return null;
   if (pecaNoLugarDoAparelho(colado.titulo, escolha.titulo)) return null;
   if (escolha.tipo === "parecido" && naoEAlternativa(escolha.muda)) return null;
   const economia = Math.round((colado.preco - escolha.preco) * 100) / 100;

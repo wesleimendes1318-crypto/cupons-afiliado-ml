@@ -474,10 +474,8 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   desenhados, artes encantadoras, animações sutis"): tema completo por
   campanha em sazonal.ts (fundo, texto, textoSuave, destaque, sobreDestaque,
   realce, rotulo com contraste AA, superficie, borda, brilho, decoracao);
-  ilustração principal em SVG com volume (ArteSazonal: presentes com laço e
-  enfeites no Natal; sacolas, etiqueta % e luzes na Black Friday; balões,
-  blocos e carrinho no Dia das Crianças) e DecoracaoSazonal (neve, confete,
-  luzes; só nas bordas, nunca sobre texto; no celular só a faixa de baixo).
+  fotos reais dos produtos (VitrineDeFotos; ver VISUAL CLEAN; as
+  ilustrações e a decoração de fundo saíram em 05/10).
   Movimento: campanha-entra/flutua/balanca/cintila (styles.css), poucas
   repetições, só transform/opacity, desligado com prefers-reduced-motion.
   Estados: ativa/antecipada com ofertas (SecaoCampanha, grade completada
@@ -534,10 +532,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   bicicleta aro 12-16) vai para brinquedos antes da regra de automotivo. Na
   temporada de Crianças, combinaComTemporada exclui peças e acessórios de
   veículo (freio, relação, capacete, bateria automotiva...).
-- IDENTIDADE DA MARCA (modelo de arte do Weslei, 05/10): degradê roxo/
-  violeta (#1d0b52 -> #5a2bd8), destaque verde-menta #5ef2b5, produtos em
-  pedestais e cartão com ✓, "Antes de comprar, compare." (usado na busca
-  guiada; ArteMarca em src/components/BuscaGuiada.tsx).
+- VISUAL CLEAN (Weslei, 05/10: "mantenha clean! a referência enviada é
+  para ter referência dos produtos... devolva a identidade do site"; "está
+  feio com essas artes"): a busca guiada segue o visual do site (cartão
+  branco, #f5f5f7, azul #0071e3). Nas campanhas, nada de ilustração nem
+  confete/neve: VitrineDeFotos (src/components/ArteSazonal.tsx) mostra as
+  fotos REAIS dos 3 primeiros produtos comparados em discos brancos com
+  sombra suave (o "pedestal" da referência), só no PC; no celular os
+  produtos já aparecem logo abaixo. Sem produto, sem arte.
+- FRETE NA VITRINE E NO CANAL (Weslei, 05/10, "Grave!!! O frete é pago!",
+  Deo Malbec R$ 59,85 com frete de R$ 11,90 que a mensagem não dizia):
+  frete desconhecido NÃO é grátis. Canal: só publica com frete grátis
+  confirmado (garimpo-v4). Vitrine: economia do mesmo produto só com
+  produtos_vistos.melhor_frete_gratis = true e "menor preço" só com
+  frete_gratis = true (marcar_frete_vitrine no gatilho, leitura
+  vitrine_frete, src/lib/frete-vitrine.ts). Bot: frete desconhecido sai como
+  "Frete não confirmado: confira antes de comprar" (nunca some).
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.

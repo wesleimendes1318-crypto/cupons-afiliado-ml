@@ -8,7 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, BadgeCheck, Link2 } from "lucide-react";
 import { useState } from "react";
 
-import { ArteSazonal, DecoracaoSazonal } from "@/components/ArteSazonal";
+import { VitrineDeFotos } from "@/components/ArteSazonal";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { BotaoTelegram, daTemporada, GradeOfertas, useOfertas } from "@/components/VitrineSazonal";
@@ -53,7 +53,6 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
         className="relative overflow-hidden"
         style={{ background: t.tema.fundo, color: t.tema.texto }}
       >
-        <DecoracaoSazonal t={t} />
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-6 px-4 py-8 sm:px-6 md:grid-cols-[minmax(0,1fr)_340px] md:py-14">
           <div className="campanha-entra min-w-0">
             <Link
@@ -106,7 +105,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
               <BotaoTelegram t={t} texto="Receber os achados no Telegram" />
             </div>
           </div>
-          <ArteSazonal t={t} className="mx-auto h-48 w-64 sm:h-56 sm:w-80 md:h-64 md:w-full" />
+          <VitrineDeFotos fotos={lista.map((o) => o.imagem)} className="mx-auto" />
         </div>
       </header>
 
@@ -130,9 +129,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
                 className="relative mt-4 overflow-hidden rounded-[28px] px-5 py-8 text-center sm:px-10"
                 style={{ background: t.tema.fundo, color: t.tema.texto }}
               >
-                <DecoracaoSazonal t={t} />
                 <div className="relative mx-auto max-w-md">
-                  <ArteSazonal t={t} className="mx-auto h-28 w-40" />
                   <p className="mt-3 text-base font-bold">Estou conferindo os primeiros achados</p>
                   <p className="mt-1 text-sm" style={{ color: t.tema.textoSuave }}>
                     Assim que um produto passar na comparação (mesmo produto, qualidade e desconto

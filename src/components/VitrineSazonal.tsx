@@ -16,7 +16,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, Link2, RefreshCw, ShieldCheck } from "lucide-react";
 
-import { ArteSazonal, DecoracaoSazonal } from "@/components/ArteSazonal";
+import { VitrineDeFotos } from "@/components/ArteSazonal";
+import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { menorPrecoVale } from "@/lib/menor-preco";
@@ -151,13 +152,17 @@ export function useOfertas() {
     let vivo = true;
     (async () => {
       try {
-        const [v, m] = await Promise.all([
+        const [v, m, fretes] = await Promise.all([
           supabase.rpc("vitrine" as never, { p_limite: 120 } as never),
           supabase.rpc("vitrine_menor_preco" as never, { p_limite: 120 } as never),
+          lerFretesDaVitrine(),
         ]);
         if (!vivo) return;
-        if (Array.isArray(v.data)) setItens(v.data as ItemVitrine[]);
-        if (Array.isArray(m.data)) setMenores(m.data as ItemMenorPreco[]);
+        if (Array.isArray(v.data)) setItens(semEconomiaSemFrete(v.data as ItemVitrine[], fretes));
+        if (Array.isArray(m.data))
+          setMenores(
+            (m.data as ItemMenorPreco[]).filter((i) => fretes.get(i.chave)?.frete_gratis === true),
+          );
       } catch {
         /* sem dados: as seções mostram o estado vazio */
       } finally {
@@ -422,9 +427,8 @@ function SecaoCampanha({ t, lista, total }: { t: Temporada; lista: Oferta[]; tot
       className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.10)]"
       style={{ background: t.tema.fundo, color: t.tema.texto }}
     >
-      <DecoracaoSazonal t={t} />
-      <div className="relative grid items-center gap-2 px-4 pt-5 sm:px-7 sm:pt-7 md:grid-cols-[minmax(0,1fr)_minmax(220px,320px)] md:gap-6">
-        <div className="relative z-10 min-w-0 pr-32 sm:pr-0">
+      <div className="relative grid items-center gap-2 px-4 pt-5 sm:px-7 sm:pt-7 md:grid-cols-[minmax(0,1fr)_minmax(260px,340px)] md:gap-6">
+        <div className="relative z-10 min-w-0">
           <p
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
             style={{
@@ -473,10 +477,7 @@ function SecaoCampanha({ t, lista, total }: { t: Temporada; lista: Oferta[]; tot
             <BotaoTelegram t={t} texto="Receber no Telegram" />
           </div>
         </div>
-        <ArteSazonal
-          t={t}
-          className="pointer-events-none absolute -right-1 top-3 h-28 w-36 sm:static sm:mx-auto sm:h-40 sm:w-56 md:h-52 md:w-full"
-        />
+        <VitrineDeFotos fotos={lista.map((o) => o.imagem)} className="hidden md:flex" />
       </div>
       <div className="relative px-4 pb-5 pt-4 sm:px-7 sm:pb-7">
         <GradeOfertas t={t} lista={lista} />
@@ -495,8 +496,7 @@ function CartaoCampanhaCompacta({ t, futura }: { t: Temporada; futura: boolean }
       className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.10)]"
       style={{ background: t.tema.fundo, color: t.tema.texto }}
     >
-      <DecoracaoSazonal t={t} />
-      <div className="relative grid items-center gap-4 px-5 py-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-7 md:grid-cols-[auto_minmax(0,1fr)_200px_auto]">
+      <div className="relative grid items-center gap-4 px-5 py-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-7">
         <div
           className="grid size-[72px] place-items-center rounded-2xl text-center"
           style={{ background: t.tema.superficie, boxShadow: `inset 0 0 0 1px ${t.tema.borda}` }}
@@ -514,7 +514,7 @@ function CartaoCampanhaCompacta({ t, futura }: { t: Temporada; futura: boolean }
             {d === 1 ? "dia" : "dias"}
           </span>
         </div>
-        <div className="relative z-10 min-w-0 pr-24 md:pr-0">
+        <div className="relative z-10 min-w-0">
           <p
             className="text-[11px] font-bold uppercase tracking-wider"
             style={{ color: t.tema.rotulo }}
@@ -536,10 +536,6 @@ function CartaoCampanhaCompacta({ t, futura }: { t: Temporada; futura: boolean }
               : "Os achados aparecem aqui assim que forem conferidos. Cole o link do produto que você quer e eu comparo agora."}
           </p>
         </div>
-        <ArteSazonal
-          t={t}
-          className="pointer-events-none absolute -right-2 top-1 h-24 w-32 opacity-90 md:static md:h-28 md:w-full md:opacity-100"
-        />
         <BotaoTelegram t={t} texto="Avisar no Telegram" />
       </div>
     </section>

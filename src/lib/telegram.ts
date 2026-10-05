@@ -56,7 +56,9 @@ export function linhaDoFrete(o: Opcao) {
     return o.custoFrete != null && o.custoFrete > 0
       ? `🚚 (frete de ${brl(o.custoFrete)} à parte)`
       : "🚚 (frete à parte)";
-  return null;
+  /* Frete desconhecido nunca some da mensagem (05/10, Deo Malbec: frete de
+     R$ 11,90 que a mensagem não dizia). */
+  return "🚚 Frete não confirmado: confira antes de comprar";
 }
 
 function linhasDaOpcao(o: Opcao) {
