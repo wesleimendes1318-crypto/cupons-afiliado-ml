@@ -458,6 +458,38 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   sazonal, sem prioridade e sem rótulo no canal (ofertasAntecipadas,
   temporadasComOfertas). Cartões: foto em altura fixa (h-32/h-36), economia
   mínima de R$ 15 e 5%, ou R$ 30 ou mais, para entrar na seção.
+  DESCONTO REAL (régua única, src/lib/regra-economia.ts, Weslei 05/10):
+  R$ 30 ou mais no produto, OU exceção para produto barato: R$ 10 e 20% do
+  anúncio comparado. Vale para canal, preparo e vitrine sazonal.
+  JÁ É O MENOR PREÇO (Weslei, 05/10: "pode aproveitar os anúncios que já são
+  a melhor escolha... alimentar minhas vitrines com múltiplas estratégias";
+  "pode ser produtos já no menor preço"): produtos_vistos.segunda_preco/
+  segunda_loja/lojas_mais_caras (marcar_menor_preco no gatilho da vitrine),
+  leitura pública vitrine_menor_preco. Vitrine: anúncio mais barato contra
+  >= 2 lojas conferidas, com a diferença para a 2ª loja como ela é
+  (menorPrecoVale). Canal: só com desconto real contra a 2ª loja
+  (menorPrecoDoColado, tipo "menor": "Já é o menor preço: conferido contra N
+  lojas").
+  DESIGN DAS CAMPANHAS (Weslei, 05/10: "personalidade, símbolos bem
+  desenhados, artes encantadoras, animações sutis"): tema completo por
+  campanha em sazonal.ts (fundo, texto, textoSuave, destaque, sobreDestaque,
+  realce, rotulo com contraste AA, superficie, borda, brilho, decoracao);
+  ilustração principal em SVG com volume (ArteSazonal: presentes com laço e
+  enfeites no Natal; sacolas, etiqueta % e luzes na Black Friday; balões,
+  blocos e carrinho no Dia das Crianças) e DecoracaoSazonal (neve, confete,
+  luzes; só nas bordas, nunca sobre texto; no celular só a faixa de baixo).
+  Movimento: campanha-entra/flutua/balanca/cintila (styles.css), poucas
+  repetições, só transform/opacity, desligado com prefers-reduced-motion.
+  Estados: ativa/antecipada com ofertas (SecaoCampanha, grade completada
+  pelo convite "Cole o link" quando há menos de 5), sem achados
+  (CartaoCampanhaCompacta), futura sem oferta antecipada (contagem) e
+  encerrada (página). Cartão padronizado (CartaoOferta): foto em área fixa,
+  selo de economia, classificação "Mesmo produto"/"Parecido"/"Menor preço",
+  preço comparado riscado, loja, botão no pé. Botão do Telegram com ícone no
+  tema (BotaoTelegram). Páginas /natal e /dia-das-criancas (PaginaTemporada,
+  sitemap, rodapé, og:image em public/sazonal/*.jpg sem contagem).
+  AUTONOMIA: pg_cron operacao-sazonal 07:05 e 17:05 (Brasília), antes do
+  preparo e do garimpo.
   BUSCA SAZONAL: operacao?tarefa=sazonal[&temporada=][&max=] põe na fila os
   produtos do catálogo oficial (/products/search) das buscas da temporada,
   1 por busca, até 15 por chamada, com o anúncio da 1ª oferta da lista

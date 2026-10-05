@@ -24,7 +24,7 @@ export const Route = createFileRoute("/telegram")({
 });
 
 /* Regras do texto conferidas em src/routes/api/public/cron-garimpo.ts
-   (05/10): até 2 achados por rodada, só comparação feita nas últimas 3 h, economia a partir de R$ 30 no produto,
+   (05/10): até 2 achados por rodada, só comparação feita nas últimas 3 h, desconto real (src/lib/regra-economia.ts),
    cada achado no máximo uma vez a cada 7 dias, frete grátis ou com valor
    conhecido. Sem prometer quantidade de posts por dia. */
 function PaginaTelegram() {
@@ -38,12 +38,13 @@ function PaginaTelegram() {
       <h2>O que vai para o canal</h2>
       <ul>
         <li>
-          Só comparações reais feitas no site, com economia a partir de R$ 30 no produto contra o
-          anúncio comparado.
+          Só comparações reais feitas no site, com desconto real no produto contra o anúncio
+          comparado: pelo menos R$ 30, ou R$ 10 e 20% em produtos mais baratos.
         </li>
         <li>
-          Mesmo produto em outra loja ou um parecido mais barato. O parecido sempre vem marcado como
-          "não é idêntico", com o que muda.
+          Mesmo produto em outra loja, um parecido mais barato com qualidade igual ou melhor (sempre
+          marcado como "não é idêntico", com o que muda) ou o anúncio que já é o menor preço entre
+          pelo menos 3 lojas.
         </li>
         <li>
           Frete grátis ou com o valor conhecido, sempre em linha separada do preço. Frete pago de

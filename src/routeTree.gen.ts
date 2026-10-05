@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ContatoRouteImport } from './routes/contato'
+import { Route as DiaDasCriancasRouteImport } from './routes/dia-das-criancas'
 import { Route as DivulgacaoDeAfiliadosRouteImport } from './routes/divulgacao-de-afiliados'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MeusPrecosRouteImport } from './routes/meus-precos'
+import { Route as NatalRouteImport } from './routes/natal'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
 import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
@@ -54,6 +56,11 @@ const ContatoRoute = ContatoRouteImport.update({
   path: '/contato',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiaDasCriancasRoute = DiaDasCriancasRouteImport.update({
+  id: '/dia-das-criancas',
+  path: '/dia-das-criancas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DivulgacaoDeAfiliadosRoute = DivulgacaoDeAfiliadosRouteImport.update({
   id: '/divulgacao-de-afiliados',
   path: '/divulgacao-de-afiliados',
@@ -72,6 +79,11 @@ const McpRoute = McpRouteImport.update({
 const MeusPrecosRoute = MeusPrecosRouteImport.update({
   id: '/meus-precos',
   path: '/meus-precos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NatalRoute = NatalRouteImport.update({
+  id: '/natal',
+  path: '/natal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
@@ -221,10 +233,12 @@ const ApiPublicTelegramWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contato': typeof ContatoRoute
+  '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
+  '/natal': typeof NatalRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -257,10 +271,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contato': typeof ContatoRoute
+  '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
+  '/natal': typeof NatalRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -294,10 +310,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/contato': typeof ContatoRoute
+  '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
+  '/natal': typeof NatalRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -332,10 +350,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/contato'
+    | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
     | '/login'
     | '/mcp'
     | '/meus-precos'
+    | '/natal'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -368,10 +388,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/contato'
+    | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
     | '/login'
     | '/mcp'
     | '/meus-precos'
+    | '/natal'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -404,10 +426,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/contato'
+    | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
     | '/login'
     | '/mcp'
     | '/meus-precos'
+    | '/natal'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -441,10 +465,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContatoRoute: typeof ContatoRoute
+  DiaDasCriancasRoute: typeof DiaDasCriancasRoute
   DivulgacaoDeAfiliadosRoute: typeof DivulgacaoDeAfiliadosRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   MeusPrecosRoute: typeof MeusPrecosRoute
+  NatalRoute: typeof NatalRoute
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
@@ -491,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContatoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dia-das-criancas': {
+      id: '/dia-das-criancas'
+      path: '/dia-das-criancas'
+      fullPath: '/dia-das-criancas'
+      preLoaderRoute: typeof DiaDasCriancasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/divulgacao-de-afiliados': {
       id: '/divulgacao-de-afiliados'
       path: '/divulgacao-de-afiliados'
@@ -517,6 +550,13 @@ declare module '@tanstack/react-router' {
       path: '/meus-precos'
       fullPath: '/meus-precos'
       preLoaderRoute: typeof MeusPrecosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/natal': {
+      id: '/natal'
+      path: '/natal'
+      fullPath: '/natal'
+      preLoaderRoute: typeof NatalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-cookies': {
@@ -721,10 +761,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContatoRoute: ContatoRoute,
+  DiaDasCriancasRoute: DiaDasCriancasRoute,
   DivulgacaoDeAfiliadosRoute: DivulgacaoDeAfiliadosRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   MeusPrecosRoute: MeusPrecosRoute,
+  NatalRoute: NatalRoute,
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,

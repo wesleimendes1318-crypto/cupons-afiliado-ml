@@ -61,6 +61,16 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://melhorescolha.io/natal</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://melhorescolha.io/dia-das-criancas</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://melhorescolha.io/telegram</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

@@ -6,6 +6,8 @@ import { abrirPreferencias } from "@/lib/consentimento";
 const PAGINAS = [
   { to: "/sobre", rotulo: "Sobre o site" },
   { to: "/guias", rotulo: "Guias" },
+  { to: "/natal", rotulo: "Natal" },
+  { to: "/dia-das-criancas", rotulo: "Dia das Crianças" },
   { to: "/telegram", rotulo: "Canal de ofertas" },
   { to: "/divulgacao-de-afiliados", rotulo: "Divulgação de afiliados" },
   { to: "/politica-de-privacidade", rotulo: "Privacidade" },

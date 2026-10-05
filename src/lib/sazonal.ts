@@ -35,12 +35,41 @@ export type Temporada = {
      05/10: as lojas ainda não entraram na campanha; antes dela, só a
      contagem de dias). */
   ofertasAntecipadas: boolean;
+  /* Página da categoria sazonal no site (Natal e Dia das Crianças). */
+  pagina?: "/natal" | "/dia-das-criancas";
   /* Buscas de produtos de valor mais alto no catálogo oficial (tarefa
      sazonal): onde a economia de verdade aparece (os mais vendidos baratos
      quase nunca têm o mesmo produto bem mais barato, medido em 05/10). */
   buscas: readonly string[];
-  /* Tema visual da seção no site (cores próprias, sem marca de terceiros). */
-  tema: { fundo: string; texto: string; destaque: string; chip: string };
+  /* Tema visual da campanha (cores próprias, sem marca de terceiros).
+     Trocar cores e ilustração de uma campanha futura = editar só isto e a
+     arte em src/components/ArteSazonal.tsx. */
+  tema: TemaCampanha;
+};
+
+export type TemaCampanha = {
+  /* Fundo da seção (degradês, sem imagem). */
+  fundo: string;
+  /* Texto principal e secundário sobre o fundo (contraste AA conferido). */
+  texto: string;
+  textoSuave: string;
+  /* Cor de ação (botões) e o texto sobre ela. */
+  destaque: string;
+  sobreDestaque: string;
+  /* Segunda cor da campanha (detalhes da arte, números grandes). */
+  realce: string;
+  /* Cor de texto pequeno de destaque (selos, contagem) com contraste AA
+     sobre o fundo. */
+  rotulo: string;
+  /* Pílulas e áreas translúcidas sobre o fundo. */
+  superficie: string;
+  borda: string;
+  /* Pontos de luz / decoração. */
+  brilho: string;
+  /* Decoração de fundo: neve, confete ou pontos de luz. */
+  decoracao: "neve" | "confete" | "luzes";
+  /* Compatibilidade (pílula antiga). */
+  chip: string;
 };
 
 export const TEMPORADAS: readonly Temporada[] = [
@@ -57,6 +86,7 @@ export const TEMPORADAS: readonly Temporada[] = [
     rotulo: "Para o Dia das Crianças",
     rotuloAntecipado: "Antecipe o Dia das Crianças",
     ofertasAntecipadas: true,
+    pagina: "/dia-das-criancas",
     buscas: [
       "lego classic caixa criativa",
       "lego city",
@@ -72,9 +102,18 @@ export const TEMPORADAS: readonly Temporada[] = [
       "jogo de tabuleiro estrela",
     ],
     tema: {
-      fundo: "linear-gradient(135deg,#fff6d6 0%,#e3f1ff 100%)",
+      fundo:
+        "radial-gradient(90% 85% at 92% 0%, #ffe6a3 0%, rgba(255,230,163,0) 58%), linear-gradient(160deg, #fff9ea 0%, #fff4df 45%, #e6f2ff 100%)",
       texto: "#1d1d1f",
+      textoSuave: "#4a4a52",
       destaque: "#0071e3",
+      sobreDestaque: "#ffffff",
+      realce: "#ff7a59",
+      rotulo: "#0058b0",
+      superficie: "rgba(255,255,255,0.78)",
+      borda: "rgba(0,113,227,0.16)",
+      brilho: "#ffc93c",
+      decoracao: "confete",
       chip: "#ffffff",
     },
   },
@@ -107,10 +146,19 @@ export const TEMPORADAS: readonly Temporada[] = [
       "aspirador robô xiaomi",
     ],
     tema: {
-      fundo: "linear-gradient(135deg,#0b0b0f 0%,#22222b 100%)",
-      texto: "#f5f5f7",
-      destaque: "#e8c468",
-      chip: "#2c2c35",
+      fundo:
+        "radial-gradient(80% 90% at 88% 0%, rgba(122,92,255,0.42) 0%, rgba(122,92,255,0) 60%), radial-gradient(60% 60% at 0% 100%, rgba(122,92,255,0.18) 0%, rgba(122,92,255,0) 70%), linear-gradient(160deg, #121218 0%, #1a1a23 60%, #14141b 100%)",
+      texto: "#f4f2ff",
+      textoSuave: "rgba(244,242,255,0.74)",
+      destaque: "#7a5cff",
+      sobreDestaque: "#ffffff",
+      realce: "#c8b8ff",
+      rotulo: "#d4c8ff",
+      superficie: "rgba(255,255,255,0.07)",
+      borda: "rgba(160,138,255,0.38)",
+      brilho: "#b9a6ff",
+      decoracao: "luzes",
+      chip: "#26232f",
     },
   },
   {
@@ -129,6 +177,7 @@ export const TEMPORADAS: readonly Temporada[] = [
     rotulo: "Ideia de presente de Natal",
     rotuloAntecipado: "Presente de Natal antecipado",
     ofertasAntecipadas: true,
+    pagina: "/natal",
     buscas: [
       "perfume 212 vip men",
       "perfume la vie est belle",
@@ -142,10 +191,19 @@ export const TEMPORADAS: readonly Temporada[] = [
       "fone jbl wave buds",
     ],
     tema: {
-      fundo: "linear-gradient(135deg,#0f3d2e 0%,#5c1a26 100%)",
-      texto: "#fdf8f0",
-      destaque: "#f2c76e",
-      chip: "#1d4a3a",
+      fundo:
+        "radial-gradient(85% 90% at 90% 0%, rgba(217,180,90,0.22) 0%, rgba(217,180,90,0) 58%), radial-gradient(70% 70% at 0% 100%, rgba(194,65,59,0.16) 0%, rgba(194,65,59,0) 70%), linear-gradient(160deg, #0b3125 0%, #0f3d2e 55%, #0d3628 100%)",
+      texto: "#f7f0e1",
+      textoSuave: "rgba(247,240,225,0.8)",
+      destaque: "#e2bf66",
+      sobreDestaque: "#1b2a22",
+      realce: "#d2453f",
+      rotulo: "#f0d48a",
+      superficie: "rgba(247,240,225,0.09)",
+      borda: "rgba(226,191,102,0.38)",
+      brilho: "#f6dd94",
+      decoracao: "neve",
+      chip: "#163f31",
     },
   },
 ];

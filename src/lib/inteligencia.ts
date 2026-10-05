@@ -12,7 +12,8 @@
    Poucas chamadas por execução (limite de subrequisições do servidor). */
 
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
-import { temporadaDoProduto, temporadasAtivas, temporadasComOfertas } from "@/lib/sazonal";
+import { descontoReal } from "@/lib/regra-economia";
+import { temporadaDoProduto, temporadasComOfertas } from "@/lib/sazonal";
 import { telegram } from "@/lib/telegram";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -102,7 +103,7 @@ export async function coletarMercado(db: Db) {
      mais enquanto ela dura, com menos nomes de produto (limite de
      subrequisições do servidor). */
   const focoIds = new Set<string>(CATEGORIAS_FOCO.map((c) => c.id));
-  const sazonais = temporadasAtivas()
+  const sazonais = temporadasComOfertas()
     .flatMap((t) => t.categorias.map((c) => ({ ...c, temporada: t.id })))
     .filter((c, i, l) => !focoIds.has(c.id) && l.findIndex((x) => x.id === c.id) === i)
     .slice(0, 2);
@@ -207,7 +208,6 @@ export async function medirCanal(db: Db) {
    na hora, nada de preço velho). Pré-filtro pelos valores da vitrine; a
    decisão final é a da tela (decisaoDaTela) no garimpo. */
 export const PREPARAR_POR_VEZ = 2;
-const ECONOMIA_MINIMA = 30;
 
 export async function prepararRevalidacao(db: Db) {
   const desde = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
@@ -218,7 +218,7 @@ export async function prepararRevalidacao(db: Db) {
     t
       .from("produtos_vistos")
       .select(
-        "url_produto,titulo,economia,melhor_link,alt_economia,alt_link,alt_frete_gratis,visto_em",
+        "url_produto,titulo,preco,economia,melhor_link,alt_economia,alt_link,alt_frete_gratis,visto_em",
       )
       .gte("visto_em", desde)
       .limit(300),
@@ -230,6 +230,7 @@ export async function prepararRevalidacao(db: Db) {
   type Visto = {
     url_produto: string | null;
     titulo: string | null;
+    preco: number | null;
     economia: number | null;
     melhor_link: string | null;
     alt_economia: number | null;
@@ -240,11 +241,11 @@ export async function prepararRevalidacao(db: Db) {
   const candidatos = ((vistos ?? []) as Visto[])
     .map((v) => {
       const mesmo =
-        (v.economia ?? 0) >= ECONOMIA_MINIMA && /^https:\/\/meli\.la\//.test(v.melhor_link ?? "")
+        descontoReal(v.economia, v.preco) && /^https:\/\/meli\.la\//.test(v.melhor_link ?? "")
           ? Number(v.economia)
           : 0;
       const alt =
-        (v.alt_economia ?? 0) >= ECONOMIA_MINIMA &&
+        descontoReal(v.alt_economia, v.preco) &&
         v.alt_frete_gratis === true &&
         /^https:\/\/meli\.la\//.test(v.alt_link ?? "")
           ? Number(v.alt_economia)

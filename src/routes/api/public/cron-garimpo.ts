@@ -10,6 +10,8 @@ import {
   type Qualidade,
 } from "@/lib/qualidade";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
+import { menorPrecoDoColado } from "@/lib/menor-preco";
+import { descontoReal } from "@/lib/regra-economia";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -19,7 +21,8 @@ import { linkDoBot } from "@/lib/telegram-publico";
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
    que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
    decisaoDaTela):
-   - economia >= R$ 30 no produto contra o anúncio comparado;
+   - desconto real no produto contra o anúncio comparado (R$ 30, ou R$ 10
+     e 20% para produto barato; src/lib/regra-economia.ts);
    - link de afiliado (meli.la) da opção escolhida;
    - frete grátis ou com valor conhecido (frete pago desconhecido fica fora);
    - nada de peça no lugar do aparelho nem alternativa que "vem menos";
@@ -33,19 +36,21 @@ import { linkDoBot } from "@/lib/telegram-publico";
    às cegas. ?simular=1 só lista. Chamada pelas tarefas do banco (pg_cron)
    com o cabeçalho x-cron-secret. */
 
-const ECONOMIA_MINIMA = 30;
 const POR_CHAMADA = 2;
 const DIAS_SEM_REPETIR = 7;
 const FRESCO_MS = 3 * 3600_000;
 const CRITERIOS =
-  "garimpo-v2 (05/10): >= R$ 30 no produto, meli.la, frete conhecido, conferida <= 3 h";
+  "garimpo-v3 (05/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete conhecido, conferida <= 3 h";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 type Achado = {
   chave: string;
   pedido: number;
-  tipo: "mesmo" | "parecido";
+  /* menor: o próprio anúncio comparado já é o menor preço (05/10). */
+  tipo: "mesmo" | "parecido" | "menor";
+  /* Lojas mais caras conferidas (tipo menor). */
+  lojasMaisCaras?: number;
   titulo: string;
   tituloOpcao: string;
   loja: string | null;
@@ -77,13 +82,40 @@ function achadoDoPedido(p: {
   const { colado, melhorMesmo, alternativa } = decisaoDaTela(opcoesDaAnalise(a, p.link));
   if (!colado) return null;
   const escolha = alternativa ?? (melhorMesmo?.tipo === "mesmo" ? melhorMesmo : null);
-  if (!escolha) return null;
+  if (!escolha) {
+    /* JÁ É O MENOR PREÇO (05/10): sem loja mais barata nem alternativa, o
+       próprio anúncio vira o achado quando é o mais barato do mesmo produto
+       contra pelo menos 2 lojas mais caras, com desconto real contra a 2ª. */
+    const m = menorPrecoDoColado(a);
+    if (!m || !/^https:\/\/meli\.la\//i.test(colado.link)) return null;
+    if (colado.freteGratis !== true && totalDaOpcao(colado) == null) return null;
+    return {
+      chave: `${p.url_alvo.split("?")[0]}|${colado.link}|menor`,
+      pedido: p.id,
+      tipo: "menor",
+      lojasMaisCaras: m.lojas,
+      titulo: colado.titulo,
+      tituloOpcao: colado.titulo,
+      loja: colado.loja,
+      lojaOficial: colado.lojaOficial,
+      preco: colado.preco,
+      precoColado: m.segunda,
+      economia: m.economia,
+      muda: null,
+      link: colado.link,
+      opcao: colado,
+      qualidade: null,
+      desvantagens: [],
+      imagem: colado.imagem ?? null,
+      temporada: temporadaDoProduto(colado.titulo),
+    };
+  }
   if (!/^https:\/\/meli\.la\//i.test(escolha.link)) return null;
   if (escolha.freteGratis !== true && totalDaOpcao(escolha) == null) return null;
   if (pecaNoLugarDoAparelho(colado.titulo, escolha.titulo)) return null;
   if (escolha.tipo === "parecido" && naoEAlternativa(escolha.muda)) return null;
   const economia = Math.round((colado.preco - escolha.preco) * 100) / 100;
-  if (!(economia >= ECONOMIA_MINIMA)) return null;
+  if (!descontoReal(economia, colado.preco)) return null;
   return {
     chave: `${p.url_alvo.split("?")[0]}|${escolha.link}`,
     pedido: p.id,
@@ -188,12 +220,18 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
             ? `❌ Desvantagens: ${html(curto(x.desvantagens.slice(0, 2).join("; "), 120))}`
             : null,
         ]
-      : ["✅ Mesmo produto, em outra loja"],
+      : x.tipo === "menor"
+        ? [
+            `✅ Já é o menor preço: conferido contra ${x.lojasMaisCaras ?? 2} lojas que vendem o mesmo produto`,
+          ]
+        : ["✅ Mesmo produto, em outra loja"],
     [
       `💰 <b>${brl(x.preco)}</b>${noPix ? ` ${html(noPix)}` : ""}`,
       parcelado ? `💳 ${html(parcelado.charAt(0).toUpperCase() + parcelado.slice(1))}` : null,
-      `🏷️ Anúncio comparado: <s>${brl(x.precoColado)}</s>`,
-      `💸 <b>${brl(x.economia)} a menos no produto</b>${pct >= 1 ? ` (−${pct}%)` : ""}`,
+      x.tipo === "menor"
+        ? `🏷️ Na 2ª loja mais barata: <s>${brl(x.precoColado)}</s>`
+        : `🏷️ Anúncio comparado: <s>${brl(x.precoColado)}</s>`,
+      `💸 <b>${brl(x.economia)} a menos no produto${x.tipo === "menor" ? " que a 2ª loja" : ""}</b>${pct >= 1 ? ` (−${pct}%)` : ""}`,
       linhaDoFrete(x.opcao),
     ],
     [

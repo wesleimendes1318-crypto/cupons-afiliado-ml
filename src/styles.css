@@ -692,3 +692,100 @@
     }
   }
 }
+
+/* CAMPANHAS SAZONAIS (05/10): movimento breve que valoriza a arte e não
+   disputa atenção com os produtos. Só transform/opacity, poucas repetições,
+   tudo desliga com prefers-reduced-motion (a versão estática é completa). */
+@keyframes campanha-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes campanha-flutua {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes campanha-balanca {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes campanha-cintila {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.campanha-entra {
+  animation: campanha-entra 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.campanha-flutua {
+  animation: campanha-flutua 4.2s ease-in-out 3;
+  transform-box: fill-box;
+}
+.campanha-balanca {
+  animation: campanha-balanca 3.6s ease-in-out 3;
+}
+.campanha-cintila {
+  animation: campanha-cintila 2.6s ease-in-out 4;
+}
+.campanha-atraso-1 {
+  animation-delay: 0.6s;
+}
+.campanha-atraso-2 {
+  animation-delay: 1.2s;
+}
+.campanha-cartao {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.campanha-cartao:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+.campanha-botao {
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+.campanha-botao:hover {
+  transform: translateY(-1px);
+}
+.campanha-botao:active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .campanha-entra,
+  .campanha-flutua,
+  .campanha-balanca,
+  .campanha-cintila {
+    animation: none;
+  }
+  .campanha-cartao,
+  .campanha-botao {
+    transition: none;
+  }
+  .campanha-cartao:hover,
+  .campanha-botao:hover,
+  .campanha-botao:active {
+    transform: none;
+  }
+}
