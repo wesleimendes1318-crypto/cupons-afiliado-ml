@@ -148,8 +148,21 @@ export function qualidadeDoParecido(p: Parecido, colado: Colado): Qualidade {
   const objetiva = comparacaoObjetiva(p, colado);
   if (objetiva?.nivel === "inferior") return objetiva;
   const conferida = String(p.qualidade ?? "").toLowerCase() as NivelQualidade;
-  if (NIVEIS.has(conferida))
-    return { nivel: conferida, motivo: (p.qualidadeMotivo ?? "").trim() || null };
+  if (NIVEIS.has(conferida)) {
+    /* "Produto idêntico" num parecido contradiz o "não é idêntico" da tela
+       (05/10, geladeira Inox x Black Inox): vira o motivo neutro, se for o
+       caso, ou fica sem motivo. */
+    const motivo = (p.qualidadeMotivo ?? "").trim();
+    const contradiz = /id[eê]ntic|mesmo produto|igual ao/i.test(motivo);
+    return {
+      nivel: conferida,
+      motivo: !contradiz
+        ? motivo || null
+        : soDiferencaNeutra(p, colado)
+          ? "Muda só a cor ou o acabamento"
+          : null,
+    };
+  }
   if (objetiva) return objetiva;
   if (soDiferencaNeutra(p, colado))
     return { nivel: "equivalente", motivo: "Muda só a cor ou o acabamento" };
