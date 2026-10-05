@@ -1087,7 +1087,59 @@ export async function diagnosticoModelos(foto: string | null) {
       ms: Date.now() - t,
     };
   };
-  const alvos = [...new Set([...MODELOS_GEMMA, ...gemmas.slice(0, 6)])];
-  const testes = await Promise.all(alvos.flatMap((m) => [medir(m, false), medir(m, true)]));
-  return { ok: true, gemmasDaChave: gemmas, testes };
+  /* Mesmo pedido com variações de configuração (raciocínio ligado por
+     padrão no Gemma 4 deixa a resposta lenta). */
+  const variar = async (nome: string, cfg: Record<string, unknown>) => {
+    const t = Date.now();
+    const partes: Parte[] = [
+      { text: 'Responda so JSON: {"ok":true,"cor":"cor principal da foto"}' },
+    ];
+    if (parte) partes.push(parte, parte);
+    try {
+      const r = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-goog-api-key": chave },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: partes }],
+            generationConfig: cfg,
+          }),
+          signal: AbortSignal.timeout(30_000),
+        },
+      );
+      const j = (await r.json().catch(() => null)) as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
+        usageMetadata?: Record<string, number>;
+        error?: { message?: string };
+      } | null;
+      const partesR = j?.candidates?.[0]?.content?.parts ?? [];
+      return {
+        nome,
+        status: r.status,
+        ms: Date.now() - t,
+        pensou: partesR.some((x) => x.thought),
+        uso: j?.usageMetadata ?? null,
+        erro: j?.error?.message?.slice(0, 120) ?? null,
+      };
+    } catch (e) {
+      return {
+        nome,
+        status: 504,
+        ms: Date.now() - t,
+        erro: String((e as Error).message).slice(0, 80),
+      };
+    }
+  };
+  const [testes, variacoes] = await Promise.all([
+    Promise.all(["gemma-4-26b-a4b-it"].flatMap((m) => [medir(m, false), medir(m, true)])),
+    Promise.all([
+      variar("padrao", { temperature: 0 }),
+      variar("budget0", { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }),
+      variar("nivel_minimo", { temperature: 0, thinkingConfig: { thinkingLevel: "minimal" } }),
+      variar("nivel_baixo", { temperature: 0, thinkingConfig: { thinkingLevel: "low" } }),
+      variar("json", { temperature: 0, responseMimeType: "application/json" }),
+    ]),
+  ]);
+  return { ok: true, gemmasDaChave: gemmas, testes, variacoes };
 }
