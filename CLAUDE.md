@@ -457,7 +457,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   como cartão de contagem ("Faltam N dias", 27/11), sem produtos, sem busca
   sazonal, sem prioridade e sem rótulo no canal (ofertasAntecipadas,
   temporadasComOfertas). Cartões: foto em altura fixa (h-32/h-36), economia
-  mínima de R$ 15 e 5% para entrar na seção.
+  mínima de R$ 15 e 5%, ou R$ 30 ou mais, para entrar na seção.
   BUSCA SAZONAL: operacao?tarefa=sazonal[&temporada=][&max=] põe na fila os
   produtos do catálogo oficial (/products/search) das buscas da temporada,
   1 por busca, até 15 por chamada, com o anúncio da 1ª oferta da lista

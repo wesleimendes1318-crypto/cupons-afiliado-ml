@@ -125,10 +125,13 @@ export function VitrineSazonal() {
           .filter((i) => t.termos.test(`${i.titulo} ${i.alt_titulo ?? ""}`))
           .map(ofertaDo)
           /* Desconto que vale a pena: pelo menos R$ 15 e 5% do anúncio
-             comparado (R$ 2 de diferença não encanta ninguém). */
+             comparado, ou R$ 30 ou mais (a regra do canal); R$ 2 de
+             diferença não encanta ninguém. */
           .filter(
             (o): o is Oferta =>
-              o != null && !usados.has(o.chave) && o.economia >= 15 && o.economia >= o.antes * 0.05,
+              o != null &&
+              !usados.has(o.chave) &&
+              (o.economia >= 30 || (o.economia >= 15 && o.economia >= o.antes * 0.05)),
           )
           .sort((a, b) => b.economia - a.economia)
           .slice(0, 10);
