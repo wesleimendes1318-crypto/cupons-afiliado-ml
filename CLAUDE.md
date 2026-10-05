@@ -672,6 +672,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   campanha_artes; o site lê artes_campanhas (useArteSalva) e usa o arquivo
   salvo; sem ele, a cena vetorial. Mudar o prompt = subir VERSAO_ARTE e
   gerar de novo (custo por imagem; nada é gerado por visita).
+- ARTES ENVIADAS PELO WESLEI (05/10, noite): recortes sem fundo em
+  public/campanhas/{criancas,natal,black_friday}.webp (imagem.recorte no
+  tema, object-contain, sem moldura) têm prioridade sobre a gerada e a
+  vetorial. Banners com texto (public/sazonal/natal.jpg, black-friday.jpg)
+  só como og:image.
 
 ## Cliente primeiro e teto dos agentes (05/10, noite)
 - Medido em 05/10: 120 comparações dos agentes x 3 de clientes em 24 h; a

@@ -837,7 +837,11 @@ export function ArteCampanha({
           width={t.imagem?.largura ?? 1536}
           height={t.imagem?.altura ?? 1024}
           alt=""
-          className="h-full w-full rounded-[22px] object-cover shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)]"
+          className={
+            t.imagem?.recorte
+              ? "h-full w-full object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.18)]"
+              : "h-full w-full rounded-[22px] object-cover shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)]"
+          }
         />
       ) : (
         <svg

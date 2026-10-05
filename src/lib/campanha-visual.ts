@@ -53,7 +53,9 @@ export type TemaVisual = {
   descricao: string;
   /* Arte salva (gerada uma vez e reutilizada nas visitas). Sem ela, a cena
      vetorial do tema. Dimensões reservadas para não deslocar a página. */
-  imagem?: { src: string; largura: number; altura: number };
+  /* recorte: PNG/WebP sem fundo (enviado pelo Weslei em 05/10), mostrado
+     inteiro sobre o fundo do tema, sem moldura. */
+  imagem?: { src: string; largura: number; altura: number; recorte?: boolean };
   /* Movimento: só a entrada suave da arte e respostas nos botões/cartões;
      nada contínuo disputando com preços. */
   movimento: "entrada" | "nenhum";
@@ -189,6 +191,7 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "Comparações para escolher melhor.",
     descricao:
       "Brinquedos já comparados com as outras lojas: o mesmo produto mais barato, alternativa de qualidade igual ou o melhor preço encontrado.",
+    imagem: { src: "/campanhas/criancas.webp", largura: 880, altura: 547, recorte: true },
     movimento: "entrada",
     palavras:
       /\b(crian[cç]as?|infantil|brinquedos?|bonecas?|lego|pel[uú]cias?|carrinho|hot ?wheels|barbie|jogos? de tabuleiro|quebra[- ]?cabe[cç]a|patinete|massinha|beb[eê]s?|kids)\b/i,
@@ -201,6 +204,7 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     titulo: "Presentes que fazem sorrir.",
     tituloDestaque: "Preço conferido antes de comprar.",
     descricao: "Ideias de presente já comparadas com as outras lojas. Comprar antes é economizar.",
+    imagem: { src: "/campanhas/natal.webp", largura: 880, altura: 544, recorte: true },
     movimento: "entrada",
     palavras:
       /\b(natal|natalin[oa]|papai noel|amigo secreto|presentes?|panetone|ceia|fim de ano)\b/i,
@@ -214,6 +218,7 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "Desconto conferido, não prometido.",
     descricao:
       "Na data, você vê se o desconto existe mesmo: comparação com as outras lojas e histórico do preço.",
+    imagem: { src: "/campanhas/black_friday.webp", largura: 880, altura: 661, recorte: true },
     movimento: "entrada",
     palavras: /\b(black ?friday|black ?week|cyber ?monday|esquenta black)\b/i,
     calendario: { de: "11-01", ate: "11-30" },
