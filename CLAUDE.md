@@ -602,6 +602,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Comissão ("Ganhos", "Ganhos extras" do hub de afiliados) NUNCA aparece no
   site, bot ou canal.
 
+## Equipe de agentes (05/10)
+- Weslei, 05/10: "desenvolva agentes pertinentes, que cuidem de TUDO" e
+  "mantenha o site totalmente funcionando, validado e com segurança do que é
+  mostrado". Papéis, horários e regras em docs/agentes.md (Guardião a cada
+  2 h, Pesquisa e oportunidades, Manutenção e configuração, Segurança, Marca/
+  layout/melhorias, Dados semanal). Base do Guardião: função
+  auditoria_exibicao(p_horas) no banco (só serviço). Problema novo que ela não
+  pega vira regra nova na função.
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em
