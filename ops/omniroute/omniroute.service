@@ -1,0 +1,25 @@
+[Unit]
+Description=OmniRoute - Melhor Escolha
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=omniroute
+Group=omniroute
+StateDirectory=omniroute
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/omniroute
+EnvironmentFile=/etc/omniroute.env
+Environment=DATA_DIR=/var/lib/omniroute
+Environment=OMNIROUTE_CLI_SKIP_REPO_ENV=1
+Environment=OMNIROUTE_NO_UPDATE_NOTIFIER=1
+ExecStart=/opt/omniroute/node_modules/.bin/omniroute serve --no-open --no-tray --no-recovery --log
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=40
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
