@@ -599,17 +599,22 @@ export function SecaoCampanha({
         tema={tema}
         fundir="baixo"
         cartao={false}
-        className="relative h-32 md:hidden"
+              {/* Cenário de estúdio ajustado: no celular h-40 para maior visibilidade; no PC h-[260px] e largura 50% */}
+      <CenarioCampanha
+        tema={tema}
+        fundir="baixo"
+        cartao={false}
+        className="relative h-40 md:hidden"
       />
       <CenarioCampanha
         tema={tema}
         fotos={fotos}
         fundir="ambos"
-        className="absolute right-0 top-0 hidden h-[230px] w-[46%] md:block"
+        className="absolute right-0 top-0 hidden h-[260px] w-[50%] md:block"
       />
-      <div className="relative -mt-6 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[230px] md:items-center md:pt-5">
-        <div className="min-w-0 md:max-w-[50%]">
-          <p
+      <div className="relative -mt-4 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[260px] md:items-center md:pt-5">
+        <div className="min-w-0 md:max-w-[48%]">
+
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
             style={{
               background: p.superficie,
