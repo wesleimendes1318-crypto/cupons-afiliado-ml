@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { ajudarAEscolher, opcoesDaAnalise } from "@/lib/ajudar-escolher";
 import { chaveGpt } from "@/lib/gpt";
+import { omniRouterConfigurado } from "@/lib/omni-router";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* "Me ajude a escolher" do resultado (Weslei, 28/09). Lê a comparação do
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/api/public/ajudar-escolher")({
       OPTIONS: async ({ request }) => respostaOptions(request),
       /* Só diz SE as chaves existem (nunca o valor). */
       GET: async ({ request }) =>
-        json(request, { gpt: Boolean(chaveGpt()), gemini: Boolean(process.env["GEMINI_API_KEY"]) }),
+        json(request, { gpt: Boolean(chaveGpt()), gemini: Boolean(process.env["GEMINI_API_KEY"]), omni: omniRouterConfigurado() }),
       POST: async ({ request }) => {
         if (!origemPermitida(request))
           return json(request, { erro: "Origem da solicitação não permitida." }, 403);

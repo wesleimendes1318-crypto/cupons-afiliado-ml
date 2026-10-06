@@ -3,6 +3,8 @@
    (regra do produto). A chave nunca sai do servidor: só se diz SE existe.
    Nome do secret: o primeiro destes que estiver preenchido. */
 
+import { objetoJsonValido, omniRouterConfigurado, perguntarAoOmniRouter } from "@/lib/omni-router";
+
 const NOMES_DA_CHAVE = [
   "OPENAI_API_KEY",
   "OPENAI_KEY",
@@ -40,6 +42,18 @@ export async function perguntarAoGpt(
   /* Fotos (endereços do mlstatic), anexadas na ordem, em baixa resolução. */
   imagens: string[] = [],
 ): Promise<RespostaGpt> {
+  const fim = Date.now() + prazo;
+  const comReserva = omniRouterConfigurado();
+  const direto = await perguntarDiretoAoGpt(prompt, comReserva ? Math.floor(prazo / 2) : prazo, imagens);
+  if (direto.ok) return direto;
+  if (comReserva) {
+    const reserva = await perguntarAoOmniRouter(prompt, { prazo: Math.max(0, fim - Date.now()), imagens });
+    if (reserva.ok) return reserva;
+  }
+  return direto;
+}
+
+async function perguntarDiretoAoGpt(prompt: string, prazo: number, imagens: string[]): Promise<RespostaGpt> {
   const chave = chaveGpt();
   if (!chave) return { ok: false, status: 503, erro: "sem chave do GPT nos secrets" };
   const fim = Date.now() + prazo;
@@ -76,21 +90,21 @@ export async function perguntarAoGpt(
         error?: { message?: string; code?: string };
       } | null;
       const texto = j?.choices?.[0]?.message?.content ?? "";
-      if (r.ok && texto) return { ok: true, texto, modelo };
+      if (r.ok && texto && objetoJsonValido(texto)) return { ok: true, texto, modelo };
       ultimo = {
         ok: false,
-        status: r.status,
-        erro: `${modelo}: ${(j?.error?.message ?? "sem resposta").slice(0, 140)}`,
+        status: r.ok ? 502 : r.status,
+        erro: `${modelo}: resposta indisponível (HTTP ${r.ok ? 502 : r.status})`,
       };
       /* Só troca de modelo quando o problema é o modelo; chave errada,
          sem crédito ou limite não melhoram com outro modelo. */
       const doModelo = r.status === 404 || j?.error?.code === "model_not_found";
       if (!doModelo) break;
-    } catch (e) {
+    } catch {
       ultimo = {
         ok: false,
         status: 504,
-        erro: `${modelo}: ${String((e as Error)?.message ?? e).slice(0, 100)}`,
+        erro: `${modelo}: falha de rede ou tempo esgotado`,
       };
       break;
     }

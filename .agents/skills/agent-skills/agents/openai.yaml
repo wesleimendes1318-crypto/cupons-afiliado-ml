@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Skills"
+  short_description: "Valide skills conforme a especificação oficial"
+  default_prompt: "Use $agent-skills para validar a estrutura e os metadados de uma skill."

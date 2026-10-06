@@ -1,3 +1,5 @@
+import { omniRouterConfigurado, perguntarAoOmniRouter } from "@/lib/omni-router";
+
 const LIMITE_POR_MINUTO = 8;
 const JANELA_MS = 60_000;
 const requisicoes = new Map<string, number[]>();
@@ -92,12 +94,12 @@ function urlGemini(modelo: string) {
  *  Prefere Flash: cota gratuita maior e resposta mais rapida, que e o que este
  *  site precisa. Devolve null se nem a listagem funcionar, e ai o problema e a
  *  chave, nao o nome do modelo. */
-async function descobrirModelo(apiKey: string): Promise<string | null> {
+async function descobrirModelo(apiKey: string, prazo = 15_000): Promise<string | null> {
   if (modeloDescoberto) return modeloDescoberto;
   try {
     const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
       headers: { "X-goog-api-key": apiKey },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(Math.max(1, prazo)),
     });
     if (!r.ok) {
       console.warn("[ia] nao consegui listar modelos do Gemini:", r.status);
@@ -159,7 +161,7 @@ function esquemaGemini(valor: unknown): unknown {
 type Opcoes = { formato?: { nome: string; schema: object }; esforco?: "low" | "medium" | "high" };
 
 /** Tenta o Gemini com a chave GEMINI_API_KEY (somente no servidor, nunca no navegador). */
-async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
+async function chamarGemini(prompt: string, opcoes?: Opcoes, fim?: number): Promise<ResultadoIa> {
   const apiKey = process.env['GEMINI_API_KEY'];
   if (!apiKey) return { ok: false, status: 503, erro: "Serviço de IA sem chave própria." };
 
@@ -178,12 +180,13 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
   let todosDeram404 = true;
 
   const tentar = async (modelo: string): Promise<ResultadoIa | null> => {
+    if (fim !== undefined && Date.now() >= fim) return ultimo;
     try {
       const resposta = await fetch(urlGemini(modelo), {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-goog-api-key": apiKey },
         body: JSON.stringify(corpo),
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(Math.max(1, fim === undefined ? 20_000 : fim - Date.now())),
       });
       if (resposta.ok) {
         const texto = textoGemini(await resposta.json());
@@ -195,6 +198,7 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
       if (resposta.status !== 404) todosDeram404 = false;
       console.warn("[ia] gemini", modelo, "respondeu", resposta.status);
       ultimo = { ok: false, status: resposta.status, erro: erroPorStatus(resposta.status) };
+      if (fim !== undefined && (resposta.status === 429 || resposta.status >= 500)) return ultimo;
       /* 404 = modelo indisponivel para a chave; 429 = sem cota. Nos dois casos
          vale tentar o proximo modelo antes de desistir. */
       if (resposta.status !== 404 && resposta.status !== 429 && resposta.status < 500) return ultimo;
@@ -202,6 +206,7 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
     } catch {
       todosDeram404 = false;
       ultimo = { ok: false, status: 502, erro: erroPorStatus(502) };
+      if (fim !== undefined) return ultimo;
       return null;
     }
   };
@@ -238,7 +243,8 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
      credito no gateway, pergunta quais modelos a chave tem e tenta uma vez. */
   if (todosDeram404) {
     modeloDescoberto = null;
-    const achado = await descobrirModelo(apiKey);
+    const achado = fim !== undefined && Date.now() >= fim ? null :
+      await descobrirModelo(apiKey, fim === undefined ? 15_000 : Math.max(1, fim - Date.now()));
     if (achado) {
       const r = await tentar(achado);
       if (r) return r;
@@ -310,8 +316,17 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
  * `formato` deve ser um JSON Schema estrito quando se espera JSON.
  */
 export async function chamarIa(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
-  const proprio = await chamarGemini(prompt, opcoes);
+  const comReserva = omniRouterConfigurado();
+  const proprio = await chamarGemini(prompt, opcoes, comReserva ? Date.now() + 10_000 : undefined);
   if (proprio.ok) return proprio;
+
+  if (comReserva) {
+    const reserva = await perguntarAoOmniRouter(prompt, {
+      prazo: 12_000, sistema: ESCOPO_IA, json: Boolean(opcoes?.formato),
+      ...(opcoes?.formato ? { formato: opcoes.formato } : {}),
+    });
+    if (reserva.ok) return reserva;
+  }
 
   const gateway = await chamarGateway(prompt, opcoes);
   if (gateway.ok) return gateway;
