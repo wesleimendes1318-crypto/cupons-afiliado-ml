@@ -47,6 +47,16 @@ async function caso(nome, executar) {
 }
 
 try {
+  await caso('Cheaper Inference usa endpoint e identificador próprios', async () => {
+    process.env['OMNI_ROUTER_PROVIDER'] = 'cheaperinference';
+    globalThis.fetch = async (url, init) => {
+      assert.equal(url, 'https://api.cheaperinference.com/v1/chat/completions');
+      assert.equal(JSON.parse(init.body).model, 'gpt-5.6-luna');
+      return ok();
+    };
+    assert.equal((await perguntarAoOmniRouter('JSON')).ok, true);
+    assert.equal((await perguntarAoOmniRouter('JSON', { imagens: ['https://http2.mlstatic.com/foto.jpg'] })).status, 503);
+  });
   await caso('chave OmniRoute sem endereço não é enviada ao OpenRouter', async () => {
     delete process.env['OMNI_ROUTER_PROVIDER'];
     assert.equal(omniRouterConfigurado(), false);

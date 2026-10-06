@@ -32,6 +32,20 @@ e exige HTTPS em produção. HTTP local só é aceito no desenvolvimento.
 
 ## Comportamento
 
+### Cheaper Inference
+
+A rota também aceita `OMNI_ROUTER_PROVIDER=cheaperinference`, usando por padrão
+`https://api.cheaperinference.com/v1` e o modelo de texto `gpt-5.6-luna`, documentado
+pelo provedor. A chave emitida por ele deve ser cadastrada em `OMNI_ROUTER` nos
+Secrets do backend. Não é necessário hospedar um OmniRoute para usar essa opção.
+Para fotos, configure `OMNI_ROUTER_VISION_MODELS` com um modelo visual disponível
+na conta e valide uma imagem real antes de publicar; não há modelo visual presumido.
+O saldo dessa conta paga chamadas do site, não créditos de edição do Lovable
+nem a cota do ChatGPT Work/Codex. A integração não cria saldo nem faz recargas.
+Referência: https://www.cheaperinference.com/docs.
+
+### Ordem das chamadas
+
 - Busca Guiada, Me Ajude a Escolher e atendimento de texto do Telegram usam
   `perguntarAoGpt`: OpenAI direto → OmniRoute/OpenRouter → fallback já existente
   no chamador. Na análise visual, as fotos são preservadas em ordem.

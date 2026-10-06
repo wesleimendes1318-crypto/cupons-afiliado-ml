@@ -16,10 +16,11 @@ type Opcoes = {
 function configuracao() {
   const chave = process.env["OMNI_ROUTER"]?.trim();
   const provedor = process.env["OMNI_ROUTER_PROVIDER"]?.trim() || "omniroute";
-  if (!chave || !["omniroute", "openrouter"].includes(provedor)) return null;
+  if (!chave || !["omniroute", "openrouter", "cheaperinference"].includes(provedor)) return null;
   // Uma chave do OmniRoute nunca é enviada ao OpenRouter por suposição.
   const base = process.env["OMNI_ROUTER_BASE_URL"]?.trim() ||
-    (provedor === "openrouter" ? "https://openrouter.ai/api/v1" : "");
+    (provedor === "openrouter" ? "https://openrouter.ai/api/v1" :
+      provedor === "cheaperinference" ? "https://api.cheaperinference.com/v1" : "");
   try {
     const url = new URL(base);
     const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
@@ -94,7 +95,7 @@ export async function perguntarAoOmniRouter(prompt: string, opcoes: Opcoes = {})
   const personalizados = process.env[imagens.length ? "OMNI_ROUTER_VISION_MODELS" : "OMNI_ROUTER_MODELS"];
   const padrao = config.provedor === "openrouter"
     ? "openai/gpt-4o-mini,google/gemini-2.5-flash"
-    : imagens.length ? "" : "auto/cheap";
+    : imagens.length ? "" : config.provedor === "cheaperinference" ? "gpt-5.6-luna" : "auto/cheap";
   const modelos = [...new Set((personalizados || padrao).split(",").map((m) => m.trim()).filter(Boolean))].slice(0, 3);
   if (!modelos.length) return { ok: false, status: 503, erro: "Configure um modelo com visão para esta rota." };
 
