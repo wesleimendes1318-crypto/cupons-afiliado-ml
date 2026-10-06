@@ -843,6 +843,7 @@ export function ArteCampanha({
             width={t.imagem.largura}
             height={t.imagem.altura}
             alt=""
+            loading="lazy"
             className="campanha-camera absolute inset-0 h-full w-full object-cover"
           />
           <span className="campanha-reflexo" />
@@ -853,6 +854,7 @@ export function ArteCampanha({
           width={t.imagem?.largura ?? 1536}
           height={t.imagem?.altura ?? 1024}
           alt=""
+          loading="lazy"
           className="h-full w-full rounded-[22px] object-cover shadow-[0_18px_40px_-22px_rgba(0,0,0,0.45)]"
         />
       ) : (

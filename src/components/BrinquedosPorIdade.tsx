@@ -102,6 +102,8 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
           <img
             src={i.imagem}
             alt={i.nome}
+            width={200}
+            height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
             className="absolute inset-0 h-full w-full object-contain p-2.5"

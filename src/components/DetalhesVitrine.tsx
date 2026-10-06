@@ -190,6 +190,7 @@ function Painel({
               <img
                 src={foto}
                 alt=""
+                loading="lazy"
                 referrerPolicy="no-referrer"
                 className="absolute inset-0 h-full w-full object-contain p-1.5 mix-blend-multiply"
               />
