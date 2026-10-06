@@ -1,6 +1,12 @@
 import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { desvantagensDoParecido, qualidadeDoParecido, textoDaQualidade } from "@/lib/qualidade";
+import {
+  AVISO_PRAZO,
+  formatarDataAmigavel,
+  formatarDataCompleta,
+  type ResultadoPrazo,
+} from "@/lib/prazo-entrega";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
 
@@ -230,4 +236,107 @@ export async function responderConversa(texto: string, nome: string | null) {
   /* Nada de link vindo do modelo: só o bot manda link, e só de afiliado. */
   if (!resposta || /https?:\/\/|www\./i.test(resposta)) return null;
   return html(resposta.slice(0, 600));
+}
+
+/* ------------------------------------------------ prazo (06/10)
+   "Receber até" no bot: o cliente manda o link com "até 10/10" (ou "receber
+   amanhã", "fim de semana") e o CEP. Mesma regra do site: só conta o que a
+   estimativa oficial garante até a data; sem data confirmada não passa como
+   rápido; o aviso oficial vai junto. */
+
+export function cepDoTexto(texto: string): string | null {
+  const semLink = texto.replace(/https?:\/\/\S+/g, " ");
+  const m = /\b(\d{5})-?(\d{3})\b/.exec(semLink);
+  return m ? `${m[1]}${m[2]}` : null;
+}
+
+const cepBonito = (c: string) => `${c.slice(0, 5)}-${c.slice(5)}`;
+
+export function mensagemComPrazo(
+  analise: Record<string, unknown>,
+  link: string | null,
+  urlColado: string,
+  r: ResultadoPrazo<Record<string, unknown>>,
+  limite: string,
+  cep: string,
+) {
+  const data = formatarDataCompleta(limite);
+  const topo = `📦 <b>Entrega até ${data}</b> para o CEP ${cepBonito(cep)}`;
+  if (!r.algumAtende) {
+    const base = mensagemDaComparacao(analise, link, urlColado);
+    return {
+      texto: [
+        topo,
+        "Nenhuma loja confirmou entrega até esta data para seu CEP. Abaixo, a comparação sem o filtro.",
+        AVISO_PRAZO,
+        "",
+        base.texto,
+      ].join("\n"),
+      imagem: base.imagem,
+    };
+  }
+  if (r.coladoAtende) {
+    const base = mensagemDaComparacao(r.analise, link, urlColado);
+    const fora = r.fora.filter((f) => f.tipo === "mesmo").length;
+    return {
+      texto: [
+        topo,
+        "✅ Só aparece o que chega até essa data.",
+        fora ? `⏱️ ${fora} ${fora > 1 ? "lojas ficaram" : "loja ficou"} de fora pelo prazo.` : null,
+        AVISO_PRAZO,
+        "",
+        base.texto,
+      ]
+        .filter((l) => l != null)
+        .join("\n"),
+      imagem: base.imagem,
+    };
+  }
+  /* O anúncio enviado não chega a tempo: a loja do mesmo produto mais barata
+     (pelo total) que chega, e até 2 parecidos que chegam. */
+  const opcoes = opcoesDaAnalise(r.analise, null);
+  const mesmo = opcoes
+    .filter((o) => o.tipo === "mesmo" && totalDaOpcao(o) != null)
+    .sort((x, y) => (totalDaOpcao(x) as number) - (totalDaOpcao(y) as number))[0];
+  const parecidos = opcoes.filter((o) => o.tipo === "parecido").slice(0, 2);
+  const titulo =
+    typeof analise["titulo"] === "string" ? analise["titulo"] : "Produto que você enviou";
+  const linhas: (string | null)[] = [
+    `✨ <b>${html(titulo)}</b>`,
+    "",
+    topo,
+    r.coladoChega
+      ? `⚠️ O anúncio que você enviou tem previsão a partir de ${formatarDataAmigavel(r.coladoChega)}: não garante a entrega até ${data}.`
+      : "⚠️ O anúncio que você enviou não tem prazo confirmado para o seu CEP.",
+    AVISO_PRAZO,
+  ];
+  if (mesmo) {
+    linhas.push(
+      "",
+      "🏆 <b>Mesmo produto que chega a tempo</b>",
+      ...linhasDaOpcao(mesmo),
+      `👉 ${html(mesmo.link)}`,
+    );
+  }
+  for (const p of parecidos) {
+    linhas.push(
+      "",
+      "🔁 <b>Parecido que chega a tempo (não é idêntico)</b>",
+      `📌 ${html(p.titulo)}`,
+      ...linhasDaOpcao(p),
+      p.muda ? `ℹ️ Muda: ${html(p.muda)}` : "ℹ️ Muda um detalhe: confira antes de comprar",
+      `👉 ${html(p.link)}`,
+    );
+  }
+  if (!mesmo && !parecidos.length)
+    linhas.push("", "Nenhuma opção com link de compra chega até essa data.");
+  linhas.push(
+    "",
+    `🔎 Comparação completa: ${SITE}/?link=${encodeURIComponent(urlColado)}`,
+    "💡 Compare qualquer produto em melhorescolha.io",
+  );
+  return {
+    texto: linhas.filter((l) => l != null).join("\n"),
+    imagem: typeof analise["imagem"] === "string" ? analise["imagem"] : null,
+  };
 }

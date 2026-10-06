@@ -20,7 +20,7 @@
    depender de o Weslei estar online para responder.
 */
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AcompanharPreco } from "@/components/AcompanharPreco";
 import { ComoFunciona } from "@/components/ComoFunciona";
@@ -43,6 +43,8 @@ import {
   type Medida,
 } from "@/lib/alternativa";
 import { SeloCep, useCepDestino } from "@/components/CepDestino";
+import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo";
+import { aplicarPrazo } from "@/lib/prazo-entrega";
 import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
@@ -1224,6 +1226,7 @@ export default function BuscaPorLink({
           urlColada={melhorLinkML(url) ?? null}
           completando={completando}
           pedidoId={atual.current}
+          cepTela={regiao && !regiao.padrao ? regiao.cep : null}
         />
       )}
 
@@ -1771,6 +1774,7 @@ function Resultado({
   urlColada,
   completando = false,
   pedidoId = null,
+  cepTela = null,
 }: {
   pedidoId?: number | null;
   pedido: Pedido;
@@ -1778,8 +1782,25 @@ function Resultado({
   copiado: string | null;
   urlColada: string | null;
   completando?: boolean;
+  cepTela?: string | null;
 }) {
-  const a = pedido.analise;
+  /* "Receber até" (06/10): com data escolhida, a tela inteira (Melhor opção,
+     tabela, Melhor alternativa e Parecidos) usa só o que chega a tempo. */
+  const [limitePrazo, setLimitePrazo] = useState<string | null>(null);
+  const cepPrazo = cepTela ?? pedido.analise?.cepDestino ?? null;
+  const { prazos, carregando: carregandoPrazo } = usePrazos(
+    pedidoId,
+    cepPrazo,
+    limitePrazo != null,
+  );
+  const filtroPrazo = useMemo(
+    () =>
+      limitePrazo && prazos && pedido.analise
+        ? aplicarPrazo(pedido.analise, prazos, limitePrazo)
+        : null,
+    [limitePrazo, prazos, pedido.analise],
+  );
+  const a = filtroPrazo?.algumAtende ? filtroPrazo.analise : pedido.analise;
   const link = pedido.link ?? "";
   const dispositivo = useDispositivo();
 
@@ -2117,6 +2138,24 @@ function Resultado({
     (a?.procurouOutra === true || alternativas.length > 0) &&
     !leituraFalhou &&
     linhasLojas.length >= 2;
+  /* Com data limite e o anúncio colado fora do prazo: a loja do MESMO
+     produto mais barata (pelo total) que chega a tempo, mesmo sendo mais
+     cara que o colado (o cliente pediu a data). Só com link de afiliado. */
+  const paraReceber =
+    limitePrazo && filtroPrazo?.algumAtende && !filtroPrazo.coladoAtende && !recomendada
+      ? (linhasLojas
+          .filter((l) => !l.colado && ehLinkDeAfiliado(l.link))
+          .map((l) => ({
+            nome: l.nome,
+            preco: l.final as number,
+            freteGratis: l.freteGratis ?? null,
+            custoFrete: l.custoFrete ?? null,
+            total: totalDaLoja(l),
+            link: l.link as string,
+          }))
+          .filter((x) => x.total != null)
+          .sort((x, y) => (x.total as number) - (y.total as number))[0] ?? null)
+      : null;
   /* Coluna da direita: lojas comparadas e/ou parecidos. */
   const temColuna = mostraTabela || (!leituraFalhou && parecidosComLink.length > 0);
 
@@ -2210,6 +2249,33 @@ function Resultado({
       </div>
 
       <div className="sm:col-start-1 sm:row-start-2">
+        {!leituraFalhou && pedidoId != null && (
+          <FiltroPrazo
+            limite={limitePrazo}
+            mudar={setLimitePrazo}
+            cep={cepPrazo}
+            carregando={carregandoPrazo}
+          />
+        )}
+        {limitePrazo && filtroPrazo && (
+          <AvisosDoPrazo
+            limite={limitePrazo}
+            r={filtroPrazo}
+            melhorNoPrazo={
+              recomendada
+                ? {
+                    nome: recomendada.o.vendedor ?? "outra loja",
+                    total: totalDaLoja(recomendada.o),
+                  }
+                : filtroPrazo.coladoAtende
+                  ? { nome: "o anúncio que você colou", total: totalColado }
+                  : paraReceber
+                    ? { nome: paraReceber.nome, total: paraReceber.total }
+                    : null
+            }
+            paraReceber={paraReceber}
+          />
+        )}
         {/* Só a melhor em destaque; todas as outras lojas estão na tabela. */}
         {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
           <OutraLojaComCupom
@@ -2228,7 +2294,7 @@ function Resultado({
         ))}
 
         {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
-        {estaEAMelhor && (
+        {estaEAMelhor && !(filtroPrazo?.algumAtende && !filtroPrazo.coladoAtende) && (
           <MelhorOpcao
             vendedor={a?.vendedor ?? null}
             preco={a?.preco ?? null}

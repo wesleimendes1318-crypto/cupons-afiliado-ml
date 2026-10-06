@@ -4333,6 +4333,9 @@ async function atenderPedidos() {
                    cliente escolhe a loja em "Outras opcoes de compra". */
                 const mesmaPagina = !!la.semAfiliado || la.link === r.link;
                 outras.push({
+                  /* Anuncio da loja (MLB...): o site consulta o prazo de entrega
+                     para o CEP do cliente (filtro "Receber ate", 06/10). */
+                  item: (alt.item || itemDoUrl(alt.url || '')) || null,
                   cupomId: alt.cupom ? alt.cupom.id : null,
                   vendedor: alt.vendedor,
                   preco: alt.preco,

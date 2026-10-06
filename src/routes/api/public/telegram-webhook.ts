@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { aplicarPrazo, dataDoTexto, type PrazoDoItem } from "@/lib/prazo-entrega";
+import { itensDaAnalise, prazosDosItens } from "@/lib/prazo-servidor";
+
 import {
   boasVindas,
   html,
@@ -8,6 +11,8 @@ import {
   responderConversa,
   VIDEO_COMO_FUNCIONA,
   mensagemDaComparacao,
+  mensagemComPrazo,
+  cepDoTexto,
   segredoDoWebhook,
   SITE,
   telegram,
@@ -67,7 +72,7 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
            na primeira conversa (e sempre que pedir /start ou /ajuda). */
         const { data: conversa } = await db
           .from("telegram_chats")
-          .select("chat_id,ia_dia,ia_usos")
+          .select("chat_id,ia_dia,ia_usos,cep")
           .eq("chat_id", chatId)
           .maybeSingle();
         const primeiro = !conversa;
@@ -131,10 +136,23 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
           "🔍 <b>Recebi o link!</b> Estou comparando com outras lojas. Em geral leva menos de 2 minutos.",
         );
 
-        const { data: novo, error } = await db.rpc("pedir_comparacao", {
-          p_url: urlColado,
-          p_nova: false,
-        });
+        /* "Receber até" (06/10): data e CEP no texto; o CEP fica guardado na
+           conversa para as próximas. */
+        const limite = dataDoTexto(texto);
+        const cepNovo = cepDoTexto(texto);
+        if (cepNovo) await db.from("telegram_chats").update({ cep: cepNovo }).eq("chat_id", chatId);
+        const cep: string | null = cepNovo ?? conversa?.cep ?? null;
+        if (limite && !cep)
+          await enviar(
+            "📦 Para filtrar pela data de entrega, mande junto o seu CEP (ex.: <i>link + até 10/10 + CEP 01001-000</i>). Vou comparar sem a data por enquanto.",
+          );
+
+        const { data: novo, error } = await db.rpc(
+          "pedir_comparacao",
+          cep
+            ? { p_url: urlColado, p_nova: false, p_cep: cep }
+            : { p_url: urlColado, p_nova: false },
+        );
         const id = novo?.id as number | undefined;
         const chave = novo?.chave as string | undefined;
         if (error || !id || !chave) {
@@ -159,11 +177,29 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
         }
 
         if (linha?.status === "pronto" && linha.analise) {
-          const { texto: resposta, imagem } = mensagemDaComparacao(
-            linha.analise,
-            linha.link ?? null,
-            urlColado,
-          );
+          let msg = mensagemDaComparacao(linha.analise, linha.link ?? null, urlColado);
+          if (limite && cep) {
+            const { data: alvo } = await db
+              .from("pedidos_link")
+              .select("url_alvo")
+              .eq("id", id)
+              .maybeSingle();
+            const mapa = itensDaAnalise(linha.analise, alvo?.url_alvo ?? urlColado);
+            const porItem = await prazosDosItens(Object.values(mapa), cep).catch(
+              () => ({}) as Record<string, PrazoDoItem>,
+            );
+            const prazos: Record<string, PrazoDoItem> = {};
+            for (const [k, item] of Object.entries(mapa)) prazos[k] = porItem[item] ?? null;
+            msg = mensagemComPrazo(
+              linha.analise,
+              linha.link ?? null,
+              urlColado,
+              aplicarPrazo(linha.analise, prazos, limite),
+              limite,
+              cep,
+            );
+          }
+          const { texto: resposta, imagem } = msg;
           if (imagem && /^https:\/\//.test(imagem) && resposta.length <= 1024) {
             const r = await telegram(token, "sendPhoto", {
               chat_id: chatId,

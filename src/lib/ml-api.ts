@@ -143,6 +143,28 @@ export async function freteParaCep(item: string, cep: string) {
   }
 }
 
+/** Resposta crua de /items/{id}/shipping_options para o CEP (prazo de
+    entrega, 06/10). Só leitura; 5 s. */
+export async function envioParaCep(item: string, cep: string) {
+  const token = await tokenDeAcesso();
+  try {
+    const r = await fetch(
+      `${API}/items/${item}/shipping_options?zip_code=${cep.replace(/\D/g, "")}`,
+      {
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
+    if (!r.ok) return { status: r.status, json: null as unknown };
+    return { status: r.status, json: (await r.json()) as unknown };
+  } catch {
+    return { status: 0, json: null as unknown };
+  }
+}
+
 /** GET na API oficial. Um 401 renova o token e tenta uma vez mais. */
 export async function mlGet<T>(caminho: string): Promise<T> {
   for (let tentativa = 0; tentativa < 2; tentativa += 1) {

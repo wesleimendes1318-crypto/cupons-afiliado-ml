@@ -850,3 +850,32 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   ficou sem o selo novo e parecia que a melhoria tinha sumido).
 - Mudança na extensão sobe a versão em extensao/manifest.json; o Weslei
   atualiza rodando ferramentas/ATUALIZAR-EXTENSAO.bat.
+
+## Prazo de entrega: "Receber até" (06/10)
+- Weslei, 06/10: "presente de aniversário ou até quando você pode receber";
+  "deve implementar em todos os canais, site, telegram". Estimativa OFICIAL
+  por anúncio e CEP (/items/{id}/shipping_options, só entrega no endereço):
+  atende só quando a data MAIS TARDIA da faixa (offset.date) é <= a data
+  escolhida; usa a opção de envio mais barata que chega (pode ser paga, e o
+  total passa a contar esse frete). Sem data confirmada = fora do filtro,
+  nunca "rápido". src/lib/prazo-entrega.ts (datas de Brasília, aplicarPrazo,
+  dataDoTexto), src/lib/prazo-servidor.ts (cache prazo_entrega_cache 30 min,
+  freio de 400 consultas novas em 5 min), /api/public/prazo-entrega
+  ({pedido, cep}).
+- Site (FiltroPrazo no resultado): chips Receba hoje / amanhã / Este fim de
+  semana / Escolher data limite, selo "Entregas até: DD/MM/AAAA · Remover" e
+  o aviso oficial textual (AVISO_PRAZO). Tabela, Melhor opção, Melhor
+  alternativa e Parecidos só com o que chega; o resto recolhido ("X lojas
+  mais baratas entregam após ..."), "💡 Economia vs Urgência" e, com o colado
+  fora do prazo, "📦 Para receber até" com a loja que chega (só meli.la).
+  Nenhuma a tempo: "Nenhuma loja confirmou entrega até esta data para seu
+  CEP" e a comparação sem filtro.
+- Bot: link + "até 10/10" / "receber amanhã" / "fim de semana" + CEP no texto
+  (CEP guardado em telegram_chats.cep); mensagemComPrazo com as mesmas
+  regras. Extensão 1.154.0 guarda o anúncio (item) de cada loja.
+- Vitrine geral (06/10, Apple Watch Series 4 "arranhado e quebrado, frete
+  não é grátis"): só entra o que foi comparado de verdade (outra loja ou
+  alternativa), sem sinal de usado/defeito no título e com frete grátis
+  confirmado (src/lib/vitrine-recomendavel.ts).
+- Botões "Início" e "Voltar ao topo" (BotoesNavegacao, canto inferior
+  esquerdo, depois de rolar) em todas as páginas.
