@@ -786,6 +786,50 @@ export type Database = {
           },
         ]
       }
+      monitor_telegram: {
+        Row: {
+          aviso_em: string | null
+          aviso_preco: number | null
+          chat_id: number | null
+          codigo: string
+          criado_em: string
+          ligado_em: string | null
+          monitor_id: number
+          navegador: string
+          pendente: boolean
+        }
+        Insert: {
+          aviso_em?: string | null
+          aviso_preco?: number | null
+          chat_id?: number | null
+          codigo: string
+          criado_em?: string
+          ligado_em?: string | null
+          monitor_id: number
+          navegador: string
+          pendente?: boolean
+        }
+        Update: {
+          aviso_em?: string | null
+          aviso_preco?: number | null
+          chat_id?: number | null
+          codigo?: string
+          criado_em?: string
+          ligado_em?: string | null
+          monitor_id?: number
+          navegador?: string
+          pendente?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitor_telegram_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "monitor_precos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operacao_execucoes: {
         Row: {
           erro: string | null
@@ -1099,6 +1143,10 @@ export type Database = {
         Args: { p_alvo?: number; p_navegador: string; p_pedido: number }
         Returns: number
       }
+      alerta_telegram: {
+        Args: { p_monitor: number; p_navegador: string }
+        Returns: string
+      }
       alternativa_da_analise: {
         Args: { a: Json; p_base: number }
         Returns: Json
@@ -1219,6 +1267,15 @@ export type Database = {
           url: string
         }[]
       }
+      detalhes_da_vitrine: {
+        Args: { p_chave: string }
+        Returns: {
+          comparado_em: string
+          detalhes: Json
+          imagem: string
+          titulo: string
+        }[]
+      }
       disparar_operacao: { Args: { p_caminho: string }; Returns: number }
       estado_do_robo: {
         Args: never
@@ -1258,6 +1315,10 @@ export type Database = {
       iniciar_pedido: {
         Args: { p_id: number; p_token: string }
         Returns: undefined
+      }
+      ligar_alerta_telegram: {
+        Args: { p_chat: number; p_codigo: string }
+        Returns: Json
       }
       limpar_vencidos: { Args: never; Returns: number }
       links_para_conferir: {
