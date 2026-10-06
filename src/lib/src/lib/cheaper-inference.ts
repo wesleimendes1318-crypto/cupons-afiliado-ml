@@ -67,35 +67,24 @@ export async function perguntarCheaperInference(
         error?: { message?: string };
       } | null;
 
-       try {
-    /* 1. Tenta Cheaper Inference (DeepSeek / Gemini) com chave OMNI_ROUTER */
-    const { perguntarCheaperInference } = await import("@/lib/cheaper-inference");
-    const ci = await perguntarCheaperInference(prompt, 9_000);
-    if (ci.ok) {
-      bruto = ci.texto;
-    } else {
-      /* 2. Reserva: GPT */
-      const { perguntarAoGpt } = await import("@/lib/gpt");
-      const gpt = await perguntarAoGpt(prompt, 9_000);
-      if (gpt.ok) bruto = gpt.texto;
-      else {
-        /* 3. Reserva: Gemini do backend */
-        const { gerarComModelos } = await import("@/lib/conferir-produto");
-        const r = await gerarComModelos([{ text: prompt }], {
-          ordem: ["gemini-flash-lite-latest", "gemma-4-26b-a4b-it"],
-          prazo: 9_000,
-        });
-        if (r.ok) bruto = r.texto;
+      const texto = j?.choices?.[0]?.message?.content ?? "";
+      if (r.ok && texto) {
+        return { ok: true, texto, modelo };
       }
-    }
-  } catch {
-    bruto = null;
-  }
 
+      ultimo = {
+        ok: false,
+        status: r.status,
+        erro: `${modelo}: ${(j?.error?.message ?? "sem resposta").slice(0, 140)}`,
+      };
+    } catch (e) {
+      ultimo = {
+        ok: false,
+        status: 504,
+        erro: `${modelo}: ${String((e as Error)?.message ?? e).slice(0, 100)}`,
       };
     }
   }
 
   return ultimo;
 }
-
