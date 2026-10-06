@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { BannerConsentimento } from "../components/BannerConsentimento";
 import { MedicaoCliques } from "../components/MedicaoCliques";
+import { BotoesNavegacao } from "../components/BotoesNavegacao";
 import {
   GoogleConsentimento,
   SCRIPT_CONSENTIMENTO_PADRAO,
@@ -163,6 +164,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <BotoesNavegacao />
       <BannerConsentimento />
       <GoogleConsentimento />
       <MedicaoCliques />

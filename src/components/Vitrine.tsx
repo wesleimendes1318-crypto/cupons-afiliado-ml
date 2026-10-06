@@ -12,6 +12,7 @@ import { BadgeCheck, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
+import { recomendavel } from "@/lib/vitrine-recomendavel";
 import { supabase } from "@/integrations/supabase/client";
 import {
   EVENTO_PERFIL,
@@ -139,7 +140,11 @@ export function Vitrine() {
           lerFretesDaVitrine(),
         ]);
         if (vivo && Array.isArray(data))
-          setItens(semEconomiaSemFrete(data as ItemVitrine[], fretes));
+          setItens(
+            semEconomiaSemFrete(data as ItemVitrine[], fretes).filter((i) =>
+              recomendavel(i, fretes),
+            ),
+          );
       } catch {
         /* sem vitrine: a página segue normal */
       }
