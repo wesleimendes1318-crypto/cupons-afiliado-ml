@@ -343,6 +343,8 @@ function Cartao({ i }: { i: ItemVitrine }) {
           <img
             src={i.imagem}
             alt={i.titulo}
+            width={200}
+            height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
             className="h-full w-full object-contain p-1.5"

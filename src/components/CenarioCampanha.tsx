@@ -384,6 +384,7 @@ export function CenarioCampanha({
             width={t.imagem?.largura ?? 1536}
             height={t.imagem?.altura ?? 1024}
             alt=""
+            loading="lazy"
             className="campanha-camera absolute inset-0 h-full w-full object-cover"
             style={{ objectPosition: "50% 40%" }}
           />

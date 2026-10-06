@@ -920,6 +920,30 @@ export type Database = {
         }
         Relationships: []
       }
+      prazo_entrega_cache: {
+        Row: {
+          cep: string
+          em: string
+          item: string
+          opcoes: Json
+          status: number
+        }
+        Insert: {
+          cep: string
+          em?: string
+          item: string
+          opcoes?: Json
+          status: number
+        }
+        Update: {
+          cep?: string
+          em?: string
+          item?: string
+          opcoes?: Json
+          status?: number
+        }
+        Relationships: []
+      }
       precos_vistos: {
         Row: {
           chave: string
@@ -1087,6 +1111,7 @@ export type Database = {
       }
       telegram_chats: {
         Row: {
+          cep: string | null
           chat_id: number
           ia_dia: string | null
           ia_usos: number
@@ -1095,6 +1120,7 @@ export type Database = {
           ultimo_em: string
         }
         Insert: {
+          cep?: string | null
           chat_id: number
           ia_dia?: string | null
           ia_usos?: number
@@ -1103,6 +1129,7 @@ export type Database = {
           ultimo_em?: string
         }
         Update: {
+          cep?: string | null
           chat_id?: number
           ia_dia?: string | null
           ia_usos?: number

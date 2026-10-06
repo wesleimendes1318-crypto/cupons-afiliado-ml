@@ -1,50 +1,59 @@
-# Cupom Afiliado ML
+# Melhor Escolha
 
-Crie um app web em português do Brasil chamado "Cupons Afiliado ML" para consultar cupons de afiliado do Mercado Livre.
+Comparador inteligente de preços de produtos vendidos no Mercado Livre, com curadoria assistida por inteligência artificial. Cole o link de um anúncio e o site mostra o mesmo produto em outras lojas dentro do Mercado Livre, do mais barato ao mais caro e com a loja oficial (quando houver), conferindo foto, descrição e características para garantir que é o mesmo produto. Produtos parecidos aparecem separados, com a descrição do que muda.
 
-IMPORTANTE: os dados virão de uma tabela Postgres chamada `cupons` que eu vou popular depois. Não invente dados fake, e trate o caso de tabela vazia com um estado vazio elegante.
+**Site**: https://melhorescolha.io
 
-Estrutura da tabela `cupons`:
-- id (bigint, chave primária) — id do cupom
-- vendedor (text) — nome da loja
-- desconto (text) — ex: "40% OFF" ou "R$ 20 OFF"
-- tipo (text) — "%" ou "R$"
-- valor (numeric) — valor numérico do desconto
-- orcamento (numeric) — orçamento restante em reais
-- vence (date) — data de validade
-- busca (text) — nome normalizado (minúsculo, sem acento, sem pontuação) para a busca
+## Visão geral
 
-Tela única, sem login, com:
+- **Comparação por link**: cole o endereço de um anúncio e receba a tabela completa de lojas, com melhor opção, alternativas e aviso de preço muito abaixo da mediana.
+- **Conferência por foto (IA)**: cada candidato a "mesmo produto" passa por duas conferências visuais e por regras de categoria; produto parecido apresentado como igual é o pior erro possível.
+- **Regras de frete e total**: o melhor preço é decidido pelo custo real (produto + frete para o CEP do cliente, detectado de forma transparente). Frete pago nunca passa na frente.
+- **Prazo de entrega**: filtro por data limite ("receber até"), consultado na API oficial de envios por CEP.
+- **Preço no Pix x parcelado**: mostra o preço à vista e o total parcelado quando sai mais caro.
+- **Busca guiada**: pesquisa em linguagem natural que usa o catálogo oficial do Mercado Livre.
+- **Vitrines e campanhas**: produtos já comparados, seções sazonais (Dia das Crianças, Black Friday, Natal) e brinquedos por faixa de idade.
+- **Acompanhar preço**: monitoramento sem cadastro, com alerta no Telegram quando o preço cai.
+- **Extensão Chrome**: leitura logada dos anúncios, geração de links de afiliado e segunda volta da comparação.
+- **Bot do Telegram**: a mesma comparação, com as mesmas regras da tela, direto na conversa.
+- **PWA**: app instalável que recebe links compartilhados do app do Mercado Livre e compara sozinho (Web Share Target).
 
-1. Cabeçalho amarelo (#ffe600) com o título e a data da última atualização dos dados.
+## Stack tecnológica
 
-2. Quatro cartões de indicadores no topo: total de cupons, vendedores distintos, maior desconto percentual, e quantos vencem em até 3 dias.
+- **Front-end**: React 19, TanStack Start (roteamento em arquivo, server functions), Vite 7, Tailwind CSS v4.
+- **Back-end**: Lovable Cloud (Supabase/Postgres) com RLS, funções `security definer` e rotinas agendadas (`pg_cron`).
+- **Inteligência**: conferência por foto em lote com fallback em cascata entre modelos, nunca inventando dados.
+- **Distribuição**: extensão Chrome, bot do Telegram, PWA e páginas estáticas com SEO (sitemap, robots, JSON-LD, Open Graph).
 
-3. Campo de busca grande que filtra pela coluna `busca` conforme digita (debounce de 150ms). A busca deve normalizar o que o usuário digita da mesma forma: minúsculo, remover acentos, remover tudo que não é letra ou número. Assim "negocia tudo" encontra "NEGOCIATUDO". Aceitar vários termos separados por vírgula, funcionando como OU.
+## Funcionalidades principais
 
-4. Filtros: tipo (todos / só % / só R$), desconto mínimo, orçamento mínimo, e ordenação (maior desconto, maior orçamento, vence antes, vendedor A-Z).
+1. **Resultado da comparação**: produto, preço, loja, frete em linha própria, link de afiliado em todo botão de compra e comparação possível — nunca tela vazia.
+2. **Melhor opção e melhor alternativa**: recomendação única, com qualidade equivalente ou superior, desvantagens e o que muda para o cliente.
+3. **Transparência**: loja sempre indicada, economia pelo custo real, aviso quando a foto e o texto do anúncio não batem.
+4. **Privacidade**: localização pelo CEP com consentimento, perfil de interesse anônimo (só com consentimento de análise) e nenhuma métrica financeira exposta ao público.
+5. **Acompanhamento**: histórico de preços por navegador, sem cadastro, com alerta via Telegram.
 
-5. Tabela de resultados com colunas Desconto, Vendedor, Orçamento restante, Vence em. Paginação de 50 por página. O desconto em % aparece em verde e negrito. Quem vence em até 3 dias aparece em vermelho. O nome do vendedor é link para https://www.mercadolivre.com.br/perfil/NOME (com encodeURIComponent).
+## Como contribuir
 
-6. Botão para exportar o resultado filtrado em CSV com separador ponto e vírgula e BOM UTF-8, para abrir certo no Excel brasileiro.
+```sh
+git clone <this-repository-url>
+cd <repository-name>
+npm i
+npm run dev
+```
 
-7. Totalmente responsivo, funcionando bem no celular, já que vou consultar do telefone. Suporte a tema claro e escuro.
+Antes de enviar mudanças:
 
-8. Rodapé curto avisando: "Fotografia dos cupons, não é tempo real. Cupom é campanha do vendedor e pode acabar antes da validade."
+- Rode a bateria de testes (`ferramentas/bateria-de-testes.sql`) e, se a extensão mudar, `ferramentas/verificar-extensao.sh` e o teste unitário dela.
+- Todo link de compra deve ser link de afiliado (`meli.la`) — há trava no código (`src/lib/afiliado.ts`).
+- Nunca invente dados: o que não foi medido não aparece.
+- Commits iguais em `claude/ml-etiquetas-cupons-k6tgkj` e `main`, sem force-push.
 
-Visual limpo, estilo Mercado Livre (amarelo #ffe600 e azul #3483fa), tipografia legível, sem excesso de enfeite. Performance importa: a busca precisa responder instantaneamente.
+## Aviso
+
+Site independente, sem vínculo com o Mercado Livre. "Mercado Livre" aparece de forma descritiva e sempre com o aviso de independência.
 
 This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://cupons-afiliado-ml.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/3f97dce2-5c60-435b-a067-f15be15dbd4a).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
