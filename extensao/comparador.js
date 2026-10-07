@@ -75,7 +75,7 @@ export function semelhancaSemNumeros(original, candidato) {
    reposicao: nunca e igual, diga a IA o que disser. "com tampa", "com
    display" (produto completo que cita a parte) nao conta. */
 export const RE_PECA_PARTE =
-  /(?<!\bcom )\b(carca[çc]as?|gabinetes?|molduras?|tampas?|painel frontal|frontal (?:de|do|da|para)|telas? touch|touch ?screen|display (?:de|do|da|para|lcd|oled|compat[ií]vel)|refil|refis|pe[çc]as? de reposi[çc][ãa]o|(?:somente|apenas|s[oó]) (?:a )?pe[çc]a|suporte (?:de|para))\b/i;
+  /^\s*(?:\d+\s*(?:un\w*\s*)?|kit\s+)?(carca[çc]as?|gabinetes?|molduras?|tampas?|painel frontal|frontal (?:de|do|da|para)|telas? touch|touch ?screen|display (?:de|do|da|para|lcd|oled|compat[ií]vel)|refil|refis|pe[çc]as? de reposi[çc][ãa]o|(?:somente|apenas|s[oó]) (?:a )?pe[çc]a|suporte (?:de|para))\b/i;
 export const MUDA_PECA = 'Apenas carcaça / peça de reposição (não é o aparelho completo)';
 export function pecaNoLugarDoAparelho(original, candidato) {
   return !RE_PECA_PARTE.test(String(original || '')) && RE_PECA_PARTE.test(String(candidato || ''));
