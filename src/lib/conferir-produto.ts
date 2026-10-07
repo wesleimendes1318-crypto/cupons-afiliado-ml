@@ -101,7 +101,7 @@ function fatosDoOriginal(original: Anuncio): string {
    (extensao/comparador.js). Original que nao e peca x candidato carcaca,
    tampa, moldura, frontal, display/tela avulsa, refil ou peca de reposicao. */
 export const RE_PECA_PARTE =
-  /(?<!\bcom )\b(carca[çc]as?|gabinetes?|molduras?|tampas?|painel frontal|frontal (?:de|do|da|para)|telas? touch|touch ?screen|display (?:de|do|da|para|lcd|oled|compat[ií]vel)|refil|refis|pe[çc]as? de reposi[çc][ãa]o|(?:somente|apenas|s[oó]) (?:a )?pe[çc]a|suporte (?:de|para))\b/i;
+  /^\s*(?:\d+\s*(?:un\w*\s*)?|kit\s+)?(carca[çc]as?|gabinetes?|molduras?|tampas?|painel frontal|frontal (?:de|do|da|para)|telas? touch|touch ?screen|display (?:de|do|da|para|lcd|oled|compat[ií]vel)|refil|refis|pe[çc]as? de reposi[çc][ãa]o|(?:somente|apenas|s[oó]) (?:a )?pe[çc]a|suporte (?:de|para))\b/i;
 export const MUDA_PECA = "Apenas carcaça / peça de reposição (não é o aparelho completo)";
 export function pecaNoLugarDoAparelho(
   original: string | null | undefined,
