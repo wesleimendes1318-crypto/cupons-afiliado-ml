@@ -49,6 +49,23 @@ Antes de enviar mudanças:
 - Nunca invente dados: o que não foi medido não aparece.
 - Commits iguais em `claude/ml-etiquetas-cupons-k6tgkj` e `main`, sem force-push.
 
+## Configuração administrativa do Telegram
+
+Após publicar, configure o webhook com `POST /api/public/telegram-setup` e o
+cabeçalho `x-cron-secret`, usando o segredo das rotinas administrativas
+(`CRON_SECRET` ou `sinc_config.cron_segredo`). A credencial deve ser enviada
+somente por ferramenta administrativa, nunca pelo navegador público ou na URL.
+Abrir esse endereço no navegador retorna HTTP 405. O destino é fixo em
+`https://melhorescolha.io/api/public/telegram-webhook`, e as mensagens pendentes
+são preservadas. A configuração exige `API_TELEGRAM` e acesso administrativo
+ao Supabase no servidor.
+
+Teste de regressão local, com banco e Telegram simulados:
+
+```sh
+node_modules/.bin/tsx --test tests/telegram-setup.test.ts
+```
+
 ## Aviso
 
 Site independente, sem vínculo com o Mercado Livre. "Mercado Livre" aparece de forma descritiva e sempre com o aviso de independência.
