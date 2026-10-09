@@ -1,7 +1,10 @@
-/* Busca por foto no navegador (09/10): reduz a foto, manda para
-   /api/public/buscar-foto e decide: certeza -> compara sozinho; senão a
-   pessoa escolhe entre os produtos achados. */
-import { useCallback, useState } from "react";
+/* Busca por foto no navegador (09/10): a pessoa escolhe a origem (câmera ou
+   galeria), vê a prévia e só então CONSENTE o envio ("Usar esta foto";
+   Weslei, 09/10: "sempre com o consentimento do usuário"). Aí a foto é
+   reduzida, vai para /api/public/buscar-foto e decide: certeza -> compara
+   sozinho; senão a pessoa escolhe entre os produtos achados. Nada sai do
+   aparelho antes do consentimento, e a foto não é guardada. */
+import { useCallback, useEffect, useState } from "react";
 
 import type { Identificacao } from "@/lib/busca-foto";
 import type { ResultadoBusca } from "@/lib/busca-guiada";
@@ -9,6 +12,10 @@ import { otimizarImagem } from "@/lib/otimizar-imagem";
 
 export type EstadoFoto =
   | { fase: "parado" }
+  /* Escolher entre câmera e galeria. */
+  | { fase: "origem" }
+  /* Prévia esperando o consentimento. */
+  | { fase: "confirmar"; arquivo: File; previa: string }
   | { fase: "lendo" }
   | { fase: "escolher"; identificado: Identificacao | null; candidatos: ResultadoBusca[] }
   | { fase: "erro"; mensagem: string };
@@ -18,6 +25,24 @@ const SEM_PRODUTO =
 
 export function useBuscaPorFoto(comparar: (url: string) => void) {
   const [estado, setEstado] = useState<EstadoFoto>({ fase: "parado" });
+
+  /* A prévia é um endereço local (blob:); solto ao sair da confirmação. */
+  const previa = estado.fase === "confirmar" ? estado.previa : null;
+  useEffect(() => {
+    if (!previa) return;
+    return () => URL.revokeObjectURL(previa);
+  }, [previa]);
+
+  const abrir = useCallback(() => setEstado({ fase: "origem" }), []);
+
+  const escolher = useCallback((arquivo: File) => {
+    if (!/^image\//.test(arquivo.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(arquivo.name)) {
+      setEstado({ fase: "erro", mensagem: "Este arquivo não é uma foto. Escolha uma imagem." });
+      return;
+    }
+    setEstado({ fase: "confirmar", arquivo, previa: URL.createObjectURL(arquivo) });
+  }, []);
+
   const enviar = useCallback(
     async (arquivo: File) => {
       setEstado({ fase: "lendo" });
@@ -63,6 +88,12 @@ export function useBuscaPorFoto(comparar: (url: string) => void) {
     },
     [comparar],
   );
+
+  /* Só com o "Usar esta foto". */
+  const consentir = useCallback(() => {
+    if (estado.fase === "confirmar") void enviar(estado.arquivo);
+  }, [estado, enviar]);
+
   const fechar = useCallback(() => setEstado({ fase: "parado" }), []);
-  return { estado, enviar, fechar };
+  return { estado, abrir, escolher, consentir, fechar };
 }

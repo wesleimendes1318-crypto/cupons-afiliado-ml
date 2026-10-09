@@ -985,7 +985,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   passa na frente da recomendação. Bot, canal e vitrine ainda não mostram
   outros marketplaces.
 - BUSCA POR FOTO (Weslei, 09/10): botão de câmera ao lado do campo do link
-  (capture="environment"), foto reduzida no navegador (1024 px, JPEG 80%,
+  abre "Tirar foto" (capture="environment", só em tela de toque) e "Da
+  galeria" ("Escolher imagem" no PC). SEMPRE COM CONSENTIMENTO (Weslei,
+  09/10): prévia + "Usar esta foto?" antes de qualquer envio; nada sai do
+  aparelho sem o toque em "Usar esta foto". Foto reduzida no navegador (1024 px, JPEG 80%,
   src/lib/otimizar-imagem.ts) e enviada a /api/public/buscar-foto (6 fotos
   a cada 10 min por endereço; a foto não é guardada). src/lib/busca-foto.ts
   identifica (Cheaper Inference -> GPT -> Gemini/Gemma) e busca no catálogo

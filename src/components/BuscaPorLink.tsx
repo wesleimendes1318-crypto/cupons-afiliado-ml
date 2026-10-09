@@ -1194,9 +1194,11 @@ export default function BuscaPorLink({
           className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5"
         />
         <div className="flex gap-2 sm:self-start">
-          {/* Busca por foto (09/10): câmera no celular, arquivo no PC. */}
+          {/* Busca por foto (09/10): câmera ou galeria, sempre com o
+              consentimento antes de enviar. */}
           <BotaoFoto
-            aoEscolher={foto.enviar}
+            aoTocar={foto.estado.fase === "origem" ? foto.fechar : foto.abrir}
+            aberto={foto.estado.fase === "origem" || foto.estado.fase === "confirmar"}
             ocupado={carregando || foto.estado.fase === "lendo"}
           />
           <button
@@ -1209,7 +1211,14 @@ export default function BuscaPorLink({
           </button>
         </div>
       </div>
-      <PainelFoto estado={foto.estado} comparar={compararDaFoto} fechar={foto.fechar} />
+      <PainelFoto
+        estado={foto.estado}
+        comparar={compararDaFoto}
+        fechar={foto.fechar}
+        abrir={foto.abrir}
+        escolher={foto.escolher}
+        consentir={foto.consentir}
+      />
       <SeloCep regiao={regiao} trocar={trocarCep} />
       {fase === "parado" && !pedido && (
         <ContinuarDeOndeParou
