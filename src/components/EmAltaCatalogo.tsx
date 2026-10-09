@@ -22,6 +22,10 @@ type ItemEmAlta = {
   imagem: string | null;
   /* Segunda foto real do catálogo (alterna no mouse/toque). */
   imagem2?: string | null;
+  /* De onde veio (09/10): lista de mais vendidos, busca em alta (termo da
+     lista oficial de mais buscados) ou busca fixa da curadoria. */
+  origem?: "vendidos" | "tendencia" | "curadoria" | null;
+  busca?: string | null;
   preco: number;
   frete_gratis: boolean | null;
   loja_oficial: boolean;
@@ -70,7 +74,7 @@ export function EmAltaCatalogo({
     void (async () => {
       try {
         const { data } = await supabase.rpc(
-          "em_alta_por_categoria" as never,
+          "em_alta_por_categoria_v3" as never,
           { p_categoria: categoria ?? null, p_por_categoria: limite } as never,
         );
         if (vivo && Array.isArray(data)) setItens(data as ItemEmAlta[]);
@@ -88,7 +92,16 @@ export function EmAltaCatalogo({
     [itens],
   );
   const atual = categoria ?? aba ?? abas[0] ?? null;
-  const todos = itens.filter((i) => i.categoria_site === atual).slice(0, limite);
+  /* Informática (Weslei, 09/10): os mais buscados primeiro, depois os da
+     curadoria (bonitos e coloridos) e então os mais vendidos. */
+  const ordemOrigem = (i: ItemEmAlta) =>
+    atual === "informatica"
+      ? (({ tendencia: 0, curadoria: 1 } as Record<string, number>)[i.origem ?? ""] ?? 2)
+      : 0;
+  const todos = itens
+    .filter((i) => i.categoria_site === atual)
+    .sort((a, b) => ordemOrigem(a) - ordemOrigem(b))
+    .slice(0, limite);
   const lista = grade ? todos.slice(0, mostrar) : todos;
   if (!lista.length) return null;
   const quando = lista.reduce(
@@ -115,12 +128,13 @@ export function EmAltaCatalogo({
           >
             <Flame className="size-5 text-[#ff6b00]" aria-hidden="true" />
             {categoria
-              ? `Mais vendidos agora em ${NOME[categoria] ?? "esta categoria"}`
-              : "Mais vendidos agora"}
+              ? `Mais vendidos e mais buscados em ${NOME[categoria] ?? "esta categoria"}`
+              : "Mais vendidos e mais buscados agora"}
           </h2>
           <p className="mt-1 text-sm text-secondary-ink">
-            Lista oficial de mais vendidos do Mercado Livre de {dataCurta(quando)}. Compare antes de
-            comprar: eu procuro o mesmo produto em outras lojas.
+            Listas oficiais de mais vendidos e de buscas em alta do Mercado Livre de{" "}
+            {dataCurta(quando)}. Compare antes de comprar: eu procuro o mesmo produto em outras
+            lojas.
           </p>
         </div>
       </div>
@@ -171,10 +185,20 @@ export function EmAltaCatalogo({
           >
             <div className="relative h-40 overflow-hidden bg-white">
               <FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />
-              {i.posicao != null && i.posicao <= 20 && (
-                <span className="absolute left-2 top-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a34700]">
-                  Entre os mais vendidos
+              {i.origem === "tendencia" ? (
+                <span
+                  className="absolute left-2 top-2 rounded-full bg-[#eef4ff] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]"
+                  title={i.busca ? `Busca em alta: ${i.busca}` : undefined}
+                >
+                  Em alta nas buscas
                 </span>
+              ) : (
+                i.posicao != null &&
+                i.posicao <= 20 && (
+                  <span className="absolute left-2 top-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a34700]">
+                    Entre os mais vendidos
+                  </span>
+                )
               )}
             </div>
             <div className="flex flex-1 flex-col p-3">

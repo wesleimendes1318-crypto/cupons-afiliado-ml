@@ -64,6 +64,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
+import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
 
 /* PERGUNTAS FREQUENTES: visíveis na página e nos dados estruturados
    (FAQPage). O nome da marca aparece só de forma descritiva, com o aviso de
@@ -2066,6 +2067,9 @@ function Index() {
 
           {/* Mais vendidos agora, por categoria (09/10). */}
           <EmAltaCatalogo naHome limite={12} />
+
+          {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
+          {buscaParada && <AnimacaoAcompanhar className="mt-8" />}
 
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
             o convite aparece abaixo dele). */}

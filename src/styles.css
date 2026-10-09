@@ -910,3 +910,88 @@ body:has(dialog[open]) [data-navegacao-rapida] {
     animation: none;
   }
 }
+
+/* Acompanhar preço, animado (09/10): 3 repetições e para no quadro final. */
+@keyframes acomp-linha {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes acomp-ponto {
+  0%,
+  50% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  70%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes acomp-sino {
+  0%,
+  62% {
+    transform: rotate(0);
+  }
+  66% {
+    transform: rotate(14deg);
+  }
+  70% {
+    transform: rotate(-12deg);
+  }
+  74% {
+    transform: rotate(8deg);
+  }
+  78%,
+  100% {
+    transform: rotate(0);
+  }
+}
+@keyframes acomp-aviso {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  70%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.acomp-linha {
+  stroke-dasharray: 1;
+  animation: acomp-linha 5s ease-in-out 0.6s 3 both;
+}
+.acomp-ponto {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: acomp-ponto 5s ease-out 0.6s 3 both;
+}
+.acomp-sino {
+  transform-origin: 50% 15%;
+  animation: acomp-sino 5s ease-in-out 0.6s 3 both;
+}
+.acomp-aviso {
+  animation: acomp-aviso 5s ease-out 0.6s 3 both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .acomp-linha,
+  .acomp-ponto,
+  .acomp-sino,
+  .acomp-aviso {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}

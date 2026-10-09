@@ -12,6 +12,7 @@ import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
+import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
 
 export const Route = createFileRoute("/meus-precos")({
   component: MeusPrecos,
@@ -293,6 +294,7 @@ function MeusPrecos() {
       titulo="Meus preços"
       resumo="Os produtos que você acompanha. Eu confiro o preço de tempos em tempos e mostro aqui quando cai. Esta página atualiza sozinha."
     >
+      <AnimacaoAcompanhar compacto className="mb-6" />
       {itens == null ? (
         <p className="flex items-center gap-2">
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> Carregando…

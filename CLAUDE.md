@@ -1022,6 +1022,33 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   arte da categoria numa faixa sem texto, com link para a página, nas abas
   de "Mais vendidos agora" e "Produtos que já comparei" da home.
 
+## Mais desejados, 100 por categoria e Acompanhar animado (09/10, noite)
+- Weslei: "adicione os itens mais desejados"; "os produtos de informática
+  devem ser os mais pesquisados, também os bonitinhos"; "Avalie 100
+  anúncios por categoria. Precisa ser incluído e removido sem depender de
+  créditos no lovable ou Claude".
+- MAIS DESEJADOS: o agente dos mais vendidos também lê a lista oficial de
+  buscas em alta da categoria (/trends/MLB/{cat}, guardada 20 h em
+  em_alta_vistos) e busca no catálogo até 3 termos por execução (2
+  produtos por termo); em Informática, também buscas fixas de periféricos
+  bonitos e coloridos (BUSCAS_CURADORIA). em_alta_catalogo.origem
+  ('vendidos' | 'tendencia' | 'curadoria') e .busca; leitura pública
+  em_alta_por_categoria_v3. Cartão: "Em alta nas buscas" (termo no
+  title) ou "Entre os mais vendidos"; Informática mostra primeiro os mais
+  buscados, depois a curadoria. Título "Mais vendidos e mais buscados".
+- 100 POR CATEGORIA, SOZINHO: pg_cron operacao-em-alta a cada 30 min
+  (23 e 53) chama o servidor, que só usa a API oficial do Mercado Livre
+  (nada de modelo de linguagem, nada de crédito do Lovable ou do Claude).
+  Meta 100, até 2 na fila de comparação por execução. INCLUSÃO pelas
+  regras de sempre (categoria pelo nome, sem falso, sem peça, oferta nova,
+  loja oficial primeiro); REMOÇÃO: relido e reprovado sai na hora; não
+  relido some depois de 3 dias. Página da categoria mostra até 100, em
+  blocos de 24.
+- ACOMPANHAR ANIMADO (AnimacaoAcompanhar): ilustração sem números (linha
+  do preço desce até o preço desejado, ponto acende, sino com "O preço
+  caiu!"), 3 repetições e para; prefers-reduced-motion parado. Na home
+  com a caixa parada (com "Ver meus preços") e no topo de /meus-precos.
+
 ## Fotos nítidas (09/10)
 - Weslei, 09/10: "melhore a qualidade das fotos!". src/lib/foto.ts: o
   mlstatic tem cada foto em -O (até 500 px, o que estava em tudo),

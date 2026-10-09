@@ -42,13 +42,35 @@ export const CATEGORIAS_EM_ALTA: Record<string, string[]> = {
 const TETO_API = 32;
 /* Weslei, 09/10: "pelo menos 20 anúncios em cada" categoria. */
 /* 09/10, noite: "aumentar todos os dias o número de anúncios": 48. */
-const META_POR_CATEGORIA = 48;
+/* 09/10, noite: "Avalie 100 anúncios por categoria. Precisa ser incluído e
+   removido sem depender de créditos": 100, com o pg_cron a cada 30 min. */
+const META_POR_CATEGORIA = 100;
 /* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
    avança para outros produtos e subcategorias. */
 const FRESCO_MS = 20 * 3600_000;
-const FILA_POR_VEZ = 4;
+/* 2 por execução (48 execuções/dia): o teto diário dos agentes é dividido
+   com sazonal, brinquedos, campanhas e hub. */
+const FILA_POR_VEZ = 2;
 const VOLTA_MS = 48 * 3600_000;
 const PRODUTOS_POR_EXECUCAO = 16;
+/* MAIS DESEJADOS (Weslei, 09/10, noite: "adicione os itens mais
+   desejados"; "os produtos de informática devem ser os mais pesquisados,
+   também os bonitinhos"): os termos mais buscados da categoria na lista
+   oficial (/trends/MLB/{categoria}, guardada 20 h) viram buscas no
+   catálogo; até 3 buscas e 2 produtos por busca a cada execução. O cartão
+   diz "Em alta nas buscas" (dado da lista oficial). Em Informática, além
+   disso, buscas fixas de periféricos bonitos e coloridos. */
+const BUSCAS_POR_EXECUCAO = 3;
+const BUSCAS_CURADORIA: Record<string, string[]> = {
+  informatica: [
+    "teclado rosa",
+    "mouse sem fio fofo",
+    "mousepad fofo",
+    "kit teclado e mouse colorido",
+    "teclado mecanico branco",
+    "suporte notebook ajustavel",
+  ],
+};
 /* Árvore oficial: filhos por nível (as maiores primeiro), até os netos da
    categoria (Moda -> Calçados -> Tênis). Chamadas para listas e filhos
    param aqui; o resto do teto fica para as fichas dos produtos. */
@@ -81,6 +103,8 @@ type Linha = {
   frete_gratis: boolean | null;
   loja_oficial: boolean;
   url: string;
+  origem: string;
+  busca: string | null;
 };
 
 const fotoGrande = (u: string | null | undefined) =>
@@ -173,7 +197,78 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     peso: 0,
     nivel: 0,
   }));
-  const candidatos: Array<{ produto: string; posicao: number; cat: string }> = [];
+  const candidatos: Array<{
+    produto: string;
+    posicao: number;
+    cat: string;
+    origem?: "tendencia" | "curadoria";
+    busca?: string;
+  }> = [];
+
+  /* 0. Mais desejados: termos mais buscados (e a curadoria de Informática). */
+  const buscas: Array<{
+    termo: string;
+    origem: "tendencia" | "curadoria";
+    peso: number;
+    cat: string;
+  }> = [];
+  for (const base of bases) {
+    if (chamadas >= TETO_ARVORE) break;
+    const mem = vistos.get(`tendencias:${base}`);
+    let termos: string[] = [];
+    if (mem && agoraMs - Date.parse(mem.visto_em) < FRESCO_MS) {
+      termos = (mem.motivo ?? "").split("|").filter(Boolean);
+    } else {
+      try {
+        chamadas += 1;
+        const tr = await mlGet<Array<{ keyword?: string }>>(`/trends/MLB/${base}`);
+        termos = (Array.isArray(tr) ? tr : [])
+          .map((x) => String(x.keyword ?? "").trim())
+          .filter((x) => x.length >= 3)
+          .slice(0, 20);
+        anotar(`tendencias:${base}`, termos.join("|"));
+      } catch (e) {
+        erros.push(`tendencias ${base}: ${String((e as Error).message).slice(0, 80)}`);
+      }
+    }
+    termos.forEach((termo, n) =>
+      buscas.push({ termo, origem: "tendencia", peso: 60 + n, cat: base }),
+    );
+  }
+  (BUSCAS_CURADORIA[categoria] ?? []).forEach((termo, n) =>
+    buscas.push({ termo, origem: "curadoria", peso: 80 + n, cat: bases[0]! }),
+  );
+  let feitas = 0;
+  for (const b of buscas) {
+    if (feitas >= BUSCAS_POR_EXECUCAO || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
+    if (chamadas >= TETO_ARVORE) break;
+    const mem = vistos.get(`busca:${b.termo}`);
+    if (mem && agoraMs - Date.parse(mem.visto_em) < FRESCO_MS) continue;
+    try {
+      chamadas += 1;
+      feitas += 1;
+      const r = await mlGet<{ results?: Array<{ id?: string }> }>(
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(b.termo)}&limit=6`,
+      );
+      let n = 0;
+      for (const p of r.results ?? []) {
+        if (!p.id || recentes.has(p.id) || descartado(p.id)) continue;
+        if (candidatos.some((x) => x.produto === p.id)) continue;
+        candidatos.push({
+          produto: p.id,
+          posicao: b.peso,
+          cat: b.cat,
+          origem: b.origem,
+          busca: b.termo,
+        });
+        if (++n >= 2 || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
+      }
+      anotar(`busca:${b.termo}`, String(n));
+    } catch (e) {
+      erros.push(`busca ${b.termo}: ${String((e as Error).message).slice(0, 80)}`);
+    }
+  }
+
   let ordem = 0;
   while (fila.length && candidatos.length < PRODUTOS_POR_EXECUCAO && chamadas < TETO_ARVORE) {
     const f = fila.shift()!;
@@ -289,6 +384,8 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         categoria_site: destino,
         categoria_ml: c.cat,
         posicao: c.posicao,
+        origem: c.origem ?? "vendidos",
+        busca: c.busca ?? null,
         nome,
         imagem: fotoGrande(foto),
         imagem2: fotoGrande(foto2),
@@ -340,6 +437,17 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     const { error } = await t.from("em_alta_catalogo").upsert(gravar, { onConflict: "produto" });
     if (error) erros.push(`gravar: ${String(error.message).slice(0, 80)}`);
   }
+  /* REMOÇÃO AUTOMÁTICA: produto que já estava à mostra e, relido agora,
+     saiu (peça, falso, fora de categoria, sem oferta nova ou 404) deixa a
+     vitrine na hora; o que não é relido some sozinho depois de 3 dias. */
+  const sairam = lembrar
+    .filter((l) => l.chave.startsWith("produto:"))
+    .map((l) => l.chave.slice(8))
+    .filter((id) => porProduto.has(id));
+  if (sairam.length) {
+    const { error } = await t.from("em_alta_catalogo").delete().in("produto", sairam);
+    if (error) erros.push(`remover: ${String(error.message).slice(0, 80)}`);
+  }
   if (lembrar.length) {
     const unicos = [...new Map(lembrar.map((l) => [l.chave, l])).values()];
     const { error } = await t.from("em_alta_vistos").upsert(unicos, { onConflict: "chave" });
@@ -350,6 +458,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     categoria,
     candidatos: candidatos.length,
     gravados: gravar.length,
+    removidos: sairam.length,
     descartados: lembrar.filter((l) => l.chave.startsWith("produto:")).length,
     enfileirados,
     chamadas,
