@@ -20,6 +20,7 @@ import { rotuloDa, temporadaDoProduto, type Temporada } from "@/lib/sazonal";
 import { linkDoBot } from "@/lib/telegram-publico";
 import { facebookConfigurado, publicarNoFacebook, textoSimples } from "@/lib/facebook";
 import { fotoOriginalJpeg } from "@/lib/foto";
+import { pareceFalso } from "@/lib/falsificado";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
    que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
@@ -92,6 +93,7 @@ function achadoDoPedido(p: {
     const m = menorPrecoDoColado(a);
     if (!m || !/^https:\/\/meli\.la\//i.test(colado.link)) return null;
     if (colado.freteGratis !== true) return null;
+    if (pareceFalso(colado.titulo)) return null;
     /* Preço muito abaixo das outras lojas sem loja oficial (09/10). */
     if (!colado.lojaOficial && precoMuitoAbaixo(colado.preco, precosDoMesmoProduto(a))) return null;
     return {
@@ -123,6 +125,8 @@ function achadoDoPedido(p: {
      comparação (shipping.cost 0 da lista oficial ou "grátis" no anúncio). */
   if (escolha.freteGratis !== true) return null;
   if (pecaNoLugarDoAparelho(colado.titulo, escolha.titulo)) return null;
+  /* Produto falso nunca vai ao canal (Weslei, 09/10). */
+  if (pareceFalso(escolha.titulo) || pareceFalso(colado.titulo)) return null;
   /* PREÇO MUITO ABAIXO DAS OUTRAS LOJAS (09/10, posts 29 e 30: Malbec R$ 200
      x R$ 361/R$ 379 e aspirador R$ 50 x R$ 120/R$ 227, contas novas sem
      selo). O site avisa "confira o vendedor"; o canal não publica, salvo

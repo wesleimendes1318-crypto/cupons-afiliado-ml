@@ -12,6 +12,7 @@ import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
 import { propsFotoCartao } from "@/lib/foto";
+import { FaixaArte } from "@/components/FaixaArte";
 
 type ItemEmAlta = {
   produto: string;
@@ -60,6 +61,9 @@ export function EmAltaCatalogo({
   className?: string;
 }) {
   const [itens, setItens] = useState<ItemEmAlta[]>([]);
+  /* Página de categoria: 24 de cada vez ("Ver mais"; 09/10, mais anúncios
+     todo dia sem uma página infinita de uma vez). */
+  const [mostrar, setMostrar] = useState(24);
   const [aba, setAba] = useState<string | null>(categoria ?? null);
   useEffect(() => {
     let vivo = true;
@@ -84,7 +88,8 @@ export function EmAltaCatalogo({
     [itens],
   );
   const atual = categoria ?? aba ?? abas[0] ?? null;
-  const lista = itens.filter((i) => i.categoria_site === atual).slice(0, limite);
+  const todos = itens.filter((i) => i.categoria_site === atual).slice(0, limite);
+  const lista = grade ? todos.slice(0, mostrar) : todos;
   if (!lista.length) return null;
   const quando = lista.reduce(
     (m, i) => (Date.parse(i.atualizado_em) > Date.parse(m) ? i.atualizado_em : m),
@@ -119,6 +124,9 @@ export function EmAltaCatalogo({
           </p>
         </div>
       </div>
+
+      {/* Arte da categoria da aba (09/10: toda vitrine com arte). */}
+      {!categoria && <FaixaArte slug={atual} />}
 
       {!categoria && abas.length > 1 && (
         <div
@@ -198,6 +206,17 @@ export function EmAltaCatalogo({
           </li>
         ))}
       </ul>
+      {grade && todos.length > lista.length && (
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setMostrar((m) => m + 24)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#0071e3]/40 bg-card px-5 py-2.5 text-sm font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+          >
+            Ver mais {Math.min(24, todos.length - lista.length)} produtos
+          </button>
+        </div>
+      )}
     </section>
   );
 }

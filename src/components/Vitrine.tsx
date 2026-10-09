@@ -24,6 +24,7 @@ import {
 } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { propsFotoCartao } from "@/lib/foto";
+import { FaixaArte } from "@/components/FaixaArte";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -271,6 +272,8 @@ export function Vitrine({
           ))}
         </div>
       )}
+      {/* Arte da categoria escolhida (09/10: toda vitrine com arte). */}
+      {!categoriaFixa && categoria && <FaixaArte slug={categoria} />}
 
       {lista.length === 0 ? (
         <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">

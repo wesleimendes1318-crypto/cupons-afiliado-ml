@@ -10,6 +10,7 @@
      alternativa com frete grátis ou o próprio anúncio com frete grátis).
    Frete desconhecido não é grátis. */
 import type { FreteDaVitrine } from "@/lib/frete-vitrine";
+import { pareceFalso } from "@/lib/falsificado";
 
 export const RE_CONDICAO_RUIM =
   /\b(usad[oa]s?|seminov[oa]s?|semi-nov[oa]s?|recondicionad[oa]s?|vitrine|mostru[aá]rio|open ?box|avariad[oa]s?|arranhad[oa]s?|riscad[oa]s?|quebrad[oa]s?|trincad[oa]s?|defeito|com detalhes?|marcas? de uso|para pe[cç]as|retirada de pe[cç]as|sem funcionar|n[aã]o liga|leia a descri[cç][aã]o|no estado|refurbished|used)\b/i;
@@ -25,6 +26,8 @@ type Item = {
 
 export function recomendavel(i: Item, fretes: Map<string, FreteDaVitrine>): boolean {
   if (RE_CONDICAO_RUIM.test(i.titulo ?? "")) return false;
+  /* Produto falso nunca (Weslei, 09/10: "Não indique produtos falsos"). */
+  if (pareceFalso(i.titulo)) return false;
   const temAlternativa = i.alt_preco != null && i.alt_frete_gratis === true;
   if ((i.lojas_comparadas ?? 0) < 1 && !temAlternativa) return false;
   const f = fretes.get(i.chave);

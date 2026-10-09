@@ -20,7 +20,9 @@ export type ArteId =
   | "brinquedos-aprender"
   | "celular-acessorios"
   | "auto-acessorios"
-  | "escolhas-bolso";
+  | "escolhas-bolso"
+  | "eletrodomesticos"
+  | "maos-a-obra";
 
 export type Arte = {
   id: ArteId;
@@ -96,6 +98,23 @@ export const ARTES: Record<ArteId, Arte> = {
     foco: "72% 50%",
     focoCelular: "72% 55%",
   },
+  /* 09/10: Eletrodomésticos não tinha arte no acervo; gerada no Higgsfield
+     com a arte da cozinha como referência de estilo (mesma luz, bancada e
+     área livre à esquerda, sem marca nem texto). */
+  eletrodomesticos: {
+    id: "eletrodomesticos",
+    descricao: "Air fryer, liquidificador, chaleira e cafeteira numa bancada",
+    tom: "claro",
+    foco: "72% 55%",
+    focoCelular: "70% 58%",
+  },
+  "maos-a-obra": {
+    id: "maos-a-obra",
+    descricao: "Furadeira, maleta de ferramentas e óculos de proteção numa bancada",
+    tom: "claro",
+    foco: "62% 55%",
+    focoCelular: "55% 58%",
+  },
 };
 
 export const LARGURA_ARTE = 1672;
@@ -118,6 +137,8 @@ export const ARTE_DA_CATEGORIA: Record<string, ArteId> = {
   beleza: "beleza-penteadeira",
   automotivo: "auto-acessorios",
   brinquedos: "brinquedos-aprender",
+  eletrodomesticos: "eletrodomesticos",
+  ferramentas: "maos-a-obra",
 };
 
 export const arteDaCategoria = (slug: string | null | undefined): Arte | null => {

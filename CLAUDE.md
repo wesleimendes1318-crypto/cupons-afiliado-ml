@@ -642,7 +642,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   com o campo do link fora da tela (não cobre cartões). "O que muda" quebra
   linha em valores longos.
 - Comissão ("Ganhos", "Ganhos extras" do hub de afiliados) NUNCA aparece no
-  site, bot ou canal.
+  site, bot ou canal. PRIORIDADE POR COMISSÃO (Weslei, 09/10, noite: "melhor taxa
+  de comissão vs valor do produto - priorizar itens que pagam mais"): a
+  extensão 1.158.0 lê só a TAXA (%) do cartão do hub e manda só ao banco
+  (registrar_hub, senha da extensão; hub_recomendados.comissao_pct, tabela
+  sem acesso público); a fila do hub vai por taxa x preço, depois mais
+  vendido e desconto, até 10 por leitura (lê até 120 cartões), só com nota
+  >= 4,5 quando conhecida. Comissão só ORDENA: nunca aprova produto,
+  vendedor nem preço. QUALIDADE PRIMEIRO (Weslei, 09/10: "considere sempre
+  a qualidade, deve devolver o melhor produto para o cliente sentir
+  segurança e voltar a comprar"): entre ofertas do mesmo produto, a loja
+  oficial vem antes da mais barata quando não há a oferta destacada do
+  catálogo.
 
 ## Equipe de agentes (05/10)
 - Weslei, 05/10: "desenvolva agentes pertinentes, que cuidem de TUDO" e
@@ -991,6 +1002,25 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   oficial" só com official_store_id, selo "Entre os mais vendidos" (lista
   oficial, com a data no subtítulo), "Comprar com segurança" (VerNaLoja: link
   de afiliado no clique) e "Comparar preço". Nunca desconto inventado.
+
+## Produto falso e categorias novas (09/10, noite)
+- NÃO INDICAR PRODUTO FALSO (Weslei, 09/10): src/lib/falsificado.ts
+  (pareceFalso) recusa réplica, "1:1", primeira linha, linha AAA,
+  inspirado/contratipo, "similar ao original", clone e modelo famoso sem a
+  marca (AirPods/i12 TWS/fone "Pro 4" sem marca conhecida, smartwatch
+  "Series 10/S10/Ultra" sem Apple). Vale nos mais vendidos
+  (categoriaDoMaisVendido), vitrine (recomendavel), campanhas (veto
+  condicao) e canal (cron-garimpo). Testes em tests/falsificado.test.ts.
+- CATEGORIAS NOVAS (em alta nos sinais de 03-09/10): Eletrodomésticos
+  (MLB5726, saiu de Casa) e Ferramentas e EPI (MLB263532 + MLB270252),
+  com página, conteúdo, arte e regras pelo nome (categoria-em-alta e
+  categoria_do_site). Meta dos mais vendidos: 48 por categoria; página da
+  categoria com até 60 em blocos de 24 ("Ver mais").
+- ARTES: Eletrodomésticos gerada no Higgsfield (nano_banana_2_1, a arte da
+  cozinha como referência de estilo; sem marca nem texto); Ferramentas usa
+  "Mãos à obra" do acervo. FaixaArte (src/components/FaixaArte.tsx): a
+  arte da categoria numa faixa sem texto, com link para a página, nas abas
+  de "Mais vendidos agora" e "Produtos que já comparei" da home.
 
 ## Fotos nítidas (09/10)
 - Weslei, 09/10: "melhore a qualidade das fotos!". src/lib/foto.ts: o

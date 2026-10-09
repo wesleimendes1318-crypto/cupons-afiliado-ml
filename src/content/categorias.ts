@@ -331,6 +331,91 @@ export const CATEGORIAS: Categoria[] = [
       },
     ],
   },
+  {
+    slug: "eletrodomesticos",
+    nome: "Eletrodomésticos",
+    chamada:
+      "Air fryer, liquidificador, aspirador, ventilador e cafeteira: o mesmo modelo e a mesma voltagem em outras lojas, do mais barato ao mais caro, com o frete em linha própria.",
+    termos: [
+      "eletrodomesticos",
+      "eletrodomésticos",
+      "eletroportateis",
+      "eletroportáteis",
+      "cozinha",
+    ],
+    resumo: "Aparelho de uso diário: voltagem, potência e capacidade decidem tanto quanto o preço.",
+    atualizacao: "09/10/2026",
+    introducao: [
+      "Eletrodoméstico é compra de anos. O mesmo modelo aparece em dezenas de lojas, muitas vezes com diferença grande de preço e de frete. O que mais engana é a voltagem: 127 V e 220 V são produtos diferentes, e o anúncio mais barato pode ser justamente o da voltagem que não serve na sua casa.",
+    ],
+    comoAvaliar: [
+      "Confira a voltagem (127 V, 220 V ou bivolt) antes de qualquer outra coisa.",
+      "Compare potência e capacidade (watts, litros) entre o anúncio e o modelo que você quer.",
+      "Prefira loja oficial ou vendedor com reputação alta em aparelhos caros.",
+      "Simule o frete para o seu CEP: em itens grandes ele muda o preço final.",
+    ],
+    cuidados: [
+      "Aparelho sem nota fiscal ou sem garantia do fabricante costuma sair mais barato por um motivo.",
+      "Modelo parecido de outra linha pode ter menos potência ou acessórios; leia o que vem na caixa.",
+      "Usado, recondicionado ou de vitrine aparece com desconto alto; o site separa esses casos.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Como sei se é a mesma voltagem?",
+        resposta:
+          "A voltagem aparece no título ou nas características do anúncio. Na comparação, voltagem diferente nunca é tratada como o mesmo produto.",
+      },
+      {
+        pergunta: "Vale comprar o mais barato?",
+        resposta:
+          "Vale quando é o mesmo modelo, na mesma voltagem, com vendedor confiável e o frete conferido para o seu CEP. É isso que a comparação mostra lado a lado.",
+      },
+    ],
+  },
+  {
+    slug: "ferramentas",
+    nome: "Ferramentas e EPI",
+    chamada:
+      "Furadeiras, parafusadeiras, kits de ferramentas e equipamentos de proteção: o mesmo produto em outras lojas, do mais barato ao mais caro, conferido pela foto.",
+    termos: [
+      "ferramentas",
+      "ferramenta",
+      "epi",
+      "seguranca",
+      "segurança",
+      "construcao",
+      "construção",
+    ],
+    resumo:
+      "Ferramenta boa dura anos; o que muda o preço é bateria, potência, acessórios e garantia.",
+    atualizacao: "09/10/2026",
+    introducao: [
+      "Em ferramentas, dois anúncios com a mesma foto podem vender coisas diferentes: com ou sem bateria, com uma ou duas baterias, com ou sem maleta. Em EPI, o que importa é o certificado de aprovação (CA) e o tamanho certo. Por isso a comparação separa o mesmo produto dos parecidos e diz o que muda.",
+    ],
+    comoAvaliar: [
+      "Confira se a bateria e o carregador estão inclusos e quantos vêm no kit.",
+      "Compare potência, voltagem e torque, não só a foto.",
+      "Em EPI, procure o número do CA no anúncio e confira o tamanho.",
+      "Prefira loja oficial da marca em ferramentas de valor alto.",
+    ],
+    cuidados: [
+      "Kit anunciado com preço baixo às vezes vem sem bateria; leia o que vem na caixa.",
+      "Ferramenta sem garantia do fabricante ou sem nota fiscal costuma ter procedência duvidosa.",
+      "Desconfie de marca famosa com preço muito abaixo das outras lojas: confira o vendedor.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Ferramenta sem bateria entra como o mesmo produto?",
+        resposta:
+          "Não. Na comparação, vir sem bateria, carregador ou acessório é diferença: o anúncio vai para Parecidos, com o que muda escrito.",
+      },
+      {
+        pergunta: "O site indica EPI sem CA?",
+        resposta:
+          "O site mostra o que o anúncio informa. Antes de comprar EPI para trabalho, confira o número do CA na descrição do anúncio.",
+      },
+    ],
+  },
 ];
 
 export function buscarCategoria(slug: string) {

@@ -20,6 +20,7 @@ import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import type { Oferta } from "@/lib/ofertas-vitrine";
 import { descontoReal } from "@/lib/regra-economia";
 import { RE_CONDICAO_RUIM } from "@/lib/vitrine-recomendavel";
+import { pareceFalso } from "@/lib/falsificado";
 
 export type Confiabilidade = {
   chave: string;
@@ -66,6 +67,8 @@ export function vetoDaCuradoria(
   if (RE_CONDICAO_RUIM.test(o.titulo) || RE_CONDICAO_USADA.test(c?.colado_condicao ?? ""))
     return "condicao";
   if (RE_PECA_PARTE.test(o.titulo)) return "peca";
+  /* Produto falso nunca (Weslei, 09/10). */
+  if (pareceFalso(o.titulo)) return "condicao";
   if (o.tipo !== "menor" && !descontoReal(o.economia, o.antes)) return "desconto";
   const quando = Date.parse(c?.conferido_em ?? o.vistoEm ?? "");
   if (!Number.isFinite(quando) || agora - quando > MAX_DIAS_CONFERIDO * 86_400_000) return "velho";

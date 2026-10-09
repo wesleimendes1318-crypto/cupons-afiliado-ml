@@ -11,6 +11,8 @@
       de onde o produto veio.
    3. Sem regra, fica a categoria da lista (o Mercado Livre já a separou). */
 
+import { pareceFalso } from "@/lib/falsificado";
+
 export type CategoriaSite =
   | "eletronicos"
   | "celulares"
@@ -19,7 +21,9 @@ export type CategoriaSite =
   | "moda"
   | "beleza"
   | "automotivo"
-  | "brinquedos";
+  | "brinquedos"
+  | "eletrodomesticos"
+  | "ferramentas";
 
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -30,10 +34,10 @@ const FORA: RegExp[] = [
 ];
 
 const REGRAS: Array<[RegExp, CategoriaSite]> = [
-  /* Ferramentas e material elétrico: Casa e utilidades. */
+  /* Ferramentas, material elétrico e EPI (09/10: categoria própria). */
   [
-    /\b(kit|jogo) (de )?(ferramentas|chaves?)\b|\bchaves? (de )?precisao\b|\bestilete\b|\bterminais? eletric|\bconector(es)? eletric|\bwago\b|\btermo ?retratil\b|\bfita isolante\b/,
-    "casa",
+    /\b(kit|jogo|maleta) (de )?(ferramentas|chaves?|brocas?)\b|\bchaves? (de )?precisao\b|\bestilete\b|\bterminais? eletric|\bconector(es)? eletric|\bwago\b|\btermo ?retratil\b|\bfita isolante\b|\bfuradeira\b|\bparafusadeira\b|\bserra (circular|tico|marmore|meia esquadria|eletrica)\b|\besmerilhadeira\b|\blixadeira\b|\bmartelete\b|\balicate\b|\btrena\b|\bnivel a laser\b|\bmultimetro\b|\bluvas? (de )?(seguranca|epi|nitrilica|vaqueta|raspa)\b|\boculos de (protecao|seguranca)\b|\bprotetor auricular\b|\bbotina\b|\bcapacete de seguranca\b|\bmascara pff\d?\b|\bepi\b|\bdecapador\b/,
+    "ferramentas",
   ],
   /* Malas e mochilas: Moda (antes de "necessaire", "notebook"...). */
   [/\bmalas?\b|\bmochilas?\b/, "moda"],
@@ -42,7 +46,7 @@ const REGRAS: Array<[RegExp, CategoriaSite]> = [
   /* Utilidades da casa que aparecem em Moda, Beleza e Informática (e
      cama/banho com personagem, que não é brinquedo). */
   [
-    /\bguarda[- ]?chuvas?\b|\bsombrinhas?\b|\blancheira\b|\bbolsa (iso)?termica\b|\bmarmitas?\b|\bpapel higienico\b|\bpercarbonato\b|\btira manchas\b|\bsabao (liquido|em po|em barra)\b|\blava roupas\b|\bdetergente\b|\bamaciante\b|\bpanos?\b|\bleques?\b|\bventilador(es)?\b|\bluminaria\b|\babajur\b|\bastronauta\b.*\b(luz|projetor|nebulosa|galaxia)\b|\bfronhas?\b|\blencol\b|\bedredom\b|\btravesseiros?\b|\btoalhas?\b|\bcortinas?\b|\btapetes?\b/,
+    /\bguarda[- ]?chuvas?\b|\bsombrinhas?\b|\blancheira\b|\bbolsa (iso)?termica\b|\bmarmitas?\b|\bpapel higienico\b|\bpercarbonato\b|\btira manchas\b|\bsabao (liquido|em po|em barra)\b|\blava roupas\b|\bdetergente\b|\bamaciante\b|\bpanos?\b|\bleques?\b|\bpotes?\b|\bluminaria\b|\babajur\b|\bastronauta\b.*\b(luz|projetor|nebulosa|galaxia)\b|\bfronhas?\b|\blencol\b|\bedredom\b|\btravesseiros?\b|\btoalhas?\b|\bcortinas?\b|\btapetes?\b/,
     "casa",
   ],
   /* Beleza antes de "infantil" (perfume infantil, presilha infantil). */
@@ -62,6 +66,10 @@ const REGRAS: Array<[RegExp, CategoriaSite]> = [
   [
     /automotiv|\bveicular\b|\bcapacetes?\b|\bmotocicleta\b|\bmotoboy\b|\bmoto\b|\bpneus?\b|\bcarplay\b|\bandroid auto\b|\bvulcani/,
     "automotivo",
+  ],
+  [
+    /\bair ?fryer\b|\bfritadeira\b|\bliquidificador\b|\bbatedeira\b|\bcafeteira\b|\bmicro-?ondas\b|\bgeladeira\b|\brefrigerador\b|\bfogao\b|\bcooktop\b|\bforno eletrico\b|\blava[- ]?loucas\b|\bmaquina de lavar\b|\blavadora\b|\bsecadora de roupas?\b|\baspirador\b|\bventilador(es)?\b|\bclimatizador\b|\bar[- ]condicionado\b|\bpurificador\b|\bsanduicheira\b|\bgrill eletrico\b|\bchaleira eletrica\b|\bmixer\b|\bprocessador de alimentos\b|\bferro de passar\b|\bpanela (eletrica|de arroz eletrica)\b/,
+    "eletrodomesticos",
   ],
   [
     /\bsmartwatch\b|\brelogio inteligente\b|\bsmartband\b|\bpower ?bank\b|\bcarregador portatil\b|\bcarregador\b.*\b(celular|iphone|samsung|galaxy|turbo|usb-?c|tipo-?c|xiaomi|motorola)\b|\bcapinhas?\b|\bpeliculas?\b|\bcabo\b.*\b(celular|iphone|usb-?c|tipo-?c|lightning)\b/,
@@ -89,7 +97,7 @@ export function categoriaDoMaisVendido(
 ): CategoriaSite | null {
   const t = semAcento(nome);
   if (!t.trim()) return null;
-  if (FORA.some((r) => r.test(t))) return null;
+  if (FORA.some((r) => r.test(t)) || pareceFalso(nome)) return null;
   for (const [re, cat] of REGRAS) if (re.test(t)) return cat;
   return (fonte as CategoriaSite) || null;
 }

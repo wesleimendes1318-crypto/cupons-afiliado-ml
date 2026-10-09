@@ -557,7 +557,7 @@ export async function gravarMonitor(token, id, leitura) {
    primeiros na fila de comparacao, com teto. */
 export async function registrarHub(token, itens) {
   if (!token || !Array.isArray(itens) || !itens.length) return null;
-  return chamarRpc(SUPABASE + '/rest/v1/rpc/registrar_hub', { p_token: token, p_itens: itens.slice(0, 80) });
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/registrar_hub', { p_token: token, p_itens: itens.slice(0, 150) });
 }
 
 /* Outros marketplaces pela extensao (09/10): o banco diz se o pedido vale

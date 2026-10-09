@@ -4860,9 +4860,11 @@ async function monitorarPrecos() {
    leitura por dia, so com a extensao parada e sem freio de captcha: abre a
    pagina numa aba de fundo (logada), rola um pouco para carregar os
    cartoes e le de cada um so titulo, preco, preco anterior, % OFF, "Mais
-   vendido", nota e vendidos. A comissao ("Ganhos", "Ganhos extras") NUNCA
-   e lida nem enviada (dado privado do Weslei). O banco poe os primeiros na
-   fila de comparacao; o site so mostra depois de comparado, com meli.la. */
+   vendido", nota e vendidos. COMISSAO (Weslei, 09/10: "priorizar itens que
+   pagam mais"): so a TAXA (%) de "Ganhos"/"Ganhos extras" e lida e vai so
+   para o banco (registrar_hub, com a senha da extensao), que ordena a fila
+   pela taxa x preco. Nunca aparece no site, bot, canal nem diagnostico. O
+   site so mostra depois de comparado, com meli.la. */
 const URL_HUB = 'https://www.mercadolivre.com.br/afiliados/hub';
 let lendoHub = false;
 async function lerHubDeAfiliados() {
@@ -4886,7 +4888,7 @@ async function lerHubDeAfiliados() {
       target: { tabId: aba.id },
       func: async () => {
         const espera = ms => new Promise(r => setTimeout(r, ms));
-        for (let k = 0; k < 4; k++) { window.scrollBy(0, window.innerHeight * 1.5); await espera(900); }
+        for (let k = 0; k < 10; k++) { window.scrollBy(0, window.innerHeight * 1.5); await espera(900); }
         const num = t => {
           const m = /R\$\s*([\d.]+)(?:[,\s]+(\d{2}))?/.exec(t || '');
           return m ? Number(m[1].replace(/\./g, '') + '.' + (m[2] || '00')) : null;
@@ -4904,8 +4906,17 @@ async function lerHubDeAfiliados() {
           let card = a;
           for (let n = 0; n < 6 && card && !/R\$/.test(card.innerText || ''); n++) card = card.parentElement;
           if (!card) continue;
-          /* Comissao fora: linhas de "Ganhos" sao descartadas antes de tudo. */
-          const linhas = (card.innerText || '').split('\n').map(l => l.trim()).filter(l => l && !/ganho/i.test(l));
+          /* Taxa de comissao (so o %): ate 3 linhas depois de "Ganhos". */
+          const brutas = (card.innerText || '').split('\n').map(l => l.trim()).filter(Boolean);
+          let comissao = null;
+          brutas.forEach((l, k) => {
+            if (!/ganho/i.test(l)) return;
+            const m = /(\d{1,2}(?:[.,]\d{1,2})?)\s*%(?!\s*off)/i.exec(brutas.slice(k, k + 4).join(' '));
+            const v = m ? Number(m[1].replace(',', '.')) : 0;
+            if (v > 0 && v <= 60) comissao = Math.max(comissao || 0, v);
+          });
+          /* Fora do texto lido: linhas de "Ganhos" (e o % logo abaixo). */
+          const linhas = brutas.filter((l, k) => !/ganho/i.test(l) && !(/^\d{1,2}([.,]\d{1,2})?\s*%$/.test(l) && brutas.slice(Math.max(0, k - 2), k).some(x => /ganho|extras?/i.test(x))) && !/^extras?$/i.test(l));
           const texto = linhas.join('\n');
           const riscado = card.querySelector('s, del, [class*="previous"], [class*="original"]');
           /* O hub quebra o preco em linhas ("R$" / "227" / "," / "38",
@@ -4931,10 +4942,11 @@ async function lerHubDeAfiliados() {
             titulo, preco, preco_original: precoOriginal && preco && precoOriginal > preco ? precoOriginal : null,
             desconto_pct: off ? Number(off[1]) : null, mais_vendido: /mais vendido/i.test(texto),
             avaliacao: nota ? Number(nota[2].replace(',', '.')) : null, vendidos: vend ? vend[0].replace(/\s+/g, ' ') : null,
-            imagem: img ? (img.currentSrc || img.src || null) : null, posicao: ++pos
+            imagem: img ? (img.currentSrc || img.src || null) : null, posicao: ++pos,
+            comissao_pct: comissao
           });
           if (amostra.length < 3) amostra.push(texto.slice(0, 240));
-          if (itens.size >= 60) break;
+          if (itens.size >= 120) break;
         }
         return { itens: [...itens.values()], amostra };
       }

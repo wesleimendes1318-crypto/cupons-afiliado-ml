@@ -29,7 +29,10 @@ export const CATEGORIAS_EM_ALTA: Record<string, string[]> = {
   eletronicos: ["MLB1000", "MLB1144"],
   celulares: ["MLB1051"],
   informatica: ["MLB1648"],
-  casa: ["MLB1574", "MLB5726"],
+  casa: ["MLB1574"],
+  /* 09/10: categorias próprias (em alta nos sinais da semana). */
+  eletrodomesticos: ["MLB5726"],
+  ferramentas: ["MLB263532", "MLB270252"],
   moda: ["MLB1430"],
   beleza: ["MLB1246"],
   automotivo: ["MLB5672"],
@@ -38,7 +41,8 @@ export const CATEGORIAS_EM_ALTA: Record<string, string[]> = {
 
 const TETO_API = 32;
 /* Weslei, 09/10: "pelo menos 20 anúncios em cada" categoria. */
-const META_POR_CATEGORIA = 24;
+/* 09/10, noite: "aumentar todos os dias o número de anúncios": 48. */
+const META_POR_CATEGORIA = 48;
 /* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
    avança para outros produtos e subcategorias. */
 const FRESCO_MS = 20 * 3600_000;
@@ -262,8 +266,11 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
             Number(x.price) > 0 &&
             x.condition !== "used",
         );
+        /* Qualidade primeiro (Weslei, 09/10): loja oficial antes da mais
+           barata; depois preço e frete grátis. */
         novas.sort(
           (a, b) =>
+            Number(!!b.official_store_id) - Number(!!a.official_store_id) ||
             Number(a.price) - Number(b.price) ||
             Number(!!b.shipping?.free_shipping) - Number(!!a.shipping?.free_shipping),
         );
