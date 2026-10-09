@@ -2,7 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { ajudarAEscolher, opcoesDaAnalise } from "@/lib/ajudar-escolher";
+import { chaveCheaperInference } from "@/lib/cheaper-inference";
+import { facebookConfigurado } from "@/lib/facebook";
 import { chaveGpt } from "@/lib/gpt";
+import { amazonConfigurada } from "@/lib/integracoes/amazon";
+import { shopeeConfigurada } from "@/lib/integracoes/shopee";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* "Me ajude a escolher" do resultado (Weslei, 28/09). Lê a comparação do
@@ -17,8 +21,16 @@ export const Route = createFileRoute("/api/public/ajudar-escolher")({
     handlers: {
       OPTIONS: async ({ request }) => respostaOptions(request),
       /* Só diz SE as chaves existem (nunca o valor). */
+      /* Só diz SE cada integração está configurada (nunca o valor). */
       GET: async ({ request }) =>
-        json(request, { gpt: Boolean(chaveGpt()), gemini: Boolean(process.env["GEMINI_API_KEY"]) }),
+        json(request, {
+          gpt: Boolean(chaveGpt()),
+          gemini: Boolean(process.env["GEMINI_API_KEY"]),
+          cheaper: Boolean(chaveCheaperInference()),
+          amazon: amazonConfigurada(),
+          shopee: shopeeConfigurada(),
+          facebook: facebookConfigurado(),
+        }),
       POST: async ({ request }) => {
         if (!origemPermitida(request))
           return json(request, { erro: "Origem da solicitação não permitida." }, 403);

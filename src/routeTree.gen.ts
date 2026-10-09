@@ -34,6 +34,7 @@ import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
 import { Route as ApiPublicBuscarRouteImport } from './routes/api/public/buscar'
+import { Route as ApiPublicBuscarFotoRouteImport } from './routes/api/public/buscar-foto'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
@@ -45,6 +46,7 @@ import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/m
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
 import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
 import { Route as ApiPublicMlTesteRouteImport } from './routes/api/public/ml-teste'
+import { Route as ApiPublicMultilojaRouteImport } from './routes/api/public/multiloja'
 import { Route as ApiPublicOperacaoRouteImport } from './routes/api/public/operacao'
 import { Route as ApiPublicPrazoEntregaRouteImport } from './routes/api/public/prazo-entrega'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
@@ -178,6 +180,11 @@ const ApiPublicBuscarRoute = ApiPublicBuscarRouteImport.update({
   path: '/api/public/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBuscarFotoRoute = ApiPublicBuscarFotoRouteImport.update({
+  id: '/api/public/buscar-foto',
+  path: '/api/public/buscar-foto',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicClassificarRoute = ApiPublicClassificarRouteImport.update({
   id: '/api/public/classificar',
   path: '/api/public/classificar',
@@ -232,6 +239,11 @@ const ApiPublicMlRetornoRoute = ApiPublicMlRetornoRouteImport.update({
 const ApiPublicMlTesteRoute = ApiPublicMlTesteRouteImport.update({
   id: '/api/public/ml-teste',
   path: '/api/public/ml-teste',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMultilojaRoute = ApiPublicMultilojaRouteImport.update({
+  id: '/api/public/multiloja',
+  path: '/api/public/multiloja',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicOperacaoRoute = ApiPublicOperacaoRouteImport.update({
@@ -292,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
+  '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -303,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
+  '/api/public/multiloja': typeof ApiPublicMultilojaRoute
   '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
@@ -336,6 +350,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
+  '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -347,6 +362,7 @@ export interface FileRoutesByTo {
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
+  '/api/public/multiloja': typeof ApiPublicMultilojaRoute
   '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
@@ -381,6 +397,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
+  '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
@@ -392,6 +409,7 @@ export interface FileRoutesById {
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
   '/api/public/ml-teste': typeof ApiPublicMlTesteRoute
+  '/api/public/multiloja': typeof ApiPublicMultilojaRoute
   '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
@@ -427,6 +445,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/buscar'
+    | '/api/public/buscar-foto'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -438,6 +457,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
+    | '/api/public/multiloja'
     | '/api/public/operacao'
     | '/api/public/prazo-entrega'
     | '/api/public/recomendar'
@@ -471,6 +491,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/buscar'
+    | '/api/public/buscar-foto'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -482,6 +503,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
+    | '/api/public/multiloja'
     | '/api/public/operacao'
     | '/api/public/prazo-entrega'
     | '/api/public/recomendar'
@@ -515,6 +537,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/buscar'
+    | '/api/public/buscar-foto'
     | '/api/public/classificar'
     | '/api/public/comparar'
     | '/api/public/conferir-produto'
@@ -526,6 +549,7 @@ export interface FileRouteTypes {
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
     | '/api/public/ml-teste'
+    | '/api/public/multiloja'
     | '/api/public/operacao'
     | '/api/public/prazo-entrega'
     | '/api/public/recomendar'
@@ -560,6 +584,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicAjudarEscolherRoute: typeof ApiPublicAjudarEscolherRoute
   ApiPublicBuscarRoute: typeof ApiPublicBuscarRoute
+  ApiPublicBuscarFotoRoute: typeof ApiPublicBuscarFotoRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
@@ -571,6 +596,7 @@ export interface RootRouteChildren {
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
   ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
   ApiPublicMlTesteRoute: typeof ApiPublicMlTesteRoute
+  ApiPublicMultilojaRoute: typeof ApiPublicMultilojaRoute
   ApiPublicOperacaoRoute: typeof ApiPublicOperacaoRoute
   ApiPublicPrazoEntregaRoute: typeof ApiPublicPrazoEntregaRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
@@ -756,6 +782,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/buscar-foto': {
+      id: '/api/public/buscar-foto'
+      path: '/api/public/buscar-foto'
+      fullPath: '/api/public/buscar-foto'
+      preLoaderRoute: typeof ApiPublicBuscarFotoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/classificar': {
       id: '/api/public/classificar'
       path: '/api/public/classificar'
@@ -833,6 +866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMlTesteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/multiloja': {
+      id: '/api/public/multiloja'
+      path: '/api/public/multiloja'
+      fullPath: '/api/public/multiloja'
+      preLoaderRoute: typeof ApiPublicMultilojaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/operacao': {
       id: '/api/public/operacao'
       path: '/api/public/operacao'
@@ -905,6 +945,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicAjudarEscolherRoute: ApiPublicAjudarEscolherRoute,
   ApiPublicBuscarRoute: ApiPublicBuscarRoute,
+  ApiPublicBuscarFotoRoute: ApiPublicBuscarFotoRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
@@ -916,6 +957,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
   ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,
   ApiPublicMlTesteRoute: ApiPublicMlTesteRoute,
+  ApiPublicMultilojaRoute: ApiPublicMultilojaRoute,
   ApiPublicOperacaoRoute: ApiPublicOperacaoRoute,
   ApiPublicPrazoEntregaRoute: ApiPublicPrazoEntregaRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,

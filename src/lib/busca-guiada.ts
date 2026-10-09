@@ -68,8 +68,9 @@ async function interpretar(q: string, contexto: string | null): Promise<Interpre
   const prompt = `${PROMPT}${contexto ? ` (contexto: ${contexto})` : ""}: ${JSON.stringify(q.slice(0, 160))}`;
   let bruto: string | null = null;
   try {
-    const { perguntarAoGpt } = await import("@/lib/gpt");
-    const gpt = await perguntarAoGpt(prompt, 9_000);
+    /* Cheaper Inference primeiro (09/10), GPT de reserva; depois Gemini/Gemma. */
+    const { perguntarAoLlm } = await import("@/lib/cheaper-inference");
+    const gpt = await perguntarAoLlm(prompt, 9_000);
     if (gpt.ok) bruto = gpt.texto;
     else {
       const { gerarComModelos } = await import("@/lib/conferir-produto");
@@ -114,15 +115,25 @@ async function interpretar(q: string, contexto: string | null): Promise<Interpre
   return { buscas: [q.slice(0, 60)], precoMin: null, precoMax: null, resumo: "" };
 }
 
-/** Interpreta, busca no catálogo e devolve até 8 produtos com anúncio ativo. */
-export async function buscaGuiada(q: string, contexto: string | null) {
-  const intencao = await interpretar(q, contexto);
+/** Busca no catálogo oficial e devolve os produtos com anúncio ativo (o
+    anúncio de referência é a 1ª oferta da lista oficial). */
+export async function buscarNoCatalogo(
+  buscas: string[],
+  opcoes: {
+    precoMin?: number | null;
+    precoMax?: number | null;
+    max?: number;
+    porBusca?: number;
+  } = {},
+) {
+  const max = opcoes.max ?? 8;
+  const porBusca = opcoes.porBusca ?? 4;
   const resultados: ResultadoBusca[] = [];
   const vistos = new Set<string>();
   let chamadas = 0;
   const TETO = 18;
-  for (const busca of intencao.buscas) {
-    if (resultados.length >= 8 || chamadas >= TETO) break;
+  for (const busca of buscas) {
+    if (resultados.length >= max || chamadas >= TETO) break;
     let lista: Array<{ id?: string; name?: string; pictures?: Array<{ url?: string }> }> = [];
     try {
       chamadas += 1;
@@ -136,7 +147,7 @@ export async function buscaGuiada(q: string, contexto: string | null) {
     }
     let desta = 0;
     for (const p of lista) {
-      if (resultados.length >= 8 || chamadas >= TETO || desta >= 4) break;
+      if (resultados.length >= max || chamadas >= TETO || desta >= porBusca) break;
       const id = String(p.id ?? "").toUpperCase();
       if (!/^MLB\d+$/.test(id) || vistos.has(id)) continue;
       vistos.add(id);
@@ -149,8 +160,8 @@ export async function buscaGuiada(q: string, contexto: string | null) {
         const item = oferta?.item_id;
         if (!item || !/^MLB\d+$/.test(item)) continue;
         const preco = num(oferta?.price);
-        if (intencao.precoMax && preco && preco > intencao.precoMax * 1.05) continue;
-        if (intencao.precoMin && preco && preco < intencao.precoMin * 0.95) continue;
+        if (opcoes.precoMax && preco && preco > opcoes.precoMax * 1.05) continue;
+        if (opcoes.precoMin && preco && preco < opcoes.precoMin * 0.95) continue;
         const foto = p.pictures?.[0]?.url ?? null;
         resultados.push({
           produto: id,
@@ -166,5 +177,15 @@ export async function buscaGuiada(q: string, contexto: string | null) {
       }
     }
   }
+  return resultados;
+}
+
+/** Interpreta, busca no catálogo e devolve até 8 produtos com anúncio ativo. */
+export async function buscaGuiada(q: string, contexto: string | null) {
+  const intencao = await interpretar(q, contexto);
+  const resultados = await buscarNoCatalogo(intencao.buscas, {
+    precoMin: intencao.precoMin,
+    precoMax: intencao.precoMax,
+  });
   return { intencao, resultados };
 }

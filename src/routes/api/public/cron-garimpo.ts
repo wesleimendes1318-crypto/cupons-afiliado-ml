@@ -17,6 +17,7 @@ import { html, linhaDoFrete, telegram } from "@/lib/telegram";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 import { rotuloDa, temporadaDoProduto, type Temporada } from "@/lib/sazonal";
 import { linkDoBot } from "@/lib/telegram-publico";
+import { facebookConfigurado, publicarNoFacebook, textoSimples } from "@/lib/facebook";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
    que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
@@ -333,6 +334,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
   const canal = process.env["TELEGRAM_CANAL_ID"];
   const token = process.env["API_TELEGRAM"];
   const publicados: string[] = [];
+  const facebook: string[] = [];
   if (!simular && canal && token) {
     for (const x of achados) {
       if (publicados.length >= POR_CHAMADA) break;
@@ -363,19 +365,41 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
          Sem resposta: ambíguo, registra para não repetir às cegas. */
       if (r && r.ok === false) continue;
       const messageId = (r?.result as { message_id?: number } | undefined)?.message_id ?? null;
-      await t.from("canal_publicacoes").insert({
-        chave: x.chave,
-        pedido_id: x.pedido,
-        tipo: x.tipo,
-        titulo: x.tipo === "parecido" ? x.tituloOpcao : x.titulo,
-        preco: x.preco,
-        economia_produto: x.economia,
-        link: x.link,
-        message_id: messageId,
-        criterios: r ? CRITERIOS : `${CRITERIOS} | resultado ambíguo`,
-      });
+      const { data: linha } = await t
+        .from("canal_publicacoes")
+        .insert({
+          chave: x.chave,
+          pedido_id: x.pedido,
+          tipo: x.tipo,
+          titulo: x.tipo === "parecido" ? x.tituloOpcao : x.titulo,
+          preco: x.preco,
+          economia_produto: x.economia,
+          link: x.link,
+          message_id: messageId,
+          criterios: r ? CRITERIOS : `${CRITERIOS} | resultado ambíguo`,
+        })
+        .select("id")
+        .maybeSingle();
       jaFoi.add(x.chave);
       publicados.push(x.chave);
+      /* PÁGINA DO FACEBOOK (09/10): a mesma oferta, depois do canal; falha
+         aqui não desfaz nem atrasa o canal (prazo próprio, nunca lança). */
+      if (facebookConfigurado()) {
+        const fb = await publicarNoFacebook(
+          foto,
+          `${textoSimples(mensagem(x, true))}\n\n🔎 Compare o seu produto: https://melhorescolha.io`,
+        );
+        if (fb.ok) facebook.push(x.chave);
+        if (linha?.id)
+          await t
+            .from("canal_publicacoes")
+            .update({
+              facebook_post_id: fb.ok ? fb.postId : null,
+              facebook_erro: fb.ok ? null : fb.erro,
+              facebook_em: new Date().toISOString(),
+            })
+            .eq("id", linha.id);
+      }
     }
   }
 
@@ -386,6 +410,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
     lidos: pedidos?.length ?? 0,
     encontrados: achados.length,
     publicados: publicados.length,
+    facebook: facebookConfigurado() ? facebook.length : "sem configuração",
     destaques: achados.map((x) => ({
       pedido: x.pedido,
       tipo: x.tipo,

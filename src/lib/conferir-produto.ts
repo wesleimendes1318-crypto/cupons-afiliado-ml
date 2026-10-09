@@ -223,7 +223,15 @@ function paraBase64(buf: ArrayBuffer): string {
 /* So foto do proprio Mercado Livre (mlstatic): nada de baixar endereco
    qualquer que venha no pedido. */
 async function imagem(url: string | null | undefined): Promise<Parte | null> {
-  if (!url || !/^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(url)) return null;
+  /* Mercado Livre e, para a comparação com outros marketplaces (09/10),
+     as fotos da Amazon e da Shopee. */
+  if (
+    !url ||
+    !/^https:\/\/([a-z0-9.-]*mlstatic\.com|m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|[a-z0-9.-]*susercontent\.com|cf\.shopee\.com\.br)\//i.test(
+      url,
+    )
+  )
+    return null;
   /* JPEG em vez de WEBP (28/09): o Gemma nunca respondeu a conferencia (500
      com a foto webp). O mlstatic serve a mesma foto em .jpg; sem ela, usa a
      original. */

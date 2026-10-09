@@ -13,7 +13,7 @@ import {
 import { baixarFoto, gerarComModelos, lerJson } from "@/lib/conferir-produto";
 import { mudaCompleta } from "@/lib/ficha";
 import { qualidadeAceita, qualidadeDoParecido } from "@/lib/qualidade";
-import { perguntarAoGpt } from "@/lib/gpt";
+import { perguntarAoLlm } from "@/lib/cheaper-inference";
 import { ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 
 type Detalhes = {
@@ -386,10 +386,11 @@ Regras:
 - Portugues do Brasil, frases curtas, sem exagero, sem caixa alta, sem citar inteligencia artificial.
 Responda SO com JSON: {"escolha": n da opcao, "resumo": "ate 240 caracteres explicando por que e a melhor escolha", "pontos": [{"n": n, "a_favor": "ate 90 caracteres", "contra": "ate 90 caracteres ou vazio"}]} com ate 4 pontos (inclua a escolhida e o anuncio colado).
 Opcoes: ${JSON.stringify(opcoes.map((o) => resumoDaOpcao(o, colado, fotoDe.get(o.n) ?? null, decisao)))}`;
-  /* GPT primeiro (chave própria, não gasta a cota gratuita da Gemini que a
-     conferência pela foto usa); sem ele, a fila Gemini/Gemma, com as fotos. */
+  /* Cheaper Inference primeiro (09/10), GPT de reserva (chaves próprias,
+     não gastam a cota gratuita da Gemini que a conferência pela foto usa);
+     sem os dois, a fila Gemini/Gemma, com as fotos. */
   let texto: string | null = null;
-  const gpt = await perguntarAoGpt(
+  const gpt = await perguntarAoLlm(
     prompt,
     20_000,
     comFoto.map((o) => o.imagem as string),

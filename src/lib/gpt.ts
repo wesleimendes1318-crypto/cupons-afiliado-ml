@@ -37,8 +37,11 @@ export type RespostaGpt =
 export async function perguntarAoGpt(
   prompt: string,
   prazo = 15_000,
-  /* Fotos (endereços do mlstatic), anexadas na ordem, em baixa resolução. */
+  /* Fotos (endereços do mlstatic ou data:image/jpeg), anexadas na ordem. */
   imagens: string[] = [],
+  /* "low" para conferir (barato); "high" para ler modelo/rótulo na busca
+     por foto. */
+  detalhe: "low" | "high" | "auto" = "low",
 ): Promise<RespostaGpt> {
   const chave = chaveGpt();
   if (!chave) return { ok: false, status: 503, erro: "sem chave do GPT nos secrets" };
@@ -61,7 +64,7 @@ export async function perguntarAoGpt(
                     { type: "text", text: prompt },
                     ...imagens.map((url) => ({
                       type: "image_url",
-                      image_url: { url: url.replace(/\.webp$/i, ".jpg"), detail: "low" },
+                      image_url: { url: url.replace(/\.webp$/i, ".jpg"), detail: detalhe },
                     })),
                   ]
                 : prompt,

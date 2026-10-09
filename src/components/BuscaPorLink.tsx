@@ -58,6 +58,9 @@ import {
   textoDaQualidade,
   type Qualidade,
 } from "@/lib/qualidade";
+import { BotaoFoto, PainelFoto } from "@/components/BuscaPorFoto";
+import { OutrosMarketplaces } from "@/components/OutrosMarketplaces";
+import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -1132,6 +1135,17 @@ export default function BuscaPorLink({
     });
   }, [fase, pedido]);
 
+  /* Busca por foto: o produto escolhido (ou a certeza) entra na comparação
+     como se o link tivesse sido colado. */
+  const compararDaFoto = useCallback(
+    (alvo: string) => {
+      setUrl(alvo);
+      void buscar(alvo);
+    },
+    [buscar],
+  );
+  const foto = useBuscaPorFoto(compararDaFoto);
+
   const carregando =
     fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
   const parada = fase === "parado" && !pedido;
@@ -1178,15 +1192,23 @@ export default function BuscaPorLink({
           aria-label="Link do anúncio do produto"
           className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5"
         />
-        <button
-          type="button"
-          onClick={() => buscar(url)}
-          disabled={carregando || !url.trim()}
-          className="min-h-11 shrink-0 rounded-xl bg-ml-yellow px-5 py-2.5 text-sm font-bold text-[#21134A] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:self-start sm:text-base"
-        >
-          {carregando ? "Comparando..." : "Comparar preços"}
-        </button>
+        <div className="flex gap-2 sm:self-start">
+          {/* Busca por foto (09/10): câmera no celular, arquivo no PC. */}
+          <BotaoFoto
+            aoEscolher={foto.enviar}
+            ocupado={carregando || foto.estado.fase === "lendo"}
+          />
+          <button
+            type="button"
+            onClick={() => buscar(url)}
+            disabled={carregando || !url.trim()}
+            className="min-h-11 flex-1 shrink-0 rounded-xl bg-ml-yellow px-5 py-2.5 text-sm font-bold text-[#21134A] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:text-base"
+          >
+            {carregando ? "Comparando..." : "Comparar preços"}
+          </button>
+        </div>
       </div>
+      <PainelFoto estado={foto.estado} comparar={compararDaFoto} fechar={foto.fechar} />
       <SeloCep regiao={regiao} trocar={trocarCep} />
       {fase === "parado" && !pedido && (
         <ContinuarDeOndeParou
@@ -1931,6 +1953,11 @@ function Resultado({
      BARATO que o melhor preço do mesmo produto, muito parecido (semelhança
      >= 85 ou a mesma foto) e sem frete pago. */
   const precoDoMesmo = (recomendada ? totalDaLoja(recomendada.o) : null) ?? totalColado ?? null;
+  /* Melhor preço do mesmo produto no Mercado Livre, só o produto (para o
+     aviso de outros marketplaces, frete em linha própria). */
+  const precoProdutoMl = recomendada
+    ? (recomendada.o.final ?? recomendada.o.preco ?? null)
+    : (a?.preco ?? null);
   /* Mais barato porque vem MENOS (28/09: "Kit 10 cabides" x 30, "1un" x 3
      pipetas) ou serve para outra coisa não é alternativa: fica em Parecidos.
      Mesma lista da função muda_nao_e_alternativa do banco (vitrine). */
@@ -2337,6 +2364,8 @@ function Resultado({
               cep={a?.cepDestino ?? null}
             />
           )}
+          {/* Amazon e Shopee (09/10): só com as credenciais nos Secrets. */}
+          <OutrosMarketplaces pedidoId={pedidoId} precoReferencia={precoProdutoMl} />
           <Parecidos
             lista={parecidosSemAlternativa}
             tituloColado={a?.titulo}
@@ -2349,6 +2378,7 @@ function Resultado({
       )}
 
       <div className="sm:col-start-1 sm:row-start-3">
+        {!temColuna && <OutrosMarketplaces pedidoId={pedidoId} precoReferencia={precoProdutoMl} />}
         {!leituraFalhou && pedidoId != null && !semLink && (
           <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
         )}

@@ -3,7 +3,9 @@
 Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 
 ## Produto
-- O site é um COMPARADOR de preços do Mercado Livre. Por enquanto só Mercado Livre.
+- O site é um COMPARADOR de preços do Mercado Livre. A recomendação é sempre
+  do Mercado Livre; Amazon e Shopee só em bloco separado (ver "Outros
+  marketplaces, busca por foto e Facebook (09/10)").
 - Todo link colado precisa ser comparado com o MESMO produto em outras lojas.
 - Só mostrar outra loja quando a Gemini confirmou pela foto que é o mesmo produto.
   Produto parecido apresentado como igual é o pior erro possível.
@@ -951,3 +953,52 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   regressiva. Medição: data-origem campanha_<slug> e impressão uma vez por
   seção visível (registrar_evento 'impressao_campanha', só com
   consentimento; src/lib/medicao.ts). Painel: view campanha_metricas_painel.
+
+## Outros marketplaces, busca por foto e Facebook (09/10)
+- PROMPT MESTRE do Weslei (09/10). Tudo ligado por Secrets (Lovable); sem a
+  chave, a parte não faz nada e o Mercado Livre carrega como sempre. Toda
+  chamada externa com prazo e Promise.allSettled.
+- AFILIADO POR MARKETPLACE (src/lib/afiliado.ts, ehLinkDeCompra): Mercado
+  Livre só meli.la; Amazon com tag=melhoresc0fff-20 ou amzn.to; Shopee
+  s.shopee.com.br ou shope.ee. Outro endereço é descartado. Botão sempre
+  "Comprar com segurança", sem nome da loja.
+- AMAZON E SHOPEE (src/lib/coletor-multiloja.ts, src/lib/integracoes/):
+  Amazon pela Creators API (a PA-API 5 foi desligada em 2026; Secrets
+  AMAZON_CREATORS_CREDENTIAL_ID, AMAZON_CREATORS_CREDENTIAL_SECRET,
+  AMAZON_CREATORS_VERSION, padrão 3.1), só condição Nova, Prime primeiro;
+  Shopee pela Affiliate Open API (SHOPEE_AFFILIATE_APP_ID,
+  SHOPEE_AFFILIATE_SECRET; comissão nunca é pedida nem mostrada). Os 2
+  melhores de cada marketplace passam pela conferência pela foto
+  (conferirMesmoProduto, chave "amazon:<asin>"/"shopee:<id>"): igual =
+  "Mesmo produto", parecido = "Parecido" com "Não é idêntico. Muda: ...",
+  conferência que falha = nada entra; peça no lugar do aparelho fora.
+  /api/public/multiloja ({pedido}, cache 6 h em multiloja_resultados, só
+  servidor; freio de 40 novos em 5 min) alimenta OutrosMarketplaces
+  (abaixo da tabela das lojas): selo neutro do marketplace (só o nome),
+  "Prime", frete em linha própria, aviso quando o mesmo produto sai mais
+  barato que o melhor preço do Mercado Livre ("no produto", frete à parte).
+  Frete da Shopee é desconhecido e o Prime é só para assinantes: nada disso
+  passa na frente da recomendação. Bot, canal e vitrine ainda não mostram
+  outros marketplaces.
+- BUSCA POR FOTO (Weslei, 09/10): botão de câmera ao lado do campo do link
+  (capture="environment"), foto reduzida no navegador (1024 px, JPEG 80%,
+  src/lib/otimizar-imagem.ts) e enviada a /api/public/buscar-foto (6 fotos
+  a cada 10 min por endereço; a foto não é guardada). src/lib/busca-foto.ts
+  identifica (Cheaper Inference -> GPT -> Gemini/Gemma) e busca no catálogo
+  oficial (buscarNoCatalogo). Compara sozinho só com certeza (confiança >=
+  85, marca e modelo lidos e os dois no nome do 1º produto); senão "Qual
+  destes é o seu?" com até 4 e "Comparar este".
+- CHEAPER INFERENCE (src/lib/cheaper-inference.ts, CHEAPER_INFERENCE_API_KEY
+  ou OMNI_ROUTER; modelos em CHEAPER_INFERENCE_MODEL ou pelo /models da
+  conta): motor prioritário da busca guiada, do "Me ajude a escolher" e da
+  busca por foto (perguntarAoLlm: metade do prazo, depois GPT, depois
+  Gemini/Gemma). A conferência pela foto continua na Gemini. Última falha
+  em sinc_config.cheaper_diagnostico.
+- FACEBOOK (src/lib/facebook.ts, FACEBOOK_PAGE_ID e
+  FACEBOOK_PAGE_ACCESS_TOKEN; FACEBOOK_GRAPH_VERSION opcional): cada post do
+  canal no garimpo vai também para a página (POST /{page-id}/photos com a
+  legenda do canal em texto simples). Falha nunca derruba o Telegram; o
+  resultado fica em canal_publicacoes.facebook_post_id/facebook_erro/
+  facebook_em. Token só no corpo do POST.
+- Diagnóstico sem expor chave: GET /api/public/ajudar-escolher diz só SE
+  cada integração está configurada.
