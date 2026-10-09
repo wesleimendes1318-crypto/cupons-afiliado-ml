@@ -50,3 +50,70 @@ export function analiseSoComAfiliado<
     referencias: limparLista(a.referencias),
   };
 }
+
+/* MULTI-MARKETPLACE (Weslei, 09/10: Amazon + Shopee). A trava acima
+   continua só meli.la para tudo que é do Mercado Livre (anúncio de outra
+   loja num campo do Mercado Livre é descartado). Para as ofertas de outro
+   marketplace, cada uma só passa com o link de afiliado DELE:
+   - Amazon: amazon.com.br com tag=melhoresc0fff-20 (Associates) ou o
+     encurtado amzn.to;
+   - Shopee: encurtado do programa de afiliados (s.shopee.com.br, shope.ee). */
+export const TAG_AMAZON = "melhoresc0fff-20";
+
+export type Marketplace = "mercadolivre" | "amazon" | "shopee";
+
+const RE_AMAZON_CURTO = /^https:\/\/amzn\.to\/[A-Za-z0-9]+\/?$/;
+const RE_SHOPEE_CURTO = /^https:\/\/(?:s\.shopee\.com\.br|shope\.ee)\/[A-Za-z0-9]+\/?$/;
+
+function urlSegura(u: unknown): URL | null {
+  if (typeof u !== "string") return null;
+  try {
+    const x = new URL(u.trim());
+    return x.protocol === "https:" ? x : null;
+  } catch {
+    return null;
+  }
+}
+
+export function ehLinkDeAfiliadoAmazon(u: unknown, tag = TAG_AMAZON): u is string {
+  if (typeof u !== "string") return false;
+  if (RE_AMAZON_CURTO.test(u.trim())) return true;
+  const x = urlSegura(u);
+  return (
+    !!x &&
+    /^(www\.)?amazon\.com\.br$/i.test(x.hostname) &&
+    x.searchParams.getAll("tag").length === 1 &&
+    x.searchParams.get("tag") === tag
+  );
+}
+
+export const ehLinkDeAfiliadoShopee = (u: unknown): u is string =>
+  typeof u === "string" && RE_SHOPEE_CURTO.test(u.trim());
+
+/** Link de compra válido do marketplace indicado (ou de qualquer um). */
+export function ehLinkDeCompra(u: unknown, de?: Marketplace): u is string {
+  if (de === "mercadolivre") return ehLinkDeAfiliado(u);
+  if (de === "amazon") return ehLinkDeAfiliadoAmazon(u);
+  if (de === "shopee") return ehLinkDeAfiliadoShopee(u);
+  return ehLinkDeAfiliado(u) || ehLinkDeAfiliadoAmazon(u) || ehLinkDeAfiliadoShopee(u);
+}
+
+export function marketplaceDoLink(u: unknown): Marketplace | null {
+  if (ehLinkDeAfiliado(u)) return "mercadolivre";
+  if (ehLinkDeAfiliadoAmazon(u)) return "amazon";
+  if (ehLinkDeAfiliadoShopee(u)) return "shopee";
+  return null;
+}
+
+/** Link de afiliado da Amazon a partir do endereço do produto: só
+    amazon.com.br com ASIN (/dp/ ou /gp/product/), endereço limpo
+    (sem rastreio de terceiros) e a tag do Weslei. Sem ASIN: null. */
+export function gerarUrlAfiliadoAmazon(url: unknown, tag = TAG_AMAZON): string | null {
+  const x = urlSegura(url);
+  if (!x || !/^(www\.)?amazon\.com\.br$/i.test(x.hostname)) return null;
+  const asin = /\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})(?:[/?]|$)/i.exec(
+    x.pathname + "/",
+  )?.[1];
+  if (!asin) return null;
+  return `https://www.amazon.com.br/dp/${asin.toUpperCase()}?tag=${encodeURIComponent(tag)}`;
+}
