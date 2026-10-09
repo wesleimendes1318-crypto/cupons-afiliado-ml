@@ -42,6 +42,9 @@ export function cartoesShopeeNaPagina() {
     const m = String(s || '').match(/(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?/);
     return m ? Number(m[1].replace(/\./g, '') + '.' + (m[2] || '0')) : null;
   };
+  /* Rola um pouco a cada leitura: a Shopee so desenha os cartoes que
+     aparecem na tela (09/10: "4 na tela"). */
+  try { window.scrollBy(0, Math.round(window.innerHeight * 0.9)); } catch (e) { /* sem rolagem */ }
   const vistos = new Set();
   const cartoes = [];
   for (const a of document.querySelectorAll('a[href]')) {
@@ -55,7 +58,9 @@ export function cartoesShopeeNaPagina() {
     imagem = imagem.replace(/_tn(\.webp)?$/, '');
     const titulo = ((img && img.alt && img.alt.length > 8) ? img.alt
       : linhas.find(l => l.length > 12 && !/^R\$|^-?\d+%|vendid|^Indicado|^Patrocinad/i.test(l))) || '';
-    const textoPrecos = linhas.filter(l => /R\$/.test(l)).join(' ');
+    /* O preco vem quebrado em linhas ("R$" / "29" / ",90", 09/10: nenhum
+       preco lido): junta tudo antes de ler. */
+    const textoPrecos = linhas.join(' ').replace(/R\$\s+/g, 'R$ ').replace(/(\d)\s*,\s*(\d{2})\b/g, '$1,$2');
     const valores = [...textoPrecos.matchAll(/R\$\s?([\d.]+(?:,\d{1,2})?)/g)].map(x => preco(x[1])).filter(n => n > 0);
     vistos.add(m[2]);
     cartoes.push({
@@ -65,7 +70,9 @@ export function cartoesShopeeNaPagina() {
       /* "R$ 10,00 - R$ 20,00": o preco depende da variacao (ambiguo). */
       faixa: /R\$\s?[\d.,]+\s*[-–]\s*R\$/.test(textoPrecos),
       patrocinado: /Patrocinad|\bAn[uú]ncio\b/i.test(linhas.join(' ')),
-      imagem: imagem || null
+      imagem: imagem || null,
+      /* So para o diagnostico quando nenhum preco e lido. */
+      texto: linhas.join(' | ').slice(0, 160)
     });
     if (cartoes.length >= 30) break;
   }
@@ -116,12 +123,17 @@ export async function buscarCandidatosShopee(termo, prazoMs = 10000) {
         await puxarFreioShopee();
         return { ofertas: [], motivo: ultimo.login ? 'a Shopee pediu login: pausada por 6 h' : 'a Shopee pediu verificacao: pausada por 6 h' };
       }
-      if (ultimo && ultimo.cartoes.length >= 6) break;
+      if (ultimo && ultimo.cartoes.filter(c => c.preco != null).length >= 6) break;
       await sleep(600);
     }
     const ofertas = ((ultimo && ultimo.cartoes) || [])
       .filter(c => c.preco != null && c.titulo && !c.patrocinado && !c.faixa);
-    return { ofertas, motivo: ofertas.length ? null : 'nenhum cartao com preco lido' + (ultimo ? ' (' + ultimo.cartoes.length + ' na tela)' : '') };
+    const semPreco = ((ultimo && ultimo.cartoes) || []).find(c => c.preco == null);
+    return {
+      ofertas,
+      motivo: ofertas.length ? null : 'nenhum cartao com preco lido' + (ultimo ? ' (' + ultimo.cartoes.length + ' na tela)' : '')
+        + (!ofertas.length && semPreco ? ' amostra: ' + semPreco.texto : '')
+    };
   } catch (e) {
     return { ofertas: [], motivo: String((e && e.message) || e).slice(0, 120) };
   } finally {

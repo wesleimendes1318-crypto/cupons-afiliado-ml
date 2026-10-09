@@ -1180,3 +1180,8 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   marketplaces, selo só Prime) e espera até ~1 min. Diagnóstico: diagnosticos
   tipo 'multiloja'. Amazon: os termos dos Associados pedem preço pela API
   oficial; a leitura pela sessão é decisão do Weslei (09/10).
+  1º teste real (09/10, pedido 1065, Echo Dot): Amazon leu 39 cartões e
+  passou 2 pela conferência (links com a tag); Shopee leu a tela mas não o
+  preço ("4 na tela"). Extensão 1.159.0: o leitor da Shopee rola a página a
+  cada leitura, junta o preço quebrado em linhas ("R$" / "29" / ",90") e,
+  sem preço, grava uma amostra do texto do cartão no diagnóstico.
