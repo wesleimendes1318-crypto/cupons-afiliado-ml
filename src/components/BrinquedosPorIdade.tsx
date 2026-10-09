@@ -4,7 +4,7 @@ import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
-import { FAIXAS, faixaPorId } from "@/lib/brinquedos";
+import { FAIXAS, faixaPorId, pareceBrinquedo } from "@/lib/brinquedos";
 import { SELO_MAIS_VENDIDO, seloDoCatalogo } from "@/lib/selos";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
@@ -234,7 +234,8 @@ export function BrinquedosPorIdade({
     (async () => {
       try {
         const { data } = await supabase.rpc("curadoria_brinquedos" as never);
-        if (vivo && Array.isArray(data)) setItens(data as Item[]);
+        if (vivo && Array.isArray(data))
+          setItens((data as Item[]).filter((i) => pareceBrinquedo(i.nome ?? "")));
       } catch {
         /* sem dados: estado vazio */
       } finally {

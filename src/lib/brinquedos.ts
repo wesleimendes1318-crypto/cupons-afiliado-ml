@@ -68,7 +68,7 @@ export const FAIXAS: Faixa[] = [
       "lego city",
       "pista hot wheels",
       "jogo de tabuleiro infantil",
-      "barbie boneca",
+      "boneca barbie fashionista",
       "bicicleta infantil aro 16",
     ],
     dica: "Montagem, jogos de regra simples e brinquedos de movimento. Bicicleta: aro 16 costuma servir de 5 a 8 anos.",
@@ -113,9 +113,11 @@ export const FAIXAS: Faixa[] = [
 export const faixaPorId = (id: string | null | undefined) =>
   FAIXAS.find((f) => f.id === id) ?? null;
 
-/* Título que não é brinquedo (peças de veículo, adulto) fica de fora. */
+/* Título que não é brinquedo (peças de veículo, adulto) fica de fora. 09/10:
+   também cama/banho, material escolar, roupa e lote de atacado com o
+   personagem ("Kit com 2 fronhas Barbie" saiu em 6 a 8 anos). */
 const NAO_E_BRINQUEDO =
-  /\b(freio|pneus?|rela[cç][aã]o|retentor|amortecedor|farol|retrovisor|para-?choque|palheta|[oó]leo|escapamento|rastreador|bateria automotiva|automotiv[oa]|veicular|adulto|er[oó]tic|sex)\b/i;
+  /\b(freio|pneus?|rela[cç][aã]o|retentor|amortecedor|farol|retrovisor|para-?choque|palheta|[oó]leo|escapamento|rastreador|bateria automotiva|automotiv[oa]|veicular|adulto|er[oó]tic|sex|fronhas?|len[cç][oó]is|len[cç]ol|jogo de cama|edredom|cobertor|travesseiros?|toalhas?|cortinas?|mochilas?|lancheiras?|estojos?|garrafas?|squeeze|canecas?|camisetas?|pijamas?|capinhas?|adesivos? de parede|papel de parede|topo de bolo|atacado)\b/i;
 
 export const pareceBrinquedo = (titulo: string) => !NAO_E_BRINQUEDO.test(titulo);
 

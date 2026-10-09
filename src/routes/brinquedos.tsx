@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { BrinquedosPorIdade, type ItemBrinquedo } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { supabase } from "@/integrations/supabase/client";
-import { FAIXAS } from "@/lib/brinquedos";
+import { FAIXAS, pareceBrinquedo } from "@/lib/brinquedos";
 
 /* Página dos brinquedos por idade (05/10): a lista vem do servidor para
    sair no HTML (busca do Google) e se atualiza no navegador. */
@@ -36,7 +36,11 @@ export const Route = createFileRoute("/brinquedos")({
   loader: async () => {
     try {
       const { data } = await supabase.rpc("curadoria_brinquedos" as never);
-      return { itens: Array.isArray(data) ? (data as ItemBrinquedo[]) : [] };
+      return {
+        itens: Array.isArray(data)
+          ? (data as ItemBrinquedo[]).filter((i) => pareceBrinquedo(i.nome ?? ""))
+          : [],
+      };
     } catch {
       return { itens: [] as ItemBrinquedo[] };
     }
