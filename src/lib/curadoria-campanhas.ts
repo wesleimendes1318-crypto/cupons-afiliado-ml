@@ -31,6 +31,7 @@ export type Confiabilidade = {
   alt_lider: string | null;
   colado_oficial: boolean | null;
   colado_condicao: string | null;
+  colado_lider?: string | null;
 };
 
 export type Vendedor = { oficial: boolean; lider: string | null };
@@ -46,7 +47,7 @@ export function vendedorDaOferta(o: Oferta, c: Confiabilidade | undefined): Vend
     return { oficial: c?.melhor_oficial === true, lider: c?.melhor_lider ?? null };
   if (o.tipo === "parecido")
     return { oficial: c?.alt_oficial === true, lider: c?.alt_lider ?? null };
-  return { oficial: c?.colado_oficial === true, lider: null };
+  return { oficial: c?.colado_oficial === true, lider: c?.colado_lider ?? null };
 }
 
 export const vendedorConfiavel = (v: Vendedor) =>

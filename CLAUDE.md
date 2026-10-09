@@ -930,8 +930,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   sem peça (RE_PECA_PARTE); desconto real ou menor preço; frete grátis
   confirmado; conferido em até 7 dias; nota >= 4,5 quando conhecida (hub);
   VENDEDOR CONFIÁVEL na oferta mostrada: loja oficial ou MercadoLíder
-  (confiabilidade_da_vitrine lê os selos da última comparação). Sem selo
-  confirmado, fora. Ordem: oficial/Platinum, depois até 48 h, depois maior
+  (confiabilidade_da_vitrine lê os selos da última comparação; o
+  MercadoLíder do próprio anúncio colado vem da extensão 1.156.0,
+  analise.mercadoLider, para o "já é o menor preço"). Sem selo confirmado,
+  fora. Ordem: oficial/Platinum, depois até 48 h, depois maior
   economia. 1ª execução (09/10): Dia das Crianças 9 de 37 (23 barrados por
   vendedor), Natal 6 de 45, Mais vendidos 4 de 16.
 - TELA: as seções sazonais da vitrine e /natal, /dia-das-criancas usam a

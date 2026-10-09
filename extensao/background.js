@@ -1328,7 +1328,12 @@ function extrairAnuncio(t, finalUrl, status) {
      com paginas reais, o selo vem so da lista oficial de ofertas (API); aqui
      so se guarda a amostra. */
   amostraDaLojaOficial(t, itemAqui, lojaOficialDoHtml(t, itemAqui), 'colado');
+  /* MercadoLider do PROPRIO anuncio (evento com o nome da loja lida; 09/10:
+     campanhas so com vendedor confiavel, inclusive o "ja e o menor preco"). */
+  let liderColado = null;
+  try { const selo = seloDoVendedor(t, itemAqui, nomes); liderColado = selo ? selo.mercadoLider : null; } catch (e) { liderColado = null; }
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: null,
+           mercadoLider: liderColado,
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
            /* Cheio, Pix e parcelado do proprio anuncio (28/09). */
            precos: precosDoItem(t, itemAqui),
@@ -4505,6 +4510,8 @@ async function atenderPedidos() {
             lojaLida: !!(a.nomes && a.nomes.length),
             /* Loja oficial da marca (selo no site; Weslei, 27/09). */
             lojaOficial: a.lojaOficial != null ? a.lojaOficial : null,
+            /* MercadoLider do proprio anuncio (platinum/gold/silver; 09/10). */
+            mercadoLider: a.mercadoLider || null,
             /* Caracteristicas, destaques e descricao do anuncio: botao "Ver
                detalhes do produto" no site (Weslei, 27/09). */
             detalhes: a.detalhes || null,
