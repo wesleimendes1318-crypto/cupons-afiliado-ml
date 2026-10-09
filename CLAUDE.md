@@ -961,7 +961,20 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (/categories/{id}, as 8 maiores de cada). Produto lido há menos de 20 h é
   pulado (a próxima execução avança). Tetos: 32 chamadas à API, 16 produtos
   e 4 na fila (pedir_link_agente) por execução, cada produto a cada 48 h.
-  disparar_operacao aceita operacao?tarefa=em_alta[&categoria=]. Tabela
+  disparar_operacao aceita operacao?tarefa=em_alta[&categoria=].
+  CATEGORIA PELO NOME (Weslei, 09/10: "está colocando produtos em
+  categorias incorretas"): a lista oficial de uma categoria traz produtos
+  de outras (Moda: guarda-chuva, presilha; Beleza: papel higiênico,
+  fralda; Informática: gift card, power bank, controle de PS5; Celulares:
+  tela de reposição). src/lib/categoria-em-alta.ts (categoriaDoMaisVendido,
+  testes em tests/categoria-em-alta.test.ts) decide pelo nome, em ordem,
+  acima da lista; sem regra, fica a da lista. Fora: código digital de
+  valor fixo (gift card, "(Digital)", assinatura), fralda e tela/display
+  de reposição. A vitrine usa categoria_do_site (banco) com os mesmos casos
+  pelo nome ANTES da árvore do anúncio (guarda-chuva/leque/panos/papel
+  higiênico -> casa, presilha -> beleza, mala/mochila -> moda, power bank
+  -> celulares, SSD/roteador -> informática, gift card e controle de
+  videogame -> eletrônicos, fralda -> outros). Tabela
   em_alta_catalogo (só servidor); leitura pública em_alta_por_categoria(
   p_categoria, p_por_categoria) com até 3 dias e teto POR categoria (a v2
   cortava as últimas abas da home no limite geral).

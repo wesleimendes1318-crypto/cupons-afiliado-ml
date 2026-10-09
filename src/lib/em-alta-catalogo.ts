@@ -18,6 +18,7 @@
    principal, as subcategorias oficiais (as maiores). Tetos por execução:
    32 chamadas à API, 16 produtos, 4 na fila; cada produto volta à fila no
    máximo a cada 48 h. */
+import { categoriaDoMaisVendido } from "@/lib/categoria-em-alta";
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import { mlGet } from "@/lib/ml-api";
 
@@ -193,6 +194,10 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         .trim()
         .slice(0, 160);
       if (!nome || RE_PECA_PARTE.test(nome)) continue;
+      /* Categoria pelo nome (src/lib/categoria-em-alta.ts): a lista de uma
+         categoria traz produtos de outras; o que não serve fica de fora. */
+      const destino = categoriaDoMaisVendido(nome, categoria);
+      if (!destino) continue;
       let oferta: Oferta | null = p.buy_box_winner ?? null;
       let ofertas: number | null = null;
       if (!oferta?.item_id || !(Number(oferta.price) > 0) || oferta.condition === "used") {
@@ -220,7 +225,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
       const foto2 = p.pictures?.[1]?.secure_url ?? p.pictures?.[1]?.url ?? null;
       prontas.push({
         produto: c.produto,
-        categoria_site: categoria,
+        categoria_site: destino,
         categoria_ml: c.cat,
         posicao: c.posicao,
         nome,
