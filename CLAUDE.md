@@ -893,8 +893,16 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Escolha melhor.", colunas Explore / Institucional / Sua privacidade,
   quadro "Transparência em cada escolha" (links de afiliado, site
   independente, preços mudam, marcas dos titulares).
-- Estúdio das vitrines de Casa, Tecnologia e Beleza também em imagem
-  (public/campanhas/estudio-{casa,tecnologia,beleza}.webp).
+- ARTES NÃO ENTRAM NAS CATEGORIAS (Weslei, 09/10): "Explore por categoria"
+  com ícone (sem arte) e os temas Casa, Tecnologia e Beleza voltam ao
+  estúdio em CSS com as fotos reais. As artes do pacote são banners de
+  abertura de seção (LEIA-ME do pacote), não ilustração de categoria.
+- AJUSTES DO MODELO FINAL (09/10, home-v2-final-sem-marcas): caixa do link
+  DENTRO do topo, à esquerda, abaixo do título; "Serviço gratuito..." logo
+  abaixo dela; arte e "Compare com clareza" à direita; passos numa faixa
+  branca logo abaixo do topo; atalhos "Buscas recentes" em pílulas lilás.
+  Com resultado, o topo encolhe (uma coluna, sem arte) e o degradê fica só
+  atrás do título; a caixa do link não muda de lugar na árvore.
 - Peça no lugar do aparelho (07/10, ajuste do Weslei em RE_PECA_PARTE,
   servidor e extensão 1.155.0): a regra olha o COMEÇO do título (peça como
   produto principal, inclusive "Kit 2 tampas", "1 un carcaça").

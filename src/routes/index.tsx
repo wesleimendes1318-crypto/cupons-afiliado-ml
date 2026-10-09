@@ -7,7 +7,9 @@ import {
   ChevronDown,
   ChevronRight,
   Clock3,
+  CookingPot,
   Copy,
+  Headphones,
   Info,
   LayoutGrid,
   Link2,
@@ -17,9 +19,11 @@ import {
   Share2,
   ShieldAlert,
   ShieldCheck,
+  Shirt,
   ShoppingCart,
   SlidersHorizontal,
   Sparkles,
+  ToyBrick,
   TrendingDown,
   WandSparkles,
   X,
@@ -1289,29 +1293,30 @@ async function carregarCupons(): Promise<Cupom[]> {
    caixa de colar o link. Voltar para true quando as etiquetas funcionarem. */
 const MOSTRAR_CUPONS = false;
 
-/* "Explore por categoria" (home-v2, 06/10): imagens do mockup aprovado. */
+/* "Explore por categoria" (home-v2). Sem arte nos cartões (Weslei, 09/10:
+   "não inserir as artes nas categorias"): ícone da marca, limpo. */
 const CATEGORIAS_HOME = [
   {
     nome: "Tecnologia",
-    imagem: "/home/categoria-tecnologia.webp",
+    icone: Headphones,
     link: { to: "/categorias/$slug", params: { slug: "eletronicos" } },
   },
   {
     nome: "Casa e cozinha",
-    imagem: "/home/categoria-casa.webp",
+    icone: CookingPot,
     link: { to: "/categorias/$slug", params: { slug: "casa" } },
   },
   {
     nome: "Beleza",
-    imagem: "/home/categoria-beleza.webp",
+    icone: Sparkles,
     link: { to: "/categorias/$slug", params: { slug: "beleza" } },
   },
   {
     nome: "Moda",
-    imagem: "/home/categoria-moda.webp",
+    icone: Shirt,
     link: { to: "/categorias/$slug", params: { slug: "moda" } },
   },
-  { nome: "Brinquedos", imagem: "/home/categoria-brinquedos.webp", link: { to: "/brinquedos" } },
+  { nome: "Brinquedos", icone: ToyBrick, link: { to: "/brinquedos" } },
 ] as const;
 
 function Index() {
@@ -1864,136 +1869,132 @@ function Index() {
 
   return (
     <div className="min-h-screen fundo-conteudo text-foreground">
-      {/* HOME-V2 (Weslei, 06/10): degradê azul -> violeta, "O mesmo produto.
-          Uma escolha melhor.", arte dos fones em pedestais (sem marca) com o
-          cartão "Compare com clareza". A caixa do link entra sobre a borda do
-          degradê; com resultado, o topo encolhe e o resultado ocupa a tela. */}
-      <section
-        aria-label="Melhor Escolha"
-        className={
-          "relative overflow-hidden bg-[linear-gradient(105deg,#3d8bfd_0%,#5b6cf5_45%,#a77ff0_100%)] text-white " +
-          (buscaParada ? "pb-28 sm:pb-32" : "pb-20")
-        }
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-32 size-[28rem] rounded-full bg-[radial-gradient(circle,rgba(255,214,230,0.35),transparent_65%)]"
-        />
-        <div className="relative mx-auto grid max-w-[1400px] items-center gap-6 px-4 pt-7 sm:px-6 sm:pt-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:px-8">
-          <div className="animate-conteudo min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#21134A]">
-              <ShieldCheck className="size-3.5" aria-hidden="true" />
-              Comparador independente
-            </span>
-            {MOSTRAR_CUPONS && atualizado && (
-              <span className="ml-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                Atualizado em {atualizado}
-              </span>
-            )}
-            <h1 className="mt-4 text-[2.15rem] font-extrabold leading-[1.02] tracking-tight sm:text-5xl lg:text-[4.1rem]">
-              O mesmo produto.
-              <br />
-              Uma escolha melhor.
-            </h1>
-            <p className="mt-3 max-w-[46ch] text-base leading-snug text-white/95 sm:text-lg">
-              Compare preços em diferentes lojas do Mercado Livre. Confira as opções antes de
-              comprar.
-            </p>
-            {/* Mensagem única do site (27/09), discreta abaixo do título. */}
-            <p className="mt-2 max-w-[70ch] text-xs leading-relaxed text-white/80 sm:text-sm">
-              Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do Mercado
-              Livre, do mais barato ao mais caro e com a loja oficial (quando houver). Confiro pela
-              foto, descrição e características para encontrar o mesmo produto. Parecidos aparecem
-              separados, com a descrição do que muda.
-            </p>
-          </div>
-
-          {/* Arte + "Compare com clareza" (PC). No celular a caixa do link vem
-              logo abaixo do título, sem a arte. */}
-          <div className="relative hidden lg:block">
-            <div className="relative mx-auto aspect-[774/706] w-full max-w-[30rem] [mask-image:radial-gradient(ellipse_75%_80%_at_55%_45%,#000_55%,transparent_100%)]">
-              <img
-                src="/home/hero-fones.webp"
-                alt=""
-                width={774}
-                height={706}
-                className="absolute inset-0 h-full w-full object-cover"
-                fetchPriority="high"
-              />
-            </div>
-            <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/30 bg-white/15 p-4 backdrop-blur-md">
-              <p className="border-b border-white/25 pb-2 text-lg font-bold">Compare com clareza</p>
-              <ul className="mt-2 space-y-2 text-sm">
-                <li className="flex items-center gap-2.5">
-                  <Search className="size-4 shrink-0" aria-hidden="true" />
-                  Mesmo produto em diferentes lojas
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-                  Loja oficial identificada, quando houver
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <Package className="size-4 shrink-0" aria-hidden="true" />
-                  Produtos semelhantes em seção separada
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {MOSTRAR_CUPONS && (
-        <nav aria-label="Categorias" className="border-b border-border bg-card">
-          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-secondary-ink">
-                Categorias
-              </span>
-              {CATEGORIAS.map((item) => {
-                const Icone = ICONE_CATEGORIA[item.slug];
-                const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
-                return (
-                  <Link
-                    key={item.slug}
-                    to="/categorias/$slug"
-                    params={{ slug: item.slug }}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold transition-colors hover:border-ml-blue hover:text-ml-blue"
-                  >
-                    {Icone ? (
-                      <Icone className="size-4" style={{ color: cor }} aria-hidden="true" />
-                    ) : null}
-                    {item.nome}
-                  </Link>
-                );
-              })}
-              <Link
-                to="/categorias"
-                className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ml-blue hover:underline"
+      <main>
+        {/* HOME-V2 (Weslei, 06/10; ajustes de 09/10 pelo modelo final
+          home-v2-final-sem-marcas): degradê azul -> violeta; à esquerda o
+          título e a caixa do link DENTRO do topo, com "Serviço gratuito" logo
+          abaixo; à direita a arte dos fones (sem marca) e "Compare com
+          clareza". Com resultado, o topo encolhe (uma coluna, sem arte) e o
+          degradê fica só atrás do título. A caixa do link nunca muda de lugar
+          na árvore (não perde a comparação em andamento). */}
+        <section aria-label="Melhor Escolha" className="relative overflow-hidden text-white">
+          <span
+            aria-hidden="true"
+            className={
+              "pointer-events-none absolute inset-x-0 top-0 bg-[linear-gradient(105deg,#3d8bfd_0%,#5b6cf5_45%,#a77ff0_100%)] " +
+              (buscaParada ? "bottom-0" : "h-44 sm:h-48")
+            }
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-24 -top-32 size-[28rem] rounded-full bg-[radial-gradient(circle,rgba(255,214,230,0.35),transparent_65%)]"
+          />
+          <div
+            className={
+              "relative mx-auto grid max-w-[1400px] gap-6 px-4 pt-7 sm:px-6 sm:pt-9 lg:px-8 " +
+              (buscaParada
+                ? "pb-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start lg:gap-10 lg:pb-10"
+                : "pb-0")
+            }
+          >
+            <div className="min-w-0">
+              <div className="animate-conteudo">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#21134A]">
+                  <ShieldCheck className="size-3.5" aria-hidden="true" />
+                  Comparador independente
+                </span>
+                {MOSTRAR_CUPONS && atualizado && (
+                  <span className="ml-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                    Atualizado em {atualizado}
+                  </span>
+                )}
+                <h1
+                  className={
+                    "mt-4 font-extrabold leading-[1.02] tracking-tight " +
+                    (buscaParada
+                      ? "text-[2.15rem] sm:text-5xl lg:text-[4.1rem]"
+                      : "text-2xl sm:text-3xl")
+                  }
+                >
+                  O mesmo produto.
+                  <br />
+                  Uma escolha melhor.
+                </h1>
+                {buscaParada && (
+                  <p className="mt-3 max-w-[46ch] text-base leading-snug text-white/95 sm:text-lg">
+                    Compare preços em diferentes lojas do Mercado Livre.
+                    <br className="hidden sm:block" /> Confira as opções antes de comprar.
+                  </p>
+                )}
+              </div>
+              <div
+                className={
+                  "relative z-10 mt-5 text-foreground " +
+                  (buscaParada ? "[&>section]:mx-0 lg:[&>section]:max-w-none" : "")
+                }
               >
-                Ver todas
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
+                <BuscaPorLink aoMudarEstado={setBuscaParada} />
+              </div>
+              <p
+                className={
+                  "mt-3 text-xs " +
+                  (buscaParada ? "text-white/85" : "mx-auto max-w-3xl px-1 text-secondary-ink")
+                }
+              >
+                Serviço gratuito. Posso receber comissão pelas compras feitas nos links, do programa
+                de afiliados.
+              </p>
+              {/* Mensagem única do site (27/09), discreta no topo. */}
+              {buscaParada && (
+                <p className="mt-1.5 max-w-[80ch] text-[11px] leading-relaxed text-white/75">
+                  Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do
+                  Mercado Livre, do mais barato ao mais caro e com a loja oficial (quando houver).
+                  Confiro pela foto, descrição e características para encontrar o mesmo produto.
+                  Parecidos aparecem separados, com a descrição do que muda.
+                </p>
+              )}
+            </div>
+
+            {/* Arte + "Compare com clareza" (PC). No celular a caixa do link vem
+              logo abaixo do título, sem a arte. */}
+            <div className={buscaParada ? "relative hidden lg:block" : "hidden"}>
+              <div className="relative mx-auto aspect-[774/706] w-full max-w-[30rem] [mask-image:radial-gradient(ellipse_75%_80%_at_55%_45%,#000_55%,transparent_100%)]">
+                <img
+                  src="/home/hero-fones.webp"
+                  alt=""
+                  width={774}
+                  height={706}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  fetchPriority="high"
+                />
+              </div>
+              <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/30 bg-white/15 p-4 backdrop-blur-md">
+                <p className="border-b border-white/25 pb-2 text-lg font-bold">
+                  Compare com clareza
+                </p>
+                <ul className="mt-2 space-y-2 text-sm">
+                  <li className="flex items-center gap-2.5">
+                    <Search className="size-4 shrink-0" aria-hidden="true" />
+                    Mesmo produto em diferentes lojas
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
+                    Loja oficial identificada, quando houver
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Package className="size-4 shrink-0" aria-hidden="true" />
+                    Produtos semelhantes em seção separada
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-        </nav>
-      )}
+        </section>
 
-      <main className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="relative z-10 -mt-20 sm:-mt-24">
-          <BuscaPorLink aoMudarEstado={setBuscaParada} />
-        </div>
-        <p className="mx-auto mt-2 max-w-3xl px-1 text-xs text-secondary-ink">
-          Serviço gratuito. Posso receber comissão pelas compras feitas nos links, do programa de
-          afiliados.
-        </p>
-
+        {/* Três passos (modelo final): faixa branca logo abaixo do topo. */}
         {buscaParada && (
-          <>
-            {/* Três passos (home-v2). */}
-            <ol
-              aria-label="Como funciona"
-              className="mt-6 grid gap-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] sm:grid-cols-3 sm:divide-x sm:divide-border sm:p-5"
-            >
+          <section aria-label="Como funciona" className="border-b border-border bg-card">
+            <ol className="mx-auto grid max-w-[1400px] gap-4 px-4 py-5 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border sm:px-6 lg:px-8">
               {[
                 { icone: Link2, titulo: "1. Cole o link", texto: "Do produto que quer comprar." },
                 {
@@ -2007,7 +2008,7 @@ function Index() {
                   texto: "E compre com segurança pelo link.",
                 },
               ].map((p) => (
-                <li key={p.titulo} className="flex items-center gap-3 sm:px-4 first:sm:pl-0">
+                <li key={p.titulo} className="flex items-center gap-3 sm:justify-center sm:px-4">
                   <p.icone className="size-8 shrink-0 text-[#7547E8]" aria-hidden="true" />
                   <span>
                     <span className="block text-base font-bold">{p.titulo}</span>
@@ -2016,8 +2017,48 @@ function Index() {
                 </li>
               ))}
             </ol>
+          </section>
+        )}
 
-            {/* Explore por categoria (home-v2). */}
+        {MOSTRAR_CUPONS && (
+          <nav aria-label="Categorias" className="border-b border-border bg-card">
+            <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-secondary-ink">
+                  Categorias
+                </span>
+                {CATEGORIAS.map((item) => {
+                  const Icone = ICONE_CATEGORIA[item.slug];
+                  const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
+                  return (
+                    <Link
+                      key={item.slug}
+                      to="/categorias/$slug"
+                      params={{ slug: item.slug }}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold transition-colors hover:border-ml-blue hover:text-ml-blue"
+                    >
+                      {Icone ? (
+                        <Icone className="size-4" style={{ color: cor }} aria-hidden="true" />
+                      ) : null}
+                      {item.nome}
+                    </Link>
+                  );
+                })}
+                <Link
+                  to="/categorias"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ml-blue hover:underline"
+                >
+                  Ver todas
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </div>
+            </div>
+          </nav>
+        )}
+
+        <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
+          {buscaParada && (
+            /* Explore por categoria (home-v2), sem arte (09/10). */
             <section aria-labelledby="explore-categoria" className="mt-8">
               <h2 id="explore-categoria" className="text-2xl font-extrabold tracking-tight">
                 Explore por categoria
@@ -2028,229 +2069,804 @@ function Index() {
                   <Link
                     key={c.nome}
                     {...c.link}
-                    className="group relative w-[42%] shrink-0 snap-start overflow-hidden rounded-3xl bg-card p-3 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
+                    className="group flex w-[42%] shrink-0 snap-start flex-col gap-4 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
                   >
-                    <span className="relative block h-24 sm:h-28">
-                      <img
-                        src={c.imagem}
-                        alt=""
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-contain"
-                      />
+                    <span className="flex size-12 items-center justify-center rounded-2xl bg-[#F7F5FC] text-[#7547E8] transition group-hover:bg-[#7547E8] group-hover:text-white">
+                      <c.icone className="size-6" aria-hidden="true" />
                     </span>
-                    <span className="mt-2 flex items-center justify-between gap-2">
+                    <span className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold sm:text-base">{c.nome}</span>
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#F7F5FC] text-[#7547E8] transition group-hover:bg-[#7547E8] group-hover:text-white">
-                        <ChevronRight className="size-4" aria-hidden="true" />
-                      </span>
+                      <ChevronRight
+                        className="size-4 shrink-0 text-[#7547E8] transition group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
                     </span>
                   </Link>
                 ))}
               </div>
             </section>
-          </>
-        )}
+          )}
 
-        {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
+          {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
             caixa e acima das campanhas. */}
-        <BuscaGuiada contexto="home" naHome className="mt-8" />
+          <BuscaGuiada contexto="home" naHome className="mt-8" />
 
-        {/* Temporadas em destaque (Dia das Crianças, Black Friday, Natal):
+          {/* Temporadas em destaque (Dia das Crianças, Black Friday, Natal):
             seções prioritárias, acima da vitrine geral (05/10). */}
-        <VitrineSazonal />
+          <VitrineSazonal />
 
-        {/* Brinquedos por idade (05/10): curadoria do agente, já comparada. */}
-        <BrinquedosPorIdade naHome className="mt-8" />
+          {/* Brinquedos por idade (05/10): curadoria do agente, já comparada. */}
+          <BrinquedosPorIdade naHome className="mt-8" />
 
-        <Vitrine />
+          <Vitrine />
 
-        {/* Convite do Telegram na home só com a caixa parada (com resultado,
+          {/* Convite do Telegram na home só com a caixa parada (com resultado,
             o convite aparece abaixo dele). */}
-        {buscaParada && <ConviteTelegram formato="cartao" origem="home" className="mt-8" />}
-        {buscaParada && <InstalarApp className="mt-4" />}
+          {buscaParada && <ConviteTelegram formato="cartao" origem="home" className="mt-8" />}
+          {buscaParada && <InstalarApp className="mt-4" />}
 
-        {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
+          {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
             da caixa do link. */}
-        <nav aria-label="Acesso rápido" className="mt-8 grid gap-3 sm:grid-cols-3">
-          {[
-            {
-              to: "/meus-precos",
-              icone: TrendingDown,
-              titulo: "Meus preços",
-              texto: "Produtos que você acompanha",
-            },
-            {
-              to: "/guias",
-              icone: BookOpen,
-              titulo: "Guias de compra",
-              texto: "Como escolher sem cair em armadilha",
-            },
-            {
-              to: "/categorias",
-              icone: LayoutGrid,
-              titulo: "Categorias",
-              texto: "Comparações por tipo de produto",
-            },
-          ].map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-ml-blue"
-            >
-              <item.icone className="size-5 shrink-0 text-ml-blue" aria-hidden="true" />
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold">{item.titulo}</span>
-                <span className="block text-xs text-secondary-ink">{item.texto}</span>
-              </span>
-            </Link>
-          ))}
-        </nav>
+          <nav aria-label="Acesso rápido" className="mt-8 grid gap-3 sm:grid-cols-3">
+            {[
+              {
+                to: "/meus-precos",
+                icone: TrendingDown,
+                titulo: "Meus preços",
+                texto: "Produtos que você acompanha",
+              },
+              {
+                to: "/guias",
+                icone: BookOpen,
+                titulo: "Guias de compra",
+                texto: "Como escolher sem cair em armadilha",
+              },
+              {
+                to: "/categorias",
+                icone: LayoutGrid,
+                titulo: "Categorias",
+                texto: "Comparações por tipo de produto",
+              },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-ml-blue"
+              >
+                <item.icone className="size-5 shrink-0 text-ml-blue" aria-hidden="true" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{item.titulo}</span>
+                  <span className="block text-xs text-secondary-ink">{item.texto}</span>
+                </span>
+              </Link>
+            ))}
+          </nav>
 
-        {MOSTRAR_CUPONS && (
-          <>
-            <section
-              className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
-              aria-label="Assistente de cupons"
-            >
-              <div className="flex items-center gap-2">
-                <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
-                <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
-              </div>
-              <form onSubmit={recomendar} className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input
-                  value={pedidoIa}
-                  onChange={(event) => setPedidoIa(event.target.value)}
-                  maxLength={500}
-                  placeholder={`O que você está procurando? Ex: ${SUGESTOES_IA[sugestao % SUGESTOES_IA.length]}`}
-                  aria-label="O que você está procurando?"
-                  className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 transition-colors placeholder:text-muted-foreground placeholder:transition-opacity focus:ring-2"
-                />
-                <Button
-                  disabled={recomendando || pedidoIa.trim().length < 3}
-                  className="min-h-12 bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90"
-                >
-                  <Sparkles aria-hidden="true" />
-                  {recomendando ? "Procurando..." : "Encontrar cupons"}
-                </Button>
-              </form>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-secondary-ink">Experimente:</span>
-                {[0, 1, 2].map((passo) => {
-                  const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
-                  const atual = passo === 0;
-                  return (
-                    <button
-                      key={texto}
-                      type="button"
-                      onClick={() => setPedidoIa(texto)}
-                      className={
-                        atual
-                          ? "animate-sugestao rounded-full border border-ml-blue bg-ml-blue/10 px-3 py-1.5 text-xs font-medium text-ml-blue transition-colors hover:bg-ml-blue/20"
-                          : "animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
-                      }
-                    >
-                      {texto}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-xs text-secondary-ink">
-                A IA escolhe somente entre os cupons recomendados e os filtros ativos.
-              </p>
-              {erroIa && (
-                <p
-                  className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger"
-                  role="alert"
-                >
-                  {erroIa}
+          {MOSTRAR_CUPONS && (
+            <>
+              <section
+                className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
+                aria-label="Assistente de cupons"
+              >
+                <div className="flex items-center gap-2">
+                  <WandSparkles className="size-5 text-ml-blue" aria-hidden="true" />
+                  <h2 className="font-semibold">Encontre uma oportunidade com IA</h2>
+                </div>
+                <form onSubmit={recomendar} className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={pedidoIa}
+                    onChange={(event) => setPedidoIa(event.target.value)}
+                    maxLength={500}
+                    placeholder={`O que você está procurando? Ex: ${SUGESTOES_IA[sugestao % SUGESTOES_IA.length]}`}
+                    aria-label="O que você está procurando?"
+                    className="min-h-12 flex-1 rounded-lg border border-border bg-background px-4 outline-none ring-ring/40 transition-colors placeholder:text-muted-foreground placeholder:transition-opacity focus:ring-2"
+                  />
+                  <Button
+                    disabled={recomendando || pedidoIa.trim().length < 3}
+                    className="min-h-12 bg-ml-blue text-ml-blue-foreground hover:bg-ml-blue/90"
+                  >
+                    <Sparkles aria-hidden="true" />
+                    {recomendando ? "Procurando..." : "Encontrar cupons"}
+                  </Button>
+                </form>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-secondary-ink">Experimente:</span>
+                  {[0, 1, 2].map((passo) => {
+                    const texto = SUGESTOES_IA[(sugestao + passo) % SUGESTOES_IA.length]!;
+                    const atual = passo === 0;
+                    return (
+                      <button
+                        key={texto}
+                        type="button"
+                        onClick={() => setPedidoIa(texto)}
+                        className={
+                          atual
+                            ? "animate-sugestao rounded-full border border-ml-blue bg-ml-blue/10 px-3 py-1.5 text-xs font-medium text-ml-blue transition-colors hover:bg-ml-blue/20"
+                            : "animate-sugestao rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-ml-blue hover:text-ml-blue"
+                        }
+                      >
+                        {texto}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-secondary-ink">
+                  A IA escolhe somente entre os cupons recomendados e os filtros ativos.
                 </p>
-              )}
-            </section>
+                {erroIa && (
+                  <p
+                    className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger"
+                    role="alert"
+                  >
+                    {erroIa}
+                  </p>
+                )}
+              </section>
 
-            <section
-              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-              aria-label="Resumo dos cupons"
-            >
-              <Indicador
-                titulo="Cupons conferidos"
-                valor={indicadores.conferidos.toLocaleString("pt-BR")}
-                detalhe={`de ${indicadores.total.toLocaleString("pt-BR")} cupons de ${indicadores.vendedores.toLocaleString("pt-BR")} lojas`}
-              />
-              <Indicador
-                titulo="Valem a pena"
-                valor={indicadores.bons.toLocaleString("pt-BR")}
-                tom="bom"
-                {...(indicadores.aproveitamento != null
-                  ? { detalhe: `${indicadores.aproveitamento}% dos que eu conferi` }
-                  : {})}
-              />
-              <Indicador
-                titulo="Armadilhas"
-                valor={indicadores.armadilhas.toLocaleString("pt-BR")}
-                tom="armadilha"
-                detalhe="anunciam muito e descontam pouco"
-              />
-              {/* "Ainda na fila" era vocabulário interno: dizia respeito ao meu
+              <section
+                className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                aria-label="Resumo dos cupons"
+              >
+                <Indicador
+                  titulo="Cupons conferidos"
+                  valor={indicadores.conferidos.toLocaleString("pt-BR")}
+                  detalhe={`de ${indicadores.total.toLocaleString("pt-BR")} cupons de ${indicadores.vendedores.toLocaleString("pt-BR")} lojas`}
+                />
+                <Indicador
+                  titulo="Valem a pena"
+                  valor={indicadores.bons.toLocaleString("pt-BR")}
+                  tom="bom"
+                  {...(indicadores.aproveitamento != null
+                    ? { detalhe: `${indicadores.aproveitamento}% dos que eu conferi` }
+                    : {})}
+                />
+                <Indicador
+                  titulo="Armadilhas"
+                  valor={indicadores.armadilhas.toLocaleString("pt-BR")}
+                  tom="armadilha"
+                  detalhe="anunciam muito e descontam pouco"
+                />
+                {/* "Ainda na fila" era vocabulário interno: dizia respeito ao meu
               sistema, não à compra de quem está lendo. Trocado pelo número que
               importa para a pessoa: quantos cupons são bons E têm produto à
               venda na loja agora. */}
-              <Indicador
-                titulo="Com produto no ar"
-                valor={indicadores.comProduto.toLocaleString("pt-BR")}
-                detalhe={
-                  indicadores.vitrineNaFila > 0
-                    ? `mais ${indicadores.vitrineNaFila.toLocaleString("pt-BR")} lojas sendo conferidas`
-                    : "loja conferida: o cupom tem onde ser usado"
-                }
-              />
-            </section>
+                <Indicador
+                  titulo="Com produto no ar"
+                  valor={indicadores.comProduto.toLocaleString("pt-BR")}
+                  detalhe={
+                    indicadores.vitrineNaFila > 0
+                      ? `mais ${indicadores.vitrineNaFila.toLocaleString("pt-BR")} lojas sendo conferidas`
+                      : "loja conferida: o cupom tem onde ser usado"
+                  }
+                />
+              </section>
 
-            {(mensagemIa || escolhidos.length > 0) && (
-              <section
-                className="mt-6 rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5"
-                aria-label="Resultado da busca com IA"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-semibold text-ml-blue">Busca realizada: “{consultaIa}”</h2>
-                    <p className="mt-1 text-sm font-medium">
-                      {escolhidos.length === 0
-                        ? "Nenhum cupom encontrado para essa busca."
-                        : escolhidos.length === 1
-                          ? "1 cupom encontrado para essa busca."
-                          : `${escolhidos.length} cupons encontrados para essa busca.`}
-                    </p>
-                    <p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p>
+              {(mensagemIa || escolhidos.length > 0) && (
+                <section
+                  className="mt-6 rounded-xl border-2 border-ml-blue/30 bg-ml-blue/5 p-4 sm:p-5"
+                  aria-label="Resultado da busca com IA"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-semibold text-ml-blue">
+                        Busca realizada: “{consultaIa}”
+                      </h2>
+                      <p className="mt-1 text-sm font-medium">
+                        {escolhidos.length === 0
+                          ? "Nenhum cupom encontrado para essa busca."
+                          : escolhidos.length === 1
+                            ? "1 cupom encontrado para essa busca."
+                            : `${escolhidos.length} cupons encontrados para essa busca.`}
+                      </p>
+                      <p className="mt-1 text-sm text-secondary-ink">{mensagemIa}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Fechar resultado da busca"
+                      onClick={() => {
+                        setEscolhasIa([]);
+                        setMensagemIa("");
+                        setConsultaIa("");
+                      }}
+                    >
+                      <X aria-hidden="true" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Fechar resultado da busca"
-                    onClick={() => {
-                      setEscolhasIa([]);
-                      setMensagemIa("");
-                      setConsultaIa("");
-                    }}
-                  >
-                    <X aria-hidden="true" />
-                  </Button>
+                  {escolhidos.length > 0 && (
+                    <>
+                      <Button
+                        onClick={irParaColarLink}
+                        size="lg"
+                        className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90"
+                      >
+                        <Link2 className="size-5" aria-hidden="true" />
+                        Escolheu um produto? Cole o link e eu confiro o cupom
+                      </Button>
+                      <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {escolhidos.map(({ cupom, motivo }) => (
+                          <div key={cupom.id} className="flex flex-col gap-2">
+                            <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">
+                              {motivo}
+                            </p>
+                            <CupomCard
+                              cupom={cupom}
+                              agora={agora}
+                              abrirCondicoes={setCupomAberto}
+                              selecionado={selecionados.includes(cupom.id)}
+                              alternarSelecao={alternarSelecao}
+                              limiteAtingido={selecionados.length >= MAX_COMPARACAO}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
+
+              {destaques.length > 0 && (
+                <section
+                  className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
+                  aria-label="Melhor cupom de cada categoria"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
+                    <p className="text-xs text-secondary-ink">
+                      categoria estimada pelo nome da loja
+                    </p>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                    {destaques.map(([categoria, cupom]) => (
+                      <div
+                        key={categoria}
+                        className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCategorias([categoria]);
+                            setVitrine("recomendados");
+                          }}
+                          className="self-start rounded-full border border-ml-blue px-2.5 py-1 text-[11px] font-semibold text-ml-blue"
+                        >
+                          {categoria}
+                        </button>
+                        <p className="mt-2 text-base font-extrabold leading-tight">
+                          {percentualTexto(cupom)}
+                        </p>
+                        <p className="text-xs font-semibold text-success">{economiaCurta(cupom)}</p>
+                        <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
+                          Em produtos de <span className="font-bold">{cupom.vendedor}</span>
+                        </p>
+
+                        {/* CONDICOES SEMPRE A VISTA.
+
+                      Estes cartoes mostravam so o desconto e o vendedor. Sem
+                      compra minima e sem validade, um "R$ 140 OFF" parece
+                      valer para qualquer compra, quando na verdade so entra a
+                      partir de R$ 175. Prometer desconto e esconder a regra e
+                      exatamente o que este site existe para denunciar, entao a
+                      regra anda junto com a promessa, aqui como em todo lugar. */}
+                        <dl className="mt-2 space-y-0.5 text-xs text-secondary-ink">
+                          <div className="flex justify-between gap-2">
+                            <dt>Compra mínima</dt>
+                            <dd className="font-semibold text-foreground">
+                              {cupom.compra_min != null && cupom.compra_min > 0
+                                ? brl.format(cupom.compra_min)
+                                : "não tem"}
+                            </dd>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <dt>Validade</dt>
+                            <dd className="font-semibold text-foreground">
+                              {contagemRegressiva(cupom.vence, agora).texto}
+                            </dd>
+                          </div>
+                        </dl>
+
+                        <AcaoDoCupom
+                          cupom={cupom}
+                          className="mt-3 h-auto min-h-10 w-full whitespace-normal bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setCupomAberto(cupom)}
+                          className="mt-2 inline-flex items-center gap-1 self-start text-xs font-medium text-secondary-ink underline-offset-2 hover:underline"
+                        >
+                          <Info className="size-3.5" aria-hidden="true" />
+                          Condições do cupom
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
+              {lojasDestaque.length > 0 && (
+                <section
+                  className="mt-8 rounded-xl border border-border bg-card p-5"
+                  aria-label="Lojas parceiras"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-base font-bold">Lojas parceiras</h2>
+                    <p className="text-xs text-secondary-ink">
+                      {lojasDisponiveis.length.toLocaleString("pt-BR")} lojas com cupom conferido
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {lojasDestaque.map(([loja, quantidade]) => (
+                      <button
+                        key={loja}
+                        type="button"
+                        aria-pressed={lojas.includes(loja)}
+                        onClick={() => alternarLoja(loja)}
+                        className={cn(
+                          "max-w-full rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                          lojas.includes(loja)
+                            ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                            : "border-border bg-background hover:border-ml-blue",
+                        )}
+                      >
+                        <span className="truncate">{loja}</span> ({quantidade})
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPainelAberto(true);
+                        document
+                          .getElementById("painel-filtros")
+                          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      className="rounded-full border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
+                    >
+                      Ver todas as lojas
+                    </button>
+                    {lojas.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setLojas([])}
+                        className="rounded-full border border-danger px-3 py-1.5 text-xs font-medium text-danger"
+                      >
+                        Limpar lojas
+                      </button>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              <section className="mt-6" aria-label="Filtros de cupons">
+                {/* Barra de controle
+              ================
+              Antes eram 871px de filtros entre a pessoa e o primeiro cupom: busca
+              de loja, lista rolavel, cinco campos numericos, lista de categorias e
+              duas fileiras de chips, tudo aberto. Isso e painel de controle, nao
+              ajuda para quem so quer um desconto.
+
+              Agora fica visivel so o que um comprador usa de verdade — as abas, a
+              contagem, a ordem e os atalhos — e o resto mora na gaveta. A barra
+              gruda no topo porque a lista tem quase 9.000px: sem isso, refinar a
+              busca obriga a rolar tudo de volta. */}
+                <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="flex" role="tablist" aria-label="Qualidade do cupom">
+                      {(
+                        [
+                          ["recomendados", "Recomendados"],
+                          ["todos", "Ver todos"],
+                        ] as const
+                      ).map(([valor, rotulo]) => (
+                        <Button
+                          key={valor}
+                          type="button"
+                          variant="ghost"
+                          role="tab"
+                          aria-selected={vitrine === valor}
+                          onClick={() => setVitrine(valor)}
+                          className={cn(
+                            "h-10 rounded-none border-b-2 px-2 text-sm sm:px-4",
+                            vitrine === valor
+                              ? "border-ml-blue text-ml-blue"
+                              : "border-transparent text-secondary-ink",
+                          )}
+                        >
+                          {rotulo}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <p
+                      key={filtrados.length}
+                      aria-live="polite"
+                      className="animate-contagem rounded px-1.5 py-0.5 text-sm font-semibold"
+                    >
+                      {isLoading
+                        ? "Carregando..."
+                        : filtrados.length === 1
+                          ? "1 cupom"
+                          : `${filtrados.length.toLocaleString("pt-BR")} cupons`}
+                    </p>
+
+                    <div className="ml-auto flex items-center gap-2">
+                      <label className="sr-only" htmlFor="ordenar-cupons">
+                        Ordenar por
+                      </label>
+                      <select
+                        id="ordenar-cupons"
+                        value={ordem}
+                        onChange={(event) => setOrdem(event.target.value as typeof ordem)}
+                        className="h-10 rounded-lg border border-border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                      >
+                        <option value="score">Melhores oportunidades</option>
+                        <option value="desconto">Maior desconto</option>
+                        <option value="teto">Maior teto de desconto</option>
+                        <option value="orcamento">Maior orçamento</option>
+                        <option value="termina">Termina primeiro</option>
+                        <option value="vendedor">Vendedor A-Z</option>
+                      </select>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-expanded={painelAberto}
+                        aria-controls="painel-filtros"
+                        onClick={() => setPainelAberto((aberto) => !aberto)}
+                        className="h-10 gap-1.5"
+                      >
+                        <SlidersHorizontal aria-hidden="true" className="size-4" />
+                        Filtros
+                        {quantosFiltros > 0 && (
+                          <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-ml-blue px-1.5 text-xs font-bold text-white">
+                            {quantosFiltros}
+                          </span>
+                        )}
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={cn(
+                            "size-4 transition-transform duration-300",
+                            painelAberto && "rotate-180",
+                          )}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Atalhos: e o que um comprador de verdade usa. Ficam de fora da
+                gaveta, em uma tira que rola de lado no celular. */}
+                  <div className="-mx-1 mt-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {ETIQUETAS.filter(
+                      (etiqueta) =>
+                        (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 ||
+                        etiquetas.includes(etiqueta.id),
+                    ).map((etiqueta) => (
+                      <button
+                        key={etiqueta.id}
+                        type="button"
+                        aria-pressed={etiquetas.includes(etiqueta.id)}
+                        onClick={() => alternarEtiqueta(etiqueta.id)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                          etiquetas.includes(etiqueta.id)
+                            ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                            : etiqueta.id === "cometiqueta"
+                              ? "border-success bg-success/10 font-bold text-success hover:bg-success/20"
+                              : "border-border bg-card hover:border-ml-blue",
+                        )}
+                      >
+                        {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
+                      </button>
+                    ))}
+                    {filtrosAtivos && (
+                      <button
+                        type="button"
+                        onClick={limparFiltros}
+                        className="shrink-0 rounded-full border border-danger px-3 py-1 text-xs font-medium text-danger"
+                      >
+                        Limpar tudo
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {escolhidos.length > 0 && (
-                  <>
+
+                {/* A gaveta: aberta so quando a pessoa pede */}
+                <div id="painel-filtros" className={cn("gaveta", painelAberto && "gaveta-aberta")}>
+                  <div>
+                    <div className="pb-1 pt-3">
+                      <div className="mt-4">
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            value={texto}
+                            onChange={(event) => setTexto(event.target.value)}
+                            inputMode="search"
+                            aria-label="Buscar loja"
+                            placeholder="Buscar loja e marcar na lista abaixo"
+                            className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
+                          />
+                        </div>
+
+                        {lojas.length > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {lojas.map((loja) => (
+                              <button
+                                key={loja}
+                                type="button"
+                                onClick={() => alternarLoja(loja)}
+                                className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
+                                aria-label={`Remover a loja ${loja} da seleção`}
+                              >
+                                <span className="truncate">{loja}</span>
+                                <X aria-hidden="true" className="size-3" />
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setLojas([])}
+                              className="text-xs font-medium text-secondary-ink underline"
+                            >
+                              Limpar lojas
+                            </button>
+                          </div>
+                        )}
+
+                        <div
+                          className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1"
+                          role="group"
+                          aria-label="Lista de lojas"
+                        >
+                          {lojasFiltradas.length === 0 ? (
+                            <p className="px-3 py-2 text-sm text-secondary-ink">
+                              Nenhuma loja com esse nome.
+                            </p>
+                          ) : (
+                            lojasFiltradas.map(([loja, quantidade]) => (
+                              <label
+                                key={loja}
+                                className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={lojas.includes(loja)}
+                                  onChange={() => alternarLoja(loja)}
+                                  className="size-4 accent-[var(--ml-blue)]"
+                                />
+                                <span className="min-w-0 flex-1 truncate">{loja}</span>
+                                <span className="shrink-0 text-xs text-secondary-ink">
+                                  {quantidade}
+                                </span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-secondary-ink">
+                          Marque uma ou mais lojas para filtrar os cupons.
+                        </p>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+                        <Campo rotulo="Tipo">
+                          <select
+                            value={tipo}
+                            onChange={(event) => setTipo(event.target.value as typeof tipo)}
+                            className="campo-filtro"
+                          >
+                            <option value="todos">Todos</option>
+                            <option value="%">Só %</option>
+                            <option value="R$">Só R$</option>
+                          </select>
+                        </Campo>
+                        <Campo rotulo="Desconto mínimo">
+                          <InputNumero valor={descontoMin} aoMudar={setDescontoMin} />
+                        </Campo>
+                        <Campo rotulo="Orçamento mínimo (R$)">
+                          <InputNumero valor={orcamentoMin} aoMudar={setOrcamentoMin} />
+                        </Campo>
+                        <Campo rotulo="Teto mínimo (R$)">
+                          <InputNumero valor={tetoMin} aoMudar={setTetoMin} />
+                        </Campo>
+                        <Campo rotulo="Compra máxima que aceito (R$)">
+                          <InputNumero valor={compraMax} aoMudar={setCompraMax} />
+                        </Campo>
+                      </div>
+
+                      {categoriasDisponiveis.length > 0 && (
+                        <div className="mt-5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-secondary-ink">
+                              Categorias — organizadas pela IA a partir do nome da loja
+                            </p>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={classificando}
+                              onClick={classificar}
+                              className="h-8 px-2 text-xs text-ml-blue"
+                            >
+                              <WandSparkles aria-hidden="true" className="size-4" />
+                              {classificando ? "Organizando..." : "Organizar categorias com IA"}
+                            </Button>
+                            {categorias.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setCategorias([])}
+                                className="text-xs font-medium text-secondary-ink underline"
+                              >
+                                Limpar categorias
+                              </button>
+                            )}
+                          </div>
+                          <div
+                            className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1"
+                            role="group"
+                            aria-label="Lista de categorias"
+                          >
+                            {categoriasDisponiveis.map(([categoria, quantidade]) => (
+                              <label
+                                key={categoria}
+                                className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={categorias.includes(categoria)}
+                                  onChange={() => alternarCategoria(categoria)}
+                                  className="size-4 accent-[var(--ml-blue)]"
+                                />
+                                <span className="min-w-0 flex-1 truncate">{categoria}</span>
+                                <span className="shrink-0 text-xs text-secondary-ink">
+                                  {quantidade}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-5">
+                        <p className="text-xs font-semibold text-secondary-ink">
+                          Faixa de economia real
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {FAIXAS.filter(
+                            (faixa) =>
+                              (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id),
+                          ).map((faixa) => (
+                            <button
+                              key={faixa.id}
+                              type="button"
+                              aria-pressed={faixas.includes(faixa.id)}
+                              onClick={() => alternarFaixa(faixa.id)}
+                              className={cn(
+                                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                                faixas.includes(faixa.id)
+                                  ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
+                                  : "border-border bg-card hover:border-ml-blue",
+                              )}
+                            >
+                              {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="mt-4" aria-label="Cupons encontrados">
+                {indicadores.total > 0 && (
+                  <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
+                    Analisei {indicadores.total.toLocaleString("pt-BR")}{" "}
+                    {indicadores.total === 1 ? "cupom" : "cupons"}.{" "}
+                    {indicadores.armadilhas === 1
+                      ? "1 desconta pouco demais para valer a pena."
+                      : `${indicadores.armadilhas.toLocaleString("pt-BR")} descontam pouco demais para valer a pena.`}{" "}
+                    {indicadores.bons === 1
+                      ? "O que passou no teste está aqui embaixo."
+                      : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
+                  </p>
+                )}
+                <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-secondary-ink">
+                  <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
+                  <ul className="mt-1 space-y-1">
+                    <li>
+                      <strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da
+                      compra. Acima disso o desconto não aumenta.
+                    </li>
+                    <li>
+                      <strong>Sem limite de valor</strong>: o percentual vale sobre o valor todo da
+                      compra.
+                    </li>
+                    <li>
+                      <strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo
+                      antes de gerar para você.
+                    </li>
+                  </ul>
+                </div>
+                {armadilhasDaBusca.length > 0 && (
+                  <div
+                    className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger"
+                    role="alert"
+                  >
+                    <strong>Atenção:</strong>{" "}
+                    {armadilhasDaBusca.map((cupom, indice) => {
+                      const limite = tetoUtil(cupom);
+                      return (
+                        <span key={cupom.id}>
+                          {indice > 0 ? " · " : ""}
+                          {cupom.vendedor}:{" "}
+                          {limite != null
+                            ? `este cupom desconta no máximo ${brl.format(limite)}.`
+                            : "este cupom não informa o limite real de desconto."}{" "}
+                          Não recomendo usá-lo como argumento de venda.
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                {error && !cupons.length ? (
+                  <Aviso
+                    titulo="Carregando os cupons"
+                    texto="A conexão falhou e estou tentando de novo sozinho. Deixe esta página aberta: assim que voltar, a lista aparece."
+                  >
+                    <Button
+                      onClick={() => void refetch()}
+                      className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+                    >
+                      Tentar agora
+                    </Button>
+                  </Aviso>
+                ) : isLoading ? (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, indice) => (
+                      <div key={indice} className="h-56 animate-pulse rounded-lg bg-muted" />
+                    ))}
+                  </div>
+                ) : !cupons.length ? (
+                  <Aviso
+                    titulo="Nenhum cupom cadastrado ainda"
+                    texto="Assim que os cupons forem carregados, eles aparecem aqui automaticamente."
+                  />
+                ) : !filtrados.length ? (
+                  <Aviso
+                    titulo="Nenhum resultado para esses filtros"
+                    texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
+                  >
                     <Button
                       onClick={irParaColarLink}
-                      size="lg"
-                      className="mt-4 h-auto min-h-12 w-full whitespace-normal bg-ml-blue py-3 text-base font-bold text-white hover:bg-ml-blue/90"
+                      className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
                     >
                       <Link2 className="size-5" aria-hidden="true" />
-                      Escolheu um produto? Cole o link e eu confiro o cupom
+                      Colar o link do produto
                     </Button>
-                    <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {escolhidos.map(({ cupom, motivo }) => (
-                        <div key={cupom.id} className="flex flex-col gap-2">
-                          <p className="rounded-md bg-card px-3 py-2 text-sm font-medium">
-                            {motivo}
-                          </p>
+                  </Aviso>
+                ) : (
+                  <>
+                    <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-ml-blue/40 bg-ml-blue/10 p-4 sm:flex-row sm:items-center">
+                      <p className="text-sm font-medium">
+                        Não achou a loja aqui? Cole o link do anúncio que você quer: eu confiro o
+                        cupom daquele vendedor na hora.
+                      </p>
+                      <Button
+                        onClick={irParaColarLink}
+                        className="h-auto min-h-11 shrink-0 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
+                      >
+                        <Link2 className="size-5" aria-hidden="true" />
+                        Colar o link do produto
+                      </Button>
+                    </div>
+                    <div
+                      key={`${paginaAtual}-${filtrados.length}`}
+                      className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                    >
+                      {visiveis.map((cupom, indice) => (
+                        <div
+                          key={cupom.id}
+                          className="animate-cartao h-full"
+                          style={{ animationDelay: `${Math.min(indice, 11) * 35}ms` }}
+                        >
                           <CupomCard
                             cupom={cupom}
                             agora={agora}
@@ -2262,612 +2878,37 @@ function Index() {
                         </div>
                       ))}
                     </div>
+
+                    {totalPaginas > 1 && (
+                      <nav
+                        className="mt-6 flex items-center justify-between gap-3"
+                        aria-label="Paginação"
+                      >
+                        <Button
+                          variant="outline"
+                          onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
+                          disabled={paginaAtual === 1}
+                        >
+                          Anterior
+                        </Button>
+                        <span className="text-sm text-secondary-ink">
+                          Página {paginaAtual} de {totalPaginas}
+                        </span>
+                        <Button
+                          variant="outline"
+                          onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
+                          disabled={paginaAtual === totalPaginas}
+                        >
+                          Próxima
+                        </Button>
+                      </nav>
+                    )}
                   </>
                 )}
               </section>
-            )}
-
-            {destaques.length > 0 && (
-              <section
-                className="mt-8 rounded-xl border border-border bg-card p-5 sm:p-6"
-                aria-label="Melhor cupom de cada categoria"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="font-semibold">Curadoria: o melhor cupom de cada categoria</h2>
-                  <p className="text-xs text-secondary-ink">categoria estimada pelo nome da loja</p>
-                </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                  {destaques.map(([categoria, cupom]) => (
-                    <div
-                      key={categoria}
-                      className="flex min-w-0 flex-col rounded-lg border border-border bg-background p-3"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCategorias([categoria]);
-                          setVitrine("recomendados");
-                        }}
-                        className="self-start rounded-full border border-ml-blue px-2.5 py-1 text-[11px] font-semibold text-ml-blue"
-                      >
-                        {categoria}
-                      </button>
-                      <p className="mt-2 text-base font-extrabold leading-tight">
-                        {percentualTexto(cupom)}
-                      </p>
-                      <p className="text-xs font-semibold text-success">{economiaCurta(cupom)}</p>
-                      <p className="mt-1 min-w-0 break-words text-sm [overflow-wrap:anywhere]">
-                        Em produtos de <span className="font-bold">{cupom.vendedor}</span>
-                      </p>
-
-                      {/* CONDICOES SEMPRE A VISTA.
-
-                      Estes cartoes mostravam so o desconto e o vendedor. Sem
-                      compra minima e sem validade, um "R$ 140 OFF" parece
-                      valer para qualquer compra, quando na verdade so entra a
-                      partir de R$ 175. Prometer desconto e esconder a regra e
-                      exatamente o que este site existe para denunciar, entao a
-                      regra anda junto com a promessa, aqui como em todo lugar. */}
-                      <dl className="mt-2 space-y-0.5 text-xs text-secondary-ink">
-                        <div className="flex justify-between gap-2">
-                          <dt>Compra mínima</dt>
-                          <dd className="font-semibold text-foreground">
-                            {cupom.compra_min != null && cupom.compra_min > 0
-                              ? brl.format(cupom.compra_min)
-                              : "não tem"}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt>Validade</dt>
-                          <dd className="font-semibold text-foreground">
-                            {contagemRegressiva(cupom.vence, agora).texto}
-                          </dd>
-                        </div>
-                      </dl>
-
-                      <AcaoDoCupom
-                        cupom={cupom}
-                        className="mt-3 h-auto min-h-10 w-full whitespace-normal bg-ml-blue px-3 py-2 text-sm font-bold text-white hover:bg-ml-blue/90"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => setCupomAberto(cupom)}
-                        className="mt-2 inline-flex items-center gap-1 self-start text-xs font-medium text-secondary-ink underline-offset-2 hover:underline"
-                      >
-                        <Info className="size-3.5" aria-hidden="true" />
-                        Condições do cupom
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Lojas parceiras a vista: atalho direto, sem abrir gaveta nenhuma. */}
-            {lojasDestaque.length > 0 && (
-              <section
-                className="mt-8 rounded-xl border border-border bg-card p-5"
-                aria-label="Lojas parceiras"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-base font-bold">Lojas parceiras</h2>
-                  <p className="text-xs text-secondary-ink">
-                    {lojasDisponiveis.length.toLocaleString("pt-BR")} lojas com cupom conferido
-                  </p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {lojasDestaque.map(([loja, quantidade]) => (
-                    <button
-                      key={loja}
-                      type="button"
-                      aria-pressed={lojas.includes(loja)}
-                      onClick={() => alternarLoja(loja)}
-                      className={cn(
-                        "max-w-full rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                        lojas.includes(loja)
-                          ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
-                          : "border-border bg-background hover:border-ml-blue",
-                      )}
-                    >
-                      <span className="truncate">{loja}</span> ({quantidade})
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPainelAberto(true);
-                      document
-                        .getElementById("painel-filtros")
-                        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                    className="rounded-full border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
-                  >
-                    Ver todas as lojas
-                  </button>
-                  {lojas.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setLojas([])}
-                      className="rounded-full border border-danger px-3 py-1.5 text-xs font-medium text-danger"
-                    >
-                      Limpar lojas
-                    </button>
-                  )}
-                </div>
-              </section>
-            )}
-
-            <section className="mt-6" aria-label="Filtros de cupons">
-              {/* Barra de controle
-              ================
-              Antes eram 871px de filtros entre a pessoa e o primeiro cupom: busca
-              de loja, lista rolavel, cinco campos numericos, lista de categorias e
-              duas fileiras de chips, tudo aberto. Isso e painel de controle, nao
-              ajuda para quem so quer um desconto.
-
-              Agora fica visivel so o que um comprador usa de verdade — as abas, a
-              contagem, a ordem e os atalhos — e o resto mora na gaveta. A barra
-              gruda no topo porque a lista tem quase 9.000px: sem isso, refinar a
-              busca obriga a rolar tudo de volta. */}
-              <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <div className="flex" role="tablist" aria-label="Qualidade do cupom">
-                    {(
-                      [
-                        ["recomendados", "Recomendados"],
-                        ["todos", "Ver todos"],
-                      ] as const
-                    ).map(([valor, rotulo]) => (
-                      <Button
-                        key={valor}
-                        type="button"
-                        variant="ghost"
-                        role="tab"
-                        aria-selected={vitrine === valor}
-                        onClick={() => setVitrine(valor)}
-                        className={cn(
-                          "h-10 rounded-none border-b-2 px-2 text-sm sm:px-4",
-                          vitrine === valor
-                            ? "border-ml-blue text-ml-blue"
-                            : "border-transparent text-secondary-ink",
-                        )}
-                      >
-                        {rotulo}
-                      </Button>
-                    ))}
-                  </div>
-
-                  <p
-                    key={filtrados.length}
-                    aria-live="polite"
-                    className="animate-contagem rounded px-1.5 py-0.5 text-sm font-semibold"
-                  >
-                    {isLoading
-                      ? "Carregando..."
-                      : filtrados.length === 1
-                        ? "1 cupom"
-                        : `${filtrados.length.toLocaleString("pt-BR")} cupons`}
-                  </p>
-
-                  <div className="ml-auto flex items-center gap-2">
-                    <label className="sr-only" htmlFor="ordenar-cupons">
-                      Ordenar por
-                    </label>
-                    <select
-                      id="ordenar-cupons"
-                      value={ordem}
-                      onChange={(event) => setOrdem(event.target.value as typeof ordem)}
-                      className="h-10 rounded-lg border border-border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                    >
-                      <option value="score">Melhores oportunidades</option>
-                      <option value="desconto">Maior desconto</option>
-                      <option value="teto">Maior teto de desconto</option>
-                      <option value="orcamento">Maior orçamento</option>
-                      <option value="termina">Termina primeiro</option>
-                      <option value="vendedor">Vendedor A-Z</option>
-                    </select>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      aria-expanded={painelAberto}
-                      aria-controls="painel-filtros"
-                      onClick={() => setPainelAberto((aberto) => !aberto)}
-                      className="h-10 gap-1.5"
-                    >
-                      <SlidersHorizontal aria-hidden="true" className="size-4" />
-                      Filtros
-                      {quantosFiltros > 0 && (
-                        <span className="ml-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-ml-blue px-1.5 text-xs font-bold text-white">
-                          {quantosFiltros}
-                        </span>
-                      )}
-                      <ChevronDown
-                        aria-hidden="true"
-                        className={cn(
-                          "size-4 transition-transform duration-300",
-                          painelAberto && "rotate-180",
-                        )}
-                      />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Atalhos: e o que um comprador de verdade usa. Ficam de fora da
-                gaveta, em uma tira que rola de lado no celular. */}
-                <div className="-mx-1 mt-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {ETIQUETAS.filter(
-                    (etiqueta) =>
-                      (contagensEtiqueta.get(etiqueta.id) ?? 0) > 0 ||
-                      etiquetas.includes(etiqueta.id),
-                  ).map((etiqueta) => (
-                    <button
-                      key={etiqueta.id}
-                      type="button"
-                      aria-pressed={etiquetas.includes(etiqueta.id)}
-                      onClick={() => alternarEtiqueta(etiqueta.id)}
-                      className={cn(
-                        "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                        etiquetas.includes(etiqueta.id)
-                          ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
-                          : etiqueta.id === "cometiqueta"
-                            ? "border-success bg-success/10 font-bold text-success hover:bg-success/20"
-                            : "border-border bg-card hover:border-ml-blue",
-                      )}
-                    >
-                      {etiqueta.rotulo} ({contagensEtiqueta.get(etiqueta.id) ?? 0})
-                    </button>
-                  ))}
-                  {filtrosAtivos && (
-                    <button
-                      type="button"
-                      onClick={limparFiltros}
-                      className="shrink-0 rounded-full border border-danger px-3 py-1 text-xs font-medium text-danger"
-                    >
-                      Limpar tudo
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* A gaveta: aberta so quando a pessoa pede */}
-              <div id="painel-filtros" className={cn("gaveta", painelAberto && "gaveta-aberta")}>
-                <div>
-                  <div className="pb-1 pt-3">
-                    <div className="mt-4">
-                      <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                          value={texto}
-                          onChange={(event) => setTexto(event.target.value)}
-                          inputMode="search"
-                          aria-label="Buscar loja"
-                          placeholder="Buscar loja e marcar na lista abaixo"
-                          className="w-full rounded-lg border border-border bg-card py-3 pl-11 pr-4 text-base outline-none ring-ring/40 placeholder:text-muted-foreground focus:ring-2"
-                        />
-                      </div>
-
-                      {lojas.length > 0 && (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {lojas.map((loja) => (
-                            <button
-                              key={loja}
-                              type="button"
-                              onClick={() => alternarLoja(loja)}
-                              className="inline-flex max-w-full items-center gap-1 rounded-full border border-ml-blue bg-ml-blue px-3 py-1 text-xs font-medium text-ml-blue-foreground"
-                              aria-label={`Remover a loja ${loja} da seleção`}
-                            >
-                              <span className="truncate">{loja}</span>
-                              <X aria-hidden="true" className="size-3" />
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => setLojas([])}
-                            className="text-xs font-medium text-secondary-ink underline"
-                          >
-                            Limpar lojas
-                          </button>
-                        </div>
-                      )}
-
-                      <div
-                        className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1"
-                        role="group"
-                        aria-label="Lista de lojas"
-                      >
-                        {lojasFiltradas.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-secondary-ink">
-                            Nenhuma loja com esse nome.
-                          </p>
-                        ) : (
-                          lojasFiltradas.map(([loja, quantidade]) => (
-                            <label
-                              key={loja}
-                              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={lojas.includes(loja)}
-                                onChange={() => alternarLoja(loja)}
-                                className="size-4 accent-[var(--ml-blue)]"
-                              />
-                              <span className="min-w-0 flex-1 truncate">{loja}</span>
-                              <span className="shrink-0 text-xs text-secondary-ink">
-                                {quantidade}
-                              </span>
-                            </label>
-                          ))
-                        )}
-                      </div>
-                      <p className="mt-1 text-xs text-secondary-ink">
-                        Marque uma ou mais lojas para filtrar os cupons.
-                      </p>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-                      <Campo rotulo="Tipo">
-                        <select
-                          value={tipo}
-                          onChange={(event) => setTipo(event.target.value as typeof tipo)}
-                          className="campo-filtro"
-                        >
-                          <option value="todos">Todos</option>
-                          <option value="%">Só %</option>
-                          <option value="R$">Só R$</option>
-                        </select>
-                      </Campo>
-                      <Campo rotulo="Desconto mínimo">
-                        <InputNumero valor={descontoMin} aoMudar={setDescontoMin} />
-                      </Campo>
-                      <Campo rotulo="Orçamento mínimo (R$)">
-                        <InputNumero valor={orcamentoMin} aoMudar={setOrcamentoMin} />
-                      </Campo>
-                      <Campo rotulo="Teto mínimo (R$)">
-                        <InputNumero valor={tetoMin} aoMudar={setTetoMin} />
-                      </Campo>
-                      <Campo rotulo="Compra máxima que aceito (R$)">
-                        <InputNumero valor={compraMax} aoMudar={setCompraMax} />
-                      </Campo>
-                    </div>
-
-                    {categoriasDisponiveis.length > 0 && (
-                      <div className="mt-5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-secondary-ink">
-                            Categorias — organizadas pela IA a partir do nome da loja
-                          </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={classificando}
-                            onClick={classificar}
-                            className="h-8 px-2 text-xs text-ml-blue"
-                          >
-                            <WandSparkles aria-hidden="true" className="size-4" />
-                            {classificando ? "Organizando..." : "Organizar categorias com IA"}
-                          </Button>
-                          {categorias.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setCategorias([])}
-                              className="text-xs font-medium text-secondary-ink underline"
-                            >
-                              Limpar categorias
-                            </button>
-                          )}
-                        </div>
-                        <div
-                          className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border bg-card p-1"
-                          role="group"
-                          aria-label="Lista de categorias"
-                        >
-                          {categoriasDisponiveis.map(([categoria, quantidade]) => (
-                            <label
-                              key={categoria}
-                              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={categorias.includes(categoria)}
-                                onChange={() => alternarCategoria(categoria)}
-                                className="size-4 accent-[var(--ml-blue)]"
-                              />
-                              <span className="min-w-0 flex-1 truncate">{categoria}</span>
-                              <span className="shrink-0 text-xs text-secondary-ink">
-                                {quantidade}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="mt-5">
-                      <p className="text-xs font-semibold text-secondary-ink">
-                        Faixa de economia real
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {FAIXAS.filter(
-                          (faixa) =>
-                            (contagensFaixa.get(faixa.id) ?? 0) > 0 || faixas.includes(faixa.id),
-                        ).map((faixa) => (
-                          <button
-                            key={faixa.id}
-                            type="button"
-                            aria-pressed={faixas.includes(faixa.id)}
-                            onClick={() => alternarFaixa(faixa.id)}
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                              faixas.includes(faixa.id)
-                                ? "border-ml-blue bg-ml-blue text-ml-blue-foreground"
-                                : "border-border bg-card hover:border-ml-blue",
-                            )}
-                          >
-                            {faixa.rotulo} ({contagensFaixa.get(faixa.id) ?? 0})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="mt-4" aria-label="Cupons encontrados">
-              {indicadores.total > 0 && (
-                <p className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-secondary-ink">
-                  Analisei {indicadores.total.toLocaleString("pt-BR")}{" "}
-                  {indicadores.total === 1 ? "cupom" : "cupons"}.{" "}
-                  {indicadores.armadilhas === 1
-                    ? "1 desconta pouco demais para valer a pena."
-                    : `${indicadores.armadilhas.toLocaleString("pt-BR")} descontam pouco demais para valer a pena.`}{" "}
-                  {indicadores.bons === 1
-                    ? "O que passou no teste está aqui embaixo."
-                    : `Os ${indicadores.bons.toLocaleString("pt-BR")} que passaram no teste estão aqui embaixo.`}
-                </p>
-              )}
-              <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-secondary-ink">
-                <p className="font-semibold text-foreground">Como ler o valor do desconto</p>
-                <ul className="mt-1 space-y-1">
-                  <li>
-                    <strong>Economize até R$ X</strong>: esse é o máximo que o cupom tira da compra.
-                    Acima disso o desconto não aumenta.
-                  </li>
-                  <li>
-                    <strong>Sem limite de valor</strong>: o percentual vale sobre o valor todo da
-                    compra.
-                  </li>
-                  <li>
-                    <strong>Limite não informado</strong>: o cupom não diz o máximo. Eu confirmo
-                    antes de gerar para você.
-                  </li>
-                </ul>
-              </div>
-              {armadilhasDaBusca.length > 0 && (
-                <div
-                  className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger"
-                  role="alert"
-                >
-                  <strong>Atenção:</strong>{" "}
-                  {armadilhasDaBusca.map((cupom, indice) => {
-                    const limite = tetoUtil(cupom);
-                    return (
-                      <span key={cupom.id}>
-                        {indice > 0 ? " · " : ""}
-                        {cupom.vendedor}:{" "}
-                        {limite != null
-                          ? `este cupom desconta no máximo ${brl.format(limite)}.`
-                          : "este cupom não informa o limite real de desconto."}{" "}
-                        Não recomendo usá-lo como argumento de venda.
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              {error && !cupons.length ? (
-                <Aviso
-                  titulo="Carregando os cupons"
-                  texto="A conexão falhou e estou tentando de novo sozinho. Deixe esta página aberta: assim que voltar, a lista aparece."
-                >
-                  <Button
-                    onClick={() => void refetch()}
-                    className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
-                  >
-                    Tentar agora
-                  </Button>
-                </Aviso>
-              ) : isLoading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, indice) => (
-                    <div key={indice} className="h-56 animate-pulse rounded-lg bg-muted" />
-                  ))}
-                </div>
-              ) : !cupons.length ? (
-                <Aviso
-                  titulo="Nenhum cupom cadastrado ainda"
-                  texto="Assim que os cupons forem carregados, eles aparecem aqui automaticamente."
-                />
-              ) : !filtrados.length ? (
-                <Aviso
-                  titulo="Nenhum resultado para esses filtros"
-                  texto="Tente outro vendedor ou ajuste os limites de desconto, teto e compra."
-                >
-                  <Button
-                    onClick={irParaColarLink}
-                    className="mt-4 h-auto min-h-11 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
-                  >
-                    <Link2 className="size-5" aria-hidden="true" />
-                    Colar o link do produto
-                  </Button>
-                </Aviso>
-              ) : (
-                <>
-                  <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-ml-blue/40 bg-ml-blue/10 p-4 sm:flex-row sm:items-center">
-                    <p className="text-sm font-medium">
-                      Não achou a loja aqui? Cole o link do anúncio que você quer: eu confiro o
-                      cupom daquele vendedor na hora.
-                    </p>
-                    <Button
-                      onClick={irParaColarLink}
-                      className="h-auto min-h-11 shrink-0 bg-ml-blue px-4 py-2 font-bold text-white hover:bg-ml-blue/90"
-                    >
-                      <Link2 className="size-5" aria-hidden="true" />
-                      Colar o link do produto
-                    </Button>
-                  </div>
-                  <div
-                    key={`${paginaAtual}-${filtrados.length}`}
-                    className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-                  >
-                    {visiveis.map((cupom, indice) => (
-                      <div
-                        key={cupom.id}
-                        className="animate-cartao h-full"
-                        style={{ animationDelay: `${Math.min(indice, 11) * 35}ms` }}
-                      >
-                        <CupomCard
-                          cupom={cupom}
-                          agora={agora}
-                          abrirCondicoes={setCupomAberto}
-                          selecionado={selecionados.includes(cupom.id)}
-                          alternarSelecao={alternarSelecao}
-                          limiteAtingido={selecionados.length >= MAX_COMPARACAO}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {totalPaginas > 1 && (
-                    <nav
-                      className="mt-6 flex items-center justify-between gap-3"
-                      aria-label="Paginação"
-                    >
-                      <Button
-                        variant="outline"
-                        onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
-                        disabled={paginaAtual === 1}
-                      >
-                        Anterior
-                      </Button>
-                      <span className="text-sm text-secondary-ink">
-                        Página {paginaAtual} de {totalPaginas}
-                      </span>
-                      <Button
-                        variant="outline"
-                        onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
-                        disabled={paginaAtual === totalPaginas}
-                      >
-                        Próxima
-                      </Button>
-                    </nav>
-                  )}
-                </>
-              )}
-            </section>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </main>
 
       <section aria-label="Perguntas frequentes" className="border-t border-border bg-background">

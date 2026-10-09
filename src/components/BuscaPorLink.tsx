@@ -780,10 +780,10 @@ function ContinuarDeOndeParou({
 }) {
   if (!lista.length) return null;
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-secondary-ink">
+    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3 text-xs text-secondary-ink">
       <span className="inline-flex items-center gap-1 font-medium">
         <History className="size-3.5" aria-hidden="true" />
-        Continuar de onde parou:
+        Buscas recentes:
       </span>
       {lista.slice(0, 4).map((h) => (
         <button
@@ -791,7 +791,7 @@ function ContinuarDeOndeParou({
           type="button"
           onClick={() => comparar(h.url)}
           title="Comparar de novo com o preço de agora"
-          className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 font-medium text-foreground transition-colors hover:border-ml-blue hover:bg-muted"
+          className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EEE9FD] px-3.5 py-1.5 font-medium text-[#21134A] transition-colors hover:bg-[#7547E8] hover:text-white dark:bg-white/10 dark:text-foreground"
         >
           <span className="max-w-[140px] truncate">{h.titulo}</span>
           {h.economia != null && (

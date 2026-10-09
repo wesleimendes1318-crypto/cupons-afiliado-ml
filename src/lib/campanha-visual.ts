@@ -238,7 +238,6 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "O mesmo produto, na loja mais em conta.",
     descricao:
       "Eletrônicos já comparados entre as lojas, com a loja oficial quando houver e o frete indicado.",
-    imagem: { src: "/campanhas/estudio-tecnologia.webp", largura: 760, altura: 690, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(tecnologia|tech|eletr[oô]nicos?|inform[aá]tica|celular|smartphone|iphone|galaxy|notebook|tablet|fone|headphone|smartwatch|caixa de som|jbl|monitor|teclado|mouse|gamer|console|tv|smart ?tv|ssd)\b/i,
@@ -251,7 +250,6 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "Escolhas comparadas, preço justo.",
     descricao:
       "Decoração e utilidades já comparadas com as outras lojas, do mesmo produto ao melhor preço encontrado.",
-    imagem: { src: "/campanhas/estudio-casa.webp", largura: 760, altura: 690, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(casa|decora[cç][aã]o|m[oó]veis?|cozinha|banheiro|quarto|sala|cama|mesa|banho|lumin[aá]ria|lumin[aá]rias|tapete|cortina|vaso|almofada|organizador|panela|jogo de cama|toalha|air ?fryer|cafeteira|aspirador)\b/i,
@@ -264,7 +262,6 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "O mesmo produto, na loja certa.",
     descricao:
       "Perfumes, maquiagem e cuidados já comparados com as outras lojas, com a loja oficial quando houver.",
-    imagem: { src: "/campanhas/estudio-beleza.webp", largura: 760, altura: 690, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(beleza|perfumes?|col[oô]nia|eau de (parfum|toilette)|maquiagem|batom|base l[ií]quida|skincare|hidratante|s[eé]rum|shampoo|condicionador|cabelo|botic[aá]rio|natura|lanc[oô]me|wella|kit de banho)\b/i,
