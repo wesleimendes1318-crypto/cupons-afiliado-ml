@@ -11,6 +11,7 @@ import {
 } from "@/lib/qualidade";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { menorPrecoDoColado } from "@/lib/menor-preco";
+import { precoMuitoAbaixo, precosDoMesmoProduto } from "@/lib/preco-suspeito";
 import { descontoReal } from "@/lib/regra-economia";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
@@ -41,7 +42,7 @@ const POR_CHAMADA = 2;
 const DIAS_SEM_REPETIR = 7;
 const FRESCO_MS = 3 * 3600_000;
 const CRITERIOS =
-  "garimpo-v4 (05/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete gratis confirmado, conferida <= 3 h";
+  "garimpo-v5 (09/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete gratis confirmado, conferida <= 3 h, sem preco < 70% da mediana das lojas (salvo loja oficial)";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -90,6 +91,8 @@ function achadoDoPedido(p: {
     const m = menorPrecoDoColado(a);
     if (!m || !/^https:\/\/meli\.la\//i.test(colado.link)) return null;
     if (colado.freteGratis !== true) return null;
+    /* Preço muito abaixo das outras lojas sem loja oficial (09/10). */
+    if (!colado.lojaOficial && precoMuitoAbaixo(colado.preco, precosDoMesmoProduto(a))) return null;
     return {
       chave: `${p.url_alvo.split("?")[0]}|${colado.link}|menor`,
       pedido: p.id,
@@ -119,6 +122,16 @@ function achadoDoPedido(p: {
      comparação (shipping.cost 0 da lista oficial ou "grátis" no anúncio). */
   if (escolha.freteGratis !== true) return null;
   if (pecaNoLugarDoAparelho(colado.titulo, escolha.titulo)) return null;
+  /* PREÇO MUITO ABAIXO DAS OUTRAS LOJAS (09/10, posts 29 e 30: Malbec R$ 200
+     x R$ 361/R$ 379 e aspirador R$ 50 x R$ 120/R$ 227, contas novas sem
+     selo). O site avisa "confira o vendedor"; o canal não publica, salvo
+     loja oficial. Mesma conta da tabela (src/lib/preco-suspeito.ts). */
+  if (
+    escolha.tipo === "mesmo" &&
+    !escolha.lojaOficial &&
+    precoMuitoAbaixo(escolha.preco, precosDoMesmoProduto(a))
+  )
+    return null;
   if (escolha.tipo === "parecido" && naoEAlternativa(escolha.muda)) return null;
   const economia = Math.round((colado.preco - escolha.preco) * 100) / 100;
   if (!descontoReal(economia, colado.preco)) return null;

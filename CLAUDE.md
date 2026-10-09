@@ -447,7 +447,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (mais velha = rascunho). Até 2 por chamada, cada achado 1 vez em 7 dias
   (tabela canal_publicacoes, com message_id e versão dos critérios);
   resposta ambígua do Telegram conta como publicada (não repete às cegas).
-  ?simular=1 só lista. Remover post: /api/public/operacao?tarefa=remover&
+  ?simular=1 só lista. PREÇO MUITO ABAIXO (09/10, posts 29 e 30: Malbec
+  R$ 200 x R$ 361/R$ 379 e aspirador R$ 50 x R$ 120/R$ 227, contas novas sem
+  selo): mesmo produto abaixo de 70% da mediana das lojas (3+ preços) não vai
+  ao canal, salvo loja oficial (src/lib/preco-suspeito.ts, a mesma conta do
+  aviso da tabela do site; garimpo-v5). Remover post: /api/public/operacao?tarefa=remover&
   publicacao=<id> (só sob pedido; canal_publicacoes.removida_em/motivo).
 
 ## Operação de inteligência (05/10)

@@ -45,6 +45,7 @@ import {
 } from "@/lib/alternativa";
 import { SeloCep, useCepDestino } from "@/components/CepDestino";
 import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo";
+import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 import { aplicarPrazo } from "@/lib/prazo-entrega";
 import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
@@ -3824,10 +3825,7 @@ function TodasAsLojas({
   /* Preço muito abaixo do resto (02/10, geladeira de ~R$ 5.000 por R$ 2.345 e
      R$ 3.400, sem frete grátis): olhar de especialista avisa antes da compra. */
   const finais = ordem.map((l) => l.final).filter((v): v is number => v != null);
-  const mediana =
-    finais.length >= 3 ? [...finais].sort((x, y) => x - y)[Math.floor(finais.length / 2)] : null;
-  const muitoAbaixo = (l: LinhaLoja) =>
-    !l.colado && mediana != null && l.final != null && l.final < mediana * 0.7;
+  const muitoAbaixo = (l: LinhaLoja) => !l.colado && precoMuitoAbaixo(l.final, finais);
   return (
     <div className="mt-3 first:sm:mt-0">
       <p className="text-sm font-bold">

@@ -63,12 +63,14 @@ export const FAIXAS: Faixa[] = [
     curto: "6 a 8 anos",
     min: 6,
     max: 8,
+    /* 09/10: lego classic, pista hot wheels e barbie têm idade mínima de 3-4
+       anos no catálogo e iam para "3 a 5"; a faixa ficou com 1 produto. */
     buscas: [
-      "lego classic",
+      "lego friends",
       "lego city",
-      "pista hot wheels",
-      "jogo de tabuleiro infantil",
-      "boneca barbie fashionista",
+      "lego minecraft",
+      "jogo banco imobiliario",
+      "jogo detetive estrela",
       "bicicleta infantil aro 16",
     ],
     dica: "Montagem, jogos de regra simples e brinquedos de movimento. Bicicleta: aro 16 costuma servir de 5 a 8 anos.",
@@ -96,12 +98,14 @@ export const FAIXAS: Faixa[] = [
     min: 0,
     max: 12,
     precoMax: 30,
+    /* 09/10: só 1 ou 2 de 9 produtos achados ficavam até R$ 30; buscas
+       genéricas trocadas por marcas conhecidas de item barato. */
     buscas: [
       "carrinho hot wheels basico",
-      "bola vinil infantil",
+      "jogo uno cartas",
       "massinha de modelar infantil",
-      "ioio brinquedo",
-      "boneca pequena infantil",
+      "cubo magico moyu",
+      "slime kimeleka",
       "kit pintura infantil",
       "bolha de sabao brinquedo",
       "pião beyblade",
