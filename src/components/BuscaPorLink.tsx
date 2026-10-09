@@ -27,6 +27,7 @@ import { ComoFunciona } from "@/components/ComoFunciona";
 import {
   BadgeCheck,
   History,
+  Link2,
   LoaderCircle,
   Package,
   Send,
@@ -1151,10 +1152,8 @@ export default function BuscaPorLink({
       }
     >
       <div className="mb-1 flex items-center gap-2">
-        <span aria-hidden="true" className="text-lg">
-          🔗
-        </span>
-        <h2 className="text-lg font-semibold tracking-tight">Cole o link do produto</h2>
+        <Link2 aria-hidden="true" className="size-5 text-[#7547E8]" />
+        <h2 className="text-lg font-bold tracking-tight sm:text-xl">Cole o link do produto</h2>
       </div>
       <p className="mb-2 text-xs text-secondary-ink">
         Procuro o mesmo produto em outras lojas dentro do Mercado Livre e mostro onde sai mais
@@ -1177,13 +1176,13 @@ export default function BuscaPorLink({
           }}
           placeholder="Cole aqui o link do anúncio do produto"
           aria-label="Link do anúncio do produto"
-          className="min-h-10 min-w-0 flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ml-blue focus:ring-1 focus:ring-ml-blue"
+          className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5"
         />
         <button
           type="button"
           onClick={() => buscar(url)}
           disabled={carregando || !url.trim()}
-          className="shrink-0 rounded-md bg-ml-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 sm:self-start"
+          className="min-h-11 shrink-0 rounded-xl bg-ml-yellow px-5 py-2.5 text-sm font-bold text-[#21134A] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:self-start sm:text-base"
         >
           {carregando ? "Comparando..." : "Comparar preços"}
         </button>

@@ -879,3 +879,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   confirmado (src/lib/vitrine-recomendavel.ts).
 - Botões "Início" e "Voltar ao topo" (BotoesNavegacao, canto inferior
   esquerdo, depois de rolar) em todas as páginas.
+
+## Home nova e rodapé (home-v2, 06/10)
+- Cabeçalho único em todas as páginas (CabecalhoSite, fora de /login e
+  /admin): logo, Meus preços, Guias, Sobre e a pílula "Ofertas no Telegram".
+- Home: topo em degradê (--gradiente-conteudo, azul -> lilás) com "O mesmo
+  produto. Uma escolha melhor.", a caixa do link sobreposta, "Serviço
+  gratuito..." e, com a caixa parada, os 3 passos e "Explore por categoria"
+  (Tecnologia, Casa e cozinha, Beleza, Moda, Brinquedos; fotos em
+  public/home/). No PC a arte do topo (hero-fones.webp) com o cartão
+  "Compare com clareza".
+- Rodapé (RodapeInstitucional): faixa do Telegram, marca "Compare antes.
+  Escolha melhor.", colunas Explore / Institucional / Sua privacidade,
+  quadro "Transparência em cada escolha" (links de afiliado, site
+  independente, preços mudam, marcas dos titulares).
+- Estúdio das vitrines de Casa, Tecnologia e Beleza também em imagem
+  (public/campanhas/estudio-{casa,tecnologia,beleza}.webp).
+- Peça no lugar do aparelho (07/10, ajuste do Weslei em RE_PECA_PARTE,
+  servidor e extensão 1.155.0): a regra olha o COMEÇO do título (peça como
+  produto principal, inclusive "Kit 2 tampas", "1 un carcaça").

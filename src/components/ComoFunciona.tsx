@@ -177,7 +177,8 @@ export function VideoComoFuncionaEstatico() {
         <source src={VIDEO.horizontal.mp4} type="video/mp4" />
       </video>
       <figcaption className="mt-1.5 text-center text-xs text-secondary-ink">
-        Como funciona, em 28 segundos. Exemplo real de 25/09/2026, com link ilustrativo; preços mudam.
+        Como funciona, em 28 segundos. Exemplo real de 25/09/2026, com link ilustrativo; preços
+        mudam.
       </figcaption>
     </figure>
   );

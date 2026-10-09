@@ -442,11 +442,8 @@
   --conteudo-cor-1: var(--ml-blue);
   --conteudo-cor-2: oklch(0.62 0.16 320);
   --conteudo-cor-3: var(--ml-yellow);
-  --gradiente-conteudo: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--conteudo-cor-1) 92%, transparent),
-    color-mix(in oklab, var(--conteudo-cor-2) 88%, transparent)
-  );
+  /* Degradê da home-v2 (06/10): azul -> violeta da marca (#7547E8). */
+  --gradiente-conteudo: linear-gradient(105deg, #3d8bfd 0%, #5b6cf5 45%, #a77ff0 100%);
   --gradiente-suave: linear-gradient(
     160deg,
     color-mix(in oklab, var(--conteudo-cor-1) 8%, var(--background)),

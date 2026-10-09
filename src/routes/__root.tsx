@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -13,6 +14,7 @@ import appCss from "../styles.css?url";
 import { BannerConsentimento } from "../components/BannerConsentimento";
 import { MedicaoCliques } from "../components/MedicaoCliques";
 import { BotoesNavegacao } from "../components/BotoesNavegacao";
+import { CabecalhoSite } from "../components/CabecalhoSite";
 import {
   GoogleConsentimento,
   SCRIPT_CONSENTIMENTO_PADRAO,
@@ -158,9 +160,13 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const caminho = useRouterState({ select: (s) => s.location.pathname });
+  /* Cabeçalho único (home-v2, 06/10); telas técnicas ficam sem ele. */
+  const comCabecalho = !/^\/(login|\.lovable|admin)/.test(caminho);
 
   return (
     <QueryClientProvider client={queryClient}>
+      {comCabecalho && <CabecalhoSite />}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <BotoesNavegacao />

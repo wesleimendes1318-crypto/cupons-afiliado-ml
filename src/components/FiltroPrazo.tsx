@@ -17,7 +17,6 @@ import {
   type ResultadoPrazo,
 } from "@/lib/prazo-entrega";
 
-
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function FiltroPrazo({

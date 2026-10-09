@@ -5,16 +5,19 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  ChevronRight,
   Clock3,
   Copy,
   Info,
   LayoutGrid,
   Link2,
   LoaderCircle,
+  Package,
   Search,
   Share2,
   ShieldAlert,
   ShieldCheck,
+  ShoppingCart,
   SlidersHorizontal,
   Sparkles,
   TrendingDown,
@@ -1286,6 +1289,31 @@ async function carregarCupons(): Promise<Cupom[]> {
    caixa de colar o link. Voltar para true quando as etiquetas funcionarem. */
 const MOSTRAR_CUPONS = false;
 
+/* "Explore por categoria" (home-v2, 06/10): imagens do mockup aprovado. */
+const CATEGORIAS_HOME = [
+  {
+    nome: "Tecnologia",
+    imagem: "/home/categoria-tecnologia.webp",
+    link: { to: "/categorias/$slug", params: { slug: "eletronicos" } },
+  },
+  {
+    nome: "Casa e cozinha",
+    imagem: "/home/categoria-casa.webp",
+    link: { to: "/categorias/$slug", params: { slug: "casa" } },
+  },
+  {
+    nome: "Beleza",
+    imagem: "/home/categoria-beleza.webp",
+    link: { to: "/categorias/$slug", params: { slug: "beleza" } },
+  },
+  {
+    nome: "Moda",
+    imagem: "/home/categoria-moda.webp",
+    link: { to: "/categorias/$slug", params: { slug: "moda" } },
+  },
+  { nome: "Brinquedos", imagem: "/home/categoria-brinquedos.webp", link: { to: "/brinquedos" } },
+] as const;
+
 function Index() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["cupons"],
@@ -1836,112 +1864,83 @@ function Index() {
 
   return (
     <div className="min-h-screen fundo-conteudo text-foreground">
-      <header className="faixa-conteudo w-full">
-        {/* Topo compacto (Weslei, 28/09: "está ocupando muito espaço da tela"). */}
-        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
-          <div className="animate-conteudo grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Logo da marca (05/10). */}
-                <Link to="/" aria-label="Melhor Escolha, página inicial" className="shrink-0">
-                  <img
-                    src="/logo.png"
-                    alt="Melhor Escolha"
-                    width={48}
-                    height={48}
-                    className="size-9 rounded-[22%] shadow-sm sm:size-12"
-                  />
-                </Link>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-ml-yellow-foreground">
-                  <ShieldAlert className="size-3.5" aria-hidden="true" />
-                  Comparador independente
-                </span>
-                {MOSTRAR_CUPONS && (
-                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                    {atualizado
-                      ? `Atualizado em ${atualizado}`
-                      : "Aguardando a primeira carga de dados"}
-                  </span>
-                )}
-              </div>
+      {/* HOME-V2 (Weslei, 06/10): degradê azul -> violeta, "O mesmo produto.
+          Uma escolha melhor.", arte dos fones em pedestais (sem marca) com o
+          cartão "Compare com clareza". A caixa do link entra sobre a borda do
+          degradê; com resultado, o topo encolhe e o resultado ocupa a tela. */}
+      <section
+        aria-label="Melhor Escolha"
+        className={
+          "relative overflow-hidden bg-[linear-gradient(105deg,#3d8bfd_0%,#5b6cf5_45%,#a77ff0_100%)] text-white " +
+          (buscaParada ? "pb-28 sm:pb-32" : "pb-20")
+        }
+      >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-24 -top-32 size-[28rem] rounded-full bg-[radial-gradient(circle,rgba(255,214,230,0.35),transparent_65%)]"
+        />
+        <div className="relative mx-auto grid max-w-[1400px] items-center gap-6 px-4 pt-7 sm:px-6 sm:pt-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:px-8">
+          <div className="animate-conteudo min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#21134A]">
+              <ShieldCheck className="size-3.5" aria-hidden="true" />
+              Comparador independente
+            </span>
+            {MOSTRAR_CUPONS && atualizado && (
+              <span className="ml-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                Atualizado em {atualizado}
+              </span>
+            )}
+            <h1 className="mt-4 text-[2.15rem] font-extrabold leading-[1.02] tracking-tight sm:text-5xl lg:text-[4.1rem]">
+              O mesmo produto.
+              <br />
+              Uma escolha melhor.
+            </h1>
+            <p className="mt-3 max-w-[46ch] text-base leading-snug text-white/95 sm:text-lg">
+              Compare preços em diferentes lojas do Mercado Livre. Confira as opções antes de
+              comprar.
+            </p>
+            {/* Mensagem única do site (27/09), discreta abaixo do título. */}
+            <p className="mt-2 max-w-[70ch] text-xs leading-relaxed text-white/80 sm:text-sm">
+              Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do Mercado
+              Livre, do mais barato ao mais caro e com a loja oficial (quando houver). Confiro pela
+              foto, descrição e características para encontrar o mesmo produto. Parecidos aparecem
+              separados, com a descrição do que muda.
+            </p>
+          </div>
 
-              <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-                Melhor Escolha: compare preços de produtos vendidos no Mercado Livre
-              </h1>
-              <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-white/90 sm:text-base">
-                <span className="font-medium">
-                  Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do
-                  Mercado Livre, do mais barato ao mais caro e com a loja oficial (quando houver).
-                </span>{" "}
-                <span className="text-white/80">
-                  Confiro pela foto, descrição e características para encontrar o mesmo produto.
-                  Parecidos aparecem separados, com a descrição do que muda.
-                </span>
-              </p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Button
-                  onClick={irParaColarLink}
-                  className="h-auto min-h-10 bg-ml-yellow px-5 py-2 text-sm font-bold text-ml-yellow-foreground shadow-lg shadow-black/10 hover:bg-ml-yellow/90 sm:text-base"
-                >
-                  <Link2 className="size-5" aria-hidden="true" />
-                  Colar o link do produto
-                </Button>
-                <nav aria-label="Conteúdo do site" className="flex flex-wrap gap-2">
-                  {[
-                    ...(MOSTRAR_CUPONS
-                      ? [{ para: "/categorias" as const, texto: "Categorias" }]
-                      : []),
-                    /* Aba de volta (Weslei, 02/10: "volte com a aba de acompanhar preços"). */
-                    { para: "/meus-precos" as const, texto: "Meus preços" },
-                    { para: "/guias" as const, texto: "Guias" },
-                    { para: "/sobre" as const, texto: "Sobre" },
-                  ].map((item) => (
-                    <Link
-                      key={item.para}
-                      to={item.para}
-                      className="inline-flex min-h-10 items-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25"
-                    >
-                      {item.texto}
-                    </Link>
-                  ))}
-                  <ConviteTelegram formato="pilula" origem="topo" />
-                </nav>
-              </div>
+          {/* Arte + "Compare com clareza" (PC). No celular a caixa do link vem
+              logo abaixo do título, sem a arte. */}
+          <div className="relative hidden lg:block">
+            <div className="relative mx-auto aspect-[774/706] w-full max-w-[30rem] [mask-image:radial-gradient(ellipse_75%_80%_at_55%_45%,#000_55%,transparent_100%)]">
+              <img
+                src="/home/hero-fones.webp"
+                alt=""
+                width={774}
+                height={706}
+                className="absolute inset-0 h-full w-full object-cover"
+                fetchPriority="high"
+              />
             </div>
-
-            {/* No celular fica de fora: a faixa "1. 2. 3." logo abaixo diz o mesmo. */}
-            <div className="hidden min-w-0 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm lg:block">
-              <p className="text-xs font-bold uppercase tracking-wide text-ml-yellow">
-                Meu compromisso com você
-              </p>
-              <ul className="mt-2 space-y-1.5 text-[13px] leading-snug text-white/90">
-                <li className="flex items-start gap-2.5">
-                  <ShieldCheck
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-ml-yellow"
-                  />
-                  Comparo o mesmo produto: foto, descrição e características
+            <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/30 bg-white/15 p-4 backdrop-blur-md">
+              <p className="border-b border-white/25 pb-2 text-lg font-bold">Compare com clareza</p>
+              <ul className="mt-2 space-y-2 text-sm">
+                <li className="flex items-center gap-2.5">
+                  <Search className="size-4 shrink-0" aria-hidden="true" />
+                  Mesmo produto em diferentes lojas
                 </li>
-                <li className="flex items-start gap-2.5">
-                  <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ml-yellow" />
-                  Mostro todas as lojas, até as mais caras, e a oficial quando houver
+                <li className="flex items-center gap-2.5">
+                  <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
+                  Loja oficial identificada, quando houver
                 </li>
-                <li className="flex items-start gap-2.5">
-                  <ShieldAlert
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-ml-yellow"
-                  />
-                  Parecido só aparece separado, com a descrição do que muda
+                <li className="flex items-center gap-2.5">
+                  <Package className="size-4 shrink-0" aria-hidden="true" />
+                  Produtos semelhantes em seção separada
                 </li>
               </ul>
-              <p className="mt-2.5 border-t border-white/20 pt-2 text-xs leading-relaxed text-white/75">
-                Comprando pelos meus links o preço é o mesmo para você.
-              </p>
             </div>
           </div>
         </div>
-      </header>
+      </section>
 
       {MOSTRAR_CUPONS && (
         <nav aria-label="Categorias" className="border-b border-border bg-card">
@@ -1979,37 +1978,78 @@ function Index() {
         </nav>
       )}
 
-      <section className="border-b border-border bg-card" aria-label="Como funciona">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5">
-          <ol className="grid gap-4 text-sm sm:grid-cols-3">
-            {[
-              { icone: Link2, texto: "Você cola o link do produto que quer comprar" },
-              {
-                icone: Search,
-                texto:
-                  "O site procura o mesmo produto em outras lojas dentro do Mercado Livre e confere pela foto, descrição e características",
-              },
-              {
-                icone: ShieldCheck,
-                texto: "Você escolhe a loja e compra com segurança pelo link",
-              },
-            ].map((passo, indice) => (
-              <li key={passo.texto} className="flex min-w-0 items-start gap-2">
-                <passo.icone className="mt-0.5 size-4 shrink-0 text-ml-blue" aria-hidden="true" />
-                <span className="min-w-0 break-words">
-                  <span className="font-semibold">{indice + 1}.</span> {passo.texto}
-                </span>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-3 text-xs text-secondary-ink">
-            Sem custo para você. Recebo comissão do programa de afiliados — não de quem compra.
-          </p>
+      <main className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
+        <div className="relative z-10 -mt-20 sm:-mt-24">
+          <BuscaPorLink aoMudarEstado={setBuscaParada} />
         </div>
-      </section>
+        <p className="mx-auto mt-2 max-w-3xl px-1 text-xs text-secondary-ink">
+          Serviço gratuito. Posso receber comissão pelas compras feitas nos links, do programa de
+          afiliados.
+        </p>
 
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
-        <BuscaPorLink aoMudarEstado={setBuscaParada} />
+        {buscaParada && (
+          <>
+            {/* Três passos (home-v2). */}
+            <ol
+              aria-label="Como funciona"
+              className="mt-6 grid gap-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] sm:grid-cols-3 sm:divide-x sm:divide-border sm:p-5"
+            >
+              {[
+                { icone: Link2, titulo: "1. Cole o link", texto: "Do produto que quer comprar." },
+                {
+                  icone: Search,
+                  titulo: "2. Compare as opções",
+                  texto: "Em diferentes lojas do Mercado Livre.",
+                },
+                {
+                  icone: ShoppingCart,
+                  titulo: "3. Escolha a loja",
+                  texto: "E compre com segurança pelo link.",
+                },
+              ].map((p) => (
+                <li key={p.titulo} className="flex items-center gap-3 sm:px-4 first:sm:pl-0">
+                  <p.icone className="size-8 shrink-0 text-[#7547E8]" aria-hidden="true" />
+                  <span>
+                    <span className="block text-base font-bold">{p.titulo}</span>
+                    <span className="block text-sm text-secondary-ink">{p.texto}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            {/* Explore por categoria (home-v2). */}
+            <section aria-labelledby="explore-categoria" className="mt-8">
+              <h2 id="explore-categoria" className="text-2xl font-extrabold tracking-tight">
+                Explore por categoria
+              </h2>
+              <p className="text-sm text-secondary-ink">Encontre produtos para comparar.</p>
+              <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-5 sm:overflow-visible">
+                {CATEGORIAS_HOME.map((c) => (
+                  <Link
+                    key={c.nome}
+                    {...c.link}
+                    className="group relative w-[42%] shrink-0 snap-start overflow-hidden rounded-3xl bg-card p-3 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
+                  >
+                    <span className="relative block h-24 sm:h-28">
+                      <img
+                        src={c.imagem}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-contain"
+                      />
+                    </span>
+                    <span className="mt-2 flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold sm:text-base">{c.nome}</span>
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#F7F5FC] text-[#7547E8] transition group-hover:bg-[#7547E8] group-hover:text-white">
+                        <ChevronRight className="size-4" aria-hidden="true" />
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
 
         {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
             caixa e acima das campanhas. */}

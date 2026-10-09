@@ -1,5 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Clock3 } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
@@ -25,18 +24,8 @@ export function LayoutConteudo({
     <div className="fundo-conteudo min-h-screen">
       <header className="faixa-conteudo">
         <div className="relative mx-auto max-w-3xl px-4 py-10 sm:px-6">
-          <div>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
-            >
-              <ArrowLeft className="size-3.5" aria-hidden="true" />
-              Voltar para o comparador
-            </Link>
-          </div>
-
           {etiqueta && (
-            <p className="animate-conteudo mt-5 inline-block rounded-full bg-ml-yellow px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-ml-yellow-foreground">
+            <p className="animate-conteudo inline-block rounded-full bg-ml-yellow px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-ml-yellow-foreground">
               {etiqueta}
             </p>
           )}
@@ -71,7 +60,7 @@ export function LayoutConteudo({
 
       <main className="mx-auto max-w-3xl px-4 pb-4 sm:px-6">
         <div
-          className="animate-conteudo -mt-6 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] sm:p-8"
+          className="animate-conteudo -mt-6 rounded-3xl border border-black/5 bg-card p-5 shadow-[var(--shadow-card)] sm:p-8"
           style={{ animationDelay: "150ms" }}
         >
           <div className="space-y-6 text-sm leading-relaxed text-secondary-ink [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-extrabold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-foreground [&_li]:ml-1 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_ol]:marker:font-bold [&_ol]:marker:text-ml-blue [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ul]:marker:text-ml-blue">

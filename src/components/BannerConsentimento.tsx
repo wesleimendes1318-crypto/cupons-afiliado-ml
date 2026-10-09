@@ -44,9 +44,8 @@ export function BannerConsentimento() {
       <div className="mx-auto max-w-3xl">
         <p className="text-sm font-bold">Cookies e privacidade</p>
         <p className="mt-1 text-xs leading-relaxed text-secondary-ink">
-          Usamos cookies essenciais para o site funcionar. Só com a sua autorização usamos
-          cookies de medição de audiência e de publicidade. Você pode mudar de ideia quando
-          quiser.
+          Usamos cookies essenciais para o site funcionar. Só com a sua autorização usamos cookies
+          de medição de audiência e de publicidade. Você pode mudar de ideia quando quiser.
         </p>
 
         {detalhes && (
@@ -67,7 +66,11 @@ export function BannerConsentimento() {
                   Contagem de visitas e de páginas mais úteis, sem identificar você.
                 </p>
               </div>
-              <Switch checked={analise} onCheckedChange={setAnalise} aria-label="Cookies de medição" />
+              <Switch
+                checked={analise}
+                onCheckedChange={setAnalise}
+                aria-label="Cookies de medição"
+              />
             </div>
             <div className="flex items-start justify-between gap-4">
               <div>
