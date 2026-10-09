@@ -148,6 +148,175 @@ export type Database = {
         }
         Relationships: []
       }
+      campanha_metricas: {
+        Row: {
+          atualizado_em: string
+          campanha_id: number
+          cliques: number
+          conversoes: number | null
+          dia: string
+          impressoes: number
+        }
+        Insert: {
+          atualizado_em?: string
+          campanha_id: number
+          cliques?: number
+          conversoes?: number | null
+          dia: string
+          impressoes?: number
+        }
+        Update: {
+          atualizado_em?: string
+          campanha_id?: number
+          cliques?: number
+          conversoes?: number | null
+          dia?: string
+          impressoes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanha_metricas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campanha_produtos: {
+        Row: {
+          adicionado_em: string
+          campanha_id: number
+          chave: string
+          conferido_em: string
+          cupom: string | null
+          economia: number
+          link: string
+          loja: string | null
+          loja_oficial: boolean
+          lojas: number | null
+          mercado_lider: string | null
+          ordem: number
+          preco: number
+          preco_antes: number
+          preco_promocional: number | null
+          tipo: string
+          titulo: string | null
+        }
+        Insert: {
+          adicionado_em?: string
+          campanha_id: number
+          chave: string
+          conferido_em: string
+          cupom?: string | null
+          economia: number
+          link: string
+          loja?: string | null
+          loja_oficial?: boolean
+          lojas?: number | null
+          mercado_lider?: string | null
+          ordem?: number
+          preco: number
+          preco_antes: number
+          preco_promocional?: number | null
+          tipo: string
+          titulo?: string | null
+        }
+        Update: {
+          adicionado_em?: string
+          campanha_id?: number
+          chave?: string
+          conferido_em?: string
+          cupom?: string | null
+          economia?: number
+          link?: string
+          loja?: string | null
+          loja_oficial?: boolean
+          lojas?: number | null
+          mercado_lider?: string | null
+          ordem?: number
+          preco?: number
+          preco_antes?: number
+          preco_promocional?: number | null
+          tipo?: string
+          titulo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanha_produtos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campanhas: {
+        Row: {
+          atualizado_em: string
+          beneficio_texto: string | null
+          categoria_site: string | null
+          coletado_em: string
+          criado_em: string
+          demanda_tipo: string | null
+          fonte: string
+          id: number
+          inicia_em: string
+          link_afiliado_campanha: string | null
+          nome: string
+          regras_resumo: string | null
+          revalidar_ate: string | null
+          slug: string
+          status: string
+          tema_visual: string | null
+          temporada: string | null
+          termina_em: string
+          ufs: string[] | null
+        }
+        Insert: {
+          atualizado_em?: string
+          beneficio_texto?: string | null
+          categoria_site?: string | null
+          coletado_em?: string
+          criado_em?: string
+          demanda_tipo?: string | null
+          fonte: string
+          id?: number
+          inicia_em: string
+          link_afiliado_campanha?: string | null
+          nome: string
+          regras_resumo?: string | null
+          revalidar_ate?: string | null
+          slug: string
+          status?: string
+          tema_visual?: string | null
+          temporada?: string | null
+          termina_em: string
+          ufs?: string[] | null
+        }
+        Update: {
+          atualizado_em?: string
+          beneficio_texto?: string | null
+          categoria_site?: string | null
+          coletado_em?: string
+          criado_em?: string
+          demanda_tipo?: string | null
+          fonte?: string
+          id?: number
+          inicia_em?: string
+          link_afiliado_campanha?: string | null
+          nome?: string
+          regras_resumo?: string | null
+          revalidar_ate?: string | null
+          slug?: string
+          status?: string
+          tema_visual?: string | null
+          temporada?: string | null
+          termina_em?: string
+          ufs?: string[] | null
+        }
+        Relationships: []
+      }
       canal_metricas: {
         Row: {
           dia: string
@@ -1150,6 +1319,17 @@ export type Database = {
         }
         Relationships: []
       }
+      campanha_metricas_painel: {
+        Row: {
+          cliques: number | null
+          conversoes: number | null
+          ctr_pct: number | null
+          dia: string | null
+          impressoes: number | null
+          slug: string | null
+        }
+        Relationships: []
+      }
       painel_operacao: {
         Row: {
           cliques_afiliado: number | null
@@ -1223,11 +1403,45 @@ export type Database = {
         }
         Returns: boolean
       }
+      campanha_publica: {
+        Args: { p_slug: string }
+        Returns: {
+          beneficio_texto: string
+          estado: string
+          inicia_em: string
+          nome: string
+          produtos: Json
+          regras_resumo: string
+          slug: string
+          tema_visual: string
+          temporada: string
+          termina_em: string
+        }[]
+      }
+      campanhas_ativas: {
+        Args: { p_uf?: string }
+        Returns: {
+          beneficio_texto: string
+          demanda_tipo: string
+          fonte: string
+          inicia_em: string
+          link_afiliado_campanha: string
+          nacional: boolean
+          nome: string
+          produtos: Json
+          regras_resumo: string
+          slug: string
+          tema_visual: string
+          temporada: string
+          termina_em: string
+        }[]
+      }
       categoria_do_site: {
         Args: { p_categoria: string; p_titulo: string }
         Returns: string
       }
       chave_do_produto: { Args: { p_url: string }; Returns: string }
+      chave_do_url: { Args: { u: string }; Returns: string }
       cobertura_do_titulo: {
         Args: { colado: string; outro: string }
         Returns: number
@@ -1257,6 +1471,23 @@ export type Database = {
         Args: { p_lista: Json; p_token: string }
         Returns: Json
       }
+      confiabilidade_da_vitrine: {
+        Args: { p_chaves: string[] }
+        Returns: {
+          alt_lider: string
+          alt_oficial: boolean
+          categoria: string
+          chave: string
+          colado_condicao: string
+          colado_lider: string
+          colado_oficial: boolean
+          conferido_em: string
+          melhor_lider: string
+          melhor_oficial: boolean
+          pedido_id: number
+        }[]
+      }
+      consolidar_metricas_campanhas: { Args: never; Returns: number }
       consultar_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
       consultar_pedido: {
         Args: { p_id: number }
@@ -1321,6 +1552,7 @@ export type Database = {
           pedido: boolean
         }[]
       }
+      expirar_campanhas: { Args: never; Returns: number }
       expirar_pedidos: { Args: never; Returns: undefined }
       gravar_diagnostico: {
         Args: { p_dados: Json; p_tipo: string; p_token: string }
@@ -1343,6 +1575,7 @@ export type Database = {
         Args: { p_id: number; p_token: string }
         Returns: undefined
       }
+      jsonb_sim: { Args: { j: Json }; Returns: boolean }
       ligar_alerta_telegram: {
         Args: { p_chat: number; p_codigo: string }
         Returns: Json
@@ -1490,6 +1723,7 @@ export type Database = {
       pedir_link_novo: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
       produto_permitido: { Args: { p_texto: string }; Returns: boolean }
+      produtos_da_campanha: { Args: { p_id: number }; Returns: Json }
       proximo_monitor: {
         Args: { p_token: string }
         Returns: {
