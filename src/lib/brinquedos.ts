@@ -81,13 +81,16 @@ export const FAIXAS: Faixa[] = [
     curto: "9 a 12 anos",
     min: 9,
     max: 12,
+    /* 09/10 (pesquisa): quebra-cabeça, kit de ciência, beyblade e nerf
+       não renderam produto em 2 dias (sem oferta nova no catálogo);
+       trocados por marcas de catálogo. */
     buscas: [
       "lego technic",
-      "quebra cabeca 500 pecas",
+      "lego star wars",
       "jogo uno",
-      "kit experimentos ciencia infantil",
-      "beyblade",
-      "lancador nerf",
+      "jogo war grow",
+      "jogo imagem e acao grow",
+      "nerf elite",
     ],
     dica: "Desafios maiores: montagem técnica, quebra-cabeça, ciência e jogos para jogar em grupo.",
   },
