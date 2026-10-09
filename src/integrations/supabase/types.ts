@@ -620,6 +620,87 @@ export type Database = {
         }
         Relationships: []
       }
+      em_alta_catalogo: {
+        Row: {
+          atualizado_em: string
+          busca: string | null
+          categoria_ml: string | null
+          categoria_site: string
+          enfileirado_em: string | null
+          frete_gratis: boolean | null
+          imagem: string | null
+          imagem2: string | null
+          item: string
+          loja_oficial: boolean
+          nome: string
+          ofertas: number | null
+          origem: string | null
+          pedido_id: number | null
+          posicao: number | null
+          preco: number
+          produto: string
+          url: string
+        }
+        Insert: {
+          atualizado_em?: string
+          busca?: string | null
+          categoria_ml?: string | null
+          categoria_site: string
+          enfileirado_em?: string | null
+          frete_gratis?: boolean | null
+          imagem?: string | null
+          imagem2?: string | null
+          item: string
+          loja_oficial?: boolean
+          nome: string
+          ofertas?: number | null
+          origem?: string | null
+          pedido_id?: number | null
+          posicao?: number | null
+          preco: number
+          produto: string
+          url: string
+        }
+        Update: {
+          atualizado_em?: string
+          busca?: string | null
+          categoria_ml?: string | null
+          categoria_site?: string
+          enfileirado_em?: string | null
+          frete_gratis?: boolean | null
+          imagem?: string | null
+          imagem2?: string | null
+          item?: string
+          loja_oficial?: boolean
+          nome?: string
+          ofertas?: number | null
+          origem?: string | null
+          pedido_id?: number | null
+          posicao?: number | null
+          preco?: number
+          produto?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      em_alta_vistos: {
+        Row: {
+          chave: string
+          motivo: string | null
+          visto_em: string
+        }
+        Insert: {
+          chave: string
+          motivo?: string | null
+          visto_em?: string
+        }
+        Update: {
+          chave?: string
+          motivo?: string | null
+          visto_em?: string
+        }
+        Relationships: []
+      }
       eventos_site: {
         Row: {
           criado_em: string
@@ -689,6 +770,7 @@ export type Database = {
       hub_recomendados: {
         Row: {
           avaliacao: number | null
+          comissao_pct: number | null
           desconto_pct: number | null
           enfileirado_em: string | null
           imagem: string | null
@@ -705,6 +787,7 @@ export type Database = {
         }
         Insert: {
           avaliacao?: number | null
+          comissao_pct?: number | null
           desconto_pct?: number | null
           enfileirado_em?: string | null
           imagem?: string | null
@@ -721,6 +804,7 @@ export type Database = {
         }
         Update: {
           avaliacao?: number | null
+          comissao_pct?: number | null
           desconto_pct?: number | null
           enfileirado_em?: string | null
           imagem?: string | null
@@ -1562,6 +1646,71 @@ export type Database = {
         }[]
       }
       disparar_operacao: { Args: { p_caminho: string }; Returns: number }
+      em_alta_da_categoria: {
+        Args: { p_categoria: string; p_limite?: number }
+        Returns: {
+          atualizado_em: string
+          categoria_site: string
+          frete_gratis: boolean
+          imagem: string
+          loja_oficial: boolean
+          nome: string
+          posicao: number
+          preco: number
+          produto: string
+          url: string
+        }[]
+      }
+      em_alta_da_categoria_v2: {
+        Args: { p_categoria: string; p_limite?: number }
+        Returns: {
+          atualizado_em: string
+          categoria_site: string
+          frete_gratis: boolean
+          imagem: string
+          imagem2: string
+          loja_oficial: boolean
+          nome: string
+          posicao: number
+          preco: number
+          produto: string
+          url: string
+        }[]
+      }
+      em_alta_por_categoria: {
+        Args: { p_categoria: string; p_por_categoria?: number }
+        Returns: {
+          atualizado_em: string
+          categoria_site: string
+          frete_gratis: boolean
+          imagem: string
+          imagem2: string
+          loja_oficial: boolean
+          nome: string
+          posicao: number
+          preco: number
+          produto: string
+          url: string
+        }[]
+      }
+      em_alta_por_categoria_v3: {
+        Args: { p_categoria: string; p_por_categoria?: number }
+        Returns: {
+          atualizado_em: string
+          busca: string
+          categoria_site: string
+          frete_gratis: boolean
+          imagem: string
+          imagem2: string
+          loja_oficial: boolean
+          nome: string
+          origem: string
+          posicao: number
+          preco: number
+          produto: string
+          url: string
+        }[]
+      }
       estado_do_robo: {
         Args: never
         Returns: {
