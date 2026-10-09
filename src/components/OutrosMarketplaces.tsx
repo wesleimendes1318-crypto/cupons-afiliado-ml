@@ -3,7 +3,8 @@
    Selo discreto do marketplace (só o nome, sem logotipo), "Prime" quando a
    busca foi só de itens Prime, frete em linha própria e botão "Comprar com
    segurança" com o link de afiliado do marketplace. A recomendação da tela
-   continua a do Mercado Livre: sem frete confirmado, nada passa na frente. */
+   continua a do Mercado Livre: sem frete confirmado, nada passa na frente.
+   Sem as APIs, quem busca é a extensão pela sessão logada (09/10). */
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 
@@ -47,8 +48,10 @@ export function OutrosMarketplaces({
           aguardar?: boolean;
         } | null;
         if (!vivo) return;
-        if (j?.aguardar && tentativas < 4) {
-          espera = setTimeout(() => void pedir(), 6_000);
+        /* A extensão leva até ~1 min (busca, conferência pela foto e
+           links): pergunta de novo a cada 5 s, por até 1 minuto. */
+        if (j?.aguardar && tentativas < 13) {
+          espera = setTimeout(() => void pedir(), 5_000);
           return;
         }
         setLojas(

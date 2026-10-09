@@ -559,3 +559,22 @@ export async function registrarHub(token, itens) {
   if (!token || !Array.isArray(itens) || !itens.length) return null;
   return chamarRpc(SUPABASE + '/rest/v1/rpc/registrar_hub', { p_token: token, p_itens: itens.slice(0, 80) });
 }
+
+/* Outros marketplaces pela extensao (09/10): o banco diz se o pedido vale
+   (cliente, ainda sem resultado, marketplace ligada) e guarda o resultado
+   para o site. Nunca derruba nada: falha = nao faz. */
+export async function multilojaVale(token, pedido) {
+  if (!token || !pedido) return { ok: false, motivo: 'sem token' };
+  try {
+    const r = await chamarRpc(SUPABASE + '/rest/v1/rpc/multiloja_vale', { p_token: token, p_pedido: pedido });
+    return r && typeof r === 'object' ? r : { ok: false, motivo: 'resposta vazia' };
+  } catch (e) { return { ok: false, motivo: String((e && e.message) || e).slice(0, 120) }; }
+}
+
+export async function gravarMultiloja(token, pedido, resultado) {
+  if (!token || !pedido) return false;
+  try {
+    await chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_multiloja', { p_token: token, p_pedido: pedido, p_resultado: resultado });
+    return true;
+  } catch (e) { return false; }
+}

@@ -3,18 +3,21 @@ import { z } from "zod";
 
 import { ehLinkDeCompra } from "@/lib/afiliado";
 import { compararMultiloja, multilojaConfigurada, type LojaExterna } from "@/lib/coletor-multiloja";
+import { limparResultado } from "@/lib/multiloja-resultado";
 import { origemPermitida } from "@/lib/public-ai-api";
 
 /* OUTROS MARKETPLACES (09/10): com a comparação do Mercado Livre pronta, o
    site pede aqui o mesmo produto na Amazon e na Shopee. Resultado guardado
    6 h por pedido (multiloja_resultados). Sem as credenciais nos Secrets,
-   responde { ativo: false } na hora e o site não mostra nada. Freio: no
+   lê o que a EXTENSÃO gravou (busca pela sessão logada, 09/10). Freio: no
    máximo 40 comparações novas a cada 5 minutos no site todo (sem limite por
    endereço: o resultado guardado é barato e a mesma rede de celular é
    dividida por muita gente). Só pedidos do próprio site. */
 
 const entradaSchema = z.object({ pedido: z.number().int().positive() });
 const CACHE_MS = 6 * 3600_000;
+/* A extensão leva até ~1 min (busca, conferência pela foto e links). */
+const ESPERA_EXTENSAO_MS = 4 * 60_000;
 
 type Resposta = { ativo: boolean; lojas: LojaExterna[]; aguardar?: boolean; adiado?: boolean };
 
@@ -35,8 +38,6 @@ export const Route = createFileRoute("/api/public/multiloja")({
         if (!origemPermitida(request))
           return Response.json({ erro: "origem não permitida" }, { status: 403 });
         const cfg = multilojaConfigurada();
-        if (!cfg.amazon && !cfg.shopee)
-          return Response.json({ ativo: false, lojas: [] } satisfies Resposta);
         let entrada: z.infer<typeof entradaSchema>;
         try {
           entrada = entradaSchema.parse(await request.json());
@@ -53,7 +54,30 @@ export const Route = createFileRoute("/api/public/multiloja")({
           .eq("pedido_id", entrada.pedido)
           .maybeSingle();
         if (guardado && Date.now() - Date.parse(guardado.criado_em) < CACHE_MS)
-          return Response.json(guardado.resultado, { headers: { "Cache-Control": "no-store" } });
+          return Response.json(limparResultado(guardado.resultado), {
+            headers: { "Cache-Control": "no-store" },
+          });
+
+        /* Sem as APIs (09/10): quem compara é a extensão, pela sessão logada,
+           e grava em multiloja_resultados (gravar_multiloja). Enquanto o
+           pedido de cliente é recente, o site espera; depois, desiste. */
+        if (!cfg.amazon && !cfg.shopee) {
+          const { data: ped } = await db
+            .from("pedidos_link")
+            .select("origem,criado_em")
+            .eq("id", entrada.pedido)
+            .maybeSingle();
+          const recente =
+            ped &&
+            (ped.origem ?? "") !== "teste" &&
+            Date.now() - Date.parse(ped.criado_em) < ESPERA_EXTENSAO_MS;
+          return Response.json(
+            (recente
+              ? { ativo: true, lojas: [], aguardar: true }
+              : { ativo: false, lojas: [] }) satisfies Resposta,
+            { headers: { "Cache-Control": "no-store" } },
+          );
+        }
 
         const { count } = await db
           .from("multiloja_resultados")

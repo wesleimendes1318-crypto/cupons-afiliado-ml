@@ -15,6 +15,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
+import { compararOutrosMarketplaces } from './multiloja.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -3898,6 +3899,17 @@ async function atenderPedidos() {
           if (a && a.titulo) a.titulo = desescapar(a.titulo);
           marcar('anuncio');
           if (a && a.faltou) gravarDiagnostico(sincToken, 'anuncio-incompleto', a.faltou).catch(() => {});
+          /* OUTROS MARKETPLACES (09/10): Amazon e Shopee pela sessao, em
+             paralelo e sem await: nunca segura nem atrasa o Mercado Livre. O
+             banco so libera pedido de cliente (multiloja_vale). */
+          if (a && a.ok && a.titulo && a.imagem) {
+            compararOutrosMarketplaces(sincToken, p.id, {
+              titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem, preco: a.preco ?? null,
+              item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
+              categoria: (a.categorias || []).join(' > ') || null,
+              fatos: fatosDoOriginal(a.detalhes, { dominio: a.dominio, condicao: a.condicao })
+            }).catch(() => {});
+          }
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
           let cupom = null, vendedor = null;
           for (const nome of (a.nomes || [])) {

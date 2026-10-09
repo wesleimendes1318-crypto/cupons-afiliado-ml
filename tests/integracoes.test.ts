@@ -220,3 +220,65 @@ test("Facebook: legenda em texto simples e token fora da URL", async () => {
     limparEnv();
   }
 });
+
+test("multiloja: a tela só recebe link de afiliado, foto conhecida e selo Prime", async () => {
+  const { limparResultado } = await import("../src/lib/multiloja-resultado");
+  const base = {
+    titulo: "JBL Tune 520BT",
+    preco: 249.9,
+    loja: null,
+    freteGratis: null,
+    custoFrete: null,
+    notaFrete: null,
+    muda: null,
+    semelhanca: null,
+    qualidade: null,
+  };
+  const r = limparResultado({
+    ativo: true,
+    lojas: [
+      {
+        ...base,
+        marketplace: "amazon",
+        id: "B0ABCDEF12",
+        relacao: "mesmo",
+        selos: ["Prime", "<b>x</b>"],
+        link: "https://www.amazon.com.br/dp/B0ABCDEF12?tag=melhoresc0fff-20",
+        imagem: "https://m.media-amazon.com/images/I/61x.jpg",
+      },
+      {
+        ...base,
+        marketplace: "amazon",
+        id: "B0OUTRATAG",
+        relacao: "mesmo",
+        selos: [],
+        link: "https://www.amazon.com.br/dp/B0OUTRATAG?tag=outra-20",
+        imagem: null,
+      },
+      {
+        ...base,
+        marketplace: "shopee",
+        id: "1",
+        relacao: "parecido",
+        selos: [],
+        link: "https://s.shopee.com.br/AbC1",
+        imagem: "https://evil.example/x.jpg",
+      },
+      {
+        ...base,
+        marketplace: "shopee",
+        id: "2",
+        relacao: "talvez",
+        selos: [],
+        link: "https://s.shopee.com.br/AbC2",
+        imagem: null,
+      },
+    ],
+  });
+  assert.deepEqual(
+    r.lojas.map((l) => l.id),
+    ["B0ABCDEF12", "1"],
+  );
+  assert.deepEqual(r.lojas[0]!.selos, ["Prime"]);
+  assert.equal(r.lojas[1]!.imagem, null);
+});

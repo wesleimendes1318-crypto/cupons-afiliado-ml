@@ -1025,3 +1025,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   facebook_em. Token só no corpo do POST.
 - Diagnóstico sem expor chave: GET /api/public/ajudar-escolher diz só SE
   cada integração está configurada.
+- AMAZON E SHOPEE PELA EXTENSÃO (Weslei, 09/10: sem credenciais das APIs,
+  "pelo MESMO mecanismo já validado do Mercado Livre"; extensão 1.157.0):
+  compararOutrosMarketplaces (extensao/multiloja.js) roda em paralelo ao
+  atendimento, SEM await (nunca atrasa o Mercado Livre), só em pedido de
+  CLIENTE (multiloja_vale; sinc_config multiloja_amazon/multiloja_shopee =
+  'false' desliga). Amazon (extensao/amazon.js): busca amazon.com.br com a
+  sessão, lê os cartões do HTML (sem patrocinado, usado/recondicionado ou
+  sem preço), link /dp/<ASIN>?tag=melhoresc0fff-20; verificação de robô =
+  pausa de 6 h. Shopee (extensao/shopee.js): a API de busca recusa chamada
+  de fora (erro 90309999), então lê a página de busca numa aba de fundo
+  (sem patrocinado e sem faixa de preço por variação); link pelo "Link
+  personalizado" do painel de afiliados numa aba, aceito só se for NOVO na
+  tela e se abrir o MESMO produto (item no destino), cache 7 dias; login ou
+  verificação = pausa de 6 h. Os 2 melhores de cada passam pela conferência
+  pela foto do servidor; grava com gravar_multiloja; o site limpa de novo
+  (src/lib/multiloja-resultado.ts: link de afiliado, foto dos hosts das
+  marketplaces, selo só Prime) e espera até ~1 min. Diagnóstico: diagnosticos
+  tipo 'multiloja'. Amazon: os termos dos Associados pedem preço pela API
+  oficial; a leitura pela sessão é decisão do Weslei (09/10).
