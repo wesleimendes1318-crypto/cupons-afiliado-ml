@@ -47,7 +47,7 @@ const REGRAS: Array<[RegExp, CategoriaSite]> = [
   ],
   /* Beleza antes de "infantil" (perfume infantil, presilha infantil). */
   [
-    /\bperfumes?\b|\bcolonias?\b|\bpresilhas?\b|\bpiranhas? (de|para) cabelo\b|\bxuxinhas?\b|\bescova (rotativa|secadora|alisadora|de cabelo)\b|\bsecador (de|para) cabelo\b|\bchapinha\b|\bprancha (alisadora|de cabelo)\b|\bmaquiagem\b|\bprotetor solar\b|\bshampoo\b|\bhidratante\b|\bserum\b|\bdesodorante\b/,
+    /\bperfumes?\b|\bcolonias?\b|\bpresilhas?\b|\bpiranhas? (de|para) cabelo\b|\bxuxinhas?\b|\bamarrador(es)?\b|\btiaras?\b|\bescova (rotativa|secadora|alisadora|de cabelo)\b|\bsecador (de|para) cabelo\b|\bchapinha\b|\bprancha (alisadora|de cabelo)\b|\bmaquiagem\b|\bprotetor solar\b|\bshampoo\b|\bhidratante\b|\bserum\b|\bdesodorante\b/,
     "beleza",
   ],
   [

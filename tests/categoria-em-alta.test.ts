@@ -33,6 +33,11 @@ test("produto que o Mercado Livre lista em outra categoria vai para a certa", ()
   );
 });
 
+test("acessório de cabelo é beleza", () => {
+  assert.equal(cat("Kit Amarrador Elástico Laycra Outubro Rosa Feminino", "moda"), "beleza");
+  assert.equal(cat("Tic Tac Presilha De Cabelo Aranha Festa Halloween", "moda"), "beleza");
+});
+
 test("relógio inteligente é acessório de celular, não moda", () => {
   assert.equal(cat("Relógio Inteligente Gps Smartwatch Amoled 3atm", "celulares"), "celulares");
   assert.equal(cat("Relógio Masculino Casio Vintage Dourado", "moda"), "moda");
