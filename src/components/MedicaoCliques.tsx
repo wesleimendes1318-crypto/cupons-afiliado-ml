@@ -8,28 +8,7 @@
 import { useEffect } from "react";
 
 import { lerConsentimento } from "@/lib/consentimento";
-
-const URL_RPC = `${import.meta.env["VITE_SUPABASE_URL"] ?? ""}/rest/v1/rpc/registrar_evento`;
-const CHAVE = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? "";
-
-function enviar(corpo: Record<string, unknown>) {
-  if (!URL_RPC.startsWith("https://") || !CHAVE) return;
-  try {
-    /* keepalive: o clique costuma abrir outra página; a contagem não pode se perder. */
-    void fetch(URL_RPC, {
-      method: "POST",
-      keepalive: true,
-      headers: {
-        "Content-Type": "application/json",
-        apikey: CHAVE,
-        Authorization: `Bearer ${CHAVE}`,
-      },
-      body: JSON.stringify(corpo),
-    }).catch(() => undefined);
-  } catch {
-    /* sem rede: segue sem medir */
-  }
-}
+import { enviarEvento } from "@/lib/medicao";
 
 export function MedicaoCliques() {
   useEffect(() => {
@@ -51,7 +30,7 @@ export function MedicaoCliques() {
         destino = u.searchParams.has("start") ? "bot" : "canal";
         origem = origem ?? u.searchParams.get("start");
       }
-      enviar({
+      enviarEvento({
         p_tipo: afiliado ? "clique_afiliado" : "clique_telegram",
         p_origem: origem,
         p_destino: destino,

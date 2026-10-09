@@ -34,12 +34,20 @@ import {
   type ItemVitrine,
   type Oferta,
 } from "@/lib/ofertas-vitrine";
+import {
+  ofertaDaCampanha,
+  useCampanhasAtivas,
+  useRevalidarAoVoltar,
+  type CampanhaPublica,
+} from "@/lib/campanhas-publicas";
+import { origemDaCampanha, registrarImpressaoCampanha } from "@/lib/medicao";
 import { descontoReal } from "@/lib/regra-economia";
 import {
   antecipada,
   combinaComTemporada,
   diasAte,
   rotuloDa,
+  SLUG_DA_TEMPORADA,
   temporadasEmDestaque,
   type Temporada,
 } from "@/lib/sazonal";
@@ -122,6 +130,11 @@ export type CampanhaVitrine = {
   descricao?: string;
   descricaoConteudo?: string;
   categorias?: ReadonlyArray<{ nome: string }>;
+  /* Campanha sem data de verdade (mais vendidos): rótulo fixo no lugar da
+     contagem (nunca contador regressivo inventado). */
+  rotulo?: string;
+  /* Endereço na tabela campanhas (medição de impressões e cliques). */
+  slug?: string;
 };
 
 /** Tema de UMA campanha (campanhas simultâneas não se misturam). */
@@ -138,6 +151,7 @@ export function temaDaCampanha(c: CampanhaVitrine, lista: Oferta[]) {
 const comoTemporada = (c: CampanhaVitrine) => c as unknown as Temporada;
 
 function contagem(c: CampanhaVitrine) {
+  if (c.rotulo) return c.rotulo;
   const t = comoTemporada(c);
   const d = diasAte(t);
   const data = `${c.dia.slice(8, 10)}/${c.dia.slice(5, 7)}`;
@@ -460,6 +474,63 @@ export function GradeOfertas({
   );
 }
 
+/* Impressão da campanha: conta uma vez quando metade da seção aparece na
+   tela (só com consentimento de análise; src/lib/medicao.ts). */
+function useImpressaoCampanha(slug: string | null) {
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!slug || !el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) {
+          registrarImpressaoCampanha(slug);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [slug]);
+  return ref;
+}
+
+/* Campanha do banco (sem calendário) no formato da vitrine: título em duas
+   partes pelo nome ("Mais vendidos" + "com preço conferido"). */
+export function campanhaDoBanco(c: CampanhaPublica, comPagina = true): CampanhaVitrine {
+  const corte = c.nome.search(/ (com|em) /);
+  const tema =
+    c.tema_visual && c.tema_visual in TEMAS_VISUAIS ? (c.tema_visual as TemaVisualId) : null;
+  return {
+    id: c.slug,
+    slug: c.slug,
+    nome: c.nome,
+    inicio: c.inicia_em.slice(0, 10),
+    fim: c.termina_em.slice(0, 10),
+    dia: c.termina_em.slice(0, 10),
+    ...(comPagina ? { pagina: `/campanhas/${c.slug}` } : {}),
+    ...(tema ? { temaVisual: tema } : {}),
+    titulo: corte > 0 ? c.nome.slice(0, corte) : c.nome,
+    tituloDestaque: corte > 0 ? c.nome.slice(corte + 1) : "",
+    ...(c.beneficio_texto ? { descricao: c.beneficio_texto } : {}),
+    rotulo:
+      c.demanda_tipo === "mais_vendidos" ? "Mais vendidos · preço conferido" : "Preço conferido",
+  };
+}
+
+/** Ofertas de uma campanha do banco (curadas), sem repetir produto. */
+export function ofertasDaCampanha(c: CampanhaPublica, usados?: Set<string>) {
+  const agora = Date.now();
+  const lista: Oferta[] = [];
+  for (const p of c.produtos ?? []) {
+    const o = ofertaDaCampanha(p, agora);
+    if (!o || !o.link || usados?.has(o.chave)) continue;
+    lista.push(o);
+  }
+  return lista;
+}
+
 /* Destaque de uma campanha com ofertas: título curto em duas partes,
    descrição de uma linha, ações e a arte do tema com as fotos reais. */
 export function SecaoCampanha({
@@ -480,10 +551,13 @@ export function SecaoCampanha({
   const destaque = c.tituloDestaque ?? v.tituloDestaque;
   const descricao = c.descricao ?? v.descricao;
   const fotos = lista.map((o) => o.imagem);
+  const ref = useImpressaoCampanha(c.slug ?? null);
   return (
     <section
+      ref={ref}
       aria-labelledby={`campanha-${c.id}`}
       data-tema={tema}
+      data-origem={c.slug ? origemDaCampanha(c.slug) : undefined}
       className="campanha-entra relative overflow-hidden rounded-[28px] shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
       style={{ background: p.fundo, color: p.texto }}
     >
@@ -617,27 +691,63 @@ export function CartaoCampanhaCompacta({ c, futura }: { c: CampanhaVitrine; futu
   );
 }
 
-export function VitrineSazonal() {
-  const [temporadas] = useState(() => temporadasEmDestaque());
+/** Ofertas de uma temporada: a lista curada da campanha no banco (vendedor
+    confiável, nota, peça, frescor...) ou, sem a leitura do banco, a conta
+    local de sempre. Campanha pausada ou vencida no banco: lista vazia. */
+export function useOfertasDaTemporada(t: Temporada) {
   const { ofertas, carregou } = useOfertas();
+  const { campanhas, carregou: carregouCampanhas } = useCampanhasAtivas();
+  const lista = useMemo(() => {
+    if (!campanhas) return daTemporada(t, ofertas);
+    const db = campanhas.find((c) => c.slug === SLUG_DA_TEMPORADA[t.id]);
+    return db ? ofertasDaCampanha(db) : [];
+  }, [campanhas, ofertas, t]);
+  return { lista, carregou: campanhas ? carregouCampanhas : carregou };
+}
+
+export function VitrineSazonal() {
+  const [temporadas, setTemporadas] = useState(() => temporadasEmDestaque());
+  /* Aba esquecida aberta: ao voltar depois de 10 min, refaz o calendário
+     (a campanha que acabou some). */
+  useRevalidarAoVoltar(() => setTemporadas(temporadasEmDestaque()));
+  const { ofertas, carregou: carregouOfertas } = useOfertas();
+  const { campanhas, carregou: carregouCampanhas } = useCampanhasAtivas();
+  const carregou = campanhas ? carregouCampanhas : carregouOfertas;
 
   const secoes = useMemo(() => {
     const usados = new Set<string>();
-    return temporadas
+    const doCalendario = temporadas
       .filter((t) => !antecipada(t) || t.ofertasAntecipadas)
-      .map((t) => {
+      .flatMap((t): Array<{ c: CampanhaVitrine; lista: Oferta[]; total: number }> => {
+        if (campanhas) {
+          const db = campanhas.find((c) => c.slug === SLUG_DA_TEMPORADA[t.id]);
+          if (!db) return [];
+          /* Até 24 por seção, só a lista curada da campanha. */
+          const lista = ofertasDaCampanha(db, usados).slice(0, 24);
+          lista.forEach((o) => usados.add(o.chave));
+          return [{ c: { ...t, slug: db.slug }, lista, total: db.produtos.length }];
+        }
         const todas = daTemporada(t, ofertas).filter((o) => !usados.has(o.chave));
-        /* Até 24 por seção (Weslei, 05/10: "pelo menos 20 itens em cada
-           vitrine sazonal"); só ofertas que passam nas regras de sempre. */
         const lista = todas.slice(0, 24);
         lista.forEach((o) => usados.add(o.chave));
-        return { t, lista, total: todas.length };
+        return [{ c: t, lista, total: todas.length }];
       });
-  }, [ofertas, temporadas]);
+    /* Campanhas do banco sem calendário (mais vendidos...): só com pelo
+       menos 3 produtos que não estão nas seções acima. */
+    const doBanco = (campanhas ?? [])
+      .filter((c) => c.fonte !== "calendario")
+      .map((c) => {
+        const lista = ofertasDaCampanha(c, usados).slice(0, 24);
+        if (lista.length >= 3) lista.forEach((o) => usados.add(o.chave));
+        return { c: campanhaDoBanco(c), lista, total: c.produtos.length };
+      })
+      .filter((x) => x.lista.length >= 3);
+    return [...doCalendario, ...doBanco];
+  }, [ofertas, temporadas, campanhas]);
 
   /* "Já é o menor preço" fora das temporadas (estratégia geral). */
   const menores = useMemo(() => {
-    const nasSecoes = new Set(secoes.flatMap((s) => s.lista.map((o) => o.chave)));
+    const nasSecoes = new Set(secoes.flatMap((x) => x.lista.map((o) => o.chave)));
     return ofertas.filter((o) => o.tipo === "menor" && !nasSecoes.has(o.chave)).slice(0, 10);
   }, [ofertas, secoes]);
 
@@ -645,15 +755,15 @@ export function VitrineSazonal() {
      entraram na mesma campanha"): só a contagem de dias, sem ofertas. */
   const futuras = temporadas.filter((t) => antecipada(t) && !t.ofertasAntecipadas);
 
-  if (!temporadas.length && menores.length < 2) return null;
+  if (!secoes.length && !futuras.length && menores.length < 2) return null;
 
   return (
     <div className="mt-8 space-y-6" data-origem="sazonal">
-      {secoes.map(({ t, lista, total }) =>
+      {secoes.map(({ c, lista, total }) =>
         lista.length > 0 ? (
-          <SecaoCampanha key={t.id} c={t} lista={lista} total={total} />
-        ) : carregou ? (
-          <CartaoCampanhaCompacta key={t.id} c={t} futura={false} />
+          <SecaoCampanha key={c.id} c={c} lista={lista} total={total} />
+        ) : carregou && !c.rotulo ? (
+          <CartaoCampanhaCompacta key={c.id} c={c} futura={false} />
         ) : null,
       )}
 

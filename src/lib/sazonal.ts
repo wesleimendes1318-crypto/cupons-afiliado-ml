@@ -222,6 +222,14 @@ export const TEMPORADAS: readonly Temporada[] = [
   },
 ];
 
+/* Endereço da campanha de cada temporada na tabela campanhas (agente de
+   campanhas e leitura da vitrine). */
+export const SLUG_DA_TEMPORADA: Record<Temporada["id"], string> = {
+  criancas: "dia-das-criancas",
+  natal: "natal",
+  black_friday: "black-friday",
+};
+
 /** Dia de hoje em Brasília (AAAA-MM-DD). */
 export function hojeEmBrasilia(agora = new Date()) {
   return agora.toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });

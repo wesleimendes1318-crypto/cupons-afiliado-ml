@@ -21,7 +21,6 @@
 import {
   janelaDaTemporada,
   ordenarDaCuradoria,
-  SLUG_DA_TEMPORADA,
   vendedorDaOferta,
   vetoDaCuradoria,
   type Confiabilidade,
@@ -35,7 +34,7 @@ import {
   type ItemVitrine,
   type Oferta,
 } from "@/lib/ofertas-vitrine";
-import { combinaComTemporada, TEMPORADAS } from "@/lib/sazonal";
+import { combinaComTemporada, SLUG_DA_TEMPORADA, TEMPORADAS } from "@/lib/sazonal";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 

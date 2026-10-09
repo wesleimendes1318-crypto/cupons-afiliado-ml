@@ -898,3 +898,46 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Peça no lugar do aparelho (07/10, ajuste do Weslei em RE_PECA_PARTE,
   servidor e extensão 1.155.0): a regra olha o COMEÇO do título (peça como
   produto principal, inclusive "Kit 2 tampas", "1 un carcaça").
+
+## Campanhas autônomas (09/10)
+- PROMPT MESTRE do Weslei (09/10): ordem de decisão regras legais/termos >
+  vendedor confiável e qualidade > verdade e frescor > relevância >
+  comissão > custo. Comissão nunca aprova produto nem vendedor.
+- Banco (20261009090000_campanhas.sql): campanhas (slug, nome,
+  beneficio_texto, regras_resumo, tema_visual, fonte calendario/tendencia/
+  hub/manual, demanda_tipo, temporada, categoria_site, ufs para a vitrine
+  regional, inicia_em, termina_em, revalidar_ate, status descoberta/ativa/
+  pausada/expirada/arquivada, link_afiliado_campanha só meli.la),
+  campanha_produtos (oferta curada com preço, economia, loja, selos e
+  conferido_em) e campanha_metricas (impressões, cliques; conversões vazias:
+  sem API de vendas). Tudo com RLS e só servidor; leitura pública só por
+  campanhas_ativas(p_uf) e campanha_publica(slug).
+- EXPIRAÇÃO EM CAMADAS: pg_cron campanhas-expirar (hora em hora, também
+  consolida as métricas); toda leitura filtra status 'ativa' e termina_em >
+  now(); o navegador revalida ao voltar para a aba depois de 10 min
+  (useRevalidarAoVoltar, src/lib/campanhas-publicas.ts); campanha vencida
+  em /campanhas/<slug> mostra "Esta campanha encerrou recentemente" (não
+  404). Produto de campanha só com conferência de até 7 dias.
+- AGENTE (src/lib/agente-campanhas.ts, operacao?tarefa=campanhas, pg_cron
+  07:15 e 17:15 de Brasília): calendário (Dia das Crianças, Natal, Black
+  Friday com as datas reais), "Mais vendidos com preço conferido" (listas
+  oficiais /highlights em mercado_sinais + "Mais vendido" do hub; rolante de
+  3 dias, só continua se renovada, mínimo 4) e "Mais vendidos em Casa/
+  Tecnologia/Beleza" (mínimo 6). Pausa manual (status 'pausada') nunca é
+  desfeita. Pede nova comparação (pedir_link_agente, teto dos agentes) dos
+  produtos de campanha conferidos há mais de 48 h, até 4 por vez.
+- CURADORIA (src/lib/curadoria-campanhas.ts): meli.la; sem usado/defeito;
+  sem peça (RE_PECA_PARTE); desconto real ou menor preço; frete grátis
+  confirmado; conferido em até 7 dias; nota >= 4,5 quando conhecida (hub);
+  VENDEDOR CONFIÁVEL na oferta mostrada: loja oficial ou MercadoLíder
+  (confiabilidade_da_vitrine lê os selos da última comparação). Sem selo
+  confirmado, fora. Ordem: oficial/Platinum, depois até 48 h, depois maior
+  economia. 1ª execução (09/10): Dia das Crianças 9 de 37 (23 barrados por
+  vendedor), Natal 6 de 45, Mais vendidos 4 de 16.
+- TELA: as seções sazonais da vitrine e /natal, /dia-das-criancas usam a
+  lista curada da campanha (sem leitura do banco, a conta local de sempre;
+  campanha pausada/vencida no banco some). Campanha sem data de verdade
+  mostra rótulo fixo ("Mais vendidos · preço conferido"), nunca contagem
+  regressiva. Medição: data-origem campanha_<slug> e impressão uma vez por
+  seção visível (registrar_evento 'impressao_campanha', só com
+  consentimento; src/lib/medicao.ts). Painel: view campanha_metricas_painel.

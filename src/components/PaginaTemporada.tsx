@@ -14,11 +14,11 @@ import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import {
   BotaoTelegram,
-  daTemporada,
   GradeOfertas,
   temaDaCampanha,
-  useOfertas,
+  useOfertasDaTemporada,
 } from "@/components/VitrineSazonal";
+import { useRevalidarAoVoltar } from "@/lib/campanhas-publicas";
 import { TEMAS_VISUAIS } from "@/lib/campanha-visual";
 import { antecipada, diasAte, hojeEmBrasilia, TEMPORADAS, type Temporada } from "@/lib/sazonal";
 
@@ -52,12 +52,17 @@ const TEXTO: Record<string, { titulo: string; slogan: string; resumo: string; di
 export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
   const t = TEMPORADAS.find((x) => x.id === id)!;
   const textos = TEXTO[id] ?? TEXTO["natal"]!;
-  const { ofertas, carregou } = useOfertas();
-  const lista = daTemporada(t, ofertas);
-  const [dias] = useState(() => diasAte(t));
-  const [antes] = useState(() => antecipada(t));
-  /* Campanha encerrada (passou o último dia): sem contagem nem compra. */
-  const [encerrada] = useState(() => hojeEmBrasilia() > t.fim);
+  /* Lista curada da campanha no banco (ou a conta local sem a leitura). */
+  const { lista, carregou } = useOfertasDaTemporada(t);
+  /* Campanha encerrada (passou o último dia): sem contagem nem compra.
+     Aba esquecida aberta: refaz a conta ao voltar depois de 10 min. */
+  const calcular = () => ({
+    dias: diasAte(t),
+    antes: antecipada(t),
+    encerrada: hojeEmBrasilia() > t.fim,
+  });
+  const [{ dias, antes, encerrada }, setEstado] = useState(calcular);
+  useRevalidarAoVoltar(() => setEstado(calcular()));
   /* Tema da campanha (configurado > conteúdo > neutro) e a paleta dele. */
   const { tema } = temaDaCampanha(t, lista);
   const p = TEMAS_VISUAIS[tema].paleta;
@@ -110,7 +115,7 @@ export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-relaxed" style={{ color: p.textoSuave }}>
               {encerrada
-                ? "Esta campanha já passou. Os produtos comparados continuam na vitrine geral do site, e você pode comparar qualquer produto colando o link."
+                ? "Esta campanha encerrou recentemente. Os produtos comparados continuam na vitrine geral do site, e você pode comparar qualquer produto colando o link."
                 : textos.resumo}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-2">

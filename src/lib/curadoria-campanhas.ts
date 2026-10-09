@@ -103,13 +103,3 @@ export function janelaDaTemporada(t: { inicio: string; fim: string; ofertasAntec
   fim.setTime(fim.getTime() + 86_400_000);
   return { inicia_em: inicio.toISOString(), termina_em: fim.toISOString() };
 }
-
-export const SLUG_DA_TEMPORADA: Record<string, string> = {
-  criancas: "dia-das-criancas",
-  natal: "natal",
-  black_friday: "black-friday",
-};
-
-/** Origem da medição de uma campanha (registrar_evento aceita [a-z0-9_]). */
-export const origemDaCampanha = (slug: string) =>
-  `campanha_${slug.replace(/-/g, "_")}`.slice(0, 32);
