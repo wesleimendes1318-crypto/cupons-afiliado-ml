@@ -1598,6 +1598,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      gravar_multiloja: {
+        Args: { p_pedido: number; p_resultado: Json; p_token: string }
+        Returns: undefined
+      }
       iniciar_pedido: {
         Args: { p_id: number; p_token: string }
         Returns: undefined
@@ -1713,6 +1717,10 @@ export type Database = {
         }[]
       }
       muda_nao_e_alternativa: { Args: never; Returns: string }
+      multiloja_vale: {
+        Args: { p_pedido: number; p_token: string }
+        Returns: Json
+      }
       normalizar_nome: { Args: { p: string }; Returns: string }
       parar_de_acompanhar: {
         Args: { p_monitor: number; p_navegador: string }
