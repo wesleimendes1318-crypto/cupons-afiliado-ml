@@ -161,7 +161,7 @@ export function EmAltaCatalogo({
               (grade ? "min-w-0" : "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto")
             }
           >
-            <div className="relative h-36 overflow-hidden bg-white">
+            <div className="relative h-40 overflow-hidden bg-white">
               <FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />
               {i.posicao != null && i.posicao <= 20 && (
                 <span className="absolute left-2 top-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a34700]">
@@ -210,7 +210,7 @@ function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: s
   if (!imagem) return null;
   const segunda = imagem2 && imagem2 !== imagem ? imagem2 : null;
   const classe =
-    "absolute inset-0 h-full w-full object-contain p-3 transition-[opacity,transform] duration-300 ease-out motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none";
+    "absolute inset-0 h-full w-full object-contain px-3 pb-2 pt-8 transition-[opacity,transform] duration-300 ease-out motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none";
   return (
     <span
       className="absolute inset-0"
