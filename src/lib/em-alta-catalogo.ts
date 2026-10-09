@@ -52,6 +52,7 @@ type Linha = {
   posicao: number;
   nome: string;
   imagem: string | null;
+  imagem2: string | null;
   item: string;
   preco: number;
   ofertas: number | null;
@@ -150,6 +151,8 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
       }
       if (!oferta?.item_id || !(Number(oferta.price) > 0)) continue;
       const foto = p.pictures?.[0]?.secure_url ?? p.pictures?.[0]?.url ?? null;
+      /* Segunda foto real do catálogo (o cartão alterna no mouse/toque). */
+      const foto2 = p.pictures?.[1]?.secure_url ?? p.pictures?.[1]?.url ?? null;
       prontas.push({
         produto: c.produto,
         categoria_site: categoria,
@@ -157,6 +160,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         posicao: c.posicao,
         nome,
         imagem: fotoGrande(foto),
+        imagem2: fotoGrande(foto2),
         item: oferta.item_id,
         preco: Number(oferta.price),
         ofertas,

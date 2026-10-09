@@ -96,7 +96,7 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
   const podeComprar = !!c.link;
   const antigo = !recente(i.atendido_em);
   return (
-    <li className="flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
+    <li className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
       <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {i.imagem ? (
           <img
@@ -106,7 +106,7 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
             height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-2.5"
+            className="absolute inset-0 h-full w-full object-contain p-2.5 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
           />
         ) : null}
         <span

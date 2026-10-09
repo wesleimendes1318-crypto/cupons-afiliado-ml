@@ -39,6 +39,7 @@ import {
 } from "react";
 
 import { CartaoCategoria } from "@/components/CartaoCategoria";
+import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
@@ -1942,38 +1943,11 @@ function Index() {
               )}
             </div>
 
-            {/* Arte + "Compare com clareza" (PC). No celular a caixa do link vem
-              logo abaixo do título, sem a arte. */}
+            {/* Destaque rotativo (09/10): institucional, categorias e, quando
+              houver, uma oferta conferida. Só no PC; no celular a caixa do
+              link vem logo abaixo do título, sem arte. */}
             <div className={buscaParada ? "relative hidden lg:block" : "hidden"}>
-              <div className="relative mx-auto aspect-[774/706] w-full max-w-[30rem] [mask-image:radial-gradient(ellipse_75%_80%_at_55%_45%,#000_55%,transparent_100%)]">
-                <img
-                  src="/home/hero-fones.webp"
-                  alt=""
-                  width={774}
-                  height={706}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  fetchPriority="high"
-                />
-              </div>
-              <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/30 bg-white/15 p-4 backdrop-blur-md">
-                <p className="border-b border-white/25 pb-2 text-lg font-bold">
-                  Compare com clareza
-                </p>
-                <ul className="mt-2 space-y-2 text-sm">
-                  <li className="flex items-center gap-2.5">
-                    <Search className="size-4 shrink-0" aria-hidden="true" />
-                    Mesmo produto em diferentes lojas
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-                    Loja oficial identificada, quando houver
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Package className="size-4 shrink-0" aria-hidden="true" />
-                    Produtos semelhantes em seção separada
-                  </li>
-                </ul>
-              </div>
+              <DestaqueHeroRotativo />
             </div>
           </div>
         </section>

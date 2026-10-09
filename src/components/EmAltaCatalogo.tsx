@@ -18,6 +18,8 @@ type ItemEmAlta = {
   posicao: number | null;
   nome: string;
   imagem: string | null;
+  /* Segunda foto real do catálogo (alterna no mouse/toque). */
+  imagem2?: string | null;
   preco: number;
   frete_gratis: boolean | null;
   loja_oficial: boolean;
@@ -58,7 +60,7 @@ export function EmAltaCatalogo({
     void (async () => {
       try {
         const { data } = await supabase.rpc(
-          "em_alta_da_categoria" as never,
+          "em_alta_da_categoria_v2" as never,
           { p_categoria: categoria ?? null, p_limite: categoria ? limite : 200 } as never,
         );
         if (vivo && Array.isArray(data)) setItens(data as ItemEmAlta[]);
@@ -145,18 +147,7 @@ export function EmAltaCatalogo({
             className="group flex w-[58%] shrink-0 snap-start flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] min-[480px]:w-[40%] sm:w-auto"
           >
             <div className="relative h-36 overflow-hidden bg-white">
-              {i.imagem ? (
-                <img
-                  src={i.imagem}
-                  alt=""
-                  width={300}
-                  height={300}
-                  loading="lazy"
-                  decoding="async"
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
-                />
-              ) : null}
+              <FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />
               {i.posicao != null && i.posicao <= 20 && (
                 <span className="absolute left-2 top-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a34700]">
                   Entre os mais vendidos
@@ -193,5 +184,58 @@ export function EmAltaCatalogo({
         ))}
       </ul>
     </section>
+  );
+}
+
+/* Foto principal e, quando o catálogo tem, a segunda foto real: crossfade
+   no mouse (PC) ou no toque na foto (celular). Caixa de altura fixa e
+   imagens absolutas: nada muda de tamanho (sem salto de layout). */
+function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: string | null }) {
+  const [alternada, setAlternada] = useState(false);
+  if (!imagem) return null;
+  const segunda = imagem2 && imagem2 !== imagem ? imagem2 : null;
+  const classe =
+    "absolute inset-0 h-full w-full object-contain p-3 transition-[opacity,transform] duration-300 ease-out motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none";
+  return (
+    <span
+      className="absolute inset-0"
+      onClick={segunda ? () => setAlternada((a) => !a) : undefined}
+      aria-hidden="true"
+    >
+      <img
+        src={imagem}
+        alt=""
+        width={300}
+        height={300}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        className={
+          classe +
+          (segunda
+            ? alternada
+              ? " opacity-0"
+              : " [@media(hover:hover)]:group-hover:opacity-0"
+            : "")
+        }
+      />
+      {segunda && (
+        <img
+          src={segunda}
+          alt=""
+          width={300}
+          height={300}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className={
+            classe +
+            (alternada
+              ? " opacity-100"
+              : " opacity-0 [@media(hover:hover)]:group-hover:opacity-100")
+          }
+        />
+      )}
+    </span>
   );
 }

@@ -919,6 +919,21 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   - Vitrines de campanha: Tecnologia (home office), Casa (cozinha), Beleza
     (penteadeira) e a neutra (escolhas que cabem no bolso) usam as artes
     (imagem.foco); Crianças, Natal e Black Friday seguem com o estúdio.
+- TOPO ROTATIVO E CARTÕES (Weslei, 09/10, "animações e vitrine rotativa no
+  hero"): DestaqueHeroRotativo (só PC) no lugar da arte fixa: institucional
+  (fones), Tecnologia, Casa, Beleza e Brinquedos (artes de src/lib/artes.ts)
+  e, se houver, UMA oferta de campanha ativa conferida < 24 h com meli.la
+  (ehLinkDeCompra; sem link, não entra). Troca a cada 7 s com fade de 500 ms;
+  pausa no mouse, toque, foco, aba oculta e botão; pontos acessíveis; itens
+  ocultos com inert. Cartão "Compare com clareza" e textos fixos; só a
+  imagem flutua 4 px em 6 s (hero-flutua). prefers-reduced-motion: sem
+  troca automática nem flutuação. Cartões (CartaoOferta, Vitrine,
+  Brinquedos, Mais vendidos): aproximação de 1,03x no mouse
+  (motion-safe), caixa da foto com altura fixa e overflow-hidden. Segunda
+  foto real só nos "Mais vendidos agora" (em_alta_catalogo.imagem2, leitura
+  em_alta_da_categoria_v2): crossfade no mouse e no toque na foto. A rota
+  /api/public/fotos não é chamada no mouse (divide o limite por pessoa com a
+  busca guiada e o "Me ajude a escolher").
 - AJUSTES DO MODELO FINAL (09/10, home-v2-final-sem-marcas): caixa do link
   DENTRO do topo, à esquerda, abaixo do título; "Serviço gratuito..." logo
   abaixo dela; arte e "Compare com clareza" à direita; passos numa faixa

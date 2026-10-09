@@ -356,9 +356,9 @@ function Cartao({ i }: { i: ItemVitrine }) {
   return (
     <li
       key={i.chave}
-      className="flex flex-col overflow-hidden rounded-lg border border-border bg-card"
+      className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card"
     >
-      <div className="relative h-28 bg-white sm:h-32">
+      <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {i.imagem ? (
           <img
             src={i.imagem}
@@ -367,7 +367,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
             height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="h-full w-full object-contain p-1.5"
+            className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center p-2 text-center text-[11px] text-secondary-ink">

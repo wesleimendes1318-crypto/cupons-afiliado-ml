@@ -261,7 +261,7 @@ export function CartaoOferta({
     : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110";
   return (
     <li
-      className={`campanha-entra campanha-cartao flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
+      className={`campanha-entra campanha-cartao group flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
       style={{ animationDelay: `${Math.min(atraso, 8) * 50}ms` }}
     >
       {/* Foto sempre dentro da área (05/10: fotos grandes estouravam o
@@ -275,7 +275,7 @@ export function CartaoOferta({
             height={200}
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-2.5"
+            className="absolute inset-0 h-full w-full object-contain p-2.5 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
           />
         ) : (
           <span className="absolute inset-0 grid place-items-center text-[11px] text-[#86868b]">
