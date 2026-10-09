@@ -7,6 +7,7 @@ import {
   prepararRevalidacao,
   removerPublicacao,
 } from "@/lib/inteligencia";
+import { gerirCampanhas } from "@/lib/agente-campanhas";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
 import { enviarAlertas } from "@/lib/alertas-telegram";
@@ -28,6 +29,9 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
                       (src/lib/curadoria-brinquedos.ts);
    - ?tarefa=arte&tema=<tema>[&forcar=1] gera e salva a arte realista do
                       tema (uma vez; src/lib/gerar-arte-campanha.ts);
+   - ?tarefa=campanhas sincroniza as campanhas (calendário, mais vendidos),
+                      escolhe os produtos com a curadoria e expira o que
+                      passou do prazo (src/lib/agente-campanhas.ts);
    - ?tarefa=alertas  manda no Telegram os avisos de preço marcados pelo
                       gatilho do banco (src/lib/alertas-telegram.ts);
    - ?tarefa=remover&publicacao=<id> apaga do canal um post registrado em
@@ -79,6 +83,10 @@ async function executar(request: Request) {
   if (tarefa === "brinquedos") {
     const alvo = new URL(request.url).searchParams.get("alvo");
     const resumo = await registrarExecucao(db, "brinquedos", () => curarBrinquedos(db, { alvo }));
+    return Response.json(resumo);
+  }
+  if (tarefa === "campanhas") {
+    const resumo = await registrarExecucao(db, "campanhas", () => gerirCampanhas(db));
     return Response.json(resumo);
   }
   if (tarefa === "alertas") {
