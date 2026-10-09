@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { BrinquedosPorIdade, type ItemBrinquedo } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
+import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { supabase } from "@/integrations/supabase/client";
 import { FAIXAS, pareceBrinquedo } from "@/lib/brinquedos";
 
@@ -169,6 +170,7 @@ function PaginaBrinquedos() {
           </p>
         </section>
       </main>
+      <RodapeInstitucional />
     </div>
   );
 }
