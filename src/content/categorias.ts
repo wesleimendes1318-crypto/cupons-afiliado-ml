@@ -8,6 +8,9 @@
 export type Categoria = {
   slug: string;
   nome: string;
+  /** Chamada da página (09/10): o que o site faz nesta categoria, sem
+      promessa de cupom nem de preço. */
+  chamada: string;
   /** Termos usados na base de cupons que pertencem a esta categoria. */
   termos: string[];
   resumo: string;
@@ -22,6 +25,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "eletronicos",
     nome: "Eletrônicos",
+    chamada:
+      "Fones, caixas de som, TVs e games: eu procuro o mesmo produto em outras lojas e mostro do mais barato ao mais caro, conferido pela foto.",
     termos: ["eletronicos", "eletrônicos", "eletro", "audio", "áudio", "tv", "games"],
     resumo:
       "Fones, caixas de som, televisores e acessórios: onde o cupom costuma render pouco e o preço base decide.",
@@ -58,6 +63,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "celulares",
     nome: "Celulares e acessórios",
+    chamada:
+      "Celulares, capas, carregadores e películas: o mesmo modelo em outras lojas, com versão e compatibilidade conferidas nos dois anúncios.",
     termos: ["celular", "celulares", "smartphone", "telefonia", "capinha"],
     resumo:
       "Aparelhos, capas, carregadores e fones: onde vale separar o cupom do aparelho do cupom do acessório.",
@@ -92,6 +99,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "informatica",
     nome: "Informática",
+    chamada:
+      "Notebooks, monitores, periféricos e cadeiras: o mesmo produto entre lojas, com o frete em linha própria e a loja oficial quando houver.",
     termos: ["informatica", "informática", "notebook", "computador", "pc", "periferico"],
     resumo:
       "Notebooks, periféricos e componentes: especificação errada custa mais caro que qualquer desconto perdido.",
@@ -126,6 +135,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "casa",
     nome: "Casa e utilidades",
+    chamada:
+      "Cozinha, utilidades e decoração: o mesmo produto em outras lojas, do mais barato ao mais caro, com o frete em linha própria.",
     termos: [
       "casa",
       "cozinha",
@@ -169,6 +180,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "moda",
     nome: "Moda e calçados",
+    chamada:
+      "Roupas, calçados e bolsas: o mesmo modelo e a mesma cor em outras lojas; o que muda aparece separado, em Parecidos.",
     termos: [
       "moda",
       "roupa",
@@ -213,6 +226,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "beleza",
     nome: "Beleza e cuidados pessoais",
+    chamada:
+      "Perfumes, maquiagem e cuidados: o mesmo volume e a mesma versão em outras lojas, com a loja oficial quando houver.",
     termos: ["beleza", "cosmetico", "cosmético", "perfume", "cabelo", "skincare", "saude", "saúde"],
     resumo:
       "Produtos de reposição constante, onde validade, procedência e volume importam mais que o percentual.",
@@ -247,6 +262,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "automotivo",
     nome: "Automotivo",
+    chamada:
+      "Peças e acessórios: só indico o mesmo item, com a compatibilidade do veículo conferida nos dois anúncios.",
     termos: ["automotivo", "carro", "moto", "pneu", "acessorios automotivos", "auto"],
     resumo:
       "Peças e acessórios em que compatibilidade com o veículo vale mais que qualquer desconto.",
@@ -281,6 +298,8 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "brinquedos",
     nome: "Brinquedos",
+    chamada:
+      "O mesmo brinquedo em outras lojas, do mais barato ao mais caro, com a faixa etária indicada no anúncio.",
     termos: ["brinquedos", "brinquedo", "infantil", "jogos", "bonecas", "lego"],
     resumo:
       "Brinquedos e presentes infantis: o mesmo brinquedo mais barato em outra loja, com idade indicada e segurança conferidas.",

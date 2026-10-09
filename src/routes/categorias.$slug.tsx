@@ -1,22 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { AlertTriangle, CheckCircle2, Link2 } from "lucide-react";
 
 import { AdInArticle } from "@/components/anuncios/Anuncio";
+import { BannerArte } from "@/components/BannerArte";
+import { CartaoCategoria } from "@/components/CartaoCategoria";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
-import { AvisoAfiliado } from "@/components/RodapeInstitucional";
-import { ArrowRight, AlertTriangle, CheckCircle2, Tag } from "lucide-react";
+import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
+import { Vitrine } from "@/components/Vitrine";
 import { buscarCategoria, CATEGORIAS } from "@/content/categorias";
-import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
-import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useMemo, useState } from "react";
-import {
-  calcularScore,
-  CondicoesModal,
-  CupomCard,
-  diasAte,
-  type Cupom,
-  type CupomIndexado,
-} from "@/routes/index";
+import { arteDaCategoria, srcArte } from "@/lib/artes";
 
 const BASE = "https://melhorescolha.io/categorias";
 
@@ -34,14 +26,19 @@ export const Route = createFileRoute("/categorias/$slug")({
     }
     const { categoria } = loaderData;
     const url = `${BASE}/${params.slug}`;
+    const titulo = `${categoria.nome}: compare preços antes de comprar`;
+    const arte = arteDaCategoria(categoria.slug);
     return {
       meta: [
-        { title: `Cupons de ${categoria.nome} conferidos` },
-        { name: "description", content: categoria.resumo },
-        { property: "og:title", content: `Cupons de ${categoria.nome} conferidos` },
-        { property: "og:description", content: categoria.resumo },
-        { property: "og:type", content: "article" },
+        { title: titulo },
+        { name: "description", content: categoria.chamada },
+        { property: "og:title", content: titulo },
+        { property: "og:description", content: categoria.chamada },
+        { property: "og:type", content: "website" },
         { property: "og:url", content: url },
+        ...(arte
+          ? [{ property: "og:image", content: `https://melhorescolha.io${srcArte(arte.id)}` }]
+          : []),
       ],
       links: [{ rel: "canonical", href: url }],
       scripts: [
@@ -78,191 +75,171 @@ function CategoriaNaoEncontrada() {
   );
 }
 
-const CAMPOS =
-  "id,vendedor,desconto,tipo,valor,orcamento,vence,busca,compra_min,teto,sem_teto,qualidade,categoria,updated_at,codigo_cupom,vitrine_ok,link_afiliado,link_origem,link_loja";
+/* PÁGINA DE CATEGORIA (09/10, artes novas; Weslei: "ajuste as vitrines e
+   categorias, inclua as artes. cuidado com todo design"). Antes listava
+   cupons (fora do ar desde 24/09) e dizia "nenhum cupom"; agora mostra o que
+   o site faz: banner com a arte da categoria, os produtos já comparados
+   dela (a mesma vitrine da home, com as mesmas regras) e o que conferir
+   antes de comprar. Texto sobre cupom do conteúdo antigo fica de fora. */
+const semCupom = (t: string) => !/cupo/i.test(t);
+
+const BOTAO_PRIMARIO =
+  "inline-flex min-h-11 items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:brightness-110";
+const BOTAO_SECUNDARIO =
+  "inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-[#7547E8]";
 
 function PaginaCategoria() {
   const { categoria } = Route.useLoaderData();
-  const tom = TOM_CATEGORIA[categoria.slug] ?? "var(--ml-blue)";
-  const [agora, setAgora] = useState<number | null>(null);
-  const [cupomAberto, setCupomAberto] = useState<CupomIndexado | null>(null);
-
-  useEffect(() => {
-    setAgora(Date.now());
-    const id = window.setInterval(() => setAgora(Date.now()), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["cupons-categoria", categoria.slug],
-    staleTime: 120_000,
-    retry: 5,
-    retryDelay: (tentativa) => Math.min(1000 * 2 ** tentativa, 15_000),
-    queryFn: async (): Promise<Cupom[]> => {
-      const hoje = new Date().toISOString().slice(0, 10);
-      const { data, error } = await supabase
-        .from("cupons")
-        .select(CAMPOS)
-        .eq("qualidade", "bom")
-        .or(`vence.is.null,vence.gte.${hoje}`)
-        .order("teto", { ascending: false, nullsFirst: false })
-        .limit(600);
-      if (error) throw error;
-      const termos = categoria.termos.map((termo) => termo.toLowerCase());
-      return ((data ?? []) as unknown as Cupom[])
-        .filter((cupom) => cupom.vitrine_ok !== false)
-        .filter((cupom) => {
-          const rotulo = (cupom.categoria ?? "").toLowerCase();
-          return rotulo !== "" && termos.some((termo) => rotulo.includes(termo));
-        })
-        .slice(0, 24);
-    },
-  });
-
-  /* O mesmo cartão da tela inicial: a pessoa vê contagem, economia e o botão
-     no lugar de sempre, sem precisar reaprender a ler a página. */
-  const cupons: CupomIndexado[] = useMemo(
-    () =>
-      (data ?? []).map((cupom) => ({
-        ...cupom,
-        chave: `${cupom.vendedor}|${cupom.desconto ?? ""}`,
-        dias: diasAte(cupom.vence),
-        score: calcularScore(cupom, agora),
-      })),
-    [data, agora],
-  );
+  const arte = arteDaCategoria(categoria.slug);
+  const avaliar = categoria.comoAvaliar.filter(semCupom);
+  const cuidados = categoria.cuidados.filter(semCupom);
+  const perguntas = categoria.perguntas.filter((p) => semCupom(p.pergunta) && semCupom(p.resposta));
+  const titulo = `${categoria.nome}: compare antes de comprar`;
 
   return (
-    <LayoutConteudo
-      etiqueta={categoria.nome}
-      titulo={`Cupons de ${categoria.nome}`}
-      resumo={categoria.resumo}
-      atualizacao={categoria.atualizacao}
-      trilha={
-        <Link to="/categorias" className="font-semibold text-white underline hover:opacity-80">
-          Todas as categorias
-        </Link>
-      }
-    >
-      <h2 className="flex items-center gap-2">
-        <Tag className="size-5" style={{ color: tom }} aria-hidden="true" />
-        {isLoading
-          ? "Carregando os cupons desta categoria"
-          : cupons.length === 1
-            ? "1 cupom conferido nesta categoria"
-            : `${cupons.length} cupons conferidos nesta categoria`}
-      </h2>
-
-      {isLoading ? (
-        <p>Buscando os cupons desta categoria...</p>
-      ) : cupons.length === 0 ? (
-        <p>
-          Não há, neste momento, cupom confirmado para esta categoria na nossa base. Isso não
-          significa que não existam ofertas: significa apenas que nada foi verificado por aqui, e
-          preferimos dizer isso a inventar uma lista.{" "}
-          <Link to="/" className="font-semibold text-ml-blue hover:underline">
-            Ver todos os cupons conferidos
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6 sm:pt-6">
+        <nav aria-label="Você está em" className="mb-3 text-xs text-secondary-ink">
+          <Link to="/" className="hover:underline">
+            Início
           </Link>
-          .
-        </p>
-      ) : (
-        <>
-          <p>
-            Cada cartão mostra as condições lidas da própria campanha do vendedor. Condições mudam
-            sem aviso — confirme no carrinho antes de pagar.
-          </p>
-          <div className="not-prose grid gap-4 sm:grid-cols-2">
-            {cupons.map((cupom) => (
-              <CupomCard
-                key={cupom.id}
-                cupom={cupom}
-                agora={agora}
-                abrirCondicoes={setCupomAberto}
-                selecionado={false}
-                alternarSelecao={() => {}}
-                permitirComparar={false}
-              />
-            ))}
-          </div>
-          <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
-          <p className="text-sm">
-            <Link to="/" className="font-semibold text-ml-blue hover:underline">
-              Ver todos os cupons e comparar economia
-            </Link>
-          </p>
-          <AvisoAfiliado className="mt-3 text-xs text-secondary-ink" />
-        </>
-      )}
+          <span aria-hidden="true"> › </span>
+          <Link to="/categorias" className="hover:underline">
+            Categorias
+          </Link>
+          <span aria-hidden="true"> › </span>
+          <span className="font-semibold text-foreground">{categoria.nome}</span>
+        </nav>
 
-      <AdInArticle />
-
-      <h2>Dicas para comprar em {categoria.nome.toLowerCase()}</h2>
-      {categoria.introducao.map((paragrafo) => (
-        <p key={paragrafo}>{paragrafo}</p>
-      ))}
-
-      <h3 className="flex items-center gap-2">
-        <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
-        O que conferir antes de comprar
-      </h3>
-      <ul className="lista-marcada !list-none !pl-0 space-y-2">
-        {categoria.comoAvaliar.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-
-      <h3 className="flex items-center gap-2">
-        <AlertTriangle className="size-5 text-urgency-warning" aria-hidden="true" />
-        Erros que custam caro
-      </h3>
-      <ul className="lista-alerta !list-none !pl-0 space-y-2">
-        {categoria.cuidados.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-
-      <h2>Perguntas frequentes</h2>
-      <div className="not-prose space-y-3">
-        {categoria.perguntas.map((item) => (
-          <div
-            key={item.pergunta}
-            className="rounded-xl border border-border bg-card p-4 text-sm leading-relaxed text-secondary-ink"
+        {arte ? (
+          <BannerArte
+            arte={arte}
+            etiqueta="Categoria"
+            titulo={titulo}
+            resumo={categoria.chamada}
+            prioridade
           >
-            <p className="font-bold text-foreground">{item.pergunta}</p>
-            <p className="mt-1.5">{item.resposta}</p>
-          </div>
-        ))}
-      </div>
+            <Link to="/" hash="colar-link" className={BOTAO_PRIMARIO}>
+              <Link2 className="size-4" aria-hidden="true" />
+              Colar o link e comparar
+            </Link>
+            {(avaliar.length > 0 || cuidados.length > 0) && (
+              <a href="#dicas" className={BOTAO_SECUNDARIO}>
+                O que conferir
+              </a>
+            )}
+          </BannerArte>
+        ) : (
+          <header className="rounded-3xl bg-card p-6 shadow-[var(--shadow-card)]">
+            <h1 className="text-3xl font-extrabold tracking-tight">{titulo}</h1>
+            <p className="mt-2 text-secondary-ink">{categoria.chamada}</p>
+          </header>
+        )}
 
-      <h2>Outras categorias</h2>
-      <div className="not-prose grid gap-3 sm:grid-cols-2">
-        {CATEGORIAS.filter((item) => item.slug !== categoria.slug)
-          .slice(0, 4)
-          .map((item) => {
-            const Icone = ICONE_CATEGORIA[item.slug];
-            const cor = TOM_CATEGORIA[item.slug] ?? "var(--ml-blue)";
-            return (
-              <Link
-                key={item.slug}
-                to="/categorias/$slug"
-                params={{ slug: item.slug }}
-                className="cartao-conteudo group flex items-center gap-3 p-3"
-              >
-                <span
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-white"
-                  style={{ background: cor }}
-                >
-                  {Icone ? <Icone className="size-4" aria-hidden="true" /> : null}
-                </span>
-                <span className="text-sm font-bold text-foreground">{item.nome}</span>
-                <ArrowRight
-                  className="ml-auto size-4 text-secondary-ink transition-transform group-hover:translate-x-1"
-                  aria-hidden="true"
-                />
+        <Vitrine
+          categoriaFixa={categoria.slug}
+          vazio={
+            <div className="mt-8 rounded-3xl bg-card p-6 shadow-[var(--shadow-card)]">
+              <h2 className="text-xl font-extrabold tracking-tight">
+                Ainda não comparei produtos de {categoria.nome.toLowerCase()} por aqui
+              </h2>
+              <p className="mt-1 text-sm text-secondary-ink">
+                Cole o link de um anúncio e eu mostro o mesmo produto em outras lojas, do mais
+                barato ao mais caro.
+              </p>
+              <Link to="/" hash="colar-link" className={`${BOTAO_PRIMARIO} mt-4`}>
+                <Link2 className="size-4" aria-hidden="true" />
+                Colar o link e comparar
               </Link>
-            );
-          })}
-      </div>
-    </LayoutConteudo>
+            </div>
+          }
+        />
+
+        <AdInArticle />
+
+        {(avaliar.length > 0 || cuidados.length > 0) && (
+          <section id="dicas" className="mt-10 scroll-mt-20" aria-labelledby="dicas-titulo">
+            <h2 id="dicas-titulo" className="text-xl font-extrabold tracking-tight sm:text-2xl">
+              Antes de comprar {categoria.nome.toLowerCase()}
+            </h2>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              {avaliar.length > 0 && (
+                <div className="rounded-3xl bg-card p-5 shadow-[var(--shadow-card)] sm:p-6">
+                  <h3 className="flex items-center gap-2 text-base font-bold">
+                    <CheckCircle2 className="size-5 text-success" aria-hidden="true" />O que
+                    conferir
+                  </h3>
+                  <ul className="mt-3 space-y-2 text-sm leading-relaxed text-secondary-ink">
+                    {avaliar.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span
+                          aria-hidden="true"
+                          className="mt-2 size-1.5 shrink-0 rounded-full bg-success"
+                        />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {cuidados.length > 0 && (
+                <div className="rounded-3xl bg-card p-5 shadow-[var(--shadow-card)] sm:p-6">
+                  <h3 className="flex items-center gap-2 text-base font-bold">
+                    <AlertTriangle className="size-5 text-urgency-warning" aria-hidden="true" />
+                    Erros que custam caro
+                  </h3>
+                  <ul className="mt-3 space-y-2 text-sm leading-relaxed text-secondary-ink">
+                    {cuidados.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span
+                          aria-hidden="true"
+                          className="mt-2 size-1.5 shrink-0 rounded-full bg-urgency-warning"
+                        />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {perguntas.length > 0 && (
+          <section className="mt-8" aria-labelledby="faq-titulo">
+            <h2 id="faq-titulo" className="text-xl font-extrabold tracking-tight">
+              Perguntas frequentes
+            </h2>
+            <div className="mt-3 space-y-3">
+              {perguntas.map((item) => (
+                <div
+                  key={item.pergunta}
+                  className="rounded-3xl bg-card p-5 text-sm leading-relaxed text-secondary-ink shadow-[var(--shadow-card)]"
+                >
+                  <p className="font-bold text-foreground">{item.pergunta}</p>
+                  <p className="mt-1.5">{item.resposta}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="mt-10" aria-labelledby="outras-titulo">
+          <h2 id="outras-titulo" className="text-xl font-extrabold tracking-tight">
+            Outras categorias
+          </h2>
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {CATEGORIAS.filter((item) => item.slug !== categoria.slug).map((item) => (
+              <li key={item.slug}>
+                <CartaoCategoria slug={item.slug} nome={item.nome} />
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <AvisoAfiliado className="mt-8 text-xs text-secondary-ink" />
+      </main>
+      <RodapeInstitucional />
+    </div>
   );
 }

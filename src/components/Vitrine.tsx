@@ -7,7 +7,7 @@
    Google ficam de fora no próprio banco (função vitrine). */
 
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { BadgeCheck, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
@@ -117,10 +117,20 @@ const quando = (iso: string) => {
 
 type Aba = "recentes" | "economias" | "procurados";
 
-export function Vitrine() {
+export function Vitrine({
+  categoriaFixa,
+  vazio,
+}: {
+  /* Página de categoria (09/10): só os produtos dela, sem os filtros de
+     categoria. */
+  categoriaFixa?: string;
+  /* Mostrado quando a categoria fixa ainda não tem produto. */
+  vazio?: ReactNode;
+} = {}) {
   const [itens, setItens] = useState<ItemVitrine[]>([]);
+  const [carregou, setCarregou] = useState(false);
   const [aba, setAba] = useState<Aba>("recentes");
-  const [categoria, setCategoria] = useState<string | null>(null);
+  const [categoria, setCategoria] = useState<string | null>(categoriaFixa ?? null);
   /* Interesse principal do visitante (perfil anônimo do navegador, só com
      consentimento de análise). Lido depois de montar: o servidor não conhece. */
   const [interesse, setInteresse] = useState<ClusterInteresse | null>(null);
@@ -136,7 +146,7 @@ export function Vitrine() {
     (async () => {
       try {
         const [{ data }, fretes] = await Promise.all([
-          supabase.rpc("vitrine" as never, { p_limite: 120 } as never),
+          supabase.rpc("vitrine" as never, { p_limite: categoriaFixa ? 300 : 120 } as never),
           lerFretesDaVitrine(),
         ]);
         if (vivo && Array.isArray(data))
@@ -147,12 +157,14 @@ export function Vitrine() {
           );
       } catch {
         /* sem vitrine: a página segue normal */
+      } finally {
+        if (vivo) setCarregou(true);
       }
     })();
     return () => {
       vivo = false;
     };
-  }, []);
+  }, [categoriaFixa]);
 
   /* Categorias do próprio site, na ordem do site; "Mais achados" por último. */
   const categorias = useMemo(() => {
@@ -184,7 +196,11 @@ export function Vitrine() {
       .slice(0, 5);
   }, [lista, interesse, categoria]);
 
-  if (!itens.length) return null;
+  if (categoriaFixa) {
+    if (!carregou) return null;
+    if (!itens.some((i) => (i.categoria_site ?? "outros") === categoriaFixa))
+      return <>{vazio ?? null}</>;
+  } else if (!itens.length) return null;
 
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "recentes", rotulo: "Pesquisados agora" },
@@ -196,7 +212,11 @@ export function Vitrine() {
     <section className="mt-8" aria-label="Produtos já comparados" data-origem="vitrine">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-xl font-extrabold sm:text-2xl">Produtos que já comparei</h2>
+          <h2 className="text-xl font-extrabold sm:text-2xl">
+            {categoriaFixa
+              ? `${NOME_CATEGORIA[categoriaFixa] ?? "Produtos"} que já comparei`
+              : "Produtos que já comparei"}
+          </h2>
           <p className="mt-1 text-sm text-secondary-ink">
             Preço de quando foi comparado. Toque em "Comparar de novo" para ver o preço de agora.
           </p>
@@ -223,7 +243,7 @@ export function Vitrine() {
         ))}
       </div>
 
-      {categorias.length > 1 && (
+      {!categoriaFixa && categorias.length > 1 && (
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           <button
             type="button"

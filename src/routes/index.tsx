@@ -38,6 +38,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { CartaoCategoria } from "@/components/CartaoCategoria";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
 import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
@@ -1293,30 +1294,15 @@ async function carregarCupons(): Promise<Cupom[]> {
    caixa de colar o link. Voltar para true quando as etiquetas funcionarem. */
 const MOSTRAR_CUPONS = false;
 
-/* "Explore por categoria" (home-v2). Sem arte nos cartões (Weslei, 09/10:
-   "não inserir as artes nas categorias"): ícone da marca, limpo. */
+/* "Explore por categoria" (home-v2). Com as artes novas (Weslei, 09/10:
+   "ajuste as vitrines e categorias, inclua as artes"), enquadradas nos
+   objetos (src/lib/artes.ts). */
 const CATEGORIAS_HOME = [
-  {
-    nome: "Tecnologia",
-    icone: Headphones,
-    link: { to: "/categorias/$slug", params: { slug: "eletronicos" } },
-  },
-  {
-    nome: "Casa e cozinha",
-    icone: CookingPot,
-    link: { to: "/categorias/$slug", params: { slug: "casa" } },
-  },
-  {
-    nome: "Beleza",
-    icone: Sparkles,
-    link: { to: "/categorias/$slug", params: { slug: "beleza" } },
-  },
-  {
-    nome: "Moda",
-    icone: Shirt,
-    link: { to: "/categorias/$slug", params: { slug: "moda" } },
-  },
-  { nome: "Brinquedos", icone: ToyBrick, link: { to: "/brinquedos" } },
+  { nome: "Tecnologia", slug: "eletronicos" },
+  { nome: "Casa e cozinha", slug: "casa" },
+  { nome: "Beleza", slug: "beleza" },
+  { nome: "Moda", slug: "moda" },
+  { nome: "Brinquedos", slug: "brinquedos", paginaPropria: true },
 ] as const;
 
 function Index() {
@@ -2058,32 +2044,35 @@ function Index() {
 
         <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
           {buscaParada && (
-            /* Explore por categoria (home-v2), sem arte (09/10). */
+            /* Explore por categoria (home-v2), com as artes (09/10). */
             <section aria-labelledby="explore-categoria" className="mt-8">
-              <h2 id="explore-categoria" className="text-2xl font-extrabold tracking-tight">
-                Explore por categoria
-              </h2>
-              <p className="text-sm text-secondary-ink">Encontre produtos para comparar.</p>
-              <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-5 sm:overflow-visible">
-                {CATEGORIAS_HOME.map((c) => (
-                  <Link
-                    key={c.nome}
-                    {...c.link}
-                    className="group flex w-[42%] shrink-0 snap-start flex-col gap-4 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
-                  >
-                    <span className="flex size-12 items-center justify-center rounded-2xl bg-[#F7F5FC] text-[#7547E8] transition group-hover:bg-[#7547E8] group-hover:text-white">
-                      <c.icone className="size-6" aria-hidden="true" />
-                    </span>
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold sm:text-base">{c.nome}</span>
-                      <ChevronRight
-                        className="size-4 shrink-0 text-[#7547E8] transition group-hover:translate-x-0.5"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </Link>
-                ))}
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <h2 id="explore-categoria" className="text-2xl font-extrabold tracking-tight">
+                    Explore por categoria
+                  </h2>
+                  <p className="text-sm text-secondary-ink">
+                    Veja o que já comparei e o que conferir antes de comprar.
+                  </p>
+                </div>
+                <Link
+                  to="/categorias"
+                  className="hidden shrink-0 text-sm font-semibold text-[#0071e3] hover:underline sm:inline"
+                >
+                  Todas as categorias
+                </Link>
               </div>
+              <ul className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0">
+                {CATEGORIAS_HOME.map((c) => (
+                  <li key={c.nome} className="w-[42%] shrink-0 snap-start sm:w-auto">
+                    <CartaoCategoria
+                      slug={c.slug}
+                      nome={c.nome}
+                      paginaPropria={"paginaPropria" in c && c.paginaPropria}
+                    />
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

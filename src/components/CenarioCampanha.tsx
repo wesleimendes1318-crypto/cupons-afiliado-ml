@@ -9,10 +9,10 @@
      Weslei, com câmera lenta e reflexo. As fotos reais dos produtos entram
      num cartão de comparação flutuante, fora da máscara (sem corte, sem
      filtro).
-   - Demais temas (tecnologia, casa, beleza, marca): o mesmo estúdio
-     montado em CSS (parede ripada, arco, piso, pedestais e cartão de
-     comparação com ✓), nas cores do tema, com as fotos reais dos produtos
-     nos pedestais; sem foto, ícones do tema.
+   - Tecnologia, Casa, Beleza e a marca (09/10): as artes do pacote
+     ME-Imagens (src/lib/artes.ts), enquadradas nos objetos (imagem.foco).
+     Tema sem arte: o mesmo estúdio montado em CSS (parede ripada, arco,
+     piso, pedestais e cartão de comparação com ✓), nas cores do tema.
    - Só decoração (aria-hidden). Movimento desliga com
      prefers-reduced-motion. */
 import { useId, type CSSProperties, type ComponentType } from "react";
@@ -386,7 +386,7 @@ export function CenarioCampanha({
             alt=""
             loading="lazy"
             className="campanha-camera absolute inset-0 h-full w-full object-cover"
-            style={{ objectPosition: "50% 40%" }}
+            style={{ objectPosition: t.imagem?.foco ?? "50% 40%" }}
           />
         ) : (
           <EstudioCss tema={tema} fotos={reais} cor={cor} />

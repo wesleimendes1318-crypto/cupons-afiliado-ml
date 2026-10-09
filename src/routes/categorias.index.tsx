@@ -1,6 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
-  ArrowRight,
   Car,
   Laptop,
   Shirt,
@@ -12,6 +11,7 @@ import {
   Blocks,
 } from "lucide-react";
 
+import { CartaoCategoria } from "@/components/CartaoCategoria";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { CATEGORIAS } from "@/content/categorias";
 
@@ -66,57 +66,24 @@ export const Route = createFileRoute("/categorias/")({
 function Categorias() {
   return (
     <LayoutConteudo
-      etiqueta="Curadoria por tipo de produto"
+      etiqueta="Explore por categoria"
       titulo="Categorias"
-      resumo="O que muda na hora de avaliar uma oferta dependendo do tipo de produto."
-      atualizacao="23/09/2026"
-      trilha={<span>{CATEGORIAS.length} categorias com orientação própria</span>}
+      resumo="Os produtos que já comparei em cada categoria e o que conferir antes de comprar."
+      atualizacao="09/10/2026"
+      trilha={<span>{CATEGORIAS.length} categorias</span>}
     >
       <p>
-        O mesmo cupom rende de formas muito diferentes conforme o que você compra. Em moda, onde a
-        compra é menor, o percentual quase todo se realiza. Em eletrônicos, o teto trava o desconto
-        em poucos reais. Cada página abaixo explica esse comportamento e o que conferir antes de
-        fechar a compra.
+        Cole o link do produto e eu mostro o mesmo produto em outras lojas dentro do Mercado Livre,
+        do mais barato ao mais caro. Em cada categoria você vê o que já foi comparado e os cuidados
+        que mais pesam na hora de escolher.
       </p>
 
-      <div className="not-prose grid gap-4 sm:grid-cols-2">
-        {CATEGORIAS.map((categoria, indice) => {
-          const Icone = ICONE_CATEGORIA[categoria.slug] ?? Sparkles;
-          const tom = TOM_CATEGORIA[categoria.slug] ?? "var(--ml-blue)";
-          return (
-            <Link
-              key={categoria.slug}
-              to="/categorias/$slug"
-              params={{ slug: categoria.slug }}
-              className="cartao-conteudo animate-conteudo group block p-4"
-              style={{ animationDelay: `${indice * 55}ms` }}
-            >
-              <span
-                className="inline-flex size-9 items-center justify-center rounded-lg text-white"
-                style={{ background: tom }}
-              >
-                <Icone className="size-5" aria-hidden="true" />
-              </span>
-              <h2
-                className="mt-3 text-base font-bold text-foreground transition-colors"
-                style={{ color: undefined }}
-              >
-                {categoria.nome}
-              </h2>
-              <p className="mt-1 text-sm text-secondary-ink">{categoria.resumo}</p>
-              <p
-                className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
-                style={{ color: tom }}
-              >
-                Ver orientações
-                <ArrowRight
-                  className="size-3.5 transition-transform group-hover:translate-x-1"
-                  aria-hidden="true"
-                />
-              </p>
-            </Link>
-          );
-        })}
+      {/* div, não ul: o estilo de texto da página põe marcador e recuo em
+          listas. */}
+      <div className="not-prose grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {CATEGORIAS.map((categoria) => (
+          <CartaoCategoria key={categoria.slug} slug={categoria.slug} nome={categoria.nome} />
+        ))}
       </div>
     </LayoutConteudo>
   );

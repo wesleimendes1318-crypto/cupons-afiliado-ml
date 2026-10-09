@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
+import { BannerArte } from "@/components/BannerArte";
+import { ARTES } from "@/lib/artes";
 import { BrinquedosPorIdade, type ItemBrinquedo } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
@@ -124,7 +126,15 @@ function PaginaBrinquedos() {
           <ArrowLeft className="size-3.5" aria-hidden="true" />
           Voltar para o comparador
         </Link>
-        <BrinquedosPorIdade inicial={itens} titulo="h1" className="mt-4" />
+        <BannerArte
+          arte={ARTES["brinquedos-aprender"]}
+          etiqueta="Brinquedos"
+          titulo="Brinquedos por idade com o menor preço conferido"
+          resumo="Os mais vendidos e as melhores escolhas por idade, já comparados com as outras lojas. Inclui opções até R$ 30 para doação."
+          prioridade
+          className="mt-4"
+        />
+        <BrinquedosPorIdade inicial={itens} titulo="oculto" className="mt-4" />
         <BuscaGuiada contexto="criancas" className="mt-8" />
 
         <section className="mt-8 grid gap-4 md:grid-cols-2">

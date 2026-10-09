@@ -56,7 +56,9 @@ export type TemaVisual = {
   /* estudio: cenário 3D de estúdio com fundo ripado (Weslei, 05/10: "as
      artes devem ter como base esses exemplos"), sem texto na imagem, num
      quadro com a proporção da arte e movimento lento de câmera + reflexo. */
-  imagem?: { src: string; largura: number; altura: number; estudio?: boolean };
+  /* foco: object-position que preserva os objetos da arte (artes de
+     09/10, com área livre à esquerda e objetos à direita). */
+  imagem?: { src: string; largura: number; altura: number; estudio?: boolean; foco?: string };
   /* Movimento: só a entrada suave da arte e respostas nos botões/cartões;
      nada contínuo disputando com preços. */
   movimento: "entrada" | "nenhum";
@@ -238,6 +240,14 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "O mesmo produto, na loja mais em conta.",
     descricao:
       "Eletrônicos já comparados entre as lojas, com a loja oficial quando houver e o frete indicado.",
+    /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
+    imagem: {
+      src: "/artes/home-office.webp",
+      largura: 1600,
+      altura: 900,
+      estudio: true,
+      foco: "74% 50%",
+    },
     movimento: "entrada",
     palavras:
       /\b(tecnologia|tech|eletr[oô]nicos?|inform[aá]tica|celular|smartphone|iphone|galaxy|notebook|tablet|fone|headphone|smartwatch|caixa de som|jbl|monitor|teclado|mouse|gamer|console|tv|smart ?tv|ssd)\b/i,
@@ -250,6 +260,14 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "Escolhas comparadas, preço justo.",
     descricao:
       "Decoração e utilidades já comparadas com as outras lojas, do mesmo produto ao melhor preço encontrado.",
+    /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
+    imagem: {
+      src: "/artes/cozinha.webp",
+      largura: 1600,
+      altura: 900,
+      estudio: true,
+      foco: "76% 58%",
+    },
     movimento: "entrada",
     palavras:
       /\b(casa|decora[cç][aã]o|m[oó]veis?|cozinha|banheiro|quarto|sala|cama|mesa|banho|lumin[aá]ria|lumin[aá]rias|tapete|cortina|vaso|almofada|organizador|panela|jogo de cama|toalha|air ?fryer|cafeteira|aspirador)\b/i,
@@ -262,6 +280,14 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "O mesmo produto, na loja certa.",
     descricao:
       "Perfumes, maquiagem e cuidados já comparados com as outras lojas, com a loja oficial quando houver.",
+    /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
+    imagem: {
+      src: "/artes/beleza-penteadeira.webp",
+      largura: 1600,
+      altura: 900,
+      estudio: true,
+      foco: "76% 50%",
+    },
     movimento: "entrada",
     palavras:
       /\b(beleza|perfumes?|col[oô]nia|eau de (parfum|toilette)|maquiagem|batom|base l[ií]quida|skincare|hidratante|s[eé]rum|shampoo|condicionador|cabelo|botic[aá]rio|natura|lanc[oô]me|wella|kit de banho)\b/i,
@@ -274,6 +300,14 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "Mesmo produto ou alternativa semelhante.",
     descricao:
       "Produtos já comparados com as outras lojas, com o que muda explicado e o link seguro para comprar.",
+    /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
+    imagem: {
+      src: "/artes/escolhas-bolso.webp",
+      largura: 1600,
+      altura: 900,
+      estudio: true,
+      foco: "72% 50%",
+    },
     movimento: "entrada",
     palavras: /$^/,
   },

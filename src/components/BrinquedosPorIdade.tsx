@@ -223,7 +223,8 @@ export function BrinquedosPorIdade({
   className?: string;
   /* Lista lida no servidor (página /brinquedos): sai no HTML para busca. */
   inicial?: Item[];
-  titulo?: "h1" | "h2";
+  /* "oculto": a página já tem o banner com o título (09/10). */
+  titulo?: "h1" | "h2" | "oculto";
 }) {
   const [itens, setItens] = useState<Item[]>(inicial ?? []);
   const [carregou, setCarregou] = useState(!!inicial);
@@ -295,18 +296,25 @@ export function BrinquedosPorIdade({
           Brinquedos por idade com o menor preço conferido
         </h1>
       ) : (
-        <h2 id="brinquedos-titulo" className="text-2xl font-extrabold tracking-tight">
+        <h2
+          id="brinquedos-titulo"
+          className={titulo === "oculto" ? "sr-only" : "text-2xl font-extrabold tracking-tight"}
+        >
           Brinquedos por idade
         </h2>
       )}
-      <p className="mt-1 text-sm text-secondary-ink">
-        Os mais vendidos e as melhores escolhas por idade, já comparados com as outras lojas. Inclui
-        opções baratas para doação.
-      </p>
+      {titulo !== "oculto" && (
+        <p className="mt-1 text-sm text-secondary-ink">
+          Os mais vendidos e as melhores escolhas por idade, já comparados com as outras lojas.
+          Inclui opções baratas para doação.
+        </p>
+      )}
       <div
         role="tablist"
         aria-label="Faixa de idade"
-        className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1"
+        className={
+          "-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 " + (titulo === "oculto" ? "" : "mt-4")
+        }
       >
         {ABAS.map((a) => {
           const n = porAba.get(a.id)?.length ?? 0;

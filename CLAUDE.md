@@ -899,10 +899,26 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Escolha melhor.", colunas Explore / Institucional / Sua privacidade,
   quadro "Transparência em cada escolha" (links de afiliado, site
   independente, preços mudam, marcas dos titulares).
-- ARTES NÃO ENTRAM NAS CATEGORIAS (Weslei, 09/10): "Explore por categoria"
-  com ícone (sem arte) e os temas Casa, Tecnologia e Beleza voltam ao
-  estúdio em CSS com as fotos reais. As artes do pacote são banners de
-  abertura de seção (LEIA-ME do pacote), não ilustração de categoria.
+- ARTES NAS CATEGORIAS E VITRINES (Weslei, 09/10, tarde: "ajuste as
+  vitrines e categorias, inclua as artes. cuidado com todo design"; substitui
+  o "sem arte nas categorias" da manhã). Pacote ME-Imagens (sem logos; 50
+  artes com área livre à esquerda e objetos à direita; nada de preço, data
+  ou cupom na imagem). Catálogo em src/lib/artes.ts (public/artes/<id>.webp
+  1600 px e -m.webp 960 px, foco por arte); Celulares e Automotivo usam as
+  do acervo original (sem texto). Não usar "Festival de cupons", "Ofertas
+  relâmpago" nem a pasta 03-historico-nao-publicar.
+  - BannerArte: PC com a arte inteira e o texto na área livre sobre véu em
+    degradê (escuro no modo escuro); celular com a arte em faixa no topo e o
+    texto abaixo (nunca texto sobre foto em tela pequena).
+  - /categorias/<slug>: banner + produtos já comparados da categoria
+    (Vitrine categoriaFixa, mesmas regras da home) + "Antes de comprar"
+    e perguntas, sem o texto antigo de cupom; título "<Categoria>: compare
+    antes de comprar". /categorias, "Explore por categoria" (home) e
+    "Outras categorias": CartaoCategoria com a miniatura da arte.
+  - /brinquedos: banner com a arte de brinquedos.
+  - Vitrines de campanha: Tecnologia (home office), Casa (cozinha), Beleza
+    (penteadeira) e a neutra (escolhas que cabem no bolso) usam as artes
+    (imagem.foco); Crianças, Natal e Black Friday seguem com o estúdio.
 - AJUSTES DO MODELO FINAL (09/10, home-v2-final-sem-marcas): caixa do link
   DENTRO do topo, à esquerda, abaixo do título; "Serviço gratuito..." logo
   abaixo dela; arte e "Compare com clareza" à direita; passos numa faixa

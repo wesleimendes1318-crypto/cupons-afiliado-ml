@@ -861,3 +861,32 @@ body:has(dialog[open]) [data-botao-colar],
 body:has(dialog[open]) [data-navegacao-rapida] {
   display: none;
 }
+
+/* Banner com arte (src/components/BannerArte.tsx, 09/10): enquadramento nos
+   objetos da arte (foco por arte) e véu da área do texto no PC. No modo
+   escuro o véu claro vira escuro e o texto, branco. */
+.banner-arte-img {
+  object-position: var(--foco-celular, 75% 55%);
+}
+@media (min-width: 640px) {
+  .banner-arte-img {
+    object-position: var(--foco, 72% 50%);
+  }
+}
+.banner-veu-claro {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(255, 255, 255, 0.82) 36%,
+    rgba(255, 255, 255, 0) 64%
+  );
+}
+.banner-veu-escuro,
+.dark .banner-veu-claro {
+  background: linear-gradient(
+    90deg,
+    rgba(10, 14, 40, 0.92) 0%,
+    rgba(10, 14, 40, 0.78) 34%,
+    rgba(10, 14, 40, 0) 62%
+  );
+}
