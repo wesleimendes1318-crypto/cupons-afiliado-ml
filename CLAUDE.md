@@ -974,7 +974,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   pelo nome ANTES da árvore do anúncio (guarda-chuva/leque/panos/papel
   higiênico -> casa, presilha -> beleza, mala/mochila -> moda, power bank
   -> celulares, SSD/roteador -> informática, gift card e controle de
-  videogame -> eletrônicos, fralda -> outros). Tabela
+  videogame -> eletrônicos, fralda -> outros).
+  ÁRVORE E MEMÓRIA (09/10): Moda tem poucos produtos de catálogo nas
+  listas de cima; o agente desce até os netos da categoria (8 filhos e 6
+  netos, maiores primeiro) e guarda em em_alta_vistos (só servidor) o
+  produto descartado (7 dias), a lista sem produto novo (20 h) e os filhos
+  de cada categoria (7 dias), para não gastar o teto relendo. Tabela
   em_alta_catalogo (só servidor); leitura pública em_alta_por_categoria(
   p_categoria, p_por_categoria) com até 3 dias e teto POR categoria (a v2
   cortava as últimas abas da home no limite geral).

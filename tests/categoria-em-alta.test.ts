@@ -33,6 +33,11 @@ test("produto que o Mercado Livre lista em outra categoria vai para a certa", ()
   );
 });
 
+test("relógio inteligente é acessório de celular, não moda", () => {
+  assert.equal(cat("Relógio Inteligente Gps Smartwatch Amoled 3atm", "celulares"), "celulares");
+  assert.equal(cat("Relógio Masculino Casio Vintage Dourado", "moda"), "moda");
+});
+
 test("fora: código digital, fralda e tela de reposição", () => {
   assert.equal(cat("Sony PlayStation Store Gift Card R$ 150 (Digital)", "informatica"), null);
   assert.equal(cat("Xbox Game Pass Ultimate assinatura 1 mês (Digital)", "eletronicos"), null);

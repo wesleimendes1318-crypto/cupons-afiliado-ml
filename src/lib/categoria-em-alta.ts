@@ -64,7 +64,7 @@ const REGRAS: Array<[RegExp, CategoriaSite]> = [
     "automotivo",
   ],
   [
-    /\bpower ?bank\b|\bcarregador portatil\b|\bcarregador\b.*\b(celular|iphone|samsung|galaxy|turbo|usb-?c|tipo-?c|xiaomi|motorola)\b|\bcapinhas?\b|\bpeliculas?\b|\bcabo\b.*\b(celular|iphone|usb-?c|tipo-?c|lightning)\b/,
+    /\bsmartwatch\b|\brelogio inteligente\b|\bsmartband\b|\bpower ?bank\b|\bcarregador portatil\b|\bcarregador\b.*\b(celular|iphone|samsung|galaxy|turbo|usb-?c|tipo-?c|xiaomi|motorola)\b|\bcapinhas?\b|\bpeliculas?\b|\bcabo\b.*\b(celular|iphone|usb-?c|tipo-?c|lightning)\b/,
     "celulares",
   ],
   [

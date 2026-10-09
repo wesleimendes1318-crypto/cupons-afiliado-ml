@@ -20,7 +20,7 @@
    máximo a cada 48 h. */
 import { categoriaDoMaisVendido } from "@/lib/categoria-em-alta";
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
-import { mlGet } from "@/lib/ml-api";
+import { ErroApiMl, mlGet } from "@/lib/ml-api";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
@@ -44,8 +44,16 @@ const META_POR_CATEGORIA = 24;
 const FRESCO_MS = 20 * 3600_000;
 const FILA_POR_VEZ = 4;
 const VOLTA_MS = 48 * 3600_000;
-const SUBCATEGORIAS_POR_BASE = 8;
 const PRODUTOS_POR_EXECUCAO = 16;
+/* Árvore oficial: filhos por nível (as maiores primeiro), até os netos da
+   categoria (Moda -> Calçados -> Tênis). Chamadas para listas e filhos
+   param aqui; o resto do teto fica para as fichas dos produtos. */
+const FILHOS_POR_NIVEL = [8, 6];
+const TETO_ARVORE = TETO_API - 12;
+/* Memória (em_alta_vistos): produto descartado fica 7 dias fora; lista
+   sem produto novo, 20 h; filhos de uma categoria, 7 dias. */
+const DESCARTE_MS = 7 * 24 * 3600_000;
+const FILHOS_MS = 7 * 24 * 3600_000;
 
 type Oferta = {
   item_id?: string;
@@ -133,47 +141,84 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     linhas.filter((l) => agoraMs - Date.parse(l.atualizado_em) < FRESCO_MS).map((l) => l.produto),
   );
 
-  /* 1. Fontes: as categorias oficiais e, enquanto faltar produto, as
-        subcategorias delas (lidas da API, as maiores primeiro). */
+  /* Memória do agente: descartes, listas esgotadas e filhos. */
+  const { data: memoria } = await t
+    .from("em_alta_vistos")
+    .select("chave,motivo,visto_em")
+    .gte("visto_em", new Date(agoraMs - DESCARTE_MS).toISOString());
+  const vistos = new Map(
+    ((memoria ?? []) as Array<{ chave: string; motivo: string | null; visto_em: string }>).map(
+      (m) => [m.chave, m],
+    ),
+  );
+  const lembrar: Array<{ chave: string; motivo: string; visto_em: string }> = [];
+  const anotar = (chave: string, motivo: string) =>
+    lembrar.push({ chave, motivo, visto_em: new Date().toISOString() });
+  const descartado = (produto: string) => vistos.has(`produto:${produto}`);
+  const esgotada = (cat: string) => {
+    const m = vistos.get(`fonte:${cat}`);
+    return !!m && agoraMs - Date.parse(m.visto_em) < FRESCO_MS;
+  };
+
+  /* 1. Fontes: a lista oficial da categoria e, enquanto faltar produto,
+        as das subcategorias e das sub-subcategorias (as maiores primeiro). */
   const bases = CATEGORIAS_EM_ALTA[categoria]!;
-  const fontes: Array<{ cat: string; peso: number }> = bases.map((cat) => ({ cat, peso: 0 }));
-  if (visiveis(categoria) < META_POR_CATEGORIA * 2) {
-    for (const [k, base] of bases.entries()) {
-      if (chamadas >= TETO_API) break;
+  const expandir = visiveis(categoria) < META_POR_CATEGORIA * 2;
+  const fila: Array<{ cat: string; peso: number; nivel: number }> = bases.map((cat) => ({
+    cat,
+    peso: 0,
+    nivel: 0,
+  }));
+  const candidatos: Array<{ produto: string; posicao: number; cat: string }> = [];
+  let ordem = 0;
+  while (fila.length && candidatos.length < PRODUTOS_POR_EXECUCAO && chamadas < TETO_ARVORE) {
+    const f = fila.shift()!;
+    if (!esgotada(f.cat)) {
+      try {
+        chamadas += 1;
+        const h = await mlGet<{
+          content?: Array<{ id?: string; position?: number; type?: string }>;
+        }>(`/highlights/MLB/category/${f.cat}`);
+        let novos = 0;
+        for (const c of (h.content ?? []).filter((x) => x.type === "PRODUCT" && x.id)) {
+          if (recentes.has(c.id!) || descartado(c.id!)) continue;
+          if (candidatos.some((x) => x.produto === c.id)) continue;
+          novos += 1;
+          if (candidatos.length < PRODUTOS_POR_EXECUCAO)
+            candidatos.push({ produto: c.id!, posicao: f.peso + (c.position ?? 50), cat: f.cat });
+        }
+        if (!novos) anotar(`fonte:${f.cat}`, "sem produto novo");
+      } catch (e) {
+        erros.push(`highlights ${f.cat}: ${String((e as Error).message).slice(0, 80)}`);
+      }
+    }
+    if (!expandir || f.nivel >= FILHOS_POR_NIVEL.length) continue;
+    /* Filhos da categoria: da memória (7 dias) ou da API. */
+    let filhos: string[] | null = null;
+    const m = vistos.get(`filhos:${f.cat}`);
+    if (m && agoraMs - Date.parse(m.visto_em) < FILHOS_MS) {
+      filhos = (m.motivo ?? "").split(",").filter(Boolean);
+    } else if (chamadas < TETO_ARVORE) {
       try {
         chamadas += 1;
         const c = await mlGet<{
           children_categories?: Array<{ id?: string; total_items_in_this_category?: number }>;
-        }>(`/categories/${base}`);
-        (c.children_categories ?? [])
+        }>(`/categories/${f.cat}`);
+        filhos = (c.children_categories ?? [])
           .filter((x) => x.id)
           .sort(
             (a, b) => (b.total_items_in_this_category ?? 0) - (a.total_items_in_this_category ?? 0),
           )
-          .slice(0, SUBCATEGORIAS_POR_BASE)
-          .forEach((x, n) => fontes.push({ cat: x.id!, peso: 100 * (1 + n * bases.length + k) }));
+          .map((x) => x.id!)
+          .slice(0, 12);
+        anotar(`filhos:${f.cat}`, filhos.join(","));
       } catch (e) {
-        erros.push(`categoria ${base}: ${String((e as Error).message).slice(0, 80)}`);
+        erros.push(`categoria ${f.cat}: ${String((e as Error).message).slice(0, 80)}`);
       }
     }
-  }
-
-  /* Mais vendidos de cada fonte, até juntar o que cabe nesta execução. */
-  const candidatos: Array<{ produto: string; posicao: number; cat: string }> = [];
-  for (const f of fontes) {
-    if (candidatos.length >= PRODUTOS_POR_EXECUCAO || chamadas >= TETO_API - 6) break;
-    try {
-      chamadas += 1;
-      const h = await mlGet<{ content?: Array<{ id?: string; position?: number; type?: string }> }>(
-        `/highlights/MLB/category/${f.cat}`,
-      );
-      for (const c of (h.content ?? []).filter((x) => x.type === "PRODUCT" && x.id)) {
-        if (recentes.has(c.id!) || candidatos.some((x) => x.produto === c.id)) continue;
-        candidatos.push({ produto: c.id!, posicao: f.peso + (c.position ?? 50), cat: f.cat });
-        if (candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
-      }
-    } catch (e) {
-      erros.push(`highlights ${f.cat}: ${String((e as Error).message).slice(0, 80)}`);
+    for (const cat of (filhos ?? []).slice(0, FILHOS_POR_NIVEL[f.nivel])) {
+      ordem += 1;
+      fila.push({ cat, peso: 100 * ordem, nivel: f.nivel + 1 });
     }
   }
   candidatos.sort((a, b) => a.posicao - b.posicao);
@@ -193,11 +238,17 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
       const nome = String(p.name ?? "")
         .trim()
         .slice(0, 160);
-      if (!nome || RE_PECA_PARTE.test(nome)) continue;
+      if (!nome || RE_PECA_PARTE.test(nome)) {
+        anotar(`produto:${c.produto}`, "peça ou sem nome");
+        continue;
+      }
       /* Categoria pelo nome (src/lib/categoria-em-alta.ts): a lista de uma
          categoria traz produtos de outras; o que não serve fica de fora. */
       const destino = categoriaDoMaisVendido(nome, categoria);
-      if (!destino) continue;
+      if (!destino) {
+        anotar(`produto:${c.produto}`, `fora: ${nome.slice(0, 60)}`);
+        continue;
+      }
       let oferta: Oferta | null = p.buy_box_winner ?? null;
       let ofertas: number | null = null;
       if (!oferta?.item_id || !(Number(oferta.price) > 0) || oferta.condition === "used") {
@@ -219,7 +270,10 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         oferta = novas[0] ?? null;
         ofertas = novas.length;
       }
-      if (!oferta?.item_id || !(Number(oferta.price) > 0)) continue;
+      if (!oferta?.item_id || !(Number(oferta.price) > 0)) {
+        anotar(`produto:${c.produto}`, "sem oferta nova");
+        continue;
+      }
       const foto = p.pictures?.[0]?.secure_url ?? p.pictures?.[0]?.url ?? null;
       /* Segunda foto real do catálogo (o cartão alterna no mouse/toque). */
       const foto2 = p.pictures?.[1]?.secure_url ?? p.pictures?.[1]?.url ?? null;
@@ -239,8 +293,11 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         loja_oficial: Boolean(oferta.official_store_id),
         url: `https://www.mercadolivre.com.br/p/${c.produto}?pdp_filters=item_id%3A${oferta.item_id}`,
       });
-    } catch {
-      /* sem ficha ou sem oferta ativa (404): fica de fora */
+    } catch (e) {
+      /* Sem ficha ou sem oferta ativa (404): fora por 7 dias; outro erro
+         (rede, limite) tenta de novo na próxima. */
+      if (e instanceof ErroApiMl && e.status === 404)
+        anotar(`produto:${c.produto}`, "sem ficha ou oferta (404)");
     }
   }
 
@@ -276,11 +333,17 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     const { error } = await t.from("em_alta_catalogo").upsert(gravar, { onConflict: "produto" });
     if (error) erros.push(`gravar: ${String(error.message).slice(0, 80)}`);
   }
+  if (lembrar.length) {
+    const unicos = [...new Map(lembrar.map((l) => [l.chave, l])).values()];
+    const { error } = await t.from("em_alta_vistos").upsert(unicos, { onConflict: "chave" });
+    if (error) erros.push(`memoria: ${String(error.message).slice(0, 80)}`);
+  }
   return {
     ok: true,
     categoria,
     candidatos: candidatos.length,
     gravados: gravar.length,
+    descartados: lembrar.filter((l) => l.chave.startsWith("produto:")).length,
     enfileirados,
     chamadas,
     erros,
