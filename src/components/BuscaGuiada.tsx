@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { ArrowRight, Check, Loader2, Search, Sparkles } from "lucide-react";
+import { propsFotoCartao } from "@/lib/foto";
 
 /* BUSCA GUIADA (05/10): para quem não tem o link. A pessoa escreve do jeito
    dela ("presente para menino de 8 anos até R$ 200"), o servidor entende o
@@ -229,7 +230,7 @@ export function BuscaGuiada({
                       <div className="relative grid h-28 place-items-center overflow-hidden bg-[#f5f5f7] sm:h-32">
                         {r.imagem ? (
                           <img
-                            src={r.imagem}
+                            {...propsFotoCartao(r.imagem)}
                             alt=""
                             loading="lazy"
                             className="absolute inset-0 h-full w-full object-contain p-2 mix-blend-multiply"

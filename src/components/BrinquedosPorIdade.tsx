@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { FAIXAS, faixaPorId, pareceBrinquedo } from "@/lib/brinquedos";
 import { SELO_MAIS_VENDIDO, seloDoCatalogo } from "@/lib/selos";
+import { propsFotoCartao } from "@/lib/foto";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
    API oficial (mais vendidos e buscas por idade) e que JÁ passaram pela
@@ -100,7 +101,7 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
       <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {i.imagem ? (
           <img
-            src={i.imagem}
+            {...propsFotoCartao(i.imagem)}
             alt={i.nome}
             width={200}
             height={200}

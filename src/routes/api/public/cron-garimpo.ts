@@ -19,6 +19,7 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
 import { rotuloDa, temporadaDoProduto, type Temporada } from "@/lib/sazonal";
 import { linkDoBot } from "@/lib/telegram-publico";
 import { facebookConfigurado, publicarNoFacebook, textoSimples } from "@/lib/facebook";
+import { fotoOriginalJpeg } from "@/lib/foto";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
    que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
@@ -266,9 +267,12 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
 }
 
 /* Foto do Mercado Livre em JPEG e na maior versão (o Telegram não aceita
-   webp por URL em sendPhoto). */
+   webp por URL em sendPhoto): a original de até 1200 px (src/lib/foto.ts,
+   09/10: "melhore a qualidade das fotos!"); fora do padrão, a -O. */
 function fotoGrande(u: string | null) {
-  if (!u || !/^https:\/\//.test(u)) return null;
+  if (!u || !/^https?:\/\//.test(u)) return null;
+  const original = fotoOriginalJpeg(u);
+  if (original) return original;
   return u
     .replace(/^http:/, "https:")
     .replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1")

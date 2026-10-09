@@ -11,6 +11,7 @@ import { ArrowRight, Flame } from "lucide-react";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
+import { propsFotoCartao } from "@/lib/foto";
 
 type ItemEmAlta = {
   produto: string;
@@ -45,12 +46,17 @@ export function EmAltaCatalogo({
   categoria,
   naHome = false,
   limite = 24,
+  grade = false,
   className = "",
 }: {
   /* Página de categoria: só ela. Sem categoria: abas por categoria. */
   categoria?: string;
   naHome?: boolean;
+  /* Teto por categoria (cada aba da home tem o seu). */
   limite?: number;
+  /* Página de categoria: grade de 2 colunas também no celular (volume à
+     vista), em vez da fileira com rolagem lateral. */
+  grade?: boolean;
   className?: string;
 }) {
   const [itens, setItens] = useState<ItemEmAlta[]>([]);
@@ -60,8 +66,8 @@ export function EmAltaCatalogo({
     void (async () => {
       try {
         const { data } = await supabase.rpc(
-          "em_alta_da_categoria_v2" as never,
-          { p_categoria: categoria ?? null, p_limite: categoria ? limite : 200 } as never,
+          "em_alta_por_categoria" as never,
+          { p_categoria: categoria ?? null, p_por_categoria: limite } as never,
         );
         if (vivo && Array.isArray(data)) setItens(data as ItemEmAlta[]);
       } catch {
@@ -140,11 +146,20 @@ export function EmAltaCatalogo({
         </div>
       )}
 
-      <ul className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-4 xl:grid-cols-6">
+      <ul
+        className={
+          grade
+            ? "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+            : "-mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-4 xl:grid-cols-6"
+        }
+      >
         {lista.map((i) => (
           <li
             key={i.produto}
-            className="group flex w-[58%] shrink-0 snap-start flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] min-[480px]:w-[40%] sm:w-auto"
+            className={
+              "group flex flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] " +
+              (grade ? "min-w-0" : "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto")
+            }
           >
             <div className="relative h-36 overflow-hidden bg-white">
               <FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />
@@ -203,7 +218,7 @@ function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: s
       aria-hidden="true"
     >
       <img
-        src={imagem}
+        {...propsFotoCartao(imagem)}
         alt=""
         width={300}
         height={300}
@@ -221,7 +236,7 @@ function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: s
       />
       {segunda && (
         <img
-          src={segunda}
+          {...propsFotoCartao(segunda)}
           alt=""
           width={300}
           height={300}

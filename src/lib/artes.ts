@@ -6,8 +6,8 @@
    Automotivo usam as do acervo original (sem texto), por não haver arte
    nova desses temas.
 
-   Arquivos em public/artes/: <id>.webp (1600 px) e <id>-m.webp (960 px,
-   celular e miniaturas). "foco" é o object-position que preserva os
+   Arquivos em public/artes/: <id>.webp (1672 px, a original do pacote,
+   WebP 90) e <id>-m.webp (1280 px, WebP 86; celular e miniaturas). "foco" é o object-position que preserva os
    objetos quando o quadro corta; "tom" diz se o texto vai claro ou escuro
    sobre a arte. */
 
@@ -98,10 +98,15 @@ export const ARTES: Record<ArteId, Arte> = {
   },
 };
 
-export const LARGURA_ARTE = 1600;
-export const ALTURA_ARTE = 900;
+export const LARGURA_ARTE = 1672;
+export const ALTURA_ARTE = 941;
 
 export const srcArte = (id: ArteId, celular = false) => `/artes/${id}${celular ? "-m" : ""}.webp`;
+
+/* As duas versões para o navegador escolher pela tela (09/10, "melhore a
+   qualidade das fotos!"): 1280 px e a original de 1672 px. */
+export const srcSetArte = (id: ArteId) =>
+  `/artes/${id}-m.webp 1280w, /artes/${id}.webp ${LARGURA_ARTE}w`;
 
 /* Uma arte por categoria do site (src/content/categorias.ts). */
 export const ARTE_DA_CATEGORIA: Record<string, ArteId> = {

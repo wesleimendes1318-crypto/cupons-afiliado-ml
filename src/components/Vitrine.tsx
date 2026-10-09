@@ -23,6 +23,7 @@ import {
   type ClusterInteresse,
 } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
+import { propsFotoCartao } from "@/lib/foto";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -361,7 +362,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
       <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {i.imagem ? (
           <img
-            src={i.imagem}
+            {...propsFotoCartao(i.imagem)}
             alt={i.titulo}
             width={200}
             height={200}

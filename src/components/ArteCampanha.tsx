@@ -17,6 +17,7 @@ import { useId, type ReactNode } from "react";
 
 import { useArteSalva } from "@/lib/artes-salvas";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
+import { propsFotoGrande } from "@/lib/foto";
 
 type G = (n: string) => string;
 
@@ -800,9 +801,6 @@ const CENAS: Record<TemaVisualId, (p: { g: G }) => ReactNode> = {
   neutro: CenaNeutra,
 };
 
-const fotoGrande = (u: string) =>
-  u.replace(/^http:/, "https:").replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1");
-
 /** Cena do tema + fotos reais dos produtos em cartões separados. */
 export function ArteCampanha({
   tema,
@@ -878,7 +876,7 @@ export function ArteCampanha({
           }`}
         >
           <img
-            src={fotoGrande(src)}
+            {...propsFotoGrande(src)}
             width={160}
             height={160}
             alt=""

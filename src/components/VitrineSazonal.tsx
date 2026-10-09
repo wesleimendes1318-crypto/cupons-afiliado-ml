@@ -52,6 +52,7 @@ import {
   type Temporada,
 } from "@/lib/sazonal";
 import { LINK_CANAL } from "@/lib/telegram-publico";
+import { propsFotoCartao } from "@/lib/foto";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -269,7 +270,7 @@ export function CartaoOferta({
       <div className="relative h-28 overflow-hidden bg-white sm:h-32">
         {o.imagem ? (
           <img
-            src={o.imagem}
+            {...propsFotoCartao(o.imagem)}
             alt={o.titulo}
             width={200}
             height={200}

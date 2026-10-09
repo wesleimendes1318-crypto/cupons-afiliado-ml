@@ -13,8 +13,11 @@
       afiliado no clique) e põe os primeiros na fila de comparação
       (pedir_link_agente: teto diário dos agentes e cota da conferência).
       Comparados, entram na vitrine pelas regras de sempre.
-   Tetos por execução: 30 chamadas à API, 8 na fila; cada produto volta à
-   fila no máximo a cada 48 h. */
+   Meta: pelo menos 24 por categoria (Weslei, 09/10: "pelo menos 20 em
+   cada"); a categoria com menos produtos vem primeiro e, acabando a lista
+   principal, as subcategorias oficiais (as maiores). Tetos por execução:
+   32 chamadas à API, 16 produtos, 4 na fila; cada produto volta à fila no
+   máximo a cada 48 h. */
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import { mlGet } from "@/lib/ml-api";
 
@@ -32,10 +35,16 @@ export const CATEGORIAS_EM_ALTA: Record<string, string[]> = {
   brinquedos: ["MLB1132"],
 };
 
-const TETO_API = 30;
-const POR_CATEGORIA_ML = 14;
-const FILA_POR_VEZ = 8;
+const TETO_API = 32;
+/* Weslei, 09/10: "pelo menos 20 anúncios em cada" categoria. */
+const META_POR_CATEGORIA = 24;
+/* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
+   avança para outros produtos e subcategorias. */
+const FRESCO_MS = 20 * 3600_000;
+const FILA_POR_VEZ = 4;
 const VOLTA_MS = 48 * 3600_000;
+const SUBCATEGORIAS_POR_BASE = 8;
+const PRODUTOS_POR_EXECUCAO = 16;
 
 type Oferta = {
   item_id?: string;
@@ -79,37 +88,93 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     atualizado_em: string;
     enfileirado_em: string | null;
   }>;
+  const agoraMs = Date.now();
   const ultimo = (c: string) =>
     Math.max(
       0,
       ...linhas.filter((l) => l.categoria_site === c).map((l) => Date.parse(l.atualizado_em)),
     );
+  /* Produtos à mostra (até 3 dias, como a leitura pública). */
+  const visiveis = (c: string) =>
+    linhas.filter(
+      (l) => l.categoria_site === c && agoraMs - Date.parse(l.atualizado_em) < 72 * 3600_000,
+    ).length;
+  /* Última TENTATIVA de cada categoria (execuções anteriores): uma
+     categoria que não cresce mais não prende o rodízio das outras. */
+  const { data: execs } = await t
+    .from("operacao_execucoes")
+    .select("inicio,resumo")
+    .eq("tarefa", "em_alta")
+    .order("inicio", { ascending: false })
+    .limit(60);
+  const tentativa = (c: string) =>
+    Math.max(
+      ultimo(c),
+      ...((execs ?? []) as Array<{ inicio: string; resumo: { categoria?: string } | null }>)
+        .filter((e) => e.resumo?.categoria === c)
+        .map((e) => Date.parse(e.inicio)),
+    );
+  const prioridade = (c: string) =>
+    visiveis(c) < META_POR_CATEGORIA && agoraMs - tentativa(c) > 2 * 3600_000 ? 0 : 1;
   const nomes = Object.keys(CATEGORIAS_EM_ALTA);
+  /* Abaixo da meta (e sem tentativa nas últimas 2 h) primeiro, com menos
+     produtos na frente; depois o rodízio pela tentativa mais antiga. */
   const categoria =
     opcoes.categoria && CATEGORIAS_EM_ALTA[opcoes.categoria]
       ? opcoes.categoria
-      : nomes.sort((a, b) => ultimo(a) - ultimo(b))[0]!;
+      : nomes.sort(
+          (a, b) =>
+            prioridade(a) - prioridade(b) ||
+            (prioridade(a) === 0 ? visiveis(a) - visiveis(b) : 0) ||
+            tentativa(a) - tentativa(b),
+        )[0]!;
+  const recentes = new Set(
+    linhas.filter((l) => agoraMs - Date.parse(l.atualizado_em) < FRESCO_MS).map((l) => l.produto),
+  );
 
-  /* 1. Mais vendidos das categorias oficiais. */
+  /* 1. Fontes: as categorias oficiais e, enquanto faltar produto, as
+        subcategorias delas (lidas da API, as maiores primeiro). */
+  const bases = CATEGORIAS_EM_ALTA[categoria]!;
+  const fontes: Array<{ cat: string; peso: number }> = bases.map((cat) => ({ cat, peso: 0 }));
+  if (visiveis(categoria) < META_POR_CATEGORIA * 2) {
+    for (const [k, base] of bases.entries()) {
+      if (chamadas >= TETO_API) break;
+      try {
+        chamadas += 1;
+        const c = await mlGet<{
+          children_categories?: Array<{ id?: string; total_items_in_this_category?: number }>;
+        }>(`/categories/${base}`);
+        (c.children_categories ?? [])
+          .filter((x) => x.id)
+          .sort(
+            (a, b) => (b.total_items_in_this_category ?? 0) - (a.total_items_in_this_category ?? 0),
+          )
+          .slice(0, SUBCATEGORIAS_POR_BASE)
+          .forEach((x, n) => fontes.push({ cat: x.id!, peso: 100 * (1 + n * bases.length + k) }));
+      } catch (e) {
+        erros.push(`categoria ${base}: ${String((e as Error).message).slice(0, 80)}`);
+      }
+    }
+  }
+
+  /* Mais vendidos de cada fonte, até juntar o que cabe nesta execução. */
   const candidatos: Array<{ produto: string; posicao: number; cat: string }> = [];
-  for (const cat of CATEGORIAS_EM_ALTA[categoria]!) {
-    if (chamadas >= TETO_API) break;
+  for (const f of fontes) {
+    if (candidatos.length >= PRODUTOS_POR_EXECUCAO || chamadas >= TETO_API - 6) break;
     try {
       chamadas += 1;
       const h = await mlGet<{ content?: Array<{ id?: string; position?: number; type?: string }> }>(
-        `/highlights/MLB/category/${cat}`,
+        `/highlights/MLB/category/${f.cat}`,
       );
-      for (const c of (h.content ?? [])
-        .filter((x) => x.type === "PRODUCT" && x.id)
-        .slice(0, POR_CATEGORIA_ML)) {
-        if (candidatos.some((x) => x.produto === c.id)) continue;
-        candidatos.push({ produto: c.id!, posicao: c.position ?? candidatos.length + 1, cat });
+      for (const c of (h.content ?? []).filter((x) => x.type === "PRODUCT" && x.id)) {
+        if (recentes.has(c.id!) || candidatos.some((x) => x.produto === c.id)) continue;
+        candidatos.push({ produto: c.id!, posicao: f.peso + (c.position ?? 50), cat: f.cat });
+        if (candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
       }
     } catch (e) {
-      erros.push(`highlights ${cat}: ${String((e as Error).message).slice(0, 80)}`);
+      erros.push(`highlights ${f.cat}: ${String((e as Error).message).slice(0, 80)}`);
     }
   }
-  /* Intercala as categorias oficiais (as duas aparecem no topo). */
   candidatos.sort((a, b) => a.posicao - b.posicao);
 
   /* 2. Ficha e oferta de cada produto. */

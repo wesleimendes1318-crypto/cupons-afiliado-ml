@@ -157,8 +157,9 @@ function PaginaCategoria() {
         />
 
         {/* Mais vendidos da lista oficial (09/10): volume na categoria mesmo
-            antes da comparação; os primeiros já vão para a fila. */}
-        <EmAltaCatalogo categoria={categoria.slug} />
+            antes da comparação; os primeiros já vão para a fila. Weslei,
+            09/10: "pelo menos 20 anúncios em cada". */}
+        <EmAltaCatalogo categoria={categoria.slug} limite={36} grade />
 
         <AdInArticle />
 

@@ -4,7 +4,7 @@
      categorias fortes (src/lib/artes.ts) e, quando houver, UMA oferta real
      de campanha ativa (foto, nome, economia e link de afiliado validado;
      sem link de afiliado, a oferta não entra).
-   - Troca a cada 7 s com fade de 500 ms; pausa no mouse/toque/foco, com a
+   - Troca a cada 4 s com fade de 500 ms; pausa no mouse/toque/foco, com a
      aba oculta e pelo botão; pontos acessíveis por teclado.
    - O cartão de vidro e os textos ficam FIXOS; só a imagem flutua 4 px num
      ciclo de 6 s. prefers-reduced-motion: sem troca automática e sem
@@ -15,8 +15,9 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Package, Pause, Play, Search, ShieldCheck } from "lucide-react";
 
 import { ehLinkDeCompra } from "@/lib/afiliado";
-import { ARTES, srcArte, type Arte } from "@/lib/artes";
+import { ARTES, srcArte, srcSetArte, type Arte } from "@/lib/artes";
 import { ofertaDaCampanha, useCampanhasAtivas } from "@/lib/campanhas-publicas";
+import { propsFotoGrande } from "@/lib/foto";
 
 type Slide =
   | { id: string; tipo: "institucional"; rotulo: string }
@@ -38,10 +39,9 @@ const CATEGORIAS_DESTAQUE: Array<{ slug: string; rotulo: string; arte: Arte }> =
   { slug: "brinquedos", rotulo: "Brinquedos", arte: ARTES["brinquedos-aprender"] },
 ];
 
-const TROCA_MS = 7000;
+/* Weslei, 09/10: "está demorando muito para passar os cards" (era 7 s). */
+const TROCA_MS = 4000;
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fotoGrande = (u: string) =>
-  u.replace(/^http:/, "https:").replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1");
 
 /** A melhor oferta conferida das campanhas ativas (só meli.la, < 24 h). */
 function useOfertaEmDestaque(): Slide | null {
@@ -63,7 +63,7 @@ function useOfertaEmDestaque(): Slide | null {
           tipo: "oferta" as const,
           rotulo: "Oferta conferida",
           titulo: o.titulo,
-          imagem: fotoGrande(o.imagem),
+          imagem: o.imagem,
           economia: o.economia,
           link: o.link,
         };
@@ -164,27 +164,34 @@ export function DestaqueHeroRotativo() {
                     fetchPriority="high"
                   />
                 ) : s.tipo === "categoria" ? (
+                  /* A arte cobre o quadro pela altura (aparece ~780 px de
+                     largura): o navegador escolhe 1280 ou 1672 px. */
                   <img
                     src={srcArte(s.arte.id, true)}
+                    srcSet={srcSetArte(s.arte.id)}
+                    sizes="780px"
                     alt=""
-                    width={960}
-                    height={540}
+                    width={1280}
+                    height={720}
                     loading="lazy"
                     decoding="async"
                     className="absolute inset-0 h-full w-full object-cover"
                     style={{ objectPosition: s.arte.focoCelular }}
                   />
                 ) : (
-                  <span className="absolute inset-[14%] grid place-items-center rounded-full bg-white shadow-[0_30px_60px_-30px_rgba(0,0,0,0.45)]">
+                  /* Foto da oferta num quadro branco ACIMA do cartão de vidro
+                     (Weslei, 09/10: o disco branco vazava por trás do cartão e
+                     apagava o título). */
+                  <span className="absolute inset-x-[20%] bottom-[40%] top-[16%] grid place-items-center rounded-3xl bg-white shadow-[0_24px_48px_-24px_rgba(20,10,60,0.55)]">
                     <img
-                      src={s.imagem}
+                      {...propsFotoGrande(s.imagem)}
                       alt=""
                       width={320}
                       height={320}
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="h-[70%] w-[70%] object-contain"
+                      className="absolute inset-[8%] h-[84%] w-[84%] object-contain"
                     />
                   </span>
                 )}
@@ -256,7 +263,8 @@ export function DestaqueHeroRotativo() {
       )}
 
       {/* Cartão de vidro: fixo em todos os itens. */}
-      <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/30 bg-white/15 p-4 backdrop-blur-md">
+      {/* Vidro escuro: o texto branco fica legível sobre qualquer imagem. */}
+      <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/25 bg-[#1d1240]/35 p-4 shadow-[0_18px_40px_-24px_rgba(20,10,60,0.6)] backdrop-blur-md">
         <p className="border-b border-white/25 pb-2 text-lg font-bold">Compare com clareza</p>
         <ul className="mt-2 space-y-2 text-sm">
           <li className="flex items-center gap-2.5">

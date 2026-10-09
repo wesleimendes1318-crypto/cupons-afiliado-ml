@@ -64,6 +64,7 @@ import { OutrosMarketplaces } from "@/components/OutrosMarketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
+import { fotoNitida } from "@/lib/foto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -1725,9 +1726,20 @@ function fotoML(u: string | null | undefined): string | null {
   return m ? `https://http2.mlstatic.com/D_NQ_NP_${m[1]}-O.webp` : u;
 }
 
-function Foto({ src, className }: { src: string | null | undefined; className: string }) {
+function Foto({
+  src,
+  className,
+  nitida = false,
+}: {
+  src: string | null | undefined;
+  className: string;
+  /* Foto grande na tela: a versão de 640 px primeiro (src/lib/foto.ts). */
+  nitida?: boolean;
+}) {
   const [tentativa, setTentativa] = useState(0);
-  const lista = [fotoML(src), src].filter((x, i, a): x is string => !!x && a.indexOf(x) === i);
+  const lista = [nitida ? fotoNitida(src, "cartao") : null, fotoML(src), src].filter(
+    (x, i, a): x is string => !!x && a.indexOf(x) === i,
+  );
   const atual = lista[tentativa];
   if (!atual) {
     return (
@@ -3593,7 +3605,7 @@ function Parecidos({
             >
               {/* Foto em destaque no celular (cartão estilo Apple). */}
               <div className="mb-3 flex justify-center rounded-2xl bg-muted/50 p-3 sm:hidden">
-                <Foto src={p.imagem} className="h-36 w-36 rounded-xl object-contain" />
+                <Foto src={p.imagem} nitida className="h-36 w-36 rounded-xl object-contain" />
               </div>
               {/* Cabeçalho: foto, título e quem vende. */}
               <div className="flex items-start gap-2.5">

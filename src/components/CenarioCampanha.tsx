@@ -34,6 +34,7 @@ import {
 
 import { useArteSalva } from "@/lib/artes-salvas";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
+import { propsFotoCartao, propsFotoGrande } from "@/lib/foto";
 
 type Estudio = {
   parede: string;
@@ -184,9 +185,6 @@ function estiloMascara(f: Fusao): CSSProperties {
   };
 }
 
-const fotoGrande = (u: string) =>
-  u.replace(/^http:/, "https:").replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1");
-
 /* Foto real num ladrilho branco (sem corte: object-contain). */
 function Ladrilho({
   src,
@@ -205,7 +203,7 @@ function Ladrilho({
     >
       {src ? (
         <img
-          src={fotoGrande(src)}
+          {...propsFotoGrande(src)}
           width={200}
           height={200}
           alt=""
@@ -264,7 +262,7 @@ function CartaoComparacao({
             <span className="relative aspect-square overflow-hidden rounded-[14%] bg-[#f3f4f8]">
               {fotos[k] ? (
                 <img
-                  src={fotoGrande(fotos[k]!)}
+                  {...propsFotoCartao(fotos[k]!, "160px")}
                   width={120}
                   height={120}
                   alt=""

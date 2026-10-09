@@ -195,7 +195,7 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     tituloDestaque: "Compare. Escolha. Encante.",
     descricao:
       "Brinquedos já comparados com as outras lojas: o mesmo produto mais barato, alternativa de qualidade igual ou o melhor preço encontrado.",
-    imagem: { src: "/campanhas/estudio-criancas.webp", largura: 760, altura: 703, estudio: true },
+    imagem: { src: "/campanhas/estudio-criancas.webp", largura: 1017, altura: 941, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(crian[cç]as?|infantil|brinquedos?|bonecas?|lego|pel[uú]cias?|carrinho|hot ?wheels|barbie|jogos? de tabuleiro|quebra[- ]?cabe[cç]a|patinete|massinha|beb[eê]s?|kids)\b/i,
@@ -208,7 +208,7 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     titulo: "Escolhas que viram sorrisos.",
     tituloDestaque: "Compare antes de presentear.",
     descricao: "Ideias de presente já comparadas com as outras lojas. Comprar antes é economizar.",
-    imagem: { src: "/campanhas/estudio-natal.webp", largura: 760, altura: 686, estudio: true },
+    imagem: { src: "/campanhas/estudio-natal.webp", largura: 1042, altura: 940, estudio: true },
     movimento: "entrada",
     palavras:
       /\b(natal|natalin[oa]|papai noel|amigo secreto|presentes?|panetone|ceia|fim de ano)\b/i,
@@ -224,8 +224,8 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
       "Sua próxima melhor escolha. Na data, você vê se o desconto existe mesmo: comparação com as outras lojas e histórico do preço.",
     imagem: {
       src: "/campanhas/estudio-black_friday.webp",
-      largura: 760,
-      altura: 696,
+      largura: 1027,
+      altura: 941,
       estudio: true,
     },
     movimento: "entrada",
@@ -243,8 +243,8 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
     imagem: {
       src: "/artes/home-office.webp",
-      largura: 1600,
-      altura: 900,
+      largura: 1672,
+      altura: 941,
       estudio: true,
       foco: "74% 50%",
     },
@@ -263,8 +263,8 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
     imagem: {
       src: "/artes/cozinha.webp",
-      largura: 1600,
-      altura: 900,
+      largura: 1672,
+      altura: 941,
       estudio: true,
       foco: "76% 58%",
     },
@@ -283,8 +283,8 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
     imagem: {
       src: "/artes/beleza-penteadeira.webp",
-      largura: 1600,
-      altura: 900,
+      largura: 1672,
+      altura: 941,
       estudio: true,
       foco: "76% 50%",
     },
@@ -303,8 +303,8 @@ export const TEMAS_VISUAIS: Record<TemaVisualId, TemaVisual> = {
     /* Arte do pacote ME-Imagens (09/10, src/lib/artes.ts). */
     imagem: {
       src: "/artes/escolhas-bolso.webp",
-      largura: 1600,
-      altura: 900,
+      largura: 1672,
+      altura: 941,
       estudio: true,
       foco: "72% 50%",
     },

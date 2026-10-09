@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Images, LoaderCircle, ShieldCheck, X } from 
 
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
+import { propsFotoGrande } from "@/lib/foto";
 
 type Carac = { nome: string; valor: string };
 type Detalhes = {
@@ -27,7 +28,8 @@ type Resposta = {
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const cache = new Map<string, Resposta | null>();
 const fotosCache = new Map<string, string[]>();
-/* Foto maior do mlstatic (-O) para a galeria. */
+/* Endereço padrão do mlstatic (-O): chave da galeria e miniaturas; a foto
+   aberta usa a original (propsFotoGrande). */
 const fotoGrande = (u: string) =>
   u.replace(/^http:/, "https:").replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1");
 
@@ -240,7 +242,7 @@ function Painel({
                   {galeria.map((u, k) => (
                     <li key={u} className="relative h-full w-full shrink-0 snap-center">
                       <img
-                        src={u}
+                        {...propsFotoGrande(u)}
                         alt={`${titulo}: foto ${k + 1} de ${n}`}
                         loading={k === 0 ? "eager" : "lazy"}
                         referrerPolicy="no-referrer"

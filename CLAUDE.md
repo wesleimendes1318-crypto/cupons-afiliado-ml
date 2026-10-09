@@ -949,21 +949,46 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   tenho poucas opções no meu site hoje"; "catálogos do mercado livre".
 - AGENTE (src/lib/em-alta-catalogo.ts, operacao?tarefa=em_alta[&categoria=],
   pg_cron operacao-em-alta de hora em hora, minuto 23): uma categoria do site
-  por execução (a mais desatualizada), lista oficial /highlights das
-  categorias MLB de CATEGORIAS_EM_ALTA, até 14 produtos de cada; ficha
-  /products/{id} (nome, foto, buy_box_winner) e, sem ela, a oferta NOVA mais
-  barata de /products/{id}/items. Fora: usado, peça no lugar do aparelho,
-  sem oferta. Tetos: 30 chamadas à API e 8 na fila (pedir_link_agente) por
-  execução, cada produto a cada 48 h. Tabela em_alta_catalogo (só
-  servidor); leitura pública em_alta_da_categoria(p_categoria, p_limite)
-  com até 3 dias.
+  por execução, lista oficial /highlights das categorias MLB de
+  CATEGORIAS_EM_ALTA; ficha /products/{id} (nome, foto, buy_box_winner) e,
+  sem ela, a oferta NOVA mais barata de /products/{id}/items. Fora: usado,
+  peça no lugar do aparelho, sem oferta.
+  META DE 24 POR CATEGORIA (Weslei, 09/10: "pelo menos 20 anúncios em
+  cada"): abaixo da meta (e sem tentativa nas últimas 2 h) vem primeiro, a
+  com menos produtos na frente; depois rodízio pela tentativa mais antiga
+  (operacao_execucoes), para uma categoria que não cresce não prender as
+  outras. Com menos de 48 à mostra, entram as subcategorias oficiais
+  (/categories/{id}, as 8 maiores de cada). Produto lido há menos de 20 h é
+  pulado (a próxima execução avança). Tetos: 32 chamadas à API, 16 produtos
+  e 4 na fila (pedir_link_agente) por execução, cada produto a cada 48 h.
+  disparar_operacao aceita operacao?tarefa=em_alta[&categoria=]. Tabela
+  em_alta_catalogo (só servidor); leitura pública em_alta_por_categoria(
+  p_categoria, p_por_categoria) com até 3 dias e teto POR categoria (a v2
+  cortava as últimas abas da home no limite geral).
 - SITE (EmAltaCatalogo): "Mais vendidos agora em <categoria>" nas páginas de
-  categoria e "Mais vendidos agora" com abas na home (abaixo da vitrine).
+  categoria (até 36, grade de 2 colunas no celular) e "Mais vendidos agora"
+  com abas na home (12 por aba, abaixo da vitrine).
   Cartão: foto, nome, "Preço de referência (dd/mm)", frete em linha própria
   (grátis só com free_shipping true; senão "confira no anúncio"), "Loja
   oficial" só com official_store_id, selo "Entre os mais vendidos" (lista
   oficial, com a data no subtítulo), "Comprar com segurança" (VerNaLoja: link
   de afiliado no clique) e "Comparar preço". Nunca desconto inventado.
+
+## Fotos nítidas (09/10)
+- Weslei, 09/10: "melhore a qualidade das fotos!". src/lib/foto.ts: o
+  mlstatic tem cada foto em -O (até 500 px, o que estava em tudo),
+  D_NQ_NP_2X_…-V (até 640 px) e -F (a original, até 1200 px); conferido em
+  13 fotos da vitrine, as três existem. Cartões (vitrine, campanhas,
+  brinquedos, mais vendidos, busca guiada, parecido no celular): 640 px com
+  srcSet da original; vistas grandes (galeria "Ver fotos", destaque do topo,
+  pedestais das campanhas): a original. Falhou a versão maior, o <img> volta
+  para o endereço gravado (voltarAoOriginal). Canal/Facebook: -F.jpg.
+- Artes: public/artes reexportadas do pacote original (1672 px WebP 90 e
+  -m 1280 px WebP 86; srcSetArte no topo rotativo), estúdios das campanhas
+  no tamanho do recorte original (~1040 px, WebP 88) e logo.png em 192 px
+  (vinha 96 px e aparecia ampliado no celular). Medição antes (09/10,
+  Playwright): fotos de produto não ficavam ampliadas; artes e estúdios
+  ficavam 1,4x a 2x ampliados.
 
 ## Campanhas autônomas (09/10)
 - PROMPT MESTRE do Weslei (09/10): ordem de decisão regras legais/termos >
