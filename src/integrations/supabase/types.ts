@@ -340,6 +340,9 @@ export type Database = {
           chave: string
           criterios: string | null
           economia_produto: number | null
+          facebook_em: string | null
+          facebook_erro: string | null
+          facebook_post_id: string | null
           id: number
           link: string | null
           message_id: number | null
@@ -355,6 +358,9 @@ export type Database = {
           chave: string
           criterios?: string | null
           economia_produto?: number | null
+          facebook_em?: string | null
+          facebook_erro?: string | null
+          facebook_post_id?: string | null
           id?: number
           link?: string | null
           message_id?: number | null
@@ -370,6 +376,9 @@ export type Database = {
           chave?: string
           criterios?: string | null
           economia_produto?: number | null
+          facebook_em?: string | null
+          facebook_erro?: string | null
+          facebook_post_id?: string | null
           id?: number
           link?: string | null
           message_id?: number | null
@@ -998,6 +1007,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      multiloja_resultados: {
+        Row: {
+          criado_em: string
+          pedido_id: number
+          resultado: Json
+        }
+        Insert: {
+          criado_em?: string
+          pedido_id: number
+          resultado: Json
+        }
+        Update: {
+          criado_em?: string
+          pedido_id?: number
+          resultado?: Json
+        }
+        Relationships: []
       }
       operacao_execucoes: {
         Row: {
