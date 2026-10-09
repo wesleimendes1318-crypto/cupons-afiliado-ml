@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Link2 } from "lucide-react";
 import { AdInArticle } from "@/components/anuncios/Anuncio";
 import { BannerArte } from "@/components/BannerArte";
 import { CartaoCategoria } from "@/components/CartaoCategoria";
+import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Vitrine } from "@/components/Vitrine";
@@ -154,6 +155,10 @@ function PaginaCategoria() {
             </div>
           }
         />
+
+        {/* Mais vendidos da lista oficial (09/10): volume na categoria mesmo
+            antes da comparação; os primeiros já vão para a fila. */}
+        <EmAltaCatalogo categoria={categoria.slug} />
 
         <AdInArticle />
 

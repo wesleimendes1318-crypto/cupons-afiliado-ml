@@ -929,6 +929,27 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   servidor e extensão 1.155.0): a regra olha o COMEÇO do título (peça como
   produto principal, inclusive "Kit 2 tampas", "1 un carcaça").
 
+## Mais vendidos do catálogo por categoria (09/10)
+- Weslei, 09/10: "um bom volume de produtos em alta para cada categoria,
+  tenho poucas opções no meu site hoje"; "catálogos do mercado livre".
+- AGENTE (src/lib/em-alta-catalogo.ts, operacao?tarefa=em_alta[&categoria=],
+  pg_cron operacao-em-alta de hora em hora, minuto 23): uma categoria do site
+  por execução (a mais desatualizada), lista oficial /highlights das
+  categorias MLB de CATEGORIAS_EM_ALTA, até 14 produtos de cada; ficha
+  /products/{id} (nome, foto, buy_box_winner) e, sem ela, a oferta NOVA mais
+  barata de /products/{id}/items. Fora: usado, peça no lugar do aparelho,
+  sem oferta. Tetos: 30 chamadas à API e 8 na fila (pedir_link_agente) por
+  execução, cada produto a cada 48 h. Tabela em_alta_catalogo (só
+  servidor); leitura pública em_alta_da_categoria(p_categoria, p_limite)
+  com até 3 dias.
+- SITE (EmAltaCatalogo): "Mais vendidos agora em <categoria>" nas páginas de
+  categoria e "Mais vendidos agora" com abas na home (abaixo da vitrine).
+  Cartão: foto, nome, "Preço de referência (dd/mm)", frete em linha própria
+  (grátis só com free_shipping true; senão "confira no anúncio"), "Loja
+  oficial" só com official_store_id, selo "Entre os mais vendidos" (lista
+  oficial, com a data no subtítulo), "Comprar com segurança" (VerNaLoja: link
+  de afiliado no clique) e "Comparar preço". Nunca desconto inventado.
+
 ## Campanhas autônomas (09/10)
 - PROMPT MESTRE do Weslei (09/10): ordem de decisão regras legais/termos >
   vendedor confiável e qualidade > verdade e frescor > relevância >

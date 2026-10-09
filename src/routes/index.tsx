@@ -39,6 +39,7 @@ import {
 } from "react";
 
 import { CartaoCategoria } from "@/components/CartaoCategoria";
+import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
 import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
@@ -2088,6 +2089,9 @@ function Index() {
           <BrinquedosPorIdade naHome className="mt-8" />
 
           <Vitrine />
+
+          {/* Mais vendidos agora, por categoria (09/10). */}
+          <EmAltaCatalogo naHome limite={12} />
 
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
             o convite aparece abaixo dele). */}

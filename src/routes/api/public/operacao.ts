@@ -10,6 +10,7 @@ import {
 import { gerirCampanhas } from "@/lib/agente-campanhas";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
+import { atualizarEmAlta } from "@/lib/em-alta-catalogo";
 import { enviarAlertas } from "@/lib/alertas-telegram";
 import { gerarArteCampanha } from "@/lib/gerar-arte-campanha";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -83,6 +84,11 @@ async function executar(request: Request) {
   if (tarefa === "brinquedos") {
     const alvo = new URL(request.url).searchParams.get("alvo");
     const resumo = await registrarExecucao(db, "brinquedos", () => curarBrinquedos(db, { alvo }));
+    return Response.json(resumo);
+  }
+  if (tarefa === "em_alta") {
+    const categoria = new URL(request.url).searchParams.get("categoria");
+    const resumo = await registrarExecucao(db, "em_alta", () => atualizarEmAlta(db, { categoria }));
     return Response.json(resumo);
   }
   if (tarefa === "campanhas") {
