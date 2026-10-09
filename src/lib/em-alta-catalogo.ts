@@ -224,7 +224,20 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         const tr = await mlGet<Array<{ keyword?: string }>>(`/trends/MLB/${base}`);
         termos = (Array.isArray(tr) ? tr : [])
           .map((x) => String(x.keyword ?? "").trim())
-          .filter((x) => x.length >= 3)
+          /* Fora: nome de loja/empresa, revenda, gift card e termo sem
+             produto ("6 6", "eletrodomestico"); 09/10: "ebazar com br
+             ltda", "seller", "produtos para revenda". */
+          .filter(
+            (x) =>
+              x.length >= 4 &&
+              /[a-z]{3}/i.test(x) &&
+              !/\b(ltda|eireli|seller|revenda|atacado|gift ?card|cupom|frete gratis|com br)\b/i.test(
+                x,
+              ) &&
+              !/^(eletrodomesticos?|computador|papel|luz|todos os produtos|internacional|infantil)$/i.test(
+                x,
+              ),
+          )
           .slice(0, 20);
         anotar(`tendencias:${base}`, termos.join("|"));
       } catch (e) {
@@ -261,7 +274,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
           origem: b.origem,
           busca: b.termo,
         });
-        if (++n >= 2 || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
+        if (++n >= 3 || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
       }
       anotar(`busca:${b.termo}`, String(n));
     } catch (e) {
