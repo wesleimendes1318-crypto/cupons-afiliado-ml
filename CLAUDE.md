@@ -773,6 +773,23 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   destaque mais baixo (230 px no PC, faixa de 128 px no celular). A página
   da temporada (/natal, /dia-das-criancas) continua com a grade completa.
 
+## Cliente primeiro na fila (10/10)
+- Weslei, 10/10: "Ajuste urgente: está demorando muito para consultar e o
+  usuário desiste" (tela: "Pronto em até 10min 05s"; pedido 1208 esperou 2
+  pedidos internos e saiu em 120 s). Causas: a previsão contava os 20
+  pedidos internos enfileirados de uma vez (3 a 13 min na fila) e a rodada
+  interna levava 2 pedidos. Banco (20261010160000_cliente_primeiro_fila.sql):
+  tempo_estimado só com pedidos de CLIENTE (P75 ~47 s); pedidos_pendentes
+  com 1 interno por rodada; pedir_link_base não duplica o mesmo link já na
+  fila/andamento (1208/1209, mesmo link em 4 s); pedidos_pendentes_v2 (com a
+  origem) e clientes_esperando (só clientes).
+- Extensão 1.165.3: pedido INTERNO em andamento é cortado quando um cliente
+  entra na fila (olho de 3 s em clientes_esperando -> interromperVolta,
+  resta() = 0, sem links da recomendação); fica incompleto
+  (cortadoPorCliente) e a segunda volta refaz depois dos clientes.
+- Nunca enfileirar pedidos internos em lote grande de uma vez (20 em
+  10/10 às 11:24 seguraram a fila por 13 min).
+
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em

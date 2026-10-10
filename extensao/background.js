@@ -8,7 +8,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
-         avaliacoesPendentes, gravarAvaliacoes } from './sincronia.js';
+         avaliacoesPendentes, gravarAvaliacoes, clientesEsperando } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -4364,8 +4364,9 @@ async function atenderPedidos() {
                 return freteAqui === false;
               }).slice(0, 3);
             }
-            /* Segunda volta interrompida por cliente novo: resultado descartado. */
-            if (volta > 1 && interromperVolta) return;
+            /* Segunda volta (ou pedido interno, 1.165.3) interrompida por
+               cliente novo: resultado descartado; refeito depois. */
+            if ((volta > 1 || p.origem === 'teste') && interromperVolta) return;
             /* O link de afiliado sai numa etapa separada de proposito. Se ele
                falhar, o achado NAO vai para a tela: mandar o cliente para uma
                oferta mais barata por um endereco sem etiqueta seria entregar a
@@ -4603,7 +4604,9 @@ async function atenderPedidos() {
             marcar('linkRecomendada');
           };
           await compararAgora();
-          await linksDaRecomendacao();
+          /* Pedido interno cortado por cliente (1.165.3): sem os links agora;
+             a segunda volta refaz depois do cliente. */
+          if (!(p.origem === 'teste' && interromperVolta)) await linksDaRecomendacao();
 
           const montarAnalise = (nomeTempo) => ({
             titulo: a.titulo ?? null,
@@ -4694,6 +4697,15 @@ async function atenderPedidos() {
           /* final = nao vem mais nada; o site para de esperar. Sem o anuncio
              lido nao ha o que comparar de novo. */
           analise.final = analise.completa || !a.ok;
+          /* CLIENTE PRIMEIRO (10/10, pedido 1208: o cliente esperou 2 pedidos
+             internos e a tela dizia "10 min"): interno cortado no meio fica
+             incompleto e vai para a segunda volta, que espera a fila de
+             clientes esvaziar. */
+          if (p.origem === 'teste' && interromperVolta && a.ok) {
+            analise.cortadoPorCliente = true;
+            analise.completa = false;
+            analise.final = false;
+          }
           /* true = o site continua atualizando ate os links da tabela chegarem. */
           analise.linksPendentes = faltamLinks() > 0;
           await marcarComInsistencia(sincToken, p.id, r.link, r.codigo, null, analise);
@@ -4748,8 +4760,15 @@ async function atenderPedidos() {
         /* A conferencia da Amazon/Shopee espera a do Mercado Livre (cota do
            modelo por minuto: cliente primeiro). */
         buscaMlComecou(p.id);
+        /* Pedido INTERNO (agentes, origem 'teste'): se um cliente entrar na
+           fila no meio, as etapas encerram (resta() = 0) e o cliente vem em
+           seguida (1.165.3). So a fila de CLIENTES conta aqui. */
+        const olho = p.origem === 'teste' ? setInterval(() => {
+          clientesEsperando(sincToken).then(n => { if (n > 0) interromperVolta = true; }).catch(() => {});
+        }, 3000) : null;
         try { await atenderUmCorpo(p); }
         finally {
+          if (olho) { clearInterval(olho); interromperVolta = false; }
           buscaMlTerminou(p.id);
           await chrome.storage.local.remove('pedidoEmAndamento').catch(() => {});
         }

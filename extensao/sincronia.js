@@ -184,8 +184,23 @@ async function chamarRpc(url, corpo) {
 
 export async function pedidosPendentes(token) {
   if (!token) return [];
-  const lista = await chamarRpc(RPC_PENDENTES, { p_token: token });
+  /* v2 traz a origem (cliente x interno): o pedido interno em andamento e
+     cortado quando um cliente chega (1.165.3). Sem a v2 no banco (404), a
+     de sempre. */
+  let lista;
+  try { lista = await chamarRpc(RPC_PENDENTES + '_v2', { p_token: token }); }
+  catch (e) {
+    if (!/^RPC 404/.test(String(e.message))) throw e;
+    lista = await chamarRpc(RPC_PENDENTES, { p_token: token });
+  }
   return Array.isArray(lista) ? lista : [];
+}
+
+/* So pedidos de CLIENTE na fila (pedidos_esperando conta os internos). */
+export async function clientesEsperando(token) {
+  if (!token) return 0;
+  const n = await chamarRpc(SUPABASE + '/rest/v1/rpc/clientes_esperando', { p_token: token });
+  return Number(n) || 0;
 }
 
 const RPC_INICIAR = SUPABASE + '/rest/v1/rpc/iniciar_pedido';
