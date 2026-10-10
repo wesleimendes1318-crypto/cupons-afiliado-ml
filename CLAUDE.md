@@ -1277,3 +1277,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   que falhou) = uma nova tentativa depois de 60 s, de novo só com o
   Mercado Livre parado; o servidor devolve guardado o que já conferiu.
   Diagnóstico: diagnosticos tipo 'multiloja' (esperouMl, novaTentativa).
+  Validado com clientes reais em 10/10: pedido 1124 (JBL Wave Beam 2) com a
+  conferência do Mercado Livre completa e a nova tentativa recuperando os
+  3 candidatos sem veredito. Extensão 1.162.0 (pedido 1123, bicicleta
+  Caloi, saiu sem lojas nem parecidos): a segunda volta espera o tempo que
+  a cota por minuto pede ("volta em 57s", até 65 s; antes eram 12 s e as 2
+  tentativas extras caíam no mesmo minuto), já antes da 1ª volta
+  (respiroDaCota); a conferência da Amazon/Shopee também espera a segunda
+  volta do MESMO pedido (voltaMlPendente), até 3 min. O site espera a
+  extensão até 6 min (ESPERA_EXTENSAO_MS) e pergunta por ~7 min.

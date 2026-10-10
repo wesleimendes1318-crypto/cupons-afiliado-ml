@@ -15,7 +15,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
-import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces } from './multiloja.js';
+import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -3712,9 +3712,12 @@ async function segundaVolta(sincToken, atenderUm) {
     const c = paraCompletar.shift();
     c.cortes = c.cortes || 0;
     /* Respiro entre tentativas do mesmo pedido: IA ocupada (429/503) costuma
-       voltar em segundos. */
-    const espera = 12000 - (Date.now() - c.ultima);
-    if (c.tentativas > 0 && espera > 0 && await esperarOuCliente(sincToken, espera)) {
+       voltar em segundos. Limite POR MINUTO do modelo (10/10, pedido 1123:
+       "volta em 57s", e as duas tentativas extras caiam no mesmo minuto):
+       espera o tempo que a cota pede (ate 65 s), ja antes da 1a volta. */
+    const respiro = respiroDaCota(c.analise);
+    const espera = Math.max(12000, respiro) - (Date.now() - c.ultima);
+    if ((c.tentativas > 0 || respiro > 0) && espera > 0 && await esperarOuCliente(sincToken, espera)) {
       paraCompletar.unshift(c);
       continue;
     }
@@ -3743,7 +3746,18 @@ async function segundaVolta(sincToken, atenderUm) {
       await completarPedido(sincToken, c.id, { ...c.analise, final: acabou, voltas: c.tentativas + 1 });
     } catch (e) { console.warn('[segunda volta] gravar', c.id, e.message || e); }
     if (!acabou) paraCompletar.push(c);
+    else voltaMlPendente(c.id, false);
   }
+}
+
+/* Quanto esperar quando a ultima conferencia bateu no limite POR MINUTO do
+   modelo ("...PerMinute... volta em 57s"); 0 para os outros erros. */
+function respiroDaCota(analise) {
+  const ia = analise && analise.buscaFora && analise.buscaFora.leitura && analise.buscaFora.leitura.ia;
+  const texto = [].concat((ia && ia.erros) || []).join(' ');
+  if (!/PerMinute/i.test(texto)) return 0;
+  const m = texto.match(/volta em (\d+(?:\.\d+)?)s/);
+  return Math.min(65000, (m ? Number(m[1]) * 1000 : 60000) + 2000);
 }
 
 async function atenderPedidos() {
@@ -4572,6 +4586,9 @@ async function atenderPedidos() {
           }
           if (!analise.final) {
             const temposPrimeira = analise.tempos;
+            /* A conferencia da Amazon/Shopee deste pedido espera a segunda
+               volta (cliente primeiro na cota do modelo). */
+            voltaMlPendente(p.id, true);
             paraCompletar.push({
               id: p.id, tentativas: 0, ultima: Date.now(), analise,
               tentar: async (n) => {

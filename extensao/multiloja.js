@@ -79,15 +79,23 @@ export function escolherCandidatos(lista, original, n = 4) {
    derrubou a do Mercado Livre). A busca nas outras lojas continua em
    paralelo (nao gasta cota), mas a CONFERENCIA delas espera as do Mercado
    Livre terminarem (buscaMlComecou/buscaMlTerminou, chamadas pelo
-   atendimento), por ate 2 min. */
+   atendimento) e a segunda volta do mesmo pedido (voltaMlPendente), por
+   ate 3 min. */
 const buscasMl = new Set();
 export function buscaMlComecou(pedido) { buscasMl.add(pedido); }
 export function buscaMlTerminou(pedido) { buscasMl.delete(pedido); }
+/* Pedido com segunda volta pendente (10/10, pedido 1123: a conferencia da
+   Amazon/Shopee comecou no intervalo entre a 1a passada e a segunda volta
+   do MESMO pedido, e a segunda volta bateu no limite por minuto de novo). */
+const voltasMl = new Set();
+export function voltaMlPendente(pedido, pendente) {
+  if (pendente) voltasMl.add(pedido); else voltasMl.delete(pedido);
+}
 const esperar = ms => new Promise(ok => setTimeout(ok, ms));
-async function esperarBuscasMl(limiteMs) {
+async function esperarBuscasMl(limiteMs, pedido) {
   const ate = Date.now() + limiteMs;
   let esperou = false;
-  while (buscasMl.size && Date.now() < ate) { esperou = true; await esperar(1500); }
+  while ((buscasMl.size || voltasMl.has(pedido)) && Date.now() < ate) { esperou = true; await esperar(1500); }
   return esperou;
 }
 /* Janela do limite por minuto do modelo antes de tentar de novo. */
@@ -143,7 +151,7 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
 
     /* Conferencia pela foto: a mesma do Mercado Livre (servidor), depois
        das conferencias do Mercado Livre em andamento. */
-    diag.esperouMl = await esperarBuscasMl(120000);
+    diag.esperouMl = await esperarBuscasMl(180000, pedido);
     const conferir = () => conferirNoServidor(token, {
       tipo: 'conferir',
       original: { titulo: original.titulo, imagem: original.imagem, preco: original.preco ?? null,
@@ -161,7 +169,7 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
       diag.novaTentativa = { faltavam: sv && Array.isArray(sv.avaliacao) ? candidatos.length - sv.avaliacao.length : candidatos.length,
                              erro: sv && !sv.ok ? String(sv.erro || '').slice(0, 120) : null };
       await esperar(NOVA_TENTATIVA_MS);
-      await esperarBuscasMl(120000);
+      await esperarBuscasMl(180000, pedido);
       const sv2 = await conferir();
       if (sv2 && sv2.ok && Array.isArray(sv2.avaliacao)
           && (!sv || !sv.ok || !Array.isArray(sv.avaliacao) || sv2.avaliacao.length >= sv.avaliacao.length)) sv = sv2;

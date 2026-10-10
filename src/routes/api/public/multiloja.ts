@@ -21,8 +21,10 @@ import { origemPermitida } from "@/lib/public-ai-api";
 
 const entradaSchema = z.object({ pedido: z.number().int().positive() });
 const CACHE_MS = 6 * 3600_000;
-/* A extensão leva até ~1 min (busca, conferência pela foto e links). */
-const ESPERA_EXTENSAO_MS = 4 * 60_000;
+/* A extensão leva de ~1 min a alguns minutos: a conferência da Amazon/Shopee
+   espera a do Mercado Livre e a segunda volta do pedido (10/10, cliente
+   primeiro na cota do modelo). */
+const ESPERA_EXTENSAO_MS = 6 * 60_000;
 
 type Resposta = {
   ativo: boolean;

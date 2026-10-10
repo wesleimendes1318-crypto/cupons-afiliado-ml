@@ -98,8 +98,8 @@ function useMultiloja(pedidoId: number | null) {
           (RespostaMultiloja & { aguardar?: boolean }) | null;
         if (!vivo) return;
         /* 1º minuto a cada 5 s; depois a cada 15 s, até a rota parar de
-           pedir espera (ela desiste 4 min depois do pedido). */
-        if (j?.aguardar && tentativas < 30) {
+           pedir espera (ela desiste 6 min depois do pedido). */
+        if (j?.aguardar && tentativas < 38) {
           espera = setTimeout(() => void pedir(), tentativas < 12 ? 5_000 : 15_000);
           return;
         }
