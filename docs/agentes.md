@@ -29,6 +29,9 @@ seguem as mesmas regras:
 - Cliente primeiro: agente só põe produto na fila por `pedir_link_agente`
   (teto diário `sinc_config.agentes_teto_dia` e parada sem cota da
   conferência). Nunca usar `pedir_link_novo` fora da bateria de testes.
+- REGRA Nº 1 (Weslei, 10/10): SEMPRE devolver o link de afiliado dele
+  ("minha fonte de renda"). Pedido, cartão, mensagem ou post sem o link é
+  problema grave a resolver na hora (ver o topo do CLAUDE.md).
 - Todo botão de compra só com `https://meli.la/...`. Nada inventado: preço,
   frete, loja, "menor preço", "mais vendido" só com dado medido.
 - Mudança de código: pequena, validada (tsc, eslint dos arquivos tocados,
@@ -68,6 +71,9 @@ seguem as mesmas regras:
   da ficha do catálogo num anúncio definido (o botão abre a oferta
   destacada, outro preço). A trava do banco barra o pedido; post antigo só
   sai a pedido do Weslei (CLAUDE.md).
+- `link_no_clique_falhou` (10/10, grave): o cliente tocou em "Comprar com
+  segurança" sem link pronto e o pedido "só link" falhou, saiu sem link ou
+  ficou mais de 3 min na fila (regra nº 1).
 - `execucao_com_erro`, `chamada_agendada_falhou`.
 
 Problema novo que a auditoria não pega: o agente acrescenta a regra na função

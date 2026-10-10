@@ -2394,10 +2394,12 @@ function Resultado({
     .map((l) => l.final)
     .filter((p): p is number => typeof p === "number" && p > 0);
   /* Barra fixa do celular: a mesma recomendação da tela, só com link de
-     afiliado (sem link pronto, a barra fica sem botão). */
+     afiliado (sem link pronto, o botão gera o link no clique: regra nº 1). */
   const barra = recomendada
     ? {
         link: recomendada.o.link && !recomendada.o.semAfiliado ? recomendada.o.link : null,
+        urlGerar:
+          recomendada.o.link && !recomendada.o.semAfiliado ? null : (recomendada.o.url ?? null),
         preco: recomendada.o.final,
         freteGratis: recomendada.o.freteGratis ?? null,
         custoFrete: recomendada.o.custoFrete ?? null,
@@ -2405,6 +2407,7 @@ function Resultado({
     : estaEAMelhor
       ? {
           link: semLink ? null : link,
+          urlGerar: semLink ? (urlColada ?? null) : null,
           preco: a?.preco ?? null,
           freteGratis: a?.freteGratis ?? null,
           custoFrete: a?.custoFrete ?? null,
@@ -2456,6 +2459,7 @@ function Resultado({
             imagem={a?.imagem ?? null}
             titulo={semEntidades(a?.titulo) ?? null}
             link={barra.link}
+            urlGerar={barra.urlGerar}
             preco={barra.preco}
             freteGratis={barra.freteGratis}
             custoFrete={barra.custoFrete}
@@ -2893,23 +2897,57 @@ function MelhorOpcao({
 
 /* "Ver na loja": o link de afiliado da loja só é criado quando o cliente pede,
    para ele conferir o preço lá com os próprios olhos. Nada é gerado sem clique. */
+/* REGRA Nº 1 (Weslei, 10/10: "SEMPRE DEVE DEVOLVER O MEU LINK"): o botão
+   sempre termina num link de afiliado. 1) link já conhecido deste anúncio:
+   na hora, sem esperar a extensão; 2) o link gerado no clique; 3) sem ele em
+   poucos segundos (extensão parada, pausada, no freio ou fila cheia), o link
+   de afiliado da PÁGINA DO PRODUTO (link_de_reserva), que abre a oferta em
+   destaque: o botão diz que o preço pode ser outro. Se o link desta loja sair
+   depois, ele toma o lugar da reserva. */
 export function VerNaLoja({
   url,
   grande = false,
   cartao = false,
+  pilula = false,
+  tabIndex,
 }: {
   url: string;
   grande?: boolean;
   /** Mesmo tamanho do botão dos cartões da vitrine. */
   cartao?: boolean;
+  /** Pílula da barra fixa do celular. */
+  pilula?: boolean;
+  tabIndex?: number;
 }) {
   const classeCartao =
     "inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-1.5 text-xs font-bold text-white transition hover:brightness-95 active:scale-[0.98] disabled:opacity-60";
+  const classePilula =
+    "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[#15803d] px-4 text-center text-[13px] font-bold leading-tight text-white active:scale-[0.98] disabled:opacity-60";
   const [estado, setEstado] = useState<"parado" | "gerando" | "falhou">("parado");
   const [link, setLink] = useState<string | null>(null);
+  const [reserva, setReserva] = useState<string | null>(null);
+  const comTexto = grande || cartao || pilula;
+
+  async function buscarReserva() {
+    try {
+      const { data } = await supabase.rpc("link_de_reserva" as never, { p_url: url } as never);
+      const r = data as { link?: string | null; tipo?: string | null } | null;
+      if (!r || !ehLinkDeAfiliado(r.link)) return;
+      if (r.tipo === "anuncio") setLink(r.link.trim());
+      else setReserva(r.link.trim());
+    } catch {
+      /* sem reserva: fica o "Tentar de novo" */
+    }
+  }
 
   async function gerar() {
     setEstado("gerando");
+    let pediuReserva = false;
+    const reservar = () => {
+      if (pediuReserva) return;
+      pediuReserva = true;
+      void buscarReserva();
+    };
     try {
       /* Endereço do ANÚNCIO da loja, não da ficha de catálogo: assim cada loja
          ganha o seu próprio link de afiliado (medido em 25/09). */
@@ -2921,8 +2959,18 @@ export function VerNaLoja({
         "pedir_link_da_loja" as never,
         { p_url: alvo } as never,
       );
-      const id = (pedidoNovo as { id?: number } | null)?.id ?? null;
-      const chave = (pedidoNovo as { chave?: string } | null)?.chave ?? null;
+      const resposta = pedidoNovo as {
+        id?: number | null;
+        chave?: string | null;
+        link?: string | null;
+      } | null;
+      /* Link já gerado antes para este anúncio: na hora. */
+      if (ehLinkDeAfiliado(resposta?.link)) {
+        setLink(resposta.link.trim());
+        return;
+      }
+      const id = resposta?.id ?? null;
+      const chave = resposta?.chave ?? null;
       if (error || id == null || !chave) throw new Error("falhou");
       try {
         window.postMessage(
@@ -2932,6 +2980,7 @@ export function VerNaLoja({
       } catch {
         /* sem extensão: o alarme cobre */
       }
+      const inicio = Date.now();
       for (let volta = 0; volta < 45; volta++) {
         await new Promise((ok) => setTimeout(ok, volta < 10 ? 1200 : 2500));
         const { data } = await supabase.rpc(
@@ -2946,10 +2995,16 @@ export function VerNaLoja({
           setLink(linha.link);
           return;
         }
-        if (linha?.status === "falhou") break;
+        if (linha?.status === "falhou" || linha?.status === "pronto") break;
+        /* Ninguém pegou o pedido em 6 s (extensão parada) ou já são 12 s: a
+           reserva aparece enquanto o link desta loja não sai. */
+        const passou = Date.now() - inicio;
+        if ((linha?.status === "pendente" && passou > 6000) || passou > 12000) reservar();
       }
+      reservar();
       setEstado("falhou");
     } catch {
+      reservar();
       setEstado("falhou");
     }
   }
@@ -2959,17 +3014,52 @@ export function VerNaLoja({
       <a
         href={link}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="noopener noreferrer sponsored"
+        tabIndex={tabIndex}
         className={
-          cartao
-            ? classeCartao
-            : grande
-              ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
-              : "inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
+          pilula
+            ? classePilula
+            : cartao
+              ? classeCartao
+              : grande
+                ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+                : "inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
         }
       >
-        {grande || cartao ? "Comprar com segurança ↗" : "Abrir ↗"}
+        {pilula && <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />}
+        {comTexto ? "Comprar com segurança ↗" : "Abrir ↗"}
       </a>
+    );
+  }
+  if (reserva) {
+    return (
+      <span className={pilula ? "flex shrink-0 flex-col items-end" : "block"}>
+        <a
+          href={reserva}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          tabIndex={tabIndex}
+          className={
+            pilula
+              ? classePilula
+              : cartao
+                ? classeCartao
+                : grande
+                  ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+                  : "inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
+          }
+        >
+          {comTexto ? "Ver o produto com segurança ↗" : "Ver produto ↗"}
+        </a>
+        <span
+          className={
+            "mt-0.5 block text-[10px] leading-snug text-secondary-ink " +
+            (pilula ? "text-right" : "")
+          }
+        >
+          Abre a página do produto com a oferta em destaque: o preço pode ser diferente.
+        </span>
+      </span>
     );
   }
   return (
@@ -2977,21 +3067,25 @@ export function VerNaLoja({
       type="button"
       onClick={() => void gerar()}
       disabled={estado === "gerando"}
+      tabIndex={tabIndex}
       className={
-        cartao
-          ? classeCartao
-          : grande
-            ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
-            : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
+        pilula
+          ? classePilula
+          : cartao
+            ? classeCartao
+            : grande
+              ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
+              : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
       }
     >
+      {pilula && <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />}
       {estado === "gerando"
-        ? grande || cartao
+        ? comTexto
           ? "Gerando seu link…"
           : "Gerando…"
         : estado === "falhou"
           ? "Tentar de novo"
-          : grande || cartao
+          : comTexto
             ? "Comprar com segurança"
             : "Abrir"}
     </button>
@@ -3367,6 +3461,7 @@ function BarraFixa({
   imagem,
   titulo,
   link,
+  urlGerar,
   preco,
   freteGratis,
   custoFrete,
@@ -3374,6 +3469,8 @@ function BarraFixa({
   imagem: string | null;
   titulo: string | null;
   link: string | null;
+  /* Sem link pronto: o botão gera o link de afiliado no clique (regra nº 1). */
+  urlGerar: string | null;
   preco: number | null;
   freteGratis: boolean | null;
   custoFrete: number | null;
@@ -3438,7 +3535,7 @@ function BarraFixa({
             )}
             {frete && <p className="text-[11px] text-secondary-ink">{frete}</p>}
           </div>
-          {link && (
+          {link ? (
             <a
               href={link}
               target="_blank"
@@ -3449,7 +3546,11 @@ function BarraFixa({
               <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               <span>Comprar com segurança</span>
             </a>
-          )}
+          ) : urlGerar ? (
+            <span className="max-w-[60%] shrink-0">
+              <VerNaLoja url={urlGerar} pilula tabIndex={visivel ? 0 : -1} />
+            </span>
+          ) : null}
         </div>
       </div>
     </>

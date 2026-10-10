@@ -2,6 +2,32 @@
 
 Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 
+## REGRA Nº 1: SEMPRE DEVOLVER O LINK DE AFILIADO DO WESLEI (10/10)
+- Weslei, 10/10: "SEMPRE DEVE DEVOLVER O MEU LINK. Não deve ter dúvidas
+  disso, essa é a minha fonte de renda por ser afiliado!". Vale acima de
+  qualquer outra regra de exibição, em todo canal: site, vitrines,
+  campanhas, brinquedos, busca guiada, busca por foto, Meus preços, bot,
+  canal, Facebook e Shorts.
+- Todo caminho de compra termina num link de afiliado DELE (Mercado Livre
+  só https://meli.la/<código>; Amazon tag=melhoresc0fff-20 ou amzn.to;
+  Shopee s.shopee.com.br ou shope.ee). Nunca endereço sem afiliado, nunca
+  link de outra pessoa, nunca botão que leva a lugar nenhum.
+- Ordem de garantia (VerNaLoja e pedir_link_da_loja, 20261010233000):
+  1) link pronto na tela; 2) link já gerado antes para o MESMO anúncio
+  (link_conhecido: na hora, sem extensão); 3) link gerado no clique pela
+  extensão; 4) sem ele em 6-12 s (extensão parada, pausada, no freio ou fila
+  cheia), o link de afiliado da PÁGINA DO PRODUTO (link_de_reserva), com o
+  aviso no botão "Abre a página do produto com a oferta em destaque: o preço
+  pode ser diferente" (nunca afirma o preço que não entrega); se o link da
+  loja sair depois, ele toma o lugar. Barra fixa do celular e cartões de
+  brinquedo sem link também geram no clique.
+- Link que falha (erro do gerador, 111, captcha) é refeito: 2ª e 3ª
+  tentativa na extensão, reparo links_a_refazer (3 a cada 3 min, só sem
+  cliente) e o Guardião (auditoria_exibicao: pronto_sem_link e
+  link_no_clique_falhou são GRAVES). Ninguém "aceita" um pedido sem link.
+- Mudança que toca botão, link, vitrine, bot ou canal: conferir antes de
+  publicar que o caminho continua terminando no link dele.
+
 ## Produto
 - O site é um COMPARADOR de preços do Mercado Livre. A recomendação é sempre
   do Mercado Livre; Amazon e Shopee têm a mesma análise em seções próprias

@@ -8,3 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Regra nº 1 do Weslei (10/10)
+
+SEMPRE devolver o link de afiliado do Weslei em todo botão, mensagem e post
+("essa é a minha fonte de renda por ser afiliado"). Detalhes e ordem de
+garantia no topo do CLAUDE.md.

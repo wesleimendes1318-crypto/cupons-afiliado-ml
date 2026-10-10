@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { VerNaLoja } from "@/components/BuscaPorLink";
 import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -190,6 +191,12 @@ function CartaoBrinquedo({
               <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
               Comprar com segurança
             </a>
+          ) : c.tipo !== "desconto" ? (
+            /* Sem link guardado: o link de afiliado do próprio anúncio sai no
+               clique (regra nº 1: sempre o link do Weslei). */
+            <div className="mb-1.5">
+              <VerNaLoja url={i.url} cartao />
+            </div>
           ) : null}
           {(!podeComprar || antigo) &&
             (() => {
