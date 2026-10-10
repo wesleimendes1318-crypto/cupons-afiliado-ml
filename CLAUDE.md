@@ -1554,6 +1554,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   os seguintes em ~50 s (aba do gerador dormindo), então 1 por vez a cada
   5 min; 3 por vez só na 1.165.5+. Recusado pelo programa (111) sai da
   fila. Brinquedos (curadoria_brinquedos exige o link do pedido) na frente.
+  1.165.6 instalada em 10/10 23:04 e conferida pela bateria: pedido 1316
+  (pó de banana) R$ 8 com meli.la/2sfJJDp pelo MLB-5141126371 em 20 s;
+  capinha (1317) pelo MLB-4739054961; pista dinossauro (1310) ficou sem
+  link porque o anúncio está indisponível e é recusado (111), o certo.
+  Reparo: 3 links por vez, 2-3 s cada.
 - Bot: anúncio enviado sem link entra só como referência de preço
   (enviadoSemLink, decisaoDaTela(opcoes, enviado)); sendo o melhor, a compra
   é pelo site. Nunca "R$ 0,00 a menos".
@@ -1577,3 +1582,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   LIGAR/DESLIGAR: select public.pausar_extensao(true|false) (só servidor).
   Testado em 10/10 20:04 (transação desfeita): filas vazias, reservar
   'bloqueado', freio mantido depois da tentativa de limpar.
+  Retomada em 10/10 23:05 (Weslei atualizou para a 1.165.6). Na volta,
+  com todas as filas liberadas de uma vez, o Mercado Livre pediu uma
+  verificação em 2 leituras (pedidos 1305 e 1306); o freio da extensão
+  agiu e as leituras seguintes passaram.
