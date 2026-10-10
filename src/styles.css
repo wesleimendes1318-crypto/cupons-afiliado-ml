@@ -856,8 +856,7 @@
   }
 }
 
-/* Painel aberto (detalhes da vitrine): o botão flutuante "Colar link" some. */
-body:has(dialog[open]) [data-botao-colar],
+/* Painel aberto (detalhes da vitrine): a navegação rápida some. */
 body:has(dialog[open]) [data-navegacao-rapida] {
   display: none;
 }
@@ -993,5 +992,17 @@ body:has(dialog[open]) [data-navegacao-rapida] {
     opacity: 1;
     transform: none;
     stroke-dashoffset: 0;
+  }
+}
+
+/* NAVEGAÇÃO SOFT (design de 10/10): rolagem suave até as seções e âncoras
+   que param abaixo do cabeçalho fixo; com "reduzir movimento", instantânea. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }

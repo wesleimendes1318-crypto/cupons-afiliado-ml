@@ -642,9 +642,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   preço" como ação secundária. Busca guiada: "Comprar com segurança" gera o
   link de afiliado no clique (VerNaLoja / pedir_link_da_loja) e "Comparar
   preço" fica secundário. Substitui o "UM botão só" de 02/10.
-- Botão flutuante "Colar link do produto": círculo compacto que só aparece
-  com o campo do link fora da tela (não cobre cartões). "O que muda" quebra
-  linha em valores longos.
+- Botão flutuante "Colar link do produto": SUBSTITUÍDO em 10/10 pelo campo
+  do link no cabeçalho (ver "Navegação soft"). "O que muda" quebra linha em
+  valores longos.
 - Comissão ("Ganhos", "Ganhos extras" do hub de afiliados) NUNCA aparece no
   site, bot ou canal. PRIORIDADE POR COMISSÃO (Weslei, 09/10, noite: "melhor taxa
   de comissão vs valor do produto - priorizar itens que pagam mais"): a
@@ -1416,3 +1416,30 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   git; cota local; containsSyntheticMedia = true; comentário com o link).
 - Limites: a API não fixa comentário (fixar no Studio); link em Shorts não
   é clicável; privado por padrão (SHORTS_PRIVACIDADE).
+
+## Navegação soft (10/10)
+- Weslei, 10/10: "atue como especialista de design UX e UI, deixe a
+  navegação soft" (canvas claude.ai/artifact/XZDdoFRbkAGaofGojMfGoy) e
+  "publique as atualizações de design".
+- Cabeçalho (CabecalhoSite) FIXO em vidro (56 px no celular, 60 no PC, linha
+  fina); na tela inicial, com o campo do link fora da tela, aparece "Cole o
+  link de outro produto" + "Comparar" (PC; dispara comparar-link) ou o ícone
+  do link de 44 px (celular, leva ao campo). Os links das páginas no celular
+  ficam numa linha própria abaixo, que rola com a página. O botão flutuante
+  "Colar link" saiu.
+- Resultado: BarraDeSecoes (src/components/BarraDeSecoes.tsx) fixa abaixo
+  do cabeçalho, pílulas Resumo · Lojas N · Alternativas N · 3 marketplaces ·
+  Dúvidas (só as que existem; ids secao-*, scroll-mt-36); a ativa acompanha
+  a rolagem (seção na linha de leitura de 140 px; no fim da página, a mais
+  baixa visível; trava 0,9 s depois do toque); no celular o trilho rola na
+  horizontal. Trilha "Início › Comparação" + "Comparado há X" com ponto de
+  estado e "Atualizar comparação" (IdadeDaComparacao).
+- Celular: a barra de compra (BarraFixa) fica EMBAIXO, em vidro ("Melhor
+  opção", preço, frete em linha própria, "Comprar com segurança" verde);
+  Início/topo sobem junto (--folga-compra).
+- Movimento: html com rolagem suave e scroll-padding-top 72 px; com
+  "reduzir movimento", instantânea; transições de 150-300 ms com
+  cubic-bezier(.2,.8,.2,1); foco visível azul de 2 px. O topo da home usa
+  overflow-clip (hidden quebrava o sticky).
+- Mantido da regra de sempre: a tabela continua mostrando TODAS as lojas (o
+  "Ver as outras N lojas" do desenho não foi aplicado).

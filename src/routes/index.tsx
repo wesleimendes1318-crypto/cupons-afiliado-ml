@@ -1176,69 +1176,6 @@ export function AcaoDoCupom({
   );
 }
 
-/* BOTÃO FLUTUANTE "COLAR LINK" (05/10, Weslei: o botão cobria os cartões
-   do resultado e o convite "Tem um produto em mente?"). Agora é um círculo
-   compacto, que só aparece quando o campo do link está fora da tela, com o
-   nome no title/aria-label. */
-function BotaoColarFlutuante({ acima }: { acima: boolean }) {
-  const [visivel, setVisivel] = useState(false);
-  const botao = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    /* Some enquanto o campo do link OU um convite de colar link
-       (data-convite-colar, ex.: "Tem um produto em mente?") está na tela. */
-    let quadro = 0;
-    const naTela = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      return r.bottom > 0 && r.top < window.innerHeight * 0.85;
-    };
-    const conferir = () => {
-      quadro = 0;
-      const campo = document.getElementById("colar-link");
-      const convites = Array.from(document.querySelectorAll("[data-convite-colar]"));
-      /* Nunca por cima de cartão, botão ou link (05/10). */
-      let cobre = false;
-      const r = botao.current?.getBoundingClientRect();
-      if (r && r.width) {
-        const embaixo = document
-          .elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2)
-          .find((el) => !botao.current?.contains(el));
-        cobre = !!embaixo?.closest(".campanha-cartao, [data-convite-colar], li, a, button");
-      }
-      setVisivel(!(campo && naTela(campo)) && !convites.some(naTela) && !cobre);
-    };
-    const agendar = () => {
-      if (!quadro) quadro = window.requestAnimationFrame(conferir);
-    };
-    conferir();
-    window.addEventListener("scroll", agendar, { passive: true });
-    window.addEventListener("resize", agendar);
-    return () => {
-      window.removeEventListener("scroll", agendar);
-      window.removeEventListener("resize", agendar);
-      if (quadro) window.cancelAnimationFrame(quadro);
-    };
-  }, []);
-  return (
-    <button
-      ref={botao}
-      data-botao-colar
-      type="button"
-      onClick={irParaColarLink}
-      aria-label="Colar link do produto"
-      title="Colar link do produto"
-      tabIndex={visivel ? 0 : -1}
-      aria-hidden={!visivel}
-      className={cn(
-        "fixed right-4 z-50 flex size-12 items-center justify-center rounded-full bg-ml-blue text-white shadow-modal transition duration-200 hover:scale-105 hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ml-blue motion-reduce:transition-none sm:size-14",
-        acima ? "bottom-40" : "bottom-6",
-        visivel ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0",
-      )}
-    >
-      <Link2 className="size-6" aria-hidden="true" />
-    </button>
-  );
-}
-
 function irParaColarLink() {
   if (typeof document === "undefined") return;
   document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1866,7 +1803,12 @@ function Index() {
           clareza". Com resultado, o topo encolhe (uma coluna, sem arte) e o
           degradê fica só atrás do título. A caixa do link nunca muda de lugar
           na árvore (não perde a comparação em andamento). */}
-        <section aria-label="Melhor Escolha" className="relative overflow-hidden text-white">
+        <section
+          aria-label="Melhor Escolha"
+          /* overflow-clip (não hidden): recorta a decoração sem virar área de
+             rolagem, para a barra de seções do resultado ficar fixa. */
+          className="relative overflow-clip text-white"
+        >
           <span
             aria-hidden="true"
             className={
@@ -2994,8 +2936,6 @@ function Index() {
           </div>
         </div>
       )}
-
-      <BotaoColarFlutuante acima={cupomSelecionados.length > 0} />
 
       <CondicoesModal cupom={cupomAberto} fechar={() => setCupomAberto(null)} />
 

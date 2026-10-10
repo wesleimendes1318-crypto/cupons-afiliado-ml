@@ -27,7 +27,7 @@ export function BotoesNavegacao() {
       aria-label="Navegação rápida"
       aria-hidden={!visivel}
       className={
-        "fixed bottom-6 left-4 z-40 flex items-center gap-1 rounded-full border border-black/5 bg-white/85 p-1 shadow-lg backdrop-blur-md transition duration-200 motion-reduce:transition-none " +
+        "fixed bottom-[calc(1.5rem+var(--folga-compra,0px))] left-4 z-40 flex items-center gap-1 rounded-full border border-black/5 bg-white/85 p-1 shadow-lg backdrop-blur-md transition duration-200 motion-reduce:transition-none " +
         (visivel ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")
       }
     >

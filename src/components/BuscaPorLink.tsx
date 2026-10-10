@@ -30,6 +30,7 @@ import {
   Link2,
   LoaderCircle,
   Package,
+  RefreshCw,
   Send,
   Share2,
   ShieldCheck,
@@ -69,6 +70,7 @@ import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LinkDeOutraLoja } from "@/components/LinkDeOutraLoja";
 import { Avaliacoes } from "@/components/Avaliacoes";
+import { BarraDeSecoes, type Secao } from "@/components/BarraDeSecoes";
 import type { Avaliacoes as DadosAvaliacoes } from "@/lib/avaliacoes";
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
@@ -1861,28 +1863,59 @@ function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: ()
           ? `há ${Math.round(min / 60)} h`
           : `há ${Math.round(min / 1440)} ${Math.round(min / 1440) === 1 ? "dia" : "dias"}`;
   const velho = min >= 60 * 24;
+  /* Navegação soft (10/10): trilha "Início › Comparação" à esquerda e o
+     estado da comparação à direita, com o botão sempre à mão. */
   return (
-    <div
-      className={
-        "mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm " +
-        (velho ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : "border-border bg-muted/50")
-      }
-    >
-      <span>
-        <span className="font-semibold">Comparado {texto}.</span>{" "}
-        {velho
-          ? "Preço e estoque provavelmente mudaram: atualize antes de comprar."
-          : min >= 60
-            ? "Os preços podem ter mudado desde então."
-            : ""}
-      </span>
-      <button
-        type="button"
-        onClick={atualizar}
-        className="shrink-0 rounded-md bg-ml-blue px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
-      >
-        Atualizar comparação
-      </button>
+    <div className="mt-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <nav
+          aria-label="Você está em"
+          className="flex items-center gap-2 text-[13px] text-[#6b6b70]"
+        >
+          <a
+            href="/"
+            className="rounded-md hover:text-[#0f1729] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:hover:text-white"
+          >
+            Início
+          </a>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page" className="font-semibold text-foreground">
+            Comparação
+          </span>
+        </nav>
+        <div className="flex items-center gap-2.5 text-[13px] text-[#6b6b70]">
+          <span
+            aria-hidden="true"
+            className={
+              "size-2 rounded-full " +
+              (velho ? "bg-amber-500" : min >= 60 ? "bg-amber-400" : "bg-[#15803d]")
+            }
+          />
+          Comparado {texto}
+          <button
+            type="button"
+            onClick={atualizar}
+            className="inline-flex h-11 items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0f1729] transition-colors duration-150 hover:bg-[#f2f2f5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 dark:text-white sm:h-8"
+          >
+            <RefreshCw className="size-3.5" aria-hidden="true" />
+            Atualizar comparação
+          </button>
+        </div>
+      </div>
+      {(velho || min >= 60) && (
+        <p
+          className={
+            "mt-2 rounded-xl px-3 py-2 text-[13px] " +
+            (velho
+              ? "border border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+              : "bg-muted/60 text-secondary-ink")
+          }
+        >
+          {velho
+            ? "Preço e estoque provavelmente mudaram: atualize antes de comprar."
+            : "Os preços podem ter mudado desde então."}
+        </p>
+      )}
     </div>
   );
 }
@@ -2367,244 +2400,266 @@ function Resultado({
         }
       : null;
 
+  /* Navegação soft (design de 10/10): seções deste resultado, na ordem da
+     página. */
+  const temAlternativas =
+    parecidosSemAlternativa.length > 0 || (alternativa != null && !leituraFalhou);
+  const secoes: Secao[] = [
+    { id: "secao-resumo", nome: "Resumo" },
+    ...(mostraTabela && linhasLojas.length >= 2
+      ? [{ id: "secao-lojas", nome: "Lojas", conta: linhasLojas.length }]
+      : []),
+    ...(temAlternativas
+      ? [
+          {
+            id: "secao-alternativas",
+            nome: "Alternativas",
+            conta: parecidosSemAlternativa.length + (alternativa != null && !leituraFalhou ? 1 : 0),
+          },
+        ]
+      : []),
+    { id: "secao-marketplaces", nome: "3 marketplaces" },
+    ...(!leituraFalhou && opcoesEscolha.length >= 2
+      ? [{ id: "secao-duvidas", nome: "Dúvidas" }]
+      : []),
+  ];
+
   return (
-    <div
-      className={
-        "relative mt-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)]" +
-        (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_1fr] sm:gap-x-5" : "")
-      }
-    >
-      {barra && (
-        <BarraFixa
-          imagem={a?.imagem ?? null}
-          titulo={semEntidades(a?.titulo) ?? null}
-          link={barra.link}
-          preco={barra.preco}
-          freteGratis={barra.freteGratis}
-          custoFrete={barra.custoFrete}
-        />
-      )}
-      <div className="flex items-start gap-3 sm:col-start-1 sm:row-start-1">
-        <Foto src={a?.imagem} className="size-16 shrink-0 rounded-2xl border border-border/70" />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
-            {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
-          </p>
-          {a?.aviso && (
-            <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
-              O anúncio informa: {a.aviso}
+    <>
+      <BarraDeSecoes secoes={secoes} />
+      <div
+        className={
+          "relative mt-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)]" +
+          (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_1fr] sm:gap-x-5" : "")
+        }
+      >
+        {barra && (
+          <BarraFixa
+            imagem={a?.imagem ?? null}
+            titulo={semEntidades(a?.titulo) ?? null}
+            link={barra.link}
+            preco={barra.preco}
+            freteGratis={barra.freteGratis}
+            custoFrete={barra.custoFrete}
+          />
+        )}
+        <div
+          id="secao-resumo"
+          className="flex scroll-mt-36 items-start gap-3 sm:col-start-1 sm:row-start-1"
+        >
+          <Foto src={a?.imagem} className="size-16 shrink-0 rounded-2xl border border-border/70" />
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
+              {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
             </p>
-          )}
-          {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
-            <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-              <strong>Atenção: neste anúncio a foto e o texto não batem.</strong>{" "}
-              {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele envia
-              antes de comprar.
-            </p>
-          ) : fotoDeOutro ? (
-            /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
-               foto com foto): o cliente precisa saber antes de comprar (28/09,
-               agasalho da SHOPMASP com a foto do conjunto Woven). */
-            <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-              <strong>Atenção:</strong> a foto deste anúncio é a mesma de outro produto (
-              {semEntidades(fotoDeOutro.titulo)}
-              {fotoDeOutro.muda ? `; muda: ${fotoDeOutro.muda}` : ""}). Confirme com o vendedor qual
-              produto ele envia antes de comprar.
-            </p>
-          ) : null}
-          <p className="mt-0.5 text-xs text-secondary-ink">
-            {a?.preco != null && (
-              <span className="text-base font-bold tabular-nums text-foreground">
-                {brl(a.preco)}
-              </span>
-            )}
-            {textoDoPagamento(a?.preco, a?.precos) && (
-              <span className="font-medium"> {textoDoPagamento(a?.preco, a?.precos)}</span>
-            )}
-            {a?.temCupom && <span> · sem o cupom</span>}
-            {a?.vendedor && <span> · {a.vendedor}</span>}
-            {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
-            <Avaliacoes a={a?.avaliacoes} className="ml-1.5 inline-flex" />
-          </p>
-          <DetalhesDoProduto detalhes={a?.detalhes} />
-        </div>
-      </div>
-
-      <div className="sm:col-start-1 sm:row-start-2">
-        {!leituraFalhou && pedidoId != null && (
-          <FiltroPrazo
-            limite={limitePrazo}
-            mudar={setLimitePrazo}
-            cep={cepPrazo}
-            carregando={carregandoPrazo}
-          />
-        )}
-        {limitePrazo && filtroPrazo && (
-          <AvisosDoPrazo
-            limite={limitePrazo}
-            r={filtroPrazo}
-            melhorNoPrazo={
-              recomendada
-                ? {
-                    nome: recomendada.o.vendedor ?? "outra loja",
-                    total: totalDaLoja(recomendada.o),
-                  }
-                : filtroPrazo.coladoAtende
-                  ? { nome: "o anúncio que você colou", total: totalColado }
-                  : paraReceber
-                    ? { nome: paraReceber.nome, total: paraReceber.total }
-                    : null
-            }
-            paraReceber={paraReceber}
-          />
-        )}
-        {/* Só a melhor em destaque; todas as outras lojas estão na tabela. */}
-        {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
-          <OutraLojaComCupom
-            key={`${oferta.vendedor ?? "loja"}-${i}`}
-            oferta={oferta}
-            dispositivo={dispositivo}
-            vendedorAqui={a?.vendedor ?? null}
-            cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
-            precoAqui={a?.preco ?? null}
-            titulo={a?.titulo ?? null}
-            principal={trocar && i === 0}
-            semAnimacao={alternativa != null}
-            compacto={i > 0}
-            lojaAquiTemCupom={a?.temCupom === true}
-          />
-        ))}
-
-        {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
-        {estaEAMelhor && !(filtroPrazo?.algumAtende && !filtroPrazo.coladoAtende) && (
-          <MelhorOpcao
-            vendedor={a?.vendedor ?? null}
-            preco={a?.preco ?? null}
-            link={semLink ? null : link}
-            urlColada={urlColada}
-            comparou={a?.procurouOutra === true}
-            completando={completando}
-            dispositivo={dispositivo}
-            temCupom={a?.temCupom === true}
-            /* -1: pedido de versão antiga, sem a lista de lojas. */
-            comparadas={a?.referencias ? referencias.length : -1}
-            olhados={a?.buscaFora?.leitura?.comPreco ?? null}
-            conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
-            iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
-            semAnimacao={alternativa != null}
-            precos={a?.precos ?? null}
-            avaliacoes={a?.avaliacoes ?? null}
-          />
-        )}
-      </div>
-
-      {temColuna && (
-        <div className="sm:col-start-2 sm:row-span-3 sm:row-start-1">
-          {/* Melhor alternativa no topo da coluna, acima da tabela e dos Parecidos
-              (Weslei, 03/10). */}
-          {alternativa && !leituraFalhou && (
-            <MelhorAlternativa
-              p={alternativa}
-              precoBase={precoDoMesmo}
-              cb={podeSerAlternativa(alternativa, baseAlt).cb}
-              dispositivo={dispositivo}
-              tituloColado={a?.titulo ?? null}
-              detalhesColado={a?.detalhes ?? null}
-              colado={coladoResumo}
-              pedidoId={pedidoId}
-            />
-          )}
-          {mostraTabela && (
-            <TodasAsLojas
-              linhas={linhasLojas}
-              melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
-              cep={a?.cepDestino ?? null}
-            />
-          )}
-          <Parecidos
-            lista={parecidosSemAlternativa}
-            tituloColado={a?.titulo}
-            precoColado={a?.preco}
-            detalhesColado={a?.detalhes ?? null}
-            colado={coladoResumo}
-            pedidoId={pedidoId}
-          />
-        </div>
-      )}
-
-      {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
-          largura inteira no PC (abaixo das duas colunas); no celular, logo
-          depois da análise do Mercado Livre. */}
-      <div className={temColuna ? "sm:col-span-2 sm:row-start-4" : ""}>
-        <ComparacaoMarketplaces
-          pedidoId={pedidoId}
-          colado={coladoParaComparar}
-          melhorMl={melhorMl}
-          precosMl={precosMl}
-          cep={a?.cepDestino ?? null}
-          gerarLink={gerarLinkMl}
-          chavePedido={chavePedido}
-        />
-      </div>
-
-      <div className="sm:col-start-1 sm:row-start-3">
-        {!leituraFalhou && pedidoId != null && !semLink && (
-          <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
-        )}
-
-        {!leituraFalhou && (
-          <CompareEEscolha
-            key={pedidoId ?? "sem-pedido"}
-            opcoes={opcoesEscolha}
-            padrao={
-              recomendada?.chave ??
-              (alternativa ? `par-${parecidosComLink.indexOf(alternativa)}` : null)
-            }
-            pedidoId={pedidoId}
-            dispositivo={dispositivo}
-          />
-        )}
-
-        {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
-
-        {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
-          Dizer isso é o que dá confiança para comprar aqui. */}
-        {a?.temCupom === true && alternativas.length === 0 && (
-          <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
-            {a.procurouOutra === true && !completando
-              ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
-              : null}
-          </p>
-        )}
-
-        {/* Sem link pronto: a "Melhor opção" e a tabela trazem o botão que gera o
-          link de afiliado no clique. */}
-
-        {a?.temCupom && a.cupom?.id != null && !trocar && (
-          <CodigoNaHora
-            cupomId={a.cupom.id}
-            destino={link}
-            titulo={a.titulo}
-            vendedor={a.vendedor}
-            cupom={a.cupom}
-          />
-        )}
-
-        {/* Achei loja mais barata, mas a pessoa pode preferir a loja que ela
-          colou. Se essa loja tem cupom, o meu cupom continua disponível para
-          ela, com o valor que fica com o desconto. */}
-        {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
-          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
-            <p className="text-sm font-bold">
-              Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem
-              cupom
-              {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
-            </p>
-            {alternativas[0]?.finalAtual != null && a.preco != null && (
-              <p className="mt-1 text-xs tabular-nums text-secondary-ink">
-                Com o cupom, lá sai por {brl(alternativas[0].finalAtual)} (de {brl(a.preco)}).
+            {a?.aviso && (
+              <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
+                O anúncio informa: {a.aviso}
               </p>
             )}
+            {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
+              <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <strong>Atenção: neste anúncio a foto e o texto não batem.</strong>{" "}
+                {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
+                envia antes de comprar.
+              </p>
+            ) : fotoDeOutro ? (
+              /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
+               foto com foto): o cliente precisa saber antes de comprar (28/09,
+               agasalho da SHOPMASP com a foto do conjunto Woven). */
+              <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <strong>Atenção:</strong> a foto deste anúncio é a mesma de outro produto (
+                {semEntidades(fotoDeOutro.titulo)}
+                {fotoDeOutro.muda ? `; muda: ${fotoDeOutro.muda}` : ""}). Confirme com o vendedor
+                qual produto ele envia antes de comprar.
+              </p>
+            ) : null}
+            <p className="mt-0.5 text-xs text-secondary-ink">
+              {a?.preco != null && (
+                <span className="text-base font-bold tabular-nums text-foreground">
+                  {brl(a.preco)}
+                </span>
+              )}
+              {textoDoPagamento(a?.preco, a?.precos) && (
+                <span className="font-medium"> {textoDoPagamento(a?.preco, a?.precos)}</span>
+              )}
+              {a?.temCupom && <span> · sem o cupom</span>}
+              {a?.vendedor && <span> · {a.vendedor}</span>}
+              {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
+              <Avaliacoes a={a?.avaliacoes} className="ml-1.5 inline-flex" />
+            </p>
+            <DetalhesDoProduto detalhes={a?.detalhes} />
+          </div>
+        </div>
+
+        <div className="sm:col-start-1 sm:row-start-2">
+          {!leituraFalhou && pedidoId != null && (
+            <FiltroPrazo
+              limite={limitePrazo}
+              mudar={setLimitePrazo}
+              cep={cepPrazo}
+              carregando={carregandoPrazo}
+            />
+          )}
+          {limitePrazo && filtroPrazo && (
+            <AvisosDoPrazo
+              limite={limitePrazo}
+              r={filtroPrazo}
+              melhorNoPrazo={
+                recomendada
+                  ? {
+                      nome: recomendada.o.vendedor ?? "outra loja",
+                      total: totalDaLoja(recomendada.o),
+                    }
+                  : filtroPrazo.coladoAtende
+                    ? { nome: "o anúncio que você colou", total: totalColado }
+                    : paraReceber
+                      ? { nome: paraReceber.nome, total: paraReceber.total }
+                      : null
+              }
+              paraReceber={paraReceber}
+            />
+          )}
+          {/* Só a melhor em destaque; todas as outras lojas estão na tabela. */}
+          {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
+            <OutraLojaComCupom
+              key={`${oferta.vendedor ?? "loja"}-${i}`}
+              oferta={oferta}
+              dispositivo={dispositivo}
+              vendedorAqui={a?.vendedor ?? null}
+              cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
+              precoAqui={a?.preco ?? null}
+              titulo={a?.titulo ?? null}
+              principal={trocar && i === 0}
+              semAnimacao={alternativa != null}
+              compacto={i > 0}
+              lojaAquiTemCupom={a?.temCupom === true}
+            />
+          ))}
+
+          {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
+          {estaEAMelhor && !(filtroPrazo?.algumAtende && !filtroPrazo.coladoAtende) && (
+            <MelhorOpcao
+              vendedor={a?.vendedor ?? null}
+              preco={a?.preco ?? null}
+              link={semLink ? null : link}
+              urlColada={urlColada}
+              comparou={a?.procurouOutra === true}
+              completando={completando}
+              dispositivo={dispositivo}
+              temCupom={a?.temCupom === true}
+              /* -1: pedido de versão antiga, sem a lista de lojas. */
+              comparadas={a?.referencias ? referencias.length : -1}
+              olhados={a?.buscaFora?.leitura?.comPreco ?? null}
+              conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
+              iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
+              semAnimacao={alternativa != null}
+              precos={a?.precos ?? null}
+              avaliacoes={a?.avaliacoes ?? null}
+            />
+          )}
+        </div>
+
+        {temColuna && (
+          <div className="sm:col-start-2 sm:row-span-3 sm:row-start-1">
+            {/* Melhor alternativa no topo da coluna, acima da tabela e dos Parecidos
+              (Weslei, 03/10). */}
+            {alternativa && !leituraFalhou && (
+              <div
+                id={parecidosSemAlternativa.length ? undefined : "secao-alternativas"}
+                className="scroll-mt-36"
+              >
+                <MelhorAlternativa
+                  p={alternativa}
+                  precoBase={precoDoMesmo}
+                  cb={podeSerAlternativa(alternativa, baseAlt).cb}
+                  dispositivo={dispositivo}
+                  tituloColado={a?.titulo ?? null}
+                  detalhesColado={a?.detalhes ?? null}
+                  colado={coladoResumo}
+                  pedidoId={pedidoId}
+                />
+              </div>
+            )}
+            {mostraTabela && (
+              <div id="secao-lojas" className="scroll-mt-36">
+                <TodasAsLojas
+                  linhas={linhasLojas}
+                  melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
+                  cep={a?.cepDestino ?? null}
+                />
+              </div>
+            )}
+            <div
+              id={parecidosSemAlternativa.length ? "secao-alternativas" : undefined}
+              className="scroll-mt-36"
+            >
+              <Parecidos
+                lista={parecidosSemAlternativa}
+                tituloColado={a?.titulo}
+                precoColado={a?.preco}
+                detalhesColado={a?.detalhes ?? null}
+                colado={coladoResumo}
+                pedidoId={pedidoId}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
+          largura inteira no PC (abaixo das duas colunas); no celular, logo
+          depois da análise do Mercado Livre. */}
+        <div
+          id="secao-marketplaces"
+          className={"scroll-mt-36" + (temColuna ? " sm:col-span-2 sm:row-start-4" : "")}
+        >
+          <ComparacaoMarketplaces
+            pedidoId={pedidoId}
+            colado={coladoParaComparar}
+            melhorMl={melhorMl}
+            precosMl={precosMl}
+            cep={a?.cepDestino ?? null}
+            gerarLink={gerarLinkMl}
+            chavePedido={chavePedido}
+          />
+        </div>
+
+        <div className="sm:col-start-1 sm:row-start-3">
+          {!leituraFalhou && pedidoId != null && !semLink && (
+            <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
+          )}
+
+          {!leituraFalhou && (
+            <div id="secao-duvidas" className="scroll-mt-36">
+              <CompareEEscolha
+                key={pedidoId ?? "sem-pedido"}
+                opcoes={opcoesEscolha}
+                padrao={
+                  recomendada?.chave ??
+                  (alternativa ? `par-${parecidosComLink.indexOf(alternativa)}` : null)
+                }
+                pedidoId={pedidoId}
+                dispositivo={dispositivo}
+              />
+            </div>
+          )}
+
+          {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
+
+          {/* Cenário 1A sem alternativa: a loja do anúncio tem cupom e eu comparei.
+          Dizer isso é o que dá confiança para comprar aqui. */}
+          {a?.temCupom === true && alternativas.length === 0 && (
+            <p className="mt-2 text-xs leading-relaxed text-secondary-ink">
+              {a.procurouOutra === true && !completando
+                ? "Comparei com as outras lojas que vendem este produto: esta, com o cupom, é a opção mais barata hoje."
+                : null}
+            </p>
+          )}
+
+          {/* Sem link pronto: a "Melhor opção" e a tabela trazem o botão que gera o
+          link de afiliado no clique. */}
+
+          {a?.temCupom && a.cupom?.id != null && !trocar && (
             <CodigoNaHora
               cupomId={a.cupom.id}
               destino={link}
@@ -2612,76 +2667,103 @@ function Resultado({
               vendedor={a.vendedor}
               cupom={a.cupom}
             />
-          </div>
-        )}
+          )}
 
-        {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={
-              trocar
-                ? "mt-3 block w-full rounded-md border border-ml-blue py-2 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
-                : "mt-3 block w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
-            }
-          >
-            {trocar
-              ? "Prefiro o anúncio que colei"
-              : textoDoBotao(dispositivo, "Comprar com segurança")}
-          </a>
-        )}
-        {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && <AvisoDoBotao d={dispositivo} />}
-
-        {!leituraFalhou &&
-          !semLink &&
-          (() => {
-            const melhor = recomendada ? recomendada.o : null;
-            const destino = melhor?.link ?? link;
-            const texto = mensagemMelhorOpcao({
-              titulo: a?.titulo,
-              preco: melhor ? melhor.final : a?.preco,
-              precoOriginal: melhor ? a?.preco : null,
-              economia: melhor ? melhor.ganho : null,
-              comparadas: a?.referencias ? referencias.length : 0,
-              freteGratis: melhor ? melhor.freteGratis : a?.freteGratis,
-              link: destino,
-            });
-            return <BotoesCompartilhar texto={texto} link={destino} />;
-          })()}
-
-        {pedido.codigo && (
-          <details className="mt-2 text-xs text-secondary-ink">
-            <summary className="cursor-pointer select-none">
-              O link não abriu no aplicativo?
-            </summary>
-            <p className="mt-1 leading-relaxed">Busque este código no aplicativo. Não é cupom.</p>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
-                {pedido.codigo}
-              </code>
-              <button
-                type="button"
-                onClick={() => copiar(pedido.codigo as string, "codigo")}
-                className="shrink-0 rounded border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
-              >
-                {copiado === "codigo" ? "copiado" : "copiar"}
-              </button>
+          {/* Achei loja mais barata, mas a pessoa pode preferir a loja que ela
+          colou. Se essa loja tem cupom, o meu cupom continua disponível para
+          ela, com o valor que fica com o desconto. */}
+          {a?.temCupom && a.cupom?.id != null && trocar && !leituraFalhou && !semLink && (
+            <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-sm font-bold">
+                Prefere comprar {a.vendedor ? `na ${a.vendedor}` : "na loja do anúncio"}? A loja tem
+                cupom
+                {a.cupom.titulo ? ` de ${a.cupom.titulo}` : ""}.
+              </p>
+              {alternativas[0]?.finalAtual != null && a.preco != null && (
+                <p className="mt-1 text-xs tabular-nums text-secondary-ink">
+                  Com o cupom, lá sai por {brl(alternativas[0].finalAtual)} (de {brl(a.preco)}).
+                </p>
+              )}
+              <CodigoNaHora
+                cupomId={a.cupom.id}
+                destino={link}
+                titulo={a.titulo}
+                vendedor={a.vendedor}
+                cupom={a.cupom}
+              />
             </div>
-          </details>
-        )}
+          )}
 
-        {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
+          {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={
+                trocar
+                  ? "mt-3 block w-full rounded-md border border-ml-blue py-2 text-center text-sm font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
+                  : "mt-3 block w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+              }
+            >
+              {trocar
+                ? "Prefiro o anúncio que colei"
+                : textoDoBotao(dispositivo, "Comprar com segurança")}
+            </a>
+          )}
+          {!leituraFalhou && !semLink && !trocar && !estaEAMelhor && (
+            <AvisoDoBotao d={dispositivo} />
+          )}
+
+          {!leituraFalhou &&
+            !semLink &&
+            (() => {
+              const melhor = recomendada ? recomendada.o : null;
+              const destino = melhor?.link ?? link;
+              const texto = mensagemMelhorOpcao({
+                titulo: a?.titulo,
+                preco: melhor ? melhor.final : a?.preco,
+                precoOriginal: melhor ? a?.preco : null,
+                economia: melhor ? melhor.ganho : null,
+                comparadas: a?.referencias ? referencias.length : 0,
+                freteGratis: melhor ? melhor.freteGratis : a?.freteGratis,
+                link: destino,
+              });
+              return <BotoesCompartilhar texto={texto} link={destino} />;
+            })()}
+
+          {pedido.codigo && (
+            <details className="mt-2 text-xs text-secondary-ink">
+              <summary className="cursor-pointer select-none">
+                O link não abriu no aplicativo?
+              </summary>
+              <p className="mt-1 leading-relaxed">Busque este código no aplicativo. Não é cupom.</p>
+              <div className="mt-1 flex items-center gap-2">
+                <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1.5 text-sm font-bold tracking-wide">
+                  {pedido.codigo}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => copiar(pedido.codigo as string, "codigo")}
+                  className="shrink-0 rounded border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue"
+                >
+                  {copiado === "codigo" ? "copiado" : "copiar"}
+                </button>
+              </div>
+            </details>
+          )}
+
+          {/* Sem leitura nao existe botao, e sem botao esta promessa nao pode ser
           feita: seria prometer comissao sobre um link que nao foi gerado. */}
-        {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
-        {!leituraFalhou && !semLink && (
-          <p className="mt-2 text-center text-[11px] text-secondary-ink">
-            Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão do
-            programa de afiliados. Obrigado!
-          </p>
-        )}
+          {/* Uma linha só: quase ninguém lê parágrafo (observado pelo Weslei, 24/09). */}
+          {!leituraFalhou && !semLink && (
+            <p className="mt-2 text-center text-[11px] text-secondary-ink">
+              Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma pequena comissão do
+              programa de afiliados. Obrigado!
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -3230,10 +3312,10 @@ function MelhorAlternativa({
   );
 }
 
-/* BARRA FIXA NO CELULAR (Weslei, 03/10: estilo Apple Store): ao rolar pelo
-   resultado, uma barra translúcida no topo com a foto, o nome curto, o melhor
-   preço (frete em linha própria) e o botão em pílula com o link de afiliado.
-   Some quando o resultado sai da tela. */
+/* BARRA FIXA NO CELULAR (Weslei, 03/10: estilo Apple Store; embaixo desde a
+   navegação soft de 10/10): ao rolar pelo resultado, uma barra de vidro com a
+   foto, "Melhor opção", o melhor preço (frete em linha própria) e o botão com
+   o link de afiliado. Some quando o resultado sai da tela. */
 function BarraFixa({
   imagem,
   titulo,
@@ -3270,6 +3352,14 @@ function BarraFixa({
       if (quadro) cancelAnimationFrame(quadro);
     };
   }, []);
+  /* Com a barra embaixo, a navegação rápida (Início / topo) sobe junto
+     (só no celular: a barra não existe a partir de sm). */
+  useEffect(() => {
+    const raiz = document.documentElement;
+    const celular = window.matchMedia?.("(max-width: 639px)").matches;
+    raiz.style.setProperty("--folga-compra", visivel && celular ? "84px" : "0px");
+    return () => raiz.style.setProperty("--folga-compra", "0px");
+  }, [visivel]);
   const frete =
     freteGratis === true
       ? "Frete grátis"
@@ -3281,25 +3371,23 @@ function BarraFixa({
   return (
     <>
       <span ref={marco} aria-hidden="true" className="absolute left-0 top-0 h-px w-px" />
+      {/* NAVEGAÇÃO SOFT (design de 10/10): no celular, a compra fica numa
+          barra de vidro EMBAIXO (o topo é do cabeçalho e da barra de seções). */}
       <div
         className={
-          "fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-white/75 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-all duration-300 dark:border-white/10 dark:bg-black/60 sm:hidden " +
-          (visivel
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-full opacity-0")
+          "fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 transition-[transform,opacity] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none sm:hidden " +
+          (visivel ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0")
         }
         aria-hidden={!visivel}
       >
-        <div className="flex items-center gap-2.5 px-4 py-2">
-          <Foto src={imagem} className="size-9 shrink-0 rounded-xl bg-muted object-contain" />
+        <div className="flex items-center gap-3 rounded-[18px] border border-[#ececf0] bg-white/90 px-3.5 py-3 shadow-[0_6px_24px_rgba(15,23,41,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90">
+          <Foto src={imagem} className="size-10 shrink-0 rounded-xl bg-muted object-contain" />
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-[13px] font-semibold tracking-tight">
-              {titulo ?? "Produto"}
-            </p>
-            {preco != null && (
-              <p className="text-[11px] text-secondary-ink">
-                Melhor preço <strong className="text-foreground tabular-nums">{brl(preco)}</strong>
-              </p>
+            <p className="text-[11px] font-semibold text-[#15803d]">Melhor opção</p>
+            {preco != null ? (
+              <p className="text-[17px] font-bold tabular-nums text-foreground">{brl(preco)}</p>
+            ) : (
+              <p className="truncate text-[13px] font-semibold">{titulo ?? "Produto"}</p>
             )}
             {frete && <p className="text-[11px] text-secondary-ink">{frete}</p>}
           </div>
@@ -3309,9 +3397,9 @@ function BarraFixa({
               target="_blank"
               rel="noopener noreferrer"
               tabIndex={visivel ? 0 : -1}
-              className="inline-flex max-w-[52%] shrink-0 items-center gap-1 rounded-full bg-ml-blue px-3 py-1.5 text-center text-[12px] font-semibold leading-tight text-white active:scale-95"
+              className="inline-flex h-11 max-w-[56%] shrink-0 items-center gap-1.5 rounded-full bg-[#15803d] px-4 text-center text-[13px] font-bold leading-tight text-white active:scale-[0.98]"
             >
-              <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
+              <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               <span>Comprar com segurança</span>
             </a>
           )}
