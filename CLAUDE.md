@@ -1379,3 +1379,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   avaliações)") e "Me ajude a escolher" (avaliacao_das_pessoas; poucas
   avaliações valem pouco) também. Loja oficial no bot passou a "✔️" para não
   confundir com a estrela. Sem o dado, nada aparece.
+
+## Shorts no YouTube (10/10)
+- Weslei, 10/10: "PROMPT MESTRE: AUTOMAÇÃO DE SHORTS ULTRA-REALISTAS".
+  Pacote Python scripts/automacao_shorts/ (roda no computador do Weslei;
+  LEIAME.md com a instalação): radar_produtos (campanhas_ativas, só
+  "mesmo"/"menor", preço conferido < 24 h, sem repetir em 14 dias, regras
+  de falso/usado/peça/desconto real portadas em regras.py), gerador_roteiro
+  (gancho, valor, comparação, CTA, loop; nenhum valor em reais além dos 3
+  conferidos; nada de "testei"/"neste vídeo"; frete em frase própria;
+  polimento opcional só se passar na validação; SEO com título <= 70 e
+  #Shorts, 3-4 hashtags, 8-12 tags sem "review"/"unboxing"),
+  higgsfield_video (API oficial api.higgsfield.ai, imagem->vídeo da foto
+  real, estúdio clean por padrão), voz_narracao (ElevenLabs com tempos;
+  reserva OpenAI TTS), editor_video (ffmpeg/imageio-ffmpeg, 1080x1920,
+  legendas ASS, cartão de preço com o comparado riscado, loop pelo 1º
+  quadro), youtube_publisher (OAuth persistente em credenciais/, fora do
+  git; cota local; containsSyntheticMedia = true; comentário com o link).
+- Limites: a API não fixa comentário (fixar no Studio); link em Shorts não
+  é clicável; privado por padrão (SHORTS_PRIVACIDADE).
