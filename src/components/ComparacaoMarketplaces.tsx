@@ -306,7 +306,12 @@ function SecaoDoMarketplace({
           {!mesmos.length && (
             <p className="mt-1 text-xs text-secondary-ink">
               Não achei o mesmo produto
-              {resumo?.conferidas ? ` entre os ${resumo.conferidas} conferidos pela foto` : ""}.
+              {resumo?.conferidas === 1
+                ? " no único conferido pela foto"
+                : resumo?.conferidas
+                  ? ` entre os ${resumo.conferidas} conferidos pela foto`
+                  : ""}
+              .
             </p>
           )}
           {parecidos.length > 0 && (

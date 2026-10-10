@@ -95,6 +95,9 @@ export function mudaCompleta(
     .split(/;\s*/)
     .map((p) => p.trim())
     .filter(Boolean)
+    /* Item cortado no meio (motivo gravado com corte seco em 140, até 10/10):
+       "Alimentação: Pilha ->" sem o valor do outro anúncio sai da tela. */
+    .filter((p) => !/->\s*$/.test(p))
     .filter((p) => !(ficha.length && ESPECULACAO.test(p)));
   /* A conferência escreve "Campo: original -> candidato" (02/10). */
   const todas = [...ficha, ...partes.map((p) => p.replace(/\s*->\s*/g, " → "))];

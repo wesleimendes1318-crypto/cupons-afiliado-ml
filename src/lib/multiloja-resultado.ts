@@ -79,7 +79,14 @@ export function limparResultado(r: unknown): RespostaMultiloja {
           : null,
       notaFrete: texto(l.notaFrete, 80),
       selos: Array.isArray(l.selos) ? l.selos.filter((x) => x === "Prime") : [],
-      muda: texto(l.muda, 400),
+      /* Item cortado no meio ("Campo: X ->" sem o outro valor) sai. */
+      muda: texto(
+        (typeof l.muda === "string" ? l.muda : "")
+          .split(/;\s*/)
+          .filter((p) => p.trim() && !/->\s*$/.test(p))
+          .join("; "),
+        400,
+      ),
       qualidade: texto(l.qualidade, 20),
       qualidadeMotivo: texto(l.qualidadeMotivo, 200),
       desvantagens: Array.isArray(l.desvantagens)

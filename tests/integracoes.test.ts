@@ -474,3 +474,44 @@ test("comparação final: diferença contra o colado e frete em linha própria",
     ),
   );
 });
+
+test("o que muda é cortado no último item completo", async () => {
+  const { cortarNoItem } = await import("../src/lib/conferir-produto");
+  const muda =
+    "Marca: Logitech -> não informada; Cor: Grafite/Preto -> Azul/Branco; Conectividade: 2.4GHz -> Bluetooth + USB 2.4GHz; Alimentação: Pilha -> Bateria recarregável";
+  const r = cortarNoItem(muda, 140);
+  assert.equal(
+    r,
+    "Marca: Logitech -> não informada; Cor: Grafite/Preto -> Azul/Branco; Conectividade: 2.4GHz -> Bluetooth + USB 2.4GHz",
+  );
+  assert.ok(!/->\s*$/.test(r));
+  assert.equal(cortarNoItem("Cor: preto -> azul", 140), "Cor: preto -> azul");
+  assert.equal(cortarNoItem("x".repeat(200), 10), "xxxxxxxxx…");
+});
+
+test("item cortado no meio do que muda não aparece na tela", async () => {
+  const { limparResultado } = await import("../src/lib/multiloja-resultado");
+  const r = limparResultado({
+    ativo: true,
+    lojas: [
+      {
+        marketplace: "amazon",
+        id: "B0GQ8ZWP2L",
+        titulo: "Kit Teclado e Mouse Sem Fio",
+        preco: 53.19,
+        link: "https://www.amazon.com.br/dp/B0GQ8ZWP2L?tag=melhoresc0fff-20",
+        imagem: null,
+        loja: null,
+        freteGratis: null,
+        custoFrete: null,
+        notaFrete: null,
+        selos: [],
+        relacao: "parecido",
+        muda: "Marca: Logitech -> não informada; Cor: Grafite -> Azul; Alimentação: Pilha -> ",
+        semelhanca: 20,
+        qualidade: "incerta",
+      },
+    ],
+  });
+  assert.equal(r.lojas[0]!.muda, "Marca: Logitech -> não informada; Cor: Grafite -> Azul");
+});

@@ -1025,9 +1025,19 @@ function lerVereditos(lista: VereditoIA[], total: number) {
               .slice(0, 3)
           : [],
         confianca: Math.max(0, Math.min(100, Number(c.confianca) || 0)),
-        motivo: motivo.slice(0, 140),
+        motivo: cortarNoItem(motivo, 140),
       };
     });
+}
+
+/** Corta o "o que muda" no último item completo (10/10, pedido 1110: o corte
+    seco em 140 deixava "Alimentação: Pilha ->" sem o valor do candidato). */
+export function cortarNoItem(texto: string, max: number) {
+  if (texto.length <= max) return texto;
+  const corte = texto.slice(0, max);
+  const fim = corte.lastIndexOf("; ");
+  if (fim > 0) return corte.slice(0, fim);
+  return corte.slice(0, max - 1).trimEnd() + "…";
 }
 
 export async function termoDeBusca(
