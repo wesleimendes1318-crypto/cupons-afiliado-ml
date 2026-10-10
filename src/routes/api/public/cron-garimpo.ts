@@ -260,7 +260,7 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
       linhaDoFrete(x.opcao),
     ],
     [
-      x.loja ? `🏪 ${html(curto(x.loja, 40))}${x.lojaOficial ? " · ⭐ Loja oficial" : ""}` : null,
+      x.loja ? `🏪 ${html(curto(x.loja, 40))}${x.lojaOficial ? " · ✔️ Loja oficial" : ""}` : null,
       /* Avaliação das pessoas lida no anúncio (10/10). */
       linhaDasAvaliacoes(x.opcao.avaliacoes),
       comLink ? `🛒 Comprar com segurança: ${x.link}` : null,
