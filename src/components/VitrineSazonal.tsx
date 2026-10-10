@@ -53,7 +53,7 @@ import {
 } from "@/lib/sazonal";
 import { LINK_CANAL } from "@/lib/telegram-publico";
 import { propsFotoCartao } from "@/lib/foto";
-import { Avaliacoes } from "@/components/Avaliacoes";
+import { LinhaAvaliacoes } from "@/components/Avaliacoes";
 import {
   avaliacaoDaOferta,
   ContextoAvaliacoes,
@@ -307,7 +307,11 @@ export function CartaoOferta({
         <p className="mt-1 truncate text-[11px] text-[#6e6e73]">
           {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
-        <Avaliacoes a={avaliacaoDaOferta(avaliacoes, o.chave, o.link)} compacto className="flex" />
+        <LinhaAvaliacoes
+          resumo={avaliacaoDaOferta(avaliacoes, o.chave, o.link)}
+          titulo={o.titulo}
+          link={o.link}
+        />
         <p className="text-[10px] text-[#86868b]">{quando}</p>
         <div className="mt-auto pt-3">
           <VerDetalhesVitrine

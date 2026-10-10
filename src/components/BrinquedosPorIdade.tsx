@@ -7,6 +7,13 @@ import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { FAIXAS, faixaPorId, pareceBrinquedo } from "@/lib/brinquedos";
 import { SELO_MAIS_VENDIDO, seloDoCatalogo } from "@/lib/selos";
 import { propsFotoCartao } from "@/lib/foto";
+import { LinhaAvaliacoes } from "@/components/Avaliacoes";
+import { avaliacaoDaOferta, useAvaliacoesDaVitrine } from "@/lib/avaliacoes-vitrine";
+import {
+  itemDoEndereco,
+  useAvaliacoesPorItens,
+  type ResumoAvaliacoes,
+} from "@/lib/avaliacoes-detalhe";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
    API oficial (mais vendidos e buscas por idade) e que JÁ passaram pela
@@ -90,7 +97,19 @@ function cartaoDo(i: Item): Cartao | null {
   };
 }
 
-function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
+/* Chave do produto na vitrine: o anúncio do endereço (item_id). */
+const chaveDoBrinquedo = (url: string) =>
+  /item_id(?:%3A|:)(MLB\d+)/i.exec(url)?.[1]?.toUpperCase() ?? "";
+
+function CartaoBrinquedo({
+  c,
+  naHome,
+  avaliacao = null,
+}: {
+  c: Cartao;
+  naHome: boolean;
+  avaliacao?: ResumoAvaliacoes | null;
+}) {
   const i = c.item;
   const faixa = faixaPorId(i.faixa);
   /* Botão direto sempre que houver link de afiliado (Weslei, 05/10). */
@@ -148,9 +167,10 @@ function CartaoBrinquedo({ c, naHome }: { c: Cartao; naHome: boolean }) {
         {c.loja && (
           <p className="mt-0.5 truncate text-[11px] text-secondary-ink">Vendido por {c.loja}</p>
         )}
+        <LinhaAvaliacoes resumo={avaliacao} titulo={i.nome} link={c.link} className="mt-0.5" />
         <div className="mt-auto pt-3">
           <VerDetalhesVitrine
-            chave={/item_id(?:%3A|:)(MLB\d+)/i.exec(i.url)?.[1]?.toUpperCase() ?? ""}
+            chave={chaveDoBrinquedo(i.url)}
             titulo={i.nome}
             imagem={i.imagem}
             preco={c.preco}
@@ -285,6 +305,19 @@ export function BrinquedosPorIdade({
   const atual = ABAS.find((a) => a.id === aba)!;
   const lista = porAba.get(aba) ?? [];
   const total = itens.length;
+  /* Avaliações (10/10): a oferta do botão pela vitrine; sem ela, o próprio
+     anúncio do produto quando o botão é dele. */
+  const vistos = lista.slice(0, 15);
+  const pelaVitrine = useAvaliacoesDaVitrine(vistos.map((c) => chaveDoBrinquedo(c.item.url)));
+  const pelosItens = useAvaliacoesPorItens(
+    vistos.map((c) => (c.tipo === "desconto" ? null : itemDoEndereco(c.item.url))),
+  );
+  const avaliacaoDo = (c: Cartao): ResumoAvaliacoes | null => {
+    const v = avaliacaoDaOferta(pelaVitrine, chaveDoBrinquedo(c.item.url), c.link);
+    if (v && (v.avaliacoes || v.sem)) return v;
+    const it = c.tipo === "desconto" ? null : itemDoEndereco(c.item.url);
+    return (it ? pelosItens.get(it) : null) ?? v;
+  };
   if (carregou && total === 0) return null;
 
   return (
@@ -359,7 +392,12 @@ export function BrinquedosPorIdade({
           className="-mx-5 mt-4 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5"
         >
           {lista.slice(0, 15).map((c) => (
-            <CartaoBrinquedo key={c.item.produto} c={c} naHome={naHome} />
+            <CartaoBrinquedo
+              key={c.item.produto}
+              c={c}
+              naHome={naHome}
+              avaliacao={avaliacaoDo(c)}
+            />
           ))}
         </ul>
       )}

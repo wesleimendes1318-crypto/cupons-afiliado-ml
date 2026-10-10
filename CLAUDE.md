@@ -1397,6 +1397,45 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   link de catálogo (/p/) muitas vezes vem sem nota própria. Produto só
   ganha estrela depois de comparado na 1.164.0 (em 10/10, 20 da vitrine
   entraram na fila dos agentes, fonte 'avaliacoes').
+- EM TODOS E COM DETALHAMENTO (Weslei, 10/10: "precisa ter as avaliações
+  em TODOS, e precisa de um espaço que abra o detalhamento das avaliações
+  reais"). Extensão 1.165.0: detalheDasAvaliacoes (comparador.js, teste com
+  os trechos reais dos diagnósticos) lê o bloco de opiniões da página:
+  distribuição [{"value","percentage","index"}] (index 0 = 5 estrelas; só
+  vale se fechar com a média, +-0,3), "rating_average_formatted", total do
+  aria_label ("Avaliação 4.9 de 5. 2586 opiniões."), até 6 opiniões
+  (rating, comment.content.text, date, created_date e count_likes do mesmo
+  review_id), "total_opinions" e o aviso "Inclui opiniões de pessoas de
+  outros países". semAvaliacoesNaPagina: "Sem avaliações ainda" só com a
+  página inteira do próprio anúncio e nenhuma nota. Amostra diária em
+  diagnosticos tipo 'avaliacoes-amostra'.
+  - Leitura: anúncio colado e lojas (parte lida) mandam para o banco
+    (gravar_avaliacoes, senha da extensão); atualizarAvaliacoes (alarme de
+    1 min) lê SEM a conta (credentials omit) até 3 páginas por minuto, só
+    com a extensão parada; verificação = pausa de 1 h. Fila
+    avaliacoes_pendentes: pedido de cliente das últimas 3 h, vitrine,
+    campanhas, brinquedos, mais vendidos; cada anúncio a cada 7 dias (falha
+    espera 1 dia).
+  - Banco (20261010150000_avaliacoes_detalhadas.sql): avaliacoes_anuncios
+    (item MLB... ou MLBP... para página de catálogo sem anúncio, como o
+    "pid" do próprio Mercado Livre; só servidor), avaliacoes_ofertas (mapa
+    chave + link meli.la -> anúncio + nota da comparação, refeito pelo
+    pg_cron avaliacoes-ofertas a cada 15 min), leituras públicas
+    avaliacoes_da_vitrine_v2, avaliacoes_por_itens e detalhe_avaliacoes. A
+    leitura da página vale mais que a nota da comparação; detalhamento só é
+    trocado por outro detalhamento.
+  - Site: LinhaAvaliacoes (src/components/Avaliacoes.tsx) em TODOS os
+    cartões (vitrine e alternativa, campanhas, brinquedos, mais vendidos),
+    sempre com a mesma altura: "★ 4,4 (81) Ver avaliações ›", "Sem
+    avaliações ainda" ou espaço reservado (sem leitura, nada inventado). No
+    resultado, a estrela vira botão quando o anúncio é conhecido (colado,
+    tabela, recomendação, Melhor alternativa, Parecidos), completada pela
+    leitura da página (ContextoAvaliacoesPorItem). PainelAvaliacoes: nota,
+    estrelas, total, barras por estrela, aviso, "O que dizem os
+    compradores" (estrelas, data, texto, "N pessoas acharam útil"),
+    "Mostrando N de M comentários", "Ver todas as avaliações no anúncio"
+    só com meli.la e "lidas na página do anúncio em dd/mm/aaaa". Sem
+    distribuição/opiniões lidas, o painel diz que ainda não foram lidas.
 
 ## Shorts no YouTube (10/10)
 - Weslei, 10/10: "PROMPT MESTRE: AUTOMAÇÃO DE SHORTS ULTRA-REALISTAS".

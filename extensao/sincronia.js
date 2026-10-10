@@ -535,6 +535,22 @@ export async function vitrineCompletar(token, chave, imagem, categoria) {
   } catch (e) { /* tenta na proxima rodada */ }
 }
 
+/* AVALIACOES EM TODOS OS CARTOES (10/10): o banco entrega os anuncios das
+   vitrines sem leitura recente e recebe nota, total, distribuicao e opinioes
+   lidas na pagina de cada um. */
+export async function avaliacoesPendentes(token, limite = 3) {
+  if (!token) return [];
+  try {
+    const l = await chamarRpc(SUPABASE + '/rest/v1/rpc/avaliacoes_pendentes', { p_token: token, p_limite: limite });
+    return Array.isArray(l) ? l : [];
+  } catch (e) { return []; }
+}
+
+export async function gravarAvaliacoes(token, itens) {
+  if (!token || !Array.isArray(itens) || !itens.length) return null;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_avaliacoes', { p_token: token, p_itens: itens.slice(0, 20) });
+}
+
 /* ACOMPANHAR PRECO (28/09, teste): o banco entrega um produto por vez para
    conferir e recebe o preco lido. Nada de SerpAPI nem de comparacao. */
 export async function proximoMonitor(token) {

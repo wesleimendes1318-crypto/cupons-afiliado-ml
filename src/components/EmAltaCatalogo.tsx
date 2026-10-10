@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Flame } from "lucide-react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { LinhaAvaliacoes } from "@/components/Avaliacoes";
+import { itemDoEndereco, useAvaliacoesPorItens } from "@/lib/avaliacoes-detalhe";
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
 import { propsFotoCartao } from "@/lib/foto";
@@ -103,6 +105,8 @@ export function EmAltaCatalogo({
     .sort((a, b) => ordemOrigem(a) - ordemOrigem(b))
     .slice(0, limite);
   const lista = grade ? todos.slice(0, mostrar) : todos;
+  /* Avaliações de cada anúncio (10/10), lidas pela extensão. */
+  const avaliacoes = useAvaliacoesPorItens(lista.map((i) => itemDoEndereco(i.url)));
   if (!lista.length) return null;
   const quando = lista.reduce(
     (m, i) => (Date.parse(i.atualizado_em) > Date.parse(m) ? i.atualizado_em : m),
@@ -215,6 +219,11 @@ export function EmAltaCatalogo({
               {i.loja_oficial && (
                 <p className="text-[11px] font-semibold text-[#0058b0]">Loja oficial</p>
               )}
+              <LinhaAvaliacoes
+                resumo={avaliacoes.get(itemDoEndereco(i.url) ?? "")}
+                titulo={i.nome}
+                className="mt-0.5"
+              />
               <div className="mt-auto space-y-1.5 pt-3">
                 <VerNaLoja url={i.url} grande />
                 <button

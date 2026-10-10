@@ -777,6 +777,117 @@ export function avaliacaoDoItem(html, item) {
   return null;
 }
 
+/* DETALHE DAS AVALIACOES (Weslei, 10/10: "precisa ter as avaliacoes em
+   TODOS, e precisa de um espaco que abra o detalhamento das avaliacoes
+   reais"). O componente de opinioes da pagina traz (amostras reais de 09/10,
+   JBL Flip 6 e Kit Lily):
+     distribuicao  [{"value":9,"percentage":0.35,"index":3},...] (index 0 =
+                   5 estrelas: com media 4,9, o index 4 tinha 1,16%)
+     media         "rating_average_formatted":"4.9"
+     total         "aria_label":"Avaliacao 4.9 de 5. 2586 opinioes."
+     opinioes      "reviews":[{"id":N,"rating":5,"variant":"","comment":
+                   {"content":{"text":"..."}},"date":"Ha 10 meses",...
+                   "review_id":N,"created_date":"2026-06-27T..."}]
+   Tudo conferido: distribuicao que nao fecha com a media sai fora; opiniao
+   sem nota ou sem texto fica de fora. Nunca inventa. */
+const RE_NIVEIS = /\[\s*\{[^[\]]*?"index"\s*:\s*[0-4][^[\]]*\]/g;
+
+function textoDaOpiniao(bruto) {
+  let s = String(bruto || '')
+    .replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\[nrt]/g, ' ')
+    .replace(/\\(.)/g, '$1')
+    .replace(/<[^>]{0,200}>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (s.length > 700) s = s.slice(0, 697).replace(/\s+\S*$/, '') + '…';
+  return s;
+}
+
+export function detalheDasAvaliacoes(html) {
+  if (!html) return null;
+  const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
+  const re = /"rating_average_formatted"\s*:\s*"(\d(?:[.,]\d)?)"/g;
+  let m;
+  while ((m = re.exec(t))) {
+    const media = parseFloat(m[1].replace(',', '.'));
+    if (!(media > 0 && media <= 5)) continue;
+    /* A distribuicao fica logo antes da media, no mesmo bloco. */
+    const antes = t.slice(Math.max(0, m.index - 1500), m.index);
+    const arrays = antes.match(RE_NIVEIS);
+    if (!arrays) continue;
+    const niveis = new Map();
+    for (const o of arrays[arrays.length - 1].match(/\{[^{}]{0,200}\}/g) || []) {
+      const i = /"index"\s*:\s*([0-4])\b/.exec(o);
+      const v = /"value"\s*:\s*(\d{1,9})\b/.exec(o);
+      if (i && v && !niveis.has(Number(i[1]))) niveis.set(Number(i[1]), Number(v[1]));
+    }
+    if (niveis.size !== 5) continue;
+    let soma = 0, pontos = 0;
+    for (const [i, v] of niveis) { soma += v; pontos += (5 - i) * v; }
+    if (!(soma > 0)) continue;
+    const depois = t.slice(m.index, m.index + 600);
+    const aria = /"aria_label"\s*:\s*"Avalia[^"]{0,20}?de 5\.\s*([\d.]{1,12})\s*opini/i.exec(depois);
+    const total = aria ? parseInt(aria[1].replace(/\./g, ''), 10) : soma;
+    if (!(total >= 1)) continue;
+    /* A media da pagina precisa fechar com a distribuicao. */
+    const distribuicao = Math.abs(pontos / soma - media) <= 0.3
+      ? [0, 1, 2, 3, 4].map(i => ({ estrelas: 5 - i, total: niveis.get(i) }))
+      : null;
+    const info = /"information"\s*:\s*"([^"]{4,140})"/.exec(depois);
+    const aviso = info && /opini/i.test(info[1]) ? textoDaOpiniao(info[1]) : null;
+
+    /* Opinioes: o primeiro "reviews":[ depois do bloco da nota. */
+    const comentarios = [];
+    const resto = t.slice(m.index, m.index + 120000);
+    const ini = resto.search(/"reviews"\s*:\s*\[\s*\{\s*"id"\s*:\s*\d/);
+    if (ini >= 0 && ini < 6000) {
+      const seg = resto.slice(ini);
+      const inicios = [];
+      const rr = /\{\s*"id"\s*:\s*(\d{4,15})\s*,\s*"rating"\s*:\s*([1-5])\b/g;
+      let r;
+      while ((r = rr.exec(seg)) && inicios.length < 8) inicios.push({ pos: r.index, id: r[1], nota: Number(r[2]) });
+      for (let k = 0; k < inicios.length && comentarios.length < 6; k++) {
+        const o = inicios[k];
+        const pedaco = seg.slice(o.pos, k + 1 < inicios.length ? inicios[k + 1].pos : o.pos + 8000);
+        const tx = /"content"\s*:\s*\{\s*"text"\s*:\s*"([\s\S]{1,4000}?)"\s*,\s*"(?:see_more|see_less|should_hide)/.exec(pedaco)
+          || /"content"\s*:\s*\{\s*"text"\s*:\s*"([^"]{1,4000})"/.exec(pedaco);
+        const texto = tx ? textoDaOpiniao(tx[1]) : '';
+        if (texto.length < 2) continue;
+        const data = /"date"\s*:\s*"([^"{}]{1,40})"/.exec(pedaco);
+        const criado = new RegExp('"review_id"\\s*:\\s*' + o.id + '\\s*,\\s*"created_date"\\s*:\\s*"(\\d{4}-\\d{2}-\\d{2})').exec(pedaco);
+        const uteis = /"count_likes"\s*:\s*(\d{1,7})\b/.exec(pedaco);
+        comentarios.push({
+          nota: o.nota, texto,
+          data: data ? textoDaOpiniao(data[1]) : null,
+          criadoEm: criado ? criado[1] : null,
+          uteis: uteis ? Number(uteis[1]) : null
+        });
+      }
+    }
+    const tc = /"total_opinions"\s*:\s*"([\d.]{1,12})\s*coment/.exec(t);
+    return {
+      nota: Math.round(media * 10) / 10, total, distribuicao, comentarios,
+      totalComentarios: tc ? parseInt(tc[1].replace(/\./g, ''), 10) : null,
+      aviso
+    };
+  }
+  return null;
+}
+
+/* Pagina que mostra o anuncio sem nenhuma avaliacao: o evento do proprio
+   anuncio esta na pagina e nao ha nota em lugar nenhum. So assim "Sem
+   avaliacoes ainda" (pagina cortada ou de outro anuncio nao conta). */
+export function semAvaliacoesNaPagina(html, item) {
+  if (!html || !item || String(html).length < 100000) return false;
+  const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
+  if (!t.replace(/\s+/g, '').includes('"item_id":"' + String(item).toUpperCase() + '"')) return false;
+  if (/"rating_average_formatted"/.test(t)) return false;
+  if (/"reviews"\s*:\s*\{[\s\S]{0,400}?"count"\s*:\s*[1-9]/.test(t)) return false;
+  if (/"review_rate"\s*:\s*[1-5]/.test(t)) return false;
+  return true;
+}
+
 /* PRECOS DO PROPRIO ANUNCIO (Weslei, 28/09: "cuidado com o valor a vista e
    parcelado"; iPhone 17 Pro Max: R$ 8.781,40 no Pix, R$ 9.757,11 em 15x).
    O evento do anuncio traz o preco cheio (pricing.actual_price ou "price"

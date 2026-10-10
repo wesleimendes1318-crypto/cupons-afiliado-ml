@@ -25,7 +25,7 @@ import {
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
-import { Avaliacoes } from "@/components/Avaliacoes";
+import { LinhaAvaliacoes } from "@/components/Avaliacoes";
 import {
   avaliacaoDaOferta,
   ContextoAvaliacoes,
@@ -423,10 +423,11 @@ function Cartao({ i }: { i: ItemVitrine }) {
             <>na {i.loja ?? "loja"}</>
           )}
         </p>
-        <Avaliacoes
-          a={avaliacaoDaOferta(avaliacoes, i.chave, destino)}
-          compacto
-          className="mt-0.5 flex"
+        <LinhaAvaliacoes
+          resumo={avaliacaoDaOferta(avaliacoes, i.chave, destino)}
+          titulo={i.titulo}
+          link={destino}
+          className="mt-0.5"
         />
         {temAlternativa && <Alternativa i={i} />}
         {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
@@ -505,10 +506,11 @@ function Alternativa({ i }: { i: ItemVitrine }) {
           Vendido por <strong className="text-foreground">{i.alt_loja}</strong>
         </p>
       )}
-      <Avaliacoes
-        a={avaliacaoDaOferta(avaliacoes, i.chave, i.alt_link)}
-        compacto
-        className="mt-0.5 flex"
+      <LinhaAvaliacoes
+        resumo={avaliacaoDaOferta(avaliacoes, i.chave, i.alt_link)}
+        titulo={i.alt_titulo ?? i.titulo}
+        link={i.alt_link}
+        className="mt-0.5"
       />
       {vantagens.length > 0 && (
         <ul className="mt-1 flex flex-wrap gap-1">

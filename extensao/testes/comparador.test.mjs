@@ -540,3 +540,51 @@ test('avaliacao das pessoas: nota e total do evento do proprio anuncio', () => {
   assert.equal(avaliacaoDoItem(EVENTO_AVALIACAO.replace('\\"count\\":5056', '\\"count\\":0'), 'MLB5319985885'), null);
   assert.equal(avaliacaoDoItem('<html></html>', 'MLB5319985885'), null);
 });
+
+import { detalheDasAvaliacoes, semAvaliacoesNaPagina } from '../comparador.js';
+
+/* Bloco de opinioes montado com os trechos reais dos diagnosticos de 09/10
+   (JBL Flip 6: niveis 3 e 4, media, total e a 1a opiniao; Kit Lily: data
+   de criacao e "util"). Os niveis 0 a 2 foram completados para somar 2586. */
+const OPINIOES = '"rating":{"levels":[{"value":2370,"percentage":91.65,"index":0},{"value":150,"percentage":5.8,"index":1},{"value":27,"percentage":1.04,"index":2},{"value":9,"percentage":0.35,"index":3},{"value":30,"percentage":1.16,"index":4}],"aria_label":"Avaliação 4.9 de 5. 2586 opiniões.","rating_average_formatted":"4.9","information":"Inclui opiniões de pessoas de outros países."},"title_reviews":{"title":"Opiniões"},"reviews":[{"id":2538679240,"rating":5,"variant":"","comment":{"content":{"text":"Apesar de ser a caixa de som mais barata da loja oficial da jbl no mercado livre, o som é muito bom, com bons graves e cumpre o que promete.","see_more":"Saiba mais","see_less":"Ler menos","should_hide_button_all_reviews":false},"date":"Há 10 meses","country":"Brasil","actions":[{"track":{"event_data":{"review":{"rate":5,"count_likes":12}}}}],"track_show":{"event_data":{"review":{"review_id":2538679240,"created_date":"2025-12-02T10:00:00Z"}}}}},{"id":2977854217,"rating":3,"variant":"","comment":{"content":{"text":"Bom, mas o \\"grave\\" poderia ser maior.\\nChegou rápido.","see_more":"Saiba mais"},"date":"Há 3 meses"}},{"id":2977854218,"rating":4,"comment":{"content":{"text":""}},"date":"Há 1 mês"}],"total_opinions":"2.586 comentários"';
+
+test('detalhe das avaliacoes: distribuicao, total e opinioes reais', () => {
+  for (const html of [OPINIOES, OPINIOES.replace(/"/g, '\\"')]) {
+    const d = detalheDasAvaliacoes(html);
+    assert.equal(d.nota, 4.9);
+    assert.equal(d.total, 2586);
+    assert.deepEqual(d.distribuicao.map(x => [x.estrelas, x.total]), [[5, 2370], [4, 150], [3, 27], [2, 9], [1, 30]]);
+    assert.equal(d.comentarios.length, 2, 'opiniao sem texto fica de fora');
+    assert.equal(d.comentarios[0].nota, 5);
+    assert.match(d.comentarios[0].texto, /^Apesar de ser a caixa de som/);
+    assert.equal(d.comentarios[0].data, 'Há 10 meses');
+    assert.equal(d.comentarios[0].criadoEm, '2025-12-02');
+    assert.equal(d.comentarios[0].uteis, 12);
+    assert.equal(d.comentarios[1].nota, 3);
+    assert.equal(d.comentarios[1].texto, 'Bom, mas o "grave" poderia ser maior. Chegou rápido.');
+    assert.equal(d.comentarios[1].uteis, null);
+    assert.equal(d.totalComentarios, 2586);
+    assert.equal(d.aviso, 'Inclui opiniões de pessoas de outros países.');
+  }
+});
+
+test('detalhe das avaliacoes: distribuicao que nao fecha com a media sai fora', () => {
+  /* Niveis invertidos (index 0 = 1 estrela) dariam media 1,1 contra 4,9. */
+  const invertido = OPINIOES.replace('"value":2370', '"value":1').replace('"value":30,', '"value":2370,');
+  const d = detalheDasAvaliacoes(invertido);
+  assert.equal(d.distribuicao, null);
+  assert.equal(d.nota, 4.9);
+  /* Sem o bloco: null. */
+  assert.equal(detalheDasAvaliacoes('<html>"rating_average_formatted":"4.9"</html>'), null);
+  assert.equal(detalheDasAvaliacoes(''), null);
+});
+
+test('sem avaliacoes so com a pagina inteira do proprio anuncio e nenhuma nota', () => {
+  const corpo = 'x'.repeat(120000);
+  const evento = '"melidata_event":{"event_data":{"item_id":"MLB123456789","review_rate":0}}';
+  assert.equal(semAvaliacoesNaPagina(corpo + evento, 'MLB123456789'), true);
+  assert.equal(semAvaliacoesNaPagina(corpo + evento, 'MLB999999999'), false, 'outro anuncio');
+  assert.equal(semAvaliacoesNaPagina(evento, 'MLB123456789'), false, 'pagina cortada');
+  assert.equal(semAvaliacoesNaPagina(corpo + evento + OPINIOES, 'MLB123456789'), false, 'tem nota');
+  assert.equal(semAvaliacoesNaPagina(corpo + evento + EVENTO_AVALIACAO, 'MLB123456789'), false, 'evento com contagem');
+});

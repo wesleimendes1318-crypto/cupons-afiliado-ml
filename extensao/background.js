@@ -7,9 +7,10 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes } from './sincronia.js';
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
+         avaliacoesPendentes, gravarAvaliacoes } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, soMarcaEModelo, sugeridosExtras,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
@@ -302,6 +303,67 @@ const indisponivelPorItem = new Map();
 const detalhesPorItem = new Map();
 /* item -> { cheio, pix, parcelas } do evento do proprio anuncio (28/09). */
 const precosPorItem = new Map();
+/* AVALIACOES COMPLETAS (Weslei, 10/10: "detalhamento das avaliacoes
+   reais"). Toda pagina lida por inteiro (anuncio colado, lojas, leitura das
+   vitrines) manda nota, total, distribuicao e opinioes ao banco
+   (gravar_avaliacoes, so com a senha da extensao). Junta e envia de uma vez,
+   sem fazer ninguem esperar. */
+let avaliacoesParaGravar = [];
+let envioAvaliacoes = null;
+function registrarAvaliacaoLida(item, base, det) {
+  try {
+    const id = String(item || '').toUpperCase();
+    if (!/^MLBP?\d{6,}$/.test(id)) return;
+    const nota = det ? det.nota : base ? base.nota : null;
+    const total = det ? det.total : base ? base.total : null;
+    if (!(nota > 0 && nota <= 5 && total >= 1)) return;
+    avaliacoesParaGravar = avaliacoesParaGravar.filter(x => x.item !== id);
+    avaliacoesParaGravar.push({
+      item: id, nota, total,
+      distribuicao: (det && det.distribuicao) || null,
+      comentarios: (det && det.comentarios) || [],
+      totalComentarios: (det && det.totalComentarios) || null,
+      aviso: (det && det.aviso) || null
+    });
+    if (!envioAvaliacoes) envioAvaliacoes = setTimeout(enviarAvaliacoes, 8000);
+  } catch (e) { /* so leitura extra */ }
+}
+async function enviarAvaliacoes() {
+  envioAvaliacoes = null;
+  const lote = avaliacoesParaGravar.splice(0, 20);
+  if (!lote.length) return;
+  try {
+    const { sincToken } = await chrome.storage.local.get('sincToken');
+    await gravarAvaliacoes(sincToken, lote);
+  } catch (e) { /* proxima leitura manda de novo */ }
+  if (avaliacoesParaGravar.length && !envioAvaliacoes) envioAvaliacoes = setTimeout(enviarAvaliacoes, 8000);
+}
+/* Amostra do bloco de opinioes (1 boa e ate 3 com falha por dia) para
+   conferir a leitura com paginas reais. */
+let amostrasAvaliacao = { dia: '', n: 0, boa: false };
+function amostraDasAvaliacoes(html, item, det) {
+  try {
+    const dia = new Date().toISOString().slice(0, 10);
+    if (amostrasAvaliacao.dia !== dia) amostrasAvaliacao = { dia, n: 0, boa: false };
+    if (!html) return;
+    const ok = Boolean(det && det.distribuicao && det.comentarios && det.comentarios.length);
+    if (ok ? amostrasAvaliacao.boa : amostrasAvaliacao.n >= 3) return;
+    const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
+    const i = t.indexOf('"rating_average_formatted"');
+    if (i < 0) return;
+    if (ok) amostrasAvaliacao.boa = true; else amostrasAvaliacao.n++;
+    const j = t.indexOf('"reviews":[', i);
+    chrome.storage.local.get('sincToken').then(({ sincToken }) =>
+      gravarDiagnostico(sincToken, 'avaliacoes-amostra', {
+        versao: chrome.runtime.getManifest().version, item, bytes: t.length,
+        lido: det ? { nota: det.nota, total: det.total, niveis: Boolean(det.distribuicao),
+                      opinioes: (det.comentarios || []).length, primeira: det.comentarios && det.comentarios[0] || null } : null,
+        trechoNota: t.slice(Math.max(0, i - 1800), i + 700),
+        trechoOpinioes: j > 0 && j - i < 6000 ? t.slice(j, j + 5000) : null
+      })).catch(() => {});
+  } catch (e) { /* so diagnostico */ }
+}
+
 /* Coloca os detalhes ja lidos em cada linha (tabela, parecidos), no proprio
    objeto: o lote de links muda estas mesmas linhas depois. */
 function comDetalhes(lista) {
@@ -412,6 +474,14 @@ async function resolverVendedorAgora(id, url) {
       if (pr) precosPorItem.set(id, pr);
       const d = detalhesResumidos(detalhesDoAnuncio(full));
       if (d) detalhesPorItem.set(id, d);
+      /* Avaliacoes completas, quando a parte lida da pagina traz o bloco. */
+      try {
+        const det = detalheDasAvaliacoes(full);
+        if (det && String(full).includes(id)) {
+          registrarAvaliacaoLida(id, avaliacaoPorItem.get(id), det);
+          if (!avaliacaoPorItem.get(id)) avaliacaoPorItem.set(id, { nota: det.nota, total: det.total });
+        }
+      } catch (e) { /* so avaliacoes */ }
       const r = cacheMem.get(id);
       if (r && (d || pr)) { if (d) r.detalhes = d; if (pr) r.precos = pr; chrome.storage.local.set({ [chave]: r }); }
     };
@@ -1341,6 +1411,17 @@ function extrairAnuncio(t, finalUrl, status) {
   /* Avaliacao das pessoas do PROPRIO anuncio (10/10). */
   let avaliacaoColado = null;
   try { avaliacaoColado = avaliacaoDoItem(t, itemAqui); } catch (e) { avaliacaoColado = null; }
+  /* Detalhe das avaliacoes (10/10): distribuicao e opinioes do bloco da
+     pagina; sem nota no evento (pagina de catalogo), a nota do bloco. */
+  try {
+    const det = detalheDasAvaliacoes(t);
+    amostraDasAvaliacoes(t, itemAqui, det);
+    if (det && !avaliacaoColado) avaliacaoColado = { nota: det.nota, total: det.total };
+    if (itemAqui) registrarAvaliacaoLida(itemAqui, avaliacaoColado, det);
+    /* Pagina de catalogo: a vitrine guarda a oferta pelo produto (MLBP). */
+    const prod = /\/p\/(MLB\d{6,})/i.exec(String(finalUrl || ''));
+    if (prod && det) registrarAvaliacaoLida('MLBP' + prod[1].slice(3), null, det);
+  } catch (e) { /* so avaliacoes */ }
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: null,
            mercadoLider: liderColado, avaliacoes: avaliacaoColado,
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
@@ -4920,6 +5001,79 @@ async function monitorarPrecos() {
   }
 }
 
+/* AVALIACOES EM TODOS OS CARTOES (Weslei, 10/10: "precisa ter as
+   avaliacoes em TODOS"). Le aos poucos a pagina de cada anuncio mostrado no
+   site (avaliacoes_pendentes: pedido de cliente recente, vitrine, campanhas,
+   brinquedos e mais vendidos, sem leitura nos ultimos 7 dias), SEM a conta
+   (credentials omit, como a foto da vitrine), ate 3 por minuto e so com a
+   extensao parada. Pagina de verificacao = pausa de 1 h, nunca insiste. */
+let lendoAvaliacoes = false;
+let avaliacoesUltima = 0;
+async function atualizarAvaliacoes() {
+  if (lendoAvaliacoes || atendendo || Date.now() - avaliacoesUltima < 50e3) return;
+  const { sincToken, avaliacoesPausaAte } = await chrome.storage.local.get(['sincToken', 'avaliacoesPausaAte']);
+  if (!sincToken || (avaliacoesPausaAte && Date.now() < avaliacoesPausaAte)) return;
+  lendoAvaliacoes = true;
+  avaliacoesUltima = Date.now();
+  const lote = [];
+  try {
+    const lista = await avaliacoesPendentes(sincToken, 3);
+    for (const it of lista) {
+      if (atendendo) break;
+      const r = await lerAvaliacoesDoAnuncio(it.item, it.url);
+      if (r.verificacao) {
+        await chrome.storage.local.set({ avaliacoesPausaAte: Date.now() + 3600e3 });
+        lote.push({ item: r.item, erro: 'verificacao' });
+        break;
+      }
+      lote.push(r);
+      await sleep(4000 + Math.random() * 4000);
+    }
+  } catch (e) {
+    console.warn('[avaliacoes]', e.message);
+  } finally {
+    if (lote.length) await gravarAvaliacoes(sincToken, lote).catch(() => {});
+    lendoAvaliacoes = false;
+  }
+}
+
+async function lerAvaliacoesDoAnuncio(item, url) {
+  const id = String(item || '').toUpperCase();
+  const ctrl = new AbortController();
+  const corta = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`,
+      { credentials: 'omit', redirect: 'follow', signal: ctrl.signal });
+    if (/account-verification|suspicious|\/captcha\//i.test(r.url || '')) return { item: id, verificacao: true };
+    if (!r.ok) return { item: id, erro: 'HTTP ' + r.status };
+    let html = await r.text();
+    if (html.length > MAX_ANUNCIO) html = html.slice(0, MAX_ANUNCIO);
+    if (/Por seguran.a, complete esta etapa|suspicious-traffic-frontend/i.test(html.slice(0, 20000))) return { item: id, verificacao: true };
+    /* A pagina precisa ser do anuncio pedido (ou do produto de catalogo,
+       chave MLBP: vale o anuncio do botao de compra da pagina). */
+    const limpo = html.replace(/\\u0022/gi, '"').replace(/\\+"/g, '"').replace(/\s+/g, '');
+    const produto = /^MLBP\d+$/.test(id) ? 'MLB' + id.slice(4) : null;
+    if (produto ? !limpo.includes('"catalog_product_id":"' + produto + '"') : !limpo.includes('"item_id":"' + id + '"')) {
+      return { item: id, erro: 'pagina de outro anuncio' };
+    }
+    const doItem = produto ? itemDaCompra(html) : id;
+    const det = detalheDasAvaliacoes(html);
+    const base = doItem ? avaliacaoDoItem(html, doItem) : null;
+    amostraDasAvaliacoes(html, id, det);
+    if (det) {
+      return { item: id, nota: det.nota, total: det.total, distribuicao: det.distribuicao,
+               comentarios: det.comentarios, totalComentarios: det.totalComentarios, aviso: det.aviso };
+    }
+    if (base) return { item: id, nota: base.nota, total: base.total };
+    if (doItem && semAvaliacoesNaPagina(html, doItem)) return { item: id, sem: true };
+    return { item: id, erro: 'nota nao lida' };
+  } catch (e) {
+    return { item: id, erro: String((e && e.message) || e).slice(0, 80) };
+  } finally {
+    clearTimeout(corta);
+  }
+}
+
 /* RECOMENDADOS DO HUB DE AFILIADOS (Weslei, 05/10: "consulte os principais
    produtos que o proprio Mercado Livre recomenda" em /afiliados/hub). Uma
    leitura por dia, so com a extensao parada e sem freio de captcha: abre a
@@ -5055,6 +5209,7 @@ chrome.alarms.onAlarm.addListener(async a => {
     sinalDeVida().catch(() => {});
     monitorarPrecos().catch(() => {});
     lerHubDeAfiliados().catch(() => {});
+    atualizarAvaliacoes().catch(() => {});
     vigiarFila().catch(() => {});
     completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.
