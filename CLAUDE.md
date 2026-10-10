@@ -1211,6 +1211,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   afiliado do próprio marketplace, sem usado e sem falso (pareceFalso).
 - Aviso de preço muito abaixo (a mesma conta da tabela, com os preços do
   mesmo produto nos 3 marketplaces) no vendedor da coluna.
+- MODELO PELO TÍTULO (10/10, pedido 1181: "Echo Dot Max" saiu como "Cor:
+  Preto -> Roxo", qualidade equivalente, contra o "Echo Dot 5ª Geração"):
+  Amazon e Shopee não têm ficha, então src/lib/modelo-titulo.ts
+  (diferencaDeModelo) compara versão (Max, Pro, Plus/+, Mini, Lite, Ultra,
+  Slim, Kids, Note, Neo, FE) e geração dos dois títulos. Diferente: nunca
+  "mesmo produto", o "Muda" ganha "Modelo: 5ª geração -> Max" e a qualidade
+  julgada sem isso volta a "não confirmada" (limparResultado com o título
+  do colado, na tela).
 - COMPARE COM CLAREZA (Weslei, 10/10: nova tela e "exemplo de tabela
   final"; src/components/ComparacaoMarketplaces.tsx + src/lib/
   comparacao-marketplaces.ts). Fica no FIM do resultado, em largura

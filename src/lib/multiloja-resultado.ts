@@ -5,6 +5,7 @@
 import { ehLinkDeCompra } from "@/lib/afiliado";
 import type { LojaExterna, ResumoMarketplace } from "@/lib/coletor-multiloja";
 import { pareceFalso } from "@/lib/falsificado";
+import { diferencaDeModelo } from "@/lib/modelo-titulo";
 
 export type RespostaMultiloja = {
   ativo: boolean;
@@ -51,7 +52,7 @@ function limparResumo(r: unknown): RespostaMultiloja["resumo"] {
 /** Trava final de tudo que vai para a tela: só link de afiliado do próprio
     marketplace, preço válido, sem usado nem falso e foto dos hosts
     conhecidos. */
-export function limparResultado(r: unknown): RespostaMultiloja {
+export function limparResultado(r: unknown, tituloColado?: string | null): RespostaMultiloja {
   const o = (r ?? {}) as Partial<RespostaMultiloja>;
   const lojas = (Array.isArray(o.lojas) ? o.lojas : [])
     .filter(
@@ -97,6 +98,22 @@ export function limparResultado(r: unknown): RespostaMultiloja {
         : null,
       mesmaFoto: l.mesmaFoto === true,
     }))
+    /* Modelo pelo título (10/10, pedido 1181: "Echo Dot Max" saiu como
+       "Cor: Preto -> Roxo" contra o "Echo Dot 5ª Geração"): versão ou geração
+       diferente nunca é o mesmo produto; o "Muda" ganha a linha do modelo e a
+       qualidade, julgada sem saber disso, volta a "não confirmada". */
+    .map((l) => {
+      const dif = diferencaDeModelo(tituloColado, l.titulo);
+      if (!dif || /\bmodelo\b/i.test(l.muda ?? ""))
+        return dif ? { ...l, relacao: "parecido" as const } : l;
+      return {
+        ...l,
+        relacao: "parecido" as const,
+        muda: [dif, l.muda].filter(Boolean).join("; "),
+        qualidade: null,
+        qualidadeMotivo: null,
+      };
+    })
     .sort(
       (a, b) =>
         (a.relacao === "mesmo" ? 0 : 1) - (b.relacao === "mesmo" ? 0 : 1) || a.preco - b.preco,

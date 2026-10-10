@@ -79,7 +79,7 @@ export type ColadoParaComparar = {
    com a chave do pedido). Antes disso a rota responde sobDemanda e a tela
    mostra os valores borrados com o botão. Depois do pedido, pergunta à rota
    enquanto a extensão compara (medido em 10/10: de 35 s a 2 min e 22 s). */
-function useMultiloja(pedidoId: number | null, chave: string | null) {
+function useMultiloja(pedidoId: number | null, chave: string | null, tituloColado: string | null) {
   const [r, setR] = useState<{
     estado: Estado;
     dados: RespostaMultiloja | null;
@@ -129,7 +129,7 @@ function useMultiloja(pedidoId: number | null, chave: string | null) {
           setR({ estado: "inativo", dados: null, aviso: null });
           return;
         }
-        setR({ estado: "pronto", dados: limparResultado(j), aviso: null });
+        setR({ estado: "pronto", dados: limparResultado(j, tituloColado), aviso: null });
       } catch {
         if (vivo) setR({ estado: "inativo", dados: null, aviso: null });
       }
@@ -139,7 +139,7 @@ function useMultiloja(pedidoId: number | null, chave: string | null) {
       vivo = false;
       if (espera) clearTimeout(espera);
     };
-  }, [pedidoId, rodada]);
+  }, [pedidoId, rodada, tituloColado]);
 
   const pedir = useCallback(async () => {
     if (pedidoId == null || !chave) return;
@@ -594,7 +594,11 @@ export function ComparacaoMarketplaces({
   /* Chave do pedido: só com ela o cliente pede a busca na Amazon e na Shopee. */
   chavePedido?: string | null;
 }) {
-  const { estado, dados, aviso, pedir } = useMultiloja(pedidoId, chavePedido ?? null);
+  const { estado, dados, aviso, pedir } = useMultiloja(
+    pedidoId,
+    chavePedido ?? null,
+    colado.titulo ?? null,
+  );
   const podePedir = Boolean(chavePedido);
   const [destaque, setDestaque] = useState<Jogador | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
