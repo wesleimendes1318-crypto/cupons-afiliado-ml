@@ -1560,3 +1560,20 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Busca guiada/por foto: oferta NOVA da lista oficial e "Preço de um
   anúncio do catálogo agora / às HH:MM: pode mudar" (a resposta fica até
   6 h guardada; lidoEm).
+
+## Pausa remota da extensão (10/10)
+- Weslei, 10/10: "Pause a extensão por enquanto, não estou com o notebook
+  neste momento". A extensão só trabalha com o que o banco entrega
+  (20261010200000_pausa_remota_extensao.sql): com
+  sinc_config.extensao_pausada = 'true' as filas que ela consulta devolvem
+  vazio sem reservar nada (pedidos_pendentes e v2, avaliações, fotos da
+  vitrine, lojas, cupons, multiloja, "Acompanhar preço"; as originais ficam
+  como *_sem_pausa), pausa_geral = 1 (reservar_geracao recusa todo link),
+  operacao_pausada = 'true' (agentes) e o reparo do link para; freio_ate
+  daqui a 30 dias faz o site mostrar "A conferência de links está pausada"
+  na hora (roboAtivo), e anotar_estado_robo não deixa a extensão limpar esse
+  freio. Fica de fora a leitura diária do hub de afiliados (decidida no
+  navegador). Auditoria: 'extensao_pausada' (atenção) e sem 'pedido_parado'.
+  LIGAR/DESLIGAR: select public.pausar_extensao(true|false) (só servidor).
+  Testado em 10/10 20:04 (transação desfeita): filas vazias, reservar
+  'bloqueado', freio mantido depois da tentativa de limpar.

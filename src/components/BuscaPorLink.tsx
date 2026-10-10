@@ -4840,8 +4840,8 @@ function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | nul
     <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
       <p className="text-sm font-medium">A conferência de links está pausada neste momento.</p>
       <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-        Não sei dizer quando volta, então prefiro não te deixar esperando. Enquanto isso, procure a
-        loja pelo nome na busca logo abaixo: os limites e condições de cada cupom continuam aí.
+        Não sei dizer quando volta, então prefiro não te deixar esperando. Enquanto isso, veja logo
+        abaixo os produtos que já comparei, com o preço e a data de cada um.
       </p>
       {motivo && (
         <p className="mt-2 rounded border border-border bg-card px-2 py-1 text-xs text-secondary-ink/80">
