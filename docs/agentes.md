@@ -61,7 +61,13 @@ seguem as mesmas regras:
   próprio agente, origem "teste").
 - `pedido_parado`, `pedido_falhou`.
 - `entrada_sem_preco`.
-- `canal_sem_frete_confirmado`: post no ar sem frete grátis confirmado.
+- `canal_sem_frete_confirmado`: post no ar sem frete grátis confirmado
+  (vale também o frete do anúncio colado quando o link do post era o da
+  ficha desse anúncio, 10/10).
+- `link_da_ficha` e `canal_link_da_ficha` (10/10): pedido ou post com o link
+  da ficha do catálogo num anúncio definido (o botão abre a oferta
+  destacada, outro preço). A trava do banco barra o pedido; post antigo só
+  sai a pedido do Weslei (CLAUDE.md).
 - `execucao_com_erro`, `chamada_agendada_falhou`.
 
 Problema novo que a auditoria não pega: o agente acrescenta a regra na função
