@@ -8,6 +8,7 @@ import {
   type ResultadoPrazo,
 } from "@/lib/prazo-entrega";
 import { nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
+import { linhaDasAvaliacoes } from "@/lib/avaliacoes";
 import { ehLinkDeCompra, gerarUrlAfiliadoAmazon } from "@/lib/afiliado";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
@@ -112,7 +113,9 @@ function linhasDaOpcao(o: Opcao) {
   const pagamento = textoDoPagamento(o.preco, o.precos as Precos | null);
   return [
     `💰 <b>${brl(o.preco)}</b>${pagamento ? ` ${html(pagamento)}` : ""}`,
-    o.loja ? `🏪 Vendido por ${html(o.loja)}${o.lojaOficial ? " ⭐ (Loja oficial)" : ""}` : null,
+    o.loja ? `🏪 Vendido por ${html(o.loja)}${o.lojaOficial ? " ✔️ (Loja oficial)" : ""}` : null,
+    /* Avaliação das pessoas (10/10), só com o dado lido no anúncio. */
+    linhaDasAvaliacoes(o.avaliacoes),
     linhaDoFrete(o),
   ].filter(Boolean) as string[];
 }

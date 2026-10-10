@@ -746,6 +746,37 @@ function eventosDoItem(html, item) {
     .filter(seg => seg.replace(/\s+/g, '').includes(alvo));
 }
 
+/* AVALIACAO DAS PESSOAS (Weslei, 10/10: "adicione a avaliacao das pessoas,
+   como mais um simbolo de convencimento"). O evento do anuncio traz
+   "reviews": {"count": 5056, "rate": 4.9, ...} (a nota media e o total que a
+   pagina mostra). So o primeiro nivel do objeto conta (dentro dele ha
+   "summary" e listas). Sem o evento do PROPRIO anuncio: null (nunca inventa). */
+export function avaliacaoDoItem(html, item) {
+  if (!html || !item) return null;
+  const t = String(html).replace(/\\u0022/gi, '"').replace(/\\+"/g, '"');
+  const alvo = '"item_id":"' + String(item).toUpperCase() + '"';
+  for (const bruto of t.split('"melidata_event"').slice(1)) {
+    const seg = bruto.slice(0, 30000);
+    if (!seg.replace(/\s+/g, '').includes(alvo)) continue;
+    const i = seg.search(/"reviews"\s*:\s*\{/);
+    if (i < 0) continue;
+    let nivel = 0, topo = '';
+    for (let k = seg.indexOf('{', i); k < seg.length && k < i + 4000; k++) {
+      const c = seg[k];
+      if (c === '{' || c === '[') nivel++;
+      else if (c === '}' || c === ']') { nivel--; if (nivel === 0) break; }
+      else if (nivel === 1) topo += c;
+    }
+    const total = /"count"\s*:\s*(\d+)/.exec(topo);
+    const nota = /"rate"\s*:\s*(\d+(?:\.\d+)?)/.exec(topo);
+    if (!total || !nota) continue;
+    const n = parseFloat(nota[1]), c = parseInt(total[1], 10);
+    if (!(n > 0 && n <= 5) || !(c > 0)) continue;
+    return { nota: Math.round(n * 10) / 10, total: c };
+  }
+  return null;
+}
+
 /* PRECOS DO PROPRIO ANUNCIO (Weslei, 28/09: "cuidado com o valor a vista e
    parcelado"; iPhone 17 Pro Max: R$ 8.781,40 no Pix, R$ 9.757,11 em 15x).
    O evento do anuncio traz o preco cheio (pricing.actual_price ou "price"

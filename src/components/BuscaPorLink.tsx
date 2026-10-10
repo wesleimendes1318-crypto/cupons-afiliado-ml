@@ -68,6 +68,8 @@ import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LinkDeOutraLoja } from "@/components/LinkDeOutraLoja";
+import { Avaliacoes } from "@/components/Avaliacoes";
+import type { Avaliacoes as DadosAvaliacoes } from "@/lib/avaliacoes";
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 import { fotoNitida } from "@/lib/foto";
@@ -304,6 +306,8 @@ type OutraLoja = {
      loja oficial da adidas). Selo na tabela e na recomendação. */
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
+  /* Avaliação das pessoas lida no anúncio (10/10). */
+  avaliacoes?: DadosAvaliacoes | null;
   /* Outro anúncio da mesma loja do link colado, mais barato. */
   mesmaLoja?: boolean | null;
   cupomId?: number | null;
@@ -342,6 +346,8 @@ type OutraLoja = {
 
 type Analise = {
   titulo: string | null;
+  /* Avaliação das pessoas do anúncio colado (10/10). */
+  avaliacoes?: DadosAvaliacoes | null;
   preco: number | null;
   vendedor: string | null;
   temCupom: boolean;
@@ -399,6 +405,8 @@ type Analise = {
     /* Loja que vende (sempre que lida) e selo MercadoLíder dela. */
     vendedor?: string | null;
     mercadoLider?: "platinum" | "gold" | "silver" | null;
+    /* Avaliação das pessoas lida no anúncio (10/10). */
+    avaliacoes?: DadosAvaliacoes | null;
     link?: string | null;
     url?: string | null;
     semAfiliado?: boolean | null;
@@ -474,6 +482,8 @@ type Referencia = {
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
+  /* Avaliação das pessoas lida no anúncio (10/10). */
+  avaliacoes?: DadosAvaliacoes | null;
   detalhes?: Detalhes | null;
   precos?: Precos | null;
 };
@@ -2161,6 +2171,7 @@ function Resultado({
             freteGratis: a?.freteGratis ?? null,
             custoFrete: a?.custoFrete ?? null,
             lojaOficial: a?.lojaOficial ?? null,
+            avaliacoes: a?.avaliacoes ?? null,
             detalhes: a?.detalhes ?? null,
             precos: a?.precos ?? null,
           },
@@ -2180,6 +2191,7 @@ function Resultado({
       mesmaLoja: o.mesmaLoja ?? null,
       lojaOficial: o.lojaOficial ?? null,
       mercadoLider: o.mercadoLider ?? null,
+      avaliacoes: o.avaliacoes ?? null,
       detalhes: o.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !o.detalhes,
       precos: o.precos ?? null,
@@ -2197,6 +2209,7 @@ function Resultado({
       mesmaLoja: r.mesmaLoja ?? null,
       lojaOficial: r.lojaOficial ?? null,
       mercadoLider: r.mercadoLider ?? null,
+      avaliacoes: r.avaliacoes ?? null,
       detalhes: r.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !r.detalhes,
       precos: r.precos ?? null,
@@ -2411,6 +2424,7 @@ function Resultado({
             {a?.temCupom && <span> · sem o cupom</span>}
             {a?.vendedor && <span> · {a.vendedor}</span>}
             {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
+            <Avaliacoes a={a?.avaliacoes} className="ml-1.5 inline-flex" />
           </p>
           <DetalhesDoProduto detalhes={a?.detalhes} />
         </div>
@@ -2479,6 +2493,7 @@ function Resultado({
             iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
             semAnimacao={alternativa != null}
             precos={a?.precos ?? null}
+            avaliacoes={a?.avaliacoes ?? null}
           />
         )}
       </div>
@@ -2687,8 +2702,11 @@ function MelhorOpcao({
   completando = false,
   semAnimacao = false,
   precos = null,
+  avaliacoes = null,
 }: {
   semAnimacao?: boolean;
+  /* Avaliação das pessoas do anúncio (10/10). */
+  avaliacoes?: DadosAvaliacoes | null;
   vendedor: string | null;
   preco: number | null;
   /* Pix x parcelado do anúncio (02/10): "no Pix · ou R$ X em Nx". */
@@ -2718,6 +2736,7 @@ function MelhorOpcao({
           <Fogo /> Melhor opção
         </span>
         <span className="text-sm font-semibold">{vendedor ?? "Loja do anúncio"}</span>
+        <Avaliacoes a={avaliacoes} className="inline-flex" />
         <span className="ml-auto text-base font-bold tabular-nums">
           {preco != null ? (
             brl(preco)
@@ -2880,6 +2899,8 @@ type LinhaLoja = {
   mesmaLoja?: boolean | null;
   lojaOficial?: boolean | null;
   mercadoLider?: "platinum" | "gold" | "silver" | null;
+  /* Avaliação das pessoas lida no anúncio (10/10). */
+  avaliacoes?: DadosAvaliacoes | null;
   /* Link abre a página geral do produto: escolher a loja em "Outras opções". */
   mesmaPagina?: boolean | null;
   /* Detalhes da página desta loja; sem eles, a ficha do anúncio colado
@@ -3127,6 +3148,7 @@ function MelhorAlternativa({
               </span>
               {oficial && <SeloLojaOficial className="inline-flex" />}
               <SeloLider nivel={p.mercadoLider} className="inline-flex" />
+              <Avaliacoes a={p.avaliacoes} className="inline-flex" />
             </p>
           )}
           <p className="mt-1 flex flex-wrap items-baseline gap-x-2 tabular-nums">
@@ -3758,6 +3780,7 @@ function Parecidos({
                         <SeloLojaOficial className="inline-flex" />
                       )}
                       <SeloLider nivel={p.mercadoLider} className="inline-flex" />
+                      <Avaliacoes a={p.avaliacoes} className="inline-flex" />
                     </p>
                   )}
                   {(p.mesmaFoto ||
@@ -4014,6 +4037,7 @@ function TodasAsLojas({
                       {l.colado ? "Anúncio colado" : l.nome}
                       {l.lojaOficial === true && <SeloLojaOficial className="block" />}
                       {!l.colado && <SeloLider nivel={l.mercadoLider} className="block" />}
+                      <Avaliacoes a={l.avaliacoes} compacto className="flex" />
                       {l.mesmaPagina && !l.colado && (
                         <span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                           Na página, escolha esta loja em "Outras opções de compra"
@@ -4293,6 +4317,7 @@ function OutraLojaComCupom({
           loja oficial{oferta.vendedor ? ` ${oferta.vendedor}` : ""}
         </p>
       )}
+      <Avaliacoes a={oferta.avaliacoes} className="mt-0.5 flex" />
       <div className="mt-2 flex items-center gap-2">
         <Foto src={oferta.imagem} className="size-14 shrink-0 rounded" />
         {oferta.verificadoIA && (

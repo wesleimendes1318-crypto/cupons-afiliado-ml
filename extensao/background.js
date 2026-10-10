@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, soMarcaEModelo, sugeridosExtras,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
@@ -293,6 +293,8 @@ const oficialPorItem = new Map();
 const condicaoPorItem = new Map();
 /* item -> 'platinum' | 'gold' | 'silver' | null (MercadoLider do vendedor). */
 const liderPorItem = new Map();
+/* item -> { nota, total } das avaliacoes das pessoas (10/10) ou null. */
+const avaliacaoPorItem = new Map();
 /* item -> true quando a pagina do anuncio diz que esta indisponivel/pausado. */
 const indisponivelPorItem = new Map();
 /* item -> detalhes resumidos (caracteristicas, destaques, descricao) da
@@ -304,10 +306,11 @@ const precosPorItem = new Map();
    objeto: o lote de links muda estas mesmas linhas depois. */
 function comDetalhes(lista) {
   for (const x of lista || []) {
-    if (!x || (x.detalhes && x.precos)) continue;
+    if (!x || (x.detalhes && x.precos && x.avaliacoes != null)) continue;
     const it = x.item || (x.url ? itemDoUrl(x.url) : null) || (x.link && /mercadoli[vb]re/.test(x.link) ? itemDoUrl(x.link) : null);
     if (it && detalhesPorItem.has(it)) x.detalhes = detalhesPorItem.get(it);
     if (it && !x.precos && precosPorItem.has(it)) x.precos = precosPorItem.get(it);
+    if (it && x.avaliacoes == null && avaliacaoPorItem.get(it)) x.avaliacoes = avaliacaoPorItem.get(it);
   }
   return lista;
 }
@@ -389,7 +392,7 @@ function amostraDoVendedor(id, html) {
 
 async function resolverVendedorAgora(id, url) {
   const m = cacheMem.get(id);
-  if (m && Date.now() - m.ts < TTL_VEND) { if (m.detalhes) detalhesPorItem.set(id, m.detalhes); if (m.precos) precosPorItem.set(id, m.precos); oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); return m.nomes; }
+  if (m && Date.now() - m.ts < TTL_VEND) { if (m.detalhes) detalhesPorItem.set(id, m.detalhes); if (m.precos) precosPorItem.set(id, m.precos); oficialPorItem.set(id, m.oficial ?? null); condicaoPorItem.set(id, m.condicao ?? null); liderPorItem.set(id, m.lider ?? null); avaliacaoPorItem.set(id, m.avaliacao ?? null); return m.nomes; }
 
   // v2: o cache antigo guardava so o primeiro nome do anuncio. Trocar o prefixo
   // invalida aquilo sem precisar limpar o storage na mao.
@@ -398,7 +401,7 @@ async function resolverVendedorAgora(id, url) {
      loja (pedido 716); trocar o prefixo descarta tudo aquilo. */
   const chave = 'v4_' + id;
   const g = (await chrome.storage.local.get(chave))[chave];
-  if (g && Date.now() - g.ts < TTL_VEND) { if (g.detalhes) detalhesPorItem.set(id, g.detalhes); if (g.precos) precosPorItem.set(id, g.precos); cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); return g.nomes; }
+  if (g && Date.now() - g.ts < TTL_VEND) { if (g.detalhes) detalhesPorItem.set(id, g.detalhes); if (g.precos) precosPorItem.set(id, g.precos); cacheMem.set(id, g); oficialPorItem.set(id, g.oficial ?? null); condicaoPorItem.set(id, g.condicao ?? null); liderPorItem.set(id, g.lider ?? null); avaliacaoPorItem.set(id, g.avaliacao ?? null); return g.nomes; }
 
   let nomes = [];
   let oficial = null;
@@ -422,12 +425,14 @@ async function resolverVendedorAgora(id, url) {
     condicao = condicaoDoHtml(html, id);
     const selo = seloDoVendedor(html, id, nomes);
     liderPorItem.set(id, selo ? selo.mercadoLider : null);
+    avaliacaoPorItem.set(id, fora ? null : avaliacaoDoItem(html, id));
     amostraDoVendedor(id, html);
   } catch (e) { nomes = []; }
   oficialPorItem.set(id, oficial);
   condicaoPorItem.set(id, condicao);
 
-  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null, detalhes: detalhesPorItem.get(id) ?? null,
+  const reg = { nomes, oficial, condicao, lider: liderPorItem.get(id) ?? null,
+                avaliacao: avaliacaoPorItem.get(id) ?? null, detalhes: detalhesPorItem.get(id) ?? null,
                 precos: precosPorItem.get(id) ?? null, ts: Date.now() };
   if (nomes.length) { cacheMem.set(id, reg); chrome.storage.local.set({ [chave]: reg }); }
   return nomes;
@@ -1333,8 +1338,11 @@ function extrairAnuncio(t, finalUrl, status) {
      campanhas so com vendedor confiavel, inclusive o "ja e o menor preco"). */
   let liderColado = null;
   try { const selo = seloDoVendedor(t, itemAqui, nomes); liderColado = selo ? selo.mercadoLider : null; } catch (e) { liderColado = null; }
+  /* Avaliacao das pessoas do PROPRIO anuncio (10/10). */
+  let avaliacaoColado = null;
+  try { avaliacaoColado = avaliacaoDoItem(t, itemAqui); } catch (e) { avaliacaoColado = null; }
   return { ok: true, finalUrl: finalUrl, status: status, nomes: nomes, faltou, lojaOficial: null,
-           mercadoLider: liderColado,
+           mercadoLider: liderColado, avaliacoes: avaliacaoColado,
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
            /* Cheio, Pix e parcelado do proprio anuncio (28/09). */
            precos: precosDoItem(t, itemAqui),
@@ -4569,6 +4577,8 @@ async function atenderPedidos() {
             lojaOficial: a.lojaOficial != null ? a.lojaOficial : null,
             /* MercadoLider do proprio anuncio (platinum/gold/silver; 09/10). */
             mercadoLider: a.mercadoLider || null,
+            /* Avaliacao das pessoas: { nota, total } lida no anuncio (10/10). */
+            avaliacoes: a.avaliacoes || null,
             /* Caracteristicas, destaques e descricao do anuncio: botao "Ver
                detalhes do produto" no site (Weslei, 27/09). */
             detalhes: a.detalhes || null,

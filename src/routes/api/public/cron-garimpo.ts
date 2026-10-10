@@ -21,6 +21,7 @@ import { linkDoBot } from "@/lib/telegram-publico";
 import { facebookConfigurado, publicarNoFacebook, textoSimples } from "@/lib/facebook";
 import { fotoOriginalJpeg } from "@/lib/foto";
 import { pareceFalso } from "@/lib/falsificado";
+import { linhaDasAvaliacoes } from "@/lib/avaliacoes";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
    que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
@@ -260,6 +261,8 @@ function mensagem(x: Achado & { conferidoEm?: string | null }, comLink = false) 
     ],
     [
       x.loja ? `🏪 ${html(curto(x.loja, 40))}${x.lojaOficial ? " · ⭐ Loja oficial" : ""}` : null,
+      /* Avaliação das pessoas lida no anúncio (10/10). */
+      linhaDasAvaliacoes(x.opcao.avaliacoes),
       comLink ? `🛒 Comprar com segurança: ${x.link}` : null,
       `🕒 Preço conferido${hora ? ` às ${hora}` : ""}; pode mudar. Confira antes de comprar.`,
     ],

@@ -1363,3 +1363,19 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   delas (procurar o mesmo produto mais barato na própria loja); precisa de
   um pedido próprio na extensão. Hoje: produto exato com afiliado + busca no
   Mercado Livre.
+
+## Avaliação das pessoas (10/10)
+- Weslei, 10/10: "adicione a avaliação das pessoas, como mais um símbolo de
+  convencimento". Fonte: o evento do PRÓPRIO anúncio na página ("reviews":
+  {"count", "rate"}, só o primeiro nível; extensão 1.164.0,
+  avaliacaoDoItem em extensao/comparador.js, teste com trecho real). A API
+  oficial /reviews/item responde 403 para o aplicativo (testado em 10/10).
+- Campo avaliacoes {nota, total} no colado (analise.avaliacoes), nas lojas
+  (outrasLojas, referencias) e nos parecidos (comDetalhes, cache v4 com
+  avaliacao). src/lib/avaliacoes.ts confere (0 < nota <= 5, total >= 1,
+  nunca arredonda para cima) e escreve; componente Avaliacoes (★ 4,9 (5.056
+  avaliações)) no colado, Minha recomendação, Melhor opção, Melhor
+  alternativa, Parecidos e tabela. Bot, canal ("⭐ 4,9 de 5 (5.056
+  avaliações)") e "Me ajude a escolher" (avaliacao_das_pessoas; poucas
+  avaliações valem pouco) também. Loja oficial no bot passou a "✔️" para não
+  confundir com a estrela. Sem o dado, nada aparece.

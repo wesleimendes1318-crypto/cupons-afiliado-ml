@@ -525,3 +525,18 @@ test('cartao sem foto pega a foto nos dados da pagina (pedido 619)', async () =>
   assert.equal(diag.semFoto, 1);
   assert.equal(diag.fotoPelosDados, 1);
 });
+
+import { avaliacaoDoItem } from '../comparador.js';
+
+/* Trecho real do evento do anuncio (10/10, amostra do diagnostico; loja
+   trocada), como vem escapado dentro do HTML. */
+const EVENTO_AVALIACAO = String.raw`"track":{\"melidata_event\":{\"path\":\"/upp\",\"event_data\":{\"seller_id\":1,\"seller_name\":\"LOJA\",\"power_seller_status\":\"platinum\",\"review_rate\":5,\"reviews\":{\"qualitative_attributes\":[{\"count\":99,\"rate\":1}],\"attributes_quantity\":0,\"count\":5056,\"reviews_with_comment\":1996,\"rate\":4.9,\"summary\":{\"status\":\"published\",\"rate\":2}},\"price\":13.5,\"catalog_product_id\":\"MLB55968228\",\"item_id\":\"MLB5319985885\",\"category_id\":\"MLB439122\"}}}`;
+
+test('avaliacao das pessoas: nota e total do evento do proprio anuncio', () => {
+  assert.deepEqual(avaliacaoDoItem(EVENTO_AVALIACAO, 'MLB5319985885'), { nota: 4.9, total: 5056 });
+  /* Evento de outro anuncio da pagina nao vale. */
+  assert.equal(avaliacaoDoItem(EVENTO_AVALIACAO, 'MLB1111111111'), null);
+  /* Sem avaliacoes (count 0) ou sem o objeto: null, nunca inventa. */
+  assert.equal(avaliacaoDoItem(EVENTO_AVALIACAO.replace('\\"count\\":5056', '\\"count\\":0'), 'MLB5319985885'), null);
+  assert.equal(avaliacaoDoItem('<html></html>', 'MLB5319985885'), null);
+});

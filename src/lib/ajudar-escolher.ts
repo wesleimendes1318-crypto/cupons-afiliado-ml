@@ -15,6 +15,7 @@ import { mudaCompleta } from "@/lib/ficha";
 import { qualidadeAceita, qualidadeDoParecido } from "@/lib/qualidade";
 import { perguntarAoLlm } from "@/lib/cheaper-inference";
 import { ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
+import { avaliacoesValidas, type Avaliacoes } from "@/lib/avaliacoes";
 
 type Detalhes = {
   caracteristicas?: { nome: string; valor: string }[];
@@ -45,6 +46,8 @@ export type Opcao = {
   qualidadeMotivo?: string | null;
   desvantagens?: string[] | null;
   detalhes: Detalhes;
+  /* Avaliação das pessoas lida no anúncio (10/10): { nota, total }. */
+  avaliacoes?: Avaliacoes | null;
   /* Foto do anúncio e { cheio, pix, parcelas } lidos na página (28/09). */
   imagem: string | null;
   precos: Bruto | null;
@@ -84,6 +87,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       freteGratis: (a["freteGratis"] as boolean | null) ?? null,
       custoFrete: num(a["custoFrete"]),
       lojaOficial: a["lojaOficial"] === true,
+      avaliacoes: avaliacoesValidas(a["avaliacoes"]),
       link: linkColado,
       muda: null,
       vantagem: null,
@@ -120,6 +124,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       freteGratis: (o["freteGratis"] as boolean | null) ?? null,
       custoFrete: num(o["custoFrete"]),
       lojaOficial: o["lojaOficial"] === true,
+      avaliacoes: avaliacoesValidas(o["avaliacoes"]),
       link,
       muda: null,
       vantagem: null,
@@ -154,6 +159,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       freteGratis: (p["freteGratis"] as boolean | null) ?? null,
       custoFrete: num(p["custoFrete"]),
       lojaOficial: p["lojaOficial"] === true || p["daBuscaOficial"] === true,
+      avaliacoes: avaliacoesValidas(p["avaliacoes"]),
       link,
       muda: mudaCompleta(txt(p["muda"]), detalhesColado, (p["detalhes"] as Detalhes) ?? null),
       vantagem: txt(p["vantagem"]),
@@ -345,6 +351,9 @@ function resumoDaOpcao(
             : "pago, valor nao informado"
           : "nao informado",
     loja_oficial_da_marca: o.lojaOficial,
+    avaliacao_das_pessoas: o.avaliacoes
+      ? `${o.avaliacoes.nota} de 5 (${o.avaliacoes.total} avaliacoes)`
+      : "nao informada",
     o_que_muda: o.muda,
     vantagem: o.vantagem,
     desvantagens: o.desvantagens ?? null,
@@ -374,7 +383,7 @@ export async function ajudarAEscolher(opcoes: Opcao[]): Promise<Ajuda | null> {
   const comFoto = opcoes.filter((o) => o.imagem).slice(0, 7);
   const fotoDe = new Map(comFoto.map((o, i) => [o.n, i + 1] as const));
   const prompt = `Voce e um consultor de compras honesto e criterioso. Um cliente colou o link de um produto e o comparador achou as opcoes abaixo (JSON, com FOTOS anexadas na ordem do campo "foto"). Objetivo do cliente: o produto MAIS PROXIMO possivel do que ele colou, pelo melhor custo-beneficio.
-Analise, para cada opcao: a foto (modelo, cor, pecas, acessorios, estado), a descricao, as caracteristicas, o preco (no Pix e parcelado quando houver), o frete (pago pesa contra; "nao informado" nao pesa), a loja oficial da marca e o que muda em relacao ao anuncio colado.
+Analise, para cada opcao: a foto (modelo, cor, pecas, acessorios, estado), a descricao, as caracteristicas, o preco (no Pix e parcelado quando houver), o frete (pago pesa contra; "nao informado" nao pesa), a loja oficial da marca, a avaliacao das pessoas (nota e quantidade; poucas avaliacoes valem pouco; "nao informada" nao pesa) e o que muda em relacao ao anuncio colado.
 Regras:
 - Use SO o que esta nos dados e nas fotos. Nunca invente caracteristica, garantia, prazo ou beneficio. Na duvida, diga que nao da para confirmar.
 - "MESMO produto" e o mesmo item do anuncio colado. "PARECIDO" NAO e o mesmo produto: so escolha um parecido se ele for quase igual ao colado (a foto e as caracteristicas confirmam) e sair mais barato, ou tiver vantagem real; diga o que muda.
