@@ -370,7 +370,6 @@ test("comparação final: só disputa o mais barato quem tem custo confirmado", 
     prime: false,
     oficial: false,
     link: "https://meli.la/1AbCdEf",
-    total: 249.9,
   };
   const lojaAmazon = {
     marketplace: "amazon" as const,
@@ -398,7 +397,7 @@ test("comparação final: só disputa o mais barato quem tem custo confirmado", 
   const amazon = m.melhorDoMarketplace([parecidoMaisBarato, lojaAmazon], "amazon");
   /* parecido nunca é a melhor oferta do mesmo produto */
   assert.equal(amazon?.preco, 199.9);
-  assert.equal(amazon?.total, null);
+  assert.equal(m.totalConfirmado(amazon!), null);
   assert.equal(amazon?.prime, true);
 
   /* Prime não confirma o custo: o Mercado Livre continua o mais barato e a
@@ -418,7 +417,7 @@ test("comparação final: só disputa o mais barato quem tem custo confirmado", 
   assert.equal(d2.menorNoProduto, null);
 
   /* Empate (menos de R$ 0,50): Mercado Livre primeiro. */
-  const d3 = m.decidirEntreMarketplaces([{ ...amazonGratis, preco: 249.6, total: 249.6 }, ml]);
+  const d3 = m.decidirEntreMarketplaces([{ ...amazonGratis, preco: 249.6 }, ml]);
   assert.equal(d3.vencedor?.jogador, "mercadolivre");
 
   /* Link de outro programa não vira botão. */
@@ -514,4 +513,95 @@ test("item cortado no meio do que muda não aparece na tela", async () => {
     ],
   });
   assert.equal(r.lojas[0]!.muda, "Marca: Logitech -> não informada; Cor: Grafite -> Azul");
+});
+
+test("comparação: frete a confirmar no Mercado Livre também não disputa a Melhor escolha", async () => {
+  const m = await import("../src/lib/comparacao-marketplaces");
+  const base = {
+    titulo: "Fone",
+    loja: "Loja",
+    notaFrete: null,
+    prime: false,
+    oficial: false,
+    link: null,
+  };
+  const ml = {
+    ...base,
+    jogador: "mercadolivre" as const,
+    preco: 100,
+    freteGratis: null,
+    custoFrete: null,
+  };
+  const shopee = {
+    ...base,
+    jogador: "shopee" as const,
+    preco: 120,
+    freteGratis: false,
+    custoFrete: 9.9,
+  };
+  const d = m.decidirEntreMarketplaces([ml, shopee]);
+  /* a Shopee tem o custo confirmado (R$ 129,90); o Mercado Livre não */
+  assert.equal(d.vencedor?.jogador, "shopee");
+  assert.equal(d.menorNoProduto?.jogador, "mercadolivre");
+  assert.equal(m.totalConfirmado(shopee), 129.9);
+  /* ninguém confirmado: sem vencedor, o menor no produto aparece */
+  const d2 = m.decidirEntreMarketplaces([ml, { ...shopee, custoFrete: null, freteGratis: null }]);
+  assert.equal(d2.vencedor, null);
+  assert.equal(d2.menorNoProduto?.jogador, "mercadolivre");
+});
+
+test("comparação: célula do frete, o que muda, marca, rótulo e qualidade", async () => {
+  const m = await import("../src/lib/comparacao-marketplaces");
+  const sp = (t: string) => t.replace(/\u00a0/g, " ");
+  assert.equal(
+    m.celulaDoFrete({ freteGratis: true, custoFrete: null, notaFrete: null, prime: false }),
+    "Grátis",
+  );
+  assert.equal(
+    sp(m.celulaDoFrete({ freteGratis: false, custoFrete: 12.9, notaFrete: null, prime: false })),
+    "R$ 12,90",
+  );
+  assert.equal(
+    m.celulaDoFrete({
+      freteGratis: null,
+      custoFrete: null,
+      notaFrete: "Frete grátis para assinantes Prime",
+      prime: false,
+    }),
+    "Grátis só para assinantes Prime",
+  );
+  assert.equal(
+    m.celulaDoFrete({ freteGratis: null, custoFrete: null, notaFrete: null, prime: false }),
+    "A confirmar",
+  );
+  assert.equal(
+    m.linhaDoFrete({ freteGratis: null, custoFrete: null, notaFrete: "Frete: confira no anúncio" }),
+    "Frete a confirmar",
+  );
+
+  const muda =
+    "Marca: Logitech -> não informada; Cor: Grafite/Preto -> Azul/Branco; Alimentação: Pilha -> ";
+  assert.deepEqual(m.itensDoQueMuda(muda), [
+    { campo: "Marca", seu: "Logitech", este: "não informada" },
+    { campo: "Cor", seu: "Grafite/Preto", este: "Azul/Branco" },
+  ]);
+  assert.equal(m.marcaDoParecido(muda), null);
+  assert.equal(
+    m.marcaDoParecido("Marca: Logitech -> Multilaser; Cor: Preto -> Azul"),
+    "Multilaser",
+  );
+  assert.equal(m.marcaDoParecido("Cor: Preto -> Azul"), null);
+  assert.deepEqual(m.detalhesDoParecido(muda), ["Azul/Branco"]);
+  assert.deepEqual(m.comparacaoDoParecido(muda), [
+    "Marca: o seu Logitech → este não informada",
+    "Cor: o seu Grafite/Preto → este Azul/Branco",
+  ]);
+  assert.deepEqual(m.detalhesDoParecido("Não confirmado: cor"), ["Não confirmado: cor"]);
+
+  assert.equal(m.rotuloDaRelacao({ semelhanca: 75 }), "Parecido");
+  assert.equal(m.rotuloDaRelacao({ semelhanca: 20 }), "Produto diferente");
+  assert.equal(m.rotuloDaRelacao({ semelhanca: 20, mesmaFoto: true }), "Parecido");
+  assert.equal(m.qualidadeDoCartao("superior").texto, "Qualidade superior à do seu");
+  assert.equal(m.qualidadeDoCartao("inferior").nivel, "inferior");
+  assert.equal(m.qualidadeDoCartao(null).texto, "Qualidade não confirmada");
 });

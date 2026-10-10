@@ -2246,7 +2246,7 @@ function Resultado({
             recomendada.o.link && !recomendada.o.semAfiliado && !recomendada.o.mesmaPagina
               ? recomendada.o.link
               : null,
-          total: totalDaLoja(recomendada.o),
+          urlLoja: recomendada.o.url ?? null,
         }
       : null
     : precoColado != null
@@ -2261,10 +2261,13 @@ function Resultado({
           prime: false,
           oficial: a?.lojaOficial === true,
           link: semLink ? null : link,
-          total: totalColado,
+          urlLoja: urlColada,
           ehColado: true,
         }
       : null;
+  /* Sem link pronto no Mercado Livre: o botão gera o link de afiliado no
+     clique (nunca endereço sem afiliado). */
+  const gerarLinkMl = (url: string) => <VerNaLoja url={url} grande />;
   const precosMl = linhasLojas
     .map((l) => l.final)
     .filter((p): p is number => typeof p === "number" && p > 0);
@@ -2446,26 +2449,24 @@ function Resultado({
             colado={coladoResumo}
             pedidoId={pedidoId}
           />
-          {/* A mesma análise na Amazon e na Shopee e, por fim, os 3
-              marketplaces lado a lado (Weslei, 09/10). */}
-          <ComparacaoMarketplaces
-            pedidoId={pedidoId}
-            colado={coladoParaComparar}
-            melhorMl={melhorMl}
-            precosMl={precosMl}
-          />
         </div>
       )}
 
+      {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
+          largura inteira no PC (abaixo das duas colunas); no celular, logo
+          depois da análise do Mercado Livre. */}
+      <div className={temColuna ? "sm:col-span-2 sm:row-start-4" : ""}>
+        <ComparacaoMarketplaces
+          pedidoId={pedidoId}
+          colado={coladoParaComparar}
+          melhorMl={melhorMl}
+          precosMl={precosMl}
+          cep={a?.cepDestino ?? null}
+          gerarLink={gerarLinkMl}
+        />
+      </div>
+
       <div className="sm:col-start-1 sm:row-start-3">
-        {!temColuna && (
-          <ComparacaoMarketplaces
-            pedidoId={pedidoId}
-            colado={coladoParaComparar}
-            melhorMl={melhorMl}
-            precosMl={precosMl}
-          />
-        )}
         {!leituraFalhou && pedidoId != null && !semLink && (
           <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
         )}

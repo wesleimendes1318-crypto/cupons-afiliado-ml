@@ -1,19 +1,23 @@
-/* COMPARAÇÃO FINAL DOS 3 MARKETPLACES (Weslei, 09/10: "deve fazer a mesma
-   analise em cada player e por fim comparar os 3 players"; prompt "Linha da
-   Amazon na tabela de comparação", tag melhoresc0fff-20).
+/* COMPARAÇÃO DOS 3 MARKETPLACES (Weslei, 09/10: "deve fazer a mesma analise
+   em cada player e por fim comparar os 3 players"; 10/10: tabela "Mesmo
+   produto" com uma coluna por marketplace e "Alternativas parecidas").
 
    Cada marketplace passa pela mesma análise (conferência pela foto, mesmo
-   produto x parecido, usado/falso/peça fora, frete em linha própria). No
-   fim, uma linha por marketplace com a melhor oferta do MESMO produto:
-   - disputa o "Mais barato" quem tem custo confirmado: no Mercado Livre, a
-     mesma conta da tabela (totalDaLoja: frete pago sem valor fica fora); na
-     Amazon e na Shopee, só frete grátis confirmado ou de valor conhecido.
-     "Prime" é frete grátis só para assinantes: não confirma o custo de
-     todo comprador, então não passa na frente;
+   produto x parecido, usado/falso/peça fora, frete em linha própria). Na
+   tabela, a melhor oferta do MESMO produto de cada um:
+   - só disputa a "Melhor escolha" quem tem o CUSTO TOTAL CONFIRMADO
+     (produto + frete): frete grátis confirmado ou de valor conhecido, nos 3
+     marketplaces. "Prime" é frete grátis só para assinantes e "confira no
+     anúncio" não é valor: não confirmam;
    - empate (menos de R$ 0,50): Mercado Livre primeiro, depois loja oficial;
-   - quem é mais barato só no produto, com frete não confirmado, aparece
-     como "Menor preço no produto", com o frete em linha própria.
-   Nunca inventa preço: sem oferta conferida, a linha diz o que houve. */
+   - mais barato só no produto, com frete a confirmar = "Menor preço no
+     produto (frete a confirmar)", com o frete em linha própria.
+   Nunca inventa preço: sem oferta conferida, a coluna diz o que houve.
+   Identificação dos marketplaces (Weslei, 10/10: "use a medida que me
+   resguarde dos termos de uso de cada afiliado, mas que seja possível
+   identificar o player"): só o NOME em texto e o endereço da loja, sem
+   logotipo e sem as cores das marcas (as diretrizes de marca da Amazon só
+   permitem o logotipo nos arquivos fornecidos por ela, sem alteração). */
 import { ehLinkDeCompra, type Marketplace } from "@/lib/afiliado";
 import type { LojaExterna } from "@/lib/coletor-multiloja";
 import type { NivelQualidade } from "@/lib/qualidade";
@@ -25,6 +29,16 @@ export const NOME_DO_JOGADOR: Record<Jogador, string> = {
   amazon: "Amazon Brasil",
   shopee: "Shopee",
 };
+
+/* Endereço da loja, em texto: ajuda a reconhecer o marketplace sem usar
+   logotipo nem as cores da marca. */
+export const ENDERECO_DO_JOGADOR: Record<Jogador, string> = {
+  mercadolivre: "mercadolivre.com.br",
+  amazon: "amazon.com.br",
+  shopee: "shopee.com.br",
+};
+
+export const ORDEM_DAS_COLUNAS: Jogador[] = ["mercadolivre", "amazon", "shopee"];
 
 export type OfertaDoJogador = {
   jogador: Jogador;
@@ -40,8 +54,9 @@ export type OfertaDoJogador = {
   oficial: boolean;
   /* Link de compra (afiliado do próprio marketplace) ou null. */
   link: string | null;
-  /* Custo que disputa o "Mais barato" (null = não confirmado). */
-  total: number | null;
+  /* Endereço do anúncio para gerar o link de afiliado no clique (só
+     Mercado Livre, quando o link ainda não saiu). */
+  urlLoja?: string | null;
   /* É o próprio anúncio colado (só Mercado Livre). */
   ehColado?: boolean;
 };
@@ -54,8 +69,9 @@ export function freteConfirmado(o: { freteGratis: boolean | null; custoFrete: nu
   return o.freteGratis === true || (o.custoFrete != null && o.custoFrete > 0);
 }
 
-/** Total confirmado de uma oferta de outro marketplace (ou null). */
-export function totalExterno(o: {
+/** Custo total confirmado (produto + frete) ou null quando o frete não está
+    confirmado para qualquer comprador. Mesma régua nos 3 marketplaces. */
+export function totalConfirmado(o: {
   preco: number;
   freteGratis: boolean | null;
   custoFrete: number | null;
@@ -78,7 +94,6 @@ export function ofertaExterna(l: LojaExterna): OfertaDoJogador {
     prime: (l.selos ?? []).includes("Prime"),
     oficial: false,
     link: ehLinkDeCompra(l.link, l.marketplace) ? l.link : null,
-    total: totalExterno(l),
   };
 }
 
@@ -92,8 +107,10 @@ export function melhorDoMarketplace(lojas: LojaExterna[], mk: "amazon" | "shopee
     .filter((o) => o.link != null);
   return (
     mesmos.sort((a, b) => {
-      if ((a.total == null) !== (b.total == null)) return a.total == null ? 1 : -1;
-      const d = (a.total ?? a.preco) - (b.total ?? b.preco);
+      const ta = totalConfirmado(a);
+      const tb = totalConfirmado(b);
+      if ((ta == null) !== (tb == null)) return ta == null ? 1 : -1;
+      const d = (ta ?? a.preco) - (tb ?? b.preco);
       if (Math.abs(d) >= 0.5) return d;
       return (b.prime ? 1 : 0) - (a.prime ? 1 : 0) || d;
     })[0] ?? null
@@ -119,18 +136,20 @@ export function decidirEntreMarketplaces(lista: Array<OfertaDoJogador | null>): 
   const desempate = (a: OfertaDoJogador, b: OfertaDoJogador) =>
     ORDEM[a.jogador] - ORDEM[b.jogador] || (b.oficial ? 1 : 0) - (a.oficial ? 1 : 0);
   ofertas.sort((a, b) => {
-    if ((a.total == null) !== (b.total == null)) return a.total == null ? 1 : -1;
-    const d = (a.total ?? a.preco) - (b.total ?? b.preco);
+    const ta = totalConfirmado(a);
+    const tb = totalConfirmado(b);
+    if ((ta == null) !== (tb == null)) return ta == null ? 1 : -1;
+    const d = (ta ?? a.preco) - (tb ?? b.preco);
     return Math.abs(d) >= 0.5 ? d : desempate(a, b);
   });
-  const vencedor = ofertas.find((o) => o.total != null) ?? null;
+  const vencedor = ofertas.find((o) => totalConfirmado(o) != null) ?? null;
   const maisBaratoNoProduto = [...ofertas].sort((a, b) => {
     const d = a.preco - b.preco;
     return Math.abs(d) >= 0.5 ? d : desempate(a, b);
   })[0];
   const menorNoProduto =
     maisBaratoNoProduto &&
-    maisBaratoNoProduto.total == null &&
+    totalConfirmado(maisBaratoNoProduto) == null &&
     maisBaratoNoProduto !== vencedor &&
     (vencedor == null || maisBaratoNoProduto.preco <= vencedor.preco - 0.5)
       ? maisBaratoNoProduto
@@ -163,21 +182,86 @@ export function diferencaContraColado(
   return custoFinal ? `${quanto} no custo final, já com o frete` : `${quanto} no produto`;
 }
 
-/** Linha do frete (sempre em linha própria, sem juntar com outro valor). */
-export function linhaDoFrete(o: Pick<OfertaDoJogador, "freteGratis" | "custoFrete" | "notaFrete">) {
+/** Linha do frete (sempre em linha própria, sem juntar com outro valor).
+    Prime é frete grátis só para assinantes; o resto sem valor é "a
+    confirmar" (frete desconhecido não é grátis). */
+export function linhaDoFrete(
+  o: Pick<OfertaDoJogador, "freteGratis" | "custoFrete" | "notaFrete"> & { prime?: boolean },
+) {
   if (o.freteGratis === true) return "Frete grátis";
   if (o.custoFrete != null && o.custoFrete > 0) return `Frete ${brl(o.custoFrete)}`;
-  if (o.notaFrete) return o.notaFrete;
-  return o.freteGratis === false ? "Sem frete grátis" : "Frete: confira no anúncio";
+  if (o.prime || /prime/i.test(o.notaFrete ?? "")) return "Frete grátis só para assinantes Prime";
+  return o.freteGratis === false ? "Sem frete grátis" : "Frete a confirmar";
 }
 
-/** Selo da qualidade do parecido, pelo veredito da conferência. */
-export function seloDaQualidade(q: string | null | undefined): {
+/** Frete na célula "Frete" da tabela (o rótulo da linha já diz "Frete"). */
+export function celulaDoFrete(
+  o: Pick<OfertaDoJogador, "freteGratis" | "custoFrete" | "notaFrete" | "prime">,
+) {
+  if (o.freteGratis === true) return "Grátis";
+  if (o.custoFrete != null && o.custoFrete > 0) return brl(o.custoFrete);
+  if (o.prime || /prime/i.test(o.notaFrete ?? "")) return "Grátis só para assinantes Prime";
+  if (o.freteGratis === false) return "Pago, valor a confirmar";
+  return "A confirmar";
+}
+
+export type ItemDoQueMuda = { campo: string | null; seu: string | null; este: string };
+
+/** "Marca: Logitech -> não informada; Cor: Preto -> Azul" em itens. Item sem
+    "Campo: X -> Y" fica como texto livre (campo e seu nulos). */
+export function itensDoQueMuda(muda: string | null | undefined): ItemDoQueMuda[] {
+  return String(muda ?? "")
+    .split(/;\s*/)
+    .map((p) => p.trim())
+    .filter((p) => p && !/->\s*$/.test(p))
+    .map((p) => {
+      const m = /^([^:]{1,40}):\s*(.+?)\s*->\s*(.+)$/.exec(p);
+      return m
+        ? { campo: m[1]!.trim(), seu: m[2]!.trim(), este: m[3]!.trim() }
+        : { campo: null, seu: null, este: p };
+    });
+}
+
+const NAO_INFORMADA =
+  /^n[aã]o\s+(informad[ao]|identificad[ao]|vis[ií]vel)|^sem marca|^gen[eé]ric[ao]$/i;
+
+/** Marca do parecido pelo que a conferência apontou ("Marca: X -> Y");
+    null quando não informada ou quando a conferência não falou da marca. */
+export function marcaDoParecido(muda: string | null | undefined): string | null {
+  const item = itensDoQueMuda(muda).find((i) => i.campo && /^marca$/i.test(i.campo));
+  if (!item || NAO_INFORMADA.test(item.este)) return null;
+  return item.este;
+}
+
+/** Características do parecido no que difere do seu, sem a marca (que tem
+    linha própria): só o valor DELE, como no cartão ("Azul/Branco ·
+    Bluetooth + USB"). */
+export function detalhesDoParecido(muda: string | null | undefined): string[] {
+  return itensDoQueMuda(muda)
+    .filter((i) => !(i.campo && /^marca$/i.test(i.campo)))
+    .map((i) => i.este);
+}
+
+/** O que muda, por extenso ("Cor: o seu Preto → este Azul"), para quem
+    quiser conferir campo a campo. */
+export function comparacaoDoParecido(muda: string | null | undefined): string[] {
+  return itensDoQueMuda(muda).map((i) =>
+    i.campo ? `${i.campo}: o seu ${i.seu} → este ${i.este}` : i.este,
+  );
+}
+
+/** "Parecido" (muito semelhante ou mesma foto) ou "Produto diferente". */
+export function rotuloDaRelacao(l: { semelhanca: number | null; mesmaFoto?: boolean | null }) {
+  return l.mesmaFoto === true || (l.semelhanca ?? 0) >= 60 ? "Parecido" : "Produto diferente";
+}
+
+/** Qualidade do parecido no cartão, pelo veredito da conferência. */
+export function qualidadeDoCartao(q: string | null | undefined): {
   nivel: NivelQualidade;
   texto: string;
 } {
-  if (q === "superior") return { nivel: "superior", texto: "✓ Qualidade superior" };
-  if (q === "equivalente") return { nivel: "equivalente", texto: "✓ Qualidade equivalente" };
-  if (q === "inferior") return { nivel: "inferior", texto: "⚠ Qualidade inferior" };
-  return { nivel: "incerta", texto: "? Qualidade não confirmada" };
+  if (q === "superior") return { nivel: "superior", texto: "Qualidade superior à do seu" };
+  if (q === "equivalente") return { nivel: "equivalente", texto: "Qualidade equivalente à do seu" };
+  if (q === "inferior") return { nivel: "inferior", texto: "Qualidade inferior à do seu" };
+  return { nivel: "incerta", texto: "Qualidade não confirmada" };
 }

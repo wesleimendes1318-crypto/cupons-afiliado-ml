@@ -1,31 +1,57 @@
-/* MESMA ANÁLISE EM CADA MARKETPLACE E COMPARAÇÃO FINAL (Weslei, 09/10:
-   "deve fazer a mesma analise em cada player e por fim comparar os 3
-   players"). Abaixo da análise do Mercado Livre:
-   1. "Na Amazon" e "Na Shopee": o que cada uma leu e conferiu pela foto,
-      o mesmo produto (do mais barato) e os parecidos (com o que muda,
-      qualidade e desvantagens), frete em linha própria e a diferença
-      contra o anúncio colado;
-   2. "Comparação final": uma linha por marketplace com a melhor oferta do
-      mesmo produto (Mercado Livre = a recomendação da tela). Disputa o
-      "Mais barato" só quem tem custo confirmado (src/lib/
-      comparacao-marketplaces.ts); Prime é só para assinantes.
+/* COMPARE COM CLAREZA: OS 3 MARKETPLACES (Weslei, 09/10: "deve fazer a mesma
+   analise em cada player e por fim comparar os 3 players"; 10/10: nova tela
+   e "exemplo de tabela final"). No fim do resultado, em largura inteira:
+   1. "Mesmo produto | N ofertas confirmadas nesta análise": tabela com uma
+      coluna por marketplace (Mercado Livre = a recomendação da tela) e as
+      linhas Correspondência, Produto, Frete, Total, Vendedor e Ação. Só
+      disputa a "Melhor escolha" quem tem o custo total confirmado (src/lib/
+      comparacao-marketplaces.ts); Prime é só para assinantes. Espaço
+      estreito (celular): um cartão por marketplace (container query).
+   2. "Alternativas parecidas": os parecidos da Amazon e da Shopee em cartões
+      horizontais (foto, marca, o que difere, qualidade, desvantagens, preço,
+      frete e botão).
    Botão sempre "Comprar com segurança" com o link de afiliado do próprio
-   marketplace; o nome do marketplace só no selo. Sem preço capturado na
-   Amazon: "Conferir na Amazon" (busca com a tag). Quem busca é a extensão
-   pela sessão logada; aqui o site só lê o resultado. */
-import { useEffect, useState } from "react";
-import { Search, ShieldCheck } from "lucide-react";
+   marketplace; sem link pronto no Mercado Livre, gera no clique (VerNaLoja);
+   sem preço capturado na Amazon, "Conferir na loja" (busca com a tag). Nunca
+   "Ver no Mercado Livre/na Amazon/na Shopee". Marketplace identificado só
+   pelo NOME e pelo endereço da loja, em texto: sem logotipo e sem as cores
+   das marcas (Weslei, 10/10: "use a medida que me resguarde dos termos de
+   uso de cada afiliado, mas que seja possível identificar o player"). Quem
+   busca na Amazon e na Shopee é a extensão pela sessão logada; aqui o site
+   só lê o resultado. */
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  Info,
+  MapPin,
+  Minus,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Tag,
+  TriangleAlert,
+} from "lucide-react";
 
 import { ehLinkDeCompra, urlBuscaAmazon } from "@/lib/afiliado";
 import type { LojaExterna } from "@/lib/coletor-multiloja";
 import {
+  celulaDoFrete,
+  comparacaoDoParecido,
   decidirEntreMarketplaces,
+  detalhesDoParecido,
   diferencaContraColado,
+  ENDERECO_DO_JOGADOR,
   linhaDoFrete,
+  marcaDoParecido,
   melhorDoMarketplace,
   NOME_DO_JOGADOR,
   ofertaExterna,
-  seloDaQualidade,
+  ORDEM_DAS_COLUNAS,
+  qualidadeDoCartao,
+  rotuloDaRelacao,
+  totalConfirmado,
   type Jogador,
   type OfertaDoJogador,
 } from "@/lib/comparacao-marketplaces";
@@ -95,10 +121,219 @@ function useMultiloja(pedidoId: number | null) {
   return r;
 }
 
-function SeloMarketplace({ jogador }: { jogador: Jogador }) {
+const semMovimento = () =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+type Situacao =
+  "mesmo" | "conferindo" | "nao_localizado" | "nao_consultado" | "indisponivel" | "sem_preco";
+
+type Coluna = {
+  jogador: Jogador;
+  oferta: OfertaDoJogador | null;
+  /* Outras ofertas do mesmo produto no mesmo marketplace. */
+  extras: number;
+  situacao: Situacao;
+  /* Há parecido deste marketplace em "Alternativas parecidas". */
+  temAlternativa: boolean;
+  suspeito: boolean;
+};
+
+const TEXTO_DA_SITUACAO: Record<Exclude<Situacao, "mesmo">, [string, string]> = {
+  conferindo: ["Conferindo", "aguarde alguns segundos"],
+  nao_localizado: ["Não localizado", "nesta análise"],
+  nao_consultado: ["Não consultado", "nesta análise"],
+  indisponivel: ["Conferência", "indisponível agora"],
+  sem_preco: ["Sem preço lido", ""],
+};
+
+/* Fundo da linha Total (como no exemplo: a linha que decide). */
+const FUNDO_TOTAL = "bg-[#f3f6fb] dark:bg-white/[0.06]";
+
+function Correspondencia({ c }: { c: Coluna }) {
+  if (c.situacao === "mesmo")
+    return (
+      <span className="inline-flex items-center gap-2 font-semibold">
+        <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-white">
+          <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+        </span>
+        <span className="whitespace-nowrap">Mesmo produto</span>
+      </span>
+    );
+  const [l1, l2] = TEXTO_DA_SITUACAO[c.situacao];
   return (
-    <span className="whitespace-nowrap rounded-full border border-border bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-secondary-ink dark:bg-white/10">
-      {NOME_DO_JOGADOR[jogador]}
+    <span className="inline-flex items-center gap-2 text-left">
+      <span
+        className={
+          "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-300 text-white dark:bg-white/25" +
+          (c.situacao === "conferindo" ? " motion-safe:animate-pulse" : "")
+        }
+      >
+        <Minus className="size-3.5" strokeWidth={3} aria-hidden="true" />
+      </span>
+      <span className="flex flex-col leading-tight">
+        <span className="font-semibold">{l1}</span>
+        {l2 && <span className="text-[11px] text-secondary-ink">{l2}</span>}
+      </span>
+    </span>
+  );
+}
+
+function BotaoComprar({
+  link,
+  origem,
+  compacto = false,
+}: {
+  link: string;
+  origem: string;
+  /* Coluna estreita (preço do cartão): mesmo texto, ícones e espaços menores. */
+  compacto?: boolean;
+}) {
+  return (
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      data-origem={origem}
+      className={
+        "flex w-full items-center justify-center rounded-xl bg-success py-2.5 font-bold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px " +
+        (compacto ? "gap-1 px-2 text-[12px]" : "gap-1.5 px-2.5 text-[13px]")
+      }
+    >
+      <ShieldCheck
+        className={(compacto ? "size-3.5" : "size-4") + " shrink-0"}
+        aria-hidden="true"
+      />
+      <span className="whitespace-nowrap">Comprar com segurança</span>
+      <ArrowUpRight
+        className={(compacto ? "size-3.5" : "size-4") + " shrink-0"}
+        aria-hidden="true"
+      />
+    </a>
+  );
+}
+
+const BOTAO_SECUNDARIO =
+  "flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2.5 text-[13px] font-semibold text-foreground transition-colors duration-200 ease-out hover:bg-muted";
+
+/* "Conferir na loja": busca da Amazon com a tag, quando não há preço
+   capturado (nunca é compra direta e nunca leva o nome da loja). */
+function ConferirNaLoja({ titulo }: { titulo: string | null }) {
+  const link = titulo ? urlBuscaAmazon(termoDeBuscaExterna(titulo)) : null;
+  if (!link) return <span className="text-secondary-ink">—</span>;
+  return (
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      data-origem="comparacao_amazon_busca"
+      className={BOTAO_SECUNDARIO}
+    >
+      <Search className="size-4 shrink-0" aria-hidden="true" />
+      Conferir na loja
+    </a>
+  );
+}
+
+function Acao({
+  c,
+  colado,
+  gerarLink,
+  verAlternativa,
+}: {
+  c: Coluna;
+  colado: ColadoParaComparar;
+  gerarLink?: ((url: string) => ReactNode) | undefined;
+  verAlternativa: (j: Jogador) => void;
+}) {
+  const o = c.oferta;
+  if (o?.link) return <BotaoComprar link={o.link} origem={`comparacao_${c.jogador}`} />;
+  if (o && o.urlLoja && gerarLink) return <div className="w-full">{gerarLink(o.urlLoja)}</div>;
+  if (!o && c.temAlternativa)
+    return (
+      <button type="button" onClick={() => verAlternativa(c.jogador)} className={BOTAO_SECUNDARIO}>
+        Ver alternativa
+        <ChevronDown className="size-4 shrink-0" aria-hidden="true" />
+      </button>
+    );
+  if (!o && c.jogador === "amazon" && c.situacao !== "conferindo")
+    return <ConferirNaLoja titulo={colado.titulo} />;
+  return <span className="text-secondary-ink">—</span>;
+}
+
+function Vendedor({ c, direita = false }: { c: Coluna; direita?: boolean }) {
+  const o = c.oferta;
+  if (!o) return <span className="text-secondary-ink">—</span>;
+  return (
+    <span
+      className={"flex flex-col gap-0.5 " + (direita ? "items-end text-right" : "items-center")}
+    >
+      <span className="break-words">{o.loja ?? "Não informado"}</span>
+      {o.ehColado && (
+        <span className="text-[11px] text-secondary-ink">o anúncio que você colou</span>
+      )}
+      {o.oficial && (
+        <span className="rounded-full bg-[#e8f1fd] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]">
+          Loja oficial
+        </span>
+      )}
+      {c.extras > 0 && (
+        <span className="text-[11px] text-secondary-ink">
+          +{c.extras} {c.extras === 1 ? "oferta" : "ofertas"} do mesmo produto
+        </span>
+      )}
+      {c.suspeito && (
+        <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+          Preço muito abaixo das outras lojas: confira o vendedor antes de comprar.
+        </span>
+      )}
+    </span>
+  );
+}
+
+function Total({
+  c,
+  colado,
+  direita = false,
+}: {
+  c: Coluna;
+  colado: ColadoParaComparar;
+  direita?: boolean;
+}) {
+  const o = c.oferta;
+  if (!o) return <span className="text-secondary-ink">—</span>;
+  const t = totalConfirmado(o);
+  const dif = diferencaContraColado(o, colado);
+  return (
+    <span
+      className={"flex flex-col gap-0.5 " + (direita ? "items-end text-right" : "items-center")}
+    >
+      {t != null ? (
+        <strong className="text-xl font-bold tracking-tight tabular-nums">{brl(t)}</strong>
+      ) : (
+        <span className="font-semibold text-secondary-ink">A confirmar</span>
+      )}
+      {dif && <span className="text-[11px] font-normal text-secondary-ink">{dif}</span>}
+    </span>
+  );
+}
+
+function SeloMelhor() {
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-success px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
+      <span className="animate-fogo inline-block" aria-hidden="true">
+        🔥
+      </span>
+      Melhor escolha
+    </span>
+  );
+}
+
+function SeloMenorNoProduto() {
+  return (
+    <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-center text-[10px] font-bold leading-tight text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      Menor preço no produto (frete a confirmar)
     </span>
   );
 }
@@ -111,440 +346,495 @@ function SeloPrime() {
   );
 }
 
-function BotaoComprar({ link, origem }: { link: string; origem: string }) {
+/* Nome do marketplace em texto + endereço da loja: identifica sem logotipo. */
+function NomeDoMarketplace({ j, grande = false }: { j: Jogador; grande?: boolean }) {
   return (
-    <a
-      href={link}
-      target="_blank"
-      rel="noopener noreferrer sponsored"
-      data-origem={origem}
-      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-success px-3 py-1.5 text-[11px] font-bold text-white hover:brightness-95"
-    >
-      <ShieldCheck className="size-3.5" aria-hidden="true" />
-      Comprar com segurança
-    </a>
+    <span className="flex flex-col leading-tight">
+      <span className={(grande ? "text-[15px]" : "text-sm") + " font-bold"}>
+        {NOME_DO_JOGADOR[j]}
+      </span>
+      <span className="text-[10px] font-normal text-secondary-ink">{ENDERECO_DO_JOGADOR[j]}</span>
+    </span>
   );
 }
 
-/* "Conferir na Amazon": busca com a tag, quando não há preço capturado. */
-function ConferirNaAmazon({ titulo }: { titulo: string | null }) {
-  const link = titulo ? urlBuscaAmazon(termoDeBuscaExterna(titulo)) : null;
-  if (!link) return null;
-  return (
-    <a
-      href={link}
-      target="_blank"
-      rel="noopener noreferrer sponsored"
-      data-origem="multiloja_amazon_busca"
-      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-muted"
-    >
-      <Search className="size-3.5" aria-hidden="true" />
-      Conferir na Amazon
-    </a>
-  );
-}
-
-function LinhaOferta({
+function CartaoAlternativa({
   l,
-  i,
   colado,
-  precosDoMesmo,
+  ancora,
+  destacado,
 }: {
   l: LojaExterna;
-  i: number;
   colado: ColadoParaComparar;
-  precosDoMesmo: number[];
+  ancora: string | undefined;
+  destacado: boolean;
 }) {
   const o = ofertaExterna(l);
-  const diferenca = diferencaContraColado(o, colado);
-  const suspeito = l.relacao === "mesmo" && precoMuitoAbaixo(l.preco, precosDoMesmo);
-  const qualidade = l.relacao === "parecido" ? seloDaQualidade(l.qualidade) : null;
+  const marca = marcaDoParecido(l.muda);
+  const detalhes = detalhesDoParecido(l.muda);
+  const porExtenso = comparacaoDoParecido(l.muda);
+  const qualidade = qualidadeDoCartao(l.qualidade);
+  const dif = diferencaContraColado(o, colado);
+  const desv = l.desvantagens ?? [];
   return (
     <li
+      id={ancora}
       className={
-        "grid grid-cols-[56px_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 sm:grid-cols-[56px_minmax(0,1fr)_auto] " +
-        (i % 2 ? "bg-muted/40" : "bg-card")
+        "@container/cartao group scroll-mt-24 rounded-2xl border bg-card p-3 shadow-sm transition-all duration-200 ease-out hover:shadow-md motion-safe:hover:-translate-y-0.5 sm:p-4 " +
+        (destacado ? "border-[#0071e3] ring-2 ring-[#0071e3]/40" : "border-border")
       }
     >
-      <span className="relative block size-14 shrink-0 overflow-hidden rounded-xl bg-white">
-        {l.imagem && (
-          <img
-            src={l.imagem}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-contain"
-          />
-        )}
-      </span>
-      <span className="min-w-0">
-        <span className="flex flex-wrap items-center gap-1.5">
-          {o.prime && <SeloPrime />}
-          <span
-            className={
-              "rounded-full px-2 py-0.5 text-[10px] font-bold " +
-              (l.relacao === "mesmo"
-                ? "bg-success/15 text-success"
-                : "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200")
-            }
-          >
-            {l.relacao === "mesmo" ? "Mesmo produto" : "Parecido"}
-          </span>
-          {l.relacao === "parecido" && l.mesmaFoto && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-secondary-ink">
-              Mesma foto do anúncio colado
-            </span>
-          )}
-          {qualidade && (
-            <span
-              className={
-                "rounded-full px-2 py-0.5 text-[10px] font-bold " +
-                (qualidade.nivel === "inferior"
-                  ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
-                  : qualidade.nivel === "incerta"
-                    ? "bg-muted text-secondary-ink"
-                    : "bg-success/15 text-success")
-              }
-              title={l.qualidadeMotivo ?? undefined}
-            >
-              {qualidade.texto}
-            </span>
-          )}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <NomeDoMarketplace j={l.marketplace} grande />
+        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          {rotuloDaRelacao(l)}
         </span>
-        <span className="mt-1 line-clamp-2 block text-xs font-semibold leading-snug">
-          {l.titulo}
-        </span>
-        {l.loja && (
-          <span className="block text-[11px] text-secondary-ink">Vendido por {l.loja}</span>
-        )}
-        {l.relacao === "parecido" && (
-          <span className="block break-words text-[11px] text-amber-900 dark:text-amber-200">
-            Não é idêntico ao anúncio que você colou.{l.muda ? ` Muda: ${l.muda}` : ""}
-          </span>
-        )}
-        {l.relacao === "parecido" && l.desvantagens && l.desvantagens.length > 0 && (
-          <span className="mt-1 block rounded-lg bg-red-50 px-2 py-1 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
-            <strong>Desvantagens em relação ao seu:</strong> {l.desvantagens.join("; ")}
-          </span>
-        )}
-        {suspeito && (
-          <span className="mt-1 block text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-            Preço muito abaixo das outras lojas: confira o vendedor antes de comprar.
-          </span>
-        )}
-      </span>
-      {/* Celular: preço e frete à esquerda; o botão desce de linha quando
-          não cabe (nada de texto quebrando palavra por palavra). */}
-      <span className="col-span-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:col-span-1 sm:flex-col sm:flex-nowrap sm:items-end sm:justify-start sm:gap-1 sm:text-right">
-        <span className="flex min-w-[9rem] flex-1 flex-col sm:flex-none sm:items-end">
-          <strong className="text-sm tabular-nums">{brl(l.preco)}</strong>
-          <span className="text-[11px] text-secondary-ink">{linhaDoFrete(o)}</span>
-          {diferenca && <span className="text-[11px] text-secondary-ink">{diferenca}</span>}
-        </span>
-        {o.link && <BotaoComprar link={o.link} origem={`multiloja_${l.marketplace}`} />}
-      </span>
-    </li>
-  );
-}
-
-/* A análise de um marketplace: o que leu, o mesmo produto e os parecidos. */
-function SecaoDoMarketplace({
-  mk,
-  estado,
-  dados,
-  colado,
-  precosDoMesmo,
-}: {
-  mk: "amazon" | "shopee";
-  estado: Estado;
-  dados: RespostaMultiloja | null;
-  colado: ColadoParaComparar;
-  precosDoMesmo: number[];
-}) {
-  const lojas = (dados?.lojas ?? []).filter((l) => l.marketplace === mk);
-  const mesmos = lojas.filter((l) => l.relacao === "mesmo");
-  const parecidos = lojas.filter((l) => l.relacao === "parecido");
-  const resumo = dados?.resumo?.[mk];
-  /* Sem consulta e sem nada para mostrar, a seção não aparece (a linha da
-     comparação final diz o que houve). */
-  if (estado !== "aguardando" && !lojas.length && !resumo) return null;
-  const nome = mk === "amazon" ? "Na Amazon" : "Na Shopee";
-  return (
-    <div className="mt-4" data-origem={`multiloja_${mk}`}>
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <p className="text-sm font-bold">{nome}</p>
-        {resumo && (
-          <span className="text-[11px] text-secondary-ink">
-            {resumo.lidas
-              ? `Li ${resumo.lidas} ${resumo.lidas === 1 ? "resultado" : "resultados"}` +
-                (resumo.conferidas
-                  ? ` e conferi ${resumo.conferidas} pela foto, descrição e características`
-                  : "")
-              : "Nenhum resultado lido nesta busca"}
+        {l.mesmaFoto && (
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-secondary-ink">
+            Mesma foto do anúncio colado
           </span>
         )}
       </div>
-      {estado === "aguardando" && !lojas.length ? (
-        <p className="mt-1 animate-pulse text-xs text-secondary-ink">Conferindo o mesmo produto…</p>
-      ) : (
-        <>
-          {mesmos.length > 0 && (
-            <>
-              <p className="mt-1.5 text-xs font-semibold">Mesmo produto ({mesmos.length})</p>
-              <ul className="mt-1 overflow-hidden rounded-2xl border border-border">
-                {mesmos.map((l, i) => (
-                  <LinhaOferta
-                    key={`${l.marketplace}:${l.id}`}
-                    l={l}
-                    i={i}
-                    colado={colado}
-                    precosDoMesmo={precosDoMesmo}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
-          {!mesmos.length && (
-            <p className="mt-1 text-xs text-secondary-ink">
-              Não achei o mesmo produto
-              {resumo?.conferidas === 1
-                ? " no único conferido pela foto"
-                : resumo?.conferidas
-                  ? ` entre os ${resumo.conferidas} conferidos pela foto`
-                  : ""}
-              .
-            </p>
-          )}
-          {parecidos.length > 0 && (
-            <>
-              <p className="mt-2 text-xs font-semibold">
-                Parecidos ({parecidos.length}) · não é o mesmo produto
-              </p>
-              <ul className="mt-1 overflow-hidden rounded-2xl border border-border">
-                {parecidos.map((l, i) => (
-                  <LinhaOferta
-                    key={`${l.marketplace}:${l.id}`}
-                    l={l}
-                    i={i}
-                    colado={colado}
-                    precosDoMesmo={precosDoMesmo}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function LinhaFinal({
-  jogador,
-  oferta,
-  i,
-  vencedor,
-  menorNoProduto,
-  estado,
-  consultado,
-  incompleto,
-  colado,
-}: {
-  jogador: Jogador;
-  oferta: OfertaDoJogador | null;
-  i: number;
-  vencedor: boolean;
-  menorNoProduto: boolean;
-  estado: Estado;
-  consultado: boolean;
-  incompleto: boolean;
-  colado: ColadoParaComparar;
-}) {
-  const diferenca = oferta ? diferencaContraColado(oferta, colado) : null;
-  const semOferta =
-    jogador === "mercadolivre"
-      ? "Sem preço lido"
-      : estado === "aguardando"
-        ? "Conferindo…"
-        : incompleto
-          ? "Não deu para conferir pela foto agora"
-          : consultado
-            ? "Não achei o mesmo produto conferido pela foto"
-            : "Não consultada nesta comparação";
-  return (
-    <li
-      className={
-        "flex flex-wrap items-center justify-between gap-x-3 gap-y-2 p-3 " +
-        (vencedor ? "bg-success/10" : i % 2 ? "bg-muted/40" : "bg-card")
-      }
-    >
-      <span className="min-w-[10rem] flex-1">
-        <span className="flex flex-wrap items-center gap-1.5">
-          <SeloMarketplace jogador={jogador} />
-          {oferta?.prime && <SeloPrime />}
-          {oferta?.oficial && (
-            <span className="rounded-full bg-[#e8f1fd] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]">
-              Loja oficial
+      <div className="mt-3 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-3 [grid-template-areas:'foto_info'_'preco_preco'] @md/cartao:grid-cols-[5.5rem_minmax(0,1fr)_minmax(11rem,auto)] @md/cartao:[grid-template-areas:'foto_info_preco']">
+        <div className="relative h-24 overflow-hidden rounded-xl bg-white [grid-area:foto]">
+          {l.imagem ? (
+            <img
+              src={l.imagem}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-contain p-1.5 transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.02]"
+            />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center text-[11px] text-secondary-ink">
+              Sem foto
             </span>
           )}
-          {vencedor && (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-success px-2 py-0.5 text-[10px] font-bold text-white">
-              <span className="animate-fogo inline-block" aria-hidden="true">
-                🔥
+        </div>
+        <div className="min-w-0 [grid-area:info]">
+          <p className="line-clamp-2 text-[14px] font-bold leading-snug">{l.titulo}</p>
+          <ul className="mt-1.5 space-y-1 text-[12px] leading-snug text-secondary-ink">
+            <li className="flex gap-1.5">
+              <Tag className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{marca ? `Marca: ${marca}` : "Marca não informada"}</span>
+            </li>
+            <li className="flex gap-1.5" title={porExtenso.join("; ") || undefined}>
+              <SlidersHorizontal className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 break-words">
+                {detalhes.length ? detalhes.join(" · ") : "Confira as características no anúncio"}
               </span>
-              Mais barato entre os 3
-            </span>
-          )}
-          {menorNoProduto && (
-            <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-              Menor preço no produto
-            </span>
-          )}
-        </span>
-        {oferta ? (
-          <>
-            {oferta.loja && (
-              <span className="mt-1 block text-[11px] text-secondary-ink">
-                Vendido por {oferta.loja}
-              </span>
+            </li>
+            <li
+              className={
+                "flex gap-1.5 " +
+                (qualidade.nivel === "inferior"
+                  ? "text-red-700 dark:text-red-300"
+                  : qualidade.nivel === "incerta"
+                    ? ""
+                    : "text-success")
+              }
+              title={l.qualidadeMotivo ?? undefined}
+            >
+              {qualidade.nivel === "incerta" ? (
+                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              ) : qualidade.nivel === "inferior" ? (
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              ) : (
+                <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              )}
+              <span>{qualidade.texto}</span>
+            </li>
+            {desv.length > 0 && (
+              <li className="flex gap-1.5 text-red-700 dark:text-red-300">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 break-words">
+                  Desvantagens em relação ao seu: {desv.join("; ")}
+                </span>
+              </li>
             )}
-            <span className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-              <strong className="text-sm tabular-nums">{brl(oferta.preco)}</strong>
-              {diferenca && <span className="text-[11px] text-secondary-ink">{diferenca}</span>}
-            </span>
-            <span className="block text-[11px] text-secondary-ink">{linhaDoFrete(oferta)}</span>
-          </>
-        ) : (
-          <span
-            className={
-              "mt-1 block text-[11px] text-secondary-ink" +
-              (estado === "aguardando" && jogador !== "mercadolivre" ? " animate-pulse" : "")
-            }
-          >
-            {semOferta}
-          </span>
-        )}
-      </span>
-      <span className="ml-auto flex justify-end">
-        {oferta?.link ? (
-          <BotaoComprar link={oferta.link} origem={`comparacao_final_${jogador}`} />
-        ) : jogador === "amazon" && estado !== "aguardando" ? (
-          <ConferirNaAmazon titulo={colado.titulo} />
-        ) : null}
-      </span>
+          </ul>
+        </div>
+        <div className="flex flex-col justify-center [grid-area:preco] @md/cartao:border-l @md/cartao:border-border @md/cartao:pl-4">
+          <p className="text-2xl font-bold tracking-tight tabular-nums">{brl(l.preco)}</p>
+          <p className="text-[12px] text-secondary-ink">{linhaDoFrete(o)}</p>
+          {dif && <p className="text-[11px] text-secondary-ink">{dif}</p>}
+          {o.link && (
+            <div className="mt-2">
+              <BotaoComprar link={o.link} origem={`alternativa_${l.marketplace}`} compacto />
+            </div>
+          )}
+        </div>
+      </div>
     </li>
   );
 }
+
+const ROTULOS = ["Correspondência", "Produto", "Frete", "Total", "Vendedor", "Ação"] as const;
 
 export function ComparacaoMarketplaces({
   pedidoId,
   colado,
   melhorMl,
   precosMl,
+  cep,
+  gerarLink,
 }: {
   pedidoId: number | null;
   colado: ColadoParaComparar;
   /* A recomendação do Mercado Livre na tela (mesmo produto). */
   melhorMl: OfertaDoJogador | null;
-  /* Preços do mesmo produto no Mercado Livre (aviso de preço muito abaixo). */
+  /* Preços do mesmo produto no Mercado Livre (anúncio colado + lojas da
+     tabela): contagem de ofertas e aviso de preço muito abaixo. */
   precosMl: number[];
+  /* CEP do frete simulado, quando houver. */
+  cep?: string | null;
+  /* Botão que gera o link de afiliado no clique (Mercado Livre sem link). */
+  gerarLink?: (url: string) => ReactNode;
 }) {
   const { estado, dados } = useMultiloja(pedidoId);
+  const [destaque, setDestaque] = useState<Jogador | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const verAlternativa = useCallback((j: Jogador) => {
+    const el = document.getElementById(`alternativa-${j}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: semMovimento() ? "auto" : "smooth", block: "center" });
+    setDestaque(j);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDestaque(null), 1800);
+  }, []);
+
   if (pedidoId == null) return null;
   const lojas = dados?.lojas ?? [];
-  const amazon = melhorDoMarketplace(lojas, "amazon");
-  const shopee = melhorDoMarketplace(lojas, "shopee");
   const ml =
     melhorMl && melhorMl.link && !ehLinkDeCompra(melhorMl.link, "mercadolivre")
       ? { ...melhorMl, link: null }
       : melhorMl;
+  const amazon = melhorDoMarketplace(lojas, "amazon");
+  const shopee = melhorDoMarketplace(lojas, "shopee");
   const decisao = decidirEntreMarketplaces([ml, amazon, shopee]);
-  const precosDoMesmo = [
-    ...precosMl,
-    ...lojas.filter((l) => l.relacao === "mesmo").map((l) => l.preco),
-  ];
-  const consultado = (mk: "amazon" | "shopee") =>
-    Boolean(dados?.resumo?.[mk]) || lojas.some((l) => l.marketplace === mk);
-  /* Ordem da tabela: a da decisão, e quem não tem oferta no fim. */
-  const ordem: Jogador[] = [
-    ...decisao.ofertas.map((o) => o.jogador),
-    ...(["mercadolivre", "amazon", "shopee"] as Jogador[]).filter(
-      (j) => !decisao.ofertas.some((o) => o.jogador === j),
-    ),
-  ];
-  const doJogador = (j: Jogador) => decisao.ofertas.find((o) => o.jogador === j) ?? null;
   const v = decisao.vencedor;
   const m = decisao.menorNoProduto;
-  return (
-    <section aria-label="Amazon, Shopee e comparação final" className="mt-2">
-      <SecaoDoMarketplace
-        mk="amazon"
-        estado={estado}
-        dados={dados}
-        colado={colado}
-        precosDoMesmo={precosDoMesmo}
-      />
-      <SecaoDoMarketplace
-        mk="shopee"
-        estado={estado}
-        dados={dados}
-        colado={colado}
-        precosDoMesmo={precosDoMesmo}
-      />
+  const mesmosExternos = lojas.filter(
+    (l) => l.relacao === "mesmo" && ehLinkDeCompra(l.link, l.marketplace),
+  );
+  const precosDoMesmo = [...precosMl, ...mesmosExternos.map((l) => l.preco)];
+  const parecidos = lojas
+    .filter((l) => l.relacao === "parecido" && ehLinkDeCompra(l.link, l.marketplace))
+    .sort(
+      (a, b) =>
+        (b.mesmaFoto ? 1 : 0) - (a.mesmaFoto ? 1 : 0) ||
+        (b.semelhanca ?? 0) - (a.semelhanca ?? 0) ||
+        a.preco - b.preco,
+    );
+  const consultado = (mk: "amazon" | "shopee") =>
+    Boolean(dados?.resumo?.[mk]) || lojas.some((l) => l.marketplace === mk);
 
-      <div
-        className="mt-5 rounded-3xl border border-border bg-card p-3"
-        data-origem="comparacao_final"
-      >
-        <p className="text-sm font-bold">Comparação final: os 3 marketplaces</p>
-        <p className="text-[11px] text-secondary-ink">
-          A melhor oferta do mesmo produto em cada um. Só disputa o mais barato quem tem o custo
-          confirmado.
+  const colunas: Coluna[] = ORDEM_DAS_COLUNAS.map((j) => {
+    const oferta = j === "mercadolivre" ? ml : j === "amazon" ? amazon : shopee;
+    const situacao: Situacao = oferta
+      ? "mesmo"
+      : j === "mercadolivre"
+        ? "sem_preco"
+        : estado === "aguardando"
+          ? "conferindo"
+          : dados?.incompleto
+            ? "indisponivel"
+            : consultado(j)
+              ? "nao_localizado"
+              : "nao_consultado";
+    return {
+      jogador: j,
+      oferta,
+      extras:
+        j === "mercadolivre"
+          ? 0
+          : Math.max(0, mesmosExternos.filter((l) => l.marketplace === j).length - 1),
+      situacao,
+      temAlternativa: j !== "mercadolivre" && parecidos.some((l) => l.marketplace === j),
+      suspeito:
+        j !== "mercadolivre" && oferta != null && precoMuitoAbaixo(oferta.preco, precosDoMesmo),
+    };
+  });
+  const totalOfertas = precosMl.length + mesmosExternos.length;
+  const resumo = dados?.resumo;
+  const leitura = (["amazon", "shopee"] as const)
+    .map((mk) => {
+      const r = resumo?.[mk];
+      if (!r) return null;
+      return r.lidas
+        ? `${NOME_DO_JOGADOR[mk]}: li ${r.lidas} ${r.lidas === 1 ? "resultado" : "resultados"}` +
+            (r.conferidas ? ` e conferi ${r.conferidas} pela foto` : "")
+        : `${NOME_DO_JOGADOR[mk]}: nenhum resultado lido`;
+    })
+    .filter(Boolean)
+    .join(" · ");
+  const ehVencedor = (c: Coluna) => v != null && v.jogador === c.jogador;
+  const ehMenor = (c: Coluna) => m != null && m.jogador === c.jogador;
+  /* Âncora do "Ver alternativa": o 1º parecido de cada marketplace. */
+  const ancoras = new Map<string, string>();
+  for (const l of parecidos)
+    if (![...ancoras.values()].includes(`alternativa-${l.marketplace}`))
+      ancoras.set(`${l.marketplace}:${l.id}`, `alternativa-${l.marketplace}`);
+  const busca = colado.titulo ? termoDeBuscaExterna(colado.titulo) : "";
+
+  /* Conteúdo de cada linha da tabela, por coluna. */
+  const celula = (c: Coluna, rotulo: (typeof ROTULOS)[number]): ReactNode => {
+    const o = c.oferta;
+    switch (rotulo) {
+      case "Correspondência":
+        return <Correspondencia c={c} />;
+      case "Produto":
+        return o ? (
+          <span className="tabular-nums">{brl(o.preco)}</span>
+        ) : (
+          <span className="text-secondary-ink">—</span>
+        );
+      case "Frete":
+        return o ? <span>{celulaDoFrete(o)}</span> : <span className="text-secondary-ink">—</span>;
+      case "Total":
+        return <Total c={c} colado={colado} />;
+      case "Vendedor":
+        return <Vendedor c={c} />;
+      case "Ação":
+        return <Acao c={c} colado={colado} gerarLink={gerarLink} verAlternativa={verAlternativa} />;
+    }
+  };
+
+  return (
+    <section
+      aria-label="Compare com clareza: Mercado Livre, Amazon e Shopee"
+      className="@container mt-6"
+      data-origem="comparacao_marketplaces"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-2xl font-bold tracking-tight">Compare com clareza.</h3>
+          <p className="text-[15px] text-secondary-ink">
+            Veja preço, frete e diferenças em cada loja.
+          </p>
+          {busca && (
+            <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[13px]">
+              <Search className="size-4 shrink-0 text-secondary-ink" aria-hidden="true" />
+              <span className="shrink-0 text-secondary-ink">Sua busca:</span>
+              <strong className="truncate">{busca}</strong>
+            </p>
+          )}
+        </div>
+        {cep && (
+          <span className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-[12px] shadow-sm">
+            <MapPin className="size-4 text-[#0071e3]" aria-hidden="true" />
+            Entrega: CEP {cep}
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-[11px] text-secondary-ink">
+        {estado === "aguardando"
+          ? "Conferindo o mesmo produto na Amazon e na Shopee…"
+          : leitura || "A mesma análise em cada marketplace."}
+      </p>
+
+      {/* MESMO PRODUTO */}
+      <div className="mt-3 rounded-3xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-5">
+        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+          <strong className="text-xl tracking-tight">Mesmo produto</strong>
+          <span className="hidden h-4 w-px bg-border sm:inline-block" aria-hidden="true" />
+          <span className="text-[13px] text-secondary-ink">
+            {totalOfertas} {totalOfertas === 1 ? "oferta confirmada" : "ofertas confirmadas"} nesta
+            análise
+          </span>
         </p>
-        {v && (
-          <div className="mt-2 rounded-2xl border border-success/30 bg-success/5 p-3 text-xs leading-relaxed">
-            <p>
-              <strong>Melhor escolha: {NOME_DO_JOGADOR[v.jogador]}</strong>
-              {v.loja ? `, vendido por ${v.loja}` : ""} — <strong>{brl(v.preco)}</strong>
-              {v.ehColado ? " (o anúncio que você colou)" : ""}.
-            </p>
-            <p className="text-secondary-ink">{linhaDoFrete(v)}.</p>
+        {(v || m) && (
+          <div className="mt-2 space-y-1 text-xs leading-relaxed">
+            {v && (
+              <p>
+                <strong>🔥 Melhor escolha: {NOME_DO_JOGADOR[v.jogador]}</strong>
+                {(() => {
+                  const t = totalConfirmado(v);
+                  return t != null ? ` · total de ${brl(t)} confirmado` : "";
+                })()}
+                .
+              </p>
+            )}
+            {m && (
+              <p className="text-amber-900 dark:text-amber-200">
+                <strong>
+                  Menor preço no produto (frete a confirmar): {NOME_DO_JOGADOR[m.jogador]}
+                </strong>
+                {v ? `, ${brl(v.preco - m.preco)} a menos no produto` : ""}.{" "}
+                {m.prime
+                  ? "Frete grátis só para assinantes Prime: confira antes de comprar."
+                  : "Confira o frete no anúncio antes de comprar."}
+              </p>
+            )}
           </div>
         )}
-        {m && (
-          <div className="mt-2 rounded-2xl border border-amber-300/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
-            <p>
-              <strong>Menor preço no produto: {NOME_DO_JOGADOR[m.jogador]}</strong>
-              {v ? `, ${brl(v.preco - m.preco)} a menos no produto` : ""}.
-            </p>
-            <p>{linhaDoFrete(m)}.</p>
-            <p>
-              {m.prime
-                ? "Sem custo de entrega só para assinantes Prime: confira antes de comprar."
-                : "O frete não foi confirmado: confira antes de comprar."}
-            </p>
-          </div>
+        {!v && !m && decisao.ofertas.length > 0 && estado !== "aguardando" && (
+          <p className="mt-2 text-xs text-secondary-ink">
+            Nenhum marketplace confirmou o custo total com o frete: compare o preço do produto e
+            confira o frete no anúncio.
+          </p>
         )}
-        <ul className="mt-2 overflow-hidden rounded-2xl border border-border">
-          {ordem.map((j, i) => (
-            <LinhaFinal
-              key={j}
-              jogador={j}
-              oferta={doJogador(j)}
-              i={i}
-              vencedor={decisao.ofertas.length >= 2 && v?.jogador === j}
-              menorNoProduto={m?.jogador === j}
-              estado={estado}
-              consultado={j === "mercadolivre" ? true : consultado(j)}
-              incompleto={j !== "mercadolivre" && dados?.incompleto === true}
-              colado={colado}
-            />
+
+        {/* Espaço largo: tabela; as linhas se alinham entre as colunas (subgrid). */}
+        <div
+          className="mt-4 hidden grid-flow-col grid-cols-[minmax(7.5rem,0.7fr)_repeat(3,minmax(0,1fr))] grid-rows-[repeat(7,auto)] text-[13px] @2xl:grid"
+          role="group"
+          aria-label="Mesmo produto nos 3 marketplaces"
+        >
+          <div className="row-span-7 grid grid-rows-subgrid">
+            <span aria-hidden="true" />
+            {ROTULOS.map((r, i) => (
+              <span
+                key={r}
+                className={
+                  "flex items-center border-l border-t border-border px-4 py-3 " +
+                  (r === "Total"
+                    ? FUNDO_TOTAL + " font-bold text-foreground"
+                    : "bg-muted/60 font-medium text-secondary-ink") +
+                  (i === 0 ? " rounded-tl-xl" : "") +
+                  (i === ROTULOS.length - 1 ? " rounded-bl-xl border-b" : "")
+                }
+              >
+                {r}
+              </span>
+            ))}
+          </div>
+          {colunas.map((c, idx) => (
+            <div
+              key={c.jogador}
+              role="group"
+              aria-label={NOME_DO_JOGADOR[c.jogador]}
+              className={
+                "relative row-span-7 grid grid-rows-subgrid " +
+                (ehVencedor(c)
+                  ? "z-10 rounded-xl shadow-lg shadow-success/15 ring-2 ring-success/60"
+                  : "")
+              }
+            >
+              <span
+                className={
+                  "mx-px flex flex-col items-center justify-end gap-1 rounded-t-xl px-3 pb-2.5 pt-2 text-center " +
+                  (ehVencedor(c) ? "bg-success/10" : "bg-muted")
+                }
+              >
+                {ehVencedor(c) && <SeloMelhor />}
+                <NomeDoMarketplace j={c.jogador} grande />
+                {(c.oferta?.prime || ehMenor(c)) && (
+                  <span className="flex flex-wrap justify-center gap-1">
+                    {c.oferta?.prime && <SeloPrime />}
+                    {ehMenor(c) && <SeloMenorNoProduto />}
+                  </span>
+                )}
+              </span>
+              {ROTULOS.map((r, i) => (
+                <span
+                  key={r}
+                  className={
+                    "flex items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
+                    (r === "Total" ? FUNDO_TOTAL : "bg-card") +
+                    (i === ROTULOS.length - 1 ? " border-b" : "") +
+                    (i === ROTULOS.length - 1 && idx === colunas.length - 1 ? " rounded-br-xl" : "")
+                  }
+                >
+                  {celula(c, r)}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Espaço estreito (celular): um cartão por marketplace. */}
+        <ul className="mt-4 space-y-3 @2xl:hidden">
+          {colunas.map((c) => (
+            <li
+              key={c.jogador}
+              className={
+                "rounded-2xl border bg-card p-3 " +
+                (ehVencedor(c)
+                  ? "border-success/60 shadow-lg shadow-success/15 ring-2 ring-success/40"
+                  : "border-border")
+              }
+            >
+              {(ehVencedor(c) || ehMenor(c) || c.oferta?.prime) && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {ehVencedor(c) && <SeloMelhor />}
+                  {ehMenor(c) && <SeloMenorNoProduto />}
+                  {c.oferta?.prime && <SeloPrime />}
+                </div>
+              )}
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0 flex-1">
+                  <NomeDoMarketplace j={c.jogador} grande />
+                </span>
+                <span className="shrink-0 text-[13px]">
+                  <Correspondencia c={c} />
+                </span>
+              </div>
+              {c.oferta && (
+                <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
+                  {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
+                    <div
+                      key={r}
+                      className={
+                        "flex items-start justify-between gap-3 border-t border-border px-3 py-2 first:border-t-0 " +
+                        (r === "Total" ? FUNDO_TOTAL : "")
+                      }
+                    >
+                      <dt
+                        className={r === "Total" ? "font-bold" : "font-medium text-secondary-ink"}
+                      >
+                        {r}
+                      </dt>
+                      <dd className="min-w-0 text-right">
+                        {r === "Total" ? (
+                          <Total c={c} colado={colado} direita />
+                        ) : r === "Vendedor" ? (
+                          <Vendedor c={c} direita />
+                        ) : (
+                          celula(c, r)
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <div className="mt-3">
+                <Acao c={c} colado={colado} gerarLink={gerarLink} verAlternativa={verAlternativa} />
+              </div>
+            </li>
           ))}
         </ul>
-        <p className="mt-1 text-[11px] text-secondary-ink">
-          Preços de quando comparei. Links de afiliado dos programas do Mercado Livre, da Amazon e
-          da Shopee. Frete grátis do Prime vale só para assinantes.
-        </p>
       </div>
+
+      {/* ALTERNATIVAS PARECIDAS */}
+      {parecidos.length > 0 && (
+        <div className="mt-6">
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <strong className="text-xl tracking-tight">Alternativas parecidas</strong>
+            <span className="hidden h-4 w-px bg-border sm:inline-block" aria-hidden="true" />
+            <span className="text-[13px] text-secondary-ink">
+              São produtos diferentes. Confira as características.
+            </span>
+          </p>
+          <ul className="mt-3 grid gap-3 @3xl:grid-cols-2">
+            {parecidos.map((l) => (
+              <CartaoAlternativa
+                key={`${l.marketplace}:${l.id}`}
+                l={l}
+                colado={colado}
+                ancora={ancoras.get(`${l.marketplace}:${l.id}`)}
+                destacado={destaque === l.marketplace && ancoras.has(`${l.marketplace}:${l.id}`)}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="mt-4 text-center text-[11px] leading-relaxed text-secondary-ink">
+        Links de afiliado. Frete e condições dependem do CEP (na Amazon e na Shopee, confira no
+        anúncio). Valores de referência conferidos no momento da análise. Site independente, sem
+        vínculo com Mercado Livre, Amazon ou Shopee; as marcas pertencem aos seus titulares.
+      </p>
     </section>
   );
 }

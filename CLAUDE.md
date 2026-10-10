@@ -1207,35 +1207,63 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   responde grava incompleto (a tela diz "Não deu para conferir pela foto
   agora"). Trava da tela (src/lib/multiloja-resultado.ts): link de
   afiliado do próprio marketplace, sem usado e sem falso (pareceFalso).
-- TELA (src/components/ComparacaoMarketplaces.tsx, depois dos Parecidos
-  do Mercado Livre): "Na Amazon" e "Na Shopee" com "Li N resultados e
-  conferi M pela foto, descrição e características", Mesmo produto (do
-  mais barato) e Parecidos (com "Não é idêntico ao anúncio que você
-  colou. Muda: ...", selo de qualidade ✓/⚠/?, "Desvantagens em relação
-  ao seu", "Mesma foto do anúncio colado"), aviso de preço muito abaixo
-  (a mesma conta da tabela, com os preços das 3 marketplaces) e a
-  diferença contra o anúncio colado.
-- COMPARAÇÃO FINAL (src/lib/comparacao-marketplaces.ts): uma linha por
-  marketplace ("Mercado Livre", "Amazon Brasil", "Shopee") com a melhor
-  oferta do MESMO produto; o Mercado Livre entra com a recomendação da
-  tela (mesma conta da tabela, totalDaLoja). Disputa o "🔥 Mais barato
-  entre os 3" só quem tem custo confirmado: na Amazon e na Shopee, frete
-  grátis confirmado ou de valor conhecido. Prime = frete grátis só para
-  assinantes: não confirma. Empate (< R$ 0,50): Mercado Livre primeiro,
-  depois loja oficial. O selo só aparece com 2 ou mais marketplaces com o
-  mesmo produto. Mais barato só no produto com frete não confirmado =
-  "Menor preço no produto" (R$ X a menos no produto, frete em linha
-  própria, "confira antes de comprar"). Diferença contra o colado: "no
-  custo final, já com o frete" só com o frete dos dois lados conhecido;
-  senão "no produto". Linha sem oferta: "Conferindo…", "Não achei o
-  mesmo produto conferido pela foto", "Não consultada nesta comparação"
-  ou "Não deu para conferir pela foto agora"; na Amazon, sem preço
-  capturado, "Conferir na Amazon" (busca com a tag). Botão sempre
-  "Comprar com segurança" (só link de afiliado do próprio marketplace);
-  o nome do marketplace só no selo. Hoje a Amazon e a Shopee nunca têm
-  frete confirmado para o cliente (a leitura usa a sessão do Weslei:
-  Prime e CEP dele), então a recomendação continua a do Mercado Livre e
-  a Amazon/Shopee mais barata aparece como "Menor preço no produto".
+- Aviso de preço muito abaixo (a mesma conta da tabela, com os preços do
+  mesmo produto nos 3 marketplaces) no vendedor da coluna.
+- COMPARE COM CLAREZA (Weslei, 10/10: nova tela e "exemplo de tabela
+  final"; src/components/ComparacaoMarketplaces.tsx + src/lib/
+  comparacao-marketplaces.ts). Fica no FIM do resultado, em largura
+  inteira no PC (linha 4 da grade, abaixo das duas colunas) e logo depois
+  da análise do Mercado Livre no celular. Topo: "Compare com clareza." /
+  "Veja preço, frete e diferenças em cada loja." / "Sua busca: <termo
+  usado nas outras lojas>", selo "Entrega: CEP X" (só com o CEP
+  simulado) e "li N resultados e conferi M pela foto" de cada marketplace.
+  - "Mesmo produto | N ofertas confirmadas nesta análise" (N = lojas do
+    mesmo produto no Mercado Livre + mesmo produto na Amazon/Shopee):
+    tabela com coluna de rótulos cinza (Correspondência, Produto, Frete,
+    Total, Vendedor, Ação), uma coluna por marketplace (Mercado Livre =
+    a recomendação da tela), linhas alinhadas por subgrid e a linha Total
+    destacada. Correspondência: ✓ "Mesmo produto" ou – "Não localizado /
+    nesta análise" (também "Não consultado", "Conferindo", "Conferência
+    indisponível agora"). Ação: "Comprar com segurança ↗" (link de
+    afiliado; sem link no Mercado Livre, VerNaLoja gera no clique), "Ver
+    alternativa ⌄" (rola até o cartão e destaca; sem rolagem suave com
+    prefers-reduced-motion) ou, na Amazon sem nada, "Conferir na loja"
+    (busca com a tag). Espaço estreito (container query @2xl): um cartão
+    por marketplace.
+  - "Melhor escolha" (🔥, moldura verde na coluna) só com CUSTO TOTAL
+    CONFIRMADO, a mesma régua nos 3 (totalConfirmado: frete grátis
+    confirmado ou de valor conhecido; vale também para o Mercado Livre).
+    Prime e "a confirmar" não confirmam. Empate (< R$ 0,50): Mercado Livre,
+    depois loja oficial. Mais barato só no produto = "Menor preço no
+    produto (frete a confirmar)". Ninguém confirmado: aviso para comparar o
+    produto e conferir o frete. Diferença contra o colado: "no custo final,
+    já com o frete" só com o frete dos dois lados conhecido; senão "no
+    produto".
+  - "Alternativas parecidas | São produtos diferentes. Confira as
+    características.": cartões horizontais (2 colunas a partir de @3xl;
+    empilhados no celular) com nome do marketplace, selo âmbar "Parecido"
+    (semelhança >= 60 ou mesma foto) ou "Produto diferente", foto em caixa
+    fixa (object-contain), título, Marca (da conferência; senão "Marca não
+    informada"), o que difere (só o valor dele, "Azul/Branco · Bluetooth";
+    por extenso no title), qualidade (equivalente/superior/inferior/não
+    confirmada), desvantagens, preço grande, frete em linha própria e
+    "Comprar com segurança ↗". Hover: elevação de 0,5 e foto 1,02x
+    (motion-safe).
+  - IDENTIFICAÇÃO DOS MARKETPLACES (Weslei, 10/10: "use a medida que me
+    resguarde dos termos de uso de cada afiliado, mas que seja possível
+    identificar o player"): só o NOME em texto e o endereço da loja
+    (mercadolivre.com.br, amazon.com.br, shopee.com.br). Sem logotipo, sem
+    as cores das marcas (cabeçalhos no cinza do site) e "Prime" no azul
+    neutro do site; as diretrizes de marca dos Associados da Amazon só
+    permitem o logotipo nos arquivos fornecidos por ela. Botão nunca "Ver
+    no Mercado Livre/na Amazon/na Shopee". Rodapé: links de afiliado, frete
+    depende do CEP (Amazon e Shopee: confira no anúncio), valores de
+    referência e "Site independente, sem vínculo com Mercado Livre, Amazon
+    ou Shopee; as marcas pertencem aos seus titulares".
+  Hoje a Amazon e a Shopee nunca têm frete confirmado para o cliente (a
+  leitura usa a sessão do Weslei: Prime e CEP dele), então quem confirma o
+  custo é o Mercado Livre e a Amazon/Shopee mais barata aparece como
+  "Menor preço no produto (frete a confirmar)".
 - CLIENTE PRIMEIRO NA COTA DA CONFERÊNCIA (10/10, pedido 1110, MK235):
   com a cota diária da Gemini esgotada, só o Gemma 26b confere, e ele
   aceita 16 mil tokens de entrada por minuto (429
