@@ -5015,11 +5015,13 @@ async function monitorarPrecos() {
 let lendoAvaliacoes = false;
 let avaliacoesUltima = 0;
 let avaliacoesDiagUltimo = 0;
+/* Pausa com nome novo na 1.165.1: a pausa da 1.165.0 (verificacao sem a
+   conta) nao vale mais, agora ha a leitura com a conta. */
 async function atualizarAvaliacoes() {
   if (lendoAvaliacoes || atendendo || Date.now() - avaliacoesUltima < 50e3) return;
-  const st = await chrome.storage.local.get(['sincToken', 'avaliacoesPausaAte', 'avaliacoesSemCookieAte']);
+  const st = await chrome.storage.local.get(['sincToken', 'avaliacoesPausaAte2', 'avaliacoesSemCookieAte']);
   const sincToken = st.sincToken;
-  if (!sincToken || (st.avaliacoesPausaAte && Date.now() < st.avaliacoesPausaAte)) return;
+  if (!sincToken || (st.avaliacoesPausaAte2 && Date.now() < st.avaliacoesPausaAte2)) return;
   let modo = st.avaliacoesSemCookieAte && Date.now() < st.avaliacoesSemCookieAte ? 'logada' : 'sem-cookie';
   if (modo === 'logada' && await freioLigado('leitura')) return;
   lendoAvaliacoes = true;
@@ -5046,7 +5048,7 @@ async function atualizarAvaliacoes() {
       }
       if (r.verificacao) {
         await puxarFreio('o Mercado Livre pediu verificacao ao ler as avaliacoes de um anuncio', 'leitura', r.diag.final);
-        await chrome.storage.local.set({ avaliacoesPausaAte: Date.now() + 3600e3 });
+        await chrome.storage.local.set({ avaliacoesPausaAte2: Date.now() + 3600e3 });
         parou = 'verificacao na leitura logada';
         break;
       }
