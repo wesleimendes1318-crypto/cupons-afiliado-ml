@@ -7,7 +7,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub } from './sincronia.js';
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -3760,6 +3760,42 @@ function respiroDaCota(analise) {
   return Math.min(65000, (m ? Number(m[1]) * 1000 : 60000) + 2000);
 }
 
+/* AMAZON E SHOPEE SOB DEMANDA (Weslei, 10/10: "o cliente cola o link, meu
+   site identifica o player e faz a busca so nele... caso o cliente queira
+   saber nessas outras paginas, ele precisa clicar num botao"). O site grava
+   o pedido (pedir_multiloja); aqui a extensao pega os pedidos abertos e
+   compara com o anuncio colado, montado da analise guardada (sem ler a
+   pagina de novo). Um por vez; a conferencia espera as do Mercado Livre. */
+let atendendoMultiloja = false;
+async function atenderMultiloja() {
+  if (atendendoMultiloja) return { pulou: true };
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return { semToken: true };
+  atendendoMultiloja = true;
+  let feitos = 0;
+  try {
+    for (let rodada = 0; rodada < 5; rodada++) {
+      const fila = await multilojaPendentes(sincToken);
+      if (!fila.length) break;
+      for (const p of fila) {
+        if (!p || !p.id || !p.titulo || !p.imagem) continue;
+        await compararOutrosMarketplaces(sincToken, p.id, {
+          titulo: [p.titulo, p.variacao].filter(Boolean).join(' '),
+          imagem: p.imagem,
+          preco: typeof p.preco === 'number' ? p.preco : (Number(p.preco) || null),
+          item: itemDoUrl(p.url || '') || null,
+          categoria: Array.isArray(p.categorias) && p.categorias.length ? p.categorias.join(' > ') : null,
+          fatos: fatosDoOriginal(p.detalhes || null, { dominio: p.dominio || null, condicao: p.condicao || null })
+        }).catch(() => {});
+        feitos++;
+      }
+    }
+  } finally {
+    atendendoMultiloja = false;
+  }
+  return { feitos };
+}
+
 async function atenderPedidos() {
   if (atendendo) { chegouPedidoNovo = true; return { atendidos: 0, pulou: true }; }
   const { sincToken } = await chrome.storage.local.get('sincToken');
@@ -3913,17 +3949,9 @@ async function atenderPedidos() {
           if (a && a.titulo) a.titulo = desescapar(a.titulo);
           marcar('anuncio');
           if (a && a.faltou) gravarDiagnostico(sincToken, 'anuncio-incompleto', a.faltou).catch(() => {});
-          /* OUTROS MARKETPLACES (09/10): Amazon e Shopee pela sessao, em
-             paralelo e sem await: nunca segura nem atrasa o Mercado Livre. O
-             banco so libera pedido de cliente (multiloja_vale). */
-          if (a && a.ok && a.titulo && a.imagem) {
-            compararOutrosMarketplaces(sincToken, p.id, {
-              titulo: [a.titulo, a.variacao].filter(Boolean).join(' '), imagem: a.imagem, preco: a.preco ?? null,
-              item: itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null,
-              categoria: (a.categorias || []).join(' > ') || null,
-              fatos: fatosDoOriginal(a.detalhes, { dominio: a.dominio, condicao: a.condicao })
-            }).catch(() => {});
-          }
+          /* OUTROS MARKETPLACES: so quando o cliente pede no site (sob
+             demanda, 10/10: "para nao gastar muitas requisicoes"); quem
+             atende e atenderMultiloja, fora deste pedido. */
           // 2. procura o cupom da loja NO BANCO (tem teto e compra minima)
           let cupom = null, vendedor = null;
           for (const nome of (a.nomes || [])) {
@@ -4705,6 +4733,7 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
            pedido de etiqueta esperava o alarme de 1 minuto. */
         atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
         atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
+        atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
         responder({ ok: true });
       } else if (msg.tipo === 'estadoGeral') {
         const st = await chrome.storage.local.get(['ultimoAtendimento', 'anonimaBloqueadaAte', 'sincToken']);
@@ -5023,6 +5052,8 @@ chrome.alarms.onAlarm.addListener(async a => {
     atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
     // "Ver os produtos da loja": pagina da loja pedida por quem esta no site.
     atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
+    // Amazon/Shopee pedidas pelo cliente (sob demanda).
+    atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
     return;
   }
   if (a.name === 'versao') {

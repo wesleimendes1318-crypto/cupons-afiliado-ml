@@ -563,6 +563,16 @@ export async function registrarHub(token, itens) {
 /* Outros marketplaces pela extensao (09/10): o banco diz se o pedido vale
    (cliente, ainda sem resultado, marketplace ligada) e guarda o resultado
    para o site. Nunca derruba nada: falha = nao faz. */
+/* Pedidos de busca na Amazon/Shopee feitos pelos clientes no site (sob
+   demanda, 10/10). Ja vem marcado como iniciado. */
+export async function multilojaPendentes(token) {
+  if (!token) return [];
+  try {
+    const r = await chamarRpc(SUPABASE + '/rest/v1/rpc/multiloja_pendentes', { p_token: token });
+    return Array.isArray(r) ? r : [];
+  } catch (e) { return []; }
+}
+
 export async function multilojaVale(token, pedido) {
   if (!token || !pedido) return { ok: false, motivo: 'sem token' };
   try {

@@ -1,7 +1,9 @@
-/* OUTROS MARKETPLACES PELA EXTENSAO (Weslei, 09/10). Roda EM PARALELO com
-   o atendimento do Mercado Livre, sem segurar a fila (nao e aguardado):
-     1. o banco libera (multiloja_vale: so pedido de cliente, ainda sem
-        resultado, marketplace ligada);
+/* OUTROS MARKETPLACES PELA EXTENSAO (Weslei, 09/10). SOB DEMANDA (10/10:
+   "para nao gastar muitas requisicoes"): so roda quando o cliente pede no
+   site (atenderMultiloja no background, com o anuncio montado da analise
+   guardada), nunca segura a fila do Mercado Livre:
+     1. o banco libera (multiloja_vale: so pedido de cliente que o cliente
+        pediu, ainda sem resultado, marketplace ligada);
      2. Amazon e Shopee buscam juntas (Promise.allSettled, prazo curto);
      3. MESMA ANALISE EM CADA MARKETPLACE (Weslei, 09/10: "deve fazer a
         mesma analise em cada player e por fim comparar os 3"): ate 4 de

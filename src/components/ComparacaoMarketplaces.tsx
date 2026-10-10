@@ -10,6 +10,9 @@
    2. "Alternativas parecidas": os parecidos da Amazon e da Shopee em cartões
       horizontais (foto, marca, o que difere, qualidade, desvantagens, preço,
       frete e botão).
+   SOB DEMANDA (10/10): a Amazon e a Shopee só são buscadas quando o
+   cliente toca em "Comparar também na Amazon e na Shopee" ou "Ver preço";
+   até lá, valores borrados.
    Botão sempre "Comprar com segurança" com o link de afiliado do próprio
    marketplace; sem link pronto no Mercado Livre, gera no clique (VerNaLoja);
    sem preço capturado na Amazon, "Conferir na loja" (busca com a tag). Nunca
@@ -34,6 +37,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
+import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeCompra, urlBuscaAmazon } from "@/lib/afiliado";
 import type { LojaExterna } from "@/lib/coletor-multiloja";
 import {
@@ -61,7 +65,7 @@ import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-type Estado = "aguardando" | "pronto" | "inativo";
+type Estado = "carregando" | "sob_demanda" | "aguardando" | "pronto" | "inativo";
 
 export type ColadoParaComparar = {
   titulo: string | null;
@@ -70,23 +74,27 @@ export type ColadoParaComparar = {
   totalConfirmado: number | null;
 };
 
-/* Pergunta à rota enquanto a extensão compara (busca, conferência pela foto
-   e links levam de 30 s a alguns minutos). */
-function useMultiloja(pedidoId: number | null) {
-  const [r, setR] = useState<{ estado: Estado; dados: RespostaMultiloja | null }>({
-    estado: "aguardando",
-    dados: null,
-  });
+/* SOB DEMANDA (Weslei, 10/10: "para não gastar muitas requisições"): a
+   Amazon e a Shopee só são buscadas quando o cliente pede (pedir_multiloja,
+   com a chave do pedido). Antes disso a rota responde sobDemanda e a tela
+   mostra os valores borrados com o botão. Depois do pedido, pergunta à rota
+   enquanto a extensão compara (medido em 10/10: de 35 s a 2 min e 22 s). */
+function useMultiloja(pedidoId: number | null, chave: string | null) {
+  const [r, setR] = useState<{
+    estado: Estado;
+    dados: RespostaMultiloja | null;
+    aviso: string | null;
+  }>({ estado: "carregando", dados: null, aviso: null });
+  const [rodada, setRodada] = useState(0);
   useEffect(() => {
     if (pedidoId == null) {
-      setR({ estado: "inativo", dados: null });
+      setR({ estado: "inativo", dados: null, aviso: null });
       return;
     }
-    setR({ estado: "aguardando", dados: null });
     let vivo = true;
     let tentativas = 0;
     let espera: ReturnType<typeof setTimeout> | undefined;
-    const pedir = async () => {
+    const consultar = async () => {
       tentativas += 1;
       try {
         const resp = await fetch("/api/public/multiloja", {
@@ -95,30 +103,83 @@ function useMultiloja(pedidoId: number | null) {
           body: JSON.stringify({ pedido: pedidoId }),
         });
         const j = (await resp.json().catch(() => null)) as
-          (RespostaMultiloja & { aguardar?: boolean }) | null;
+          | (RespostaMultiloja & {
+              aguardar?: boolean;
+              sobDemanda?: boolean;
+              semResposta?: boolean;
+            })
+          | null;
         if (!vivo) return;
         /* 1º minuto a cada 5 s; depois a cada 15 s, até a rota parar de
            pedir espera (ela desiste 6 min depois do pedido). */
         if (j?.aguardar && tentativas < 38) {
-          espera = setTimeout(() => void pedir(), tentativas < 12 ? 5_000 : 15_000);
+          setR((x) => ({ ...x, estado: "aguardando", aviso: null }));
+          espera = setTimeout(() => void consultar(), tentativas < 12 ? 5_000 : 15_000);
+          return;
+        }
+        if (j?.sobDemanda) {
+          setR({
+            estado: "sob_demanda",
+            dados: null,
+            aviso: j.semResposta ? "A busca não respondeu agora. Tente de novo." : null,
+          });
           return;
         }
         if (!j?.ativo) {
-          setR({ estado: "inativo", dados: null });
+          setR({ estado: "inativo", dados: null, aviso: null });
           return;
         }
-        setR({ estado: "pronto", dados: limparResultado(j) });
+        setR({ estado: "pronto", dados: limparResultado(j), aviso: null });
       } catch {
-        if (vivo) setR({ estado: "inativo", dados: null });
+        if (vivo) setR({ estado: "inativo", dados: null, aviso: null });
       }
     };
-    void pedir();
+    void consultar();
     return () => {
       vivo = false;
       if (espera) clearTimeout(espera);
     };
-  }, [pedidoId]);
-  return r;
+  }, [pedidoId, rodada]);
+
+  const pedir = useCallback(async () => {
+    if (pedidoId == null || !chave) return;
+    setR({ estado: "aguardando", dados: null, aviso: null });
+    try {
+      const { data, error } = await supabase.rpc(
+        "pedir_multiloja" as never,
+        { p_pedido: pedidoId, p_chave: chave } as never,
+      );
+      const d = data as { ok?: boolean; motivo?: string } | null;
+      if (error || !d?.ok) {
+        setR({
+          estado: "sob_demanda",
+          dados: null,
+          aviso:
+            d?.motivo === "limite"
+              ? "Muitas buscas ao mesmo tempo agora. Tente em instantes."
+              : "Não deu para pedir a busca agora. Tente de novo.",
+        });
+        return;
+      }
+      /* Cutuca a extensão na hora (sem ela, o alarme de 1 min cobre). */
+      try {
+        window.postMessage(
+          { de: "cupons-afiliado-ml", tipo: "pedido-novo", id: pedidoId },
+          window.location.origin,
+        );
+      } catch {
+        /* sem extensão: o alarme cobre */
+      }
+      setRodada((x) => x + 1);
+    } catch {
+      setR({
+        estado: "sob_demanda",
+        dados: null,
+        aviso: "Não deu para pedir a busca agora. Tente de novo.",
+      });
+    }
+  }, [pedidoId, chave]);
+  return { ...r, pedir };
 }
 
 const semMovimento = () =>
@@ -127,7 +188,13 @@ const semMovimento = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 type Situacao =
-  "mesmo" | "conferindo" | "nao_localizado" | "nao_consultado" | "indisponivel" | "sem_preco";
+  | "mesmo"
+  | "sob_demanda"
+  | "conferindo"
+  | "nao_localizado"
+  | "nao_consultado"
+  | "indisponivel"
+  | "sem_preco";
 
 type Coluna = {
   jogador: Jogador;
@@ -141,7 +208,8 @@ type Coluna = {
 };
 
 const TEXTO_DA_SITUACAO: Record<Exclude<Situacao, "mesmo">, [string, string]> = {
-  conferindo: ["Conferindo", "aguarde alguns segundos"],
+  sob_demanda: ["Ainda não comparado", "toque em Ver preço"],
+  conferindo: ["Conferindo", "de 30 s a 2 min"],
   nao_localizado: ["Não localizado", "nesta análise"],
   nao_consultado: ["Não consultado", "nesta análise"],
   indisponivel: ["Conferência", "indisponível agora"],
@@ -236,18 +304,51 @@ function ConferirNaLoja({ titulo }: { titulo: string | null }) {
   );
 }
 
+/* Valor ainda não buscado: borrado, sem número de verdade por trás. */
+function Borrado({ largura = "w-16" }: { largura?: string }) {
+  return (
+    <span className="inline-flex items-center">
+      <span
+        aria-hidden="true"
+        className={
+          "inline-block h-3.5 select-none rounded-full bg-neutral-300/80 blur-[3px] dark:bg-white/20 " +
+          largura
+        }
+      />
+      <span className="sr-only">Disponível ao comparar</span>
+    </span>
+  );
+}
+
 function Acao({
   c,
   colado,
   gerarLink,
   verAlternativa,
+  pedir,
+  podePedir,
 }: {
   c: Coluna;
   colado: ColadoParaComparar;
   gerarLink?: ((url: string) => ReactNode) | undefined;
   verAlternativa: (j: Jogador) => void;
+  pedir: () => void;
+  podePedir: boolean;
 }) {
   const o = c.oferta;
+  if (c.situacao === "sob_demanda")
+    return podePedir ? (
+      <button
+        type="button"
+        onClick={pedir}
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#0071e3]/40 bg-[#0071e3]/5 px-3 py-2.5 text-[13px] font-semibold text-[#0058b0] transition-colors duration-200 ease-out hover:bg-[#0071e3]/10 dark:text-[#6cb4ff]"
+      >
+        <Search className="size-4 shrink-0" aria-hidden="true" />
+        Ver preço
+      </button>
+    ) : (
+      <span className="text-[11px] text-secondary-ink">Atualize a comparação para ver</span>
+    );
   if (o?.link) return <BotaoComprar link={o.link} origem={`comparacao_${c.jogador}`} />;
   if (o && o.urlLoja && gerarLink) return <div className="w-full">{gerarLink(o.urlLoja)}</div>;
   if (!o && c.temAlternativa)
@@ -477,6 +578,7 @@ export function ComparacaoMarketplaces({
   precosMl,
   cep,
   gerarLink,
+  chavePedido,
 }: {
   pedidoId: number | null;
   colado: ColadoParaComparar;
@@ -489,8 +591,11 @@ export function ComparacaoMarketplaces({
   cep?: string | null;
   /* Botão que gera o link de afiliado no clique (Mercado Livre sem link). */
   gerarLink?: (url: string) => ReactNode;
+  /* Chave do pedido: só com ela o cliente pede a busca na Amazon e na Shopee. */
+  chavePedido?: string | null;
 }) {
-  const { estado, dados } = useMultiloja(pedidoId);
+  const { estado, dados, aviso, pedir } = useMultiloja(pedidoId, chavePedido ?? null);
+  const podePedir = Boolean(chavePedido);
   const [destaque, setDestaque] = useState<Jogador | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -535,13 +640,15 @@ export function ComparacaoMarketplaces({
       ? "mesmo"
       : j === "mercadolivre"
         ? "sem_preco"
-        : estado === "aguardando"
-          ? "conferindo"
-          : dados?.incompleto
-            ? "indisponivel"
-            : consultado(j)
-              ? "nao_localizado"
-              : "nao_consultado";
+        : estado === "sob_demanda"
+          ? "sob_demanda"
+          : estado === "aguardando" || estado === "carregando"
+            ? "conferindo"
+            : dados?.incompleto
+              ? "indisponivel"
+              : consultado(j)
+                ? "nao_localizado"
+                : "nao_consultado";
     return {
       jogador: j,
       oferta,
@@ -577,26 +684,45 @@ export function ComparacaoMarketplaces({
       ancoras.set(`${l.marketplace}:${l.id}`, `alternativa-${l.marketplace}`);
   const busca = colado.titulo ? termoDeBuscaExterna(colado.titulo) : "";
 
-  /* Conteúdo de cada linha da tabela, por coluna. */
+  /* Conteúdo de cada linha da tabela, por coluna. Ainda não buscado (sob
+     demanda): valores borrados e "Ver preço". */
   const celula = (c: Coluna, rotulo: (typeof ROTULOS)[number]): ReactNode => {
     const o = c.oferta;
+    const borrado = c.situacao === "sob_demanda";
     switch (rotulo) {
       case "Correspondência":
         return <Correspondencia c={c} />;
       case "Produto":
-        return o ? (
+        return borrado ? (
+          <Borrado />
+        ) : o ? (
           <span className="tabular-nums">{brl(o.preco)}</span>
         ) : (
           <span className="text-secondary-ink">—</span>
         );
       case "Frete":
-        return o ? <span>{celulaDoFrete(o)}</span> : <span className="text-secondary-ink">—</span>;
+        return borrado ? (
+          <Borrado largura="w-12" />
+        ) : o ? (
+          <span>{celulaDoFrete(o)}</span>
+        ) : (
+          <span className="text-secondary-ink">—</span>
+        );
       case "Total":
-        return <Total c={c} colado={colado} />;
+        return borrado ? <Borrado largura="w-20" /> : <Total c={c} colado={colado} />;
       case "Vendedor":
-        return <Vendedor c={c} />;
+        return borrado ? <Borrado largura="w-24" /> : <Vendedor c={c} />;
       case "Ação":
-        return <Acao c={c} colado={colado} gerarLink={gerarLink} verAlternativa={verAlternativa} />;
+        return (
+          <Acao
+            c={c}
+            colado={colado}
+            gerarLink={gerarLink}
+            verAlternativa={verAlternativa}
+            pedir={() => void pedir()}
+            podePedir={podePedir}
+          />
+        );
     }
   };
 
@@ -629,8 +755,10 @@ export function ComparacaoMarketplaces({
       </div>
       <p className="mt-1 text-[11px] text-secondary-ink">
         {estado === "aguardando"
-          ? "Conferindo o mesmo produto na Amazon e na Shopee…"
-          : leitura || "A mesma análise em cada marketplace."}
+          ? "Conferindo o mesmo produto e a qualidade na Amazon e na Shopee: costuma levar de 30 segundos a 2 minutos."
+          : estado === "sob_demanda" || estado === "carregando"
+            ? "Comparei no Mercado Livre. A Amazon e a Shopee entram quando você pedir."
+            : leitura || "A mesma análise em cada marketplace."}
       </p>
 
       {/* MESMO PRODUTO */}
@@ -643,6 +771,33 @@ export function ComparacaoMarketplaces({
             análise
           </span>
         </p>
+        {estado === "sob_demanda" && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3">
+            <p className="min-w-0 flex-1 text-[13px] leading-snug">
+              <strong>Quer ver na Amazon e na Shopee?</strong> Eu busco o mesmo produto e confiro a
+              foto, as características e a qualidade.
+              {aviso && (
+                <span className="mt-0.5 block text-[12px] font-semibold text-amber-800 dark:text-amber-300">
+                  {aviso}
+                </span>
+              )}
+            </p>
+            {podePedir ? (
+              <button
+                type="button"
+                onClick={() => void pedir()}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#0071e3] px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:w-auto @xl:shrink-0"
+              >
+                <Search className="size-4" aria-hidden="true" />
+                Comparar também na Amazon e na Shopee
+              </button>
+            ) : (
+              <span className="text-[12px] text-secondary-ink">
+                Atualize a comparação para buscar.
+              </span>
+            )}
+          </div>
+        )}
         {(v || m) && (
           <div className="mt-2 space-y-1 text-xs leading-relaxed">
             {v && (
@@ -762,15 +917,15 @@ export function ComparacaoMarketplaces({
                   {c.oferta?.prime && <SeloPrime />}
                 </div>
               )}
-              <div className="flex items-start justify-between gap-3">
-                <span className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+                <span className="min-w-[7rem]">
                   <NomeDoMarketplace j={c.jogador} grande />
                 </span>
-                <span className="shrink-0 text-[13px]">
+                <span className="ml-auto shrink-0 text-[13px]">
                   <Correspondencia c={c} />
                 </span>
               </div>
-              {c.oferta && (
+              {(c.oferta || c.situacao === "sob_demanda") && (
                 <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
                   {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
                     <div
@@ -786,7 +941,9 @@ export function ComparacaoMarketplaces({
                         {r}
                       </dt>
                       <dd className="min-w-0 text-right">
-                        {r === "Total" ? (
+                        {c.situacao === "sob_demanda" ? (
+                          celula(c, r)
+                        ) : r === "Total" ? (
                           <Total c={c} colado={colado} direita />
                         ) : r === "Vendedor" ? (
                           <Vendedor c={c} direita />
@@ -799,7 +956,14 @@ export function ComparacaoMarketplaces({
                 </dl>
               )}
               <div className="mt-3">
-                <Acao c={c} colado={colado} gerarLink={gerarLink} verAlternativa={verAlternativa} />
+                <Acao
+                  c={c}
+                  colado={colado}
+                  gerarLink={gerarLink}
+                  verAlternativa={verAlternativa}
+                  pedir={() => void pedir()}
+                  podePedir={podePedir}
+                />
               </div>
             </li>
           ))}

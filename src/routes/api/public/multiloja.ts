@@ -11,14 +11,16 @@ import {
 import { limparResultado } from "@/lib/multiloja-resultado";
 import { origemPermitida } from "@/lib/public-ai-api";
 
-/* OUTROS MARKETPLACES (09/10): com a comparação do Mercado Livre pronta, o
-   site pede aqui o mesmo produto na Amazon e na Shopee. Resultado guardado
-   6 h por pedido (multiloja_resultados). Sem as credenciais nos Secrets,
-   lê o que a EXTENSÃO gravou (busca pela sessão logada, 09/10). Freio: no
-   máximo 40 comparações novas a cada 5 minutos no site todo (sem limite por
-   endereço: o resultado guardado é barato e a mesma rede de celular é
-   dividida por muita gente). Só pedidos do próprio site. */
-
+/* OUTROS MARKETPLACES (09/10): o mesmo produto na Amazon e na Shopee.
+   SOB DEMANDA (Weslei, 10/10: "para não gastar muitas requisições... Deixe
+   Amazon e Shopee disponíveis, mas com valores borrados. Caso o cliente
+   queira saber nessas outras páginas, ele precisa clicar num botão"): sem
+   o pedido do cliente (pedir_multiloja -> multiloja_solicitacoes), a rota
+   responde sobDemanda e o site mostra os valores borrados com o botão. Com
+   o pedido: resultado guardado 6 h por pedido (multiloja_resultados); sem
+   as credenciais nos Secrets, quem busca é a EXTENSÃO pela sessão logada,
+   e o site espera até 6 min. Freio das APIs: no máximo 40 comparações
+   novas a cada 5 minutos no site todo. Só pedidos do próprio site. */
 const entradaSchema = z.object({ pedido: z.number().int().positive() });
 const CACHE_MS = 6 * 3600_000;
 /* A extensão leva de ~1 min a alguns minutos: a conferência da Amazon/Shopee
@@ -32,6 +34,9 @@ type Resposta = {
   resumo?: Record<string, ResumoMarketplace>;
   aguardar?: boolean;
   adiado?: boolean;
+  /* O cliente ainda não pediu (ou o pedido venceu sem resposta). */
+  sobDemanda?: boolean;
+  semResposta?: boolean;
 };
 
 /* Chave do anúncio colado para os vereditos guardados (código MLB). */
@@ -71,26 +76,42 @@ export const Route = createFileRoute("/api/public/multiloja")({
             headers: { "Cache-Control": "no-store" },
           });
 
-        /* Sem as APIs (09/10): quem compara é a extensão, pela sessão logada,
-           e grava em multiloja_resultados (gravar_multiloja). Enquanto o
-           pedido de cliente é recente, o site espera; depois, desiste. */
-        if (!cfg.amazon && !cfg.shopee) {
-          const { data: ped } = await db
-            .from("pedidos_link")
-            .select("origem,criado_em")
-            .eq("id", entrada.pedido)
-            .maybeSingle();
-          const recente =
-            ped &&
-            (ped.origem ?? "") !== "teste" &&
-            Date.now() - Date.parse(ped.criado_em) < ESPERA_EXTENSAO_MS;
+        const { data: ped } = await db
+          .from("pedidos_link")
+          .select("origem")
+          .eq("id", entrada.pedido)
+          .maybeSingle();
+        if (!ped || (ped.origem ?? "") === "teste")
+          return Response.json({ ativo: false, lojas: [] } satisfies Resposta, {
+            headers: { "Cache-Control": "no-store" },
+          });
+        /* Só busca quando o cliente pediu (botão no site). */
+        const { data: sol } = await db
+          .from("multiloja_solicitacoes")
+          .select("solicitado_em,concluido_em")
+          .eq("pedido_id", entrada.pedido)
+          .maybeSingle();
+        const pedidoAberto =
+          sol &&
+          sol.concluido_em == null &&
+          Date.now() - Date.parse(sol.solicitado_em) < ESPERA_EXTENSAO_MS;
+        if (!pedidoAberto)
           return Response.json(
-            (recente
-              ? { ativo: true, lojas: [], aguardar: true }
-              : { ativo: false, lojas: [] }) satisfies Resposta,
+            {
+              ativo: true,
+              lojas: [],
+              sobDemanda: true,
+              ...(sol && sol.concluido_em == null ? { semResposta: true } : {}),
+            } satisfies Resposta,
             { headers: { "Cache-Control": "no-store" } },
           );
-        }
+
+        /* Sem as APIs (09/10): quem compara é a extensão, pela sessão logada,
+           e grava em multiloja_resultados (gravar_multiloja). */
+        if (!cfg.amazon && !cfg.shopee)
+          return Response.json({ ativo: true, lojas: [], aguardar: true } satisfies Resposta, {
+            headers: { "Cache-Control": "no-store" },
+          });
 
         const { count } = await db
           .from("multiloja_resultados")
@@ -135,6 +156,11 @@ export const Route = createFileRoute("/api/public/multiloja")({
           resultado: resposta,
           criado_em: new Date().toISOString(),
         });
+        await db
+          .from("multiloja_solicitacoes")
+          .update({ concluido_em: new Date().toISOString() })
+          .eq("pedido_id", entrada.pedido)
+          .is("concluido_em", null);
         return Response.json(limparResultado(resposta), {
           headers: { "Cache-Control": "no-store" },
         });

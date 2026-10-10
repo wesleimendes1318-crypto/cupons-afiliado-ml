@@ -595,6 +595,14 @@ function limparLinkML(bruto: string): string {
 
    Também resolve a sujeira antiga: mesma URL emendada duas vezes sem espaço,
    texto em volta, quebra de linha no meio. */
+/* Marketplace de um link que não é do Mercado Livre (só para avisar). */
+function marketplaceDoTexto(texto: string): "Amazon" | "Shopee" | null {
+  const t = String(texto || "").toLowerCase();
+  if (/https?:\/\/([a-z0-9-]+\.)*(amazon\.com(\.br)?|amzn\.to|a\.co)\//.test(t)) return "Amazon";
+  if (/https?:\/\/([a-z0-9-]+\.)*(shopee\.com\.br|shope\.ee)\//.test(t)) return "Shopee";
+  return null;
+}
+
 function melhorLinkML(texto: string): string | null {
   const limpo = String(texto || "")
     .replace(/\s+/g, " ")
@@ -864,6 +872,8 @@ export default function BuscaPorLink({
   /* Pedido que a tela está acompanhando. A espera pela segunda volta dura
      minutos: uma consulta velha nunca pode sobrescrever um link novo colado. */
   const atual = useRef<number | null>(null);
+  /* Chave do pedido em tela: o botão da Amazon/Shopee pede a busca com ela. */
+  const chaveAtual = useRef<string | null>(null);
   /* Link (limpo) do pedido acompanhado, para o histórico. */
   const urlDoPedido = useRef<string | null>(null);
   const perfilRegistrado = useRef<string | null>(null);
@@ -899,7 +909,15 @@ export default function BuscaPorLink({
       urlDoPedido.current = limpo;
       if (!limpo) {
         setFase("parado");
-        setErro("Esse link não é de um anúncio válido. Cole o endereço do produto.");
+        /* Identifica o marketplace do link (10/10): a comparação começa pelo
+           Mercado Livre; a Amazon e a Shopee entram no resultado, quando o
+           cliente pede. */
+        const outro = marketplaceDoTexto(alvo);
+        setErro(
+          outro
+            ? `Esse link é da ${outro}. Por enquanto a comparação começa por um link do Mercado Livre: cole o link do produto lá e, no resultado, toque em "Comparar também na Amazon e na Shopee".`
+            : "Esse link não é de um anúncio válido. Cole o endereço do produto.",
+        );
         return;
       }
 
@@ -953,6 +971,7 @@ export default function BuscaPorLink({
       }
 
       atual.current = id;
+      chaveAtual.current = chave;
       setFase("na-fila");
       /* Cutuca a extensao na hora. Sem isso o pedido espera o alarme do Chrome,
          que nao roda em menos de 1 minuto: era esse o tempo morto da espera. */
@@ -1262,6 +1281,7 @@ export default function BuscaPorLink({
           urlColada={melhorLinkML(url) ?? null}
           completando={completando}
           pedidoId={atual.current}
+          chavePedido={chaveAtual.current}
           cepTela={regiao && !regiao.padrao ? regiao.cep : null}
         />
       )}
@@ -1821,9 +1841,11 @@ function Resultado({
   urlColada,
   completando = false,
   pedidoId = null,
+  chavePedido = null,
   cepTela = null,
 }: {
   pedidoId?: number | null;
+  chavePedido?: string | null;
   pedido: Pedido;
   copiar: (t: string, m: string) => void;
   copiado: string | null;
@@ -2463,6 +2485,7 @@ function Resultado({
           precosMl={precosMl}
           cep={a?.cepDestino ?? null}
           gerarLink={gerarLinkMl}
+          chavePedido={chavePedido}
         />
       </div>
 

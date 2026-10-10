@@ -7,7 +7,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   do Mercado Livre; Amazon e Shopee têm a mesma análise em seções próprias
   e entram na "Comparação final" dos 3 marketplaces, onde só disputam o
   mais barato com custo confirmado (ver "Mesma análise em cada marketplace
-  e comparação final dos 3 (09/10, noite)").
+  e comparação final dos 3 (09/10, noite)"). SOB DEMANDA (10/10): a busca
+  na Amazon e na Shopee só roda quando o cliente pede (ver "Amazon e
+  Shopee sob demanda (10/10)").
 - Todo link colado precisa ser comparado com o MESMO produto em outras lojas.
 - Só mostrar outra loja quando a Gemini confirmou pela foto que é o mesmo produto.
   Produto parecido apresentado como igual é o pior erro possível.
@@ -1286,3 +1288,41 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (respiroDaCota); a conferência da Amazon/Shopee também espera a segunda
   volta do MESMO pedido (voltaMlPendente), até 3 min. O site espera a
   extensão até 6 min (ESPERA_EXTENSAO_MS) e pergunta por ~7 min.
+
+## Amazon e Shopee sob demanda (10/10)
+- Weslei, 10/10: "para não gastar muitas requisições, use essa hierarquia:
+  o cliente cola o link, meu site identifica o player e faz a busca só
+  nele. Deixe Amazon e Shopee disponíveis, mas com valores borrados. Caso o
+  cliente queira saber nessas outras páginas, ele precisa clicar num botão.
+  Então, aí sim deverá seguir com a busca do mesmo produto e qualidade nos
+  demais players."
+- O link colado é do Mercado Livre: a comparação roda só nele. A extensão
+  (1.163.0) NÃO busca mais a Amazon e a Shopee sozinha no atendimento.
+- Tela (ComparacaoMarketplaces): colunas da Amazon e da Shopee com os
+  valores BORRADOS (sem número por trás) e "Ainda não comparado"; aviso
+  "Quer ver na Amazon e na Shopee?" com o botão "Comparar também na Amazon
+  e na Shopee" e "Ver preço" em cada coluna. O clique chama
+  pedir_multiloja(p_pedido, p_chave) (só com a chave do pedido em tela; no
+  site todo até 30 pedidos novos a cada 10 min; resultado de menos de 6 h
+  volta como pronto) e cutuca a extensão ("pedido-novo"). Depois:
+  "Conferindo... de 30 segundos a 2 minutos" (medido em 10/10: 35 s a
+  2 min 22 s) e o resultado de sempre. Sem a chave (pedido aberto por outro
+  caminho): "Atualize a comparação para buscar".
+- Banco (20261010020000_multiloja_sob_demanda.sql): tabela
+  multiloja_solicitacoes (só servidor); multiloja_pendentes(p_token) entrega
+  à extensão os pedidos abertos (até 3, marca iniciado; travado há 8 min
+  volta) com o anúncio colado montado da análise (título, variação, foto,
+  preço, categorias, condição, ficha); multiloja_vale só libera pedido que
+  o cliente pediu; gravar_multiloja fecha a solicitação.
+- Rota /api/public/multiloja: sem pedido do cliente responde sobDemanda
+  (semResposta quando o pedido venceu sem resultado: "Tente de novo"); com
+  o pedido, aguardar até 6 min. As APIs oficiais (com credenciais) também
+  só rodam com o pedido.
+- Extensão: atenderMultiloja (alarme de 1 min e "atenderAgora") pega os
+  pedidos e chama compararOutrosMarketplaces, uma por vez; a conferência
+  continua esperando as do Mercado Livre.
+- Link colado da Amazon ou da Shopee: o site identifica o marketplace
+  (marketplaceDoTexto) e explica que a comparação começa por um link do
+  Mercado Livre, com o caminho para comparar nos outros. Começar pela
+  Amazon/Shopee (busca só nela e o Mercado Livre sob demanda) ainda não
+  existe.
