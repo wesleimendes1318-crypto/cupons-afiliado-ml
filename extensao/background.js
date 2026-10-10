@@ -13,7 +13,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
-         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
+         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
@@ -1473,7 +1473,7 @@ function extrairAnuncio(t, finalUrl, status) {
            /* Cheio, Pix e parcelado do proprio anuncio (28/09). */
            precos: precosDoItem(t, itemAqui),
            relacionados, relacionadosDiag: relacionados.diag || null,
-           titulo: titulo, preco: preco, canonica: canonica, ...ident,
+           titulo: titulo, preco: preco, canonica: canonica, item: itemAqui, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
            /* Opcao marcada no anuncio (modelo do celular, tamanho...). */
            variacao: variacaoEscolhida(t) };
@@ -3106,7 +3106,7 @@ async function achadosPeloGoogle(lista, precoRef, itemAtual, original, soCandida
     if (!item || item === itemAtual) return;
     if (precoRef != null && (b.preco < precoRef * 0.4 || b.preco > precoRef * 1.6)) return;
     if (b.nomes && b.nomes.length) cacheMem.set(item, { nomes: b.nomes, ts: Date.now() });
-    candidatos.push({ item, url: b.canonica || b.finalUrl || alvos[k].url, preco: b.preco,
+    candidatos.push({ item, url: enderecoDaOfertaLida(b.canonica, b.finalUrl, alvos[k].url, b.item || item), preco: b.preco,
                       titulo: b.titulo || alvos[k].titulo, imagem: b.imagem || null });
   });
   diag.lidos = candidatos.length;
@@ -4102,8 +4102,15 @@ async function atenderPedidos() {
              a pessoa colou. A canonica ja era extraida para isso e nunca era
              usada: link curto colado virava pedido de link de afiliado em cima
              de um meli.la, que nao e endereco de produto. Ordem: canonica, url
-             final depois dos redirecionamentos, e por ultimo o que foi colado. */
-          const alvoDoLink = a.canonica || a.finalUrl || url;
+             final depois dos redirecionamentos, e por ultimo o que foi colado.
+
+             10/10 (pedido 1215, R$ 8 na tela e R$ 13 no link): a canonica de
+             pagina de catalogo nao tem o anuncio e o link abria a oferta
+             destacada do catalogo (outra loja). Com o anuncio lido, o link
+             sai do endereco DESSA oferta (enderecoDaOfertaLida). */
+          const alvoDoLink = a.ok
+            ? enderecoDaOfertaLida(a.canonica, a.finalUrl, url, a.item)
+            : enderecoDaOfertaLida(null, null, url, null);
 
           /* A geracao do link nao pode derrubar a analise inteira.
 
@@ -4114,6 +4121,8 @@ async function atenderPedidos() {
              jeito, e a falha do link vira um aviso proprio. */
           let r = { link: null, codigo: null };
           let linkFalhou = null;
+          /* Endereco que gerou o link (o site e o banco conferem a oferta). */
+          let linkDe = null;
           try {
             /* Sem ler o anuncio nao se gera link: o "alvo" seria o proprio
                link colado, que pode ser de OUTRO afiliado (visto em 24/09 com
@@ -4123,7 +4132,8 @@ async function atenderPedidos() {
                quando ele e um endereco de produto (nao um meli.la, que pode ser
                de outro afiliado); limparUrl tira rastreio de terceiros. */
             if (!a.ok && !/mercadolivre\.com\.br\/.*MLB/i.test(url)) throw new Error('nao gerei link: o anuncio nao foi lido');
-            r = await gerarNaAba(tabId, a.ok ? alvoDoLink : url, TAG_PADRAO);
+            r = await gerarNaAba(tabId, alvoDoLink, TAG_PADRAO);
+            linkDe = alvoDoLink;
           } catch (e) {
             linkFalhou = e.message || String(e);
             console.warn('[link]', linkFalhou);
@@ -4133,16 +4143,16 @@ async function atenderPedidos() {
                 && (a.ok || /mercadolivre\.com\.br\/.*MLB/i.test(url))) {
               try {
                 await sleep(1500);
-                const alvo2 = enderecoDoAnuncio(alvoDoLink, itemDoUrl(url) || itemDoUrl(a.finalUrl || '') || null);
+                const alvo2 = enderecoDoAnuncio(alvoDoLink, itemDoUrl(alvoDoLink) || itemDoUrl(a.finalUrl || '') || itemDoUrl(url) || null);
                 const r2 = await gerarNaAbaSemCadastro(tabId, alvo2, TAG_PADRAO);
-                if (r2 && r2.link) { r = r2; linkFalhou = null; }
+                if (r2 && r2.link) { r = r2; linkFalhou = null; linkDe = alvo2; }
               } catch (e2) { linkFalhou += ' | 2a tentativa: ' + (e2.message || e2); }
               /* 3a tentativa (28/09, "crie sempre alternativas"): numa aba NOVA
                  do gerador, aberta só para isso e fechada no fim. */
               if (!r.link) {
                 try {
-                  const r3 = await gerarEmAbaNova(a.ok ? alvoDoLink : url);
-                  if (r3 && r3.link) { r = r3; linkFalhou = null; }
+                  const r3 = await gerarEmAbaNova(alvoDoLink);
+                  if (r3 && r3.link) { r = r3; linkFalhou = null; linkDe = alvoDoLink; }
                 } catch (e3) { linkFalhou += ' | 3a tentativa (aba nova): ' + (e3.message || e3); }
               }
             }
@@ -4688,6 +4698,7 @@ async function atenderPedidos() {
             /* Preenchido quando o produto foi lido mas o SEU link nao saiu.
                O site usa isso para nao mostrar botao de compra sem etiqueta. */
             linkFalhou: linkFalhou,
+            linkDe: r && r.link ? linkDe : null,
             /* Fica gravado quando existiu oferta melhor mas o link de afiliado
                nao saiu. Sem isto, "nao apareceu alternativa" some no meio de
                "nao existe alternativa", e sao problemas diferentes. */

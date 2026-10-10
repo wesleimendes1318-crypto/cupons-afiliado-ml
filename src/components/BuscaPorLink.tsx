@@ -2893,7 +2893,18 @@ function MelhorOpcao({
 
 /* "Ver na loja": o link de afiliado da loja só é criado quando o cliente pede,
    para ele conferir o preço lá com os próprios olhos. Nada é gerado sem clique. */
-export function VerNaLoja({ url, grande = false }: { url: string; grande?: boolean }) {
+export function VerNaLoja({
+  url,
+  grande = false,
+  cartao = false,
+}: {
+  url: string;
+  grande?: boolean;
+  /** Mesmo tamanho do botão dos cartões da vitrine. */
+  cartao?: boolean;
+}) {
+  const classeCartao =
+    "inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-1.5 text-xs font-bold text-white transition hover:brightness-95 active:scale-[0.98] disabled:opacity-60";
   const [estado, setEstado] = useState<"parado" | "gerando" | "falhou">("parado");
   const [link, setLink] = useState<string | null>(null);
 
@@ -2950,12 +2961,14 @@ export function VerNaLoja({ url, grande = false }: { url: string; grande?: boole
         target="_blank"
         rel="noopener noreferrer"
         className={
-          grande
-            ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
-            : "inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
+          cartao
+            ? classeCartao
+            : grande
+              ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+              : "inline-block rounded bg-ml-blue px-2 py-1 text-[11px] font-bold text-white"
         }
       >
-        {grande ? "Comprar com segurança ↗" : "Abrir ↗"}
+        {grande || cartao ? "Comprar com segurança ↗" : "Abrir ↗"}
       </a>
     );
   }
@@ -2965,18 +2978,20 @@ export function VerNaLoja({ url, grande = false }: { url: string; grande?: boole
       onClick={() => void gerar()}
       disabled={estado === "gerando"}
       className={
-        grande
-          ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
-          : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
+        cartao
+          ? classeCartao
+          : grande
+            ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
+            : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue disabled:opacity-60"
       }
     >
       {estado === "gerando"
-        ? grande
+        ? grande || cartao
           ? "Gerando seu link…"
           : "Gerando…"
         : estado === "falhou"
           ? "Tentar de novo"
-          : grande
+          : grande || cartao
             ? "Comprar com segurança"
             : "Abrir"}
     </button>

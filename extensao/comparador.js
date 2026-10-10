@@ -116,6 +116,27 @@ export function itemDoUrl(u) {
   return b ? 'MLB' + b[1] : null;
 }
 
+/* PREÇO MOSTRADO = PREÇO QUE O LINK ABRE (10/10, pedido 1215, pó facial
+   banana: R$ 8 na tela, R$ 13 ao abrir o link). A canônica de uma página de
+   catálogo (/p/MLB...) não tem o anúncio: o link gerado por ela abre a
+   oferta destacada do catálogo, que pode ser de outra loja e outro preço
+   (e o gerador devolve o mesmo link para todas as ofertas da ficha, medido
+   em 24/09). Com o anúncio cujo preço foi lido, o link sai do endereço do
+   PRÓPRIO anúncio (produto.mercadolivre.com.br/MLB-..., a forma que a
+   tabela e o "gerar no clique" usam desde 25/09 e que abre essa oferta).
+   Anúncio da página lida primeiro (url final, depois o da compra); o colado
+   só vale quando não há url final. */
+export function enderecoDaOfertaLida(canonica, finalUrl, colado, itemLido) {
+  const ok = s => (typeof s === 'string' && /^https?:\/\//i.test(s) ? s : null);
+  const can = ok(canonica), fim = ok(finalUrl), col = ok(colado);
+  const lido = typeof itemLido === 'string' && /^MLB\d{6,}$/i.test(itemLido) ? itemLido.toUpperCase() : null;
+  const item = (fim && itemDoUrl(fim)) || lido || (!fim && col ? itemDoUrl(col) : null);
+  const base = can || fim || col;
+  if (!item) return base;
+  if (base && /^https:\/\/produto\.mercadolivre\.com\.br\//i.test(base) && itemDoUrl(base) === item) return base;
+  return 'https://produto.mercadolivre.com.br/' + item.replace(/^MLB/, 'MLB-');
+}
+
 function decodeURIComponentSeguro(s) {
   try { return decodeURIComponent(s); } catch (e) { return s; }
 }

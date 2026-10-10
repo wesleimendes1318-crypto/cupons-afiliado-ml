@@ -1511,3 +1511,32 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   overflow-clip (hidden quebrava o sticky).
 - Mantido da regra de sempre: a tabela continua mostrando TODAS as lojas (o
   "Ver as outras N lojas" do desenho não foi aplicado).
+
+## Preço mostrado = preço que o link abre (10/10)
+- Weslei, 10/10: "o preço indicado foi de R$8. Ao acessar o link, subiu
+  para R$13. Isso não pode ocorrer jamais, em nenhum player" (pedido 1215,
+  busca por foto, pó facial banana). Causa: o link do anúncio colado saía da
+  CANÔNICA da página; numa página de catálogo ela é /p/MLB... SEM o
+  anúncio, e o link da ficha abre a oferta destacada (outra loja, R$ 13 com
+  frete grátis). O gerador devolve o mesmo link para todas as ofertas da
+  ficha (24/09). Em 30 dias, 519 pedidos com anúncio definido saíram assim.
+- Extensão 1.165.6: enderecoDaOfertaLida (comparador.js) gera o link do
+  anúncio colado e dos achados pelo Google pelo endereço do PRÓPRIO anúncio
+  lido (produto.mercadolivre.com.br/MLB-..., o mesmo da tabela e do "gerar
+  no clique"); analise.linkDe guarda de onde o link saiu. Nunca a ficha.
+- Banco (20261010170000_link_da_oferta.sql): trava pedido_link_da_oferta
+  (link_da_ficha pelo registro geracoes) descarta o link da ficha num pedido
+  que aponta um anúncio (analise.linkDaFichaDescartado) e a tela gera o link
+  do anúncio no clique (VerNaLoja; vitrine também, cartao). Limpeza aplicada:
+  541 pedidos, 343 cartões da vitrine, 47 ofertas de campanha (saíram; a
+  curadoria as traz de volta) e 1 acompanhamento. Reparo: links_a_refazer +
+  pg_cron links-refazer (10 min) põem 3 pedidos "(so link)" internos por vez
+  com o endereço do anúncio, só com a extensão 1.165.5+ e sem cliente
+  esperando; link_refeito devolve o link novo aos pedidos, à vitrine e ao
+  acompanhamento.
+- Bot: anúncio enviado sem link entra só como referência de preço
+  (enviadoSemLink, decisaoDaTela(opcoes, enviado)); sendo o melhor, a compra
+  é pelo site. Nunca "R$ 0,00 a menos".
+- Busca guiada/por foto: oferta NOVA da lista oficial e "Preço de um
+  anúncio do catálogo agora / às HH:MM: pode mudar" (a resposta fica até
+  6 h guardada; lidoEm).

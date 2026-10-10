@@ -103,6 +103,7 @@ export const Route = createFileRoute("/api/public/buscar")({
           buscas: achado.intencao.buscas,
           resultados: achado.resultados,
           enfileirados,
+          lidoEm: new Date().toISOString(),
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)

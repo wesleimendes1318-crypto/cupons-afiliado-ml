@@ -15,7 +15,21 @@ export type Resposta = {
   buscas: string[];
   resultados: Resultado[];
   enfileirados: number;
+  lidoEm?: string;
 };
+
+/** "agora" ou "às 14:05" (horário de Brasília): a busca fica guardada até
+    6 h e o preço do cartão é o daquele momento. */
+export function quandoFoiLido(lidoEm: string | undefined, agora = Date.now()): string {
+  const t = lidoEm ? Date.parse(lidoEm) : NaN;
+  if (!Number.isFinite(t) || agora - t < 10 * 60_000) return "agora";
+  const hora = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(t);
+  return agora - t < 20 * 3_600_000 ? `às ${hora}` : "há mais de um dia";
+}
 
 export type ContextoBusca = "home" | "natal" | "criancas";
 

@@ -1,4 +1,10 @@
-import { decisaoDaTela, opcoesDaAnalise, totalDaOpcao, type Opcao } from "@/lib/ajudar-escolher";
+import {
+  decisaoDaTela,
+  enviadoSemLink,
+  opcoesDaAnalise,
+  totalDaOpcao,
+  type Opcao,
+} from "@/lib/ajudar-escolher";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { desvantagensDoParecido, qualidadeDoParecido, textoDaQualidade } from "@/lib/qualidade";
 import {
@@ -127,37 +133,53 @@ export function mensagemDaComparacao(
   urlColado: string,
 ) {
   const opcoes = opcoesDaAnalise(analise, link);
-  const { colado, melhorMesmo, alternativa } = decisaoDaTela(opcoes);
+  /* Anúncio enviado sem link de afiliado (10/10: link da ficha descartado,
+     ou geração que falhou): entra na conta do preço e, sendo o melhor, a
+     compra é pelo site, que gera o link do anúncio no clique. */
+  const enviado = enviadoSemLink(analise, opcoes);
+  const { colado, melhorMesmo, alternativa } = decisaoDaTela(opcoes, enviado);
+  const ref = colado ?? enviado;
   const titulo =
     typeof analise["titulo"] === "string" ? analise["titulo"] : "Produto que você enviou";
   const linhas: string[] = [`✨ <b>${html(titulo)}</b>`, ""];
   if (melhorMesmo) {
     const tMelhor = totalDaOpcao(melhorMesmo) ?? melhorMesmo.preco;
-    const tColado = colado ? (totalDaOpcao(colado) ?? colado.preco) : null;
-    const menos = colado && melhorMesmo !== colado && tColado != null ? tColado - tMelhor : 0;
+    const tColado = ref ? (totalDaOpcao(ref) ?? ref.preco) : null;
+    const menos = ref && melhorMesmo !== colado && tColado != null ? tColado - tMelhor : 0;
     const comFrete = melhorMesmo.freteGratis === false && totalDaOpcao(melhorMesmo) != null;
     linhas.push(
       melhorMesmo.tipo === "colado"
         ? "🏆 <b>Melhor opção: o anúncio que você enviou já é o melhor preço do mesmo produto</b>"
-        : `🏆 <b>Melhor opção: o mesmo produto por ${brl(menos)} a menos${comFrete ? ", já com o frete" : " no produto"}</b>`,
+        : menos > 0
+          ? `🏆 <b>Melhor opção: o mesmo produto por ${brl(menos)} a menos${comFrete ? ", já com o frete" : " no produto"}</b>`
+          : "🏆 <b>Melhor opção do mesmo produto</b>",
       ...linhasDaOpcao(melhorMesmo),
       "",
       "🛒 <b>Compre com segurança:</b>",
       `👉 ${html(melhorMesmo.link)}`,
     );
+  } else if (enviado) {
+    linhas.push(
+      "🏆 <b>Melhor opção: o anúncio que você enviou já é o melhor preço do mesmo produto</b>",
+      ...linhasDaOpcao(enviado),
+      "",
+      "🛒 <b>Compre com segurança pelo site</b> (o botão abre este mesmo anúncio):",
+      `👉 ${SITE}/?link=${encodeURIComponent(urlColado)}`,
+    );
   }
-  if (alternativa && melhorMesmo) {
+  const baseAlt = melhorMesmo ?? enviado;
+  if (alternativa && baseAlt) {
     /* Economia contra o anúncio enviado, no produto (Weslei, 03/10). */
-    const tC = colado ? totalDaOpcao(colado) : null;
+    const tC = ref ? totalDaOpcao(ref) : null;
     const tA = totalDaOpcao(alternativa);
     const comFrete =
       tC != null &&
       tA != null &&
-      ((colado?.freteGratis === false && (colado?.custoFrete ?? 0) > 0) ||
+      ((ref?.freteGratis === false && (ref?.custoFrete ?? 0) > 0) ||
         (alternativa.freteGratis === false && (alternativa.custoFrete ?? 0) > 0));
     const menosAlt = comFrete
       ? (tC as number) - (tA as number)
-      : (colado?.preco ?? melhorMesmo.preco) - alternativa.preco;
+      : (ref?.preco ?? baseAlt.preco) - alternativa.preco;
     linhas.push(
       "",
       "🔥 <b>Melhor alternativa (não é idêntico ao que você enviou)</b>",
@@ -170,12 +192,12 @@ export function mensagemDaComparacao(
       /* Premissa (05/10): a alternativa só existe com qualidade equivalente ou melhor. */
       `✅ ${html(
         textoDaQualidade(
-          qualidadeDoParecido(alternativa, { titulo: colado?.titulo, detalhes: colado?.detalhes }),
+          qualidadeDoParecido(alternativa, { titulo: ref?.titulo, detalhes: ref?.detalhes }),
         ),
       ).replace("à do seu", "à do que você enviou")}`,
       ...desvantagensDoParecido(alternativa, {
-        titulo: colado?.titulo,
-        detalhes: colado?.detalhes,
+        titulo: ref?.titulo,
+        detalhes: ref?.detalhes,
       })
         .slice(0, 3)
         .map((d, i) => `${i ? "   " : "❌ Desvantagens: "}${html(d)}`),

@@ -29,6 +29,8 @@ export type RespostaBusca = {
   buscas: string[];
   resultados: ResultadoBusca[];
   enfileirados: number;
+  /** Quando os preços foram lidos (a resposta fica guardada até 6 h). */
+  lidoEm?: string;
 };
 
 type Interpretacao = {
@@ -153,10 +155,12 @@ export async function buscarNoCatalogo(
       vistos.add(id);
       try {
         chamadas += 1;
-        const o = await mlGet<{ results?: Array<{ item_id?: string; price?: number }> }>(
-          `/products/${id}/items?limit=1`,
-        );
-        const oferta = o.results?.[0];
+        /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
+           cartão tem de ser o do anúncio que o botão abre. */
+        const o = await mlGet<{
+          results?: Array<{ item_id?: string; price?: number; condition?: string }>;
+        }>(`/products/${id}/items?limit=5`);
+        const oferta = o.results?.find((x) => x.condition === "new");
         const item = oferta?.item_id;
         if (!item || !/^MLB\d+$/.test(item)) continue;
         const preco = num(oferta?.price);

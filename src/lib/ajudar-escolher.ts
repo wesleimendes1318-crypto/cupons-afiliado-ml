@@ -70,6 +70,45 @@ export type Ajuda = {
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+function opcaoDoColado(
+  a: Bruto,
+  titulo: string,
+  preco: number,
+  link: string,
+  detalhes: Detalhes | null,
+): Opcao {
+  return {
+    n: 0,
+    tipo: "colado",
+    titulo,
+    loja: txt(a["vendedor"]),
+    preco,
+    freteGratis: (a["freteGratis"] as boolean | null) ?? null,
+    custoFrete: num(a["custoFrete"]),
+    lojaOficial: a["lojaOficial"] === true,
+    avaliacoes: avaliacoesValidas(a["avaliacoes"]),
+    link,
+    muda: null,
+    vantagem: null,
+    semelhanca: 100,
+    mesmaFoto: true,
+    detalhes,
+    imagem: txt(a["imagem"]),
+    precos: (a["precos"] as Bruto) ?? null,
+  };
+}
+
+/** O anúncio enviado que ficou SEM link de afiliado (o link da ficha foi
+ *  descartado, 10/10, ou a geração falhou): só para comparar preço, nunca
+ *  vira botão (link vazio). O link de compra sai no clique, no site. */
+export function enviadoSemLink(a: Bruto, opcoes: Opcao[]): Opcao | null {
+  if (opcoes.some((o) => o.tipo === "colado")) return null;
+  const preco = num(a["preco"]);
+  if (preco == null) return null;
+  const titulo = txt(a["titulo"]) ?? "Produto do link colado";
+  return opcaoDoColado(a, titulo, preco, "", (a["detalhes"] as Detalhes) ?? null);
+}
+
 /** Opções com link de afiliado próprio: o anúncio colado, as lojas do mesmo
  *  produto e os parecidos mais próximos. */
 export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
@@ -78,25 +117,7 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
   const detalhesColado = (a["detalhes"] as Detalhes) ?? null;
   const preco = num(a["preco"]);
   if (preco != null && ehLinkDeAfiliado(linkColado) && a["linkFalhou"] !== true) {
-    out.push({
-      n: 0,
-      tipo: "colado",
-      titulo,
-      loja: txt(a["vendedor"]),
-      preco,
-      freteGratis: (a["freteGratis"] as boolean | null) ?? null,
-      custoFrete: num(a["custoFrete"]),
-      lojaOficial: a["lojaOficial"] === true,
-      avaliacoes: avaliacoesValidas(a["avaliacoes"]),
-      link: linkColado,
-      muda: null,
-      vantagem: null,
-      semelhanca: 100,
-      mesmaFoto: true,
-      detalhes: detalhesColado,
-      imagem: txt(a["imagem"]),
-      precos: (a["precos"] as Bruto) ?? null,
-    });
+    out.push(opcaoDoColado(a, titulo, preco, linkColado, detalhesColado));
   }
   const vistos = new Set(out.map((o) => o.link));
   const mesmo = [
@@ -193,10 +214,13 @@ export function totalDaOpcao(o: Opcao): number | null {
     : null;
 }
 
-export function decisaoDaTela(opcoes: Opcao[]) {
+export function decisaoDaTela(opcoes: Opcao[], enviado: Opcao | null = null) {
   const colado = opcoes.find((o) => o.tipo === "colado") ?? null;
+  /* Anúncio enviado sem link (enviadoSemLink): entra só como referência de
+     preço; vencendo, melhorMesmo fica null e a compra é pelo site. */
+  const ref = colado ?? enviado;
   /* Colado com frete pago e valor desconhecido: compara pelo preço. */
-  const totalColado = colado ? (totalDaOpcao(colado) ?? colado.preco) : null;
+  const totalColado = ref ? (totalDaOpcao(ref) ?? ref.preco) : null;
   /* Mesmo produto mais barato que o colado (>= R$ 0,50), sem frete pago; em
      empate de preço, a loja oficial. Nenhum: o próprio colado. */
   const mesmo = opcoes
@@ -213,17 +237,20 @@ export function decisaoDaTela(opcoes: Opcao[]) {
   const melhorMesmo =
     mesmo[0] ??
     colado ??
-    opcoes.filter((o) => o.tipo !== "parecido").sort((x, y) => x.preco - y.preco)[0] ??
+    (enviado
+      ? null
+      : opcoes.filter((o) => o.tipo !== "parecido").sort((x, y) => x.preco - y.preco)[0]) ??
     null;
-  const tituloColado = colado?.titulo ?? null;
+  const tituloColado = ref?.titulo ?? null;
+  const referencia = melhorMesmo ?? enviado;
   const base = {
-    preco: melhorMesmo ? (totalDaOpcao(melhorMesmo) ?? melhorMesmo.preco) : null,
+    preco: referencia ? (totalDaOpcao(referencia) ?? referencia.preco) : null,
     titulo: tituloColado,
   };
   const nota = (o: Opcao) =>
     notaDeAlternativa(o, tituloColado) - (podeSerAlternativa(o, base).cb ? 5 : 0);
   const alternativa =
-    melhorMesmo == null
+    referencia == null
       ? null
       : (opcoes
           .filter(
@@ -234,7 +261,7 @@ export function decisaoDaTela(opcoes: Opcao[]) {
               podeSerAlternativa(o, base).ok &&
               /* Premissa (05/10): qualidade equivalente ou superior. */
               qualidadeAceita(
-                qualidadeDoParecido(o, { titulo: tituloColado, detalhes: colado?.detalhes }),
+                qualidadeDoParecido(o, { titulo: tituloColado, detalhes: ref?.detalhes }),
               ),
           )
           .sort((x, y) => nota(y) - nota(x) || x.preco - y.preco)[0] ?? null);

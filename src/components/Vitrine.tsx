@@ -23,6 +23,8 @@ import {
   type ClusterInteresse,
 } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
+import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
+import { VerNaLoja } from "@/components/BuscaPorLink";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
 import { LinhaAvaliacoes } from "@/components/Avaliacoes";
@@ -453,7 +455,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
             urlProduto={i.url_produto}
             className="mb-0.5"
           />
-          {ehLinkDeAfiliado(destino) && (
+          {ehLinkDeAfiliado(destino) ? (
             <a
               href={destino}
               target="_blank"
@@ -464,6 +466,16 @@ function Cartao({ i }: { i: ItemVitrine }) {
               <ShieldCheck className="size-3.5" aria-hidden="true" />
               Comprar com segurança
             </a>
+          ) : (
+            /* Sem link guardado (10/10: o da ficha do catálogo abria outra
+               loja e foi descartado): o link do PRÓPRIO anúncio é gerado no
+               clique. Só com o anúncio no endereço (a ficha pura abre a
+               oferta destacada, que pode ter outro preço). */
+            !temEconomia &&
+            i.url_produto &&
+            /^MLB\d/.test(itemDoEndereco(i.url_produto) ?? "") && (
+              <VerNaLoja url={i.url_produto} cartao />
+            )
           )}
           {(i.url_produto || destino) && (
             <button

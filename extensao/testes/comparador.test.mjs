@@ -596,3 +596,31 @@ test('detalhe das avaliacoes: opiniao com texto vazio nao engole o codigo da pag
   assert.equal(d.comentarios[0].nota, 3);
   assert.ok(d.comentarios.every(c => !/see_more|":"/.test(c.texto)));
 });
+
+import { enderecoDaOfertaLida } from '../comparador.js';
+
+test('link do colado sai da oferta lida, nunca da ficha sem o anuncio (pedido 1215)', () => {
+  const canonica = 'https://www.mercadolivre.com.br/po-facial-banana-fenzza-makeup/p/MLB23095587';
+  const colado = 'https://www.mercadolivre.com.br/p/MLB23095587?pdp_filters=item_id%3AMLB5141126371';
+  const esperado = 'https://produto.mercadolivre.com.br/MLB-5141126371';
+  assert.equal(enderecoDaOfertaLida(canonica, colado, colado, 'MLB5141126371'), esperado);
+  assert.equal(enderecoDaOfertaLida(canonica, colado, colado, null), esperado, 'item pela url final');
+  /* Catalogo colado sem anuncio: fixa a oferta que a pagina mostrou. */
+  const semItem = 'https://www.mercadolivre.com.br/p/MLB23095587';
+  assert.equal(enderecoDaOfertaLida(canonica, semItem, semItem, 'MLB5022301663'),
+    'https://produto.mercadolivre.com.br/MLB-5022301663');
+  /* Sem anuncio nenhum: a canonica de sempre. */
+  assert.equal(enderecoDaOfertaLida(canonica, semItem, semItem, null), canonica);
+  /* Anuncio avulso cuja canonica e o catalogo. */
+  assert.equal(enderecoDaOfertaLida(canonica, 'https://produto.mercadolivre.com.br/MLB-5141126371-po-facial-_JM', null, null),
+    'https://produto.mercadolivre.com.br/MLB-5141126371');
+  /* Anuncio avulso com canonica do proprio anuncio: fica como esta. */
+  const avulso = 'https://produto.mercadolivre.com.br/MLB-1234567890-caneca-_JM';
+  assert.equal(enderecoDaOfertaLida(avulso, avulso, avulso, 'MLB1234567890'), avulso);
+  /* Pagina lida manda: o anuncio da url final vence o do colado. */
+  assert.equal(enderecoDaOfertaLida(canonica, semItem + '?pdp_filters=item_id%3AMLB5022301663', colado, null),
+    'https://produto.mercadolivre.com.br/MLB-5022301663');
+  /* /up/ sem catalogo: o endereco do proprio anuncio. */
+  assert.equal(enderecoDaOfertaLida('https://www.mercadolivre.com.br/up/MLBU123456789', 'https://www.mercadolivre.com.br/up/MLBU123456789', null, 'MLB7777777777'),
+    'https://produto.mercadolivre.com.br/MLB-7777777777');
+});

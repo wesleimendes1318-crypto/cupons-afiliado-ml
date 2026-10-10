@@ -2,7 +2,12 @@ import { useId, useState, type FormEvent } from "react";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { ArrowRight, Check, Loader2, Search, Sparkles } from "lucide-react";
 import { propsFotoCartao } from "@/lib/foto";
-import { buscarProdutos, type ContextoBusca, type Resposta } from "@/lib/busca-guiada-cliente";
+import {
+  buscarProdutos,
+  quandoFoiLido,
+  type ContextoBusca,
+  type Resposta,
+} from "@/lib/busca-guiada-cliente";
 
 export type { ContextoBusca } from "@/lib/busca-guiada-cliente";
 
@@ -275,8 +280,8 @@ export function ResultadosDaBusca({
               </ul>
               <p className="mt-3 flex items-start gap-1.5 text-[11px] text-secondary-ink">
                 <Check className="mt-0.5 size-3.5 shrink-0 text-success" aria-hidden="true" />
-                Preço de um anúncio do catálogo agora. "Comparar preço" confere o mesmo produto em
-                outras lojas antes de você comprar
+                Preço de um anúncio do catálogo {quandoFoiLido(resposta.lidoEm)}: pode mudar.
+                "Comparar preço" confere o mesmo produto em outras lojas antes de você comprar
                 {resposta.enfileirados > 0
                   ? "; os primeiros também passam pela comparação completa e, se valerem a pena, entram na vitrine."
                   : "."}
