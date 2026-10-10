@@ -1110,6 +1110,27 @@ export type Database = {
         }
         Relationships: []
       }
+      multiloja_solicitacoes: {
+        Row: {
+          concluido_em: string | null
+          iniciado_em: string | null
+          pedido_id: number
+          solicitado_em: string
+        }
+        Insert: {
+          concluido_em?: string | null
+          iniciado_em?: string | null
+          pedido_id: number
+          solicitado_em?: string
+        }
+        Update: {
+          concluido_em?: string | null
+          iniciado_em?: string | null
+          pedido_id?: number
+          solicitado_em?: string
+        }
+        Relationships: []
+      }
       operacao_execucoes: {
         Row: {
           erro: string | null
@@ -1866,6 +1887,7 @@ export type Database = {
         }[]
       }
       muda_nao_e_alternativa: { Args: never; Returns: string }
+      multiloja_pendentes: { Args: { p_token: string }; Returns: Json }
       multiloja_vale: {
         Args: { p_pedido: number; p_token: string }
         Returns: Json
@@ -1906,6 +1928,10 @@ export type Database = {
       pedir_link_loja: { Args: { p_url: string }; Returns: number }
       pedir_link_novo: { Args: { p_url: string }; Returns: number }
       pedir_loja: { Args: { p_cupom_id: number }; Returns: string }
+      pedir_multiloja: {
+        Args: { p_chave: string; p_pedido: number }
+        Returns: Json
+      }
       produto_permitido: { Args: { p_texto: string }; Returns: boolean }
       produtos_da_campanha: { Args: { p_id: number }; Returns: Json }
       proximo_monitor: {
