@@ -1411,8 +1411,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   diagnosticos tipo 'avaliacoes-amostra'.
   - Leitura: anúncio colado e lojas (parte lida) mandam para o banco
     (gravar_avaliacoes, senha da extensão); atualizarAvaliacoes (alarme de
-    1 min) lê SEM a conta (credentials omit) até 3 páginas por minuto, só
-    com a extensão parada; verificação = pausa de 1 h. Fila
+    1 min) lê primeiro SEM a conta (credentials omit), até 3 páginas por
+    minuto, só com a extensão parada; se a página sem a conta cair na
+    verificação (1.165.0 não gravou nada em 4 min), 6 h COM a conta, 1 por
+    minuto e nunca com o freio puxado (1.165.1); verificação na leitura
+    logada = freio de sempre + pausa de 1 h. Diagnóstico de cada rodada em
+    diagnosticos tipo 'avaliacoes-leitura'. Fila
     avaliacoes_pendentes: pedido de cliente das últimas 3 h, vitrine,
     campanhas, brinquedos, mais vendidos; cada anúncio a cada 7 dias (falha
     espera 1 dia).

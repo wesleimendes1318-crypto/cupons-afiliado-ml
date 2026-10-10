@@ -540,10 +540,9 @@ export async function vitrineCompletar(token, chave, imagem, categoria) {
    lidas na pagina de cada um. */
 export async function avaliacoesPendentes(token, limite = 3) {
   if (!token) return [];
-  try {
-    const l = await chamarRpc(SUPABASE + '/rest/v1/rpc/avaliacoes_pendentes', { p_token: token, p_limite: limite });
-    return Array.isArray(l) ? l : [];
-  } catch (e) { return []; }
+  /* Erro sobe: a rodada grava no diagnostico (fila vazia x fila com erro). */
+  const l = await chamarRpc(SUPABASE + '/rest/v1/rpc/avaliacoes_pendentes', { p_token: token, p_limite: limite });
+  return Array.isArray(l) ? l : [];
 }
 
 export async function gravarAvaliacoes(token, itens) {

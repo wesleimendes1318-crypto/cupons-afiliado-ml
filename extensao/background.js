@@ -5004,71 +5004,115 @@ async function monitorarPrecos() {
 /* AVALIACOES EM TODOS OS CARTOES (Weslei, 10/10: "precisa ter as
    avaliacoes em TODOS"). Le aos poucos a pagina de cada anuncio mostrado no
    site (avaliacoes_pendentes: pedido de cliente recente, vitrine, campanhas,
-   brinquedos e mais vendidos, sem leitura nos ultimos 7 dias), SEM a conta
-   (credentials omit, como a foto da vitrine), ate 3 por minuto e so com a
-   extensao parada. Pagina de verificacao = pausa de 1 h, nunca insiste. */
+   brinquedos e mais vendidos, sem leitura nos ultimos 7 dias), so com a
+   extensao parada.
+   - Primeiro SEM a conta (credentials omit), ate 3 por minuto.
+   - Se a pagina sem a conta cair na verificacao (1.165.0: nenhuma leitura
+     gravada em 4 min), passa 6 h lendo COM a conta, como toda leitura do
+     comparador, mas devagar: 1 por minuto e nunca com o freio puxado.
+     Verificacao na leitura logada = freio de sempre + pausa de 1 h.
+   Diagnostico de cada rodada em diagnosticos tipo 'avaliacoes-leitura'. */
 let lendoAvaliacoes = false;
 let avaliacoesUltima = 0;
+let avaliacoesDiagUltimo = 0;
 async function atualizarAvaliacoes() {
   if (lendoAvaliacoes || atendendo || Date.now() - avaliacoesUltima < 50e3) return;
-  const { sincToken, avaliacoesPausaAte } = await chrome.storage.local.get(['sincToken', 'avaliacoesPausaAte']);
-  if (!sincToken || (avaliacoesPausaAte && Date.now() < avaliacoesPausaAte)) return;
+  const st = await chrome.storage.local.get(['sincToken', 'avaliacoesPausaAte', 'avaliacoesSemCookieAte']);
+  const sincToken = st.sincToken;
+  if (!sincToken || (st.avaliacoesPausaAte && Date.now() < st.avaliacoesPausaAte)) return;
+  let modo = st.avaliacoesSemCookieAte && Date.now() < st.avaliacoesSemCookieAte ? 'logada' : 'sem-cookie';
+  if (modo === 'logada' && await freioLigado('leitura')) return;
   lendoAvaliacoes = true;
   avaliacoesUltima = Date.now();
   const lote = [];
+  const registro = [];
+  let pendentes = null, erroFila = null, parou = null;
   try {
-    const lista = await avaliacoesPendentes(sincToken, 3);
+    let lista = [];
+    try { lista = await avaliacoesPendentes(sincToken, modo === 'logada' ? 1 : 3); }
+    catch (e) { erroFila = String((e && e.message) || e).slice(0, 160); }
+    pendentes = lista.length;
     for (const it of lista) {
-      if (atendendo) break;
-      const r = await lerAvaliacoesDoAnuncio(it.item, it.url);
+      if (atendendo) { parou = 'pedido de cliente'; break; }
+      let r = await lerAvaliacoesDoAnuncio(it.item, it.url, modo === 'logada' ? 'include' : 'omit');
+      registro.push({ item: it.item, origem: it.origem, modo, ...r.diag });
+      if (r.verificacao && modo === 'sem-cookie') {
+        /* Sem a conta nao da: as proximas 6 h vao com a conta, devagar. */
+        await chrome.storage.local.set({ avaliacoesSemCookieAte: Date.now() + 6 * 3600e3 });
+        modo = 'logada';
+        if (atendendo || await freioLigado('leitura')) { parou = 'freio ou pedido'; break; }
+        r = await lerAvaliacoesDoAnuncio(it.item, it.url, 'include');
+        registro.push({ item: it.item, origem: it.origem, modo, ...r.diag });
+      }
       if (r.verificacao) {
+        await puxarFreio('o Mercado Livre pediu verificacao ao ler as avaliacoes de um anuncio', 'leitura', r.diag.final);
         await chrome.storage.local.set({ avaliacoesPausaAte: Date.now() + 3600e3 });
-        lote.push({ item: r.item, erro: 'verificacao' });
+        parou = 'verificacao na leitura logada';
         break;
       }
-      lote.push(r);
+      lote.push(r.registro);
+      if (modo === 'logada') break;
       await sleep(4000 + Math.random() * 4000);
     }
   } catch (e) {
-    console.warn('[avaliacoes]', e.message);
+    parou = String((e && e.message) || e).slice(0, 160);
   } finally {
-    if (lote.length) await gravarAvaliacoes(sincToken, lote).catch(() => {});
+    let banco = null;
+    if (lote.length) banco = await gravarAvaliacoes(sincToken, lote).catch(e => 'erro: ' + String(e.message).slice(0, 120));
+    const algoErrado = erroFila || parou || registro.some(x => x.res !== 'ok' && x.res !== 'sem');
+    if (algoErrado || Date.now() - avaliacoesDiagUltimo > 10 * 60e3) {
+      avaliacoesDiagUltimo = Date.now();
+      gravarDiagnostico(sincToken, 'avaliacoes-leitura', {
+        versao: chrome.runtime.getManifest().version, pendentes, erroFila, parou, banco, registro
+      }).catch(() => {});
+    }
     lendoAvaliacoes = false;
   }
 }
 
-async function lerAvaliacoesDoAnuncio(item, url) {
+async function lerAvaliacoesDoAnuncio(item, url, credenciais = 'omit') {
   const id = String(item || '').toUpperCase();
+  const diag = { res: 'erro' };
+  const volta = (registro, extra = {}) => ({ registro, diag: { ...diag, ...extra }, ...(extra.verificacao ? { verificacao: true } : {}) });
   const ctrl = new AbortController();
   const corta = setTimeout(() => ctrl.abort(), 15000);
   try {
     const r = await fetch(url || `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, 'MLB-')}`,
-      { credentials: 'omit', redirect: 'follow', signal: ctrl.signal });
-    if (/account-verification|suspicious|\/captcha\//i.test(r.url || '')) return { item: id, verificacao: true };
-    if (!r.ok) return { item: id, erro: 'HTTP ' + r.status };
+      { credentials: credenciais, redirect: 'follow', signal: ctrl.signal });
+    diag.status = r.status;
+    diag.final = String(r.url || '').replace(/^https?:\/\//, '').split('?')[0].slice(0, 90);
+    if (/account-verification|suspicious|\/captcha\//i.test(r.url || '')) {
+      return volta({ item: id, erro: 'verificacao' }, { res: 'verificacao', verificacao: true });
+    }
+    if (!r.ok) return volta({ item: id, erro: 'HTTP ' + r.status }, { erro: 'HTTP ' + r.status });
     let html = await r.text();
     if (html.length > MAX_ANUNCIO) html = html.slice(0, MAX_ANUNCIO);
-    if (/Por seguran.a, complete esta etapa|suspicious-traffic-frontend/i.test(html.slice(0, 20000))) return { item: id, verificacao: true };
+    diag.bytes = html.length;
+    if (/Por seguran.a, complete esta etapa|suspicious-traffic-frontend/i.test(html.slice(0, 20000))) {
+      return volta({ item: id, erro: 'verificacao' }, { res: 'verificacao', verificacao: true });
+    }
     /* A pagina precisa ser do anuncio pedido (ou do produto de catalogo,
        chave MLBP: vale o anuncio do botao de compra da pagina). */
     const limpo = html.replace(/\\u0022/gi, '"').replace(/\\+"/g, '"').replace(/\s+/g, '');
     const produto = /^MLBP\d+$/.test(id) ? 'MLB' + id.slice(4) : null;
     if (produto ? !limpo.includes('"catalog_product_id":"' + produto + '"') : !limpo.includes('"item_id":"' + id + '"')) {
-      return { item: id, erro: 'pagina de outro anuncio' };
+      return volta({ item: id, erro: 'pagina de outro anuncio' }, { erro: 'pagina de outro anuncio' });
     }
     const doItem = produto ? itemDaCompra(html) : id;
     const det = detalheDasAvaliacoes(html);
     const base = doItem ? avaliacaoDoItem(html, doItem) : null;
     amostraDasAvaliacoes(html, id, det);
     if (det) {
-      return { item: id, nota: det.nota, total: det.total, distribuicao: det.distribuicao,
-               comentarios: det.comentarios, totalComentarios: det.totalComentarios, aviso: det.aviso };
+      return volta({ item: id, nota: det.nota, total: det.total, distribuicao: det.distribuicao,
+                     comentarios: det.comentarios, totalComentarios: det.totalComentarios, aviso: det.aviso },
+                   { res: 'ok', niveis: Boolean(det.distribuicao), opinioes: det.comentarios.length });
     }
-    if (base) return { item: id, nota: base.nota, total: base.total };
-    if (doItem && semAvaliacoesNaPagina(html, doItem)) return { item: id, sem: true };
-    return { item: id, erro: 'nota nao lida' };
+    if (base) return volta({ item: id, nota: base.nota, total: base.total }, { res: 'ok', soNota: true });
+    if (doItem && semAvaliacoesNaPagina(html, doItem)) return volta({ item: id, sem: true }, { res: 'sem' });
+    return volta({ item: id, erro: 'nota nao lida' }, { erro: 'nota nao lida' });
   } catch (e) {
-    return { item: id, erro: String((e && e.message) || e).slice(0, 80) };
+    const erro = String((e && e.message) || e).slice(0, 80);
+    return volta({ item: id, erro }, { erro });
   } finally {
     clearTimeout(corta);
   }
