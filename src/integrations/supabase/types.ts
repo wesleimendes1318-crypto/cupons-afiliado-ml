@@ -1526,6 +1526,15 @@ export type Database = {
           problema: string
         }[]
       }
+      avaliacoes_da_vitrine: {
+        Args: { p_chaves: string[] }
+        Returns: {
+          chave: string
+          link: string
+          nota: number
+          total: number
+        }[]
+      }
       avaliar_indicacao: {
         Args: {
           p_item: string
