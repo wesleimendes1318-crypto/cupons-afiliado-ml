@@ -232,8 +232,8 @@ begin
     for p in
       update public.pedidos_link
          set link = new.link
-       where vendedor is distinct from '(so link)' and link is null
-         and coalesce((analise->>'linkDaFichaDescartado')::boolean, false)
+       where vendedor is distinct from '(so link)' and link is null and status = 'pronto'
+         -- sem depender da marca: a extensão regrava a análise depois (1222)
          and public.anuncio_do_endereco(url_alvo) = v_item
       returning *
     loop
@@ -264,14 +264,16 @@ begin
 end
 $$;
 
--- Pedidos de hoje cujo link foi descartado pela trava antes desta versão.
+-- Pedidos sem link dos últimos 2 dias (o descarte da trava ou geração que
+-- falhou; a marca some quando a extensão regrava a análise): cliente 4,
+-- interno 1.
 insert into public.links_a_refazer (item, url_oferta, prioridade)
 select public.anuncio_do_endereco(p.url_alvo),
        'https://produto.mercadolivre.com.br/' || replace(public.anuncio_do_endereco(p.url_alvo), 'MLB', 'MLB-'),
        max(case when coalesce(p.origem, '') = 'teste' then 1 else 4 end)
   from public.pedidos_link p
- where p.link is null and p.vendedor is distinct from '(so link)'
-   and coalesce((p.analise->>'linkDaFichaDescartado')::boolean, false)
+ where p.link is null and p.status = 'pronto' and p.vendedor is distinct from '(so link)'
+   and p.criado_em > now() - interval '2 days'
    and public.anuncio_do_endereco(p.url_alvo) ~ '^MLB[0-9]{6,}$'
  group by 1
 on conflict (item) do update
