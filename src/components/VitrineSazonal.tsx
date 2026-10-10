@@ -13,7 +13,7 @@
    só com link de afiliado e comparação de menos de 24 h (senão "Ver o
    preço de agora"; preço velho não vira compra, regra de 02/10). */
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronLeft, ChevronRight, Link2, RefreshCw, ShieldCheck } from "lucide-react";
 
@@ -53,6 +53,12 @@ import {
 } from "@/lib/sazonal";
 import { LINK_CANAL } from "@/lib/telegram-publico";
 import { propsFotoCartao } from "@/lib/foto";
+import { Avaliacoes } from "@/components/Avaliacoes";
+import {
+  avaliacaoDaOferta,
+  ContextoAvaliacoes,
+  useAvaliacoesDaVitrine,
+} from "@/lib/avaliacoes-vitrine";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -255,6 +261,7 @@ export function CartaoOferta({
   atraso?: number;
 }) {
   const c = classificacao(o);
+  const avaliacoes = useContext(ContextoAvaliacoes);
   const quando = o.recente ? "Conferido hoje" : `Preço de ${dataCurta(o.vistoEm) ?? "antes"}`;
   const atualizar = !o.link || !o.recente;
   const classeAtualizar = o.link
@@ -300,6 +307,7 @@ export function CartaoOferta({
         <p className="mt-1 truncate text-[11px] text-[#6e6e73]">
           {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
+        <Avaliacoes a={avaliacaoDaOferta(avaliacoes, o.chave, o.link)} compacto className="flex" />
         <p className="text-[10px] text-[#86868b]">{quando}</p>
         <div className="mt-auto pt-3">
           <VerDetalhesVitrine
@@ -423,6 +431,8 @@ export function GradeOfertas({
   fileira?: boolean;
 }) {
   const trilho = useRef<HTMLUListElement>(null);
+  const chavesDaLista = useMemo(() => lista.map((o) => o.chave), [lista]);
+  const avaliacoes = useAvaliacoesDaVitrine(chavesDaLista);
   const rolar = (lado: 1 | -1) => {
     const el = trilho.current;
     if (el) el.scrollBy({ left: lado * el.clientWidth * 0.85, behavior: "smooth" });
@@ -431,47 +441,51 @@ export function GradeOfertas({
     const completar = lista.length < 5 || lista.length % 5 !== 0;
     const largura = "w-[56%] shrink-0 snap-start min-[480px]:w-[38%] sm:w-auto";
     return (
-      <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
-        {lista.map((o, i) => (
-          <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
-        ))}
-        {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
-      </ul>
+      <ContextoAvaliacoes.Provider value={avaliacoes}>
+        <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
+          {lista.map((o, i) => (
+            <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
+          ))}
+          {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
+        </ul>
+      </ContextoAvaliacoes.Provider>
     );
   }
   const largura = "w-[64%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-[206px]";
   return (
-    <div className="relative">
-      <ul
-        ref={trilho}
-        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0"
-      >
-        {lista.map((o, i) => (
-          <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
-        ))}
-        <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />
-      </ul>
-      {lista.length > 4 && (
-        <>
-          <button
-            type="button"
-            onClick={() => rolar(-1)}
-            aria-label="Ver anteriores"
-            className="absolute -left-3 top-[52px] hidden size-10 place-items-center rounded-full bg-white text-[#1d1d1f] shadow-md ring-1 ring-black/5 hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:grid"
-          >
-            <ChevronLeft className="size-5" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => rolar(1)}
-            aria-label="Ver mais"
-            className="absolute -right-3 top-[52px] hidden size-10 place-items-center rounded-full bg-white text-[#1d1d1f] shadow-md ring-1 ring-black/5 hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:grid"
-          >
-            <ChevronRight className="size-5" aria-hidden="true" />
-          </button>
-        </>
-      )}
-    </div>
+    <ContextoAvaliacoes.Provider value={avaliacoes}>
+      <div className="relative">
+        <ul
+          ref={trilho}
+          className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0"
+        >
+          {lista.map((o, i) => (
+            <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
+          ))}
+          <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />
+        </ul>
+        {lista.length > 4 && (
+          <>
+            <button
+              type="button"
+              onClick={() => rolar(-1)}
+              aria-label="Ver anteriores"
+              className="absolute -left-3 top-[52px] hidden size-10 place-items-center rounded-full bg-white text-[#1d1d1f] shadow-md ring-1 ring-black/5 hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:grid"
+            >
+              <ChevronLeft className="size-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => rolar(1)}
+              aria-label="Ver mais"
+              className="absolute -right-3 top-[52px] hidden size-10 place-items-center rounded-full bg-white text-[#1d1d1f] shadow-md ring-1 ring-black/5 hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:grid"
+            >
+              <ChevronRight className="size-5" aria-hidden="true" />
+            </button>
+          </>
+        )}
+      </div>
+    </ContextoAvaliacoes.Provider>
   );
 }
 

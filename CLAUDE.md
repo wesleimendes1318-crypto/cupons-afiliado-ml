@@ -1387,6 +1387,16 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   avaliações)") e "Me ajude a escolher" (avaliacao_das_pessoas; poucas
   avaliações valem pouco) também. Loja oficial no bot passou a "✔️" para não
   confundir com a estrela. Sem o dado, nada aparece.
+- VITRINES (10/10, "não encontrei no meu site"): avaliacoes_da_vitrine(
+  p_chaves) (pública, só leitura, até 300) devolve a nota de cada OFERTA da
+  última comparação pelo link meli.la; src/lib/avaliacoes-vitrine.ts
+  (useAvaliacoesDaVitrine + ContextoAvaliacoes) põe a estrela no cartão da
+  vitrine (a nota da oferta atrás do botão: melhor loja ou o colado), na
+  Alternativa parecida e nos cartões das campanhas (CartaoOferta). A nota
+  é a do ANÚNCIO de cada loja (o evento da página não traz a do produto);
+  link de catálogo (/p/) muitas vezes vem sem nota própria. Produto só
+  ganha estrela depois de comparado na 1.164.0 (em 10/10, 20 da vitrine
+  entraram na fila dos agentes, fonte 'avaliacoes').
 
 ## Shorts no YouTube (10/10)
 - Weslei, 10/10: "PROMPT MESTRE: AUTOMAÇÃO DE SHORTS ULTRA-REALISTAS".

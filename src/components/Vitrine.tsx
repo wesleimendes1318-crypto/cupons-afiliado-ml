@@ -7,7 +7,7 @@
    Google ficam de fora no próprio banco (função vitrine). */
 
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BadgeCheck, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
@@ -25,6 +25,12 @@ import {
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
+import { Avaliacoes } from "@/components/Avaliacoes";
+import {
+  avaliacaoDaOferta,
+  ContextoAvaliacoes,
+  useAvaliacoesDaVitrine,
+} from "@/lib/avaliacoes-vitrine";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -198,6 +204,10 @@ export function Vitrine({
       .slice(0, 5);
   }, [lista, interesse, categoria]);
 
+  /* Nota das pessoas de cada oferta (10/10), da última comparação. */
+  const chavesDaLista = useMemo(() => itens.map((i) => i.chave), [itens]);
+  const avaliacoes = useAvaliacoesDaVitrine(chavesDaLista);
+
   if (categoriaFixa) {
     if (!carregou) return null;
     if (!itens.some((i) => (i.categoria_site ?? "outros") === categoriaFixa))
@@ -211,149 +221,156 @@ export function Vitrine({
   ];
 
   return (
-    <section className="mt-8" aria-label="Produtos já comparados" data-origem="vitrine">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-xl font-extrabold sm:text-2xl">
-            {categoriaFixa
-              ? `${NOME_CATEGORIA[categoriaFixa] ?? "Produtos"} que já comparei`
-              : "Produtos que já comparei"}
-          </h2>
-          <p className="mt-1 text-sm text-secondary-ink">
-            Preço de quando foi comparado. Toque em "Comparar de novo" para ver o preço de agora.
-          </p>
+    <ContextoAvaliacoes.Provider value={avaliacoes}>
+      <section className="mt-8" aria-label="Produtos já comparados" data-origem="vitrine">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-extrabold sm:text-2xl">
+              {categoriaFixa
+                ? `${NOME_CATEGORIA[categoriaFixa] ?? "Produtos"} que já comparei`
+                : "Produtos que já comparei"}
+            </h2>
+            <p className="mt-1 text-sm text-secondary-ink">
+              Preço de quando foi comparado. Toque em "Comparar de novo" para ver o preço de agora.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-3 flex flex-wrap gap-2" role="tablist">
-        {abas.map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            role="tab"
-            aria-selected={aba === a.id}
-            onClick={() => setAba(a.id)}
-            className={
-              "rounded-full px-3 py-1.5 text-sm font-semibold transition-colors " +
-              (aba === a.id
-                ? "bg-ml-blue text-white"
-                : "border border-border bg-card hover:border-ml-blue")
-            }
-          >
-            {a.rotulo}
-          </button>
-        ))}
-      </div>
-
-      {!categoriaFixa && categorias.length > 1 && (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => setCategoria(null)}
-            className={
-              "shrink-0 rounded-full px-3 py-1 text-xs font-semibold " +
-              (categoria == null ? "bg-foreground text-background" : "border border-border bg-card")
-            }
-          >
-            Todas
-          </button>
-          {categorias.map((c) => (
+        <div className="mt-3 flex flex-wrap gap-2" role="tablist">
+          {abas.map((a) => (
             <button
-              key={c}
+              key={a.id}
               type="button"
-              onClick={() => setCategoria(c)}
+              role="tab"
+              aria-selected={aba === a.id}
+              onClick={() => setAba(a.id)}
               className={
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold " +
-                (categoria === c ? "bg-foreground text-background" : "border border-border bg-card")
+                "rounded-full px-3 py-1.5 text-sm font-semibold transition-colors " +
+                (aba === a.id
+                  ? "bg-ml-blue text-white"
+                  : "border border-border bg-card hover:border-ml-blue")
               }
             >
-              {NOME_CATEGORIA[c] ?? c}
+              {a.rotulo}
             </button>
           ))}
         </div>
-      )}
-      {/* Arte da categoria escolhida (09/10: toda vitrine com arte). */}
-      {!categoriaFixa && categoria && <FaixaArte slug={categoria} />}
 
-      {lista.length === 0 ? (
-        <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">
-          Ainda não há produtos nesta lista.
-        </p>
-      ) : categoria == null ? (
-        /* "Todas": uma seção por categoria, cada uma com seus produtos. */
-        <div className="mt-4 space-y-7">
-          {paraVoce.length > 0 && (
-            <div>
-              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                <div>
-                  <h3 className="text-base font-bold">Do seu interesse</h3>
-                  <p className="text-xs text-secondary-ink">
-                    Recomendações baseadas nas suas últimas pesquisas (ficam só neste navegador).
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    limparPerfil();
-                    setInteresse(null);
-                  }}
-                  className="text-xs font-semibold text-secondary-ink hover:underline"
-                >
-                  Limpar histórico de interesses
-                </button>
-              </div>
-              <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                {paraVoce.map((i) => (
-                  <Cartao key={i.chave} i={i} />
-                ))}
-              </ul>
-            </div>
-          )}
-          {categorias.map((c) => {
-            const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
-            if (!daCategoria.length) return null;
-            return (
-              <div key={c}>
-                <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <h3 className="text-base font-bold">
-                    {NOME_CATEGORIA[c] ?? c}{" "}
-                    <span className="text-sm font-normal text-secondary-ink">
-                      ({daCategoria.length})
-                    </span>
-                  </h3>
-                  {daCategoria.length > 5 && (
-                    <button
-                      type="button"
-                      onClick={() => setCategoria(c)}
-                      className="text-sm font-semibold text-ml-blue hover:underline"
-                    >
-                      Ver todos
-                    </button>
-                  )}
+        {!categoriaFixa && categorias.length > 1 && (
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setCategoria(null)}
+              className={
+                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold " +
+                (categoria == null
+                  ? "bg-foreground text-background"
+                  : "border border-border bg-card")
+              }
+            >
+              Todas
+            </button>
+            {categorias.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategoria(c)}
+                className={
+                  "shrink-0 rounded-full px-3 py-1 text-xs font-semibold " +
+                  (categoria === c
+                    ? "bg-foreground text-background"
+                    : "border border-border bg-card")
+                }
+              >
+                {NOME_CATEGORIA[c] ?? c}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Arte da categoria escolhida (09/10: toda vitrine com arte). */}
+        {!categoriaFixa && categoria && <FaixaArte slug={categoria} />}
+
+        {lista.length === 0 ? (
+          <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">
+            Ainda não há produtos nesta lista.
+          </p>
+        ) : categoria == null ? (
+          /* "Todas": uma seção por categoria, cada uma com seus produtos. */
+          <div className="mt-4 space-y-7">
+            {paraVoce.length > 0 && (
+              <div>
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-bold">Do seu interesse</h3>
+                    <p className="text-xs text-secondary-ink">
+                      Recomendações baseadas nas suas últimas pesquisas (ficam só neste navegador).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      limparPerfil();
+                      setInteresse(null);
+                    }}
+                    className="text-xs font-semibold text-secondary-ink hover:underline"
+                  >
+                    Limpar histórico de interesses
+                  </button>
                 </div>
                 <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                  {daCategoria.slice(0, 5).map((i) => (
+                  {paraVoce.map((i) => (
                     <Cartao key={i.chave} i={i} />
                   ))}
                 </ul>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-          {lista.map((i) => (
-            <Cartao key={i.chave} i={i} />
-          ))}
-        </ul>
-      )}
-    </section>
+            )}
+            {categorias.map((c) => {
+              const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
+              if (!daCategoria.length) return null;
+              return (
+                <div key={c}>
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <h3 className="text-base font-bold">
+                      {NOME_CATEGORIA[c] ?? c}{" "}
+                      <span className="text-sm font-normal text-secondary-ink">
+                        ({daCategoria.length})
+                      </span>
+                    </h3>
+                    {daCategoria.length > 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setCategoria(c)}
+                        className="text-sm font-semibold text-ml-blue hover:underline"
+                      >
+                        Ver todos
+                      </button>
+                    )}
+                  </div>
+                  <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
+                    {daCategoria.slice(0, 5).map((i) => (
+                      <Cartao key={i.chave} i={i} />
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
+            {lista.map((i) => (
+              <Cartao key={i.chave} i={i} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </ContextoAvaliacoes.Provider>
   );
 }
 
 function Cartao({ i }: { i: ItemVitrine }) {
   const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
   const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
+  const avaliacoes = useContext(ContextoAvaliacoes);
   /* Alternativa parecida que economiza mais que o mesmo produto: o selo vira
      "Até R$ X de desconto" (não é idêntico, por isso o "Até"). */
   const temAlternativa = (i.alt_economia ?? 0) > (temEconomia ? (i.economia ?? 0) : 0);
@@ -406,6 +423,11 @@ function Cartao({ i }: { i: ItemVitrine }) {
             <>na {i.loja ?? "loja"}</>
           )}
         </p>
+        <Avaliacoes
+          a={avaliacaoDaOferta(avaliacoes, i.chave, destino)}
+          compacto
+          className="mt-0.5 flex"
+        />
         {temAlternativa && <Alternativa i={i} />}
         {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
         <p className="mt-0.5 text-[11px] text-secondary-ink/80">
@@ -465,6 +487,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
 /* Melhor alternativa no cartão (Weslei, 28/09): parecido mais barato, com as
    vantagens conferidas na comparação e o aviso de que não é idêntico. */
 function Alternativa({ i }: { i: ItemVitrine }) {
+  const avaliacoes = useContext(ContextoAvaliacoes);
   const completo = maisCompleto(i.alt_vantagem, i.alt_muda);
   const vantagens = [
     i.alt_oficial === true ? "Loja oficial da marca" : null,
@@ -482,6 +505,11 @@ function Alternativa({ i }: { i: ItemVitrine }) {
           Vendido por <strong className="text-foreground">{i.alt_loja}</strong>
         </p>
       )}
+      <Avaliacoes
+        a={avaliacaoDaOferta(avaliacoes, i.chave, i.alt_link)}
+        compacto
+        className="mt-0.5 flex"
+      />
       {vantagens.length > 0 && (
         <ul className="mt-1 flex flex-wrap gap-1">
           {vantagens.map((v) => (
