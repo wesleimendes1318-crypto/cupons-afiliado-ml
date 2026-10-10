@@ -151,9 +151,10 @@ begin
 end
 $$;
 
--- Reparo: na 1.165.5+ até 3 por vez (cliente nos últimos 10 min segura); na
--- 1.165.0 (gerador lento, 30-45 s por link) 1 por vez e só sem cliente nos
--- últimos 15 min.
+-- Reparo: gerador rápido (extensão 1.165.5+ ou os últimos reparos em < 20 s;
+-- medido em 10/10 15:50: 2 s na 1.165.0) até 3 por vez, cliente nos últimos
+-- 10 min segura; gerador lento (30-45 s por link) 1 por vez e só sem cliente
+-- nos últimos 15 min.
 create or replace function public.refazer_links_fila(p_max integer default 3)
 returns integer
 language plpgsql
@@ -163,6 +164,7 @@ as $$
 declare
   v_ver int[];
   v_rapida boolean;
+  v_lento numeric;
   v_max int;
   v_abertos int;
   v_n int := 0;
@@ -174,7 +176,13 @@ begin
   exception when others then
     v_ver := null;
   end;
-  v_rapida := v_ver is not null and v_ver >= array[1, 165, 5];
+  -- Gerador rápido: extensão 1.165.5+ ou os últimos reparos saíram em < 20 s.
+  select percentile_cont(0.5) within group (order by s) into v_lento
+    from (select extract(epoch from p.atendido_em - p.criado_em) s
+            from public.links_a_refazer l join public.pedidos_link p on p.id = l.pedido_id
+           where p.status = 'pronto' and p.atendido_em is not null
+           order by p.atendido_em desc limit 3) t;
+  v_rapida := (v_ver is not null and v_ver >= array[1, 165, 5]) or coalesce(v_lento, 999) < 20;
   v_max := case when v_rapida then p_max else 1 end;
   if exists (select 1 from public.pedidos_link
               where coalesce(origem, '') <> 'teste'

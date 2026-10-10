@@ -1544,8 +1544,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (transação desfeita): sem pedido, 'existe' de sempre; com pedido, 'ficha';
   endereço do anúncio, 'reservado'. A trava nunca troca link bom pelo da
   ficha (mantém o antigo ou usa o do anúncio) e põe o anúncio no reparo; o
-  reparo roda na 1.165.0 com 1 por vez e só sem cliente nos últimos 15 min;
-  pedido recente que ganha o link de volta entra na vitrine.
+  reparo mede o gerador (últimos 3 em < 20 s ou 1.165.5+: 3 por vez; lento:
+  1 por vez, só sem cliente nos últimos 15 min) e devolve o link a todo
+  pedido pronto sem link daquele anúncio (a marca some quando a extensão
+  regrava a análise, pedido 1222); pedido recente entra na vitrine.
+  Conferido em 10/10 15:50 na 1.165.0: pedido 1215 e vitrine com
+  meli.la/2sfJJDp, gerado pelo endereço MLB-5141126371 em 2 s.
 - Bot: anúncio enviado sem link entra só como referência de preço
   (enviadoSemLink, decisaoDaTela(opcoes, enviado)); sendo o melhor, a compra
   é pelo site. Nunca "R$ 0,00 a menos".
