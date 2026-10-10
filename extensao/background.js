@@ -1189,15 +1189,60 @@ function anuncioComSufixo(url, item) {
   return /^https:\/\/produto\.mercadolivre\.com\.br\/MLB-\d+$/i.test(base || '') ? base + '-_JM' : null;
 }
 
+/* ABA DO GERADOR DORMINDO (10/10, "esta demorando muito para consultar e o
+   usuario desiste"): desde 10/10 ~01:00 UTC cada link levava 30-45 s e
+   terminava sempre no segundo :00 (geracoes: antes, 1 s). O Chrome so acorda
+   uma vez por minuto a aba escondida ha mais de 5 min; logo depois de acordar,
+   as chamadas seguintes levavam 1 s. A chamada roda na aba de sempre com prazo
+   de 5 s; sem resposta, roda numa aba NOVA do gerador (recem-aberta, o Chrome
+   nao segura) e fecha. Diagnostico 'gerador-lento' (1 a cada 10 min). */
+const PRAZO_ABA_GERADOR = 5000;
+let diagGeradorUltimo = 0;
+async function rodarNoGerador(tabId, func, args) {
+  const t0 = Date.now();
+  const naAba = chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func, args })
+    .then(([s]) => (s && s.result) || null)
+    .catch(e => ({ falha: String((e && e.message) || e) }));
+  const rapido = await comPrazo(naAba, PRAZO_ABA_GERADOR, undefined);
+  if (rapido !== undefined) return rapido;
+  const diag = { esperouMs: Date.now() - t0 };
+  try {
+    const t = await chrome.tabs.get(tabId);
+    const w = t ? await chrome.windows.get(t.windowId).catch(() => null) : null;
+    Object.assign(diag, { abaAtiva: !!(t && t.active), janela: w ? w.state : null, focada: !!(w && w.focused) });
+  } catch (e) { /* so diagnostico */ }
+  let r = null;
+  const t1 = Date.now();
+  const nova = await chrome.tabs.create({ url: PAGINA_GERADOR, active: false });
+  try {
+    await esperarCarregar(nova.id, 15000);
+    if (!HOST_OK.test(await urlDaAba(nova.id))) throw new Error('a aba nova do gerador nao abriu no Mercado Livre');
+    const [s] = await chrome.scripting.executeScript({ target: { tabId: nova.id }, world: 'MAIN', func, args });
+    r = (s && s.result) || null;
+    diag.abaNovaMs = Date.now() - t1;
+    diag.ok = !!(r && !r.falha);
+  } catch (e) {
+    diag.erro = String((e && e.message) || e).slice(0, 120);
+    /* A aba nova falhou: espera a de sempre (que acorda no proximo minuto). */
+    r = await comPrazo(naAba, 60000, null);
+  } finally {
+    try { await chrome.tabs.remove(nova.id); } catch (e) { /* ja fechada */ }
+  }
+  if (Date.now() - diagGeradorUltimo > 10 * 60e3) {
+    diagGeradorUltimo = Date.now();
+    chrome.storage.local.get('sincToken').then(({ sincToken }) =>
+      gravarDiagnostico(sincToken, 'gerador-lento', { versao: chrome.runtime.getManifest().version, ...diag }))
+      .catch(() => {});
+  }
+  return r;
+}
+
 /* recusados (opcional): recebe os enderecos que o programa recusou (erro 111). */
 async function gerarVariosNaAba(tabId, urls, tag = TAG_PADRAO, recusados = null) {
   const mapa = {};
   if (!urls.length) return mapa;
   tabId = await abaViva(tabId);
-  const [saida] = await chrome.scripting.executeScript({
-    target: { tabId }, world: 'MAIN', func: chamadaVariosNaPagina, args: [ROTA_CRIAR, urls, tag]
-  });
-  const r = saida && saida.result;
+  const r = await rodarNoGerador(tabId, chamadaVariosNaPagina, [ROTA_CRIAR, urls, tag]);
   if (!r || r.falha || r.status >= 400) return mapa;
   let j = null;
   try { j = JSON.parse(r.txt || ''); } catch (e) { return mapa; }
@@ -1717,11 +1762,9 @@ async function vitrineDoCupom(tabId, id) {
 
 async function gerarNaAbaSemCadastro(tabId, url, tag = TAG_PADRAO) {
   tabId = await abaViva(tabId);
-  const [saida] = await chrome.scripting.executeScript({
-    target: { tabId }, world: 'MAIN', func: chamadaNaPagina, args: [ROTA_CRIAR, url, tag]
-  });
+  const resultado = await rodarNoGerador(tabId, chamadaNaPagina, [ROTA_CRIAR, url, tag]);
   {
-    const r = saida && saida.result;
+    const r = resultado;
     if (!r) throw new Error('nao consegui executar a chamada na pagina do Mercado Livre.');
     if (r.falha === 'deslogado')
       throw new Error('Voce esta deslogado do Mercado Livre neste navegador. Entre na conta de afiliado e tente de novo.');

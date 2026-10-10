@@ -789,6 +789,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (cortadoPorCliente) e a segunda volta refaz depois dos clientes.
 - Nunca enfileirar pedidos internos em lote grande de uma vez (20 em
   10/10 às 11:24 seguraram a fila por 13 min).
+- ABA DO GERADOR DORMINDO (10/10): desde 10/10 ~01:00 UTC cada link do
+  anúncio colado levava 30-45 s e terminava sempre no segundo :00 (tabela
+  geracoes; antes, 1 s; o lote da tabela chegava a 100-300 s): o Chrome só
+  acorda uma vez por minuto a aba escondida há mais de 5 min. Extensão
+  1.165.5: rodarNoGerador roda a chamada na aba de sempre com prazo de 5 s e,
+  sem resposta, numa aba NOVA do gerador (recém-aberta), que fecha em
+  seguida. Vale para o link do colado e para o lote. Diagnóstico
+  'gerador-lento' (espera, aba ativa, estado da janela, tempo da aba nova).
 
 ## Conta e segurança
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
