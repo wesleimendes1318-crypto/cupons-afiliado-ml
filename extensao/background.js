@@ -15,7 +15,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
-import { compararOutrosMarketplaces } from './multiloja.js';
+import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces } from './multiloja.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -4294,6 +4294,9 @@ async function atenderPedidos() {
               }
             }
             marcar('busca');
+            /* Conferencia do Mercado Livre terminou: os outros marketplaces
+               podem conferir (o resto do pedido so gera links). */
+            buscaMlTerminou(p.id);
             if (alts.length && volta === 1) marcarEtapa(sincToken, p.id, 'links');
             /* Ate 3 lojas mais baratas, todas com o link de afiliado do
                Weslei. Sem link de afiliado a oferta nao vai para a tela. */
@@ -4606,8 +4609,14 @@ async function atenderPedidos() {
       const atenderUm = async (p) => {
         await chrome.storage.local.set({ pedidoEmAndamento: {
           id: p.id, desde: Date.now(), versao: chrome.runtime.getManifest().version } }).catch(() => {});
+        /* A conferencia da Amazon/Shopee espera a do Mercado Livre (cota do
+           modelo por minuto: cliente primeiro). */
+        buscaMlComecou(p.id);
         try { await atenderUmCorpo(p); }
-        finally { await chrome.storage.local.remove('pedidoEmAndamento').catch(() => {}); }
+        finally {
+          buscaMlTerminou(p.id);
+          await chrome.storage.local.remove('pedidoEmAndamento').catch(() => {});
+        }
       };
       for (const p of pendentes) {
         await atenderUm(p);

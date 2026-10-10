@@ -1236,3 +1236,16 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   frete confirmado para o cliente (a leitura usa a sessão do Weslei:
   Prime e CEP dele), então a recomendação continua a do Mercado Livre e
   a Amazon/Shopee mais barata aparece como "Menor preço no produto".
+- CLIENTE PRIMEIRO NA COTA DA CONFERÊNCIA (10/10, pedido 1110, MK235):
+  com a cota diária da Gemini esgotada, só o Gemma 26b confere, e ele
+  aceita 16 mil tokens de entrada por minuto (429
+  GenerateContentInputTokensPerModelPerMinute). A conferência da
+  Amazon/Shopee no mesmo minuto derrubou a do Mercado Livre ("servidor do
+  site fora do ar") e perdeu os 3 candidatos mais parecidos. Extensão
+  1.161.0: a BUSCA nas outras lojas segue em paralelo (não gasta cota), mas
+  a CONFERÊNCIA delas espera as conferências do Mercado Livre em andamento
+  terminarem (buscaMlComecou no início do pedido, buscaMlTerminou em
+  marcar('busca') e no finally; até 2 min). Candidato sem veredito (lote
+  que falhou) = uma nova tentativa depois de 60 s, de novo só com o
+  Mercado Livre parado; o servidor devolve guardado o que já conferiu.
+  Diagnóstico: diagnosticos tipo 'multiloja' (esperouMl, novaTentativa).

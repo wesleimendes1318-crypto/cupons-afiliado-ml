@@ -73,6 +73,26 @@ export function escolherCandidatos(lista, original, n = 4) {
   return escolhidos.map(x => x.o);
 }
 
+/* CLIENTE PRIMEIRO NA COTA DA CONFERENCIA (10/10, pedido 1110: com a cota
+   diaria da Gemini esgotada, so o Gemma confere, e ele aceita 16 mil tokens
+   de entrada por minuto; a conferencia da Amazon/Shopee no mesmo minuto
+   derrubou a do Mercado Livre). A busca nas outras lojas continua em
+   paralelo (nao gasta cota), mas a CONFERENCIA delas espera as do Mercado
+   Livre terminarem (buscaMlComecou/buscaMlTerminou, chamadas pelo
+   atendimento), por ate 2 min. */
+const buscasMl = new Set();
+export function buscaMlComecou(pedido) { buscasMl.add(pedido); }
+export function buscaMlTerminou(pedido) { buscasMl.delete(pedido); }
+const esperar = ms => new Promise(ok => setTimeout(ok, ms));
+async function esperarBuscasMl(limiteMs) {
+  const ate = Date.now() + limiteMs;
+  let esperou = false;
+  while (buscasMl.size && Date.now() < ate) { esperou = true; await esperar(1500); }
+  return esperou;
+}
+/* Janela do limite por minuto do modelo antes de tentar de novo. */
+const NOVA_TENTATIVA_MS = 60000;
+
 const comPrazo = (promessa, ms, reserva) => Promise.race([
   promessa,
   new Promise(ok => setTimeout(() => ok(reserva), ms))
@@ -121,13 +141,32 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
       return;
     }
 
-    /* Conferencia pela foto: a mesma do Mercado Livre (servidor). */
-    const sv = await conferirNoServidor(token, {
+    /* Conferencia pela foto: a mesma do Mercado Livre (servidor), depois
+       das conferencias do Mercado Livre em andamento. */
+    diag.esperouMl = await esperarBuscasMl(120000);
+    const conferir = () => conferirNoServidor(token, {
       tipo: 'conferir',
       original: { titulo: original.titulo, imagem: original.imagem, preco: original.preco ?? null,
                   chave: original.item || null, categoria: original.categoria || null, fatos: original.fatos || null },
       candidatos: candidatos.map(c => ({ titulo: c.o.titulo, imagem: c.o.imagem, preco: c.o.preco, chave: c.chave }))
     });
+    let sv = await conferir();
+    /* Lote que falhou (limite por minuto, tempo) deixa candidato sem
+       veredito: uma nova tentativa depois de 60 s, de novo so com o Mercado
+       Livre parado. O servidor devolve guardado o que ja foi conferido e so
+       confere o que faltou. */
+    const semVeredito = r => !r || !r.ok || !Array.isArray(r.avaliacao)
+      || candidatos.some((_, i) => !r.avaliacao.some(a => a.indice === i));
+    if (semVeredito(sv)) {
+      diag.novaTentativa = { faltavam: sv && Array.isArray(sv.avaliacao) ? candidatos.length - sv.avaliacao.length : candidatos.length,
+                             erro: sv && !sv.ok ? String(sv.erro || '').slice(0, 120) : null };
+      await esperar(NOVA_TENTATIVA_MS);
+      await esperarBuscasMl(120000);
+      const sv2 = await conferir();
+      if (sv2 && sv2.ok && Array.isArray(sv2.avaliacao)
+          && (!sv || !sv.ok || !Array.isArray(sv.avaliacao) || sv2.avaliacao.length >= sv.avaliacao.length)) sv = sv2;
+      diag.novaTentativa.depois = sv && Array.isArray(sv.avaliacao) ? candidatos.length - sv.avaliacao.length : null;
+    }
     if (!sv || !sv.ok || !Array.isArray(sv.avaliacao)) {
       diag.conferencia = { ok: false, erro: String((sv && sv.erro) || 'sem resposta').slice(0, 120) };
       /* Sem conferencia, nada entra; grava vazio para o site parar de esperar. */
