@@ -850,10 +850,12 @@ export function detalheDasAvaliacoes(html) {
       for (let k = 0; k < inicios.length && comentarios.length < 6; k++) {
         const o = inicios[k];
         const pedaco = seg.slice(o.pos, k + 1 < inicios.length ? inicios[k + 1].pos : o.pos + 8000);
-        const tx = /"content"\s*:\s*\{\s*"text"\s*:\s*"([\s\S]{1,4000}?)"\s*,\s*"(?:see_more|see_less|should_hide)/.exec(pedaco)
-          || /"content"\s*:\s*\{\s*"text"\s*:\s*"([^"]{1,4000})"/.exec(pedaco);
+        /* Texto vazio ("text":"") e possivel: o {0,} nao deixa a leitura
+           engolir o "see_more" seguinte (10/10, MLB3743670987). */
+        const tx = /"content"\s*:\s*\{\s*"text"\s*:\s*"([\s\S]{0,4000}?)"\s*,\s*"(?:see_more|see_less|should_hide)/.exec(pedaco)
+          || /"content"\s*:\s*\{\s*"text"\s*:\s*"([^"]{0,4000})"/.exec(pedaco);
         const texto = tx ? textoDaOpiniao(tx[1]) : '';
-        if (texto.length < 2) continue;
+        if (texto.length < 2 || /"\s*:\s*"|"\s*,\s*"|see_more|see_less/.test(texto)) continue;
         const data = /"date"\s*:\s*"([^"{}]{1,40})"/.exec(pedaco);
         const criado = new RegExp('"review_id"\\s*:\\s*' + o.id + '\\s*,\\s*"created_date"\\s*:\\s*"(\\d{4}-\\d{2}-\\d{2})').exec(pedaco);
         const uteis = /"count_likes"\s*:\s*(\d{1,7})\b/.exec(pedaco);

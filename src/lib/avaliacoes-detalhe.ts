@@ -167,6 +167,8 @@ function opinioesValidas(c: unknown): Opiniao[] {
     const nota = Number(o?.nota);
     const texto = typeof o?.texto === "string" ? o.texto.trim() : "";
     if (!Number.isInteger(nota) || nota < 1 || nota > 5 || texto.length < 2) continue;
+    /* Pedaço do código da página no lugar do texto (opinião vazia, 10/10). */
+    if (/"\s*:\s*"|"\s*,\s*"|see_more|see_less/.test(texto)) continue;
     out.push({
       nota,
       texto,

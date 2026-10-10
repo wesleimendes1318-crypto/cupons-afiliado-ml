@@ -144,3 +144,117 @@ BEGIN
 END $function$;
 revoke all on function public.clientes_esperando(text) from public;
 grant execute on function public.clientes_esperando(text) to anon, authenticated;
+
+-- 5) gravar_avaliacoes: opinião cujo texto é pedaço do código da página
+--    (texto vazio na página; MLB3743670987) não é gravada.
+create or replace function public.gravar_avaliacoes(p_token text, p_itens jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  x jsonb;
+  v_item text;
+  v_nota numeric;
+  v_total integer;
+  v_dist jsonb;
+  v_coments jsonb;
+  v_tc integer;
+  v_aviso text;
+  n integer := 0;
+begin
+  if p_token is null or p_token <> (select sc.valor from public.sinc_config sc where sc.chave = 'token') then
+    raise exception 'token invalido';
+  end if;
+  if jsonb_typeof(p_itens) <> 'array' then return 0; end if;
+
+  for x in select e from jsonb_array_elements(p_itens) e limit 20 loop
+    v_item := upper(replace(coalesce(x->>'item', ''), '-', ''));
+    continue when v_item !~ '^MLBP?[0-9]{6,}$';
+
+    -- Pausa por verificação é da extensão inteira, não do anúncio.
+    continue when x->>'erro' = 'verificacao';
+
+    if coalesce((x->>'sem')::boolean, false) then
+      insert into public.avaliacoes_anuncios as a (item, sem_avaliacoes, lido_em, tentado_em)
+      values (v_item, true, now(), now())
+      on conflict (item) do update set
+        nota = null, total = null, sem_avaliacoes = true, distribuicao = null, comentarios = null,
+        total_comentarios = null, aviso = null, lido_em = now(), tentado_em = now(), erro = null;
+      n := n + 1;
+      continue;
+    end if;
+
+    v_nota := case when (x->>'nota') ~ '^[0-9]+(\.[0-9]+)?$' then (x->>'nota')::numeric end;
+    v_total := case when (x->>'total') ~ '^[0-9]{1,9}$' then (x->>'total')::integer end;
+    if v_nota is null or v_nota <= 0 or v_nota > 5 or v_total is null or v_total < 1 then
+      insert into public.avaliacoes_anuncios as a (item, tentado_em, erro)
+      values (v_item, now(), left(coalesce(x->>'erro', 'sem nota'), 120))
+      on conflict (item) do update set tentado_em = now(), erro = excluded.erro;
+      continue;
+    end if;
+    v_nota := floor(v_nota * 10) / 10;
+
+    -- Distribuição: as 5 estrelas, contagens inteiras.
+    v_dist := null;
+    if jsonb_typeof(x->'distribuicao') = 'array' then
+      select jsonb_agg(jsonb_build_object('estrelas', e, 'total', t) order by e desc)
+        into v_dist
+        from (
+          select distinct on ((d->>'estrelas')::int) (d->>'estrelas')::int as e, (d->>'total')::int as t
+            from jsonb_array_elements(x->'distribuicao') d
+           where (d->>'estrelas') ~ '^[1-5]$' and (d->>'total') ~ '^[0-9]{1,9}$'
+        ) s;
+      if v_dist is not null and jsonb_array_length(v_dist) <> 5 then v_dist := null; end if;
+    end if;
+
+    -- Opiniões: até 6, com nota de 1 a 5 e texto.
+    v_coments := null;
+    if jsonb_typeof(x->'comentarios') = 'array' then
+      select jsonb_agg(c order by ord)
+        into v_coments
+        from (
+          select ord, jsonb_strip_nulls(jsonb_build_object(
+                   'nota', (o->>'nota')::int,
+                   'texto', left(btrim(regexp_replace(o->>'texto', '[[:cntrl:]]+', ' ', 'g')), 800),
+                   'data', nullif(left(btrim(coalesce(o->>'data', '')), 40), ''),
+                   'criado_em', case when (o->>'criadoEm') ~ '^\d{4}-\d{2}-\d{2}$' then o->>'criadoEm' end,
+                   'uteis', case when (o->>'uteis') ~ '^[0-9]{1,7}$' then (o->>'uteis')::int end)) as c
+            from jsonb_array_elements(x->'comentarios') with ordinality as t(o, ord)
+           where (o->>'nota') ~ '^[1-5]$' and length(btrim(coalesce(o->>'texto', ''))) >= 2
+             -- Pedaço do código da página no lugar do texto (opinião vazia).
+             and (o->>'texto') !~ '"\s*:\s*"|"\s*,\s*"|see_more|see_less'
+           order by ord
+           limit 6
+        ) s;
+    end if;
+    v_tc := case when (x->>'totalComentarios') ~ '^[0-9]{1,9}$' then (x->>'totalComentarios')::int end;
+    v_aviso := nullif(left(btrim(coalesce(x->>'aviso', '')), 140), '');
+
+    if v_dist is not null or v_coments is not null then
+      insert into public.avaliacoes_anuncios as a
+        (item, nota, total, sem_avaliacoes, distribuicao, comentarios, total_comentarios, aviso, lido_em, tentado_em, erro)
+      values (v_item, v_nota, v_total, false, v_dist, v_coments, v_tc, v_aviso, now(), now(), null)
+      on conflict (item) do update set
+        nota = excluded.nota, total = excluded.total, sem_avaliacoes = false,
+        distribuicao = excluded.distribuicao, comentarios = excluded.comentarios,
+        total_comentarios = excluded.total_comentarios, aviso = excluded.aviso,
+        lido_em = now(), tentado_em = now(), erro = null;
+    else
+      -- Só nota e total: não apaga um detalhamento lido nos últimos 7 dias.
+      insert into public.avaliacoes_anuncios as a (item, nota, total, sem_avaliacoes, lido_em, tentado_em)
+      values (v_item, v_nota, v_total, false, now(), now())
+      on conflict (item) do update set
+        nota = case when a.distribuicao is not null and a.lido_em > now() - interval '7 days' then a.nota else excluded.nota end,
+        total = case when a.distribuicao is not null and a.lido_em > now() - interval '7 days' then a.total else excluded.total end,
+        sem_avaliacoes = false,
+        lido_em = case when a.distribuicao is not null and a.lido_em > now() - interval '7 days' then a.lido_em else now() end,
+        tentado_em = now(), erro = null;
+    end if;
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+revoke all on function public.gravar_avaliacoes(text, jsonb) from public;
+grant execute on function public.gravar_avaliacoes(text, jsonb) to anon, authenticated;

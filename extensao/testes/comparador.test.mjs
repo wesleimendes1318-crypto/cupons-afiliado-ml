@@ -588,3 +588,11 @@ test('sem avaliacoes so com a pagina inteira do proprio anuncio e nenhuma nota',
   assert.equal(semAvaliacoesNaPagina(corpo + evento + OPINIOES, 'MLB123456789'), false, 'tem nota');
   assert.equal(semAvaliacoesNaPagina(corpo + evento + EVENTO_AVALIACAO, 'MLB123456789'), false, 'evento com contagem');
 });
+
+test('detalhe das avaliacoes: opiniao com texto vazio nao engole o codigo da pagina', () => {
+  const vazio = OPINIOES.replace('"text":"Apesar de ser a caixa de som mais barata da loja oficial da jbl no mercado livre, o som é muito bom, com bons graves e cumpre o que promete.","see_more"', '"text":"","see_more"');
+  const d = detalheDasAvaliacoes(vazio);
+  assert.equal(d.comentarios.length, 1);
+  assert.equal(d.comentarios[0].nota, 3);
+  assert.ok(d.comentarios.every(c => !/see_more|":"/.test(c.texto)));
+});
