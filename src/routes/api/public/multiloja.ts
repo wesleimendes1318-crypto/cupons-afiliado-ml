@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { ehLinkDeCompra } from "@/lib/afiliado";
-import { compararMultiloja, multilojaConfigurada, type LojaExterna } from "@/lib/coletor-multiloja";
+import {
+  compararMultiloja,
+  multilojaConfigurada,
+  type LojaExterna,
+  type ResumoMarketplace,
+} from "@/lib/coletor-multiloja";
 import { limparResultado } from "@/lib/multiloja-resultado";
 import { origemPermitida } from "@/lib/public-ai-api";
 
@@ -19,7 +24,13 @@ const CACHE_MS = 6 * 3600_000;
 /* A extensão leva até ~1 min (busca, conferência pela foto e links). */
 const ESPERA_EXTENSAO_MS = 4 * 60_000;
 
-type Resposta = { ativo: boolean; lojas: LojaExterna[]; aguardar?: boolean; adiado?: boolean };
+type Resposta = {
+  ativo: boolean;
+  lojas: LojaExterna[];
+  resumo?: Record<string, ResumoMarketplace>;
+  aguardar?: boolean;
+  adiado?: boolean;
+};
 
 /* Chave do anúncio colado para os vereditos guardados (código MLB). */
 function chaveDoOriginal(url: string | null, pedido: number) {
@@ -101,6 +112,7 @@ export const Route = createFileRoute("/api/public/multiloja")({
           return Response.json({ ativo: true, lojas: [], aguardar: true } satisfies Resposta);
 
         let lojas: LojaExterna[] = [];
+        let resumo: Record<string, ResumoMarketplace> | undefined;
         try {
           const r = await compararMultiloja({
             titulo: a.titulo,
@@ -111,16 +123,19 @@ export const Route = createFileRoute("/api/public/multiloja")({
           });
           /* Trava final: só link de afiliado do próprio marketplace. */
           lojas = r.lojas.filter((l) => ehLinkDeCompra(l.link, l.marketplace));
+          resumo = r.resumo;
         } catch {
           lojas = [];
         }
-        const resposta: Resposta = { ativo: true, lojas };
+        const resposta: Resposta = { ativo: true, lojas, ...(resumo ? { resumo } : {}) };
         await db.from("multiloja_resultados").upsert({
           pedido_id: entrada.pedido,
           resultado: resposta,
           criado_em: new Date().toISOString(),
         });
-        return Response.json(resposta, { headers: { "Cache-Control": "no-store" } });
+        return Response.json(limparResultado(resposta), {
+          headers: { "Cache-Control": "no-store" },
+        });
       },
     },
   },

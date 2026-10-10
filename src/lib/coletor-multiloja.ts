@@ -1,42 +1,72 @@
 /* COLETOR MULTI-MARKETPLACE (Weslei, 09/10). A partir do título do anúncio
    colado (sem ruído de venda), busca em paralelo na Amazon e na Shopee
    (Promise.allSettled, prazo de 10 s por loja: se uma cair, a outra e o
-   Mercado Livre seguem). Dos achados, os 2 mais parecidos pelo título de
-   cada loja vão para a MESMA conferência pela foto do comparador
-   (conferirMesmoProduto): só vira "mesmo" com o veredito de igual; parecido
-   vai como parecido (com o que muda); o resto é descartado. Sem
-   conferência (IA fora do ar), nada entra. */
+   Mercado Livre seguem). MESMA ANÁLISE EM CADA MARKETPLACE (Weslei, 09/10:
+   "deve fazer a mesma analise em cada player e por fim comparar os 3"): de
+   cada loja, até 4 candidatos (os 3 mais parecidos pelo título e o mais
+   barato bem parecido, escolherCandidatos) vão para a MESMA conferência
+   pela foto do comparador (conferirMesmoProduto, com a segunda
+   conferência): só vira "mesmo" com o veredito de igual; parecido vai como
+   parecido (com o que muda, qualidade e desvantagens); o resto é
+   descartado. Sem conferência, nada entra. */
 import { conferirMesmoProduto, pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { amazonConfigurada, buscarNaAmazon } from "@/lib/integracoes/amazon";
 import { buscarNaShopee, shopeeConfigurada } from "@/lib/integracoes/shopee";
 import type { MarketplaceExterno, OfertaExterna } from "@/lib/integracoes/tipos";
+import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
+
+export { termoDeBuscaExterna };
 
 export type LojaExterna = OfertaExterna & {
   relacao: "mesmo" | "parecido";
   muda: string | null;
   semelhanca: number | null;
   qualidade: string | null;
+  qualidadeMotivo?: string | null;
+  desvantagens?: string[] | null;
+  mesmaFoto?: boolean | null;
 };
+
+/* O que cada marketplace leu e conferiu (a tela diz "li N, conferi M"). */
+export type ResumoMarketplace = { lidas: number; conferidas: number; motivo: string | null };
+
+/** Os candidatos de um marketplace para a conferência pela foto: na faixa
+    de preço, sem peça no lugar do aparelho nem usado, os 3 mais parecidos
+    pelo título e, entre os bem parecidos (>= 0,5), o mais barato que ainda
+    não entrou. Igual à extensão (extensao/multiloja.js). */
+export function escolherCandidatos<T extends { titulo: string; preco: number }>(
+  lista: T[],
+  original: { titulo: string; preco: number | null },
+  n = 4,
+): T[] {
+  const notas = lista
+    .filter((o) => o && o.titulo && Number.isFinite(o.preco) && o.preco > 0)
+    .filter((o) => !RE_CONDICAO_RUIM.test(o.titulo))
+    .filter((o) => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
+    .filter(
+      (o) =>
+        original.preco == null ||
+        (o.preco >= original.preco * 0.3 && o.preco <= original.preco * 3),
+    )
+    .map((o) => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
+    .filter((x) => x.nota >= 0.25)
+    .sort((a, b) => b.nota - a.nota || a.o.preco - b.o.preco);
+  const escolhidos = notas.slice(0, Math.max(0, n - 1));
+  const barato = notas
+    .filter((x) => x.nota >= 0.5 && !escolhidos.includes(x))
+    .sort((a, b) => a.o.preco - b.o.preco)[0];
+  const ultimo = barato ?? notas[n - 1];
+  if (ultimo && escolhidos.length < n) escolhidos.push(ultimo);
+  return escolhidos.map((x) => x.o);
+}
+
+const RE_CONDICAO_RUIM =
+  /\b(usad[oa]s?|recondicionad[oa]s?|seminov[oa]s?|renovad[oa]s?|vitrine|open ?box|mostru[aá]rio)\b/i;
 
 export const multilojaConfigurada = () => ({
   amazon: amazonConfigurada(),
   shopee: shopeeConfigurada(),
 });
-
-const RUIDO =
-  /\b(original|originais|lacrad[oa]s?|novo|nova|lan[cç]amento|promo[cç][aã]o|oferta|frete gr[aá]tis|envio (imediato|r[aá]pido)|pronta entrega|nota fiscal|com nf|nf|garantia|12x|sem juros|super|top|premium|melhor pre[cç]o|barato)\b/gi;
-
-/** Título do anúncio em termo de busca limpo (até 8 palavras). */
-export function termoDeBuscaExterna(titulo: string) {
-  return titulo
-    .replace(RUIDO, " ")
-    .replace(/[^\p{L}\p{N}\s.,/-]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ")
-    .slice(0, 8)
-    .join(" ");
-}
 
 const palavras = (s: string) =>
   new Set(
@@ -98,21 +128,15 @@ export async function compararMultiloja(
   prazoColeta = 10_000,
 ) {
   const coleta = await coletarMultiloja(original.titulo, prazoColeta);
-  const escolher = (l: OfertaExterna[]) =>
-    l
-      .filter((o) => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
-      .filter(
-        (o) =>
-          original.preco == null ||
-          (o.preco >= original.preco * 0.3 && o.preco <= original.preco * 3),
-      )
-      .map((o) => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
-      .filter((x) => x.nota >= 0.25)
-      .sort((a, b) => b.nota - a.nota)
-      .slice(0, 2)
-      .map((x) => x.o);
-  const candidatos = [...escolher(coleta.amazon), ...escolher(coleta.shopee)];
-  if (!candidatos.length || !original.imagem) return { lojas: [] as LojaExterna[], ...coleta };
+  const deAmazon = escolherCandidatos(coleta.amazon, original);
+  const deShopee = escolherCandidatos(coleta.shopee, original);
+  const candidatos = [...deAmazon, ...deShopee];
+  const resumo: Record<MarketplaceExterno, ResumoMarketplace> = {
+    amazon: { lidas: coleta.amazon.length, conferidas: deAmazon.length, motivo: null },
+    shopee: { lidas: coleta.shopee.length, conferidas: deShopee.length, motivo: null },
+  };
+  if (!candidatos.length || !original.imagem)
+    return { lojas: [] as LojaExterna[], resumo, ...coleta };
   const conf = await conferirMesmoProduto(
     {
       titulo: original.titulo,
@@ -131,7 +155,7 @@ export async function compararMultiloja(
   /* Sem conferência pela foto, nenhum outro marketplace entra. */
   if (!conf.ok) {
     coleta.erros.push(`conferencia: ${conf.erro.slice(0, 80)}`);
-    return { lojas: [] as LojaExterna[], ...coleta };
+    return { lojas: [] as LojaExterna[], resumo, ...coleta };
   }
   const lojas: LojaExterna[] = [];
   candidatos.forEach((c, i) => {
@@ -144,13 +168,16 @@ export async function compararMultiloja(
       muda: mesmo ? null : (av?.motivo ?? null),
       semelhanca: av?.semelhanca ?? null,
       qualidade: av?.qualidade ?? null,
+      qualidadeMotivo: mesmo ? null : (av?.qualidadeMotivo ?? null),
+      desvantagens: mesmo ? null : (av?.desvantagens ?? null),
+      mesmaFoto: av?.mesmaFoto ?? null,
     });
   });
   lojas.sort(
     (a, b) =>
       (a.relacao === "mesmo" ? 0 : 1) - (b.relacao === "mesmo" ? 0 : 1) || a.preco - b.preco,
   );
-  return { lojas, ...coleta };
+  return { lojas, resumo, ...coleta };
 }
 
 export const marketplacesDe = (l: LojaExterna[]) =>

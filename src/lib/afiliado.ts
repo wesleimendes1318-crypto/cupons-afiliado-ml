@@ -105,15 +105,37 @@ export function marketplaceDoLink(u: unknown): Marketplace | null {
   return null;
 }
 
-/** Link de afiliado da Amazon a partir do endereço do produto: só
-    amazon.com.br com ASIN (/dp/ ou /gp/product/), endereço limpo
-    (sem rastreio de terceiros) e a tag do Weslei. Sem ASIN: null. */
-export function gerarUrlAfiliadoAmazon(url: unknown, tag = TAG_AMAZON): string | null {
-  const x = urlSegura(url);
+/* ASIN (B0 + 8) ou ISBN-10 dos livros: o código do produto na Amazon. */
+const RE_ASIN = /^(?:B0[A-Z0-9]{8}|\d{9}[\dX])$/i;
+
+/** Link de afiliado da Amazon (Weslei, 09/10: tag melhoresc0fff-20):
+    - ASIN puro ("B0ABCDEFGH") -> /dp/<ASIN>?tag=...;
+    - endereço amazon.com.br com ASIN (/dp/, /gp/product/) -> o mesmo /dp/,
+      limpo (sem rastreio de terceiros);
+    - termo de busca (texto que não é endereço) -> /s?k=<termo>&tag=...
+      (o "Conferir na Amazon" quando não há preço capturado);
+    - endereço sem ASIN ou de outro domínio: null. */
+export function gerarUrlAfiliadoAmazon(urlOuAsin: unknown, tag = TAG_AMAZON): string | null {
+  if (typeof urlOuAsin !== "string") return null;
+  const bruto = urlOuAsin.trim();
+  if (!bruto) return null;
+  const dp = (asin: string) =>
+    `https://www.amazon.com.br/dp/${asin.toUpperCase()}?tag=${encodeURIComponent(tag)}`;
+  if (RE_ASIN.test(bruto)) return dp(bruto);
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(bruto) && !/^(www\.)?amazon\./i.test(bruto))
+    return urlBuscaAmazon(bruto, tag);
+  const x = urlSegura(bruto);
   if (!x || !/^(www\.)?amazon\.com\.br$/i.test(x.hostname)) return null;
   const asin = /\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})(?:[/?]|$)/i.exec(
     x.pathname + "/",
   )?.[1];
-  if (!asin) return null;
-  return `https://www.amazon.com.br/dp/${asin.toUpperCase()}?tag=${encodeURIComponent(tag)}`;
+  return asin ? dp(asin) : null;
+}
+
+/** Busca da Amazon com a tag (até 120 caracteres de termo). Sem termo: null. */
+export function urlBuscaAmazon(termo: unknown, tag = TAG_AMAZON): string | null {
+  if (typeof termo !== "string") return null;
+  const t = termo.replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!t) return null;
+  return `https://www.amazon.com.br/s?k=${encodeURIComponent(t)}&tag=${encodeURIComponent(tag)}`;
 }

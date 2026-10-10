@@ -60,7 +60,11 @@ import {
   type Qualidade,
 } from "@/lib/qualidade";
 import { BotaoFoto, PainelFoto } from "@/components/BuscaPorFoto";
-import { OutrosMarketplaces } from "@/components/OutrosMarketplaces";
+import {
+  ComparacaoMarketplaces,
+  type ColadoParaComparar,
+} from "@/components/ComparacaoMarketplaces";
+import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
@@ -1975,11 +1979,6 @@ function Resultado({
      BARATO que o melhor preço do mesmo produto, muito parecido (semelhança
      >= 85 ou a mesma foto) e sem frete pago. */
   const precoDoMesmo = (recomendada ? totalDaLoja(recomendada.o) : null) ?? totalColado ?? null;
-  /* Melhor preço do mesmo produto no Mercado Livre, só o produto (para o
-     aviso de outros marketplaces, frete em linha própria). */
-  const precoProdutoMl = recomendada
-    ? (recomendada.o.final ?? recomendada.o.preco ?? null)
-    : (a?.preco ?? null);
   /* Mais barato porque vem MENOS (28/09: "Kit 10 cabides" x 30, "1un" x 3
      pipetas) ou serve para outra coisa não é alternativa: fica em Parecidos.
      Mesma lista da função muda_nao_e_alternativa do banco (vitrine). */
@@ -2216,6 +2215,59 @@ function Resultado({
     custoFrete: a?.custoFrete ?? null,
     detalhes: a?.detalhes ?? null,
   };
+  /* COMPARAÇÃO DOS 3 MARKETPLACES (09/10): o Mercado Livre entra com a
+     recomendação da tela (mesma conta da tabela) e o colado é a base da
+     diferença (custo final só com o frete dos dois lados conhecido). */
+  const coladoParaComparar: ColadoParaComparar = {
+    titulo: a?.titulo ?? null,
+    preco: precoColado,
+    totalConfirmado:
+      precoColado == null
+        ? null
+        : a?.freteGratis === true
+          ? precoColado
+          : a?.custoFrete != null && a.custoFrete > 0
+            ? Math.round((precoColado + a.custoFrete) * 100) / 100
+            : null,
+  };
+  const melhorMl: OfertaDoJogador | null = recomendada
+    ? recomendada.o.final != null
+      ? {
+          jogador: "mercadolivre",
+          titulo: a?.titulo ?? null,
+          loja: recomendada.o.vendedor ?? null,
+          preco: recomendada.o.final,
+          freteGratis: recomendada.o.freteGratis ?? null,
+          custoFrete: recomendada.o.custoFrete ?? null,
+          notaFrete: null,
+          prime: false,
+          oficial: recomendada.o.lojaOficial === true,
+          link:
+            recomendada.o.link && !recomendada.o.semAfiliado && !recomendada.o.mesmaPagina
+              ? recomendada.o.link
+              : null,
+          total: totalDaLoja(recomendada.o),
+        }
+      : null
+    : precoColado != null
+      ? {
+          jogador: "mercadolivre",
+          titulo: a?.titulo ?? null,
+          loja: a?.vendedor ?? null,
+          preco: precoColado,
+          freteGratis: a?.freteGratis ?? null,
+          custoFrete: a?.custoFrete ?? null,
+          notaFrete: null,
+          prime: false,
+          oficial: a?.lojaOficial === true,
+          link: semLink ? null : link,
+          total: totalColado,
+          ehColado: true,
+        }
+      : null;
+  const precosMl = linhasLojas
+    .map((l) => l.final)
+    .filter((p): p is number => typeof p === "number" && p > 0);
   /* Barra fixa do celular: a mesma recomendação da tela, só com link de
      afiliado (sem link pronto, a barra fica sem botão). */
   const barra = recomendada
@@ -2386,8 +2438,6 @@ function Resultado({
               cep={a?.cepDestino ?? null}
             />
           )}
-          {/* Amazon e Shopee (09/10): só com as credenciais nos Secrets. */}
-          <OutrosMarketplaces pedidoId={pedidoId} precoReferencia={precoProdutoMl} />
           <Parecidos
             lista={parecidosSemAlternativa}
             tituloColado={a?.titulo}
@@ -2396,11 +2446,26 @@ function Resultado({
             colado={coladoResumo}
             pedidoId={pedidoId}
           />
+          {/* A mesma análise na Amazon e na Shopee e, por fim, os 3
+              marketplaces lado a lado (Weslei, 09/10). */}
+          <ComparacaoMarketplaces
+            pedidoId={pedidoId}
+            colado={coladoParaComparar}
+            melhorMl={melhorMl}
+            precosMl={precosMl}
+          />
         </div>
       )}
 
       <div className="sm:col-start-1 sm:row-start-3">
-        {!temColuna && <OutrosMarketplaces pedidoId={pedidoId} precoReferencia={precoProdutoMl} />}
+        {!temColuna && (
+          <ComparacaoMarketplaces
+            pedidoId={pedidoId}
+            colado={coladoParaComparar}
+            melhorMl={melhorMl}
+            precosMl={precosMl}
+          />
+        )}
         {!leituraFalhou && pedidoId != null && !semLink && (
           <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
         )}

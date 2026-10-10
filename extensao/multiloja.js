@@ -3,13 +3,18 @@
      1. o banco libera (multiloja_vale: so pedido de cliente, ainda sem
         resultado, marketplace ligada);
      2. Amazon e Shopee buscam juntas (Promise.allSettled, prazo curto);
-     3. os 2 melhores de cada passam pela MESMA conferencia pela foto do
-        servidor (igual = "Mesmo produto"; parecido = "Parecido" com o que
-        muda; reprovado ou sem conferencia = fora); peca no lugar do
-        aparelho fica fora antes;
+     3. MESMA ANALISE EM CADA MARKETPLACE (Weslei, 09/10: "deve fazer a
+        mesma analise em cada player e por fim comparar os 3"): ate 4 de
+        cada (os 3 mais parecidos pelo titulo e o mais barato bem parecido)
+        passam pela MESMA conferencia pela foto do servidor (igual = "Mesmo
+        produto"; parecido = "Parecido" com o que muda, qualidade e
+        desvantagens; reprovado ou sem conferencia = fora); peca no lugar do
+        aparelho e usado ficam fora antes;
      4. links: Amazon com a tag do Weslei; Shopee pelo painel de afiliados
         (so link conferido); sem link de afiliado, a oferta nao entra;
-     5. grava em multiloja_resultados; o site (OutrosMarketplaces) mostra.
+     5. grava em multiloja_resultados com o resumo (lidas/conferidas por
+        marketplace); o site (ComparacaoMarketplaces) mostra a analise de
+        cada um e a comparacao final dos 3.
    Mesmas regras do servidor (src/lib/coletor-multiloja.ts). */
 import { buscarCandidatosAmazon, ofertaAmazonParaSite } from './amazon.js';
 import { buscarCandidatosShopee, gerarLinkAfiliadoShopee, ofertaShopeeParaSite, urlCanonicaShopee } from './shopee.js';
@@ -43,18 +48,29 @@ export function parecencaDoTitulo(a, b) {
   return comum / Math.min(x.size, y.size);
 }
 
-/** Os n mais parecidos pelo titulo, na faixa de preco e sem peca no lugar
-    do aparelho. */
-export function escolherCandidatos(lista, original, n = 2) {
-  return (lista || [])
-    .filter(o => o && o.titulo && o.preco != null)
+const RE_CONDICAO_RUIM = /\b(usad[oa]s?|recondicionad[oa]s?|seminov[oa]s?|renovad[oa]s?|vitrine|open ?box|mostru[aá]rio)\b/i;
+
+/** Candidatos de um marketplace para a conferencia pela foto: na faixa de
+    preco, sem peca no lugar do aparelho nem usado, os 3 mais parecidos
+    pelo titulo e, entre os bem parecidos (>= 0,5), o mais barato que ainda
+    nao entrou. Igual ao servidor (escolherCandidatos em
+    src/lib/coletor-multiloja.ts). */
+export function escolherCandidatos(lista, original, n = 4) {
+  const notas = (lista || [])
+    .filter(o => o && o.titulo && o.preco != null && o.preco > 0)
+    .filter(o => !RE_CONDICAO_RUIM.test(o.titulo))
     .filter(o => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
     .filter(o => original.preco == null || (o.preco >= original.preco * 0.3 && o.preco <= original.preco * 3))
     .map(o => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
     .filter(x => x.nota >= 0.25)
-    .sort((a, b) => b.nota - a.nota || a.o.preco - b.o.preco)
-    .slice(0, n)
-    .map(x => x.o);
+    .sort((a, b) => b.nota - a.nota || a.o.preco - b.o.preco);
+  const escolhidos = notas.slice(0, Math.max(0, n - 1));
+  const barato = notas
+    .filter(x => x.nota >= 0.5 && !escolhidos.includes(x))
+    .sort((a, b) => a.o.preco - b.o.preco)[0];
+  const ultimo = barato || notas[n - 1];
+  if (ultimo && escolhidos.length < n) escolhidos.push(ultimo);
+  return escolhidos.map(x => x.o);
 }
 
 const comPrazo = (promessa, ms, reserva) => Promise.race([
@@ -87,13 +103,21 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
     diag.amazon = { lidas: amazon.ofertas.length, motivo: amazon.motivo || null };
     diag.shopee = { lidas: shopee.ofertas.length, motivo: shopee.motivo || null };
 
+    /* Sem foto nao da para conferir: fica de fora ANTES da escolha (a vaga
+       vai para o proximo). */
+    const deAmazon = escolherCandidatos(amazon.ofertas.filter(o => o.imagem), original);
+    const deShopee = escolherCandidatos(shopee.ofertas.filter(o => o.imagem), original);
     const candidatos = [
-      ...escolherCandidatos(amazon.ofertas, original).map(o => ({ mk: 'amazon', o, chave: 'amazon:' + o.asin })),
-      ...escolherCandidatos(shopee.ofertas, original).map(o => ({ mk: 'shopee', o, chave: 'shopee:' + o.item }))
-    ].filter(c => c.o.imagem);
+      ...deAmazon.map(o => ({ mk: 'amazon', o, chave: 'amazon:' + o.asin })),
+      ...deShopee.map(o => ({ mk: 'shopee', o, chave: 'shopee:' + o.item }))
+    ];
+    /* O que cada marketplace leu e conferiu (so as consultadas). */
+    const resumo = {};
+    if (vale.amazon) resumo.amazon = { lidas: amazon.ofertas.length, conferidas: deAmazon.length, motivo: amazon.motivo || null };
+    if (vale.shopee) resumo.shopee = { lidas: shopee.ofertas.length, conferidas: deShopee.length, motivo: shopee.motivo || null };
     if (!candidatos.length) {
       diag.motivo = 'nenhum candidato parecido';
-      await gravarMultiloja(token, pedido, { ativo: true, lojas: [], via: 'extensao', em: new Date().toISOString() });
+      await gravarMultiloja(token, pedido, { ativo: true, lojas: [], resumo, via: 'extensao', em: new Date().toISOString() });
       return;
     }
 
@@ -107,7 +131,7 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
     if (!sv || !sv.ok || !Array.isArray(sv.avaliacao)) {
       diag.conferencia = { ok: false, erro: String((sv && sv.erro) || 'sem resposta').slice(0, 120) };
       /* Sem conferencia, nada entra; grava vazio para o site parar de esperar. */
-      await gravarMultiloja(token, pedido, { ativo: true, lojas: [], via: 'extensao', incompleto: true, em: new Date().toISOString() });
+      await gravarMultiloja(token, pedido, { ativo: true, lojas: [], resumo: {}, via: 'extensao', incompleto: true, em: new Date().toISOString() });
       return;
     }
     diag.conferencia = { ok: true, modelo: sv.modelo || null, iguais: sv.iguais || [] };
@@ -132,12 +156,15 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
         relacao: mesmo ? 'mesmo' : 'parecido',
         muda: mesmo ? null : ((av && av.motivo) || null),
         semelhanca: (av && av.semelhanca) ?? null,
-        qualidade: (av && av.qualidade) || null
+        qualidade: (av && av.qualidade) || null,
+        qualidadeMotivo: mesmo ? null : ((av && av.qualidadeMotivo) || null),
+        desvantagens: mesmo ? null : ((av && Array.isArray(av.desvantagens) && av.desvantagens.length) ? av.desvantagens.slice(0, 4) : null),
+        mesmaFoto: !!(av && av.mesmaFoto)
       });
     }
     lojas.sort((a, b) => (a.relacao === 'mesmo' ? 0 : 1) - (b.relacao === 'mesmo' ? 0 : 1) || a.preco - b.preco);
     diag.aprovados = lojas.length;
-    await gravarMultiloja(token, pedido, { ativo: true, lojas, via: 'extensao', em: new Date().toISOString() });
+    await gravarMultiloja(token, pedido, { ativo: true, lojas, resumo, via: 'extensao', em: new Date().toISOString() });
   } catch (e) {
     diag.erro = String((e && e.message) || e).slice(0, 160);
   } finally {

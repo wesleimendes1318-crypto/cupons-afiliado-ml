@@ -282,3 +282,195 @@ test("multiloja: a tela só recebe link de afiliado, foto conhecida e selo Prime
   assert.deepEqual(r.lojas[0]!.selos, ["Prime"]);
   assert.equal(r.lojas[1]!.imagem, null);
 });
+
+test("multiloja: usado e falso nunca chegam à tela; resumo só com números", async () => {
+  const { limparResultado } = await import("../src/lib/multiloja-resultado");
+  const base = {
+    marketplace: "amazon",
+    preco: 199.9,
+    loja: null,
+    freteGratis: null,
+    custoFrete: null,
+    notaFrete: null,
+    muda: null,
+    semelhanca: null,
+    qualidade: null,
+    selos: [],
+    imagem: null,
+    relacao: "mesmo",
+  };
+  const r = limparResultado({
+    ativo: true,
+    lojas: [
+      {
+        ...base,
+        id: "B0AAAAAAA1",
+        titulo: "Fone JBL Tune 520BT Recondicionado",
+        link: "https://www.amazon.com.br/dp/B0AAAAAAA1?tag=melhoresc0fff-20",
+      },
+      {
+        ...base,
+        id: "B0AAAAAAA2",
+        titulo: "Fone Bluetooth Réplica Primeira Linha",
+        link: "https://www.amazon.com.br/dp/B0AAAAAAA2?tag=melhoresc0fff-20",
+      },
+      {
+        ...base,
+        id: "B0AAAAAAA3",
+        titulo: "Fone JBL Tune 520BT Preto",
+        link: "https://www.amazon.com.br/dp/B0AAAAAAA3?tag=melhoresc0fff-20",
+        desvantagens: ["Sem cabo", 3],
+      },
+    ],
+    resumo: {
+      amazon: { lidas: 39, conferidas: 4, motivo: null },
+      shopee: "x",
+      outra: { lidas: 1 },
+    },
+    incompleto: true,
+  });
+  assert.deepEqual(
+    r.lojas.map((l) => l.id),
+    ["B0AAAAAAA3"],
+  );
+  assert.deepEqual(r.lojas[0]!.desvantagens, ["Sem cabo"]);
+  assert.deepEqual(r.resumo, { amazon: { lidas: 39, conferidas: 4, motivo: null } });
+  assert.equal(r.incompleto, true);
+});
+
+test("servidor: mesma escolha de candidatos da extensão (até 4, sem usado)", async () => {
+  const { escolherCandidatos } = await import("../src/lib/coletor-multiloja");
+  const original = { titulo: "Fone de Ouvido JBL Tune 520BT Bluetooth Preto", preco: 299.9 };
+  const e = escolherCandidatos(
+    [
+      { titulo: "Fone de Ouvido JBL Tune 520BT Bluetooth Preto", preco: 289.9 },
+      { titulo: "Fone de Ouvido JBL Tune 520BT Bluetooth Preto Original", preco: 279.9 },
+      { titulo: "JBL Tune 520BT Fone de Ouvido Bluetooth Preto", preco: 269.9 },
+      { titulo: "Fone JBL Tune 520BT Bluetooth Preto Usado", preco: 99.9 },
+      { titulo: "Fone JBL Tune 520BT Azul", preco: 239.9 },
+      { titulo: "JBL Tune 520BT", preco: 199.9 },
+    ],
+    original,
+  );
+  assert.equal(e.length, 4);
+  assert.ok(e.some((o) => o.preco === 199.9));
+  assert.ok(!e.some((o) => /usado/i.test(o.titulo)));
+});
+
+test("comparação final: só disputa o mais barato quem tem custo confirmado", async () => {
+  const m = await import("../src/lib/comparacao-marketplaces");
+  const ml = {
+    jogador: "mercadolivre" as const,
+    titulo: "Fone",
+    loja: "Loja A",
+    preco: 249.9,
+    freteGratis: true,
+    custoFrete: null,
+    notaFrete: null,
+    prime: false,
+    oficial: false,
+    link: "https://meli.la/1AbCdEf",
+    total: 249.9,
+  };
+  const lojaAmazon = {
+    marketplace: "amazon" as const,
+    id: "B0ABCDEFGH",
+    titulo: "Fone",
+    preco: 199.9,
+    link: "https://www.amazon.com.br/dp/B0ABCDEFGH?tag=melhoresc0fff-20",
+    imagem: null,
+    loja: null,
+    freteGratis: null,
+    custoFrete: null,
+    notaFrete: "Frete grátis para assinantes Prime",
+    selos: ["Prime"],
+    relacao: "mesmo" as const,
+    muda: null,
+    semelhanca: 95,
+    qualidade: null,
+  };
+  const parecidoMaisBarato = {
+    ...lojaAmazon,
+    id: "B0PARECIDO",
+    preco: 99.9,
+    relacao: "parecido" as const,
+  };
+  const amazon = m.melhorDoMarketplace([parecidoMaisBarato, lojaAmazon], "amazon");
+  /* parecido nunca é a melhor oferta do mesmo produto */
+  assert.equal(amazon?.preco, 199.9);
+  assert.equal(amazon?.total, null);
+  assert.equal(amazon?.prime, true);
+
+  /* Prime não confirma o custo: o Mercado Livre continua o mais barato e a
+     Amazon aparece como menor preço no produto. */
+  const d = m.decidirEntreMarketplaces([ml, amazon, null]);
+  assert.equal(d.vencedor?.jogador, "mercadolivre");
+  assert.equal(d.menorNoProduto?.jogador, "amazon");
+  assert.deepEqual(
+    d.ofertas.map((o) => o.jogador),
+    ["mercadolivre", "amazon"],
+  );
+
+  /* Com frete grátis confirmado, a Amazon disputa e ganha. */
+  const amazonGratis = m.ofertaExterna({ ...lojaAmazon, freteGratis: true });
+  const d2 = m.decidirEntreMarketplaces([ml, amazonGratis]);
+  assert.equal(d2.vencedor?.jogador, "amazon");
+  assert.equal(d2.menorNoProduto, null);
+
+  /* Empate (menos de R$ 0,50): Mercado Livre primeiro. */
+  const d3 = m.decidirEntreMarketplaces([{ ...amazonGratis, preco: 249.6, total: 249.6 }, ml]);
+  assert.equal(d3.vencedor?.jogador, "mercadolivre");
+
+  /* Link de outro programa não vira botão. */
+  assert.equal(
+    m.ofertaExterna({ ...lojaAmazon, link: "https://www.amazon.com.br/dp/B0ABCDEFGH?tag=outra-20" })
+      .link,
+    null,
+  );
+});
+
+test("comparação final: diferença contra o colado e frete em linha própria", async () => {
+  const m = await import("../src/lib/comparacao-marketplaces");
+  /* toLocaleString usa espaço sem quebra depois do "R$". */
+  const dif = (...a: Parameters<typeof m.diferencaContraColado>) =>
+    m.diferencaContraColado(...a)?.replace(/\u00a0/g, " ") ?? null;
+  const colado = { preco: 300, totalConfirmado: 300 };
+  assert.equal(
+    dif({ preco: 250, freteGratis: true, custoFrete: null }, colado),
+    "R$ 50,00 a menos no custo final, já com o frete",
+  );
+  assert.equal(
+    dif({ preco: 250, freteGratis: null, custoFrete: null }, colado),
+    "R$ 50,00 a menos no produto",
+  );
+  assert.equal(
+    dif({ preco: 280, freteGratis: false, custoFrete: 30 }, colado),
+    "R$ 10,00 a mais no custo final, já com o frete",
+  );
+  assert.equal(
+    dif({ preco: 250, freteGratis: true, custoFrete: null }, { preco: 300, totalConfirmado: null }),
+    "R$ 50,00 a menos no produto",
+  );
+  assert.equal(
+    dif({ preco: 300, freteGratis: null, custoFrete: null, ehColado: true }, colado),
+    "É o anúncio que você colou",
+  );
+  for (const t of [
+    m.linhaDoFrete({ freteGratis: true, custoFrete: null, notaFrete: null }),
+    m.linhaDoFrete({ freteGratis: false, custoFrete: 19.9, notaFrete: null }),
+    m.linhaDoFrete({
+      freteGratis: null,
+      custoFrete: null,
+      notaFrete: "Frete grátis para assinantes Prime",
+    }),
+    m.linhaDoFrete({ freteGratis: null, custoFrete: null, notaFrete: null }),
+  ])
+    assert.ok(t.startsWith("Frete"), t);
+  /* Nenhuma diferença junta valor em reais com "frete" fora da frase
+     padrão do site ("já com o frete"). */
+  assert.ok(
+    !/R\$ [\d.,]+ (?:de )?frete|\+ ?frete/i.test(
+      dif({ preco: 280, freteGratis: false, custoFrete: 30 }, colado) ?? "",
+    ),
+  );
+});

@@ -86,3 +86,20 @@ test('termo de busca e escolha dos candidatos', () => {
   const e = escolherCandidatos(lista, original);
   assert.deepEqual(e.map(o => o.preco), [249.9, 239.9]);
 });
+
+test('mesma analise em cada marketplace: ate 4, sem usado, com o mais barato bem parecido', () => {
+  const original = { titulo: 'Fone de Ouvido JBL Tune 520BT Bluetooth Preto', preco: 299.9 };
+  const lista = [
+    { titulo: 'Fone de Ouvido JBL Tune 520BT Bluetooth Preto', preco: 289.9 },
+    { titulo: 'Fone de Ouvido JBL Tune 520BT Bluetooth Preto Original', preco: 279.9 },
+    { titulo: 'JBL Tune 520BT Fone de Ouvido Bluetooth Preto', preco: 269.9 },
+    { titulo: 'Fone JBL Tune 520BT Bluetooth Preto Usado', preco: 99.9 },     /* usado: fora */
+    { titulo: 'Fone JBL Tune 520BT Azul', preco: 239.9 },
+    { titulo: 'JBL Tune 520BT', preco: 199.9 }
+  ];
+  const e = escolherCandidatos(lista, original);
+  assert.equal(e.length, 4);
+  assert.ok(!e.some(o => /usado/i.test(o.titulo)));
+  /* o mais barato bem parecido entra mesmo fora dos 3 de maior nota */
+  assert.ok(e.some(o => o.preco === 199.9));
+});

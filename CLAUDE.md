@@ -4,8 +4,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 
 ## Produto
 - O site é um COMPARADOR de preços do Mercado Livre. A recomendação é sempre
-  do Mercado Livre; Amazon e Shopee só em bloco separado (ver "Outros
-  marketplaces, busca por foto e Facebook (09/10)").
+  do Mercado Livre; Amazon e Shopee têm a mesma análise em seções próprias
+  e entram na "Comparação final" dos 3 marketplaces, onde só disputam o
+  mais barato com custo confirmado (ver "Mesma análise em cada marketplace
+  e comparação final dos 3 (09/10, noite)").
 - Todo link colado precisa ser comparado com o MESMO produto em outras lojas.
 - Só mostrar outra loja quando a Gemini confirmou pela foto que é o mesmo produto.
   Produto parecido apresentado como igual é o pior erro possível.
@@ -1123,19 +1125,17 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   AMAZON_CREATORS_CREDENTIAL_ID, AMAZON_CREATORS_CREDENTIAL_SECRET,
   AMAZON_CREATORS_VERSION, padrão 3.1), só condição Nova, Prime primeiro;
   Shopee pela Affiliate Open API (SHOPEE_AFFILIATE_APP_ID,
-  SHOPEE_AFFILIATE_SECRET; comissão nunca é pedida nem mostrada). Os 2
-  melhores de cada marketplace passam pela conferência pela foto
+  SHOPEE_AFFILIATE_SECRET; comissão nunca é pedida nem mostrada). Até 4
+  de cada marketplace (escolherCandidatos) passam pela conferência pela foto
   (conferirMesmoProduto, chave "amazon:<asin>"/"shopee:<id>"): igual =
   "Mesmo produto", parecido = "Parecido" com "Não é idêntico. Muda: ...",
   conferência que falha = nada entra; peça no lugar do aparelho fora.
   /api/public/multiloja ({pedido}, cache 6 h em multiloja_resultados, só
-  servidor; freio de 40 novos em 5 min) alimenta OutrosMarketplaces
-  (abaixo da tabela das lojas): selo neutro do marketplace (só o nome),
-  "Prime", frete em linha própria, aviso quando o mesmo produto sai mais
-  barato que o melhor preço do Mercado Livre ("no produto", frete à parte).
-  Frete da Shopee é desconhecido e o Prime é só para assinantes: nada disso
-  passa na frente da recomendação. Bot, canal e vitrine ainda não mostram
-  outros marketplaces.
+  servidor; freio de 40 novos em 5 min) alimenta ComparacaoMarketplaces
+  (ver a seção da comparação final dos 3): selo neutro do marketplace (só o
+  nome), "Prime", frete em linha própria. Frete da Shopee é desconhecido e
+  o Prime é só para assinantes: nada disso passa na frente da
+  recomendação. Bot, canal e vitrine ainda não mostram outros marketplaces.
 - BUSCA POR FOTO (Weslei, 09/10): botão de câmera ao lado do campo do link
   abre "Tirar foto" (capture="environment", só em tela de toque) e "Da
   galeria" ("Escolher imagem" no PC). SEMPRE COM CONSENTIMENTO (Weslei,
@@ -1174,7 +1174,7 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (sem patrocinado e sem faixa de preço por variação); link pelo "Link
   personalizado" do painel de afiliados numa aba, aceito só se for NOVO na
   tela e se abrir o MESMO produto (item no destino), cache 7 dias; login ou
-  verificação = pausa de 6 h. Os 2 melhores de cada passam pela conferência
+  verificação = pausa de 6 h. Até 4 de cada passam pela conferência
   pela foto do servidor; grava com gravar_multiloja; o site limpa de novo
   (src/lib/multiloja-resultado.ts: link de afiliado, foto dos hosts das
   marketplaces, selo só Prime) e espera até ~1 min. Diagnóstico: diagnosticos
@@ -1185,3 +1185,54 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   preço ("4 na tela"). Extensão 1.159.0: o leitor da Shopee rola a página a
   cada leitura, junta o preço quebrado em linhas ("R$" / "29" / ",90") e,
   sem preço, grava uma amostra do texto do cartão no diagnóstico.
+
+## Mesma análise em cada marketplace e comparação final dos 3 (09/10, noite)
+- Weslei, 09/10: prompt "Conector Amazon (Tag melhoresc0fff-20) e Linha da
+  Amazon na Tabela de Comparação" e "deve fazer a mesma analise em cada
+  player e por fim comparar os 3 players".
+- LINKS DA AMAZON (src/lib/afiliado.ts): gerarUrlAfiliadoAmazon(urlOuAsin)
+  aceita ASIN puro (B0 + 8 ou ISBN-10) -> /dp/<ASIN>?tag=melhoresc0fff-20,
+  endereço amazon.com.br com ASIN -> o mesmo /dp/ limpo, termo de busca ->
+  urlBuscaAmazon (/s?k=<termo>&tag=...); endereço sem ASIN ou de outro
+  domínio = null. ehLinkDeAfiliadoAmazon: amazon.com.br com UMA tag igual
+  à do Weslei, ou amzn.to.
+- MESMA ANÁLISE (extensão 1.160.0, extensao/multiloja.js, e servidor,
+  escolherCandidatos em src/lib/coletor-multiloja.ts): de cada marketplace,
+  até 4 candidatos (os 3 mais parecidos pelo título + o mais barato bem
+  parecido, nota >= 0,5), sem usado/recondicionado/vitrine nem peça no
+  lugar do aparelho, vão para a conferência pela foto do servidor (com a
+  segunda conferência). Guarda muda, qualidade, qualidadeMotivo,
+  desvantagens e mesmaFoto, e o resumo por marketplace (lidas,
+  conferidas, motivo; sem a chave = não consultada). Conferência que não
+  responde grava incompleto (a tela diz "Não deu para conferir pela foto
+  agora"). Trava da tela (src/lib/multiloja-resultado.ts): link de
+  afiliado do próprio marketplace, sem usado e sem falso (pareceFalso).
+- TELA (src/components/ComparacaoMarketplaces.tsx, depois dos Parecidos
+  do Mercado Livre): "Na Amazon" e "Na Shopee" com "Li N resultados e
+  conferi M pela foto, descrição e características", Mesmo produto (do
+  mais barato) e Parecidos (com "Não é idêntico ao anúncio que você
+  colou. Muda: ...", selo de qualidade ✓/⚠/?, "Desvantagens em relação
+  ao seu", "Mesma foto do anúncio colado"), aviso de preço muito abaixo
+  (a mesma conta da tabela, com os preços das 3 marketplaces) e a
+  diferença contra o anúncio colado.
+- COMPARAÇÃO FINAL (src/lib/comparacao-marketplaces.ts): uma linha por
+  marketplace ("Mercado Livre", "Amazon Brasil", "Shopee") com a melhor
+  oferta do MESMO produto; o Mercado Livre entra com a recomendação da
+  tela (mesma conta da tabela, totalDaLoja). Disputa o "🔥 Mais barato
+  entre os 3" só quem tem custo confirmado: na Amazon e na Shopee, frete
+  grátis confirmado ou de valor conhecido. Prime = frete grátis só para
+  assinantes: não confirma. Empate (< R$ 0,50): Mercado Livre primeiro,
+  depois loja oficial. O selo só aparece com 2 ou mais marketplaces com o
+  mesmo produto. Mais barato só no produto com frete não confirmado =
+  "Menor preço no produto" (R$ X a menos no produto, frete em linha
+  própria, "confira antes de comprar"). Diferença contra o colado: "no
+  custo final, já com o frete" só com o frete dos dois lados conhecido;
+  senão "no produto". Linha sem oferta: "Conferindo…", "Não achei o
+  mesmo produto conferido pela foto", "Não consultada nesta comparação"
+  ou "Não deu para conferir pela foto agora"; na Amazon, sem preço
+  capturado, "Conferir na Amazon" (busca com a tag). Botão sempre
+  "Comprar com segurança" (só link de afiliado do próprio marketplace);
+  o nome do marketplace só no selo. Hoje a Amazon e a Shopee nunca têm
+  frete confirmado para o cliente (a leitura usa a sessão do Weslei:
+  Prime e CEP dele), então a recomendação continua a do Mercado Livre e
+  a Amazon/Shopee mais barata aparece como "Menor preço no produto".

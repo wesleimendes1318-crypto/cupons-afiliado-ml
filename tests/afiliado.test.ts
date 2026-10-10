@@ -7,6 +7,7 @@ import {
   ehLinkDeAfiliadoShopee,
   ehLinkDeCompra,
   gerarUrlAfiliadoAmazon,
+  urlBuscaAmazon,
   marketplaceDoLink,
 } from "../src/lib/afiliado";
 
@@ -82,4 +83,30 @@ test("gera link da Amazon limpo com a tag", () => {
   assert.equal(gerarUrlAfiliadoAmazon("https://www.amazon.com/dp/B0ABCDEFGH"), null);
   const gerado = gerarUrlAfiliadoAmazon("https://amazon.com.br/dp/B0ABCDEFGH");
   assert.equal(ehLinkDeAfiliadoAmazon(gerado), true);
+});
+
+test("Amazon: ASIN puro e termo de busca com a tag (Conferir na Amazon)", () => {
+  assert.equal(
+    gerarUrlAfiliadoAmazon("B0ABCDEFGH"),
+    "https://www.amazon.com.br/dp/B0ABCDEFGH?tag=melhoresc0fff-20",
+  );
+  assert.equal(
+    gerarUrlAfiliadoAmazon("b0abcdefgh"),
+    "https://www.amazon.com.br/dp/B0ABCDEFGH?tag=melhoresc0fff-20",
+  );
+  const busca = gerarUrlAfiliadoAmazon("Fone JBL Tune 520BT");
+  assert.equal(
+    busca,
+    "https://www.amazon.com.br/s?k=Fone%20JBL%20Tune%20520BT&tag=melhoresc0fff-20",
+  );
+  assert.equal(ehLinkDeAfiliadoAmazon(busca), true);
+  assert.equal(
+    urlBuscaAmazon("  a&b=c  "),
+    "https://www.amazon.com.br/s?k=a%26b%3Dc&tag=melhoresc0fff-20",
+  );
+  assert.equal(ehLinkDeAfiliadoAmazon(urlBuscaAmazon("tag=outro-20")), true);
+  assert.equal(urlBuscaAmazon("   "), null);
+  assert.equal(gerarUrlAfiliadoAmazon(""), null);
+  assert.equal(gerarUrlAfiliadoAmazon("amazon.com.br/dp/B0ABCDEFGH"), null);
+  assert.equal(gerarUrlAfiliadoAmazon("https://golpe.com/dp/B0ABCDEFGH"), null);
 });
