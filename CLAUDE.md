@@ -1550,6 +1550,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   regrava a análise, pedido 1222); pedido recente entra na vitrine.
   Conferido em 10/10 15:50 na 1.165.0: pedido 1215 e vitrine com
   meli.la/2sfJJDp, gerado pelo endereço MLB-5141126371 em 2 s.
+  Ritmo (20261010191000): na 1.165.0 o 1º link de um lote sai em 1-2 s e
+  os seguintes em ~50 s (aba do gerador dormindo), então 1 por vez a cada
+  5 min; 3 por vez só na 1.165.5+. Recusado pelo programa (111) sai da
+  fila. Brinquedos (curadoria_brinquedos exige o link do pedido) na frente.
 - Bot: anúncio enviado sem link entra só como referência de preço
   (enviadoSemLink, decisaoDaTela(opcoes, enviado)); sendo o melhor, a compra
   é pelo site. Nunca "R$ 0,00 a menos".
