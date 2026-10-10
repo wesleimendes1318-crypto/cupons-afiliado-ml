@@ -264,8 +264,13 @@ begin
        set link = new.link
      where link is null and public.anuncio_do_endereco(url) = v_item;
   elsif new.status = 'falhou' or (new.status = 'pronto' and new.link is null) then
+    -- Recusado pelo programa (erro 111): não adianta tentar de novo
+    -- (Guardião 10/10 18:44: 4 anúncios repetiam a recusa a cada 30 min).
     update public.links_a_refazer
-       set erro = left(coalesce(new.erro, new.status), 200)
+       set erro = left(coalesce(new.erro, new.status), 200),
+           tentativas = case when coalesce(new.erro, '') ilike '%not allowed%'
+                               or coalesce(new.erro, '') ~ '"error_code"\s*:\s*111'
+                             then 3 else tentativas end
      where item = v_item;
   end if;
   return new;
