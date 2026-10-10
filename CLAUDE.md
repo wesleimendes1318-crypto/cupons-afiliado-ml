@@ -1534,6 +1534,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   com o endereço do anúncio, só com a extensão 1.165.5+ e sem cliente
   esperando; link_refeito devolve o link novo aos pedidos, à vitrine e ao
   acompanhamento.
+- SEM ATUALIZAR A EXTENSÃO (Weslei, 10/10: "não consigo atualizar a
+  extensão agora"; 20261010180000_link_da_oferta_sem_atualizar.sql): toda
+  geração passa por reservar_geracao antes do gerador. Chave = ficha (/p/
+  sem anúncio) e o pedido em andamento aponta um anúncio dela: com o link do
+  anúncio já conhecido (link_do_anuncio: geracoes pelo endereço do anúncio
+  ou reparo) devolve 'existe' com ele; senão 'ficha' (recusa) e a 1.165.0 cai
+  na 2ª tentativa, que gera pelo endereço do anúncio. Testado no banco
+  (transação desfeita): sem pedido, 'existe' de sempre; com pedido, 'ficha';
+  endereço do anúncio, 'reservado'. A trava nunca troca link bom pelo da
+  ficha (mantém o antigo ou usa o do anúncio) e põe o anúncio no reparo; o
+  reparo roda na 1.165.0 com 1 por vez e só sem cliente nos últimos 15 min;
+  pedido recente que ganha o link de volta entra na vitrine.
 - Bot: anúncio enviado sem link entra só como referência de preço
   (enviadoSemLink, decisaoDaTela(opcoes, enviado)); sendo o melhor, a compra
   é pelo site. Nunca "R$ 0,00 a menos".
