@@ -1321,8 +1321,45 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Extensão: atenderMultiloja (alarme de 1 min e "atenderAgora") pega os
   pedidos e chama compararOutrosMarketplaces, uma por vez; a conferência
   continua esperando as do Mercado Livre.
-- Link colado da Amazon ou da Shopee: o site identifica o marketplace
-  (marketplaceDoTexto) e explica que a comparação começa por um link do
-  Mercado Livre, com o caminho para comparar nos outros. Começar pela
-  Amazon/Shopee (busca só nela e o Mercado Livre sob demanda) ainda não
-  existe.
+- Link colado da Amazon, da Shopee ou de outra loja: ver "Reconhecimento
+  universal de links (10/10)".
+
+## Reconhecimento universal de links (10/10)
+- Weslei, 10/10: "preciso que ele aceite qualquer link e identifique o
+  produto... caso seja um link de um player que não estou afiliado,
+  identifique o produto e busque no mercado livre". Link nunca vira "link
+  inválido".
+- src/lib/analisar-link.ts (analisarLink -> AnaliseLink {origem:
+  mercadolivre | amazon | shopee | outro_player | invalido, urlLimpa,
+  identificador, termoIdentificado, nomeLoja, encurtado}): só o texto, sem
+  rede. Nome do endereço como a loja escreveu (decodificado, hífen ->
+  espaço, sem código/SKU/rastreio: MLB-, -i.loja.item, -p-, -g-, _JM, SKU
+  longo); sem nome no endereço, o texto em volta (título que o app manda,
+  sem "Confira este produto", preço nem "na Amazon"). Testes:
+  tests/analisar-link.test.ts (os 6 casos do pedido + extras).
+- /api/public/identificar-link (src/lib/identificar-link.ts): resolve
+  encurtado (amzn.to, a.co, shope.ee, s.shopee.com.br, AliExpress, bit.ly)
+  só pelos redirecionamentos, sem abrir a página; loja conhecida sem nome no
+  endereço: lê só o título (og:title/<title>, 400 KB, 4,5 s); página de
+  verificação não vale (a Amazon devolve "Amazon.com.br" de robô). Só host
+  público com nome. Nada guardado. Encurtado que era do Mercado Livre segue
+  a comparação de sempre.
+- Tela (LinkDeOutraLoja, no lugar do erro): "Loja do link: X" e "Produto
+  identificado: Nome". Outra loja (Magalu, KaBuM!, Casas Bahia, Americanas,
+  Shein, AliExpress, Temu...): a busca no Mercado Livre começa sozinha
+  ("Buscando o melhor preço para você no Mercado Livre..."), cartões da
+  busca guiada (ResultadosDaBusca, buscarProdutos em
+  src/lib/busca-guiada-cliente.ts) com "Comprar com segurança" (meli.la no
+  clique) e "Comparar preço". Amazon: "Comprar com segurança" do produto
+  exato (gerarUrlAfiliadoAmazon, tag do Weslei) + "Buscar o mesmo produto"
+  sob demanda. Shopee: o nome + busca sob demanda (link de afiliado da
+  Shopee só pela extensão). Texto sem link: aviso amigável + "Buscar
+  “nome”". Sem nome: campo "Qual é o produto?".
+- ?link= (bot e app instalado) aceita qualquer link; o texto todo vai junto.
+- Bot: link de outra loja -> mensagemOutraLoja/tecladoOutraLoja
+  (src/lib/telegram.ts): loja, produto identificado, "Comprar com
+  segurança" (só Amazon com a tag) e "Buscar o mesmo produto" (site).
+- Ainda não existe: o garimpo DENTRO da Amazon/Shopee a partir de um link
+  delas (procurar o mesmo produto mais barato na própria loja); precisa de
+  um pedido próprio na extensão. Hoje: produto exato com afiliado + busca no
+  Mercado Livre.

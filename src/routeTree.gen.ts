@@ -42,6 +42,7 @@ import { Route as ApiPublicCronGarimpoRouteImport } from './routes/api/public/cr
 import { Route as ApiPublicFotosRouteImport } from './routes/api/public/fotos'
 import { Route as ApiPublicFreteCepRouteImport } from './routes/api/public/frete-cep'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
+import { Route as ApiPublicIdentificarLinkRouteImport } from './routes/api/public/identificar-link'
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
 import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
@@ -221,6 +222,12 @@ const ApiPublicGerarTextoRoute = ApiPublicGerarTextoRouteImport.update({
   path: '/api/public/gerar-texto',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicIdentificarLinkRoute =
+  ApiPublicIdentificarLinkRouteImport.update({
+    id: '/api/public/identificar-link',
+    path: '/api/public/identificar-link',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMesmoProdutoRoute = ApiPublicMesmoProdutoRouteImport.update({
   id: '/api/public/mesmo-produto',
   path: '/api/public/mesmo-produto',
@@ -312,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/api/public/fotos': typeof ApiPublicFotosRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
+  '/api/public/identificar-link': typeof ApiPublicIdentificarLinkRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
@@ -358,6 +366,7 @@ export interface FileRoutesByTo {
   '/api/public/fotos': typeof ApiPublicFotosRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
+  '/api/public/identificar-link': typeof ApiPublicIdentificarLinkRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
@@ -405,6 +414,7 @@ export interface FileRoutesById {
   '/api/public/fotos': typeof ApiPublicFotosRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
+  '/api/public/identificar-link': typeof ApiPublicIdentificarLinkRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
@@ -453,6 +463,7 @@ export interface FileRouteTypes {
     | '/api/public/fotos'
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
+    | '/api/public/identificar-link'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/api/public/fotos'
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
+    | '/api/public/identificar-link'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
@@ -545,6 +557,7 @@ export interface FileRouteTypes {
     | '/api/public/fotos'
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
+    | '/api/public/identificar-link'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
@@ -592,6 +605,7 @@ export interface RootRouteChildren {
   ApiPublicFotosRoute: typeof ApiPublicFotosRoute
   ApiPublicFreteCepRoute: typeof ApiPublicFreteCepRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
+  ApiPublicIdentificarLinkRoute: typeof ApiPublicIdentificarLinkRoute
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
   ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
@@ -838,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGerarTextoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/identificar-link': {
+      id: '/api/public/identificar-link'
+      path: '/api/public/identificar-link'
+      fullPath: '/api/public/identificar-link'
+      preLoaderRoute: typeof ApiPublicIdentificarLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mesmo-produto': {
       id: '/api/public/mesmo-produto'
       path: '/api/public/mesmo-produto'
@@ -953,6 +974,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicFotosRoute: ApiPublicFotosRoute,
   ApiPublicFreteCepRoute: ApiPublicFreteCepRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
+  ApiPublicIdentificarLinkRoute: ApiPublicIdentificarLinkRoute,
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
   ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,

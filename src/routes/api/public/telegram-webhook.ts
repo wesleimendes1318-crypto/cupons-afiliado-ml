@@ -7,6 +7,7 @@ import {
   boasVindas,
   html,
   linkDoAnuncio,
+  mensagemOutraLoja,
   respostaSemModelo,
   responderConversa,
   VIDEO_COMO_FUNCIONA,
@@ -15,8 +16,11 @@ import {
   cepDoTexto,
   segredoDoWebhook,
   SITE,
+  tecladoOutraLoja,
   telegram,
 } from "@/lib/telegram";
+import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
+import { identificarLink } from "@/lib/identificar-link";
 import { origemDoStart } from "@/lib/telegram-publico";
 import { ligarAlerta, RE_START_ALERTA } from "@/lib/alertas-telegram";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
@@ -99,7 +103,16 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
             .update({ origem })
             .eq("chat_id", chatId)
             .is("origem", null);
-        const urlColado = linkDoAnuncio(texto);
+        let urlColado = linkDoAnuncio(texto);
+        /* Link de outra loja (10/10): identifica o produto (encurtado e
+           título resolvidos no servidor). Encurtado do Mercado Livre segue a
+           comparação de sempre. */
+        let outraLoja: AnaliseLink | null = null;
+        if (!urlColado && /https?:\/\/|www\./i.test(texto)) {
+          const a = await identificarLink(texto).catch(() => analisarLink(texto));
+          if (a.origem === "mercadolivre" && linkDoAnuncio(a.urlLimpa)) urlColado = a.urlLimpa;
+          else if (a.origem !== "invalido") outraLoja = a;
+        }
         if (primeiro || pediuAjuda) {
           await enviar(boasVindas(nome));
           await telegram(token, "sendVideo", {
@@ -108,10 +121,15 @@ export const Route = createFileRoute("/api/public/telegram-webhook")({
             caption: "🎬 Veja em 28 segundos como funciona",
             supports_streaming: true,
           });
-          if (!urlColado) {
+          if (!urlColado && !outraLoja) {
             await enviar("👉 <b>Quando quiser, é só colar aqui o link do produto.</b>");
             return new Response("OK");
           }
+        }
+
+        if (outraLoja) {
+          await enviar(mensagemOutraLoja(outraLoja), { reply_markup: tecladoOutraLoja(outraLoja) });
+          return new Response("OK");
         }
 
         if (!urlColado) {

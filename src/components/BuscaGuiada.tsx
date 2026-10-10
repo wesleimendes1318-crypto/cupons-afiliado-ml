@@ -2,6 +2,9 @@ import { useId, useState, type FormEvent } from "react";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { ArrowRight, Check, Loader2, Search, Sparkles } from "lucide-react";
 import { propsFotoCartao } from "@/lib/foto";
+import { buscarProdutos, type ContextoBusca, type Resposta } from "@/lib/busca-guiada-cliente";
+
+export type { ContextoBusca } from "@/lib/busca-guiada-cliente";
 
 /* BUSCA GUIADA (05/10): para quem não tem o link. A pessoa escreve do jeito
    dela ("presente para menino de 8 anos até R$ 200"), o servidor entende o
@@ -10,24 +13,6 @@ import { propsFotoCartao } from "@/lib/foto";
    dela, com as regras de sempre. Visual do site (Weslei, 05/10: "mantenha
    clean... devolva a identidade do site"): cartão branco, cinza #f5f5f7 e
    azul #0071e3. Os textos não citam IA. */
-
-type Resultado = {
-  produto: string;
-  item: string;
-  nome: string;
-  imagem: string | null;
-  preco: number | null;
-  url: string;
-};
-
-type Resposta = {
-  resumo: string;
-  buscas: string[];
-  resultados: Resultado[];
-  enfileirados: number;
-};
-
-export type ContextoBusca = "home" | "natal" | "criancas";
 
 const SUGESTOES: Record<ContextoBusca, string[]> = {
   home: [
@@ -96,20 +81,10 @@ export function BuscaGuiada({
     setCarregando(true);
     setErro(null);
     setResposta(null);
-    try {
-      const r = await fetch("/api/public/buscar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q: pergunta, contexto }),
-      });
-      const j = (await r.json()) as Resposta & { erro?: string };
-      if (!r.ok || j.erro) setErro(j.erro ?? "A busca não respondeu agora. Tente de novo.");
-      else setResposta(j);
-    } catch {
-      setErro("Sem conexão agora. Tente de novo.");
-    } finally {
-      setCarregando(false);
-    }
+    const r = await buscarProdutos(pergunta, contexto);
+    setErro(r.erro);
+    setResposta(r.resposta);
+    setCarregando(false);
   }
 
   function enviar(e: FormEvent) {
@@ -195,92 +170,121 @@ export function BuscaGuiada({
         </div>
       </div>
 
-      <div aria-live="polite">
-        {carregando && (
-          <div className="px-5 pb-6 sm:px-7">
-            <p className="text-sm text-secondary-ink">Procurando os produtos certos para você…</p>
-            <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[0, 1, 2, 3].map((k) => (
-                <li key={k} className="h-56 animate-pulse rounded-2xl bg-[#f5f5f7]" />
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {erro && !carregando && (
-          <p className="mx-5 mb-6 rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm sm:mx-7">{erro}</p>
-        )}
-
-        {resposta && !carregando && (
-          <div className="px-5 pb-6 sm:px-7">
-            {resposta.resumo && <p className="text-sm text-secondary-ink">{resposta.resumo}</p>}
-            {resposta.resultados.length === 0 ? (
-              <p className="mt-2 rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm">
-                Não achei um produto com anúncio ativo para essa busca. Tente com outras palavras ou
-                cole o link do produto acima.
-              </p>
-            ) : (
-              <>
-                <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {resposta.resultados.map((r) => (
-                    <li
-                      key={r.produto}
-                      className="campanha-cartao flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-[#1d1d1f]"
-                    >
-                      <div className="relative grid h-28 place-items-center overflow-hidden bg-[#f5f5f7] sm:h-32">
-                        {r.imagem ? (
-                          <img
-                            {...propsFotoCartao(r.imagem)}
-                            alt=""
-                            loading="lazy"
-                            className="absolute inset-0 h-full w-full object-contain p-2 mix-blend-multiply"
-                          />
-                        ) : (
-                          <Search className="size-6 text-[#86868b]" aria-hidden="true" />
-                        )}
-                      </div>
-                      <div className="flex flex-1 flex-col p-3">
-                        <p className="line-clamp-3 text-[13px] font-semibold leading-snug">
-                          {r.nome}
-                        </p>
-                        {r.preco ? (
-                          <p className="mt-2 text-[11px] text-[#6e6e73]">
-                            Anúncio de referência
-                            <span className="block text-base font-extrabold tabular-nums text-[#1d1d1f]">
-                              {brl(r.preco)}
-                            </span>
-                          </p>
-                        ) : null}
-                        <div className="mt-auto space-y-1.5 pt-3">
-                          {/* Direto para a oferta (Weslei, 05/10): o link de
-                              afiliado é gerado no clique. */}
-                          <VerNaLoja url={r.url} grande />
-                          <button
-                            type="button"
-                            onClick={() => comparar(r.url)}
-                            className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-                          >
-                            Comparar preço
-                            <ArrowRight className="size-3.5" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 flex items-start gap-1.5 text-[11px] text-secondary-ink">
-                  <Check className="mt-0.5 size-3.5 shrink-0 text-success" aria-hidden="true" />
-                  Preço de um anúncio do catálogo agora. "Comparar preço" confere o mesmo produto em
-                  outras lojas antes de você comprar
-                  {resposta.enfileirados > 0
-                    ? "; os primeiros também passam pela comparação completa e, se valerem a pena, entram na vitrine."
-                    : "."}
-                </p>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      <ResultadosDaBusca
+        carregando={carregando}
+        erro={erro}
+        resposta={resposta}
+        comparar={comparar}
+      />
     </section>
+  );
+}
+
+/* Cartões da busca: carregando, erro, nenhum achado ou a grade. */
+export function ResultadosDaBusca({
+  carregando,
+  erro,
+  resposta,
+  comparar,
+  compacto = false,
+  semResultado = "Não achei um produto com anúncio ativo para essa busca. Tente com outras palavras ou cole o link do produto acima.",
+}: {
+  carregando: boolean;
+  erro: string | null;
+  resposta: Resposta | null;
+  comparar: (url: string) => void;
+  semResultado?: string;
+  /* Dentro de outro cartão: sem o recuo lateral da seção. */
+  compacto?: boolean;
+}) {
+  const recuo = compacto ? "pt-3" : "px-5 pb-6 sm:px-7";
+  return (
+    <div aria-live="polite">
+      {carregando && (
+        <div className={recuo}>
+          <p className="text-sm text-secondary-ink">Procurando os produtos certos para você…</p>
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[0, 1, 2, 3].map((k) => (
+              <li key={k} className="h-56 animate-pulse rounded-2xl bg-[#f5f5f7]" />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {erro && !carregando && (
+        <p
+          className={`rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm ${compacto ? "mt-3" : "mx-5 mb-6 sm:mx-7"}`}
+        >
+          {erro}
+        </p>
+      )}
+
+      {resposta && !carregando && (
+        <div className={recuo}>
+          {resposta.resumo && <p className="text-sm text-secondary-ink">{resposta.resumo}</p>}
+          {resposta.resultados.length === 0 ? (
+            <p className="mt-2 rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm">{semResultado}</p>
+          ) : (
+            <>
+              <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {resposta.resultados.map((r) => (
+                  <li
+                    key={r.produto}
+                    className="campanha-cartao flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-[#1d1d1f]"
+                  >
+                    <div className="relative grid h-28 place-items-center overflow-hidden bg-[#f5f5f7] sm:h-32">
+                      {r.imagem ? (
+                        <img
+                          {...propsFotoCartao(r.imagem)}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-contain p-2 mix-blend-multiply"
+                        />
+                      ) : (
+                        <Search className="size-6 text-[#86868b]" aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col p-3">
+                      <p className="line-clamp-3 text-[13px] font-semibold leading-snug">
+                        {r.nome}
+                      </p>
+                      {r.preco ? (
+                        <p className="mt-2 text-[11px] text-[#6e6e73]">
+                          Anúncio de referência
+                          <span className="block text-base font-extrabold tabular-nums text-[#1d1d1f]">
+                            {brl(r.preco)}
+                          </span>
+                        </p>
+                      ) : null}
+                      <div className="mt-auto space-y-1.5 pt-3">
+                        {/* Direto para a oferta (Weslei, 05/10): o link de
+                              afiliado é gerado no clique. */}
+                        <VerNaLoja url={r.url} grande />
+                        <button
+                          type="button"
+                          onClick={() => comparar(r.url)}
+                          className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                        >
+                          Comparar preço
+                          <ArrowRight className="size-3.5" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 flex items-start gap-1.5 text-[11px] text-secondary-ink">
+                <Check className="mt-0.5 size-3.5 shrink-0 text-success" aria-hidden="true" />
+                Preço de um anúncio do catálogo agora. "Comparar preço" confere o mesmo produto em
+                outras lojas antes de você comprar
+                {resposta.enfileirados > 0
+                  ? "; os primeiros também passam pela comparação completa e, se valerem a pena, entram na vitrine."
+                  : "."}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

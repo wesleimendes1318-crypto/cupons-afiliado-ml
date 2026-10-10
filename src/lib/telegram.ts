@@ -7,6 +7,8 @@ import {
   formatarDataCompleta,
   type ResultadoPrazo,
 } from "@/lib/prazo-entrega";
+import { nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
+import { ehLinkDeCompra, gerarUrlAfiliadoAmazon } from "@/lib/afiliado";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
 
@@ -53,6 +55,45 @@ export function linkDoAnuncio(texto: string): string | null {
       texto,
     );
   return m ? m[0] : null;
+}
+
+/* Link de outra loja (10/10): o produto identificado e o caminho para a
+   busca no Mercado Livre (feita no site). Amazon: o produto exato com a tag
+   do Weslei. Nunca preço inventado. */
+export function mensagemOutraLoja(a: AnaliseLink): string {
+  const loja = html(a.nomeLoja ?? "outra loja");
+  const nome = a.termoIdentificado ? html(nomeParaTela(a.termoIdentificado)) : null;
+  const linhas = [`🏷️ Loja do link: ${loja}`];
+  if (nome) linhas.push(`🔎 <b>Produto identificado:</b> ${nome}`);
+  else linhas.push("Não consegui ler o nome do produto neste link.");
+  if (a.origem === "amazon" && a.identificador)
+    linhas.push(
+      "",
+      "🛒 <b>Comprar com segurança</b> abre o produto do seu link. Confira o preço e o frete no anúncio.",
+    );
+  linhas.push(
+    "",
+    nome
+      ? "👉 Toque em <b>Buscar o mesmo produto</b> para ver as opções nas lojas do Mercado Livre e comparar o preço."
+      : "👉 Toque em <b>Escrever o nome e buscar</b>: no site você escreve o produto e eu procuro nas lojas do Mercado Livre.",
+  );
+  return linhas.join("\n");
+}
+
+export function tecladoOutraLoja(a: AnaliseLink) {
+  const linhas: Array<Array<{ text: string; url: string }>> = [];
+  const amazon =
+    a.origem === "amazon" && a.identificador ? gerarUrlAfiliadoAmazon(a.identificador) : null;
+  if (amazon && ehLinkDeCompra(amazon, "amazon"))
+    linhas.push([{ text: "🛡️ Comprar com segurança", url: amazon }]);
+  const texto = `${a.termoIdentificado ? `${a.termoIdentificado.slice(0, 120)} ` : ""}${a.urlLimpa}`;
+  linhas.push([
+    {
+      text: a.termoIdentificado ? "🔎 Buscar o mesmo produto" : "✍️ Escrever o nome e buscar",
+      url: `${SITE}/?link=${encodeURIComponent(texto.slice(0, 900))}`,
+    },
+  ]);
+  return { inline_keyboard: linhas };
 }
 
 /* Frete sempre em linha própria (pedido 563): nunca "R$ X a menos + frete". */

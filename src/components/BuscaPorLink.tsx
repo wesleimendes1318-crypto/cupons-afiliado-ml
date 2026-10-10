@@ -67,6 +67,8 @@ import {
 import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
+import { LinkDeOutraLoja } from "@/components/LinkDeOutraLoja";
+import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 import { fotoNitida } from "@/lib/foto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -595,14 +597,6 @@ function limparLinkML(bruto: string): string {
 
    Também resolve a sujeira antiga: mesma URL emendada duas vezes sem espaço,
    texto em volta, quebra de linha no meio. */
-/* Marketplace de um link que não é do Mercado Livre (só para avisar). */
-function marketplaceDoTexto(texto: string): "Amazon" | "Shopee" | null {
-  const t = String(texto || "").toLowerCase();
-  if (/https?:\/\/([a-z0-9-]+\.)*(amazon\.com(\.br)?|amzn\.to|a\.co)\//.test(t)) return "Amazon";
-  if (/https?:\/\/([a-z0-9-]+\.)*(shopee\.com\.br|shope\.ee)\//.test(t)) return "Shopee";
-  return null;
-}
-
 function melhorLinkML(texto: string): string | null {
   const limpo = String(texto || "")
     .replace(/\s+/g, " ")
@@ -874,6 +868,13 @@ export default function BuscaPorLink({
   const atual = useRef<number | null>(null);
   /* Chave do pedido em tela: o botão da Amazon/Shopee pede a busca com ela. */
   const chaveAtual = useRef<string | null>(null);
+  /* Link de outra loja (10/10): produto identificado e busca no Mercado
+     Livre, nunca "link inválido". */
+  const [outraLoja, setOutraLoja] = useState<{
+    analise: AnaliseLink;
+    identificando: boolean;
+  } | null>(null);
+  const identificacao = useRef(0);
   /* Link (limpo) do pedido acompanhado, para o histórico. */
   const urlDoPedido = useRef<string | null>(null);
   const perfilRegistrado = useRef<string | null>(null);
@@ -904,20 +905,43 @@ export default function BuscaPorLink({
       setDemorando(false);
       setMotivo(null);
       setCompletando(false);
+      setOutraLoja(null);
+      const vez = ++identificacao.current;
 
       const limpo = melhorLinkML(alvo);
       urlDoPedido.current = limpo;
       if (!limpo) {
         setFase("parado");
-        /* Identifica o marketplace do link (10/10): a comparação começa pelo
-           Mercado Livre; a Amazon e a Shopee entram no resultado, quando o
-           cliente pede. */
-        const outro = marketplaceDoTexto(alvo);
-        setErro(
-          outro
-            ? `Esse link é da ${outro}. Por enquanto a comparação começa por um link do Mercado Livre: cole o link do produto lá e, no resultado, toque em "Comparar também na Amazon e na Shopee".`
-            : "Esse link não é de um anúncio válido. Cole o endereço do produto.",
-        );
+        /* Reconhecimento universal (10/10): qualquer link vira o produto
+           identificado e a busca no Mercado Livre (LinkDeOutraLoja). Encurtado
+           ou link sem nome: o servidor resolve e lê o título. */
+        const analise = analisarLink(alvo);
+        const precisa =
+          analise.origem !== "invalido" && (analise.encurtado || !analise.termoIdentificado);
+        setOutraLoja({ analise, identificando: Boolean(precisa) });
+        if (!precisa) return;
+        try {
+          const r = await fetch("/api/public/identificar-link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texto: alvo.slice(0, 2000) }),
+          });
+          const j = (await r.json()) as AnaliseLink & { erro?: string };
+          if (identificacao.current !== vez) return;
+          if (!r.ok || j.erro || !j.origem) {
+            setOutraLoja({ analise, identificando: false });
+            return;
+          }
+          /* Encurtado que era do Mercado Livre: compara como sempre. */
+          if (j.origem === "mercadolivre" && melhorLinkML(j.urlLimpa)) {
+            setOutraLoja(null);
+            window.dispatchEvent(new CustomEvent("comparar-link", { detail: j.urlLimpa }));
+            return;
+          }
+          setOutraLoja({ analise: j, identificando: false });
+        } catch {
+          if (identificacao.current === vez) setOutraLoja({ analise, identificando: false });
+        }
         return;
       }
 
@@ -1110,14 +1134,19 @@ export default function BuscaPorLink({
           break;
         }
       }
+      /* Link de outra loja (10/10): vai o texto todo (o título que o app
+         manda ajuda a identificar o produto). */
+      if (!alvo) {
+        const todos = [q.get("title"), q.get("text"), q.get("link")]
+          .filter((v): v is string => Boolean(v))
+          .join(" ")
+          .trim();
+        if (/https?:\/\//i.test(todos)) alvo = todos.slice(0, 2000);
+      }
     } catch {
       alvo = null;
     }
-    if (
-      !alvo ||
-      !/^https?:\/\/([a-z0-9-]+\.)*(mercadolivre\.com\.br|mercadolibre\.com|meli\.la)\//i.test(alvo)
-    )
-      return;
+    if (!alvo || !/^https?:\/\/|\shttps?:\/\//i.test(alvo)) return;
     setUrl(alvo);
     document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "start" });
     void buscar(alvo);
@@ -1259,6 +1288,20 @@ export default function BuscaPorLink({
       )}
 
       {erro && <p className="mt-3 text-sm font-medium text-danger">{erro}</p>}
+
+      {outraLoja && fase === "parado" && !pedido && (
+        <LinkDeOutraLoja
+          analise={outraLoja.analise}
+          identificando={outraLoja.identificando}
+          comparar={(alvo) => {
+            setUrl(alvo);
+            document
+              .getElementById("colar-link")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            void buscar(alvo);
+          }}
+        />
+      )}
 
       {/* Como funciona (vídeo de 28 s): só com a caixa parada, antes de comparar. */}
       {fase === "parado" && !pedido && <ComoFunciona />}
