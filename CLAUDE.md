@@ -1478,6 +1478,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   no <campeão>: R$ Y"; Mercado Livre: "Menor preço achado na busca" (não
   conferido pela foto). Garimpo que não responde em 6 min: "Tentar de
   novo" e, na Amazon, "Conferir na loja" (busca com a tag).
+- Validado em 11/10 com a extensão 1.166.0 (atualizou sozinha): garimpo 3,
+  o bebedouro B0H34VSMNJ do bug, 31 lidos, 5 conferidos, 2 "mesmo produto"
+  e 3 parecidos (voltagem/cor), em 15 s, nenhuma fonte decorativa; garimpo
+  4, "Comparar também na Shopee" do mesmo link, 2 parecidos com
+  s.shopee.com.br em 34 s; livro Hábitos Atômicos (garimpo 2) só com
+  parecidos (caderno de atividades "qualidade inferior", kit 2 livros).
+  Busca no Mercado Livre do bebedouro no ar: 7 resultados, todos
+  bebedouros. KaBuM!: preço e foto lidos da página; Magalu: só o nome (a
+  página não entregou preço ao servidor).
 
 ## Avaliação das pessoas (10/10)
 - Weslei, 10/10: "adicione a avaliação das pessoas, como mais um símbolo de
