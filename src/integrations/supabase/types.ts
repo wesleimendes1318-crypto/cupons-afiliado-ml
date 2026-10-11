@@ -61,6 +61,48 @@ export type Database = {
         }
         Relationships: []
       }
+      avaliacoes_anuncios: {
+        Row: {
+          aviso: string | null
+          comentarios: Json | null
+          distribuicao: Json | null
+          erro: string | null
+          item: string
+          lido_em: string | null
+          nota: number | null
+          sem_avaliacoes: boolean
+          tentado_em: string
+          total: number | null
+          total_comentarios: number | null
+        }
+        Insert: {
+          aviso?: string | null
+          comentarios?: Json | null
+          distribuicao?: Json | null
+          erro?: string | null
+          item: string
+          lido_em?: string | null
+          nota?: number | null
+          sem_avaliacoes?: boolean
+          tentado_em?: string
+          total?: number | null
+          total_comentarios?: number | null
+        }
+        Update: {
+          aviso?: string | null
+          comentarios?: Json | null
+          distribuicao?: Json | null
+          erro?: string | null
+          item?: string
+          lido_em?: string | null
+          nota?: number | null
+          sem_avaliacoes?: boolean
+          tentado_em?: string
+          total?: number | null
+          total_comentarios?: number | null
+        }
+        Relationships: []
+      }
       avaliacoes_indicacao: {
         Row: {
           aplicado: boolean
@@ -91,6 +133,39 @@ export type Database = {
           motivo?: string | null
           pedido_id?: number
           util?: boolean
+        }
+        Relationships: []
+      }
+      avaliacoes_ofertas: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          item: string | null
+          link: string
+          nota: number | null
+          prio: number
+          quando: string | null
+          total: number | null
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          item?: string | null
+          link: string
+          nota?: number | null
+          prio?: number
+          quando?: string | null
+          total?: number | null
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          item?: string | null
+          link?: string
+          nota?: number | null
+          prio?: number
+          quando?: string | null
+          total?: number | null
         }
         Relationships: []
       }
@@ -899,6 +974,45 @@ export type Database = {
         }
         Relationships: []
       }
+      links_a_refazer: {
+        Row: {
+          criado_em: string
+          enfileirado_em: string | null
+          erro: string | null
+          feito_em: string | null
+          item: string
+          link_novo: string | null
+          pedido_id: number | null
+          prioridade: number
+          tentativas: number
+          url_oferta: string
+        }
+        Insert: {
+          criado_em?: string
+          enfileirado_em?: string | null
+          erro?: string | null
+          feito_em?: string | null
+          item: string
+          link_novo?: string | null
+          pedido_id?: number | null
+          prioridade?: number
+          tentativas?: number
+          url_oferta: string
+        }
+        Update: {
+          criado_em?: string
+          enfileirado_em?: string | null
+          erro?: string | null
+          feito_em?: string | null
+          item?: string
+          link_novo?: string | null
+          pedido_id?: number | null
+          prioridade?: number
+          tentativas?: number
+          url_oferta?: string
+        }
+        Relationships: []
+      }
       mercado_sinais: {
         Row: {
           categoria_id: string | null
@@ -1494,6 +1608,7 @@ export type Database = {
         Args: { p_chave: string; p_token: string; p_valor: string }
         Returns: undefined
       }
+      anuncio_do_endereco: { Args: { p_url: string }; Returns: string }
       artes_campanhas: {
         Args: never
         Returns: {
@@ -1513,6 +1628,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      atualizar_avaliacoes_ofertas: { Args: never; Returns: number }
       atualizar_produto_visto: {
         Args: { p: Database["public"]["Tables"]["pedidos_link"]["Row"] }
         Returns: undefined
@@ -1532,6 +1648,44 @@ export type Database = {
           chave: string
           link: string
           nota: number
+          total: number
+        }[]
+      }
+      avaliacoes_da_vitrine_v2: {
+        Args: { p_chaves: string[] }
+        Returns: {
+          chave: string
+          com_detalhe: boolean
+          item: string
+          link: string
+          nota: number
+          sem_avaliacoes: boolean
+          total: number
+        }[]
+      }
+      avaliacoes_pendentes: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          item: string
+          origem: string
+          url: string
+        }[]
+      }
+      avaliacoes_pendentes_sem_pausa: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          item: string
+          origem: string
+          url: string
+        }[]
+      }
+      avaliacoes_por_itens: {
+        Args: { p_itens: string[] }
+        Returns: {
+          com_detalhe: boolean
+          item: string
+          nota: number
+          sem_avaliacoes: boolean
           total: number
         }[]
       }
@@ -1583,6 +1737,7 @@ export type Database = {
       }
       chave_do_produto: { Args: { p_url: string }; Returns: string }
       chave_do_url: { Args: { u: string }; Returns: string }
+      clientes_esperando: { Args: { p_token: string }; Returns: number }
       cobertura_do_titulo: {
         Args: { colado: string; outro: string }
         Returns: number
@@ -1603,6 +1758,12 @@ export type Database = {
         Returns: undefined
       }
       condicoes_pendentes: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          id: number
+        }[]
+      }
+      condicoes_pendentes_sem_pausa: {
         Args: { p_limite?: number; p_token: string }
         Returns: {
           id: number
@@ -1664,6 +1825,20 @@ export type Database = {
           preco: number
           produto: string
           url: string
+        }[]
+      }
+      detalhe_avaliacoes: {
+        Args: { p_item: string }
+        Returns: {
+          aviso: string
+          comentarios: Json
+          distribuicao: Json
+          item: string
+          lido_em: string
+          nota: number
+          sem_avaliacoes: boolean
+          total: number
+          total_comentarios: number
         }[]
       }
       detalhes_da_vitrine: {
@@ -1758,8 +1933,21 @@ export type Database = {
           pedido: boolean
         }[]
       }
+      etiquetas_pendentes_sem_pausa: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          desconto: string
+          id: number
+          pedido: boolean
+        }[]
+      }
       expirar_campanhas: { Args: never; Returns: number }
       expirar_pedidos: { Args: never; Returns: undefined }
+      extensao_pausada: { Args: never; Returns: boolean }
+      gravar_avaliacoes: {
+        Args: { p_itens: Json; p_token: string }
+        Returns: number
+      }
       gravar_diagnostico: {
         Args: { p_dados: Json; p_tipo: string; p_token: string }
         Returns: undefined
@@ -1785,12 +1973,21 @@ export type Database = {
         Args: { p_id: number; p_token: string }
         Returns: undefined
       }
+      item_da_oferta: { Args: { o: Json }; Returns: string }
+      item_do_anuncio: { Args: { u: string }; Returns: string }
       jsonb_sim: { Args: { j: Json }; Returns: boolean }
       ligar_alerta_telegram: {
         Args: { p_chat: number; p_codigo: string }
         Returns: Json
       }
       limpar_vencidos: { Args: never; Returns: number }
+      link_conhecido: { Args: { p_url: string }; Returns: string }
+      link_da_ficha: {
+        Args: { p_link: string; p_url: string }
+        Returns: boolean
+      }
+      link_de_reserva: { Args: { p_url: string }; Returns: Json }
+      link_do_anuncio: { Args: { p_item: string }; Returns: string }
       links_para_conferir: {
         Args: { p_limite?: number; p_token: string }
         Returns: {
@@ -1799,6 +1996,12 @@ export type Database = {
         }[]
       }
       links_pendentes: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          id: number
+        }[]
+      }
+      links_pendentes_sem_pausa: {
         Args: { p_limite?: number; p_token: string }
         Returns: {
           id: number
@@ -1813,7 +2016,25 @@ export type Database = {
           vendedor: string
         }[]
       }
+      lojas_para_resolver_sem_pausa: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          cupons: number
+          origem: string
+          seller_id: string
+          vendedor: string
+        }[]
+      }
       lojas_pedidas: {
+        Args: { p_token: string }
+        Returns: {
+          cupom_id: number
+          origem: string
+          seller_id: string
+          vendedor: string
+        }[]
+      }
+      lojas_pedidas_sem_pausa: {
         Args: { p_token: string }
         Returns: {
           cupom_id: number
@@ -1897,6 +2118,10 @@ export type Database = {
       }
       muda_nao_e_alternativa: { Args: never; Returns: string }
       multiloja_pendentes: { Args: { p_token: string }; Returns: Json }
+      multiloja_pendentes_sem_pausa: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       multiloja_vale: {
         Args: { p_pedido: number; p_token: string }
         Returns: Json
@@ -1906,6 +2131,7 @@ export type Database = {
         Args: { p_monitor: number; p_navegador: string }
         Returns: undefined
       }
+      pausar_extensao: { Args: { p_pausar: boolean }; Returns: string }
       pedidos_esperando: { Args: { p_token: string }; Returns: number }
       pedidos_no_limite: { Args: never; Returns: boolean }
       pedidos_pendentes: {
@@ -1913,6 +2139,25 @@ export type Database = {
         Returns: {
           cupom_id: number
           id: number
+          url_alvo: string
+          vendedor: string
+        }[]
+      }
+      pedidos_pendentes_sem_pausa: {
+        Args: { p_token: string }
+        Returns: {
+          cupom_id: number
+          id: number
+          url_alvo: string
+          vendedor: string
+        }[]
+      }
+      pedidos_pendentes_v2: {
+        Args: { p_token: string }
+        Returns: {
+          cupom_id: number
+          id: number
+          origem: string
           url_alvo: string
           vendedor: string
         }[]
@@ -1951,6 +2196,15 @@ export type Database = {
           url: string
         }[]
       }
+      proximo_monitor_sem_pausa: {
+        Args: { p_token: string }
+        Returns: {
+          chave: string
+          id: number
+          url: string
+        }[]
+      }
+      refazer_links_fila: { Args: { p_max?: number }; Returns: number }
       registrar_evento: {
         Args: {
           p_destino?: string
@@ -2090,7 +2344,21 @@ export type Database = {
           url_produto: string
         }[]
       }
+      vitrine_sem_foto_sem_pausa: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          chave: string
+          url_produto: string
+        }[]
+      }
       vitrines_para_conferir: {
+        Args: { p_limite?: number; p_token: string }
+        Returns: {
+          id: number
+          link_origem: string
+        }[]
+      }
+      vitrines_para_conferir_sem_pausa: {
         Args: { p_limite?: number; p_token: string }
         Returns: {
           id: number
