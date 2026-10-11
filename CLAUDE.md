@@ -1418,10 +1418,60 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Bot: link de outra loja -> mensagemOutraLoja/tecladoOutraLoja
   (src/lib/telegram.ts): loja, produto identificado, "Comprar com
   segurança" (só Amazon com a tag) e "Buscar o mesmo produto" (site).
-- Ainda não existe: o garimpo DENTRO da Amazon/Shopee a partir de um link
-  delas (procurar o mesmo produto mais barato na própria loja); precisa de
-  um pedido próprio na extensão. Hoje: produto exato com afiliado + busca no
-  Mercado Livre.
+- Garimpo DENTRO da Amazon/Shopee a partir de um link delas: feito em
+  11/10 (ver "Garimpo no player de origem e campeão do nicho").
+
+## Garimpo no player de origem e campeão do nicho (11/10)
+- PROMPT MESTRE do Weslei (11/10): garimpo no MESMO player do link primeiro
+  (Amazon -> Amazon, Shopee -> Shopee, Mercado Livre -> Mercado Livre); link
+  de loja sem afiliação começa no campeão do segmento; os outros players
+  sob demanda ("Comparar também em ..."); identidade exata (bug de 11/10:
+  bebedouro pet da Amazon virou "fonte de agua pet bivolt" e voltou uma
+  fonte decorativa de Buda).
+- CAMPEÃO (src/lib/campeao-segmento.ts, determinarCampeaoDoSegmento, testes
+  em tests/campeao-segmento.test.ts): livros/Kindle e eletrônicos/
+  informática/Alexa -> Amazon; autopeças/pneus/ferramentas pesadas, linha
+  branca, beleza/perfumaria/moda -> Mercado Livre; acessório barato
+  (< R$ 50 ou preço desconhecido), bijuteria, utilidades leves, papelaria ->
+  Shopee; resto -> Mercado Livre. Ordem: livro, autopeça, linha branca,
+  beleza/moda, acessório barato, eletrônico. Só título, categoria lida e
+  preço lido. Amazon/Shopee de segmento em que o Mercado Livre é campeão de
+  verdade (não o "geral") também abrem a busca no Mercado Livre sozinhas.
+- IDENTIFICAÇÃO (/api/public/identificar-link): de loja sem afiliação lê na
+  página o preço (JSON-LD offers / product:price:amount), a foto (og:image,
+  só de servidores de imagem conhecidos, RE_FOTO_PERMITIDA em
+  src/lib/conferir-produto.ts) e a categoria (JSON-LD/breadcrumb), e devolve
+  campeao. Sem o dado, vazio (a tela diz "não consegui ler").
+- BUSCA NO MERCADO LIVRE do mesmo produto (buscarMesmoProduto,
+  /api/public/buscar modo "produto"): sem interpretar a frase, título limpo
+  (src/lib/termo-busca.ts: sem Frete Grátis, Promoção, Bivolt, 110/220v,
+  Envio Imediato, SKU, código de rastreio), e só entra produto do MESMO
+  domínio que a API oficial prevê para o título (/sites/MLB/
+  domain_discovery/search; conferido em 11/10: bebedouro ->
+  MLB-CAT_AND_DOG_DRINKERS_AND_FEEDERS, a fonte de Buda é
+  MLB-TABLETOP_WATER_FOUNTAINS e sai). Sem previsão, o tipo do produto tem
+  de estar no nome (nomeTemOTipo). A conferência pela foto (servidor e
+  extensão) ganhou "OUTRO TIPO OU OUTRO USO NUNCA é igual nem parecido".
+- GARIMPO NA AMAZON/SHOPEE (extensão 1.166.0, extensao/garimpo.js; banco
+  20261011010000_garimpo_no_player.sql): o site pede (pedir_garimpo; mesmo
+  link e player volta o mesmo pedido; 30 novos a cada 10 min) e acompanha
+  (ver_garimpo com a chave); a extensão atende (garimpos_pendentes, 2 por
+  vez, pausa remota respeitada; gravar_garimpo): busca no player pelo termo
+  limpo, acha o produto de origem na busca (mesmo ASIN / item) ou na página
+  /dp/ da Amazon (produtoAmazonDoHtml), escolhe até 5 candidatos e confere
+  pela foto no servidor depois das conferências do Mercado Livre. Sem foto
+  da origem: só "Encontrado pela busca" (nunca "mesmo produto"). Links:
+  Amazon com a tag, Shopee pelo painel; o produto de origem também volta com
+  o link do Weslei. Diagnóstico: diagnosticos tipo 'garimpo'.
+- TELA (LinkDeOutraLoja + GarimpoNoPlayer + src/lib/garimpo-cliente.ts com
+  limparGarimpo, a trava final): Amazon mostra o produto exato com a tag
+  desde já; "Na Amazon/Na Shopee" com o seu link, o mais barato do mesmo
+  produto ("R$ X a menos no produto"), parecidos com o que muda, qualidade
+  e desvantagens, e os encontrados pela busca separados; loja sem
+  afiliação: "Preço visto na <loja>: R$ X" x "Melhor opção do mesmo produto
+  no <campeão>: R$ Y"; Mercado Livre: "Menor preço achado na busca" (não
+  conferido pela foto). Garimpo que não responde em 6 min: "Tentar de
+  novo" e, na Amazon, "Conferir na loja" (busca com a tag).
 
 ## Avaliação das pessoas (10/10)
 - Weslei, 10/10: "adicione a avaliação das pessoas, como mais um símbolo de

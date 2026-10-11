@@ -68,7 +68,7 @@ import {
 import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
-import { LinkDeOutraLoja } from "@/components/LinkDeOutraLoja";
+import { LinkDeOutraLoja, type LinkIdentificadoTela } from "@/components/LinkDeOutraLoja";
 import { Avaliacoes } from "@/components/Avaliacoes";
 import { BarraDeSecoes, type Secao } from "@/components/BarraDeSecoes";
 import type { Avaliacoes as DadosAvaliacoes } from "@/lib/avaliacoes";
@@ -891,7 +891,7 @@ export default function BuscaPorLink({
   /* Link de outra loja (10/10): produto identificado e busca no Mercado
      Livre, nunca "link inválido". */
   const [outraLoja, setOutraLoja] = useState<{
-    analise: AnaliseLink;
+    analise: LinkIdentificadoTela;
     identificando: boolean;
   } | null>(null);
   const identificacao = useRef(0);
@@ -936,8 +936,11 @@ export default function BuscaPorLink({
            identificado e a busca no Mercado Livre (LinkDeOutraLoja). Encurtado
            ou link sem nome: o servidor resolve e lê o título. */
         const analise = analisarLink(alvo);
+        /* Loja sem afiliação: o servidor também lê o preço anunciado, a foto
+           e a categoria, e diz o campeão do segmento (11/10). */
         const precisa =
-          analise.origem !== "invalido" && (analise.encurtado || !analise.termoIdentificado);
+          analise.origem !== "invalido" &&
+          (analise.encurtado || !analise.termoIdentificado || analise.origem === "outro_player");
         setOutraLoja({ analise, identificando: Boolean(precisa) });
         if (!precisa) return;
         try {
@@ -946,7 +949,7 @@ export default function BuscaPorLink({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ texto: alvo.slice(0, 2000) }),
           });
-          const j = (await r.json()) as AnaliseLink & { erro?: string };
+          const j = (await r.json()) as LinkIdentificadoTela & { erro?: string };
           if (identificacao.current !== vez) return;
           if (!r.ok || j.erro || !j.origem) {
             setOutraLoja({ analise, identificando: false });

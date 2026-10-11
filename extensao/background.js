@@ -8,7 +8,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
-         avaliacoesPendentes, gravarAvaliacoes, clientesEsperando } from './sincronia.js';
+         avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -17,6 +17,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
+import { garimparNoPlayer } from './garimpo.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -847,6 +848,8 @@ const REGRA_CATEGORIAS =
   + 'SEMPRE e diferenca, mesmo com foto identica: produto completo (aparelho, eletrodomestico, equipamento) x so '
   + 'uma PARTE dele (carcaca, frontal, tampa, gabinete, moldura, display/tela, refil, peca de reposicao, acessorio '
   + 'avulso). Peca custa muito menos e o vendedor usa a foto do aparelho: confira se o titulo diz que e so a peca.\n'
+  + 'OUTRO TIPO OU OUTRO USO NUNCA e igual nem parecido (igual=false, parecido=false), mesmo com palavras em comum no '
+  + 'titulo: bebedouro/fonte para pet x fonte decorativa de sala ou jardim, capa x aparelho, brinquedo x decoracao.\n'
   + 'O que decide em cada categoria (conta so se os dois informam e diferem):\n'
   + 'Celulares e informatica: modelo e geracao, armazenamento, RAM, cor, 4G x 5G, chip, teclado ABNT2 x US, polegadas.\n'
   + 'Eletrodomesticos, eletronicos, ferramentas, agro e industria: voltagem (110/127, 220, bivolt), potencia, capacidade em '
@@ -3928,6 +3931,32 @@ async function atenderMultiloja() {
   return { feitos };
 }
 
+/* GARIMPO NO PLAYER DE ORIGEM (11/10): link da Amazon garimpa na Amazon,
+   da Shopee na Shopee, de outra loja no campeao do segmento (garimpo.js).
+   Pedido do cliente no site; um por vez, sem segurar a fila do Mercado
+   Livre (a conferencia espera as dele). */
+let atendendoGarimpos = false;
+async function atenderGarimpos() {
+  if (atendendoGarimpos) return { pulou: true };
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return { semToken: true };
+  atendendoGarimpos = true;
+  let feitos = 0;
+  try {
+    for (let rodada = 0; rodada < 3; rodada++) {
+      const fila = await garimposPendentes(sincToken);
+      if (!fila.length) break;
+      for (const p of fila) {
+        await garimparNoPlayer(sincToken, p).catch(() => {});
+        feitos++;
+      }
+    }
+  } finally {
+    atendendoGarimpos = false;
+  }
+  return { feitos };
+}
+
 async function atenderPedidos() {
   if (atendendo) { chegouPedidoNovo = true; return { atendidos: 0, pulou: true }; }
   const { sincToken } = await chrome.storage.local.get('sincToken');
@@ -4898,6 +4927,7 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
         atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
         atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
+        atenderGarimpos().catch(e => console.warn('[garimpo]', e.message));
         responder({ ok: true });
       } else if (msg.tipo === 'estadoGeral') {
         const st = await chrome.storage.local.get(['ultimoAtendimento', 'anonimaBloqueadaAte', 'sincToken']);
@@ -5338,6 +5368,8 @@ chrome.alarms.onAlarm.addListener(async a => {
     atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
     // Amazon/Shopee pedidas pelo cliente (sob demanda).
     atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
+    // Garimpo no player do link colado (Amazon/Shopee) ou no campeao.
+    atenderGarimpos().catch(e => console.warn('[garimpo]', e.message));
     return;
   }
   if (a.name === 'versao') {

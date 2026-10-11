@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { buscaGuiada, normalizarBusca, type RespostaBusca } from "@/lib/busca-guiada";
+import {
+  buscaGuiada,
+  buscarMesmoProduto,
+  normalizarBusca,
+  type RespostaBusca,
+} from "@/lib/busca-guiada";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* Busca guiada do site (05/10). A mesma pergunta (normalizada) volta do
@@ -13,6 +18,9 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
 const entradaSchema = z.object({
   q: z.string().trim().min(2).max(160),
   contexto: z.enum(["home", "natal", "criancas"]).optional(),
+  /* "produto": o texto é o título de um anúncio (link de outra loja); busca
+     o MESMO produto, sem interpretar, só na categoria prevista (11/10). */
+  modo: z.enum(["guiada", "produto"]).optional(),
 });
 
 const CONTEXTOS = {
@@ -41,7 +49,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           return json(request, { erro: "Escreva o que você procura." }, 400);
         }
         const contexto = entrada.contexto ?? "home";
-        const chave = `${contexto}|${normalizarBusca(entrada.q)}`;
+        const modoProduto = entrada.modo === "produto";
+        const chave = `${modoProduto ? "produto" : contexto}|${normalizarBusca(entrada.q)}`;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,7 +67,13 @@ export const Route = createFileRoute("/api/public/buscar")({
 
         let achado: Awaited<ReturnType<typeof buscaGuiada>>;
         try {
-          achado = await buscaGuiada(entrada.q, CONTEXTOS[contexto]);
+          if (modoProduto) {
+            const r = await buscarMesmoProduto(entrada.q);
+            achado = {
+              intencao: { buscas: r.buscas, precoMin: null, precoMax: null, resumo: "" },
+              resultados: r.resultados,
+            };
+          } else achado = await buscaGuiada(entrada.q, CONTEXTOS[contexto]);
         } catch {
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
         }

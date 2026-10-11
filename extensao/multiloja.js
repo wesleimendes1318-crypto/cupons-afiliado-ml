@@ -26,9 +26,14 @@ import { pecaNoLugarDoAparelho } from './comparador.js';
 const RUIDO =
   /\b(original|originais|lacrad[oa]s?|novo|nova|lan[cç]amento|promo[cç][aã]o|oferta|frete gr[aá]tis|envio (imediato|r[aá]pido)|pronta entrega|nota fiscal|com nf|nf|garantia|12x|sem juros|super|top|premium|melhor pre[cç]o|barato)\b/gi;
 
+/* 11/10 (bebedouro pet x fonte de Buda): voltagem, codigo de rastreio e
+   SKU tambem saem do termo. Igual ao site (src/lib/termo-busca-externa.ts). */
+const RUIDO_TECNICO = /\b(bivolt|(110|127|220) ?v|(c[oó]d(igo)?|sku)\.?\s*:?\s*[a-z0-9-]{4,}|[A-Z]{2}\d{9}[A-Z]{2})\b/gi;
+
 /** Titulo do anuncio em termo de busca limpo (ate 8 palavras). */
 export function termoDeBuscaExterna(titulo) {
   return String(titulo || '')
+    .replace(RUIDO_TECNICO, ' ')
     .replace(RUIDO, ' ')
     .replace(/[^\p{L}\p{N}\s.,/-]/gu, ' ')
     .replace(/\s+/g, ' ')
@@ -94,7 +99,7 @@ export function voltaMlPendente(pedido, pendente) {
   if (pendente) voltasMl.add(pedido); else voltasMl.delete(pedido);
 }
 const esperar = ms => new Promise(ok => setTimeout(ok, ms));
-async function esperarBuscasMl(limiteMs, pedido) {
+export async function esperarBuscasMl(limiteMs, pedido) {
   const ate = Date.now() + limiteMs;
   let esperou = false;
   while ((buscasMl.size || voltasMl.has(pedido)) && Date.now() < ate) { esperou = true; await esperar(1500); }

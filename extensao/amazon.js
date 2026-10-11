@@ -154,3 +154,58 @@ export function ofertaAmazonParaSite(o) {
     selos: o.prime ? ['Prime'] : []
   };
 }
+
+/* GARIMPO NA AMAZON (11/10): o produto do link colado, lido da propria
+   pagina (/dp/<ASIN>) com a sessao quando ele nao aparece na busca. So
+   titulo, preco atual e foto principal; sem o dado, fica null. */
+export function produtoAmazonDoHtml(html) {
+  const h = String(html || '');
+  const tituloM = h.match(/<span[^>]*id="productTitle"[^>]*>([\s\S]*?)<\/span>/);
+  const titulo = tituloM ? texto(tituloM[1]).slice(0, 300) : null;
+  /* Preco atual: o primeiro a-offscreen do bloco de preco principal (o
+     riscado "de" fica em a-text-price). */
+  let preco = null;
+  const inicio = ['corePriceDisplay_desktop_feature_div', 'corePrice_feature_div', 'apex_desktop', 'corePrice_desktop']
+    .map(id => h.indexOf('id="' + id + '"')).filter(i => i >= 0).sort((a, b) => a - b)[0];
+  if (inicio != null) {
+    const bloco = h.slice(inicio, inicio + 20000);
+    const pm = bloco.match(/<span class="a-price(?![^"]*a-text-price)[^"]*"[^>]*>\s*<span class="a-offscreen">([^<]+)<\/span>/)
+      || bloco.match(/<span class="a-offscreen">([^<]*R\$[^<]+)<\/span>/);
+    preco = pm ? precoBr(pm[1]) : null;
+  }
+  const tagImg = (h.match(/<img\b[^>]*id="landingImage"[^>]*>/) || [])[0] || '';
+  let imagem = (tagImg.match(/data-old-hires="(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/) || [])[1]
+    || (tagImg.match(/\ssrc="(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/) || [])[1]
+    || (h.match(/"hiRes":"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/) || [])[1]
+    || null;
+  if (imagem && !/^https:\/\/m\.media-amazon\.com\/images\//.test(imagem)) imagem = null;
+  return { titulo: titulo || null, preco, imagem };
+}
+
+/** Le a pagina do produto na Amazon (prazo curto, freio de 6 h na
+    verificacao). Devolve { produto, motivo }. */
+export async function lerProdutoAmazon(asin, prazoMs = 8000) {
+  const a = String(asin || '').trim().toUpperCase();
+  if (!RE_ASIN.test(a)) return { produto: null, motivo: 'ASIN invalido' };
+  if (await freioAmazon()) return { produto: null, motivo: 'pausada (verificacao da Amazon nas ultimas 6 h)' };
+  const ctrl = new AbortController();
+  const corta = setTimeout(() => ctrl.abort(), prazoMs);
+  try {
+    const r = await fetch('https://www.amazon.com.br/dp/' + a, {
+      signal: ctrl.signal, credentials: 'include', cache: 'no-store',
+      headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' }
+    });
+    const html = (await r.text()).slice(0, MAX_HTML);
+    if (ehCaptchaAmazon(html, r.url)) {
+      await chrome.storage.local.set({ freio_amazon: Date.now() + FREIO_AMAZON_MS });
+      return { produto: null, motivo: 'a Amazon pediu verificacao: pausada por 6 h' };
+    }
+    if (!r.ok) return { produto: null, motivo: 'Amazon respondeu ' + r.status };
+    const produto = produtoAmazonDoHtml(html);
+    return { produto: produto.titulo ? produto : null, motivo: produto.titulo ? null : 'pagina sem titulo do produto' };
+  } catch (e) {
+    return { produto: null, motivo: ctrl.signal.aborted ? 'tempo esgotado' : String((e && e.message) || e).slice(0, 120) };
+  } finally {
+    clearTimeout(corta);
+  }
+}

@@ -59,6 +59,10 @@ const LOJAS: Array<[RegExp, string]> = [
   [/(^|\.)fastshop\.com\.br$/i, "Fast Shop"],
   [/(^|\.)leroymerlin\.com\.br$/i, "Leroy Merlin"],
   [/(^|\.)madeiramadeira\.com\.br$/i, "MadeiraMadeira"],
+  [/(^|\.)petz\.com\.br$/i, "Petz"],
+  [/(^|\.)cobasi\.com\.br$/i, "Cobasi"],
+  [/(^|\.)drogasil\.com\.br$/i, "Drogasil"],
+  [/(^|\.)drogaraia\.com\.br$/i, "Droga Raia"],
   [/(^|\.)amazon\.(com|ca|co\.uk|de|es|fr|it|com\.mx)$/i, "Amazon (fora do Brasil)"],
 ];
 

@@ -66,6 +66,8 @@ export const REGRA_CATEGORIAS =
   "SEMPRE e diferenca, mesmo com foto identica: produto completo (aparelho, eletrodomestico, equipamento) x so " +
   "uma PARTE dele (carcaca, frontal, tampa, gabinete, moldura, display/tela, refil, peca de reposicao, acessorio " +
   "avulso). Peca custa muito menos e o vendedor usa a foto do aparelho: confira se o titulo diz que e so a peca.\n" +
+  "OUTRO TIPO OU OUTRO USO NUNCA e igual nem parecido (igual=false, parecido=false), mesmo com palavras em comum no " +
+  "titulo: bebedouro/fonte para pet x fonte decorativa de sala ou jardim, capa x aparelho, brinquedo x decoracao.\n" +
   "O que decide em cada categoria (conta so se os dois informam e diferem):\n" +
   "Celulares e informatica: modelo e geracao, armazenamento, RAM, cor, 4G x 5G, chip, teclado ABNT2 x US, polegadas.\n" +
   "Eletrodomesticos, eletronicos, ferramentas, agro e industria: voltagem (110/127, 220, bivolt), potencia, capacidade em " +
@@ -220,18 +222,15 @@ function paraBase64(buf: ArrayBuffer): string {
   return btoa(bin);
 }
 
-/* So foto do proprio Mercado Livre (mlstatic): nada de baixar endereco
-   qualquer que venha no pedido. */
+/* So foto de servidor de imagem conhecido: nada de baixar endereco
+   qualquer que venha no pedido. Mercado Livre e, para a comparação com
+   outros marketplaces (09/10), Amazon e Shopee; para o garimpo a partir de
+   um link de outra loja (11/10), os servidores de imagem dessas lojas. */
+export const RE_FOTO_PERMITIDA =
+  /^https:\/\/([a-z0-9.-]*mlstatic\.com|m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|[a-z0-9.-]*susercontent\.com|cf\.shopee\.com\.br|(a-static|i)\.mlcdn\.com\.br|images\d?\.kabum\.com\.br|imgs\.(casasbahia|pontofrio|extra)\.com\.br|[a-z0-9-]+\.b2w\.io|[a-z0-9-]+\.vtexassets\.com|[a-z0-9-]+\.vteximg\.com\.br|img\.ltwebstatic\.com|ae\d{2}\.alicdn\.com|ae-pic-a1\.aliexpress-media\.com|img\.kwcdn\.com|static\.netshoes\.com\.br|imgcentauro-a\.akamaihd\.net|static\.dafiti\.com\.br|cdn\.leroymerlin\.com\.br|images\.madeiramadeira\.com\.br|static\.petz\.com\.br|img\.drogasil\.com\.br|img\.drogaraia\.com\.br)\//i;
+
 async function imagem(url: string | null | undefined): Promise<Parte | null> {
-  /* Mercado Livre e, para a comparação com outros marketplaces (09/10),
-     as fotos da Amazon e da Shopee. */
-  if (
-    !url ||
-    !/^https:\/\/([a-z0-9.-]*mlstatic\.com|m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|[a-z0-9.-]*susercontent\.com|cf\.shopee\.com\.br)\//i.test(
-      url,
-    )
-  )
-    return null;
+  if (!url || !RE_FOTO_PERMITIDA.test(url)) return null;
   /* JPEG em vez de WEBP (28/09): o Gemma nunca respondeu a conferencia (500
      com a foto webp). O mlstatic serve a mesma foto em .jpg; sem ela, usa a
      original. */

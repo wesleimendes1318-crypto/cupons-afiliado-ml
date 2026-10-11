@@ -14,6 +14,7 @@
    O site não mostra link de compra aqui: o botão abre a comparação, que
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
+import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
 
 export type ResultadoBusca = {
   produto: string;
@@ -126,21 +127,33 @@ export async function buscarNoCatalogo(
     precoMax?: number | null;
     max?: number;
     porBusca?: number;
+    /** Produtos lidos por busca (padrão 6). */
+    limite?: number;
+    /** Só produtos destes domínios (categoria prevista pela API oficial). */
+    dominios?: Set<string> | null;
+    /** Sem domínio previsto: o nome do produto tem de trazer este tipo. */
+    tipo?: string | null;
   } = {},
 ) {
   const max = opcoes.max ?? 8;
   const porBusca = opcoes.porBusca ?? 4;
+  const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 20);
   const resultados: ResultadoBusca[] = [];
   const vistos = new Set<string>();
   let chamadas = 0;
   const TETO = 18;
   for (const busca of buscas) {
     if (resultados.length >= max || chamadas >= TETO) break;
-    let lista: Array<{ id?: string; name?: string; pictures?: Array<{ url?: string }> }> = [];
+    let lista: Array<{
+      id?: string;
+      name?: string;
+      domain_id?: string;
+      pictures?: Array<{ url?: string }>;
+    }> = [];
     try {
       chamadas += 1;
       const r = await mlGet<{ results?: typeof lista }>(
-        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(busca)}&limit=6`,
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(busca)}&limit=${limite}`,
       );
       lista = r.results ?? [];
     } catch (e) {
@@ -153,6 +166,10 @@ export async function buscarNoCatalogo(
       const id = String(p.id ?? "").toUpperCase();
       if (!/^MLB\d+$/.test(id) || vistos.has(id)) continue;
       vistos.add(id);
+      /* Outra categoria nunca entra (11/10: bebedouro pet x fonte de Buda). */
+      if (opcoes.dominios && !opcoes.dominios.has(String(p.domain_id ?? ""))) continue;
+      if (!opcoes.dominios && opcoes.tipo && !nomeTemOTipo(String(p.name ?? ""), opcoes.tipo))
+        continue;
       try {
         chamadas += 1;
         /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
@@ -192,4 +209,44 @@ export async function buscaGuiada(q: string, contexto: string | null) {
     precoMax: intencao.precoMax,
   });
   return { intencao, resultados };
+}
+
+/** Categorias (domínios) que a API oficial prevê para o título, até 4. */
+export async function dominiosPrevistos(titulo: string): Promise<Set<string> | null> {
+  const q = termoDoProduto(titulo, 12);
+  if (q.length < 3) return null;
+  try {
+    const r = await mlGet<Array<{ domain_id?: string }>>(
+      `/sites/MLB/domain_discovery/search?limit=4&q=${encodeURIComponent(q)}`,
+    );
+    const s = new Set(
+      (Array.isArray(r) ? r : [])
+        .map((d) => String(d.domain_id ?? ""))
+        .filter((d) => /^MLB-[A-Z0-9_]+$/.test(d)),
+    );
+    return s.size ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+/** BUSCA DO MESMO PRODUTO (link de outra loja, 11/10): sem interpretar a
+    frase; o título limpo (tipo, marca, modelo) vai ao catálogo e só entra
+    produto da MESMA categoria prevista para o título (ou, sem previsão, com
+    o tipo do produto no nome). */
+export async function buscarMesmoProduto(titulo: string) {
+  const longo = termoDoProduto(titulo, 8);
+  const curto = termoDoProduto(titulo, 5);
+  const buscas = [...new Set([longo, curto].filter((t) => t.length >= 3))];
+  const dominios = await dominiosPrevistos(titulo);
+  const resultados = buscas.length
+    ? await buscarNoCatalogo(buscas, {
+        max: 8,
+        porBusca: 6,
+        limite: 10,
+        dominios,
+        tipo: tipoDoProduto(titulo),
+      })
+    : [];
+  return { buscas, dominios: dominios ? [...dominios] : [], resultados };
 }

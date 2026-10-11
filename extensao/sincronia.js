@@ -611,6 +611,26 @@ export async function multilojaVale(token, pedido) {
   } catch (e) { return { ok: false, motivo: String((e && e.message) || e).slice(0, 120) }; }
 }
 
+/* GARIMPO NO PLAYER DE ORIGEM (11/10): pedidos de garimpo na Amazon/Shopee
+   feitos no site (link da propria Amazon/Shopee ou o campeao do segmento de
+   um link de outra loja). Ja vem marcado como iniciado. */
+export async function garimposPendentes(token) {
+  if (!token) return [];
+  try {
+    const r = await chamarRpc(SUPABASE + '/rest/v1/rpc/garimpos_pendentes', { p_token: token });
+    return Array.isArray(r) ? r : [];
+  } catch (e) { return []; }
+}
+
+export async function gravarGarimpo(token, id, resultado, erro = null) {
+  if (!token || !id) return false;
+  try {
+    await chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_garimpo',
+      { p_token: token, p_id: id, p_resultado: resultado, p_erro: erro });
+    return true;
+  } catch (e) { return false; }
+}
+
 export async function gravarMultiloja(token, pedido, resultado) {
   if (!token || !pedido) return false;
   try {

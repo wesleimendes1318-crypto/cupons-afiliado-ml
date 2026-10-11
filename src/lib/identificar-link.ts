@@ -3,9 +3,28 @@
    final, sem abrir a página (só os redirecionamentos). Loja conhecida sem
    nome no endereço: lê só o título da página (og:title / <title>), com prazo
    curto; página de verificação ("Robot Check", "Just a moment") não vale.
-   Nada é guardado. */
+   Nada é guardado.
+
+   CAMPEÃO DO NICHO (11/10): de loja sem afiliação lê também o preço
+   anunciado (JSON-LD/meta da própria página), a foto (og:image, só dos
+   servidores de imagem das lojas conhecidas, para a conferência pela foto)
+   e a categoria, e diz em qual marketplace afiliado a busca começa
+   (src/lib/campeao-segmento.ts). Sem o dado, o campo fica vazio. */
 
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
+import { determinarCampeaoDoSegmento, type Campeao } from "@/lib/campeao-segmento";
+import { RE_FOTO_PERMITIDA } from "@/lib/conferir-produto";
+
+export type LinkIdentificado = AnaliseLink & {
+  /** Preço anunciado na loja do link (lido na página; nunca estimado). */
+  precoOrigem?: number;
+  /** Foto do produto na loja do link (servidor de imagem conhecido). */
+  imagemOrigem?: string;
+  /** Categoria lida na página (JSON-LD/breadcrumb). */
+  categoriaOrigem?: string;
+  /** Onde a busca começa: o próprio player (Amazon/Shopee) ou o campeão. */
+  campeao?: Campeao;
+};
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36";
@@ -21,7 +40,7 @@ export function hostPublico(host: string): boolean {
 
 /* Lojas cujo título da página pode ser lido. */
 const RE_TITULO_PERMITIDO =
-  /(^|\.)(amazon\.com\.br|magazineluiza\.com\.br|kabum\.com\.br|casasbahia\.com\.br|pontofrio\.com\.br|extra\.com\.br|americanas\.com\.br|submarino\.com\.br|shoptime\.com\.br|shein\.com|aliexpress\.com|carrefour\.com\.br|netshoes\.com\.br|centauro\.com\.br|dafiti\.com\.br|fastshop\.com\.br|leroymerlin\.com\.br|madeiramadeira\.com\.br|temu\.com)$/i;
+  /(^|\.)(amazon\.com\.br|magazineluiza\.com\.br|kabum\.com\.br|casasbahia\.com\.br|pontofrio\.com\.br|extra\.com\.br|americanas\.com\.br|submarino\.com\.br|shoptime\.com\.br|shein\.com|aliexpress\.com|carrefour\.com\.br|netshoes\.com\.br|centauro\.com\.br|dafiti\.com\.br|fastshop\.com\.br|leroymerlin\.com\.br|madeiramadeira\.com\.br|temu\.com|petz\.com\.br|cobasi\.com\.br|drogasil\.com\.br|drogaraia\.com\.br|girafa\.com\.br)$/i;
 
 async function comPrazo(url: string, init: RequestInit, ms: number): Promise<Response | null> {
   const controle = new AbortController();
@@ -103,8 +122,121 @@ export function limparTitulo(bruto: string): string | null {
   return t;
 }
 
-/* Lê no máximo 400 KB da página e devolve o título do produto. */
-export async function tituloDaPagina(url: string): Promise<string | null> {
+export type DadosDaPagina = {
+  titulo: string | null;
+  preco: number | null;
+  imagem: string | null;
+  categoria: string | null;
+};
+
+const precoValido = (v: unknown): number | null => {
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string"
+        ? Number(
+            v
+              .replace(/[^\d.,]/g, "")
+              .replace(/\.(?=\d{3}(\D|$))/g, "")
+              .replace(",", "."),
+          )
+        : NaN;
+  return Number.isFinite(n) && n > 0 && n < 1_000_000 ? Math.round(n * 100) / 100 : null;
+};
+
+/* Produto do JSON-LD (schema.org): preço da oferta, foto e categoria. */
+export function dadosDoJsonLd(
+  html: string,
+): Omit<DadosDaPagina, "titulo"> & { nome: string | null } {
+  const saida = {
+    nome: null as string | null,
+    preco: null as number | null,
+    imagem: null as string | null,
+    categoria: null as string | null,
+  };
+  const blocos = html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  );
+  const nos: unknown[] = [];
+  for (const b of blocos) {
+    try {
+      const j = JSON.parse(b[1]!.trim()) as unknown;
+      const lista = Array.isArray(j) ? j : [j];
+      for (const x of lista) {
+        nos.push(x);
+        const g = (x as { "@graph"?: unknown[] })?.["@graph"];
+        if (Array.isArray(g)) nos.push(...g);
+      }
+    } catch {
+      /* bloco inválido: ignora */
+    }
+  }
+  const tipo = (n: unknown) => {
+    const t = (n as { "@type"?: unknown })?.["@type"];
+    return Array.isArray(t) ? t.map(String) : [String(t ?? "")];
+  };
+  for (const n of nos) {
+    const o = n as {
+      name?: unknown;
+      image?: unknown;
+      category?: unknown;
+      offers?: unknown;
+      itemListElement?: unknown;
+    };
+    if (tipo(n).includes("Product")) {
+      if (!saida.nome && typeof o.name === "string") saida.nome = o.name;
+      const img = Array.isArray(o.image) ? o.image[0] : o.image;
+      const urlImg = typeof img === "string" ? img : (img as { url?: unknown })?.url;
+      if (!saida.imagem && typeof urlImg === "string") saida.imagem = urlImg;
+      if (!saida.categoria && typeof o.category === "string") saida.categoria = o.category;
+      const ofertas = Array.isArray(o.offers) ? o.offers : [o.offers];
+      for (const of of ofertas) {
+        const x = of as { price?: unknown; lowPrice?: unknown } | undefined;
+        const p = precoValido(x?.price) ?? precoValido(x?.lowPrice);
+        if (p != null && saida.preco == null) saida.preco = p;
+      }
+    }
+    if (tipo(n).includes("BreadcrumbList") && !saida.categoria) {
+      const itens =
+        (o.itemListElement as Array<{ name?: unknown; item?: { name?: unknown } }>) ?? [];
+      const nomes = (Array.isArray(itens) ? itens : [])
+        .map((i) => String(i?.name ?? i?.item?.name ?? "").trim())
+        .filter((x) => x && !/^(home|in[ií]cio|p[aá]gina inicial)$/i.test(x));
+      if (nomes.length) saida.categoria = nomes.slice(0, 4).join(" > ");
+    }
+  }
+  return saida;
+}
+
+const meta = (html: string, prop: string) =>
+  new RegExp(
+    `<meta[^>]+(?:property|name|itemprop)=["']${prop}["'][^>]*content=["']([^"']+)["']`,
+    "i",
+  ).exec(html)?.[1] ??
+  new RegExp(
+    `<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name|itemprop)=["']${prop}["']`,
+    "i",
+  ).exec(html)?.[1];
+
+/** Título, preço, foto e categoria lidos na própria página (até 600 KB). */
+export function dadosDoHtml(html: string): DadosDaPagina {
+  const ld = dadosDoJsonLd(html);
+  const og = meta(html, "og:title");
+  const bruto = og ?? /<title[^>]*>([^<]+)<\/title>/i.exec(html)?.[1] ?? ld.nome;
+  const titulo = bruto ? limparTitulo(bruto) : null;
+  const preco =
+    ld.preco ??
+    precoValido(meta(html, "product:price:amount")) ??
+    precoValido(meta(html, "og:price:amount")) ??
+    precoValido(meta(html, "price"));
+  const foto = decodificarHtml(meta(html, "og:image") ?? ld.imagem ?? "").trim();
+  const imagem = /^https:\/\//i.test(foto) && RE_FOTO_PERMITIDA.test(foto) ? foto : null;
+  const categoria = ld.categoria ? decodificarHtml(ld.categoria).slice(0, 160) : null;
+  return { titulo, preco, imagem, categoria };
+}
+
+/** Lê no máximo 600 KB da página da loja e devolve o que achar. */
+export async function dadosDaPagina(url: string): Promise<DadosDaPagina | null> {
   let u: URL;
   try {
     u = new URL(url);
@@ -129,11 +261,14 @@ export async function tituloDaPagina(url: string): Promise<string | null> {
   const dec = new TextDecoder();
   let html = "";
   try {
-    while (html.length < 400_000) {
+    while (html.length < 600_000) {
       const { done, value } = await leitor.read();
       if (done) break;
       html += dec.decode(value, { stream: true });
-      if (/<\/head>/i.test(html)) break;
+      /* Com o título e o preço do produto, não precisa ler o resto. */
+      if (/<\/head>/i.test(html) && /"price"\s*:/.test(html) && /<\/script>/i.test(html)) {
+        if (dadosDoJsonLd(html).preco != null) break;
+      }
     }
   } catch {
     /* lê o que veio */
@@ -144,11 +279,12 @@ export async function tituloDaPagina(url: string): Promise<string | null> {
       /* já fechado */
     }
   }
-  const og =
-    /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(html)?.[1] ??
-    /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i.exec(html)?.[1];
-  const titulo = og ?? /<title[^>]*>([^<]+)<\/title>/i.exec(html)?.[1];
-  return titulo ? limparTitulo(titulo) : null;
+  return dadosDoHtml(html);
+}
+
+/** Só o título (compatibilidade). */
+export async function tituloDaPagina(url: string): Promise<string | null> {
+  return (await dadosDaPagina(url))?.titulo ?? null;
 }
 
 /* Shopee: o encurtado às vezes cai num endereço com o produto no meio. */
@@ -163,10 +299,10 @@ function shopeeNoMeio(final: string): string | null {
     : `https://shopee.com.br/product/${m[1]}`;
 }
 
-export async function identificarLink(texto: string): Promise<AnaliseLink> {
+export async function identificarLink(texto: string): Promise<LinkIdentificado> {
   const inicial = analisarLink(texto);
   if (inicial.origem === "invalido") return inicial;
-  let a = inicial;
+  let a: LinkIdentificado = inicial;
   if (a.encurtado && a.origem !== "mercadolivre") {
     const final = await resolverEncurtado(a.urlLimpa);
     if (final) {
@@ -182,9 +318,33 @@ export async function identificarLink(texto: string): Promise<AnaliseLink> {
       }
     }
   }
-  if (!a.termoIdentificado && a.origem !== "mercadolivre" && a.urlLimpa) {
+  /* Loja sem afiliação: título, preço, foto e categoria da página. Amazon e
+     Shopee: só o título quando o endereço não traz o nome (o resto a
+     extensão lê com a sessão). */
+  if (a.origem === "outro_player" && a.urlLimpa) {
+    const d = await dadosDaPagina(a.urlLimpa);
+    if (d) {
+      a = {
+        ...a,
+        ...(a.termoIdentificado || !d.titulo ? {} : { termoIdentificado: d.titulo }),
+        ...(d.preco != null ? { precoOrigem: d.preco } : {}),
+        ...(d.imagem ? { imagemOrigem: d.imagem } : {}),
+        ...(d.categoria ? { categoriaOrigem: d.categoria } : {}),
+      };
+    }
+  } else if (!a.termoIdentificado && a.origem !== "mercadolivre" && a.urlLimpa) {
     const titulo = await tituloDaPagina(a.urlLimpa);
     if (titulo) a = { ...a, termoIdentificado: titulo };
+  }
+  if (a.origem !== "mercadolivre" && a.termoIdentificado) {
+    a = {
+      ...a,
+      campeao: determinarCampeaoDoSegmento({
+        titulo: a.termoIdentificado,
+        categoria: a.categoriaOrigem ?? null,
+        preco: a.precoOrigem ?? null,
+      }),
+    };
   }
   return a;
 }

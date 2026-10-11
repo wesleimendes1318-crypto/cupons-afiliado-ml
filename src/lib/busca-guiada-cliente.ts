@@ -38,12 +38,14 @@ export type ContextoBusca = "home" | "natal" | "criancas";
 export async function buscarProdutos(
   pergunta: string,
   contexto: ContextoBusca = "home",
+  /** "produto": título de um anúncio; busca o MESMO produto na mesma categoria. */
+  modo: "guiada" | "produto" = "guiada",
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
   try {
     const r = await fetch("/api/public/buscar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q: pergunta.slice(0, 160), contexto }),
+      body: JSON.stringify({ q: pergunta.slice(0, 160), contexto, modo }),
     });
     const j = (await r.json()) as Resposta & { erro?: string };
     if (!r.ok || j.erro)
