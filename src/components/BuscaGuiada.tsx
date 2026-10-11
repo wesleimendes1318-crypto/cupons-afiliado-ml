@@ -260,11 +260,17 @@ export function ResultadosDaBusca({
                             {brl(r.preco)}
                           </span>
                         </p>
+                      ) : !r.item ? (
+                        <p className="mt-2 text-[11px] text-[#6e6e73]">
+                          Vendido por várias lojas: compare para ver os preços.
+                        </p>
                       ) : null}
                       <div className="mt-auto space-y-1.5 pt-3">
                         {/* Direto para a oferta (Weslei, 05/10): o link de
-                              afiliado é gerado no clique. */}
-                        <VerNaLoja url={r.url} grande />
+                              afiliado é gerado no clique. Sem anúncio de
+                              referência (catálogo sem oferta destacada), só a
+                              comparação, que gera o link de cada loja. */}
+                        {r.item ? <VerNaLoja url={r.url} grande /> : null}
                         <button
                           type="button"
                           onClick={() => comparar(r.url)}

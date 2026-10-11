@@ -133,6 +133,9 @@ export async function buscarNoCatalogo(
     dominios?: Set<string> | null;
     /** Sem domínio previsto: o nome do produto tem de trazer este tipo. */
     tipo?: string | null;
+    /** Produto do catálogo sem oferta destacada ("No winners found", comum
+        em autopeças) entra sem preço e sem anúncio: só "Comparar preço". */
+    aceitarSemOferta?: boolean;
   } = {},
 ) {
   const max = opcoes.max ?? 8;
@@ -193,8 +196,21 @@ export async function buscarNoCatalogo(
           url: `https://www.mercadolivre.com.br/p/${id}?pdp_filters=item_id%3A${item}`,
         });
         desta += 1;
-      } catch {
-        /* produto sem oferta ativa: fica de fora */
+      } catch (e) {
+        /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,
+           o sem oferta destacada entra sem preço (a comparação acha as lojas). */
+        if (opcoes.aceitarSemOferta && e instanceof ErroApiMl && e.status === 404) {
+          const foto = p.pictures?.[0]?.url ?? null;
+          resultados.push({
+            produto: id,
+            item: "",
+            nome: String(p.name ?? "").slice(0, 120),
+            imagem: foto ? foto.replace(/^http:/, "https:") : null,
+            preco: null,
+            url: `https://www.mercadolivre.com.br/p/${id}`,
+          });
+          desta += 1;
+        }
       }
     }
   }
@@ -246,6 +262,7 @@ export async function buscarMesmoProduto(titulo: string) {
         limite: 10,
         dominios,
         tipo: tipoDoProduto(titulo),
+        aceitarSemOferta: true,
       })
     : [];
   return { buscas, dominios: dominios ? [...dominios] : [], resultados };

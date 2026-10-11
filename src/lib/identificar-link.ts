@@ -326,7 +326,9 @@ export async function identificarLink(texto: string): Promise<LinkIdentificado> 
     if (d) {
       a = {
         ...a,
-        ...(a.termoIdentificado || !d.titulo ? {} : { termoIdentificado: d.titulo }),
+        /* O título da página manda: nome, preço e foto do MESMO anúncio
+           (o nome do endereço pode estar cortado ou ser de outro produto). */
+        ...(d.titulo ? { termoIdentificado: d.titulo } : {}),
         ...(d.preco != null ? { precoOrigem: d.preco } : {}),
         ...(d.imagem ? { imagemOrigem: d.imagem } : {}),
         ...(d.categoria ? { categoriaOrigem: d.categoria } : {}),

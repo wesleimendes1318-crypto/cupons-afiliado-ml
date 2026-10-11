@@ -1452,6 +1452,12 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   MLB-TABLETOP_WATER_FOUNTAINS e sai). Sem previsão, o tipo do produto tem
   de estar no nome (nomeTemOTipo). A conferência pela foto (servidor e
   extensão) ganhou "OUTRO TIPO OU OUTRO USO NUNCA é igual nem parecido".
+  Produto do catálogo sem oferta destacada (/products/{id}/items "No
+  winners found", comum em autopeças: pastilha Gol G5 em 11/10) entra sem
+  preço, com "Vendido por várias lojas" e só "Comparar preço" (sem botão de
+  compra direto, que cairia no erro 111 da ficha pura) e não vai para a fila
+  da vitrine. Loja sem afiliação: o título da página manda sobre o nome do
+  endereço (nome, preço e foto do mesmo anúncio).
 - GARIMPO NA AMAZON/SHOPEE (extensão 1.166.0, extensao/garimpo.js; banco
   20261011010000_garimpo_no_player.sql): o site pede (pedir_garimpo; mesmo
   link e player volta o mesmo pedido; 30 novos a cada 10 min) e acompanha

@@ -96,6 +96,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           const semana = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
           for (const r of achado.resultados) {
             if (livres <= 0 || enfileirados >= FILA_POR_BUSCA) break;
+            /* Sem anúncio (catálogo sem oferta destacada): não vai para a fila. */
+            if (!r.item) continue;
             const { count } = await db
               .from("pedidos_link")
               .select("id", { count: "exact", head: true })
