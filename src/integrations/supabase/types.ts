@@ -806,6 +806,63 @@ export type Database = {
         }
         Relationships: []
       }
+      garimpos: {
+        Row: {
+          chave: string
+          concluido_em: string | null
+          criado_em: string
+          erro: string | null
+          id: number
+          id_origem: string | null
+          imagem_origem: string | null
+          iniciado_em: string | null
+          loja_origem: string | null
+          origem: string
+          player: string
+          preco_origem: number | null
+          resultado: Json | null
+          status: string
+          termo: string
+          url: string
+        }
+        Insert: {
+          chave?: string
+          concluido_em?: string | null
+          criado_em?: string
+          erro?: string | null
+          id?: number
+          id_origem?: string | null
+          imagem_origem?: string | null
+          iniciado_em?: string | null
+          loja_origem?: string | null
+          origem: string
+          player: string
+          preco_origem?: number | null
+          resultado?: Json | null
+          status?: string
+          termo: string
+          url: string
+        }
+        Update: {
+          chave?: string
+          concluido_em?: string | null
+          criado_em?: string
+          erro?: string | null
+          id?: number
+          id_origem?: string | null
+          imagem_origem?: string | null
+          iniciado_em?: string | null
+          loja_origem?: string | null
+          origem?: string
+          player?: string
+          preco_origem?: number | null
+          resultado?: Json | null
+          status?: string
+          termo?: string
+          url?: string
+        }
+        Relationships: []
+      }
       geracoes: {
         Row: {
           atualizado_em: string
@@ -1944,12 +2001,22 @@ export type Database = {
       expirar_campanhas: { Args: never; Returns: number }
       expirar_pedidos: { Args: never; Returns: undefined }
       extensao_pausada: { Args: never; Returns: boolean }
+      garimpos_pendentes: { Args: { p_token: string }; Returns: Json }
       gravar_avaliacoes: {
         Args: { p_itens: Json; p_token: string }
         Returns: number
       }
       gravar_diagnostico: {
         Args: { p_dados: Json; p_tipo: string; p_token: string }
+        Returns: undefined
+      }
+      gravar_garimpo: {
+        Args: {
+          p_erro?: string
+          p_id: number
+          p_resultado: Json
+          p_token: string
+        }
         Returns: undefined
       }
       gravar_monitor: {
@@ -2169,6 +2236,19 @@ export type Database = {
             Returns: Json
           }
       pedir_etiqueta: { Args: { p_cupom_id: number }; Returns: string }
+      pedir_garimpo: {
+        Args: {
+          p_id_origem?: string
+          p_imagem?: string
+          p_loja?: string
+          p_origem: string
+          p_player: string
+          p_preco?: number
+          p_termo: string
+          p_url: string
+        }
+        Returns: Json
+      }
       pedir_link: { Args: { p_url: string }; Returns: number }
       pedir_link_agente: {
         Args: { p_fonte?: string; p_url: string }
@@ -2261,6 +2341,7 @@ export type Database = {
         }[]
       }
       tokens_do_titulo: { Args: { t: string }; Returns: string[] }
+      ver_garimpo: { Args: { p_chave: string; p_id: number }; Returns: Json }
       ver_pedido: {
         Args: { p_chave: string; p_id: number }
         Returns: {
