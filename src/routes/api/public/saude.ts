@@ -78,7 +78,21 @@ export const Route = createFileRoute("/api/public/saude")({
               config.status === "rejected" && String(config.reason).includes("tempo")
                 ? "sem resposta em 8 s"
                 : "erro na consulta";
-            return responder({ banco: "falhou", motivo, ms, em }, 503);
+            /* Só o código e o status HTTP do erro (nunca a mensagem): bastam
+               para saber se é banco pausado, chave recusada ou cache do
+               esquema (PGRST002). */
+            const r =
+              config.status === "fulfilled"
+                ? (config.value as { error?: { code?: unknown }; status?: unknown })
+                : null;
+            const codigo = String(r?.error?.code ?? "")
+              .replace(/[^A-Za-z0-9_]/g, "")
+              .slice(0, 12);
+            const status = typeof r?.status === "number" ? r.status : null;
+            return responder(
+              { banco: "falhou", motivo, codigo: codigo || null, status, ms, em },
+              503,
+            );
           }
           const valor = (c: string) => cfg.find((x) => x.chave === c)?.valor ?? null;
           const u = (
