@@ -61,6 +61,15 @@ const TITULOS: Record<ContextoBusca, { linha1: string; linha2: string; apoio: st
   },
 };
 
+/* Exemplo no campo, do contexto da página e curto (até 25 caracteres:
+   cabe inteiro no celular de 390 px; 16/10, em /brinquedos aparecia "fone
+   bluetooth até R$" cortado). */
+const EXEMPLO: Record<ContextoBusca, string> = {
+  home: "Ex.: air fryer até R$ 400",
+  natal: "Ex.: presente para mãe",
+  criancas: "Ex.: LEGO para 6 anos",
+};
+
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function BuscaGuiada({
@@ -139,7 +148,7 @@ export function BuscaGuiada({
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 maxLength={160}
-                placeholder="Ex.: fone bluetooth até R$ 300"
+                placeholder={EXEMPLO[contexto]}
                 className="h-12 w-full rounded-full border border-transparent bg-[#f5f5f7] pl-10 pr-4 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus-visible:border-[#0071e3] focus-visible:ring-4 focus-visible:ring-[#0071e3]/20"
               />
             </div>
