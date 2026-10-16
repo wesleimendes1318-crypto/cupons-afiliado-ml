@@ -134,7 +134,7 @@ function PaginaBrinquedos() {
           prioridade
           className="mt-4"
         />
-        <BrinquedosPorIdade inicial={itens} titulo="oculto" className="mt-4" />
+        <BrinquedosPorIdade inicial={itens} titulo="oculto" className="mt-4" avisoSemItens />
         <BuscaGuiada contexto="criancas" className="mt-8" />
 
         <section className="mt-8 grid gap-4 md:grid-cols-2">

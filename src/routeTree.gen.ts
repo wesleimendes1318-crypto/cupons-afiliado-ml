@@ -52,6 +52,7 @@ import { Route as ApiPublicOperacaoRouteImport } from './routes/api/public/opera
 import { Route as ApiPublicPrazoEntregaRouteImport } from './routes/api/public/prazo-entrega'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 import { Route as ApiPublicRegiaoRouteImport } from './routes/api/public/regiao'
+import { Route as ApiPublicSaudeRouteImport } from './routes/api/public/saude'
 import { Route as ApiPublicTelegramSetupRouteImport } from './routes/api/public/telegram-setup'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
 
@@ -273,6 +274,11 @@ const ApiPublicRegiaoRoute = ApiPublicRegiaoRouteImport.update({
   path: '/api/public/regiao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSaudeRoute = ApiPublicSaudeRouteImport.update({
+  id: '/api/public/saude',
+  path: '/api/public/saude',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTelegramSetupRoute = ApiPublicTelegramSetupRouteImport.update({
   id: '/api/public/telegram-setup',
   path: '/api/public/telegram-setup',
@@ -329,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
+  '/api/public/saude': typeof ApiPublicSaudeRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -376,6 +383,7 @@ export interface FileRoutesByTo {
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
+  '/api/public/saude': typeof ApiPublicSaudeRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
+  '/api/public/saude': typeof ApiPublicSaudeRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -473,6 +482,7 @@ export interface FileRouteTypes {
     | '/api/public/prazo-entrega'
     | '/api/public/recomendar'
     | '/api/public/regiao'
+    | '/api/public/saude'
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -520,6 +530,7 @@ export interface FileRouteTypes {
     | '/api/public/prazo-entrega'
     | '/api/public/recomendar'
     | '/api/public/regiao'
+    | '/api/public/saude'
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
   id:
@@ -567,6 +578,7 @@ export interface FileRouteTypes {
     | '/api/public/prazo-entrega'
     | '/api/public/recomendar'
     | '/api/public/regiao'
+    | '/api/public/saude'
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
   fileRoutesById: FileRoutesById
@@ -615,6 +627,7 @@ export interface RootRouteChildren {
   ApiPublicPrazoEntregaRoute: typeof ApiPublicPrazoEntregaRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
   ApiPublicRegiaoRoute: typeof ApiPublicRegiaoRoute
+  ApiPublicSaudeRoute: typeof ApiPublicSaudeRoute
   ApiPublicTelegramSetupRoute: typeof ApiPublicTelegramSetupRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
@@ -922,6 +935,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRegiaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/saude': {
+      id: '/api/public/saude'
+      path: '/api/public/saude'
+      fullPath: '/api/public/saude'
+      preLoaderRoute: typeof ApiPublicSaudeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telegram-setup': {
       id: '/api/public/telegram-setup'
       path: '/api/public/telegram-setup'
@@ -984,6 +1004,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPrazoEntregaRoute: ApiPublicPrazoEntregaRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
   ApiPublicRegiaoRoute: ApiPublicRegiaoRoute,
+  ApiPublicSaudeRoute: ApiPublicSaudeRoute,
   ApiPublicTelegramSetupRoute: ApiPublicTelegramSetupRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }

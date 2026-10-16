@@ -686,6 +686,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   catálogo.
 
 ## Equipe de agentes (05/10)
+- SAÚDE SEM O LOVABLE (16/10: a consulta do Lovable ao banco deu 504 por
+  horas): GET /api/public/saude (src/routes/api/public/saude.ts, só leitura,
+  limite por endereço, sem link/id/chave/erro bruto) diz se o banco responde
+  pelo servidor do site, a extensão (versão, pausa), o último pedido pronto,
+  os pedidos de cliente da última hora (falhou, pronto sem link, parados) e
+  os brinquedos. /brinquedos sem produto mostra "Estou atualizando os
+  brinquedos comparados" com "Comparar um brinquedo" (AvisoSemBrinquedos).
 - Weslei, 05/10: "desenvolva agentes pertinentes, que cuidem de TUDO" e
   "mantenha o site totalmente funcionando, validado e com segurança do que é
   mostrado". Papéis, horários e regras em docs/agentes.md (Guardião a cada

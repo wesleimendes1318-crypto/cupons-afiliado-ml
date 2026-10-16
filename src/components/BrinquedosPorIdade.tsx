@@ -246,16 +246,22 @@ export function BrinquedosPorIdade({
   className = "",
   inicial,
   titulo = "h2",
+  avisoSemItens = false,
 }: {
   naHome?: boolean;
   className?: string;
+  /* Página /brinquedos (16/10): sem produto comparado agora, um aviso com o
+     convite para comparar, em vez da seção sumir (o topo promete os achados). */
+  avisoSemItens?: boolean;
   /* Lista lida no servidor (página /brinquedos): sai no HTML para busca. */
   inicial?: Item[];
   /* "oculto": a página já tem o banner com o título (09/10). */
   titulo?: "h1" | "h2" | "oculto";
 }) {
   const [itens, setItens] = useState<Item[]>(inicial ?? []);
-  const [carregou, setCarregou] = useState(!!inicial);
+  /* Lista vazia do servidor: espera a leitura no navegador (esqueleto) antes
+     de concluir que não há produto. */
+  const [carregou, setCarregou] = useState(Boolean(inicial?.length));
   const [aba, setAba] = useState("em_alta");
 
   useEffect(() => {
@@ -325,7 +331,8 @@ export function BrinquedosPorIdade({
     const it = c.tipo === "desconto" ? null : itemDoEndereco(c.item.url);
     return (it ? pelosItens.get(it) : null) ?? v;
   };
-  if (carregou && total === 0) return null;
+  if (carregou && total === 0)
+    return avisoSemItens ? <AvisoSemBrinquedos className={className} /> : null;
 
   return (
     <section
@@ -408,6 +415,30 @@ export function BrinquedosPorIdade({
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+function AvisoSemBrinquedos({ className = "" }: { className?: string }) {
+  return (
+    <section
+      className={`rounded-3xl border border-black/5 bg-card p-5 text-center shadow-sm sm:p-7 ${className}`}
+      aria-labelledby="aviso-sem-brinquedos"
+    >
+      <h2 id="aviso-sem-brinquedos" className="text-lg font-bold tracking-tight text-foreground">
+        Estou atualizando os brinquedos comparados
+      </h2>
+      <p className="mx-auto mt-1.5 max-w-md text-sm text-secondary-ink">
+        Enquanto isso, cole o link de um brinquedo e eu comparo com as outras lojas agora, em menos
+        de 2 minutos.
+      </p>
+      <a
+        href="/#colar-link"
+        data-origem="brinquedos_vazio"
+        className="mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-[#0071e3] px-5 text-sm font-bold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+      >
+        Comparar um brinquedo
+      </a>
     </section>
   );
 }

@@ -53,6 +53,16 @@ seguem as mesmas regras:
 | Marca, layout e melhorias | terça e sexta 10:10 | Telas no PC e celular, identidade visual, contraste e teclado, SEO, textos e selos com dado; uma melhoria pequena e validada por vez. |
 | Dados (relatório semanal) | segunda 08:45 | Já existia: painel, campanhas, benchmark, decisões da semana. |
 
+**Banco sem resposta pela consulta do Lovable (16/10: erro 504 por horas).**
+Antes de dizer "não deu para conferir", qualquer agente lê
+`GET https://melhorescolha.io/api/public/saude` (o próprio servidor do site,
+só leitura, sem dado de cliente): `banco` ok/falhou e o tempo, versão e pausa
+da extensão, há quantos minutos saiu o último pedido pronto, pedidos de
+cliente da última hora (falhou, pronto sem link, parados > 20 min) e quantos
+brinquedos a página tem. `banco: falhou` no site = o cliente também está sem
+comparação: avisar o Weslei como grave. `banco: ok` = só a ferramenta do
+Lovable está fora; o relatório usa esses números.
+
 ## Auditoria automática no banco
 
 `public.auditoria_exibicao(p_horas)` (só serviço) devolve `problema`,
