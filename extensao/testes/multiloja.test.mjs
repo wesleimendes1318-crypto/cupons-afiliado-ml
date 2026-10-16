@@ -3,7 +3,8 @@ import test from 'node:test';
 
 import { ehCaptchaAmazon, ehLinkAfiliadoAmazon, gerarLinkAfiliadoAmazon, ofertaAmazonParaSite,
          ofertasAmazonDoHtml, precoBr } from '../amazon.js';
-import { ehLinkAfiliadoShopee, idsDoProdutoShopee, ofertaShopeeParaSite, urlCanonicaShopee } from '../shopee.js';
+import { META_SHOPEE, ehLinkAfiliadoShopee, idsDoProdutoShopee, juntarCartoesShopee, ofertaShopeeParaSite,
+         urlCanonicaShopee } from '../shopee.js';
 import { escolherCandidatos, parecencaDoTitulo, termoDeBuscaExterna } from '../multiloja.js';
 
 /* Recorte no formato da pagina de busca da Amazon (cartao com data-asin,
@@ -102,4 +103,20 @@ test('mesma analise em cada marketplace: ate 4, sem usado, com o mais barato bem
   assert.ok(!e.some(o => /usado/i.test(o.titulo)));
   /* o mais barato bem parecido entra mesmo fora dos 3 de maior nota */
   assert.ok(e.some(o => o.preco === 199.9));
+});
+
+test('shopee: rolagem junta as leituras pelo item (15 a 30 com preco)', () => {
+  assert.deepEqual(META_SHOPEE, { minimo: 15, maximo: 30 });
+  const l1 = [{ item: '1', preco: null, imagem: null }, { item: '2', preco: 10, imagem: 'https://cf.shopee.com.br/a' }];
+  const l2 = [{ item: '1', preco: 20, imagem: 'https://cf.shopee.com.br/b' }, { item: '2', preco: null, imagem: null },
+              { item: '3', preco: 30, imagem: null }];
+  const j = juntarCartoesShopee(l1, l2);
+  assert.deepEqual(j.map(c => [c.item, c.preco]), [['1', 20], ['2', 10], ['3', 30]]);
+  /* 40 itens em 4 leituras com sobreposicao: nenhum repetido. */
+  let acc = [];
+  for (let k = 0; k < 4; k++) {
+    acc = juntarCartoesShopee(acc, Array.from({ length: 12 }, (_, i) => ({ item: String(k * 10 + i), preco: 5 + i })));
+  }
+  assert.equal(acc.length, 42);
+  assert.equal(new Set(acc.map(c => c.item)).size, acc.length);
 });

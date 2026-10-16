@@ -23,24 +23,42 @@ import { buscarCandidatosShopee, gerarLinkAfiliadoShopee, ofertaShopeeParaSite, 
 import { conferirNoServidor, gravarDiagnostico, gravarMultiloja, multilojaVale } from './sincronia.js';
 import { pecaNoLugarDoAparelho } from './comparador.js';
 
+/* Igual ao site (src/lib/termo-busca-externa.ts). Weslei, 11/10: sai o
+   ruido de venda ("silencioso", "economico", "promocao", "oferta", "envio
+   rapido"...), FICAM as especificacoes (formato, material, medidas e
+   voltagem). Ate 8 palavras; especificacao que ficou depois entra no fim
+   (ate 3, medida primeiro). Codigo de rastreio e SKU continuam saindo. */
 const RUIDO =
-  /\b(original|originais|lacrad[oa]s?|novo|nova|lan[cç]amento|promo[cç][aã]o|oferta|frete gr[aá]tis|envio (imediato|r[aá]pido)|pronta entrega|nota fiscal|com nf|nf|garantia|12x|sem juros|super|top|premium|melhor pre[cç]o|barato)\b/gi;
+  /\b(original|originais|lacrad[oa]s?|novo|nova|lan[cç]amentos?|promo[cç][aã]o|promo[cç][oõ]es|ofertas?|frete gr[aá]tis|envio (imediato|r[aá]pido|full)|pronta entrega|nota fiscal|com nf|nf|garantia|12x|sem juros|super|top|premium|melhor pre[cç]o|barat[oa]s?|silencios[oa]s?|econ[oô]mic[oa]s?|imperd[ií]vel|queima de estoque)\b/gi;
+const RUIDO_TECNICO = /\b((c[oó]d(igo)?|sku)\.?\s*:?\s*[a-z0-9-]{4,}|[A-Z]{2}\d{9}[A-Z]{2})\b/gi;
+const UNIDADE = '(?:l|litros?|ml|kg|g|w|v|cm|mm|gb|tb)';
+const RE_NUMERO_UNIDADE = new RegExp('(\\d)\\s+(' + UNIDADE + ')\\b', 'gi');
+const RE_ESPECIFICACAO = new RegExp('^(retangular(es)?|quadrad[oa]s?|redond[oa]s?|ova(l|is)|inox|alum[ií]nio|pl[aá]stico|vidro|cer[aâ]mica|madeira|bambu|silicone|bivolt|\\d+(?:[.,]\\d+)?~?' + UNIDADE + ')$', 'i');
 
-/* 11/10 (bebedouro pet x fonte de Buda): voltagem, codigo de rastreio e
-   SKU tambem saem do termo. Igual ao site (src/lib/termo-busca-externa.ts). */
-const RUIDO_TECNICO = /\b(bivolt|(110|127|220) ?v|(c[oó]d(igo)?|sku)\.?\s*:?\s*[a-z0-9-]{4,}|[A-Z]{2}\d{9}[A-Z]{2})\b/gi;
+/* Medida primeiro, depois formato, material e voltagem. */
+const prioridade = t => (/^\d/.test(t) && !/v$/i.test(t) ? 0 : /^(retangular|quadrad|redond|ova)/i.test(t) ? 1 : /^(bivolt|\d)/i.test(t) ? 3 : 2);
 
-/** Titulo do anuncio em termo de busca limpo (ate 8 palavras). */
+/** Titulo do anuncio em termo de busca limpo (ate 8 palavras + ate 3 especificacoes). */
 export function termoDeBuscaExterna(titulo) {
-  return String(titulo || '')
+  const termos = String(titulo || '')
     .replace(RUIDO_TECNICO, ' ')
     .replace(RUIDO, ' ')
     .replace(/[^\p{L}\p{N}\s.,/-]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+    .replace(RE_NUMERO_UNIDADE, '$1~$2')
     .split(' ')
-    .slice(0, 8)
-    .join(' ');
+    .filter(t => t && !/^[-.,/]+$/.test(t));
+  const base = termos.slice(0, 8);
+  const vistos = new Set(base.map(t => t.toLowerCase()));
+  const extras = termos.slice(8)
+    .filter(t => RE_ESPECIFICACAO.test(t) && !vistos.has(t.toLowerCase()))
+    .map((t, i) => ({ t, i, p: prioridade(t) }))
+    .sort((a, b) => a.p - b.p || a.i - b.i)
+    .slice(0, 3)
+    .sort((a, b) => a.i - b.i)
+    .map(x => x.t);
+  return [...base, ...extras].join(' ').replace(/~/g, ' ');
 }
 
 const palavras = s => new Set(String(s || '')

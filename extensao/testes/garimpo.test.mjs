@@ -46,8 +46,12 @@ test('a origem nao entra como candidata e a melhor do mesmo e a mais barata conf
   assert.equal(melhorDoMesmo([{ relacao: 'busca', preco: 1 }]), null);
 });
 
-test('termo nos outros marketplaces sem bivolt, voltagem, SKU nem rastreio', async () => {
+test('termo nos outros marketplaces: sem SKU nem ruido de venda, com voltagem e especificacoes', async () => {
   const { termoDeBuscaExterna } = await import('../multiloja.js');
   assert.equal(termoDeBuscaExterna('Bebedouro Fonte Gato Bivolt 220v SKU: 99887766 Frete Grátis'),
-    'Bebedouro Fonte Gato');
+    'Bebedouro Fonte Gato Bivolt 220v');
+  assert.equal(termoDeBuscaExterna('Bebedouro Fonte Para Gatos Cães Silenciosa Automática Com Filtro Carvão Retangular Inox 2 Litros Bivolt Envio Rápido'),
+    'Bebedouro Fonte Para Gatos Cães Automática Com Filtro Retangular Inox 2 Litros');
+  assert.equal(termoDeBuscaExterna('Caixa de Areia Para Gato Fechada Econômica Grande Promoção Oferta 3L'),
+    'Caixa de Areia Para Gato Fechada Grande 3L');
 });

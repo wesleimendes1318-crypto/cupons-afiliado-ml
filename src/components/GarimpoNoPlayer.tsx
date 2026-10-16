@@ -1,50 +1,70 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Check, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Loader2, ShieldCheck } from "lucide-react";
 
 import { ehLinkDeCompra, urlBuscaAmazon } from "@/lib/afiliado";
 import {
-  melhorDoMesmo,
   pedirGarimpo,
   verGarimpo,
   type OfertaGarimpo,
   type PedidoGarimpo,
   type ResultadoGarimpo,
 } from "@/lib/garimpo-cliente";
+import {
+  brl,
+  chipsDoMuda,
+  diferencaNoProduto,
+  parecidoIndicavel,
+  type EstadoPlayer,
+} from "@/lib/placar-garimpo";
 
 /* GARIMPO NO PLAYER (Weslei, 11/10): o mesmo produto procurado na Amazon
    ou na Shopee pela extensão (busca com a sessão + conferência pela foto).
-   Mostra o produto de origem com o link de afiliado, o mais barato do
-   MESMO produto (conferido pela foto) e, separados, os parecidos (com o que
-   muda) e os encontrados só pela busca (sem foto para conferir). Todo botão
-   leva o link de afiliado do Weslei (regra nº 1); sem link, sem botão.
-   Valor em reais nunca junto de "frete": o frete vai em linha própria. */
-
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+   REDESIGN PREMIUM (11/10, estilo Apple): o produto do link e o veredito
+   ficam no topo da tela (LinkDeOutraLoja); aqui ficam as ofertas, em
+   cartões: selo (Mesmo produto / Parecido) e qualidade no topo; foto,
+   título e preço no centro; a diferença no produto; o que muda em chips
+   (sem setas e sem texto corrido); desvantagens em bloco vermelho; e o
+   botão largo "Comprar com segurança". Todo botão leva o link de afiliado
+   do Weslei (regra nº 1); sem link, sem botão. Valor em reais nunca junto
+   de "frete": o frete vai em linha própria. */
 
 const NOME: Record<PedidoGarimpo["player"], string> = { amazon: "Amazon", shopee: "Shopee" };
 
 type Fase = "parado" | "pedindo" | "aguardando" | "pronto" | "erro";
 
+export type MudancaGarimpo = { status: EstadoPlayer["status"]; resultado: ResultadoGarimpo | null };
+
+const STATUS_DA_FASE: Record<Fase, EstadoPlayer["status"]> = {
+  parado: "nao_consultado",
+  pedindo: "carregando",
+  aguardando: "carregando",
+  pronto: "pronto",
+  erro: "erro",
+};
+
 export function GarimpoNoPlayer({
   pedido,
   auto,
-  precoOrigem = null,
-  lojaOrigem = null,
-  aoTerminar,
+  referencia = null,
+  destaqueId = null,
+  aoMudar,
 }: {
   pedido: PedidoGarimpo;
-  /** Começa sozinho (player do link ou campeão); senão espera o toque. */
+  /** Começa sozinho (player do link, campeão ou toque no placar). */
   auto: boolean;
-  /** Preço lido na loja do link (só para link de outra loja). */
-  precoOrigem?: number | null;
-  lojaOrigem?: string | null;
-  /** Resultado pronto (o produto lido no player serve aos outros garimpos). */
-  aoTerminar?: ((r: ResultadoGarimpo) => void) | undefined;
+  /** Preço do link colado (para a diferença no produto). */
+  referencia?: number | null;
+  /** Oferta do veredito (moldura verde): só ela, nunca outra. */
+  destaqueId?: string | null;
+  /** O placar acompanha a fase e o resultado. */
+  aoMudar?: ((m: MudancaGarimpo) => void) | undefined;
 }) {
   const [fase, setFase] = useState<Fase>("parado");
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<ResultadoGarimpo | null>(null);
   const vez = useRef(0);
+  const avisar = useRef(aoMudar);
+  avisar.current = aoMudar;
   const nome = NOME[pedido.player];
   const chavePedido = `${pedido.player}|${pedido.url}|${pedido.termo}`;
 
@@ -70,7 +90,6 @@ export function GarimpoNoPlayer({
       if (e.status === "pronto") {
         setResultado(e.resultado);
         setFase("pronto");
-        if (e.resultado) aoTerminar?.(e.resultado);
         return;
       }
       if (e.status === "falhou" || e.parado) break;
@@ -88,20 +107,32 @@ export function GarimpoNoPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto, chavePedido]);
 
+  useEffect(() => {
+    avisar.current?.({ status: STATUS_DA_FASE[fase], resultado });
+  }, [fase, resultado]);
+
   const buscaAmazon = pedido.player === "amazon" ? urlBuscaAmazon(pedido.termo) : null;
-  const melhor = melhorDoMesmo(resultado);
-  const referencia = pedido.origem === "outro" ? precoOrigem : (resultado?.original.preco ?? null);
-  const conferidos = resultado?.ofertas.filter((o) => o.relacao !== "busca") ?? [];
+  /* Mesmo produto primeiro; depois os parecidos que podem ser indicados
+     (qualidade equivalente/superior, sem vir menos); cada grupo do mais
+     barato para o mais caro. */
+  const grupo = (o: OfertaGarimpo) => (o.relacao === "mesmo" ? 0 : parecidoIndicavel(o) ? 1 : 2);
+  const conferidos = (resultado?.ofertas.filter((o) => o.relacao !== "busca") ?? []).sort(
+    (a, b) => grupo(a) - grupo(b) || a.preco - b.preco,
+  );
   const daBusca = resultado?.ofertas.filter((o) => o.relacao === "busca") ?? [];
+  const mesmoMaisBarato =
+    referencia != null &&
+    conferidos.some((o) => o.relacao === "mesmo" && o.preco < referencia - 0.009);
 
   return (
     <section
-      className="mt-4 rounded-2xl border border-border bg-card p-4 sm:p-5"
+      id={`secao-garimpo-${pedido.player}`}
+      className="scroll-mt-36 rounded-3xl border border-black/5 bg-card p-4 shadow-sm dark:border-white/10 sm:p-5"
       aria-live="polite"
       data-origem={`garimpo_${pedido.player}`}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-base font-bold text-foreground">Na {nome}</h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="text-[17px] font-bold tracking-tight text-foreground">Na {nome}</h3>
         {resultado && (
           <p className="text-[11px] text-secondary-ink">
             li {resultado.lidas} {resultado.lidas === 1 ? "resultado" : "resultados"}
@@ -118,17 +149,37 @@ export function GarimpoNoPlayer({
         <button
           type="button"
           onClick={() => void comecar()}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#0071e3] px-4 py-2 text-sm font-bold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+          className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#0071e3] px-4 text-sm font-bold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
         >
-          Comparar na {nome}
+          Ver preço
         </button>
       )}
 
       {(fase === "pedindo" || fase === "aguardando") && (
-        <p className="mt-2 inline-flex items-center gap-2 text-sm text-secondary-ink">
-          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          Procurando o mesmo produto na {nome}… de 30 segundos a 2 minutos.
-        </p>
+        <div className="mt-3">
+          <p className="inline-flex items-center gap-2 text-sm text-secondary-ink">
+            <Loader2
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Procurando o mesmo produto na {nome}… de 30 segundos a 2 minutos.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-hidden="true">
+            {[0, 1].map((k) => (
+              <div
+                key={k}
+                className="flex gap-3 rounded-2xl border border-black/5 p-3 dark:border-white/10"
+              >
+                <div className="size-20 shrink-0 animate-pulse rounded-xl bg-[#f5f5f7] dark:bg-white/10" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="h-3 w-24 animate-pulse rounded-full bg-[#f5f5f7] dark:bg-white/10" />
+                  <div className="h-3 w-full animate-pulse rounded-full bg-[#f5f5f7] dark:bg-white/10" />
+                  <div className="h-5 w-20 animate-pulse rounded-full bg-[#f5f5f7] dark:bg-white/10" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {fase === "erro" && (
@@ -138,7 +189,7 @@ export function GarimpoNoPlayer({
             <button
               type="button"
               onClick={() => void comecar()}
-              className="inline-flex items-center rounded-full border border-border px-3 py-1.5 text-[13px] font-semibold text-foreground hover:bg-[#f5f5f7]"
+              className="inline-flex min-h-10 items-center rounded-full border border-border px-4 text-[13px] font-semibold text-foreground hover:bg-[#f5f5f7] dark:hover:bg-white/10"
             >
               Tentar de novo
             </button>
@@ -148,7 +199,7 @@ export function GarimpoNoPlayer({
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 data-origem="garimpo_amazon_busca"
-                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-[13px] font-semibold text-foreground hover:bg-[#f5f5f7]"
+                className="inline-flex min-h-10 items-center gap-1 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground hover:bg-[#f5f5f7] dark:hover:bg-white/10"
               >
                 Conferir na loja <ArrowUpRight className="size-3.5" aria-hidden="true" />
               </a>
@@ -158,112 +209,52 @@ export function GarimpoNoPlayer({
       )}
 
       {fase === "pronto" && resultado && (
-        <div className="mt-3 space-y-3">
-          {/* Link de outra loja: o preço visto lá x o melhor achado aqui. */}
-          {pedido.origem === "outro" && (
-            <div className="grid gap-2 rounded-xl bg-[#f5f5f7] p-3 text-sm dark:bg-white/5 sm:grid-cols-2">
-              <p>
-                <span className="block text-[11px] text-secondary-ink">
-                  Preço visto {lojaOrigem ? `na ${lojaOrigem}` : "na loja do link"}
-                </span>
-                <strong className="text-base tabular-nums">
-                  {precoOrigem != null ? brl(precoOrigem) : "não consegui ler"}
-                </strong>
+        <div className="mt-3 space-y-4">
+          {pedido.origem === pedido.player &&
+            resultado.conferencia === "ok" &&
+            !mesmoMaisBarato &&
+            !conferidos.some((o) => o.relacao === "mesmo") && (
+              <p className="text-sm text-secondary-ink">
+                Não achei o mesmo produto mais barato na {nome} agora.
               </p>
-              <p>
-                <span className="block text-[11px] text-secondary-ink">
-                  Melhor opção do mesmo produto na {nome}
-                </span>
-                <strong className="text-base tabular-nums">
-                  {melhor ? brl(melhor.preco) : "não confirmei o mesmo produto"}
-                </strong>
-                {melhor && precoOrigem != null && Math.abs(precoOrigem - melhor.preco) >= 0.01 && (
-                  <span className="block text-[12px] text-secondary-ink">
-                    {brl(Math.abs(precoOrigem - melhor.preco))}{" "}
-                    {melhor.preco < precoOrigem ? "a menos" : "a mais"} no produto
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
+            )}
 
-          {/* Link do próprio player: o produto colado, com o link de afiliado. */}
-          {pedido.origem === pedido.player && resultado.original.link && (
-            <CartaoOferta
-              titulo={resultado.original.titulo ?? "O produto do seu link"}
-              imagem={resultado.original.imagem}
-              preco={resultado.original.preco}
-              link={resultado.original.link}
-              selo="O seu link"
-              nota={
-                resultado.original.selos.includes("Prime")
-                  ? "Frete grátis para assinantes Prime"
-                  : "Frete: confira no anúncio"
-              }
-              detalhe={
-                melhor &&
-                resultado.original.preco != null &&
-                melhor.preco < resultado.original.preco
-                  ? `Achei o mesmo produto por ${brl(resultado.original.preco - melhor.preco)} a menos no produto (logo abaixo).`
-                  : conferidos.some((o) => o.relacao === "mesmo")
-                    ? null
-                    : resultado.conferencia === "ok"
-                      ? `Não achei o mesmo produto mais barato na ${nome} agora.`
-                      : null
-              }
-              destaque={!melhor || (resultado.original.preco ?? Infinity) <= melhor.preco}
-            />
+          {conferidos.length > 0 && (
+            <ul className="grid gap-3 sm:grid-cols-2 sm:items-start">
+              {conferidos.map((o) => (
+                <li key={`${o.relacao}-${o.id}`} className="flex">
+                  <CartaoOferta
+                    oferta={o}
+                    referencia={referencia}
+                    destaque={destaqueId != null && destaqueId === o.id}
+                  />
+                </li>
+              ))}
+            </ul>
           )}
-
-          {conferidos.map((o) => (
-            <CartaoOferta
-              key={`${o.relacao}-${o.id}`}
-              titulo={o.titulo}
-              imagem={o.imagem}
-              preco={o.preco}
-              link={o.link}
-              selo={o.relacao === "mesmo" ? "Mesmo produto" : "Parecido"}
-              nota={o.notaFrete ?? "Frete: confira no anúncio"}
-              detalhe={
-                o.relacao === "mesmo"
-                  ? referencia != null && Math.abs(referencia - o.preco) >= 0.01
-                    ? `${brl(Math.abs(referencia - o.preco))} ${o.preco < referencia ? "a menos" : "a mais"} no produto`
-                    : null
-                  : `Não é idêntico ao seu.${o.muda ? ` Muda: ${o.muda}` : ""}`
-              }
-              qualidade={o.relacao === "parecido" ? o.qualidade : null}
-              desvantagens={o.relacao === "parecido" ? (o.desvantagens ?? null) : null}
-              destaque={melhor?.id === o.id}
-            />
-          ))}
 
           {daBusca.length > 0 && (
             <div>
               <p className="text-[12px] font-semibold text-secondary-ink">
                 Encontrados pela busca (não conferi pela foto: confira se é o mesmo produto)
               </p>
-              <div className="mt-2 space-y-2">
+              <ul className="mt-2 grid gap-3 sm:grid-cols-2 sm:items-start">
                 {daBusca.map((o) => (
-                  <CartaoOferta
-                    key={`busca-${o.id}`}
-                    titulo={o.titulo}
-                    imagem={o.imagem}
-                    preco={o.preco}
-                    link={o.link}
-                    selo="Encontrado pela busca"
-                    nota={o.notaFrete ?? "Frete: confira no anúncio"}
-                    detalhe={null}
-                  />
+                  <li key={`busca-${o.id}`} className="flex">
+                    <CartaoOferta oferta={o} referencia={referencia} destaque={false} />
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
 
-          {!resultado.ofertas.length && !resultado.original.link && (
+          {!resultado.ofertas.length && (
             <p className="text-sm text-secondary-ink">
               {resultado.conferencia === "falhou"
                 ? "A conferência pela foto não respondeu agora. Tente de novo em alguns minutos."
-                : `Não achei o mesmo produto na ${nome} agora.`}
+                : pedido.origem === pedido.player
+                  ? `Não achei outra oferta do mesmo produto na ${nome} agora.`
+                  : `Sem modelo compatível na ${nome} nesta análise.`}
             </p>
           )}
         </div>
@@ -272,98 +263,179 @@ export function GarimpoNoPlayer({
   );
 }
 
+const SELO: Record<OfertaGarimpo["relacao"], { texto: string; cor: string }> = {
+  mesmo: {
+    texto: "Mesmo produto",
+    cor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+  },
+  parecido: {
+    texto: "Parecido",
+    cor: "bg-amber-50 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300",
+  },
+  busca: {
+    texto: "Encontrado pela busca",
+    cor: "bg-[#f5f5f7] text-secondary-ink dark:bg-white/10",
+  },
+};
+
+function seloQualidade(q: string | null | undefined) {
+  if (q === "superior" || q === "equivalente")
+    return {
+      texto: q === "superior" ? "✓ Qualidade superior" : "✓ Qualidade equivalente",
+      cor: "text-emerald-700 dark:text-emerald-300",
+    };
+  if (q === "inferior")
+    return { texto: "⚠ Qualidade inferior", cor: "text-amber-800 dark:text-amber-300" };
+  if (q) return { texto: "? Qualidade não confirmada", cor: "text-secondary-ink" };
+  return null;
+}
+
 function CartaoOferta({
-  titulo,
-  imagem,
-  preco,
-  link,
-  selo,
-  nota,
-  detalhe,
-  qualidade = null,
-  desvantagens = null,
-  destaque = false,
+  oferta: o,
+  referencia,
+  destaque,
 }: {
-  titulo: string;
-  imagem: string | null;
-  preco: number | null;
-  link: string;
-  selo: string;
-  nota: string;
-  detalhe: string | null;
-  qualidade?: string | null;
-  desvantagens?: string[] | null;
-  destaque?: boolean;
+  oferta: OfertaGarimpo;
+  referencia: number | null;
+  destaque: boolean;
 }) {
-  const corSelo =
-    selo === "Mesmo produto"
-      ? "bg-success/10 text-success"
-      : selo === "Parecido"
-        ? "bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300"
-        : "bg-[#f5f5f7] text-secondary-ink dark:bg-white/10";
-  const textoQualidade =
-    qualidade === "superior"
-      ? "✓ Qualidade superior"
-      : qualidade === "equivalente"
-        ? "✓ Qualidade equivalente"
-        : qualidade === "inferior"
-          ? "⚠ Qualidade inferior"
-          : qualidade
-            ? "? Qualidade não confirmada"
-            : null;
+  const selo = SELO[o.relacao];
+  const qualidade = o.relacao === "parecido" ? seloQualidade(o.qualidade) : null;
+  const chips = o.relacao === "parecido" ? chipsDoMuda(o.muda) : [];
+  const desvantagens = o.relacao === "parecido" ? (o.desvantagens ?? []).slice(0, 3) : [];
+  const diferenca = diferencaNoProduto(o.preco, referencia);
+  const frete = o.selos.includes("Prime")
+    ? "Frete grátis para assinantes Prime"
+    : (o.notaFrete ?? "Frete: confira no anúncio");
+  const temDetalhe = o.relacao === "parecido" && (!!o.muda || !!o.qualidadeMotivo);
   return (
     <article
       className={
-        "flex gap-3 rounded-xl border p-3 " +
-        (destaque ? "border-success/50 bg-success/5" : "border-border bg-card")
+        "flex w-full flex-col rounded-2xl border p-3.5 transition-[box-shadow,transform] duration-200 ease-[cubic-bezier(.2,.8,.2,1)] motion-safe:hover:-translate-y-0.5 hover:shadow-md sm:p-4 " +
+        (destaque
+          ? "border-emerald-500/50 bg-emerald-50/40 ring-1 ring-emerald-500/30 dark:bg-emerald-400/5"
+          : "border-black/5 bg-card dark:border-white/10")
       }
     >
-      <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-white">
-        {imagem ? (
-          <img
-            src={imagem}
-            alt=""
-            width={80}
-            height={80}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-1"
-          />
-        ) : null}
-      </div>
-      <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${corSelo}`}
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${selo.cor}`}
         >
-          {selo === "Mesmo produto" && <Check className="size-3" aria-hidden="true" />}
-          {selo}
+          {o.relacao === "mesmo" && <Check className="size-3" aria-hidden="true" />}
+          {selo.texto}
         </span>
-        <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">
-          {titulo}
-        </p>
-        {preco != null && (
-          <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{brl(preco)}</p>
+        {qualidade && (
+          <span className={`text-[11px] font-semibold ${qualidade.cor}`}>{qualidade.texto}</span>
         )}
-        {detalhe && <p className="text-[12px] leading-snug text-secondary-ink">{detalhe}</p>}
-        <p className="text-[11px] text-secondary-ink">{nota}</p>
-        {textoQualidade && <p className="text-[11px] text-secondary-ink">{textoQualidade}</p>}
-        {desvantagens && desvantagens.length > 0 && (
-          <ul className="mt-1 list-disc pl-4 text-[11px] text-red-700 dark:text-red-300">
+        {destaque && (
+          <span className="ml-auto text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+            <span className="animate-fogo inline-block" aria-hidden="true">
+              🔥
+            </span>{" "}
+            Menor valor
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 flex gap-3">
+        <div className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 sm:size-24">
+          {o.imagem ? (
+            <img
+              src={o.imagem}
+              alt=""
+              width={96}
+              height={96}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+              className="absolute inset-0 h-full w-full object-contain p-1.5"
+            />
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">
+            {o.titulo}
+          </p>
+          <p className="mt-1 text-lg font-extrabold tabular-nums tracking-tight text-foreground">
+            {brl(o.preco)}
+          </p>
+          {diferenca && (
+            <p
+              className={
+                "text-[12px] font-semibold " +
+                (diferenca.menos && (o.relacao === "mesmo" || parecidoIndicavel(o))
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-secondary-ink")
+              }
+            >
+              {diferenca.texto}
+            </p>
+          )}
+          <p className="text-[11px] text-secondary-ink">{frete}</p>
+        </div>
+      </div>
+
+      {chips.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="O que muda em relação ao seu">
+          {chips.map((c) => (
+            <li
+              key={`${c.campo ?? ""}-${c.valor}`}
+              title={c.original ? `O seu: ${c.original}` : undefined}
+              className="max-w-full rounded-md bg-[#f5f5f7] px-2.5 py-1 text-xs text-foreground [overflow-wrap:anywhere] dark:bg-white/10"
+            >
+              <span aria-hidden="true">{c.icone} </span>
+              {c.campo ? `${c.campo}: ` : ""}
+              <strong className="font-semibold">{c.valor}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {desvantagens.length > 0 && (
+        <div className="mt-2.5 rounded-lg bg-red-50 p-2 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-300">
+          <p className="font-semibold">Desvantagens em relação ao seu</p>
+          <ul className="mt-0.5 list-disc pl-4">
             {desvantagens.map((d) => (
               <li key={d}>{d}</li>
             ))}
           </ul>
-        )}
+        </div>
+      )}
+
+      {temDetalhe && (
+        <details className="group mt-2 text-[12px] text-secondary-ink">
+          <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1 font-semibold text-[#0071e3] [&::-webkit-details-marker]:hidden">
+            Ver análise técnica detalhada
+            <ChevronDown
+              className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
+          </summary>
+          <ul className="mt-1 space-y-0.5">
+            {chipsDoMuda(o.muda, 12).map((c) => (
+              <li key={`d-${c.campo ?? ""}-${c.valor}`}>
+                {c.campo ? `${c.campo}: ` : ""}
+                {c.original ? `o seu ${c.original} → este ${c.valor}` : c.valor}
+              </li>
+            ))}
+            {o.qualidadeMotivo && <li>Qualidade: {o.qualidadeMotivo}</li>}
+          </ul>
+        </details>
+      )}
+
+      <div className="mt-auto pt-3">
         <a
-          href={link}
+          href={o.link}
           target="_blank"
           rel="noopener noreferrer sponsored"
           data-origem="garimpo"
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-success px-3.5 py-1.5 text-[12px] font-bold text-white transition hover:brightness-95"
+          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-success px-4 text-[13px] font-bold text-white transition hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success"
         >
-          <ShieldCheck className="size-3.5" aria-hidden="true" />
+          <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
           Comprar com segurança
-          <ArrowUpRight className="size-3.5" aria-hidden="true" />
+          <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
         </a>
       </div>
     </article>

@@ -42,9 +42,15 @@ export function cartoesShopeeNaPagina() {
     const m = String(s || '').match(/(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?/);
     return m ? Number(m[1].replace(/\./g, '') + '.' + (m[2] || '0')) : null;
   };
-  /* Rola um pouco a cada leitura: a Shopee so desenha os cartoes que
-     aparecem na tela (09/10: "4 na tela"). */
-  try { window.scrollBy(0, Math.round(window.innerHeight * 0.9)); } catch (e) { /* sem rolagem */ }
+  /* Rola 1000 px a cada leitura: a Shopee so desenha os cartoes que
+     aparecem na tela (09/10: "4 na tela"; 11/10: so 3 com preco no garimpo
+     da caixa de bebedouro). Quem chama junta as leituras (15 a 30). */
+  let fim = false;
+  try {
+    window.scrollBy(0, 1000);
+    const el = document.scrollingElement || document.documentElement;
+    fim = (window.innerHeight + window.scrollY) >= (el.scrollHeight - 40);
+  } catch (e) { /* sem rolagem */ }
   const vistos = new Set();
   const cartoes = [];
   for (const a of document.querySelectorAll('a[href]')) {
@@ -74,11 +80,11 @@ export function cartoesShopeeNaPagina() {
       /* So para o diagnostico quando nenhum preco e lido. */
       texto: linhas.join(' | ').slice(0, 160)
     });
-    if (cartoes.length >= 30) break;
+    if (cartoes.length >= 60) break;
   }
   const url = location.href;
   return {
-    cartoes, url,
+    cartoes, url, fim,
     login: /\/buyer\/login|account\.shopee/i.test(url),
     verificacao: /\/verify\/|captcha|antibot/i.test(url) || /verifica[cç][aã]o de seguran/i.test(document.title || '')
   };
@@ -104,8 +110,25 @@ async function esperarAba(tabId, limiteMs) {
   return false;
 }
 
+/** Junta as leituras da rolagem (pelo numero do item): o cartao com preco
+    vale mais que o mesmo cartao lido antes sem preco. */
+export function juntarCartoesShopee(acumulado, novos) {
+  const porItem = new Map((acumulado || []).map(c => [String(c.item), c]));
+  for (const c of novos || []) {
+    const k = String(c.item);
+    const antes = porItem.get(k);
+    if (!antes || (antes.preco == null && c.preco != null) || (!antes.imagem && c.imagem && c.preco != null)) porItem.set(k, c);
+  }
+  return [...porItem.values()];
+}
+
+/* Meta da rolagem (Weslei, 11/10: "garanta que a rolagem colete entre 15 e
+   30 anuncios"): para com 30 com preco, ou com 15 quando a pagina acabou
+   ou duas leituras seguidas nao trouxeram nada novo. */
+export const META_SHOPEE = { minimo: 15, maximo: 30 };
+
 /** Busca na Shopee pela TELA, numa aba de fundo (prazo curto). Nunca lanca
-    erro: devolve { ofertas, motivo }. */
+    erro: devolve { ofertas, motivo, lidos }. */
 export async function buscarCandidatosShopee(termo, prazoMs = 10000) {
   if (!termo) return { ofertas: [], motivo: 'sem termo' };
   if (await freioShopee()) return { ofertas: [], motivo: 'pausada (verificacao da Shopee nas ultimas 6 h)' };
@@ -115,6 +138,8 @@ export async function buscarCandidatosShopee(termo, prazoMs = 10000) {
     aba = await chrome.tabs.create({ url: BUSCA_SHOPEE + encodeURIComponent(termo), active: false });
     await esperarAba(aba.id, Math.max(1000, fim - Date.now()));
     let ultimo = null;
+    let cartoes = [];
+    let parado = 0;
     while (Date.now() < fim) {
       const [saida] = await chrome.scripting.executeScript({ target: { tabId: aba.id }, func: cartoesShopeeNaPagina })
         .catch(() => [null]);
@@ -123,15 +148,22 @@ export async function buscarCandidatosShopee(termo, prazoMs = 10000) {
         await puxarFreioShopee();
         return { ofertas: [], motivo: ultimo.login ? 'a Shopee pediu login: pausada por 6 h' : 'a Shopee pediu verificacao: pausada por 6 h' };
       }
-      if (ultimo && ultimo.cartoes.filter(c => c.preco != null).length >= 6) break;
-      await sleep(600);
+      const comPrecoAntes = cartoes.filter(c => c.preco != null).length;
+      cartoes = juntarCartoesShopee(cartoes, saida && saida.result ? saida.result.cartoes : []);
+      const comPreco = cartoes.filter(c => c.preco != null).length;
+      parado = comPreco > comPrecoAntes ? 0 : parado + 1;
+      if (comPreco >= META_SHOPEE.maximo) break;
+      if (comPreco >= META_SHOPEE.minimo && ((ultimo && ultimo.fim) || parado >= 2)) break;
+      await sleep(500);
     }
-    const ofertas = ((ultimo && ultimo.cartoes) || [])
-      .filter(c => c.preco != null && c.titulo && !c.patrocinado && !c.faixa);
-    const semPreco = ((ultimo && ultimo.cartoes) || []).find(c => c.preco == null);
+    const ofertas = cartoes
+      .filter(c => c.preco != null && c.titulo && !c.patrocinado && !c.faixa)
+      .slice(0, META_SHOPEE.maximo);
+    const semPreco = cartoes.find(c => c.preco == null);
     return {
       ofertas,
-      motivo: ofertas.length ? null : 'nenhum cartao com preco lido' + (ultimo ? ' (' + ultimo.cartoes.length + ' na tela)' : '')
+      lidos: cartoes.length,
+      motivo: ofertas.length ? null : 'nenhum cartao com preco lido' + (ultimo ? ' (' + cartoes.length + ' na tela)' : '')
         + (!ofertas.length && semPreco ? ' amostra: ' + semPreco.texto : '')
     };
   } catch (e) {

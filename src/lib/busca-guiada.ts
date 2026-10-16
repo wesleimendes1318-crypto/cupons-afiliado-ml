@@ -251,8 +251,9 @@ export async function dominiosPrevistos(titulo: string): Promise<Set<string> | n
     produto da MESMA categoria prevista para o título (ou, sem previsão, com
     o tipo do produto no nome). */
 export async function buscarMesmoProduto(titulo: string) {
-  const longo = termoDoProduto(titulo, 8);
-  const curto = termoDoProduto(titulo, 5);
+  /* 4 a 6 palavras-chave + formato, material e capacidade (11/10). */
+  const longo = termoDoProduto(titulo, 6);
+  const curto = termoDoProduto(titulo, 4);
   const buscas = [...new Set([longo, curto].filter((t) => t.length >= 3))];
   const dominios = await dominiosPrevistos(titulo);
   const resultados = buscas.length

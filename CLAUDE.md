@@ -1475,9 +1475,10 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   produto ("R$ X a menos no produto"), parecidos com o que muda, qualidade
   e desvantagens, e os encontrados pela busca separados; loja sem
   afiliação: "Preço visto na <loja>: R$ X" x "Melhor opção do mesmo produto
-  no <campeão>: R$ Y"; Mercado Livre: "Menor preço achado na busca" (não
-  conferido pela foto). Garimpo que não responde em 6 min: "Tentar de
-  novo" e, na Amazon, "Conferir na loja" (busca com a tag).
+  no <campeão>: R$ Y"; Mercado Livre com o cabeçalho honesto (ver
+  "Redesign premium do garimpo multi-player"). Garimpo que não responde em
+  6 min: "Tentar de novo" e, na Amazon, "Conferir na loja" (busca com a
+  tag).
 - Validado em 11/10 com a extensão 1.166.0 (atualizou sozinha): garimpo 3,
   o bebedouro B0H34VSMNJ do bug, 31 lidos, 5 conferidos, 2 "mesmo produto"
   e 3 parecidos (voltagem/cor), em 15 s, nenhuma fonte decorativa; garimpo
@@ -1487,6 +1488,73 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   Busca no Mercado Livre do bebedouro no ar: 7 resultados, todos
   bebedouros. KaBuM!: preço e foto lidos da página; Magalu: só o nome (a
   página não entregou preço ao servidor).
+
+## Redesign premium do garimpo multi-player (11/10)
+- PROMPT MESTRE do Weslei (11/10, dois: "redesign de experiência premium" e
+  "redesign premium de UX/UI estilo Apple + correção multi-player"; o
+  segundo vale nos conflitos). Bug: "Menor preço achado na busca" no Mercado
+  Livre custando mais que o visto e que a Shopee; Shopee lia só 3 anúncios.
+- REGRA: nunca destacar como "menor preço" o que é mais caro que a
+  referência (preço do link) ou que outro player. Frete só grátis
+  confirmado; diferenças reais, sempre "no produto".
+- TELA (LinkDeOutraLoja; regras puras em src/lib/placar-garimpo.ts, testes
+  em tests/placar-garimpo.test.ts), de cima para baixo:
+  1. Cartão âncora: foto (size-16/20, object-contain), "Visto na <loja>",
+     nome, "Preço de referência" e, na Amazon (tag) ou Shopee (painel), o
+     "Comprar com segurança" do próprio link.
+  2. Veredito (vereditoDoGarimpo): "🔥 Economize R$ X na Shopee!" (faixa
+     verde, mesmo produto conferido pela foto) ou "Economize até R$ X ...
+     com modelo similar." (parecido de qualidade equivalente/superior que
+     não "vem menos", >= R$ 2); "Você já encontrou o melhor preço!" (faixa
+     azul com escudo, só depois de conferir pela foto, dizendo quantas
+     ofertas e o que ainda falta comparar); "Conferindo…" enquanto roda.
+     Sem preço do link: só "Melhor preço do mesmo produto", sem economia.
+     Busca sem conferência (Mercado Livre e "encontrado pela busca") nunca
+     vira economia.
+  3. Placar "Compare com clareza" (3 colunas no PC; trilho com snap no
+     celular, rolando até o vencedor): Correspondência (O seu link / ✓
+     Mesmo produto / Parecido / Opções similares / Sem modelo compatível
+     nesta análise), Preço com a diferença no produto, Frete em linha
+     própria e Ação (Comprar com segurança; no Mercado Livre "Comparar
+     preço"; Amazon sem achado "Conferir na loja"). Vencedor com moldura
+     verde, elevação e "🔥 Menor valor encontrado" / "Modelo similar mais
+     barato" / "Melhor valor" (o próprio link). Player não consultado:
+     cartão translúcido, valores borrados SEM número e "Ver preço" (sob
+     demanda, como antes); carregando: esqueleto.
+  4. Ofertas por player (GarimpoNoPlayer): selo Mesmo produto/Parecido +
+     qualidade no topo; foto size-20/24, título em 2 linhas, preço
+     text-lg; diferença verde só para mesmo produto ou parecido indicável;
+     o que muda em CHIPS sem setas (chipsDoMuda: "🎨 Cor: Rosa/Preto",
+     "📐 Formato: Redondo em cascata"; o valor do seu fica no title);
+     desvantagens em bloco vermelho; "Ver análise técnica detalhada"
+     recolhido; botão largo "Comprar com segurança". Ordem: mesmo produto,
+     parecidos indicáveis, os outros (cada grupo do mais barato).
+  5. Mercado Livre (rotuloMercadoLivre): "Menor preço no Mercado Livre:
+     R$ X" SÓ quando mais barato que o visto E que os outros players; senão
+     "Opções similares no Mercado Livre a partir de R$ X (+R$ Y do que você
+     viu)" ou "(+R$ Y que na Shopee)" + "Não localizamos o mesmo modelo
+     mais barato nesta análise."; sem resultado, "Sem modelo compatível
+     nesta análise".
+  6. Celular: barra de compra embaixo (vidro, foto 40 px, preço, frete em
+     linha própria, pílula "Comprar com segurança"), só com link de
+     afiliado (oferta do veredito ou o próprio link), depois de rolar
+     passando o topo; Início/topo sobem junto (--folga-compra).
+- Link de outra loja identificado conta como resultado (BuscaPorLink:
+  resultadoOutraLoja): o topo da home encolhe, a caixa usa a largura toda
+  e o vídeo "Como funciona" some, como na comparação de sempre.
+- TERMO DE BUSCA: nos outros players (termo-busca-externa.ts = extensão
+  multiloja.js) sai o ruído de venda (silencioso, econômico, promoção,
+  oferta, envio rápido...) e FICAM formato, material, medidas e voltagem;
+  até 8 palavras + até 3 especificações que ficaram depois (medida
+  primeiro). No Mercado Livre (termo-busca.ts, buscarMesmoProduto) 6 e 4
+  palavras-chave (preposição não conta) + até 2 especificações; "USB" e
+  "automática" só saem depois do nome; "silencioso", "econômico" e
+  "premium" saem. Testes em tests/termo-busca.test.ts.
+- SHOPEE 15 A 30 (extensão 1.166.1): cartoesShopeeNaPagina rola 1000 px a
+  cada leitura (de 500 ms); buscarCandidatosShopee junta as leituras pelo
+  item (juntarCartoesShopee) e para com 30 com preço, ou com 15 quando a
+  página acabou ou duas leituras não trouxeram nada novo (META_SHOPEE),
+  dentro do prazo (10-12 s).
 
 ## Avaliação das pessoas (10/10)
 - Weslei, 10/10: "adicione a avaliação das pessoas, como mais um símbolo de

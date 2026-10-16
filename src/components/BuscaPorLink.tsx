@@ -1225,7 +1225,10 @@ export default function BuscaPorLink({
 
   const carregando =
     fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
-  const parada = fase === "parado" && !pedido;
+  /* Link de outra loja com produto identificado é resultado (11/10): o topo
+     encolhe e a tela usa a largura toda, como na comparação de sempre. */
+  const resultadoOutraLoja = Boolean(outraLoja && outraLoja.analise.origem !== "invalido");
+  const parada = fase === "parado" && !pedido && !resultadoOutraLoja;
   useEffect(() => {
     aoMudarEstado?.(parada);
   }, [parada, aoMudarEstado]);
@@ -1239,7 +1242,9 @@ export default function BuscaPorLink({
         "mx-auto rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition-[max-width] sm:p-5 " +
         /* Com resultado, usa a largura da tela (Weslei, 28/09: "aproveite
            melhor o espaço"); sem resultado, a caixa do link fica enxuta. */
-        (fase === "pronto" && pedido ? "max-w-3xl lg:max-w-6xl" : "max-w-3xl")
+        ((fase === "pronto" && pedido) || resultadoOutraLoja
+          ? "max-w-3xl lg:max-w-6xl"
+          : "max-w-3xl")
       }
     >
       <div className="mb-1 flex items-center gap-2">
@@ -1327,7 +1332,7 @@ export default function BuscaPorLink({
       )}
 
       {/* Como funciona (vídeo de 28 s): só com a caixa parada, antes de comparar. */}
-      {fase === "parado" && !pedido && <ComoFunciona />}
+      {parada && <ComoFunciona />}
 
       {carregando && (
         <Espera fase={fase} demorando={demorando} inicio={inicio} estimativa={estimativa} />
