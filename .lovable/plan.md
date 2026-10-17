@@ -1,16 +1,32 @@
-# Verificação de build e publicação (nenhum código alterado)
+# Diagnóstico do Lovable Cloud (somente leitura, 17/10 10:20 UTC)
 
-## Resultado
-- Build: nenhum erro registrado. O código atual (f43f8e4 + c90973a "Work in progress") não contém mais `escolhido=` em lugar nenhum.
-- Site no ar: testei agora (24/09, 13:4x UTC) a rota `/api/public/mesmo-produto` em cupons-afiliado-ml.lovable.app e a trilha já sai no formato novo: `titulo 200 resultados=10 aceitos=... escolhidos=MLB20271308,...`. Ou seja, a versão publicada já tem o código novo de `src/lib/mesmo-produto.ts` (a partir de 4a7f20e).
-- O hash exato do commit publicado não é exposto pelas ferramentas; pelo comportamento, é f43f8e4 ou posterior.
+Nada foi alterado: nenhum banco novo, nenhuma migração, nenhum dado, nenhum arquivo do projeto.
 
-## Provável motivo de ainda ver "escolhido="
-- Comparações gravadas por 6 horas na tabela `comparacoes` (cache): resultados antigos com `procurou: true` voltam com `cache: true` e a trilha velha até expirar.
-- Ou a extensão/aba mostrando resposta anterior.
+## 1. Estado do backend
 
-## Observação sobre o teste
-O produto de catálogo foi escolhido pelo nome e pegou capas de outros modelos (iPhone 14, Moto E22...), e sem o preço do anúncio a comparação parou em "não consegui o preço do anúncio". Isso é regra de comparação, não build — só corrijo se você pedir.
+- **Estado: PAUSADO.** O banco de dados deste projeto está pausado. Não foi apagado, não foi migrado e não está em manutenção.
+- **Endereço: o mesmo de sempre** (ref rjevaqtnlldhnwsidbbn). Não existe endereço novo. Com o banco pausado, o endereço sai do DNS; por isso aparecem o HTTP 530 e o NXDOMAIN. Quando o banco voltar, o endereço volta junto.
+- **Causa provável: saldo do workspace.** Crédito do plano do ciclo (21/09 a 21/10): 0 de 200, todo usado. Sobram só 4 dos 5 créditos diários. No ciclo já foram usados 348 créditos. Não há limite manual de uso configurado. O aviso laranja da tela ("serviços pausados porque este espaço de trabalho está sem créditos") bate com isso.
+- Plano: Pro, assinatura ativa.
 
-## Próximo passo (opcional, só com sua aprovação)
-Limpar o cache de comparações antigas para que todas as respostas saiam com a trilha nova.
+## 2. O que você precisa fazer para religar
+
+1. **Pôr saldo** (é o que trava o resto):
+   - No computador: clique no nome do projeto (canto superior esquerdo) → **Settings** → **Plans & Credits**. Escolha recarga avulsa (top-up) ou um plano maior.
+   - Se o botão **Top up** do aviso laranja não abrir, libere janelas pop-up para o lovable.dev ou use o caminho acima.
+2. **Religar o banco:** abra **More** → **Database** → menu **Manage** → **Settings** e clique em **Resume / Restore**.
+   - O Lovable Cloud não tem uma seção própria. Database, Users e Storage voltam juntos.
+3. **Aguardar de 2 a 10 minutos** até o banco subir. Depois confira se https://melhorescolha.io/api/public/saude diz que o banco responde.
+4. **Extensão:** não precisa mexer. Quando o banco voltar, ela pega a fila sozinha.
+   - Se a pausa remota da extensão tiver ficado ligada (extensao_pausada), me avise que eu religo depois, com a sua autorização.
+
+## 3. Depois de religar (opcional, só com a sua aprovação)
+
+- Confirmar que o estado é "ativo e saudável".
+- Fazer uma leitura simples para ver se o último pedido e a vitrine aparecem.
+- Conferir se os botões continuam entregando o seu link de afiliado (meli.la).
+- Tudo isso só leitura, sem alterar dados.
+
+## Limitação
+
+Eu não consigo pôr saldo nem tirar o banco da pausa por aqui. A tentativa automática foi bloqueada por falta de crédito. Essas duas ações precisam ser feitas por você, como dono do workspace.
