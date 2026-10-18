@@ -2,7 +2,8 @@
    também de subir a tela para o início"). Pílula discreta no canto inferior
    esquerdo (o botão "Colar link" fica à direita), só depois de rolar a tela:
    "Início" abre a tela inicial limpa e a seta volta ao topo. Some com um
-   diálogo aberto; o movimento respeita prefers-reduced-motion. */
+   diálogo aberto; o movimento respeita prefers-reduced-motion. No celular
+   só os ícones (18/10: a pílula cobria o texto dos cartões). */
 import { useEffect, useState } from "react";
 import { ArrowUp, House } from "lucide-react";
 
@@ -34,10 +35,12 @@ export function BotoesNavegacao() {
       <a
         href="/"
         tabIndex={visivel ? 0 : -1}
-        className="flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-[#1d1d1f] hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+        aria-label="Início"
+        title="Início"
+        className="flex size-10 items-center justify-center gap-1.5 rounded-full text-sm font-semibold text-[#1d1d1f] hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-[#0071e3] sm:w-auto sm:px-3"
       >
         <House className="size-4" aria-hidden />
-        Início
+        <span className="hidden sm:inline">Início</span>
       </a>
       <button
         type="button"

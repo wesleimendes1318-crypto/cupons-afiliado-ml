@@ -130,6 +130,11 @@ function Painel({
   const ref = useRef<HTMLDialogElement>(null);
   const [dados, setDados] = useState<Resposta | null | undefined>(cache.get(chave));
   const [descricaoToda, setDescricaoToda] = useState(false);
+  /* Menos informação de cara (Weslei, 18/10): destaques à vista;
+     características e descrição abrem quando a pessoa quiser. */
+  const [verCarac, setVerCarac] = useState(false);
+  const [verDescricao, setVerDescricao] = useState(false);
+  const [todosDestaques, setTodosDestaques] = useState(false);
 
   useEffect(() => {
     const d = ref.current;
@@ -205,17 +210,6 @@ function Painel({
     >
       <div className="flex max-h-[88vh] flex-col">
         <div className="flex items-start gap-3 border-b border-border p-4">
-          <div className="relative size-20 shrink-0 overflow-hidden rounded-2xl bg-[#f5f5f7]">
-            {foto && (
-              <img
-                src={foto}
-                alt=""
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 h-full w-full object-contain p-1.5 mix-blend-multiply"
-              />
-            )}
-          </div>
           <div className="min-w-0 flex-1">
             <h3 id={`det-${chave}`} className="text-[15px] font-bold leading-snug">
               {titulo}
@@ -245,54 +239,54 @@ function Painel({
           {n > 0 && (
             <section aria-label="Fotos do produto">
               {/* Carrossel (Weslei, 05/10: "deixe como carrossel"): desliza
-                  com o dedo (scroll-snap), setas e miniaturas acompanham. */}
-              <div className="relative">
-                <ul
-                  ref={trilho}
-                  onScroll={(e) => {
-                    const el = e.currentTarget;
-                    const k = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-                    if (k !== atual) setAtual(k);
-                  }}
-                  className="flex h-64 snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-[#f5f5f7] [scrollbar-width:none] sm:h-80 [&::-webkit-scrollbar]:hidden"
-                  aria-label="Fotos do produto"
-                >
-                  {galeria.map((u, k) => (
-                    <li key={u} className="relative h-full w-full shrink-0 snap-center">
-                      <img
-                        {...propsFotoGrande(u)}
-                        alt={`${titulo}: foto ${k + 1} de ${n}`}
-                        loading={k === 0 ? "eager" : "lazy"}
-                        referrerPolicy="no-referrer"
-                        className="absolute inset-0 h-full w-full object-contain p-3 mix-blend-multiply"
-                      />
-                    </li>
-                  ))}
-                </ul>
-                {n > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => ir(atual - 1)}
-                      aria-label="Foto anterior"
-                      className="absolute left-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow hover:bg-white focus-visible:outline-2 focus-visible:outline-[#0071e3]"
-                    >
-                      <ChevronLeft className="size-5" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => ir(atual + 1)}
-                      aria-label="Próxima foto"
-                      className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow hover:bg-white focus-visible:outline-2 focus-visible:outline-[#0071e3]"
-                    >
-                      <ChevronRight className="size-5" aria-hidden="true" />
-                    </button>
-                    <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">
-                      {Math.min(atual, n - 1) + 1}/{n}
-                    </span>
-                  </>
-                )}
-              </div>
+                  com o dedo (scroll-snap), setas e miniaturas acompanham.
+                  Nada por cima da foto (Weslei, 18/10: "não competindo com a
+                  foto"): setas e contador ficam na linha de baixo. */}
+              <ul
+                ref={trilho}
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  const k = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+                  if (k !== atual) setAtual(k);
+                }}
+                className="flex h-64 snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-white ring-1 ring-black/5 [scrollbar-width:none] sm:h-80 [&::-webkit-scrollbar]:hidden"
+                aria-label="Fotos do produto"
+              >
+                {galeria.map((u, k) => (
+                  <li key={u} className="relative h-full w-full shrink-0 snap-center">
+                    <img
+                      {...propsFotoGrande(u)}
+                      alt={`${titulo}: foto ${k + 1} de ${n}`}
+                      loading={k === 0 ? "eager" : "lazy"}
+                      referrerPolicy="no-referrer"
+                      className="absolute inset-0 h-full w-full object-contain p-2"
+                    />
+                  </li>
+                ))}
+              </ul>
+              {n > 1 && (
+                <div className="mt-2 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => ir(atual - 1)}
+                    aria-label="Foto anterior"
+                    className="grid size-8 place-items-center rounded-full border border-border bg-white hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                  >
+                    <ChevronLeft className="size-4" aria-hidden="true" />
+                  </button>
+                  <span className="min-w-12 text-center text-[12px] font-semibold tabular-nums text-[#6e6e73]">
+                    {Math.min(atual, n - 1) + 1} de {n}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => ir(atual + 1)}
+                    aria-label="Próxima foto"
+                    className="grid size-8 place-items-center rounded-full border border-border bg-white hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                  >
+                    <ChevronRight className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
               {n > 1 && (
                 <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Escolher foto">
                   {galeria.map((u, k) => (
@@ -342,18 +336,52 @@ function Painel({
                     Destaques
                   </h4>
                   <ul className="mt-1.5 list-disc space-y-0.5 pl-4">
-                    {dest.slice(0, 12).map((d, k) => (
+                    {dest.slice(0, todosDestaques ? 12 : 5).map((d, k) => (
                       <li key={k}>{d}</li>
                     ))}
                   </ul>
+                  {dest.length > 5 && (
+                    <button
+                      type="button"
+                      onClick={() => setTodosDestaques((x) => !x)}
+                      className="mt-1 font-semibold text-[#0058b0] hover:underline"
+                    >
+                      {todosDestaques
+                        ? "Mostrar menos"
+                        : `Ver todos os ${Math.min(12, dest.length)}`}
+                    </button>
+                  )}
                 </section>
               )}
-              {carac.length > 0 && (
-                <section>
-                  <h4 className="text-xs font-bold uppercase tracking-wide text-[#6e6e73]">
-                    Características
-                  </h4>
-                  <table className="mt-1.5 w-full border-collapse overflow-hidden rounded-xl">
+              {(carac.length > 0 || descricao) && (
+                <div className="flex flex-wrap gap-2">
+                  {carac.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setVerCarac((x) => !x)}
+                      aria-expanded={verCarac}
+                      className="inline-flex min-h-8 items-center gap-1 rounded-full bg-[#f5f5f7] px-3 text-[12px] font-semibold hover:bg-[#e8e8ed]"
+                    >
+                      {verCarac ? "Fechar características" : `Características (${carac.length})`}
+                      <span aria-hidden="true">{verCarac ? "▴" : "▾"}</span>
+                    </button>
+                  )}
+                  {descricao && (
+                    <button
+                      type="button"
+                      onClick={() => setVerDescricao((x) => !x)}
+                      aria-expanded={verDescricao}
+                      className="inline-flex min-h-8 items-center gap-1 rounded-full bg-[#f5f5f7] px-3 text-[12px] font-semibold hover:bg-[#e8e8ed]"
+                    >
+                      {verDescricao ? "Fechar descrição" : "Descrição do anúncio"}
+                      <span aria-hidden="true">{verDescricao ? "▴" : "▾"}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+              {verCarac && carac.length > 0 && (
+                <section aria-label="Características">
+                  <table className="w-full border-collapse overflow-hidden rounded-xl">
                     <tbody>
                       {carac.slice(0, 40).map((c, k) => (
                         <tr key={k} className={k % 2 ? "bg-white" : "bg-[#f5f5f7]"}>
@@ -369,12 +397,9 @@ function Painel({
                   </table>
                 </section>
               )}
-              {descricao && (
-                <section>
-                  <h4 className="text-xs font-bold uppercase tracking-wide text-[#6e6e73]">
-                    Descrição do anúncio
-                  </h4>
-                  <p className="mt-1.5 whitespace-pre-line leading-relaxed text-[#424245]">
+              {verDescricao && descricao && (
+                <section aria-label="Descrição do anúncio">
+                  <p className="whitespace-pre-line leading-relaxed text-[#424245]">
                     {longa && !descricaoToda ? descricao.slice(0, 420).trimEnd() + "…" : descricao}
                   </p>
                   {longa && (

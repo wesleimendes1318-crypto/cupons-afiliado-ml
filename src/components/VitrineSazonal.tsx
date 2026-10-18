@@ -617,7 +617,9 @@ export function SecaoCampanha({
       style={{ background: p.fundo, color: p.texto }}
     >
       {/* Cenário de estúdio: no celular, faixa no topo que some no fundo; no
-          PC, a lateral direita do destaque, fundida no fundo da seção. */}
+          PC, a lateral direita do destaque, fundida no fundo da seção. O texto
+          começa DEPOIS da faixa (18/10: o selo e o título ficavam em cima da
+          arte, "competindo com a foto"). */}
       <CenarioCampanha
         tema={tema}
         fundir="baixo"
@@ -630,7 +632,7 @@ export function SecaoCampanha({
         fundir="ambos"
         className="absolute right-0 top-0 hidden h-[260px] w-[50%] md:block"
       />
-      <div className="relative -mt-4 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[260px] md:items-center md:pt-5">
+      <div className="relative mt-3 px-5 pt-0 sm:px-7 md:mt-0 md:flex md:min-h-[260px] md:items-center md:pt-5">
         <div className="min-w-0 md:max-w-[48%]">
           <p
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"

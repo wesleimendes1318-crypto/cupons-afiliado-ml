@@ -4721,42 +4721,49 @@ function OutraLojaComCupom({
           <Fogo /> Minha recomendação
         </p>
       )}
-      <p className="text-sm font-bold text-success">
-        {temCupomLa && !lojaAquiTemCupom
-          ? `Achei o mesmo produto${oferta.vendedor ? ` na loja ${oferta.vendedor}` : " em outra loja"} com cupom!`
-          : temCupomLa
-            ? "Achei o mesmo produto mais barato em outra loja, e lá também tem cupom"
-            : !lojaAquiTemCupom && diferenca != null && diferenca > 0
-              ? oferta.mesmaLoja
-                ? `A mesma loja vende este produto por ${brl(diferenca)} a menos em outro anúncio`
-                : `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos${freteConhecido ? ", já com o frete" : ""}`
-              : "Achei o mesmo produto mais barato em outra loja"}
-      </p>
-      {freteConhecido && oferta.final != null && (
-        <p className="mt-0.5 text-xs text-secondary-ink">
-          {`Produto ${brl(oferta.final)} · frete para seu CEP ${brl(oferta.custoFrete as number)} · total ${brl(oferta.final + (oferta.custoFrete as number))}`}
-        </p>
-      )}
-      {oferta.lojaOficial === true && (
-        <p className="mt-0.5 text-xs font-semibold text-ml-blue">
-          <BadgeCheck className="inline size-3.5 align-[-3px]" aria-hidden="true" /> Vendido pela
-          loja oficial{oferta.vendedor ? ` ${oferta.vendedor}` : ""}
-        </p>
-      )}
-      <Avaliacoes
-        a={oferta.avaliacoes}
-        de={oferta}
-        titulo={titulo}
-        link={oferta.link}
-        className="mt-0.5 flex"
-      />
-      <div className="mt-2 flex items-center gap-2">
-        <Foto src={oferta.imagem} className="size-14 shrink-0 rounded" />
-        {oferta.verificadoIA && (
-          <span className="rounded bg-card px-2 py-1 text-xs font-semibold text-success">
-            ✓ Mesmo produto: foto e anúncio conferidos
-          </span>
-        )}
+      {/* Foto ao lado do que importa (18/10: a foto ficava sozinha numa linha,
+          com um vão ao lado): quem vende, quanto a menos e as estrelas. */}
+      <div className="flex items-start gap-3">
+        <Foto
+          src={oferta.imagem}
+          className="size-16 shrink-0 rounded-xl bg-white object-contain p-1 ring-1 ring-success/20"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-success">
+            {temCupomLa && !lojaAquiTemCupom
+              ? `Achei o mesmo produto${oferta.vendedor ? ` na loja ${oferta.vendedor}` : " em outra loja"} com cupom!`
+              : temCupomLa
+                ? "Achei o mesmo produto mais barato em outra loja, e lá também tem cupom"
+                : !lojaAquiTemCupom && diferenca != null && diferenca > 0
+                  ? oferta.mesmaLoja
+                    ? `A mesma loja vende este produto por ${brl(diferenca)} a menos em outro anúncio`
+                    : `${oferta.vendedor ?? "Outra loja"} vende o mesmo produto por ${brl(diferenca)} a menos${freteConhecido ? ", já com o frete" : ""}`
+                  : "Achei o mesmo produto mais barato em outra loja"}
+          </p>
+          {freteConhecido && oferta.final != null && (
+            <p className="mt-0.5 text-xs text-secondary-ink">
+              {`Produto ${brl(oferta.final)} · frete para seu CEP ${brl(oferta.custoFrete as number)} · total ${brl(oferta.final + (oferta.custoFrete as number))}`}
+            </p>
+          )}
+          {oferta.lojaOficial === true && (
+            <p className="mt-0.5 text-xs font-semibold text-ml-blue">
+              <BadgeCheck className="inline size-3.5 align-[-3px]" aria-hidden="true" /> Vendido
+              pela loja oficial{oferta.vendedor ? ` ${oferta.vendedor}` : ""}
+            </p>
+          )}
+          <Avaliacoes
+            a={oferta.avaliacoes}
+            de={oferta}
+            titulo={titulo}
+            link={oferta.link}
+            className="mt-0.5 flex"
+          />
+          {oferta.verificadoIA && (
+            <p className="mt-1 text-xs font-semibold text-success">
+              ✓ Mesmo produto: foto e anúncio conferidos
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Tabela zebrada, uma coluna por loja, e a conta da economia escrita

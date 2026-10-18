@@ -1047,6 +1047,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Tabela de lojas no celular: duas colunas (sem a foto, o botão embaixo do
   preço); o nome da loja saía uma letra por linha. Barra de compra do
   celular: o preço nunca fica por baixo do botão.
+- Painel "Ver fotos e detalhes": a foto num quadro branco, com setas e
+  contador ("1 de 5") ABAIXO dela; sem a miniatura repetida no cabeçalho.
+  Destaques à vista (até 5); características e descrição abrem nos botões.
+- "Minha recomendação": a foto ao lado de quem vende, quanto a menos e as
+  estrelas (não mais sozinha numa linha). Campanhas no celular: o texto
+  começa depois da faixa da arte. Botões flutuantes "Início"/topo só com os
+  ícones no celular.
 - Milhar com ponto ("12.000 BTUs") é lido inteiro em src/lib/diferencas.ts
   (saía "Cabe 3 BTUS a menos"); "Cabe" só para L, mL e kg (testes em
   tests/diferencas.test.ts).
