@@ -4,7 +4,7 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
-import { NOME_SECRET_SERVICO, SUPABASE_URL_SITE } from './projeto';
+import { NOME_SECRET_SERVICO, SUPABASE_URL_SITE, chaveDeServico } from './projeto';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -32,7 +32,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
 function createSupabaseAdminClient() {
   const SUPABASE_URL = SUPABASE_URL_SITE;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env[NOME_SECRET_SERVICO]?.trim();
+  const SUPABASE_SERVICE_ROLE_KEY = chaveDeServico().chave;
 
   if (!SUPABASE_SERVICE_ROLE_KEY) {
     const message = `Missing Supabase secret: ${NOME_SECRET_SERVICO} (Lovable → Secrets).`;

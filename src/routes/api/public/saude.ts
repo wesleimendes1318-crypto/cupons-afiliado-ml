@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { chaveDeServico } from "@/integrations/supabase/projeto";
 import { excedeuLimite } from "@/lib/public-ai-api";
 
 /* SAÚDE DO SITE (16/10: a consulta do Lovable ao banco deu 504 por horas e o
@@ -132,8 +133,16 @@ export const Route = createFileRoute("/api/public/saude")({
             brinquedos: Array.isArray(brinq) ? brinq.length : null,
           });
         } catch {
+          /* Só COMO a chave do banco próprio foi achada (pelo nome, pelo
+             valor, várias ou ausente), nunca o valor (18/10). */
           return responder(
-            { banco: "falhou", motivo: "erro no servidor", ms: Date.now() - t0, em },
+            {
+              banco: "falhou",
+              motivo: "erro no servidor",
+              chaveServico: chaveDeServico().origem,
+              ms: Date.now() - t0,
+              em,
+            },
             503,
           );
         }
