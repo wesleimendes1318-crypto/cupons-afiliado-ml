@@ -5,7 +5,7 @@
    Preço é o de quando foi comparado, com a data. O botão de compra só aparece
    com link de afiliado (meli.la). Nada é inventado: sem detalhes guardados,
    o painel diz isso e oferece comparar de novo. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Images, LoaderCircle, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,8 @@ export function VerDetalhesVitrine({
   vistoEm,
   urlProduto,
   className = "",
+  rotulo = "Ver fotos e detalhes",
+  gatilho = null,
 }: {
   chave: string;
   titulo: string;
@@ -61,19 +63,35 @@ export function VerDetalhesVitrine({
   /* Endereço do produto: o id do catálogo (/p/MLB...) traz a galeria. */
   urlProduto?: string | null;
   className?: string;
+  rotulo?: string;
+  /* A FOTO DO CARTÃO abre os detalhes (Weslei, 18/10: "mostrar as principais
+     diferenças, mas que mais detalhes sejam consultados"). Sem detalhes
+     possíveis, a foto aparece sem botão. */
+  gatilho?: ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
-  if (!/^MLB\d{5,}$/.test(chave)) return null;
+  if (!/^MLB\d{5,}$/.test(chave)) return gatilho ? <>{gatilho}</> : null;
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setAberto(true)}
-        className={`inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
-      >
-        <Images className="size-3.5" aria-hidden="true" />
-        Ver fotos e detalhes
-      </button>
+      {gatilho ? (
+        <button
+          type="button"
+          onClick={() => setAberto(true)}
+          aria-label={`Ver fotos e detalhes: ${titulo}`}
+          className={`block cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
+        >
+          {gatilho}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAberto(true)}
+          className={`inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
+        >
+          <Images className="size-3.5" aria-hidden="true" />
+          {rotulo}
+        </button>
+      )}
       {aberto && (
         <Painel
           chave={chave}

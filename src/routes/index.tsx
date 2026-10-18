@@ -1849,7 +1849,7 @@ function Index() {
                 >
                   O mesmo produto.
                   <br />
-                  Uma escolha melhor.
+                  Uma melhor escolha.
                 </h1>
                 {buscaParada && (
                   <p className="mt-3 max-w-[46ch] text-base leading-snug text-white/95 sm:text-lg">

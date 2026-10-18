@@ -9,6 +9,9 @@
    - O cartão de vidro e os textos ficam FIXOS; só a imagem flutua 4 px num
      ciclo de 6 s. prefers-reduced-motion: sem troca automática e sem
      flutuação.
+   - ENQUADRAMENTO (Weslei, 18/10: "melhor ajustado e não competindo com a
+     foto"): a imagem fica inteira num quadro de cantos arredondados, sem
+     nada por cima; rótulo, pontos e "Compare com clareza" vão ABAIXO dela.
    - Timers só depois de montar (nada muda no HTML do servidor). */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -136,8 +139,8 @@ export function DestaqueHeroRotativo() {
         if (!raiz.current?.contains(e.relatedTarget as Node | null)) setEmUso(false);
       }}
     >
-      {/* Imagens (só elas mudam e flutuam). */}
-      <div className="relative mx-auto aspect-[774/706] w-full max-w-[30rem] [mask-image:radial-gradient(ellipse_75%_80%_at_55%_45%,#000_55%,transparent_100%)]">
+      {/* Imagens (só elas mudam; o quadro flutua junto). */}
+      <div className="hero-flutua relative mx-auto aspect-[774/706] w-full max-w-[30rem] overflow-hidden rounded-[2rem] bg-white/10 shadow-[0_30px_60px_-30px_rgba(20,10,60,0.65)] ring-1 ring-white/30">
         {slides.map((s, i) => {
           const visivel = i === indice;
           return (
@@ -153,7 +156,7 @@ export function DestaqueHeroRotativo() {
                 (visivel ? "opacity-100" : "pointer-events-none opacity-0")
               }
             >
-              <div className="hero-flutua absolute inset-0">
+              <div className="absolute inset-0">
                 {s.tipo === "institucional" ? (
                   <img
                     src="/home/hero-fones.webp"
@@ -179,10 +182,8 @@ export function DestaqueHeroRotativo() {
                     style={{ objectPosition: s.arte.focoCelular }}
                   />
                 ) : (
-                  /* Foto da oferta num quadro branco ACIMA do cartão de vidro
-                     (Weslei, 09/10: o disco branco vazava por trás do cartão e
-                     apagava o título). */
-                  <span className="absolute inset-x-[20%] bottom-[40%] top-[16%] grid place-items-center rounded-3xl bg-white shadow-[0_24px_48px_-24px_rgba(20,10,60,0.55)]">
+                  /* Foto da oferta inteira, no branco que ocupa o quadro. */
+                  <span className="absolute inset-0 bg-white">
                     <img
                       {...propsFotoGrande(s.imagem)}
                       alt=""
@@ -191,7 +192,7 @@ export function DestaqueHeroRotativo() {
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="absolute inset-[8%] h-[84%] w-[84%] object-contain"
+                      className="absolute inset-[10%] h-[80%] w-[80%] object-contain"
                     />
                   </span>
                 )}
@@ -201,83 +202,87 @@ export function DestaqueHeroRotativo() {
         })}
       </div>
 
-      {/* Rótulo do item (muda junto com a imagem, sem mexer no cartão). */}
-      <div className="absolute left-2 top-2 max-w-[70%]">
-        {slides.map((s, i) =>
-          i !== indice ? null : s.tipo === "categoria" ? (
-            <Link
-              key={s.id}
-              to="/categorias/$slug"
-              params={{ slug: s.slug }}
-              className="campanha-entra inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur-md hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      {/* Abaixo do quadro: o rótulo do item à esquerda e os pontos à direita. */}
+      <div className="mx-auto mt-3 flex w-full max-w-[30rem] items-center justify-between gap-3">
+        <div className="min-w-0">
+          {slides.map((s, i) =>
+            i !== indice ? null : s.tipo === "categoria" ? (
+              <Link
+                key={s.id}
+                to="/categorias/$slug"
+                params={{ slug: s.slug }}
+                className="campanha-entra inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur-md hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                Em destaque: {s.rotulo}
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            ) : s.tipo === "oferta" ? (
+              <a
+                key={s.id}
+                href={s.link}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                data-origem="hero_oferta"
+                className="campanha-entra flex max-w-full flex-col rounded-2xl border border-white/30 bg-white/15 px-3 py-1.5 text-xs backdrop-blur-md hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <span className="truncate">
+                  <span className="font-semibold">Oferta conferida:</span> {s.titulo}
+                </span>
+                <span className="font-bold">{brl(s.economia)} a menos no produto</span>
+              </a>
+            ) : (
+              <span key={s.id} className="text-xs font-semibold text-white/85">
+                O mesmo produto, em diferentes lojas
+              </span>
+            ),
+          )}
+        </div>
+        {total > 1 && (
+          <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-2 py-1 backdrop-blur-md">
+            {slides.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                aria-label={`Mostrar destaque ${i + 1} de ${total}: ${s.rotulo}`}
+                aria-current={i === indice ? "true" : undefined}
+                onClick={() => setAtivo(i)}
+                className={
+                  "h-2 rounded-full transition-all duration-300 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white " +
+                  (i === indice ? "w-5 bg-white" : "w-2 bg-white/50 hover:bg-white/80")
+                }
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setPausadoPeloBotao((p) => !p)}
+              aria-label={pausadoPeloBotao ? "Reproduzir destaques" : "Pausar destaques"}
+              className="ml-0.5 grid size-6 place-items-center rounded-full hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
-              Em destaque: {s.rotulo}
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
-          ) : s.tipo === "oferta" ? (
-            <a
-              key={s.id}
-              href={s.link}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              data-origem="hero_oferta"
-              className="campanha-entra inline-flex flex-col rounded-2xl border border-white/30 bg-white/15 px-3 py-2 text-xs backdrop-blur-md hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              <span className="font-semibold">Oferta conferida</span>
-              <span className="line-clamp-1">{s.titulo}</span>
-              <span className="font-bold">{brl(s.economia)} a menos no produto</span>
-            </a>
-          ) : null,
+              {pausadoPeloBotao ? (
+                <Play className="size-3.5" aria-hidden="true" />
+              ) : (
+                <Pause className="size-3.5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Controles: pontos e pausar/reproduzir. */}
-      {total > 1 && (
-        <div className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-2 py-1 backdrop-blur-md">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              aria-label={`Mostrar destaque ${i + 1} de ${total}: ${s.rotulo}`}
-              aria-current={i === indice ? "true" : undefined}
-              onClick={() => setAtivo(i)}
-              className={
-                "h-2 rounded-full transition-all duration-300 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white " +
-                (i === indice ? "w-5 bg-white" : "w-2 bg-white/50 hover:bg-white/80")
-              }
-            />
-          ))}
-          <button
-            type="button"
-            onClick={() => setPausadoPeloBotao((p) => !p)}
-            aria-label={pausadoPeloBotao ? "Reproduzir destaques" : "Pausar destaques"}
-            className="ml-0.5 grid size-6 place-items-center rounded-full hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            {pausadoPeloBotao ? (
-              <Play className="size-3.5" aria-hidden="true" />
-            ) : (
-              <Pause className="size-3.5" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Cartão de vidro: fixo em todos os itens. */}
-      {/* Vidro escuro: o texto branco fica legível sobre qualquer imagem. */}
-      <div className="absolute inset-x-2 -bottom-4 rounded-3xl border border-white/25 bg-[#1d1240]/35 p-4 shadow-[0_18px_40px_-24px_rgba(20,10,60,0.6)] backdrop-blur-md">
-        <p className="border-b border-white/25 pb-2 text-lg font-bold">Compare com clareza</p>
-        <ul className="mt-2 space-y-2 text-sm">
-          <li className="flex items-center gap-2.5">
+      {/* "Compare com clareza": fixo, abaixo da imagem (nunca sobre ela). */}
+      <div className="mx-auto mt-3 w-full max-w-[30rem] rounded-3xl border border-white/25 bg-[#1d1240]/25 px-4 py-3 backdrop-blur-md">
+        <p className="text-sm font-bold">Compare com clareza</p>
+        <ul className="mt-2 grid grid-cols-3 gap-3 text-xs leading-snug text-white/90">
+          <li className="flex flex-col gap-1">
             <Search className="size-4 shrink-0" aria-hidden="true" />
             Mesmo produto em diferentes lojas
           </li>
-          <li className="flex items-center gap-2.5">
+          <li className="flex flex-col gap-1">
             <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-            Loja oficial identificada, quando houver
+            Loja oficial, quando houver
           </li>
-          <li className="flex items-center gap-2.5">
+          <li className="flex flex-col gap-1">
             <Package className="size-4 shrink-0" aria-hidden="true" />
-            Produtos semelhantes em seção separada
+            Parecidos em seção separada
           </li>
         </ul>
       </div>

@@ -289,54 +289,61 @@ export function CartaoOferta({
       style={{ animationDelay: `${Math.min(atraso, 8) * 50}ms` }}
     >
       {/* Foto sempre dentro da área (05/10: fotos grandes estouravam o
-          cartão): caixa de altura fixa e imagem absoluta com object-contain. */}
-      <div className="relative h-28 overflow-hidden bg-white sm:h-32">
-        {o.imagem ? (
-          <img
-            {...propsFotoCartao(o.imagem)}
-            alt={o.titulo}
-            width={200}
-            height={200}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-2.5 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
-          />
-        ) : (
-          <span className="absolute inset-0 grid place-items-center text-[11px] text-[#86868b]">
-            Foto indisponível
+          cartão): quadro de proporção fixa e imagem absoluta com
+          object-contain. Nada por cima da foto (Weslei, 18/10: "não
+          competindo com a foto"); tocar nela abre fotos e detalhes. */}
+      <VerDetalhesVitrine
+        chave={o.chave}
+        titulo={o.titulo}
+        imagem={o.imagem}
+        preco={o.preco}
+        link={o.link}
+        vistoEm={o.vistoEm ?? null}
+        urlProduto={o.urlProduto}
+        className="w-full"
+        gatilho={
+          <span className="relative block aspect-[4/3] overflow-hidden bg-white">
+            {o.imagem ? (
+              <img
+                {...propsFotoCartao(o.imagem)}
+                alt={o.titulo}
+                width={200}
+                height={200}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
+              />
+            ) : (
+              <span className="absolute inset-0 grid place-items-center text-[11px] text-[#86868b]">
+                Foto indisponível
+              </span>
+            )}
           </span>
-        )}
-        <SeloBemAvaliado resumo={avaliacao} className="absolute bottom-1.5 left-1.5" />
-      </div>
+        }
+      />
       <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
-        <p className="line-clamp-2 min-h-[2.5em] text-[12px] font-semibold leading-snug">
+        {/* Abaixo da foto, a classificação (altura fixa: os títulos alinham). */}
+        <p className="flex min-h-5 flex-wrap items-center gap-1">
+          <span
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${c.chipClasse}`}
+          >
+            {c.chip}
+          </span>
+        </p>
+        <p className="mt-1.5 line-clamp-2 min-h-[2.5em] text-[12px] font-semibold leading-snug">
           {o.titulo}
         </p>
         <p className="mt-1.5 text-[17px] font-extrabold leading-none tracking-tight tabular-nums">
           {brl(o.preco)}
         </p>
-        <span
-          className={`mt-1.5 self-start rounded-full px-2 py-0.5 text-[10px] font-bold ${c.chipClasse}`}
-        >
-          {c.chip}
-        </span>
-        <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-[#515154]">{c.linha}</p>
-        <p className="mt-1 truncate text-[11px] text-[#6e6e73]">
-          {o.loja ? `Vendido por ${o.loja}` : " "}
+        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[#515154]">{c.linha}</p>
+        <p className="mt-0.5 truncate text-[11px] text-[#6e6e73]">
+          {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
         <LinhaAvaliacoes resumo={avaliacao} titulo={o.titulo} link={o.link} />
-        <p className="text-[10px] text-[#86868b]">{quando}</p>
+        <SeloBemAvaliado resumo={avaliacao} className="mt-0.5 self-start" />
+        <p className="mt-0.5 text-[10px] text-[#86868b]">{quando}</p>
         <div className="mt-auto pt-3">
-          <VerDetalhesVitrine
-            chave={o.chave}
-            titulo={o.titulo}
-            imagem={o.imagem}
-            preco={o.preco}
-            link={o.link}
-            vistoEm={o.vistoEm ?? null}
-            urlProduto={o.urlProduto}
-            className="mb-0.5"
-          />
           {o.link && (
             <a
               href={o.link}
@@ -371,6 +378,17 @@ export function CartaoOferta({
                 {o.link ? "Atualizar preço" : "Ver o preço de agora"}
               </a>
             ))}
+          <VerDetalhesVitrine
+            chave={o.chave}
+            titulo={o.titulo}
+            imagem={o.imagem}
+            preco={o.preco}
+            link={o.link}
+            vistoEm={o.vistoEm ?? null}
+            urlProduto={o.urlProduto}
+            rotulo="Detalhes"
+            className="mt-1 min-h-7 w-full"
+          />
         </div>
       </div>
     </li>

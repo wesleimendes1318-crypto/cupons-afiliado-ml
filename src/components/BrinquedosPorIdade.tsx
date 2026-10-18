@@ -20,7 +20,7 @@ import {
   type MapaPorItem,
   type ResumoAvaliacoes,
 } from "@/lib/avaliacoes-detalhe";
-import { passaNaQualidade } from "@/lib/qualidade-avaliacao";
+import { passaNaQualidade, seloDeAvaliacao } from "@/lib/qualidade-avaliacao";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
    API oficial (mais vendidos e buscas por idade) e que JÁ passaram pela
@@ -124,46 +124,53 @@ function CartaoBrinquedo({
   const antigo = !recente(i.atendido_em);
   return (
     <li className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
-      <div className="relative h-28 overflow-hidden bg-white sm:h-32">
-        {i.imagem ? (
-          <img
-            {...propsFotoCartao(i.imagem)}
-            alt={i.nome}
-            width={200}
-            height={200}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-2.5 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
-          />
-        ) : null}
-        <span
-          className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-            c.tipo === "desconto"
-              ? "bg-[#1d7a3e] text-white"
-              : c.tipo === "menor"
-                ? "bg-[#0071e3] text-white"
-                : "bg-[#f5f5f7] text-[#1d1d1f]"
-          }`}
-        >
-          {c.selo}
-        </span>
-        <span className="pointer-events-none absolute inset-x-2 bottom-2 flex flex-wrap gap-1">
-          {i.em_alta && (
-            <span
-              className="rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a33c00]"
-              title={SELO_MAIS_VENDIDO.nota}
-            >
-              {SELO_MAIS_VENDIDO.texto}
-            </span>
-          )}
-          <SeloBemAvaliado resumo={avaliacao} />
-        </span>
-      </div>
+      {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
+          competindo com a foto"); tocar nela abre fotos e detalhes. */}
+      <VerDetalhesVitrine
+        chave={chaveDoBrinquedo(i.url)}
+        titulo={i.nome}
+        imagem={i.imagem}
+        preco={c.preco}
+        link={c.link}
+        vistoEm={i.atendido_em}
+        urlProduto={i.url}
+        className="w-full"
+        gatilho={
+          <span className="relative block aspect-[4/3] overflow-hidden bg-white">
+            {i.imagem ? (
+              <img
+                {...propsFotoCartao(i.imagem)}
+                alt={i.nome}
+                width={200}
+                height={200}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
+              />
+            ) : null}
+          </span>
+        }
+      />
       <div className="flex flex-1 flex-col border-t border-border p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0058b0]">
+        {/* Abaixo da foto, o selo do preço (altura fixa: os títulos
+            alinham); nota alta e "mais vendido" vão junto das estrelas. */}
+        <p className="flex min-h-5 flex-wrap items-center gap-1">
+          <span
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              c.tipo === "desconto"
+                ? "bg-[#1d7a3e] text-white"
+                : c.tipo === "menor"
+                  ? "bg-[#0071e3] text-white"
+                  : "bg-[#f5f5f7] text-[#1d1d1f]"
+            }`}
+          >
+            {c.selo}
+          </span>
+        </p>
+        <p className="mt-1.5 text-[11px] font-semibold text-[#0058b0]">
           {i.idade_texto ? `Idade: ${i.idade_texto}` : (faixa?.curto ?? "Em alta")}
         </p>
-        <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug">{i.nome}</p>
+        <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug">{i.nome}</p>
         <p className="mt-2 text-[17px] font-extrabold leading-none tabular-nums">{brl(c.preco)}</p>
         {c.detalhe && <p className="mt-1 text-[11px] text-secondary-ink">{c.detalhe}</p>}
         <p className="mt-1 flex items-center gap-1 text-[11px] text-secondary-ink">
@@ -178,17 +185,20 @@ function CartaoBrinquedo({
           <p className="mt-0.5 truncate text-[11px] text-secondary-ink">Vendido por {c.loja}</p>
         )}
         <LinhaAvaliacoes resumo={avaliacao} titulo={i.nome} link={c.link} className="mt-0.5" />
+        {(seloDeAvaliacao(avaliacao) || i.em_alta) && (
+          <p className="mt-1 flex flex-wrap gap-1">
+            <SeloBemAvaliado resumo={avaliacao} />
+            {i.em_alta && (
+              <span
+                className="whitespace-nowrap rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a33c00]"
+                title={SELO_MAIS_VENDIDO.nota}
+              >
+                {SELO_MAIS_VENDIDO.texto}
+              </span>
+            )}
+          </p>
+        )}
         <div className="mt-auto pt-3">
-          <VerDetalhesVitrine
-            chave={chaveDoBrinquedo(i.url)}
-            titulo={i.nome}
-            imagem={i.imagem}
-            preco={c.preco}
-            link={c.link}
-            vistoEm={i.atendido_em}
-            urlProduto={i.url}
-            className="mb-1.5 w-full"
-          />
           {podeComprar ? (
             <a
               href={c.link as string}
@@ -231,6 +241,17 @@ function CartaoBrinquedo({
                 </a>
               );
             })()}
+          <VerDetalhesVitrine
+            chave={chaveDoBrinquedo(i.url)}
+            titulo={i.nome}
+            imagem={i.imagem}
+            preco={c.preco}
+            link={c.link}
+            vistoEm={i.atendido_em}
+            urlProduto={i.url}
+            rotulo="Detalhes"
+            className="mt-1 min-h-7 w-full"
+          />
         </div>
       </div>
     </li>

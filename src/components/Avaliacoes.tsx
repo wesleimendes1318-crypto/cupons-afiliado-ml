@@ -208,7 +208,8 @@ export function SeloBemAvaliado({
   if (!selo) return null;
   return (
     <span
-      className={`pointer-events-none inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-[#7a4a00] shadow-sm ring-1 ring-black/5 backdrop-blur ${className}`}
+      /* Na linha de selos abaixo da foto, nunca sobre ela (18/10). */
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-[#7a4a00] ring-1 ring-amber-200/70 ${className}`}
     >
       <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden="true" />
       {selo}

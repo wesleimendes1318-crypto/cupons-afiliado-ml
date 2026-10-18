@@ -20,7 +20,7 @@
    depender de o Weslei estar online para responder.
 */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AcompanharPreco } from "@/components/AcompanharPreco";
 import { ComoFunciona } from "@/components/ComoFunciona";
@@ -3415,58 +3415,68 @@ function MelhorAlternativa({
         </ul>
       )}
 
-      {p.muda || p.qualidade ? (
-        <OQueMuda
-          muda={p.muda}
-          tituloColado={textoDoColado}
-          detalhesColado={detalhesColado}
-          detalhesOutro={p.detalhes}
-          titulo="Não é idêntico ao anúncio que você colou. O que muda para você:"
-          qualidade={qualidadeDoParecido(p, { titulo: textoDoColado, detalhes: detalhesColado })}
-          desvantagens={desvantagensDoParecido(p, {
-            titulo: textoDoColado,
-            detalhes: detalhesColado,
-          })}
-        />
-      ) : (
-        <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
-          Não é idêntico ao anúncio que você colou.
-        </p>
-      )}
-      {pedidoId != null && p.item && <AvaliarIndicacao pedidoId={pedidoId} item={p.item} />}
+      {/* À vista o aviso e as principais diferenças; o significado de cada
+          uma, o lado a lado e as características em "Ver análise completa"
+          (Weslei, 18/10: "mais detalhes sejam consultados"). */}
+      {(() => {
+        const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
+        const qualidade = qualidadeDoParecido(p, doColado);
+        const desvantagens = desvantagensDoParecido(p, doColado);
+        return (
+          <>
+            <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+              <p className="font-bold">Não é idêntico ao anúncio que você colou.</p>
+              <PrincipaisDiferencas
+                linhas={diferencasParaCliente(p.muda, textoDoColado, detalhesColado)}
+                qualidade={p.muda || p.qualidade ? qualidade : null}
+                desvantagens={desvantagens}
+              />
+            </div>
 
-      {p.link ? (
-        <a
-          href={p.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="animate-botao-destaque mt-3 block w-full rounded-full bg-success py-3 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
-        >
-          <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
-          {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(p.preco)}`).replace(
-            " pelo app",
-            " no app",
-          )}
-        </a>
-      ) : p.url ? (
-        <div className="mt-3">
-          <VerNaLoja url={p.url} grande />
-        </div>
-      ) : null}
+            {p.link ? (
+              <a
+                href={p.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="animate-botao-destaque mt-3 block w-full rounded-full bg-success py-3 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+              >
+                <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
+                {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(p.preco)}`).replace(
+                  " pelo app",
+                  " no app",
+                )}
+              </a>
+            ) : p.url ? (
+              <div className="mt-3">
+                <VerNaLoja url={p.url} grande />
+              </div>
+            ) : null}
 
-      {colado && (
-        <div className="text-center">
-          <CompararComOSeu colado={colado} outro={p} />
-        </div>
-      )}
-      <div className="mt-2 text-center">
-        <DetalhesDoProduto
-          detalhes={p.detalhes}
-          rotulo="características"
-          destacar={compararFichas(detalhesColado, p.detalhes).diferentes}
-          nota={notaDaLoja(p.vendedor, detalhesColado, p.detalhes)}
-        />
-      </div>
+            <AnaliseCompleta>
+              {(p.muda || p.qualidade) && (
+                <OQueMuda
+                  muda={p.muda}
+                  tituloColado={textoDoColado}
+                  detalhesColado={detalhesColado}
+                  detalhesOutro={p.detalhes}
+                  qualidade={qualidade}
+                  desvantagens={desvantagens}
+                />
+              )}
+              {colado && <CompararComOSeu colado={colado} outro={p} abertoInicial />}
+              <div className="mt-2">
+                <DetalhesDoProduto
+                  detalhes={p.detalhes}
+                  rotulo="características"
+                  destacar={compararFichas(detalhesColado, p.detalhes).diferentes}
+                  nota={notaDaLoja(p.vendedor, detalhesColado, p.detalhes)}
+                />
+              </div>
+              {pedidoId != null && p.item && <AvaliarIndicacao pedidoId={pedidoId} item={p.item} />}
+            </AnaliseCompleta>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -3547,7 +3557,10 @@ function BarraFixa({
           <div className="min-w-0 flex-1 leading-tight">
             <p className="text-[11px] font-semibold text-[#15803d]">Melhor opção</p>
             {preco != null ? (
-              <p className="text-[17px] font-bold tabular-nums text-foreground">{brl(preco)}</p>
+              /* O preço nunca fica por baixo do botão (18/10: "R$ 1.199,0"). */
+              <p className="whitespace-nowrap text-base font-bold tabular-nums text-foreground">
+                {brl(preco)}
+              </p>
             ) : (
               <p className="truncate text-[13px] font-semibold">{titulo ?? "Produto"}</p>
             )}
@@ -3559,13 +3572,13 @@ function BarraFixa({
               target="_blank"
               rel="noopener noreferrer"
               tabIndex={visivel ? 0 : -1}
-              className="inline-flex h-11 max-w-[56%] shrink-0 items-center gap-1.5 rounded-full bg-[#15803d] px-4 text-center text-[13px] font-bold leading-tight text-white active:scale-[0.98]"
+              className="inline-flex h-11 max-w-[50%] shrink-0 items-center gap-1.5 rounded-full bg-[#15803d] px-3.5 text-center text-[13px] font-bold leading-tight text-white active:scale-[0.98]"
             >
               <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               <span>Comprar com segurança</span>
             </a>
           ) : urlGerar ? (
-            <span className="max-w-[60%] shrink-0">
+            <span className="max-w-[50%] shrink-0">
               <VerNaLoja url={urlGerar} pilula tabIndex={visivel ? 0 : -1} />
             </span>
           ) : null}
@@ -3672,11 +3685,13 @@ function textoFrete(gratis: boolean | null | undefined, custo: number | null | u
 function CompararComOSeu({
   colado,
   outro,
+  abertoInicial = false,
 }: {
   colado: ColadoResumo;
   outro: NonNullable<Analise["parecidos"]>[number];
+  abertoInicial?: boolean;
 }) {
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(abertoInicial);
   const textoDoColado = [
     colado.titulo ?? "",
     ...(colado.detalhes?.caracteristicas ?? []).map((c) => c.valor),
@@ -3894,6 +3909,135 @@ function OQueMuda({
   );
 }
 
+/* PRINCIPAIS DIFERENÇAS (Weslei, 18/10: "deixem o usuário menos confuso com
+   tanta informação. A ideia é mostrar as principais diferenças, mas que mais
+   detalhes sejam consultados"). À vista: a qualidade em uma linha e até três
+   diferenças em etiquetas ("Capacidade: 9.000 BTUs"); em vermelho as que são
+   desvantagem. O que significa cada uma, o lado a lado e as características
+   ficam em "Ver análise completa". Nada novo é calculado aqui: são as mesmas
+   linhas de OQueMuda. */
+const ROTULO_QUALIDADE: Record<Qualidade["nivel"], string> = {
+  superior: "✓ Qualidade superior à do seu",
+  equivalente: "✓ Qualidade equivalente à do seu",
+  inferior: "⚠ Qualidade inferior à do seu",
+  incerta: "? Qualidade não confirmada",
+};
+
+function PrincipaisDiferencas({
+  linhas,
+  qualidade = null,
+  desvantagens = [],
+  maximo = 3,
+}: {
+  linhas: LinhaMuda[];
+  qualidade?: Qualidade | null;
+  desvantagens?: string[];
+  maximo?: number;
+}) {
+  const campoDe = (t: string) =>
+    (t.split(":")[0] ?? t)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .split(" ")[0];
+  const ruins = new Set(desvantagens.map(campoDe));
+  type Etiqueta = { texto: string; dica: string; ruim: boolean };
+  const doMuda = linhas
+    .map((l) => {
+      const texto = l.campo && l.este ? `${l.campo}: ${l.este}` : (l.texto ?? l.campo ?? "").trim();
+      const dica = [l.seu ? `O seu: ${l.seu}` : null, l.significa].filter(Boolean).join(" · ");
+      return texto ? { texto, dica, ruim: ruins.has(campoDe(l.campo ?? texto)) } : null;
+    })
+    .filter((x): x is Etiqueta => x != null);
+  /* Desvantagem que não está no "muda" (piora vista nas fichas) também vira
+     etiqueta vermelha, com o valor deste ("Potência: 1,23 W"). */
+  const jaTem = new Set(doMuda.map((e) => campoDe(e.texto)));
+  const soDesvantagem: Etiqueta[] = desvantagens
+    .filter((d) => !jaTem.has(campoDe(d)))
+    .map((d) => {
+      const i = d.indexOf(":");
+      const campo = i > 0 ? d.slice(0, i).trim() : "";
+      const valor = i > 0 ? d.slice(i + 1).trim() : "";
+      const este = valor.includes("→") ? (valor.split("→").pop() ?? "").trim() : valor;
+      return { texto: campo && este ? `${campo}: ${este}` : d, dica: d, ruim: true };
+    });
+  /* As desvantagens vêm primeiro: são o que mais pesa na escolha. */
+  const etiquetas = [
+    ...doMuda.filter((e) => e.ruim),
+    ...soDesvantagem,
+    ...doMuda.filter((e) => !e.ruim),
+  ];
+  const vistas = etiquetas.slice(0, maximo);
+  const resto = etiquetas.length - vistas.length;
+  if (!qualidade && !vistas.length) return null;
+  return (
+    <div className="mt-2 space-y-1.5">
+      {qualidade && (
+        <p
+          className={
+            "text-xs font-semibold leading-snug " +
+            (qualidade.nivel === "inferior"
+              ? "text-danger"
+              : qualidade.nivel === "incerta"
+                ? "text-amber-800 dark:text-amber-200"
+                : "text-success")
+          }
+        >
+          {ROTULO_QUALIDADE[qualidade.nivel]}
+        </p>
+      )}
+      {vistas.length > 0 && (
+        <ul className="flex flex-wrap gap-1" aria-label="Principais diferenças">
+          {vistas.map((e) => (
+            <li
+              key={e.texto}
+              title={e.dica || undefined}
+              className={
+                "max-w-full rounded-full px-2 py-0.5 text-[11px] font-medium leading-snug [overflow-wrap:anywhere] " +
+                (e.ruim
+                  ? "bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200"
+                  : "bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100")
+              }
+            >
+              {e.ruim && <span aria-hidden="true">✗ </span>}
+              {e.texto}
+            </li>
+          ))}
+          {resto > 0 && (
+            <li className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-secondary-ink">
+              +{resto}
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* "Ver análise completa": o que muda com o significado, desvantagens, lado
+   a lado, características e "faz sentido para você?", tudo recolhido. */
+function AnaliseCompleta({ children, acao = null }: { children: ReactNode; acao?: ReactNode }) {
+  const [aberta, setAberta] = useState(false);
+  return (
+    <div className="mt-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setAberta((x) => !x)}
+          aria-expanded={aberta}
+          className="inline-flex min-h-8 items-center gap-1 rounded-full bg-muted px-3 text-xs font-semibold text-foreground hover:bg-muted/70"
+        >
+          {aberta ? "Fechar análise" : "Ver análise completa"}
+          <span aria-hidden="true">{aberta ? "▴" : "▾"}</span>
+        </button>
+        {acao}
+      </div>
+      {aberta && <div className="mt-1">{children}</div>}
+    </div>
+  );
+}
+
 /* Parecidos: NAO e o mesmo produto (regra: parecido nunca aparece como
    igual). Tabela separada, âmbar (atenção), com o que muda em cada um. */
 /* PREÇO POR UNIDADE: com quantidade diferente (kit de 30 x kit de 20, 500 ml
@@ -4011,9 +4155,15 @@ function Parecidos({
               key={i}
               className="w-[86%] shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
             >
-              {/* Foto em destaque no celular (cartão estilo Apple). */}
-              <div className="mb-3 flex justify-center rounded-2xl bg-muted/50 p-3 sm:hidden">
-                <Foto src={p.imagem} nitida className="h-36 w-36 rounded-xl object-contain" />
+              {/* Foto em destaque no celular: quadro branco do tamanho do
+                  cartão, sem moldura cinza em volta (18/10: o fundo branco da
+                  foto virava um quadro dentro do quadro). */}
+              <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-white sm:hidden">
+                <Foto
+                  src={p.imagem}
+                  nitida
+                  className="absolute inset-0 h-full w-full object-contain p-2"
+                />
               </div>
               {/* Cabeçalho: foto, título e quem vende. */}
               <div className="flex items-start gap-2.5">
@@ -4043,16 +4193,8 @@ function Parecidos({
                       />
                     </p>
                   )}
-                  {(p.mesmaFoto ||
-                    (p.semelhanca ?? 0) >= 85 ||
-                    p.sugerido === true ||
-                    (p.diferenca != null && p.diferenca <= -0.5)) && (
+                  {(p.mesmaFoto || (p.semelhanca ?? 0) >= 85 || p.sugerido === true) && (
                     <p className="mt-1 flex flex-wrap gap-1 text-[10px] font-semibold">
-                      {p.diferenca != null && p.diferenca <= -0.5 && (
-                        <span className="rounded-full bg-success/15 px-1.5 py-0.5 text-success">
-                          Mais barato que o seu
-                        </span>
-                      )}
                       {p.sugerido === true && (
                         <span className="rounded-full bg-ml-blue/10 px-1.5 py-0.5 text-ml-blue">
                           Sugerido na página do anúncio
@@ -4101,20 +4243,11 @@ function Parecidos({
                 />
               </div>
 
-              <OQueMuda
-                muda={p.muda}
-                tituloColado={textoDoColado}
-                detalhesColado={detalhesColado}
-                detalhesOutro={p.detalhes}
-                qualidade={qualidadeDoParecido(p, {
-                  titulo: textoDoColado,
-                  detalhes: detalhesColado,
-                })}
-                desvantagens={desvantagensDoParecido(p, {
-                  titulo: textoDoColado,
-                  detalhes: detalhesColado,
-                })}
-                extras={[
+              {(() => {
+                const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
+                const qualidade = qualidadeDoParecido(p, doColado);
+                const desvantagens = desvantagensDoParecido(p, doColado);
+                const extras: LinhaMuda[] = [
                   ...(porMedida && m && mColado && m.qtd !== mColado.qtd && precoColado != null
                     ? [
                         {
@@ -4146,43 +4279,65 @@ function Parecidos({
                         },
                       ]
                     : []),
-                ]}
-              />
-              {pedidoId != null && p.item && <AvaliarIndicacao pedidoId={pedidoId} item={p.item} />}
-
-              {/* Rodapé: detalhes à esquerda, compra à direita. */}
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                {temDetalhes(p.detalhes) ? (
-                  <BotaoDetalhes
-                    aberto={aberto === i}
-                    alternar={() => setAberto((x) => (x === i ? null : i))}
-                    rotulo="características"
-                  />
-                ) : (
-                  <span />
-                )}
-                {p.link ? (
+                ];
+                const linhas: LinhaMuda[] = [
+                  ...diferencasParaCliente(p.muda, textoDoColado, detalhesColado),
+                  ...extras,
+                ];
+                const comprar = p.link ? (
                   <a
                     href={p.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md border border-ml-blue px-3 py-1.5 text-xs font-bold text-ml-blue hover:bg-ml-blue/5"
+                    className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-ml-blue px-3 py-2 text-xs font-bold text-ml-blue hover:bg-ml-blue/5 sm:w-auto sm:py-1.5"
                   >
-                    <ShieldCheck className="size-3.5" aria-hidden="true" />
+                    <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
                     Comprar com segurança
                   </a>
                 ) : p.url ? (
                   <VerNaLoja url={p.url} />
-                ) : null}
-              </div>
-              {colado && <CompararComOSeu colado={colado} outro={p} />}
-              {aberto === i && temDetalhes(p.detalhes) && (
-                <PainelDetalhes
-                  detalhes={p.detalhes}
-                  destacar={compararFichas(detalhesColado, p.detalhes).diferentes}
-                  nota={notaDaLoja(p.vendedor, detalhesColado, p.detalhes)}
-                />
-              )}
+                ) : null;
+                return (
+                  <>
+                    <PrincipaisDiferencas
+                      linhas={linhas}
+                      qualidade={qualidade}
+                      desvantagens={desvantagens}
+                    />
+                    <AnaliseCompleta acao={comprar}>
+                      <OQueMuda
+                        muda={p.muda}
+                        tituloColado={textoDoColado}
+                        detalhesColado={detalhesColado}
+                        detalhesOutro={p.detalhes}
+                        qualidade={qualidade}
+                        desvantagens={desvantagens}
+                        extras={extras}
+                      />
+                      {colado && <CompararComOSeu colado={colado} outro={p} abertoInicial />}
+                      {temDetalhes(p.detalhes) && (
+                        <div className="mt-2">
+                          <BotaoDetalhes
+                            aberto={aberto === i}
+                            alternar={() => setAberto((x) => (x === i ? null : i))}
+                            rotulo="características"
+                          />
+                          {aberto === i && (
+                            <PainelDetalhes
+                              detalhes={p.detalhes}
+                              destacar={compararFichas(detalhesColado, p.detalhes).diferentes}
+                              nota={notaDaLoja(p.vendedor, detalhesColado, p.detalhes)}
+                            />
+                          )}
+                        </div>
+                      )}
+                      {pedidoId != null && p.item && (
+                        <AvaliarIndicacao pedidoId={pedidoId} item={p.item} />
+                      )}
+                    </AnaliseCompleta>
+                  </>
+                );
+              })()}
             </li>
           );
         })}
@@ -4262,6 +4417,30 @@ function TodasAsLojas({
      R$ 3.400, sem frete grátis): olhar de especialista avisa antes da compra. */
   const finais = ordem.map((l) => l.final).filter((v): v is number => v != null);
   const muitoAbaixo = (l: LinhaLoja) => !l.colado && precoMuitoAbaixo(l.final, finais);
+  const botaoDaLoja = (l: LinhaLoja, destaque: boolean) =>
+    l.link ? (
+      <a
+        href={l.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={
+          destaque
+            ? "animate-botao-destaque inline-block whitespace-nowrap rounded bg-success px-2 py-1 text-[11px] font-bold text-white hover:brightness-95"
+            : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
+        }
+      >
+        {destaque ? (
+          <>
+            <ShieldCheck className="mr-0.5 inline size-3 align-[-2px]" aria-hidden="true" />
+            Comprar
+          </>
+        ) : (
+          "Abrir"
+        )}
+      </a>
+    ) : l.url ? (
+      <VerNaLoja url={l.url} />
+    ) : null;
   return (
     <div className="mt-3 first:sm:mt-0">
       <p className="text-sm font-bold">
@@ -4269,11 +4448,14 @@ function TodasAsLojas({
         {cep && <span className="font-normal text-secondary-ink"> · frete para {cep}</span>}
       </p>
       <table className="mt-1.5 w-full table-fixed border-collapse overflow-hidden rounded-md border border-border text-sm">
+        {/* Celular (18/10: o nome da loja saía uma letra por linha): duas
+            colunas, sem a foto (é o mesmo produto em todas) e com o botão
+            embaixo do preço; a partir de 640 px, foto e coluna do botão. */}
         <thead>
           <tr className="bg-muted/70 text-left text-xs text-secondary-ink">
             <th className="px-2 py-1.5 font-semibold">Loja</th>
-            <th className="w-[38%] px-2 py-1.5 text-right font-semibold">Preço</th>
-            <th className="w-[6rem] px-1 py-1.5" />
+            <th className="w-[46%] px-2 py-1.5 text-right font-semibold sm:w-[38%]">Preço</th>
+            <th className="hidden w-[6rem] px-1 py-1.5 sm:table-cell" />
           </tr>
         </thead>
         <tbody className="tabular-nums">
@@ -4292,7 +4474,7 @@ function TodasAsLojas({
               >
                 <td className="px-2 py-1">
                   <span className="flex items-center gap-2">
-                    <Foto src={l.imagem} className="size-8 shrink-0 rounded" />
+                    <Foto src={l.imagem} className="hidden size-8 shrink-0 rounded sm:block" />
                     <span className="min-w-0 text-xs font-medium leading-tight [overflow-wrap:anywhere]">
                       {l.colado ? "Anúncio colado" : l.nome}
                       {l.lojaOficial === true && <SeloLojaOficial className="block" />}
@@ -4407,34 +4589,12 @@ function TodasAsLojas({
                       </span>
                     );
                   })()}
+                  <div className="mt-1 sm:hidden">
+                    {botaoDaLoja(l, i === melhorIdx && menor != null)}
+                  </div>
                 </td>
-                <td className="px-1 py-1 text-right">
-                  {l.link ? (
-                    <a
-                      href={l.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={
-                        i === melhorIdx && menor != null
-                          ? "animate-botao-destaque inline-block whitespace-nowrap rounded bg-success px-2 py-1 text-[11px] font-bold text-white hover:brightness-95"
-                          : "inline-block rounded border border-ml-blue px-2 py-1 text-[11px] font-bold text-ml-blue hover:bg-ml-blue/5"
-                      }
-                    >
-                      {i === melhorIdx && menor != null ? (
-                        <>
-                          <ShieldCheck
-                            className="mr-0.5 inline size-3 align-[-2px]"
-                            aria-hidden="true"
-                          />
-                          Comprar
-                        </>
-                      ) : (
-                        "Abrir"
-                      )}
-                    </a>
-                  ) : l.url ? (
-                    <VerNaLoja url={l.url} />
-                  ) : null}
+                <td className="hidden px-1 py-1 text-right sm:table-cell">
+                  {botaoDaLoja(l, i === melhorIdx && menor != null)}
                 </td>
               </tr>
               {aberta === l.chave && temDetalhes(l.detalhes) && (

@@ -1018,6 +1018,39 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   todas. Ao mexer em carrossel ou cartão, medir de novo
   (documentElement.scrollWidth = largura da tela).
 
+## Foto livre e menos informação de cara (18/10)
+- Weslei, 18/10: "Faça o enquadramento ficar melhor ajustado e não
+  competindo com a foto. Ainda aplique melhorias que deixem o usuário menos
+  confuso com tanta informação. A ideia é mostrar as principais
+  diferenças, mas que mais detalhes sejam consultados" e o título "O mesmo
+  produto. Uma melhor escolha." (era "Uma escolha melhor").
+- NADA POR CIMA DA FOTO nos cartões (vitrine, campanhas, brinquedos, mais
+  vendidos): quadro branco de proporção fixa (4/3; 160 px de altura na
+  vitrine do PC) com a foto inteira (object-contain). O selo do preço/
+  classificação fica na linha logo abaixo da foto, em altura fixa (os
+  títulos alinham); "Muito bem avaliado" e "Entre os mais vendidos" vão
+  junto das estrelas. Tocar na foto abre "Ver fotos e detalhes"
+  (VerDetalhesVitrine com gatilho); no pé, "Comprar com segurança" e uma
+  linha discreta com "Detalhes" (e "Atualizar preço" na vitrine).
+- Vitrine: a Alternativa parecida mostra só o preço e "Não é idêntico.
+  Muda: ..."; loja, avaliações e vantagens abrem em "Mais".
+- Topo do PC (DestaqueHeroRotativo): a imagem num quadro de cantos
+  arredondados, inteira e sem nada por cima; rótulo, pontos e "Compare com
+  clareza" (3 itens em linha) ficam ABAIXO dela.
+- Resultado: Parecidos e Melhor alternativa mostram a qualidade em uma
+  linha e até 3 diferenças em etiquetas (PrincipaisDiferencas: "Campo:
+  valor deste"; vermelho com ✗ = desvantagem, primeiro). O que cada uma
+  significa, o bloco de desvantagens, o lado a lado (já aberto),
+  características e "faz sentido para você?" ficam em "Ver análise
+  completa" (AnaliseCompleta). Sem a etiqueta repetida "Mais barato que o
+  seu" (a diferença já aparece no preço).
+- Tabela de lojas no celular: duas colunas (sem a foto, o botão embaixo do
+  preço); o nome da loja saía uma letra por linha. Barra de compra do
+  celular: o preço nunca fica por baixo do botão.
+- Milhar com ponto ("12.000 BTUs") é lido inteiro em src/lib/diferencas.ts
+  (saía "Cabe 3 BTUS a menos"); "Cabe" só para L, mL e kg (testes em
+  tests/diferencas.test.ts).
+
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.

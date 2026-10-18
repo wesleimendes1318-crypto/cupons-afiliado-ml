@@ -201,27 +201,30 @@ export function EmAltaCatalogo({
               (grade ? "min-w-0" : "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto")
             }
           >
-            <div className="relative h-40 overflow-hidden bg-white">
+            {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
+                competindo com a foto"); os selos vão logo abaixo. */}
+            <div className="relative aspect-[4/3] overflow-hidden bg-white">
               <FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />
-              {i.origem === "tendencia" ? (
-                <span
-                  className="absolute left-2 top-2 rounded-full bg-[#eef4ff] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]"
-                  title={i.busca ? `Busca em alta: ${i.busca}` : undefined}
-                >
-                  Em alta nas buscas
-                </span>
-              ) : (
-                i.posicao != null &&
-                i.posicao <= 20 && (
-                  <span className="absolute left-2 top-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a34700]">
-                    Entre os mais vendidos
-                  </span>
-                )
-              )}
-              <SeloBemAvaliado resumo={resumoDe(i)} className="absolute bottom-2 left-2" />
             </div>
-            <div className="flex flex-1 flex-col p-3">
-              <p className="line-clamp-3 text-[13px] font-semibold leading-snug">{i.nome}</p>
+            <div className="flex flex-1 flex-col border-t border-border/60 p-3">
+              <p className="flex min-h-5 flex-wrap items-center gap-1">
+                {i.origem === "tendencia" ? (
+                  <span
+                    className="whitespace-nowrap rounded-full bg-[#eef4ff] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]"
+                    title={i.busca ? `Busca em alta: ${i.busca}` : undefined}
+                  >
+                    Em alta nas buscas
+                  </span>
+                ) : (
+                  i.posicao != null &&
+                  i.posicao <= 20 && (
+                    <span className="whitespace-nowrap rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a34700]">
+                      Entre os mais vendidos
+                    </span>
+                  )
+                )}
+              </p>
+              <p className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-snug">{i.nome}</p>
               <p className="mt-2 text-[11px] text-secondary-ink">
                 Preço de referência ({dataCurta(i.atualizado_em)})
                 <span className="block text-base font-extrabold tabular-nums text-foreground">
@@ -235,6 +238,7 @@ export function EmAltaCatalogo({
                 <p className="text-[11px] font-semibold text-[#0058b0]">Loja oficial</p>
               )}
               <LinhaAvaliacoes resumo={resumoDe(i)} titulo={i.nome} className="mt-0.5" />
+              <SeloBemAvaliado resumo={resumoDe(i)} className="mt-1 self-start" />
               <div className="mt-auto space-y-1.5 pt-3">
                 <VerNaLoja url={i.url} grande />
                 <button

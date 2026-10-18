@@ -21,19 +21,24 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCa
 const CAMPOS_FICHA =
   "Modelo|Capacidade|Voltagem|Armazenamento|Memória RAM|Tela|Volume|Conteúdo|Peso líquido|Unidades|Peças|Potência";
 
-/* Número e unidade de um valor ("477 L", "500 litros", "128 GB", "1,5 kg"). */
-function numero(v: string): { n: number; u: string } | null {
-  const m = norm(v).match(/(\d+(?:[.,]\d+)?)\s*([a-z"]+)?/);
+/* Número e unidade de um valor ("477 L", "500 litros", "128 GB", "1,5 kg",
+   "12.000 BTUs"). Ponto seguido de 3 dígitos é milhar (18/10: "12.000
+   BTUs" x "9.000 BTUs" virava "Cabe 3 BTUS a menos"). */
+export function numero(v: string): { n: number; u: string } | null {
+  const m = norm(v).match(/(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)\s*([a-z"]+)?/);
   if (!m?.[1]) return null;
   const u = (m[2] ?? "")
     .replace(/^(litros?|lts?)$/, "l")
     .replace(/^(polegadas?|pol)$/, '"')
-    .replace(/^(unidades?|un|pecas?)$/, "un");
-  return { n: Number(m[1].replace(",", ".")), u };
+    .replace(/^(unidades?|un|pecas?)$/, "un")
+    .replace(/^btus?$/, "btu");
+  const bruto = /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(m[1])
+    ? m[1].replace(/\./g, "").replace(",", ".")
+    : m[1].replace(",", ".");
+  return { n: Number(bruto), u };
 }
 
-const fmt = (n: number) =>
-  Number.isInteger(n) ? String(n) : n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
 /* "23 L a menos" / "1 TB a mais", só com a mesma unidade nos dois. */
 function delta(seu: string | null, este: string | null) {
@@ -43,9 +48,23 @@ function delta(seu: string | null, este: string | null) {
   if (!a || !b || a.u !== b.u || a.n === b.n) return null;
   const d = b.n - a.n;
   /* Unidade como se escreve: L, mL, g, kg, GB, TB, W. */
-  const UN: Record<string, string> = { l: " L", ml: " mL", g: " g", kg: " kg", w: " W", '"': '"' };
+  const UN: Record<string, string> = {
+    l: " L",
+    ml: " mL",
+    g: " g",
+    kg: " kg",
+    w: " W",
+    kw: " kW",
+    btu: " BTUs",
+    mah: " mAh",
+    mm: " mm",
+    cm: " cm",
+    m: " m",
+    hz: " Hz",
+    '"': '"',
+  };
   const u = UN[b.u] ?? (b.u && b.u !== "un" ? ` ${b.u.toUpperCase()}` : "");
-  return { d, txt: `${fmt(Math.abs(d))}${u} a ${d > 0 ? "mais" : "menos"}` };
+  return { d, u: b.u, txt: `${fmt(Math.abs(d))}${u} a ${d > 0 ? "mais" : "menos"}` };
 }
 
 /** O que a diferença significa para quem compra (regra fixa ou conta). */
@@ -64,7 +83,13 @@ export function significado(
   if (/\bmarca\b/.test(c)) return "Outra marca: a garantia e a assistência são dessa marca.";
   if (/\b(cor|cores|acabamento|estampa|tonalidade|tom)\b/.test(c)) return "Muda só a aparência.";
   if (/capacidade/.test(c))
-    return dd ? `Cabe ${dd.txt} que o seu.` : "Capacidade diferente da sua: confira se atende.";
+    /* "Cabe" só para o que se enche (litros, kg de roupa); BTUs, mAh e
+       outras medidas dizem só a diferença de capacidade. */
+    return !dd
+      ? "Capacidade diferente da sua: confira se atende."
+      : /^(l|ml|kg)$/.test(dd.u)
+        ? `Cabe ${dd.txt} que o seu.`
+        : `${dd.txt.replace(/^./, (x) => x.toUpperCase())} de capacidade que o seu.`;
   if (/(volume|conteudo|litro)/.test(c))
     return dd ? `Vem ${dd.txt} que o seu: compare pelo preço por litro.` : "Outro volume.";
   if (/peso/.test(c))
