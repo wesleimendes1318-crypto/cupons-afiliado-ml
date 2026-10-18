@@ -1000,6 +1000,24 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   comparação mais recente do MESMO produto (senão o do anúncio colado dela),
   com o aviso de que o preço pode ser diferente.
 
+## Largura e zoom no celular (18/10)
+- Weslei, 18/10 (print do iPhone: o site na metade esquerda da tela):
+  "Ajuste o redimensionamento e zoom em todas as versões". Causa: os
+  textos só para leitor de tela (sr-only) dos cartões dentro dos carrosséis
+  com rolagem lateral ficavam na posição de origem e, sem pai posicionado,
+  escapavam do corte (página de 2.224 px num celular de 390 px; o navegador
+  diminuía o zoom para caber). src/styles.css: .sr-only com top/left 0 e
+  html/body com overflow-x: clip (não quebra o sticky). Cabeçalho: o campo
+  "Cole o link de outro produto" só a partir de 1024 px (no tablet vazava
+  para 899 px) e, em 320 px, o botão do Telegram só com o ícone. Em tela de
+  toque todo campo de texto tem 16 px (o iPhone dá zoom sozinho em campo
+  menor); o campo principal diz "Cole o link aqui" para caber numa linha.
+  Medido com Playwright em 320, 360, 390, 430, 768, 1024 e 1440 px na home,
+  /brinquedos, /natal, /dia-das-criancas, categorias, /meus-precos,
+  /telegram, /sobre, /guias e no resultado da comparação: largura certa em
+  todas. Ao mexer em carrossel ou cartão, medir de novo
+  (documentElement.scrollWidth = largura da tela).
+
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.

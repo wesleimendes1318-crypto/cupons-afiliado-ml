@@ -95,14 +95,15 @@ export function CabecalhoSite() {
             </span>
           </Link>
 
-          {/* PC: comparar outro produto direto do cabeçalho. */}
+          {/* PC: comparar outro produto direto do cabeçalho (a partir de 1024 px;
+              no tablet o campo não cabe ao lado dos links, 18/10). */}
           {naInicial && (
             <form
               role="search"
               onSubmit={comparar}
               aria-hidden={!mostrarCampo}
               className={
-                "hidden h-10 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 md:flex " +
+                "hidden h-10 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
                 (mostrarCampo ? "opacity-100" : "pointer-events-none opacity-0")
               }
             >
@@ -131,14 +132,14 @@ export function CabecalhoSite() {
           )}
 
           <nav aria-label="Páginas do site" className="ml-auto flex items-center gap-1 sm:gap-2">
-            {/* Celular: o ícone do link leva ao campo (alvo de 44 px). */}
+            {/* Celular e tablet: o ícone do link leva ao campo (alvo de 44 px). */}
             {naInicial && mostrarCampo && (
               <button
                 type="button"
                 onClick={irAoCampo}
                 aria-label="Colar link de outro produto"
                 title="Colar link de outro produto"
-                className="inline-flex size-11 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white md:hidden"
+                className="inline-flex size-11 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white lg:hidden"
               >
                 <Link2 className="size-5" aria-hidden="true" />
               </button>
@@ -159,11 +160,12 @@ export function CabecalhoSite() {
               rel="noopener noreferrer"
               data-origem="topo"
               aria-label="Ofertas no Telegram: abrir o canal de ofertas comparadas (abre em nova aba)"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#7547E8]/50 px-3 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white sm:px-4"
+              className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#7547E8]/50 px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
             >
               <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
               <span className="hidden min-[400px]:inline">Ofertas no Telegram</span>
-              <span className="min-[400px]:hidden">Ofertas</span>
+              {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
+              <span className="hidden min-[360px]:inline min-[400px]:hidden">Ofertas</span>
             </a>
           </nav>
         </div>

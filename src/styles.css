@@ -1006,3 +1006,31 @@ html {
     scroll-behavior: auto;
   }
 }
+
+/* LARGURA E ZOOM (Weslei, 18/10: no iPhone o site aparecia na metade
+   esquerda da tela, com o zoom reduzido). Os textos só para leitor de tela
+   (sr-only) dos cartões ficavam na posição de origem dentro dos carrosséis
+   com rolagem lateral e, sem um pai posicionado, escapavam do corte: a
+   página chegava a 2.224 px num celular de 390 px e o navegador diminuía o
+   zoom para caber. Presos no canto do pai, nunca alargam a página. E a
+   página nunca rola para o lado (clip não quebra o sticky, como o hidden). */
+.sr-only {
+  top: 0;
+  left: 0;
+}
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+/* O iPhone aumenta o zoom ao tocar num campo com letra menor que 16 px e
+   não volta sozinho (campos de 12 a 15 px no link, CEP e buscas). Em tela
+   de toque todo campo de texto tem 16 px; no PC nada muda. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

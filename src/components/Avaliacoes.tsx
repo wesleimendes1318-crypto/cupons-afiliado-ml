@@ -44,7 +44,7 @@ function Nota({
   cinco?: boolean;
 }) {
   return (
-    <span aria-hidden="true" className="inline-flex items-center gap-0.5">
+    <span aria-hidden="true" className="inline-flex items-center gap-0.5 whitespace-nowrap">
       {cinco ? (
         <Estrelas nota={v.nota} />
       ) : (
@@ -103,12 +103,12 @@ export function Avaliacoes({
         onClick={() => setAberto(true)}
         aria-haspopup="dialog"
         title={`${rotulo}: ver as avaliações de quem comprou`}
-        className={`items-center gap-1 whitespace-nowrap rounded-full text-[11px] leading-tight text-secondary-ink underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
+        className={`max-w-full flex-wrap items-center gap-x-1 gap-y-0.5 rounded-full text-left text-[11px] leading-tight text-secondary-ink underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
       >
         <span className="sr-only">{`${rotulo}. Ver avaliações`}</span>
         <Nota v={v} compacto={compacto} />
         {!compacto && (
-          <span aria-hidden="true" className="font-semibold text-[#0071e3]">
+          <span aria-hidden="true" className="whitespace-nowrap font-semibold text-[#0071e3]">
             Ver avaliações
           </span>
         )}

@@ -1271,7 +1271,9 @@ export default function BuscaPorLink({
               setTimeout(() => buscar(colado), 0);
             }
           }}
-          placeholder="Cole aqui o link do anúncio do produto"
+          /* Curto para caber numa linha também com a letra de 16 px do
+             celular (sem ela o iPhone aumenta o zoom ao tocar, 18/10). */
+          placeholder="Cole o link aqui"
           aria-label="Link do anúncio do produto"
           className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5"
         />
