@@ -22,6 +22,7 @@ import { facebookConfigurado, publicarNoFacebook, textoSimples } from "@/lib/fac
 import { fotoOriginalJpeg } from "@/lib/foto";
 import { pareceFalso } from "@/lib/falsificado";
 import { linhaDasAvaliacoes } from "@/lib/avaliacoes";
+import { aprovadaParaCanal } from "@/lib/qualidade-avaliacao";
 
 /* GARIMPO (Weslei, 05/10): olha as comparações prontas e separa os achados
    que valem divulgar, com as MESMAS regras da tela (opcoesDaAnalise +
@@ -45,7 +46,7 @@ const POR_CHAMADA = 2;
 const DIAS_SEM_REPETIR = 7;
 const FRESCO_MS = 3 * 3600_000;
 const CRITERIOS =
-  "garimpo-v5 (09/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete gratis confirmado, conferida <= 3 h, sem preco < 70% da mediana das lojas (salvo loja oficial)";
+  "garimpo-v6 (18/10): >= R$ 30 ou (>= R$ 10 e >= 20%) no produto, meli.la, frete gratis confirmado, conferida <= 3 h, sem preco < 70% da mediana das lojas (salvo loja oficial), nota >= 4,5 com >= 5 avaliacoes (sem nota: so loja oficial)";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -95,6 +96,9 @@ function achadoDoPedido(p: {
     if (!m || !/^https:\/\/meli\.la\//i.test(colado.link)) return null;
     if (colado.freteGratis !== true) return null;
     if (pareceFalso(colado.titulo)) return null;
+    /* Boas avaliações (Weslei, 18/10): nota 4,5 ou mais com pelo menos 5
+       avaliações lidas no anúncio; sem nota lida, só loja oficial. */
+    if (!aprovadaParaCanal(colado.avaliacoes ?? null, colado.lojaOficial)) return null;
     /* Preço muito abaixo das outras lojas sem loja oficial (09/10). */
     if (!colado.lojaOficial && precoMuitoAbaixo(colado.preco, precosDoMesmoProduto(a))) return null;
     return {
@@ -128,6 +132,11 @@ function achadoDoPedido(p: {
   if (pecaNoLugarDoAparelho(colado.titulo, escolha.titulo)) return null;
   /* Produto falso nunca vai ao canal (Weslei, 09/10). */
   if (pareceFalso(escolha.titulo) || pareceFalso(colado.titulo)) return null;
+  /* QUALIDADE PRIMEIRO (Weslei, 18/10: "Garanta sempre produtos com
+     qualidade!!!!! Boas avaliações"): nota 4,5 ou mais com pelo menos 5
+     avaliações lidas no anúncio da oferta; sem nota lida, só loja oficial
+     (src/lib/qualidade-avaliacao.ts). */
+  if (!aprovadaParaCanal(escolha.avaliacoes ?? null, escolha.lojaOficial)) return null;
   /* PREÇO MUITO ABAIXO DAS OUTRAS LOJAS (09/10, posts 29 e 30: Malbec R$ 200
      x R$ 361/R$ 379 e aspirador R$ 50 x R$ 120/R$ 227, contas novas sem
      selo). O site avisa "confira o vendedor"; o canal não publica, salvo

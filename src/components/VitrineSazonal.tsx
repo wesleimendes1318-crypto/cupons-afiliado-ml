@@ -53,12 +53,15 @@ import {
 } from "@/lib/sazonal";
 import { LINK_CANAL } from "@/lib/telegram-publico";
 import { propsFotoCartao } from "@/lib/foto";
-import { LinhaAvaliacoes } from "@/components/Avaliacoes";
+import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import {
   avaliacaoDaOferta,
   ContextoAvaliacoes,
+  lerAvaliacoesDaVitrine,
   useAvaliacoesDaVitrine,
+  type MapaAvaliacoes,
 } from "@/lib/avaliacoes-vitrine";
+import { passaNaQualidade, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -68,6 +71,7 @@ const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 export function useOfertas() {
   const [itens, setItens] = useState<ItemVitrine[]>([]);
   const [menores, setMenores] = useState<ItemMenorPreco[]>([]);
+  const [notas, setNotas] = useState<MapaAvaliacoes>(() => new Map());
   const [carregou, setCarregou] = useState(false);
   useEffect(() => {
     let vivo = true;
@@ -79,6 +83,13 @@ export function useOfertas() {
           lerFretesDaVitrine(),
         ]);
         if (!vivo) return;
+        const chaves = [
+          ...(Array.isArray(v.data) ? (v.data as ItemVitrine[]) : []),
+          ...(Array.isArray(m.data) ? (m.data as ItemMenorPreco[]) : []),
+        ].map((i) => i.chave);
+        const mapa = await lerAvaliacoesDaVitrine(chaves);
+        if (!vivo) return;
+        setNotas(mapa);
         if (Array.isArray(v.data)) setItens(semEconomiaSemFrete(v.data as ItemVitrine[], fretes));
         if (Array.isArray(m.data))
           setMenores(
@@ -97,16 +108,20 @@ export function useOfertas() {
   const ofertas = useMemo(() => {
     const vistas = new Set<string>();
     const lista: Oferta[] = [];
+    /* QUALIDADE PRIMEIRO (Weslei, 18/10): só a oferta com nota 4,5 ou mais
+       lida no anúncio (src/lib/qualidade-avaliacao.ts). */
+    const exigir = notas.size > 0;
     for (const o of [...itens.map(ofertaDo), ...menores.map(ofertaMenorPreco)]) {
       if (!o || vistas.has(o.chave)) continue;
       if (o.tipo !== "menor" && !descontoReal(o.economia, o.antes)) continue;
+      if (!passaNaQualidade(avaliacaoDaOferta(notas, o.chave, o.link), exigir)) continue;
       vistas.add(o.chave);
       lista.push(o);
     }
     /* Economia de verdade primeiro; "menor preço" com diferença pequena
        depois dos descontos maiores. */
     return lista.sort((a, b) => b.economia - a.economia);
-  }, [itens, menores]);
+  }, [itens, menores, notas]);
   return { ofertas, carregou };
 }
 
@@ -262,6 +277,7 @@ export function CartaoOferta({
 }) {
   const c = classificacao(o);
   const avaliacoes = useContext(ContextoAvaliacoes);
+  const avaliacao = avaliacaoDaOferta(avaliacoes, o.chave, o.link);
   const quando = o.recente ? "Conferido hoje" : `Preço de ${dataCurta(o.vistoEm) ?? "antes"}`;
   const atualizar = !o.link || !o.recente;
   const classeAtualizar = o.link
@@ -290,6 +306,7 @@ export function CartaoOferta({
             Foto indisponível
           </span>
         )}
+        <SeloBemAvaliado resumo={avaliacao} className="absolute bottom-1.5 left-1.5" />
       </div>
       <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
         <p className="line-clamp-2 min-h-[2.5em] text-[12px] font-semibold leading-snug">
@@ -307,11 +324,7 @@ export function CartaoOferta({
         <p className="mt-1 truncate text-[11px] text-[#6e6e73]">
           {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
-        <LinhaAvaliacoes
-          resumo={avaliacaoDaOferta(avaliacoes, o.chave, o.link)}
-          titulo={o.titulo}
-          link={o.link}
-        />
+        <LinhaAvaliacoes resumo={avaliacao} titulo={o.titulo} link={o.link} />
         <p className="text-[10px] text-[#86868b]">{quando}</p>
         <div className="mt-auto pt-3">
           <VerDetalhesVitrine
@@ -421,7 +434,7 @@ function CartaoColar({
    em 5 colunas, completada pelo convite quando há poucos. */
 export function GradeOfertas({
   p,
-  lista,
+  lista: todasDaLista,
   naHome = true,
   natal = false,
   fileira = true,
@@ -435,8 +448,13 @@ export function GradeOfertas({
   fileira?: boolean;
 }) {
   const trilho = useRef<HTMLUListElement>(null);
-  const chavesDaLista = useMemo(() => lista.map((o) => o.chave), [lista]);
+  const chavesDaLista = useMemo(() => todasDaLista.map((o) => o.chave), [todasDaLista]);
   const avaliacoes = useAvaliacoesDaVitrine(chavesDaLista);
+  /* Campanha curada no servidor duas vezes por dia: nota que caiu depois
+     da curadoria também tira o cartão (só a nota baixa conhecida barra). */
+  const lista = todasDaLista.filter(
+    (o) => !reprovadaPelaAvaliacao(avaliacaoDaOferta(avaliacoes, o.chave, o.link)),
+  );
   const rolar = (lado: 1 | -1) => {
     const el = trilho.current;
     if (el) el.scrollBy({ left: lado * el.clientWidth * 0.85, behavior: "smooth" });

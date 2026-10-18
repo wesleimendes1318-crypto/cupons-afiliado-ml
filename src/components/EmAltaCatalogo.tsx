@@ -9,8 +9,9 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Flame } from "lucide-react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
-import { LinhaAvaliacoes } from "@/components/Avaliacoes";
-import { itemDoEndereco, useAvaliacoesPorItens } from "@/lib/avaliacoes-detalhe";
+import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
+import { itemDoEndereco, lerAvaliacoesPorItens, type MapaPorItem } from "@/lib/avaliacoes-detalhe";
+import { bemAvaliadosPrimeiro, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
 import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
 import { propsFotoCartao } from "@/lib/foto";
@@ -67,6 +68,7 @@ export function EmAltaCatalogo({
   className?: string;
 }) {
   const [itens, setItens] = useState<ItemEmAlta[]>([]);
+  const [avaliacoes, setAvaliacoes] = useState<MapaPorItem>(() => new Map());
   /* Página de categoria: 24 de cada vez ("Ver mais"; 09/10, mais anúncios
      todo dia sem uma página infinita de uma vez). */
   const [mostrar, setMostrar] = useState(24);
@@ -79,7 +81,15 @@ export function EmAltaCatalogo({
           "em_alta_por_categoria_v3" as never,
           { p_categoria: categoria ?? null, p_por_categoria: limite } as never,
         );
-        if (vivo && Array.isArray(data)) setItens(data as ItemEmAlta[]);
+        if (!vivo || !Array.isArray(data)) return;
+        const lidos = data as ItemEmAlta[];
+        /* Avaliações de cada anúncio (10/10), lidas pela extensão. */
+        const mapa = await lerAvaliacoesPorItens(
+          lidos.map((i) => itemDoEndereco(i.url)).filter((x): x is string => !!x),
+        );
+        if (!vivo) return;
+        setAvaliacoes(mapa);
+        setItens(lidos);
       } catch {
         /* sem a lista: a seção não aparece */
       }
@@ -100,13 +110,17 @@ export function EmAltaCatalogo({
     atual === "informatica"
       ? (({ tendencia: 0, curadoria: 1 } as Record<string, number>)[i.origem ?? ""] ?? 2)
       : 0;
-  const todos = itens
-    .filter((i) => i.categoria_site === atual)
-    .sort((a, b) => ordemOrigem(a) - ordemOrigem(b))
-    .slice(0, limite);
+  /* QUALIDADE PRIMEIRO (Weslei, 18/10): nota abaixo de 4,5 ou anúncio sem
+     nenhuma avaliação sai; os bem avaliados vêm na frente e os que a
+     extensão ainda não leu, depois (src/lib/qualidade-avaliacao.ts). */
+  const resumoDe = (i: ItemEmAlta) => avaliacoes.get(itemDoEndereco(i.url) ?? "");
+  const todos = bemAvaliadosPrimeiro(
+    itens
+      .filter((i) => i.categoria_site === atual && !reprovadaPelaAvaliacao(resumoDe(i)))
+      .sort((a, b) => ordemOrigem(a) - ordemOrigem(b)),
+    resumoDe,
+  ).slice(0, limite);
   const lista = grade ? todos.slice(0, mostrar) : todos;
-  /* Avaliações de cada anúncio (10/10), lidas pela extensão. */
-  const avaliacoes = useAvaliacoesPorItens(lista.map((i) => itemDoEndereco(i.url)));
   if (!lista.length) return null;
   const quando = lista.reduce(
     (m, i) => (Date.parse(i.atualizado_em) > Date.parse(m) ? i.atualizado_em : m),
@@ -137,8 +151,8 @@ export function EmAltaCatalogo({
           </h2>
           <p className="mt-1 text-sm text-secondary-ink">
             Listas oficiais de mais vendidos e de buscas em alta do Mercado Livre de{" "}
-            {dataCurta(quando)}. Compare antes de comprar: eu procuro o mesmo produto em outras
-            lojas.
+            {dataCurta(quando)}, sem os que têm nota abaixo de 4,5 ou nenhuma avaliação. Compare
+            antes de comprar: eu procuro o mesmo produto em outras lojas.
           </p>
         </div>
       </div>
@@ -204,6 +218,7 @@ export function EmAltaCatalogo({
                   </span>
                 )
               )}
+              <SeloBemAvaliado resumo={resumoDe(i)} className="absolute bottom-2 left-2" />
             </div>
             <div className="flex flex-1 flex-col p-3">
               <p className="line-clamp-3 text-[13px] font-semibold leading-snug">{i.nome}</p>
@@ -219,11 +234,7 @@ export function EmAltaCatalogo({
               {i.loja_oficial && (
                 <p className="text-[11px] font-semibold text-[#0058b0]">Loja oficial</p>
               )}
-              <LinhaAvaliacoes
-                resumo={avaliacoes.get(itemDoEndereco(i.url) ?? "")}
-                titulo={i.nome}
-                className="mt-0.5"
-              />
+              <LinhaAvaliacoes resumo={resumoDe(i)} titulo={i.nome} className="mt-0.5" />
               <div className="mt-auto space-y-1.5 pt-3">
                 <VerNaLoja url={i.url} grande />
                 <button

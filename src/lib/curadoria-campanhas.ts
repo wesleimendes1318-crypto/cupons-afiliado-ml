@@ -11,16 +11,21 @@
    - frete grátis confirmado (aplicado antes, como na vitrine);
    - comparação de no máximo 7 dias (nada de oferta zumbi);
    - nota do produto >= 4,5 quando conhecida (recomendados do hub);
+   - nota de quem comprou >= 4,5 lida no anúncio da oferta, e anúncio sem
+     nenhuma avaliação fora (Weslei, 18/10: "Garanta sempre produtos com
+     qualidade!!!!! Boas avaliações"; src/lib/qualidade-avaliacao.ts);
    - vendedor CONFIÁVEL na oferta mostrada: loja oficial ou MercadoLíder
      (selos lidos na comparação). Sem o selo confirmado, fica de fora.
-   Ordem: loja oficial e MercadoLíder Platinum primeiro, depois o mais
-   recente (até 48 h) e a maior economia. */
+   Ordem: loja oficial e MercadoLíder Platinum primeiro, depois a nota
+   ponderada pelo número de avaliações, o mais recente (até 48 h) e a maior
+   economia. */
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import type { Oferta } from "@/lib/ofertas-vitrine";
 import { descontoReal } from "@/lib/regra-economia";
 import { RE_CONDICAO_RUIM } from "@/lib/vitrine-recomendavel";
 import { pareceFalso } from "@/lib/falsificado";
+import { passaNaQualidade, type ResumoQualidade } from "@/lib/qualidade-avaliacao";
 
 export type Confiabilidade = {
   chave: string;
@@ -62,6 +67,9 @@ export function vetoDaCuradoria(
   c: Confiabilidade | undefined,
   nota: number | null,
   agora = Date.now(),
+  /* Nota lida no anúncio da oferta; exigirAvaliacao: sem ela, fora. */
+  avaliacao: ResumoQualidade = null,
+  exigirAvaliacao = false,
 ): Veto | null {
   if (!ehLinkDeAfiliado(o.link)) return "link";
   if (RE_CONDICAO_RUIM.test(o.titulo) || RE_CONDICAO_USADA.test(c?.colado_condicao ?? ""))
@@ -73,6 +81,7 @@ export function vetoDaCuradoria(
   const quando = Date.parse(c?.conferido_em ?? o.vistoEm ?? "");
   if (!Number.isFinite(quando) || agora - quando > MAX_DIAS_CONFERIDO * 86_400_000) return "velho";
   if (nota != null && nota < NOTA_MINIMA) return "nota";
+  if (!passaNaQualidade(avaliacao, exigirAvaliacao)) return "nota";
   if (!vendedorConfiavel(vendedorDaOferta(o, c))) return "vendedor";
   return null;
 }
@@ -81,15 +90,18 @@ const PESO_LIDER: Record<string, number> = { platinum: 2, gold: 1.5, silver: 1 }
 const pesoDoVendedor = (v: Vendedor) =>
   (v.oficial ? 3 : 0) + (PESO_LIDER[(v.lider ?? "").toLowerCase()] ?? 0);
 
-/** Ordem da vitrine da campanha (vendedor > frescor > economia). */
+/** Ordem da vitrine da campanha (vendedor > avaliação > frescor > economia).
+    nota: pontuacaoDaAvaliacao (0 sem nota boa), em décimos. */
 export function ordenarDaCuradoria(
-  lista: Array<{ o: Oferta; v: Vendedor; conferido: number }>,
+  lista: Array<{ o: Oferta; v: Vendedor; conferido: number; nota?: number }>,
   agora = Date.now(),
 ) {
   const recente = (t: number) => (agora - t <= 48 * 3600_000 ? 1 : 0);
+  const decimos = (n: number | undefined) => Math.floor((n ?? 0) * 10);
   return [...lista].sort(
     (a, b) =>
       pesoDoVendedor(b.v) - pesoDoVendedor(a.v) ||
+      decimos(b.nota) - decimos(a.nota) ||
       recente(b.conferido) - recente(a.conferido) ||
       b.o.economia - a.o.economia,
   );

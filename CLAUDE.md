@@ -961,6 +961,33 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   renovam em 21/10); depois, desligar as rotinas (pg_cron) de lá para nada
   rodar em dobro.
 
+## Qualidade primeiro nas vitrines (18/10)
+- Weslei, 18/10: "Garanta sempre produtos com qualidade!!!!! Boas
+  avaliações etc. precisa encantar quem olha".
+- Régua única (src/lib/qualidade-avaliacao.ts, testes em
+  tests/qualidade-avaliacao.test.ts), com a nota lida na página do anúncio
+  da oferta (avaliacoes_da_vitrine_v2 / avaliacoes_por_itens):
+  - nota abaixo de 4,5 ou página sem nenhuma avaliação: fora de TODA
+    vitrine e do canal;
+  - vitrine geral, categorias, brinquedos e campanhas (produtos já
+    comparados): só com nota 4,5 ou mais já lida (passaNaQualidade exigindo
+    a nota). Alternativa reprovada sai do cartão; o produto fica se a
+    oferta dele passar. Leitura das notas que não trouxe nada (falha da
+    rede) não esvazia a tela: aí só a nota baixa conhecida barra;
+  - mais vendidos (lista oficial, lidos aos poucos pela extensão): os bem
+    avaliados na frente, os ainda não lidos depois (bemAvaliadosPrimeiro);
+  - campanhas no servidor (vetoDaCuradoria 'nota' + ordenarDaCuradoria:
+    vendedor > nota ponderada > frescor > economia; nota ponderada = média
+    bayesiana com 10 avaliações de 4,5, pontuacaoDaAvaliacao);
+  - canal (garimpo-v6): nota 4,5 ou mais com pelo menos 5 avaliações; sem
+    nota lida, só loja oficial (aprovadaParaCanal).
+- Visual: cinco estrelas preenchidas até a nota nos cartões (LinhaAvaliacoes)
+  e o selo "Muito bem avaliado" sobre a foto (SeloBemAvaliado) só com nota
+  4,8 ou mais e 50 avaliações ou mais lidas. Frases nas seções: "Só entram
+  produtos com nota 4,5 ou mais de quem comprou" (só quando as notas foram
+  lidas) e, nos mais vendidos, "sem os que têm nota abaixo de 4,5 ou
+  nenhuma avaliação". Nunca inventa nota nem selo.
+
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.

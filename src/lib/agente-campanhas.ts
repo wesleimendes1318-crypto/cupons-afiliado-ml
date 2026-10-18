@@ -35,6 +35,8 @@ import {
   type Oferta,
 } from "@/lib/ofertas-vitrine";
 import { combinaComTemporada, SLUG_DA_TEMPORADA, TEMPORADAS } from "@/lib/sazonal";
+import { avaliacoesValidas } from "@/lib/avaliacoes";
+import { pontuacaoDaAvaliacao, type ResumoQualidade } from "@/lib/qualidade-avaliacao";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
@@ -43,7 +45,7 @@ const REVALIDAR_MS = 48 * 3600_000;
 const FILA_POR_VEZ = 4;
 const VALIDADE_ROLANTE_MS = 3 * 86_400_000;
 const REGRAS =
-  "Só produtos já comparados, com vendedor confiável (loja oficial ou MercadoLíder), frete grátis confirmado e economia real. O preço é o da data da conferência.";
+  "Só produtos já comparados, com vendedor confiável (loja oficial ou MercadoLíder), nota 4,5 ou mais de quem comprou, frete grátis confirmado e economia real. O preço é o da data da conferência.";
 
 type ItemDaVitrine = ItemVitrine & { categoria_site: string | null };
 
@@ -147,6 +149,36 @@ export async function gerirCampanhas(db: Db) {
   });
   if (erroConf) erros.push(`confiabilidade: ${String(erroConf.message).slice(0, 120)}`);
   const confDe = new Map(((conf ?? []) as Confiabilidade[]).map((c) => [c.chave, c]));
+
+  /* Nota de quem comprou, lida no anúncio de cada oferta (18/10: "Garanta
+     sempre produtos com qualidade!!!!! Boas avaliações"). Leitura que não
+     trouxe nada não barra a campanha inteira: aí só a nota baixa conhecida. */
+  const notaDaOferta = new Map<string, ResumoQualidade>();
+  const chavesDasOfertas = [...ofertas.keys()];
+  for (let k = 0; k < chavesDasOfertas.length; k += 300) {
+    const { data: notas, error: erroNotas } = await t.rpc("avaliacoes_da_vitrine_v2", {
+      p_chaves: chavesDasOfertas.slice(k, k + 300),
+    });
+    if (erroNotas) erros.push(`avaliacoes: ${String(erroNotas.message).slice(0, 120)}`);
+    for (const r of (notas ?? []) as Array<{
+      chave: string;
+      link: string;
+      nota: number | string | null;
+      total: number | null;
+      sem_avaliacoes: boolean | null;
+    }>) {
+      if (!r.chave || !r.link) continue;
+      const avaliacoes = avaliacoesValidas({
+        nota: r.nota == null ? null : Number(r.nota),
+        total: r.total == null ? null : Number(r.total),
+      });
+      notaDaOferta.set(`${r.chave}|${r.link}`, {
+        avaliacoes,
+        sem: !avaliacoes && r.sem_avaliacoes === true,
+      });
+    }
+  }
+  const exigirAvaliacao = notaDaOferta.size > 0;
 
   /* Demanda: listas oficiais de mais vendidos (7 dias) e o hub. */
   const desde = new Date(agora - 7 * 86_400_000).toISOString();
@@ -275,13 +307,21 @@ export async function gerirCampanhas(db: Db) {
 
   for (const d of defs) {
     const vetos: Partial<Record<Veto, number>> = {};
-    const aprovados: Array<{ o: Oferta; v: Vendedor; conferido: number }> = [];
+    const aprovados: Array<{ o: Oferta; v: Vendedor; conferido: number; nota: number }> = [];
     let candidatos = 0;
     for (const o of ofertas.values()) {
       if (!d.seleciona(o)) continue;
       candidatos += 1;
       const c = confDe.get(o.chave);
-      const veto = vetoDaCuradoria(o, c, notaDe.get(o.chave) ?? null, agora);
+      const avaliacao = notaDaOferta.get(`${o.chave}|${o.link}`) ?? null;
+      const veto = vetoDaCuradoria(
+        o,
+        c,
+        notaDe.get(o.chave) ?? null,
+        agora,
+        avaliacao,
+        exigirAvaliacao,
+      );
       if (veto) {
         vetos[veto] = (vetos[veto] ?? 0) + 1;
         continue;
@@ -290,6 +330,7 @@ export async function gerirCampanhas(db: Db) {
         o,
         v: vendedorDaOferta(o, c),
         conferido: Date.parse(c?.conferido_em ?? o.vistoEm ?? agoraIso),
+        nota: pontuacaoDaAvaliacao(avaliacao),
       });
     }
     const lista = ordenarDaCuradoria(aprovados, agora).slice(0, MAX_POR_CAMPANHA);

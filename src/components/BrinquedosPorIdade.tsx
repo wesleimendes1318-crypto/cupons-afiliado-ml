@@ -8,13 +8,19 @@ import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { FAIXAS, faixaPorId, pareceBrinquedo } from "@/lib/brinquedos";
 import { SELO_MAIS_VENDIDO, seloDoCatalogo } from "@/lib/selos";
 import { propsFotoCartao } from "@/lib/foto";
-import { LinhaAvaliacoes } from "@/components/Avaliacoes";
-import { avaliacaoDaOferta, useAvaliacoesDaVitrine } from "@/lib/avaliacoes-vitrine";
+import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
+import {
+  avaliacaoDaOferta,
+  lerAvaliacoesDaVitrine,
+  type MapaAvaliacoes,
+} from "@/lib/avaliacoes-vitrine";
 import {
   itemDoEndereco,
-  useAvaliacoesPorItens,
+  lerAvaliacoesPorItens,
+  type MapaPorItem,
   type ResumoAvaliacoes,
 } from "@/lib/avaliacoes-detalhe";
+import { passaNaQualidade } from "@/lib/qualidade-avaliacao";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
    API oficial (mais vendidos e buscas por idade) e que JÁ passaram pela
@@ -141,14 +147,17 @@ function CartaoBrinquedo({
         >
           {c.selo}
         </span>
-        {i.em_alta && (
-          <span
-            className="absolute bottom-2 left-2 rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a33c00]"
-            title={SELO_MAIS_VENDIDO.nota}
-          >
-            {SELO_MAIS_VENDIDO.texto}
-          </span>
-        )}
+        <span className="pointer-events-none absolute inset-x-2 bottom-2 flex flex-wrap gap-1">
+          {i.em_alta && (
+            <span
+              className="rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-bold text-[#a33c00]"
+              title={SELO_MAIS_VENDIDO.nota}
+            >
+              {SELO_MAIS_VENDIDO.texto}
+            </span>
+          )}
+          <SeloBemAvaliado resumo={avaliacao} />
+        </span>
       </div>
       <div className="flex flex-1 flex-col border-t border-border p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0058b0]">
@@ -263,14 +272,29 @@ export function BrinquedosPorIdade({
      de concluir que não há produto. */
   const [carregou, setCarregou] = useState(Boolean(inicial?.length));
   const [aba, setAba] = useState("em_alta");
+  /* Avaliações (10/10): a oferta do botão pela vitrine; sem ela, o próprio
+     anúncio do produto quando o botão é dele. Lidas junto com a lista. */
+  const [notas, setNotas] = useState<{ vitrine: MapaAvaliacoes; itens: MapaPorItem }>(() => ({
+    vitrine: new Map(),
+    itens: new Map(),
+  }));
 
   useEffect(() => {
     let vivo = true;
     (async () => {
       try {
         const { data } = await supabase.rpc("curadoria_brinquedos" as never);
-        if (vivo && Array.isArray(data))
-          setItens((data as Item[]).filter((i) => pareceBrinquedo(i.nome ?? "")));
+        if (!vivo || !Array.isArray(data)) return;
+        const lidos = (data as Item[]).filter((i) => pareceBrinquedo(i.nome ?? ""));
+        const [vitrine, porItem] = await Promise.all([
+          lerAvaliacoesDaVitrine(lidos.map((i) => chaveDoBrinquedo(i.url))),
+          lerAvaliacoesPorItens(
+            lidos.map((i) => itemDoEndereco(i.url)).filter((x): x is string => !!x),
+          ),
+        ]);
+        if (!vivo) return;
+        setNotas({ vitrine, itens: porItem });
+        setItens(lidos);
       } catch {
         /* sem dados: estado vazio */
       } finally {
@@ -282,12 +306,23 @@ export function BrinquedosPorIdade({
     };
   }, []);
 
+  const avaliacaoDo = (c: Cartao): ResumoAvaliacoes | null => {
+    const v = avaliacaoDaOferta(notas.vitrine, chaveDoBrinquedo(c.item.url), c.link);
+    if (v && (v.avaliacoes || v.sem)) return v;
+    const it = c.tipo === "desconto" ? null : itemDoEndereco(c.item.url);
+    return (it ? notas.itens.get(it) : null) ?? v;
+  };
+
   const porAba = useMemo(() => {
     const m = new Map<string, Cartao[]>();
     for (const a of ABAS) m.set(a.id, []);
+    /* QUALIDADE PRIMEIRO (Weslei, 18/10): só brinquedo com nota 4,5 ou mais
+       lida no anúncio da oferta. Sem nenhuma nota lida (falha da leitura),
+       só a nota baixa conhecida barra. */
+    const exigir = notas.vitrine.size + notas.itens.size > 0;
     for (const i of itens) {
       const c = cartaoDo(i);
-      if (!c) continue;
+      if (!c || !passaNaQualidade(avaliacaoDo(c), exigir)) continue;
       if (i.em_alta) m.get("em_alta")!.push(c);
       if (i.faixa && m.has(i.faixa)) m.get(i.faixa)!.push(c);
       /* Barato de qualquer faixa também serve para doação. */
@@ -303,7 +338,8 @@ export function BrinquedosPorIdade({
             : peso(a) - peso(b) || a.preco - b.preco,
       );
     return m;
-  }, [itens]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itens, notas]);
 
   /* Abre na primeira aba com produtos. */
   useEffect(() => {
@@ -318,19 +354,6 @@ export function BrinquedosPorIdade({
   const atual = ABAS.find((a) => a.id === aba)!;
   const lista = porAba.get(aba) ?? [];
   const total = itens.length;
-  /* Avaliações (10/10): a oferta do botão pela vitrine; sem ela, o próprio
-     anúncio do produto quando o botão é dele. */
-  const vistos = lista.slice(0, 15);
-  const pelaVitrine = useAvaliacoesDaVitrine(vistos.map((c) => chaveDoBrinquedo(c.item.url)));
-  const pelosItens = useAvaliacoesPorItens(
-    vistos.map((c) => (c.tipo === "desconto" ? null : itemDoEndereco(c.item.url))),
-  );
-  const avaliacaoDo = (c: Cartao): ResumoAvaliacoes | null => {
-    const v = avaliacaoDaOferta(pelaVitrine, chaveDoBrinquedo(c.item.url), c.link);
-    if (v && (v.avaliacoes || v.sem)) return v;
-    const it = c.tipo === "desconto" ? null : itemDoEndereco(c.item.url);
-    return (it ? pelosItens.get(it) : null) ?? v;
-  };
   if (carregou && total === 0)
     return avisoSemItens ? <AvisoSemBrinquedos className={className} /> : null;
 
@@ -355,6 +378,8 @@ export function BrinquedosPorIdade({
         <p className="mt-1 text-sm text-secondary-ink">
           Os mais vendidos e as melhores escolhas por idade, já comparados com as outras lojas.
           Inclui opções baratas para doação.
+          {notas.vitrine.size + notas.itens.size > 0 &&
+            " Só entram brinquedos com nota 4,5 ou mais de quem comprou."}
         </p>
       )}
       <div

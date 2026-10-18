@@ -27,12 +27,14 @@ import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
-import { LinhaAvaliacoes } from "@/components/Avaliacoes";
+import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import {
   avaliacaoDaOferta,
   ContextoAvaliacoes,
-  useAvaliacoesDaVitrine,
+  lerAvaliacoesDaVitrine,
+  type MapaAvaliacoes,
 } from "@/lib/avaliacoes-vitrine";
+import { passaNaQualidade } from "@/lib/qualidade-avaliacao";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -73,6 +75,43 @@ type ItemVitrine = {
 /* Maior economia que a comparação achou: a do mesmo produto ou, quando maior,
    a da melhor alternativa (parecido), que o selo diz "Até R$ X de desconto". */
 const maiorEconomia = (i: ItemVitrine) => Math.max(i.economia ?? 0, i.alt_economia ?? 0);
+
+/* Oferta atrás do botão: a melhor loja quando ela economiza, senão o anúncio. */
+const destinoDe = (i: ItemVitrine) =>
+  ((i.economia ?? 0) > 0 && i.melhor_preco != null ? i.melhor_link : null) ?? i.link;
+
+const semAlternativa = (i: ItemVitrine): ItemVitrine => ({
+  ...i,
+  alt_preco: null,
+  alt_economia: null,
+  alt_titulo: null,
+  alt_link: null,
+  alt_loja: null,
+  alt_oficial: null,
+  alt_vantagem: null,
+  alt_frete_gratis: null,
+  alt_muda: null,
+});
+
+/* QUALIDADE PRIMEIRO (Weslei, 18/10: "Garanta sempre produtos com
+   qualidade!!!!! Boas avaliações"): a oferta do botão e a alternativa só
+   aparecem com nota 4,5 ou mais lida na página do anúncio
+   (src/lib/qualidade-avaliacao.ts). Alternativa reprovada sai do cartão; o
+   produto fica se a oferta dele passar. Leitura das notas que não trouxe
+   nada (falha da rede) não esvazia a vitrine: aí só a nota baixa conhecida
+   barra. */
+function comQualidade(lista: ItemVitrine[], mapa: MapaAvaliacoes): ItemVitrine[] {
+  const exigir = mapa.size > 0;
+  const out: ItemVitrine[] = [];
+  for (const i of lista) {
+    const altOk =
+      !!i.alt_link && passaNaQualidade(avaliacaoDaOferta(mapa, i.chave, i.alt_link), exigir);
+    const item = altOk || !i.alt_link ? i : semAlternativa(i);
+    if (!passaNaQualidade(avaliacaoDaOferta(mapa, i.chave, destinoDe(item)), exigir)) continue;
+    out.push(item);
+  }
+  return out;
+}
 
 const doInteresse = (i: ItemVitrine, c: ClusterInteresse) =>
   detectarCluster(i.titulo ?? "", i.categoria) === c;
@@ -138,6 +177,7 @@ export function Vitrine({
   vazio?: ReactNode;
 } = {}) {
   const [itens, setItens] = useState<ItemVitrine[]>([]);
+  const [avaliacoes, setAvaliacoes] = useState<MapaAvaliacoes>(() => new Map());
   const [carregou, setCarregou] = useState(false);
   const [aba, setAba] = useState<Aba>("recentes");
   const [categoria, setCategoria] = useState<string | null>(categoriaFixa ?? null);
@@ -159,12 +199,17 @@ export function Vitrine({
           supabase.rpc("vitrine" as never, { p_limite: categoriaFixa ? 300 : 120 } as never),
           lerFretesDaVitrine(),
         ]);
-        if (vivo && Array.isArray(data))
-          setItens(
-            semEconomiaSemFrete(data as ItemVitrine[], fretes).filter((i) =>
-              recomendavel(i, fretes),
-            ),
-          );
+        if (!vivo || !Array.isArray(data)) return;
+        const lidos = data as ItemVitrine[];
+        /* Nota das pessoas de cada oferta (10/10), da última comparação. */
+        const mapa = await lerAvaliacoesDaVitrine(lidos.map((i) => i.chave));
+        if (!vivo) return;
+        setAvaliacoes(mapa);
+        setItens(
+          comQualidade(semEconomiaSemFrete(lidos, fretes), mapa).filter((i) =>
+            recomendavel(i, fretes),
+          ),
+        );
       } catch {
         /* sem vitrine: a página segue normal */
       } finally {
@@ -206,10 +251,6 @@ export function Vitrine({
       .slice(0, 5);
   }, [lista, interesse, categoria]);
 
-  /* Nota das pessoas de cada oferta (10/10), da última comparação. */
-  const chavesDaLista = useMemo(() => itens.map((i) => i.chave), [itens]);
-  const avaliacoes = useAvaliacoesDaVitrine(chavesDaLista);
-
   if (categoriaFixa) {
     if (!carregou) return null;
     if (!itens.some((i) => (i.categoria_site ?? "outros") === categoriaFixa))
@@ -233,7 +274,8 @@ export function Vitrine({
                 : "Produtos que já comparei"}
             </h2>
             <p className="mt-1 text-sm text-secondary-ink">
-              Preço de quando foi comparado. Toque em "Comparar de novo" para ver o preço de agora.
+              Preço de quando foi comparado. Toque em "Atualizar preço" para ver o preço de agora.
+              {avaliacoes.size > 0 && " Só entram produtos com nota 4,5 ou mais de quem comprou."}
             </p>
           </div>
         </div>
@@ -371,8 +413,9 @@ export function Vitrine({
 
 function Cartao({ i }: { i: ItemVitrine }) {
   const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
-  const destino = (temEconomia ? i.melhor_link : null) ?? i.link;
+  const destino = destinoDe(i);
   const avaliacoes = useContext(ContextoAvaliacoes);
+  const avaliacao = avaliacaoDaOferta(avaliacoes, i.chave, destino);
   /* Alternativa parecida que economiza mais que o mesmo produto: o selo vira
      "Até R$ X de desconto" (não é idêntico, por isso o "Até"). */
   const temAlternativa = (i.alt_economia ?? 0) > (temEconomia ? (i.economia ?? 0) : 0);
@@ -410,6 +453,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
             </span>
           )
         )}
+        <SeloBemAvaliado resumo={avaliacao} className="absolute bottom-1.5 left-1.5" />
       </div>
       <div className="flex flex-1 flex-col p-2">
         <p className="line-clamp-2 text-xs font-medium leading-snug">{i.titulo}</p>
@@ -425,12 +469,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
             <>na {i.loja ?? "loja"}</>
           )}
         </p>
-        <LinhaAvaliacoes
-          resumo={avaliacaoDaOferta(avaliacoes, i.chave, destino)}
-          titulo={i.titulo}
-          link={destino}
-          className="mt-0.5"
-        />
+        <LinhaAvaliacoes resumo={avaliacao} titulo={i.titulo} link={destino} className="mt-0.5" />
         {temAlternativa && <Alternativa i={i} />}
         {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
         <p className="mt-0.5 text-[11px] text-secondary-ink/80">

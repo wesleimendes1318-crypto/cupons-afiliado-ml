@@ -14,11 +14,42 @@ import {
   itemDaOferta,
   type ResumoAvaliacoes,
 } from "@/lib/avaliacoes-detalhe";
+import { seloDeAvaliacao } from "@/lib/qualidade-avaliacao";
 
-function Nota({ v, compacto }: { v: DadosAvaliacoes; compacto: boolean }) {
+/* Cinco estrelas preenchidas até a nota lida (4,7 = quatro cheias e 70% da
+   quinta), como a página do anúncio mostra. */
+function Estrelas({ nota }: { nota: number }) {
+  const estrela = (k: number) => <Star key={k} className="size-3 shrink-0 fill-current" />;
+  return (
+    <span aria-hidden="true" className="relative inline-flex">
+      <span className="flex text-[#d2d2d7]">{[0, 1, 2, 3, 4].map(estrela)}</span>
+      <span
+        className="absolute inset-y-0 left-0 flex overflow-hidden text-amber-400"
+        style={{ width: `${Math.max(0, Math.min(100, (nota / 5) * 100))}%` }}
+      >
+        {[0, 1, 2, 3, 4].map(estrela)}
+      </span>
+    </span>
+  );
+}
+
+function Nota({
+  v,
+  compacto,
+  cinco = false,
+}: {
+  v: DadosAvaliacoes;
+  compacto: boolean;
+  /* Cartões das vitrines: as cinco estrelas. */
+  cinco?: boolean;
+}) {
   return (
     <span aria-hidden="true" className="inline-flex items-center gap-0.5">
-      <Star className="size-3 fill-amber-400 text-amber-400" />
+      {cinco ? (
+        <Estrelas nota={v.nota} />
+      ) : (
+        <Star className="size-3 fill-amber-400 text-amber-400" />
+      )}
       <strong className="font-bold tabular-nums text-foreground">{notaEscrita(v)}</strong>
       <span className="tabular-nums">
         ({compacto ? v.total.toLocaleString("pt-BR") : totalEscrito(v)})
@@ -125,7 +156,7 @@ export function LinhaAvaliacoes({
     return (
       <p className={`${base} gap-1 text-secondary-ink`} title={`${rotulo} no anúncio`}>
         <span className="sr-only">{rotulo}</span>
-        <Nota v={v} compacto />
+        <Nota v={v} compacto cinco />
       </p>
     );
   }
@@ -140,7 +171,7 @@ export function LinhaAvaliacoes({
       >
         <span className="sr-only">{`${rotulo}. Ver avaliações`}</span>
         <span className="whitespace-nowrap">
-          <Nota v={v} compacto />
+          <Nota v={v} compacto cinco />
         </span>
         <span
           aria-hidden="true"
@@ -160,5 +191,27 @@ export function LinhaAvaliacoes({
         />
       )}
     </div>
+  );
+}
+
+/* "Muito bem avaliado" sobre a foto do cartão (Weslei, 18/10: "boas
+   avaliações... precisa encantar quem olha"): só com nota 4,8 ou mais e 50
+   avaliações ou mais lidas na página do anúncio. Quem chama posiciona. */
+export function SeloBemAvaliado({
+  resumo,
+  className = "",
+}: {
+  resumo: ResumoAvaliacoes | null | undefined;
+  className?: string;
+}) {
+  const selo = seloDeAvaliacao(resumo);
+  if (!selo) return null;
+  return (
+    <span
+      className={`pointer-events-none inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-[#7a4a00] shadow-sm ring-1 ring-black/5 backdrop-blur ${className}`}
+    >
+      <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+      {selo}
+    </span>
   );
 }
