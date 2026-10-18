@@ -76,6 +76,10 @@ function contextoMorto(e) {
 
 const CAMPOS = ['geminiKey', 'geminiModel', 'sincToken', 'sincAuto', 'ntfyTopico'];
 
+/* Senha do banco proprio (18/10, 1.167.1): so letras. Numero e espaco que
+   entrarem no campo (tecla 9 presa no notebook) sao descartados ao salvar. */
+const limparToken = v => String(v || '').replace(/[^A-Za-z]/g, '');
+
 function lerStorage() {
   return new Promise((ok, falha) => {
     try {
@@ -120,7 +124,7 @@ $('salvar').addEventListener('click', async () => {
     const querido = {
       geminiKey: $('key').value.trim(),
       geminiModel: $('modelo').value,
-      sincToken: $('sinc').value.trim(),
+      sincToken: limparToken($('sinc').value),
       sincAuto: $('sincauto').checked,
       ntfyTopico: $('ntfy').value.trim().replace(/[^A-Za-z0-9_-]/g, '')
     };
