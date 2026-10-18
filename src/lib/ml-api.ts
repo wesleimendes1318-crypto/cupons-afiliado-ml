@@ -56,23 +56,29 @@ async function tokenDeAcesso(forcarNovo = false): Promise<string | null> {
   /* O refresh token do Mercado Livre vale uma vez só: cada renovação devolve
      um novo, que precisa ser guardado. O do secret é só o primeiro. */
   const refresh = cfg["ml_refresh_token"] || process.env["ML_REFRESH_TOKEN"] || "";
-  const corpo = new URLSearchParams(
-    refresh
-      ? {
-          grant_type: "refresh_token",
-          client_id: id,
-          client_secret: segredo,
-          refresh_token: refresh,
-        }
-      : { grant_type: "client_credentials", client_id: id, client_secret: segredo },
-  );
-  try {
-    const r = await fetch(`${API}/oauth/token`, {
+  const pedir = (corpo: Record<string, string>) =>
+    fetch(`${API}/oauth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-      body: corpo,
+      body: new URLSearchParams(corpo),
       signal: AbortSignal.timeout(10_000),
     });
+  const doApp = { grant_type: "client_credentials", client_id: id, client_secret: segredo };
+  try {
+    let r = await pedir(
+      refresh
+        ? {
+            grant_type: "refresh_token",
+            client_id: id,
+            client_secret: segredo,
+            refresh_token: refresh,
+          }
+        : doApp,
+    );
+    /* Banco novo (18/10/2026): o refresh guardado ficou no banco antigo e o do
+       secret já foi usado. Recusado, o token do próprio aplicativo ainda abre
+       os endereços públicos (anúncios, catálogo, frete). */
+    if (!r.ok && refresh) r = await pedir(doApp);
     if (!r.ok) {
       console.warn("[ml-api] token recusado:", r.status);
       return null;

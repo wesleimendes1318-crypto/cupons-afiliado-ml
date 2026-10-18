@@ -1,31 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AuthContext } from "@lovable.dev/mcp-js";
+import { SUPABASE_CHAVE_PUBLICA_SITE, SUPABASE_URL_SITE } from "@/integrations/supabase/projeto";
 
-type RuntimeGlobals = typeof globalThis & {
-  process?: { env?: Record<string, string | undefined> };
-};
-
-function env(names: readonly string[]): string | undefined {
-  const runtime = globalThis as RuntimeGlobals;
-  for (const name of names) {
-    const v = runtime.process?.env?.[name]?.trim();
-    if (v) return v;
-  }
-  return undefined;
-}
-
+/* Banco próprio desde 18/10/2026 (projeto.ts): os SUPABASE_* do Lovable Cloud
+   apontam para o banco pausado. */
 function url(): string {
-  const u = env(["SUPABASE_URL", "VITE_SUPABASE_URL"]) ?? import.meta.env["VITE_SUPABASE_URL"];
-  if (!u) throw new Error("SUPABASE_URL is required");
-  return u;
+  return SUPABASE_URL_SITE;
 }
 
 function key(): string {
-  const k =
-    env(["SUPABASE_PUBLISHABLE_KEY", "VITE_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"]) ??
-    import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
-  if (!k) throw new Error("SUPABASE_PUBLISHABLE_KEY is required");
-  return k;
+  return SUPABASE_CHAVE_PUBLICA_SITE;
 }
 
 /** Repassa o token verificado: as regras do banco valem como o usuário conectado. */

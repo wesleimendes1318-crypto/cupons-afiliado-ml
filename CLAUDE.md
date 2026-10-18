@@ -922,6 +922,33 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   pista dinossauro) na versão nova e conferir todas as metas. Falhou alguma:
   corrigir e rodar de novo. Só então avisar.
 
+## Banco próprio no Supabase (18/10)
+- O Lovable Cloud pausou o banco em 16/10 (~09:50 UTC) por falta de crédito
+  (348 créditos gastos no ciclo de 200; o uso do banco sai do mesmo saldo).
+  Weslei, 17/10: "eu não tenho como colocar sempre os créditos no lovable".
+  O banco passou para o Supabase PRÓPRIO dele, plano grátis: projeto
+  itgdvxvqbwjcvmglfval (sa-east-1), org do Weslei. O site, o domínio e a
+  publicação continuam no Lovable (publicar não gasta crédito: testado em
+  17/10).
+- Montagem: supabase/base/00_base_lovable.sql (as 6 tabelas e funções antigas
+  que o Lovable criou sem arquivo, reconstruídas pelo types.ts e pelas
+  chamadas do site e da extensão) + as 88 migrações, aplicadas pelo próprio
+  banco a partir do GitHub (public._aplicar_migracoes). Filas de cupom que
+  abririam o Mercado Livre (etiquetas, links e vitrines de cupom, condições)
+  devolvem vazio no banco novo. Numeração de todas as tabelas a partir de
+  1.000.000 para o histórico antigo entrar depois sem bater número.
+- Código: src/integrations/supabase/projeto.ts (endereço e chave publicável,
+  públicos). A chave de serviço só nos Secrets do Lovable como
+  MEU_SUPABASE_SERVICE_ROLE_KEY (os SUPABASE_* do Lovable Cloud apontam para
+  o banco pausado). Os clientes gerados pelo Lovable (client.ts,
+  client.server.ts, auth-middleware.ts) foram editados para usar projeto.ts:
+  se o Lovable regerar, refazer. Extensão 1.167.0 aponta para o banco novo; a
+  senha da extensão (sinc_config 'token') é cadastrada pelo Weslei.
+- Histórico do banco antigo (pedidos, vitrine, links, inscritos do bot,
+  Acompanhar preço, canal): copiar quando o Lovable religar o banco (créditos
+  renovam em 21/10); depois, desligar as rotinas (pg_cron) de lá para nada
+  rodar em dobro.
+
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.

@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Route } from "../src/routes/api/public/telegram-setup";
+import { SUPABASE_URL_SITE } from "../src/integrations/supabase/projeto";
 
 test("setup do Telegram exige autorização, fixa destino e preserva mensagens", async () => {
   const originalFetch = globalThis.fetch;
-  const nomes = ["API_TELEGRAM", "CRON_SECRET", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+  const nomes = ["API_TELEGRAM", "CRON_SECRET", "MEU_SUPABASE_SERVICE_ROLE_KEY"];
   const originais = nomes.map((nome) => process.env[nome]);
   const segredo = "segredo-ficticio-com-mais-de-16-caracteres";
   process.env["API_TELEGRAM"] = "token-ficticio";
   process.env["CRON_SECRET"] = segredo;
-  process.env["SUPABASE_URL"] = "https://banco.example";
-  process.env["SUPABASE_SERVICE_ROLE_KEY"] = "sb_secret_ficticio";
+  process.env["MEU_SUPABASE_SERVICE_ROLE_KEY"] = "sb_secret_ficticio";
   let chamadasTelegram = 0;
   let falhar = false;
   globalThis.fetch = async (input, init) => {
     const url = input instanceof Request ? input.url : String(input);
-    if (url.startsWith("https://banco.example/")) {
+    if (url.startsWith(`${SUPABASE_URL_SITE}/`)) {
       return Response.json({ valor: segredo });
     }
     assert.equal(url, "https://api.telegram.org/bottoken-ficticio/setWebhook");

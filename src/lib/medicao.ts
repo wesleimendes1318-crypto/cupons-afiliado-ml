@@ -2,9 +2,10 @@
    t.me (MedicaoCliques) e impressões das campanhas. Só com consentimento de
    análise; sem IP, sem cookie, sem id de visitante. */
 import { lerConsentimento } from "@/lib/consentimento";
+import { SUPABASE_CHAVE_PUBLICA_SITE, SUPABASE_URL_SITE } from "@/integrations/supabase/projeto";
 
-const URL_RPC = `${import.meta.env["VITE_SUPABASE_URL"] ?? ""}/rest/v1/rpc/registrar_evento`;
-const CHAVE = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? "";
+const URL_RPC = `${SUPABASE_URL_SITE}/rest/v1/rpc/registrar_evento`;
+const CHAVE = SUPABASE_CHAVE_PUBLICA_SITE;
 
 export function enviarEvento(corpo: Record<string, unknown>) {
   if (!URL_RPC.startsWith("https://") || !CHAVE) return;

@@ -40,7 +40,9 @@ async function siteVivo() {
   }
   return SITE;
 }
-const SUPABASE = 'https://rjevaqtnlldhnwsidbbn.supabase.co';
+/* Banco proprio do Weslei desde 18/10/2026 (1.167.0): o do Lovable Cloud foi
+   pausado por falta de credito em 16/10. */
+const SUPABASE = 'https://itgdvxvqbwjcvmglfval.supabase.co';
 const RPC      = SUPABASE + '/rest/v1/rpc/sincronizar_cupons';
 
 /* A chave publicavel do Supabase e publica por definicao: ela ja vai no
@@ -52,7 +54,7 @@ let CHAVE_CACHE = { valor: null, ts: 0 };
    como reserva: em 24/09 o endereco do site mudou na configuracao do dominio
    e a extensao parou de ler a fila porque dependia do site para achar a
    chave. Com a reserva, ela nunca mais para por causa de endereco. */
-const CHAVE_RESERVA = 'sb_publishable_WYvqQiuyMhALUhvTBXR3ug_5tazN9Lm';
+const CHAVE_RESERVA = 'sb_publishable_Y5TUpxpFEO9rsUj-8cYa4g_EWq3NYPY';
 
 async function chavePublicavel() {
   if (CHAVE_CACHE.valor && Date.now() - CHAVE_CACHE.ts < 6 * 3600e3) return CHAVE_CACHE.valor;

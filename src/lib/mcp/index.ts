@@ -1,7 +1,8 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
+import { SUPABASE_PROJETO_SITE } from "@/integrations/supabase/projeto";
 import buscarCupons from "./tools/buscar-cupons";
 
-const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
+const projectRef = SUPABASE_PROJETO_SITE;
 
 export default defineMcp({
   name: "cupom-afiliado",

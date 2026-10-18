@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Conferidor de Cupons",
-  "version": "1.166.1",
+  "version": "1.167.0",
   "incognito": "spanning",
   "description": "Confere o desconto real dos cupons de afiliado: teto, compra minima e validade, direto na pagina do anuncio.",
   "author": "Weslei Mendes",
@@ -28,7 +28,7 @@
     "https://https-cupons-afiliado-ml.lovable.app/*",
     "https://melhorescolha.io/*",
     "https://www.melhorescolha.io/*",
-    "https://rjevaqtnlldhnwsidbbn.supabase.co/*",
+    "https://itgdvxvqbwjcvmglfval.supabase.co/*",
     "https://ntfy.sh/*",
     "*://*.amazon.com.br/*",
     "*://associados.amazon.com.br/*",

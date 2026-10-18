@@ -19,9 +19,12 @@ seguem as mesmas regras:
 - CLAUDE.md manda. Nunca force-push nem reescrever histórico; branch
   `claude/ml-etiquetas-cupons-k6tgkj` e `main` recebem o mesmo commit; depois
   do push, `list_edits` "completed" e `deploy_project`.
-- Banco: projeto Lovable `3f97dce2-5c60-435b-a067-f15be15dbd4a`
-  (`mcp__Lovable__query_database`). Migrações só aditivas, com arquivo em
-  `supabase/migrations/`.
+- Banco (desde 18/10/2026): Supabase próprio do Weslei, projeto
+  `itgdvxvqbwjcvmglfval` (`mcp__Supabase__execute_sql` /
+  `mcp__Supabase__apply_migration`). O `mcp__Lovable__query_database` aponta
+  para o banco ANTIGO, pausado por falta de crédito: não usar. O site
+  continua publicado pelo Lovable (`deploy_project`, não gasta crédito).
+  Migrações só aditivas, com arquivo em `supabase/migrations/`.
 - Nunca pedir nem escrever chaves. Nunca expor comissão, ganhos, vendas ou
   qualquer dado do painel de afiliados (privado do Weslei).
 - Proteger a conta de afiliado: sem rajadas; respeitar os tetos das tarefas
