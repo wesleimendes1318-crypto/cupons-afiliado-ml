@@ -80,6 +80,7 @@ import {
 } from "@/lib/avaliacoes-detalhe";
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
+import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -1971,7 +1972,14 @@ function Resultado({
         : null,
     [limitePrazo, prazos, pedido.analise],
   );
-  const a = filtroPrazo?.algumAtende ? filtroPrazo.analise : pedido.analise;
+  /* Anúncio que o programa de afiliados recusa (reputação vermelha, 18/10)
+     vira semAfiliado: sai da tabela e da recomendação. */
+  const recusados = useAnunciosRecusados(pedido.analise);
+  const analiseBase = filtroPrazo?.algumAtende ? filtroPrazo.analise : pedido.analise;
+  const a = useMemo(
+    () => (analiseBase ? semRecusados(analiseBase, recusados) : analiseBase),
+    [analiseBase, recusados],
+  );
   const link = pedido.link ?? "";
   const dispositivo = useDispositivo();
 

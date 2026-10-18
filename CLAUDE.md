@@ -987,6 +987,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   produtos com nota 4,5 ou mais de quem comprou" (só quando as notas foram
   lidas) e, nos mais vendidos, "sem os que têm nota abaixo de 4,5 ou
   nenhuma avaliação". Nunca inventa nota nem selo.
+- VENDEDOR RECUSADO PELO PROGRAMA (Guardião, 18/10, pedidos 1000041-44: a
+  tela recomendou um guarda-roupa de R$ 400 contra R$ 929,99 e o cliente
+  clicou 4 vezes; o gerador respondeu "The seller must have reputation
+  yellow and up, reputation: 1_red"; o link de reserva veio vazio porque
+  nenhum link sai mais da ficha). Migração 20261018170000_vendedor_recusado:
+  anuncios_recusados(p_itens) (pública, só códigos; geracoes com erro de
+  reputação, "URL not allowed" ou 111 nos últimos 30 dias) -> a tela
+  (src/lib/anuncios-recusados.ts, semRecusados no Resultado) marca a oferta
+  sem link como semAfiliado: sai da tabela e da recomendação. link_de_reserva
+  cai, sem link da ficha, no link da loja mais barata com link próprio da
+  comparação mais recente do MESMO produto (senão o do anúncio colado dela),
+  com o aviso de que o preço pode ser diferente.
 
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
