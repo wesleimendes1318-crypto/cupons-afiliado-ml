@@ -942,8 +942,20 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   MEU_SUPABASE_SERVICE_ROLE_KEY (os SUPABASE_* do Lovable Cloud apontam para
   o banco pausado). Os clientes gerados pelo Lovable (client.ts,
   client.server.ts, auth-middleware.ts) foram editados para usar projeto.ts:
-  se o Lovable regerar, refazer. Extensão 1.167.0 aponta para o banco novo; a
-  senha da extensão (sinc_config 'token') é cadastrada pelo Weslei.
+  se o Lovable regerar, refazer. Se o Secret tiver outro nome, vale o único
+  cujo VALOR começa com sb_secret_ (chaveDeServico; /api/public/saude diz só
+  como a chave foi achada). Extensão 1.167.1 aponta para o banco novo. A
+  senha da extensão (sinc_config 'token') é SÓ DE LETRAS e o campo das
+  opções descarta número e espaço ao salvar (18/10: a tecla 9 do notebook
+  digita sozinha). Weslei copia do editor de tabelas do Supabase e cola com
+  o botão direito.
+- Ligado em 18/10 ~14:45 UTC: banco ok, extensão 1.167.1 despausada,
+  rotinas religadas. Vitrines recomeçaram do zero: em_alta disparado nas 10
+  categorias (88 "mais vendidos"), brinquedos em_alta e mercado; as
+  comparações dos agentes refazem a vitrine geral (13 produtos na 1ª hora).
+  1ª comparação depois da pausa caiu na verificação do Mercado Livre
+  (resolvida pelo Weslei no Chrome do notebook); as seguintes saíram
+  completas, todas com meli.la.
 - Histórico do banco antigo (pedidos, vitrine, links, inscritos do bot,
   Acompanhar preço, canal): copiar quando o Lovable religar o banco (créditos
   renovam em 21/10); depois, desligar as rotinas (pg_cron) de lá para nada
