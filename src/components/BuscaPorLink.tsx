@@ -466,6 +466,8 @@ type Analise = {
   /* Comparação feita pelo servidor, pela lista oficial de ofertas da ficha,
      com a extensão parada (19/10): sem parecidos nem outros marketplaces. */
   modoServidor?: boolean | null;
+  /* Modo servidor: o anúncio de referência dentro da ficha (link sem anúncio). */
+  urlDaOferta?: string | null;
   buscaFora?: {
     vistos?: number | null;
     leitura?: {
@@ -1431,7 +1433,11 @@ export default function BuscaPorLink({
           pedido={pedido}
           copiar={copiar}
           copiado={copiado}
-          urlColada={melhorLinkML(url) ?? null}
+          urlColada={
+            (pedido.analise?.modoServidor ? pedido.analise.urlDaOferta : null) ??
+            melhorLinkML(url) ??
+            null
+          }
           completando={completando}
           pedidoId={atual.current}
           chavePedido={chaveAtual.current}

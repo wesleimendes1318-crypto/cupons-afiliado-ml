@@ -92,6 +92,25 @@ test("link de catálogo sem anúncio: a oferta em destaque é a referência e as
   assert.equal(r.link, null);
 });
 
+test("ficha sem oferta em destaque: a mais barata da lista é a referência", async () => {
+  const original = FICHA.buy_box_winner;
+  (FICHA as { buy_box_winner: unknown }).buy_box_winner = null;
+  try {
+    const r = await comApiFalsa(() =>
+      compararAgora("https://www.mercadolivre.com.br/ar-condicionado-lg/p/MLB27727511"),
+    );
+    assert.equal(r.ok, true);
+    if (!r.ok) return;
+    const a = r.analise as { preco: number; urlDaOferta: string; referencias: unknown[] };
+    assert.equal(a.preco, 2200);
+    assert.match(a.urlDaOferta, /item_id%3AMLB6199322700/);
+    /* A loja 2 só tem outro anúncio mais caro: fica de fora; a loja 1 entra. */
+    assert.equal(a.referencias.length, 1);
+  } finally {
+    (FICHA as { buy_box_winner: unknown }).buy_box_winner = original;
+  }
+});
+
 test("anúncio do link fora da lista: não afirma preço, busca pelo nome", async () => {
   const r = await comApiFalsa(() =>
     compararAgora(

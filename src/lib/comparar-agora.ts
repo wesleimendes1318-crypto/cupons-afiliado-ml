@@ -113,11 +113,14 @@ export async function compararAgora(entrada: string): Promise<ResultadoAgora> {
   if (!ficha?.name || !ofertas.length) return { ok: false, termo: ficha?.name ?? termo, perfil };
 
   /* A oferta que o cliente estava vendo: o anúncio do link; sem ele, a
-     oferta em destaque da ficha (a que a página do produto abre). */
+     oferta em destaque da ficha (a que a página do produto abre) e, sem
+     destaque (a página lista as lojas), a mais barata da lista. Anúncio do
+     link fora da lista: o preço dele não é conhecido, então nada é afirmado. */
   const destaque = String(ficha.buy_box_winner?.item_id ?? "").toUpperCase();
-  const colado =
-    ofertas.find((o) => o.item === ids.item) ??
-    (ids.item ? null : (ofertas.find((o) => o.item === destaque) ?? null));
+  const maisBarata = [...ofertas].sort((a, b) => a.preco - b.preco)[0] ?? null;
+  const colado = ids.item
+    ? (ofertas.find((o) => o.item === ids.item) ?? null)
+    : (ofertas.find((o) => o.item === destaque) ?? maisBarata);
   if (!colado) return { ok: false, termo: ficha.name, perfil };
 
   /* Uma linha por loja (a oferta mais barata dela); a loja do anúncio colado
@@ -176,6 +179,9 @@ export async function compararAgora(entrada: string): Promise<ResultadoAgora> {
       freteGratis: colado.freteGratis,
       lojaOficial: colado.lojaOficial,
       imagem,
+      /* Endereço do ANÚNCIO de referência: o botão do "anúncio colado" gera o
+         link por ele, nunca pela ficha (o link da ficha abre outra oferta). */
+      urlDaOferta: urlDaOferta(catalogo, colado.item),
       /* A tela diz de onde veio e esconde o que depende da extensão. */
       modoServidor: true,
     },
