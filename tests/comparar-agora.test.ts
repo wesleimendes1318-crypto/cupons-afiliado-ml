@@ -55,8 +55,8 @@ function comApiFalsa<T>(fn: () => Promise<T>) {
   const original = globalThis.fetch;
   globalThis.fetch = (async (entrada: RequestInfo | URL) => {
     const u = String(entrada);
-    if (/\/products\/MLB27727511\/items/.test(u)) return Response.json(OFERTAS);
-    if (/\/products\/MLB27727511/.test(u)) return Response.json(FICHA);
+    if (/\/products\/MLB\d+\/items/.test(u)) return Response.json(OFERTAS);
+    if (/\/products\/MLB\d+/.test(u)) return Response.json(FICHA);
     if (/\/users\/\d+/.test(u)) return Response.json({ nickname: "LOJA" });
     return new Response("{}", { status: 404 });
   }) as typeof fetch;
@@ -108,6 +108,66 @@ test("ficha sem oferta em destaque: a mais barata da lista é a referência", as
     assert.equal(a.referencias.length, 1);
   } finally {
     (FICHA as { buy_box_winner: unknown }).buy_box_winner = original;
+  }
+});
+
+test("sem destaque: preço muito abaixo das outras lojas não vira a referência", async () => {
+  const original = FICHA.buy_box_winner;
+  const ofertas = OFERTAS.results;
+  (FICHA as { buy_box_winner: unknown }).buy_box_winner = null;
+  /* Pedido 1000048 (18/10): R$ 1.199 numa loja sem selo contra R$ 2.250 a
+     R$ 4.800 nas outras. */
+  OFERTAS.results = [
+    {
+      item_id: "MLB7811771900",
+      price: 1199,
+      seller_id: 9,
+      condition: "new",
+      shipping: { free_shipping: true },
+    },
+    {
+      item_id: "MLB5393406491",
+      price: 2250,
+      seller_id: 2,
+      condition: "new",
+      shipping: { free_shipping: true },
+    },
+    {
+      item_id: "MLB6199360994",
+      price: 2298,
+      seller_id: 3,
+      condition: "new",
+      shipping: { free_shipping: false, cost: 120 },
+    },
+    {
+      item_id: "MLB4671720659",
+      price: 2799,
+      seller_id: 4,
+      condition: "new",
+      shipping: { free_shipping: true },
+    },
+    {
+      item_id: "MLB7631174058",
+      price: 4800,
+      seller_id: 5,
+      condition: "new",
+      shipping: { free_shipping: true },
+    },
+  ] as typeof OFERTAS.results;
+  try {
+    const r = await comApiFalsa(() =>
+      compararAgora("https://www.mercadolivre.com.br/ar-condicionado-lg/p/MLB27727599"),
+    );
+    assert.equal(r.ok, true);
+    if (!r.ok) return;
+    const a = r.analise as { preco: number; referencias: { preco: number }[] };
+    assert.equal(a.preco, 2250);
+    /* Ficha própria: a lista de ofertas fica 5 min em memória. */
+    /* A de R$ 1.199 continua na tabela (com o aviso da tela), nunca some. */
+    assert.ok(a.referencias.some((x) => x.preco === 1199));
+  } finally {
+    (FICHA as { buy_box_winner: unknown }).buy_box_winner = original;
+    OFERTAS.results = ofertas;
   }
 });
 

@@ -21,6 +21,7 @@ import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { resolverEncurtado } from "@/lib/identificar-link";
 import { mlGet } from "@/lib/ml-api";
 import { apelidos, freteDaOferta, idsDoLink, ofertasDoCatalogo } from "@/lib/mesmo-produto";
+import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 
 type Ficha = {
   name?: string;
@@ -114,13 +115,20 @@ export async function compararAgora(entrada: string): Promise<ResultadoAgora> {
 
   /* A oferta que o cliente estava vendo: o anúncio do link; sem ele, a
      oferta em destaque da ficha (a que a página do produto abre) e, sem
-     destaque (a página lista as lojas), a mais barata da lista. Anúncio do
-     link fora da lista: o preço dele não é conhecido, então nada é afirmado. */
+     destaque (a página lista as lojas), a mais barata SEGURA da lista
+     (Weslei, 18/10: preço muito abaixo das outras lojas sem avaliação não
+     vira recomendação; frete pago de valor desconhecido não passa na
+     frente). Anúncio do link fora da lista: o preço dele não é conhecido,
+     então nada é afirmado. */
   const destaque = String(ficha.buy_box_winner?.item_id ?? "").toUpperCase();
-  const maisBarata = [...ofertas].sort((a, b) => a.preco - b.preco)[0] ?? null;
+  const precos = ofertas.map((o) => o.preco);
+  const seguras = [...ofertas]
+    .filter((o) => o.lojaOficial === true || !precoMuitoAbaixo(o.preco, precos))
+    .sort((a, b) => a.preco - b.preco);
+  const maisBarataSegura = seguras.find((o) => o.freteGratis === true) ?? seguras[0] ?? null;
   const colado = ids.item
     ? (ofertas.find((o) => o.item === ids.item) ?? null)
-    : (ofertas.find((o) => o.item === destaque) ?? maisBarata);
+    : (ofertas.find((o) => o.item === destaque) ?? maisBarataSegura);
   if (!colado) return { ok: false, termo: ficha.name, perfil };
 
   /* Uma linha por loja (a oferta mais barata dela); a loja do anúncio colado

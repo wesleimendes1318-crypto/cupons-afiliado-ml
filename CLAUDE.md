@@ -1904,7 +1904,9 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (/api/public/comparar-agora, src/lib/comparar-agora.ts): só a API oficial
   (/products/{id} + /products/{id}/items), nada gravado. Ficha do link (/p/):
   a oferta do anúncio do link ou, sem ele, a oferta em destaque
-  (buy_box_winner) é a referência; as outras lojas da MESMA ficha (só
+  (buy_box_winner) e, sem destaque, a mais barata SEGURA (não muito abaixo
+  das outras lojas, salvo loja oficial; frete grátis primeiro) é a
+  referência; as outras lojas da MESMA ficha (só
   condição nova, uma linha por loja, a mesma loja só com outro anúncio mais
   barato) vão para a tabela com "Mesmo produto, na mesma página de
   catálogo" (sem a frase de conferência pela foto). Links: só o meli.la já
