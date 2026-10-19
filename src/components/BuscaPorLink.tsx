@@ -70,6 +70,8 @@ import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LinkDeOutraLoja, type LinkIdentificadoTela } from "@/components/LinkDeOutraLoja";
+import { ResultadosDaBusca } from "@/components/BuscaGuiada";
+import { buscarProdutos, type Resposta as RespostaBusca } from "@/lib/busca-guiada-cliente";
 import { Avaliacoes } from "@/components/Avaliacoes";
 import { BarraDeSecoes, type Secao } from "@/components/BarraDeSecoes";
 import type { Avaliacoes as DadosAvaliacoes } from "@/lib/avaliacoes";
@@ -98,6 +100,9 @@ const LIMITE_MS = 240000;
 /* Depois disso a espera deixou de ser normal. Nao desiste: troca o texto por um
    aviso honesto e da uma saida util para a pessoa nao abandonar a pagina. */
 const AVISO_MS = 45000;
+/* Pedido ainda na fila depois disto (a extensão pega em segundos quando está
+   ligada): a comparação sai pela lista oficial, pelo servidor (19/10). */
+const NINGUEM_PEGOU_MS = 90000;
 /* Segunda volta da extensão (regra do Weslei: enquanto não achar opção mais
    barata ou não tiver a análise completa, não desapontar o cliente). O
    resultado aparece em até 1 minuto e a tela continua se atualizando até a
@@ -458,6 +463,9 @@ type Analise = {
   } | null;
   /* Foto do anúncio colado e o que a busca em outras lojas leu. */
   imagem?: string | null;
+  /* Comparação feita pelo servidor, pela lista oficial de ofertas da ficha,
+     com a extensão parada (19/10): sem parecidos nem outros marketplaces. */
+  modoServidor?: boolean | null;
   buscaFora?: {
     vistos?: number | null;
     leitura?: {
@@ -602,6 +610,27 @@ function limparLinkML(bruto: string): string {
   } catch {
     // Sem parse possível: pelo menos tira a âncora de rastreio.
     return bruto.split("#")[0] ?? bruto;
+  }
+}
+
+type RespostaAgora =
+  | { ok: true; link: string | null; comparadoEm: string; analise: Analise }
+  | { ok: false; termo: string | null; perfil: boolean };
+
+/* Comparação pelo servidor (19/10): a lista oficial de ofertas do mesmo
+   produto, sem a extensão. null = o servidor não respondeu. */
+async function compararPeloServidor(url: string): Promise<RespostaAgora | null> {
+  try {
+    const r = await fetch("/api/public/comparar-agora", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: url.slice(0, 2000) }),
+    });
+    const j = (await r.json()) as RespostaAgora & { erro?: string };
+    if (!r.ok || j.erro || typeof j.ok !== "boolean") return null;
+    return j;
+  } catch {
+    return null;
   }
 }
 
@@ -897,6 +926,9 @@ export default function BuscaPorLink({
     identificando: boolean;
   } | null>(null);
   const identificacao = useRef(0);
+  /* Sem a comparação pelo servidor (link sem ficha de catálogo): a tela busca
+     o produto pelo nome, nunca só um aviso de pausa (Weslei, 19/10). */
+  const [semFicha, setSemFicha] = useState<{ termo: string | null; perfil: boolean } | null>(null);
   /* Link (limpo) do pedido acompanhado, para o histórico. */
   const urlDoPedido = useRef<string | null>(null);
   const perfilRegistrado = useRef<string | null>(null);
@@ -928,6 +960,7 @@ export default function BuscaPorLink({
       setMotivo(null);
       setCompletando(false);
       setOutraLoja(null);
+      setSemFicha(null);
       const vez = ++identificacao.current;
 
       const limpo = melhorLinkML(alvo);
@@ -985,12 +1018,43 @@ export default function BuscaPorLink({
         }
       })();
 
-      /* Extensão desligada: o pedido ficaria na fila sem ninguém atender e o
-         cliente esperaria à toa. Diz na hora. */
-      if (!(await roboAtivo())) {
+      /* SEMPRE FUNCIONA (Weslei, 19/10): com a extensão parada, sem resposta
+         dela ou sem pedido, o servidor compara pela lista oficial de ofertas
+         do mesmo produto; sem ficha de catálogo, a tela busca pelo nome. */
+      const pelaListaOficial = async () => {
+        const r = await compararPeloServidor(limpo);
+        if (identificacao.current !== vez) return;
+        limparTimers();
+        atual.current = null;
+        chaveAtual.current = null;
+        if (r?.ok) {
+          setMotivo(null);
+          setErro(null);
+          setCompletando(false);
+          setPedido({
+            status: "pronto",
+            link: soAfiliado(r.link),
+            codigo: null,
+            erro: null,
+            analise: analiseSoComAfiliado(r.analise),
+            comparado_em: r.comparadoEm,
+          });
+          setFase("pronto");
+          return;
+        }
+        setSemFicha({
+          termo: (r && !r.ok ? r.termo : null) ?? analisarLink(limpo).termoIdentificado ?? null,
+          perfil: Boolean(r && !r.ok && r.perfil) || /\/social\//i.test(limpo),
+        });
         setFase("offline");
+      };
+
+      /* Extensão desligada: o pedido ficaria na fila sem ninguém atender e o
+         cliente esperaria à toa. Compara pelo servidor na hora. */
+      if (!(await roboAtivo())) {
         setMotivo(null);
         setErro(null);
+        await pelaListaOficial();
         return;
       }
 
@@ -1008,14 +1072,12 @@ export default function BuscaPorLink({
 
       if (error || id == null || !chave) {
         limparTimers();
-        setFase("offline");
-        setErro(
-          /link invalido/i.test(error?.message ?? "")
-            ? "Esse link não é de um anúncio válido. Cole o endereço do produto."
-            : /fila cheia/i.test(error?.message ?? "")
-              ? "Muitas comparações ao mesmo tempo agora. Em 1 minuto a fila libera."
-              : null,
-        );
+        if (/link invalido/i.test(error?.message ?? "")) {
+          setFase("offline");
+          setErro("Esse link não é de um anúncio válido. Cole o endereço do produto.");
+          return;
+        }
+        await pelaListaOficial();
         return;
       }
 
@@ -1033,6 +1095,7 @@ export default function BuscaPorLink({
         /* sem extensao: o alarme cobre */
       }
 
+      const pedidoFeitoEm = Date.now();
       let voltas = 0;
       let parou = false;
       let prontoEm: number | null = null;
@@ -1096,12 +1159,27 @@ export default function BuscaPorLink({
           /* Guarda o motivo real. Sem isso a pessoa (e o Weslei) so via "fora
              do ar" e nao dava para saber se era sessao caida, link errado ou
              erro nosso. */
-          setMotivo(
+          const real =
             linha.erro ??
-              (linha.analise as { diagnostico?: string | null } | null)?.diagnostico ??
-              null,
-          );
-          setFase("offline");
+            (linha.analise as { diagnostico?: string | null } | null)?.diagnostico ??
+            null;
+          setMotivo(real);
+          /* Link de perfil (lista de produtos) tem aviso próprio; o resto
+             ganha a comparação pela lista oficial. */
+          if (real && /perfil|nao abre um anuncio/i.test(real)) setFase("offline");
+          else void pelaListaOficial();
+          return;
+        }
+
+        /* Ninguém pegou o pedido (a extensão dormiu depois do último sinal de
+           vida): sem esperar os 4 minutos, compara pela lista oficial. */
+        if (
+          !parou &&
+          linha?.status === "pendente" &&
+          Date.now() - pedidoFeitoEm > NINGUEM_PEGOU_MS
+        ) {
+          parou = true;
+          void pelaListaOficial();
           return;
         }
 
@@ -1118,7 +1196,7 @@ export default function BuscaPorLink({
       prazo.current = setTimeout(() => {
         parou = true;
         limparTimers();
-        setFase((f) => (f === "pronto" ? f : "offline"));
+        if (prontoEm == null) void pelaListaOficial();
       }, LIMITE_MS);
       consultar();
     },
@@ -1366,7 +1444,20 @@ export default function BuscaPorLink({
         <ConviteTelegram formato="cartao" origem="resultado" className="mt-6" />
       )}
 
-      {fase === "offline" && !erro && <Offline tentar={() => buscar(url)} motivo={motivo} />}
+      {fase === "offline" && !erro && (
+        <Offline
+          tentar={() => buscar(url)}
+          motivo={motivo}
+          semFicha={semFicha}
+          comparar={(alvo) => {
+            setUrl(alvo);
+            document
+              .getElementById("colar-link")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            void buscar(alvo);
+          }}
+        />
+      )}
 
       {/* Com a caixa parada as últimas comparações já aparecem em atalhos acima. */}
       {!carregando && !(fase === "parado" && !pedido) && (
@@ -2086,8 +2177,10 @@ function Resultado({
         lojaOficial: r.lojaOficial ?? null,
         mercadoLider: r.mercadoLider ?? null,
         avaliacoes: r.avaliacoes ?? null,
-        verificadoIA: true,
-        achadoNaBusca: true,
+        /* Pela lista oficial da ficha (modo servidor, 19/10) é o mesmo produto
+           da mesma página de catálogo, sem conferência pela foto. */
+        verificadoIA: !a?.modoServidor,
+        achadoNaBusca: !a?.modoServidor,
         motivo: "mais_barata",
       } as OutraLoja,
     })),
@@ -2484,7 +2577,7 @@ function Resultado({
           },
         ]
       : []),
-    { id: "secao-marketplaces", nome: "3 marketplaces" },
+    ...(a?.modoServidor ? [] : [{ id: "secao-marketplaces", nome: "3 marketplaces" }]),
     ...(!leituraFalhou && opcoesEscolha.length >= 2
       ? [{ id: "secao-duvidas", nome: "Dúvidas" }]
       : []),
@@ -2493,6 +2586,12 @@ function Resultado({
   return (
     <ContextoAvaliacoesPorItem.Provider value={avaliacoesPorItem}>
       <BarraDeSecoes secoes={secoes} />
+      {a?.modoServidor && (
+        <p className="mt-3 rounded-2xl bg-[#f5f5f7] px-3.5 py-2.5 text-xs leading-relaxed text-secondary-ink dark:bg-white/5">
+          Comparei as lojas que vendem este mesmo produto na lista oficial do catálogo, com o preço
+          de agora. Parecidos e outros marketplaces ficam de fora desta vez.
+        </p>
+      )}
       <div
         className={
           "relative mt-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)]" +
@@ -2683,20 +2782,22 @@ function Resultado({
         {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
           largura inteira no PC (abaixo das duas colunas); no celular, logo
           depois da análise do Mercado Livre. */}
-        <div
-          id="secao-marketplaces"
-          className={"scroll-mt-36" + (temColuna ? " sm:col-span-2 sm:row-start-4" : "")}
-        >
-          <ComparacaoMarketplaces
-            pedidoId={pedidoId}
-            colado={coladoParaComparar}
-            melhorMl={melhorMl}
-            precosMl={precosMl}
-            cep={a?.cepDestino ?? null}
-            gerarLink={gerarLinkMl}
-            chavePedido={chavePedido}
-          />
-        </div>
+        {!a?.modoServidor && (
+          <div
+            id="secao-marketplaces"
+            className={"scroll-mt-36" + (temColuna ? " sm:col-span-2 sm:row-start-4" : "")}
+          >
+            <ComparacaoMarketplaces
+              pedidoId={pedidoId}
+              colado={coladoParaComparar}
+              melhorMl={melhorMl}
+              precosMl={precosMl}
+              cep={a?.cepDestino ?? null}
+              gerarLink={gerarLinkMl}
+              chavePedido={chavePedido}
+            />
+          </div>
+        )}
 
         <div className="sm:col-start-1 sm:row-start-3">
           {!leituraFalhou && pedidoId != null && !semLink && (
@@ -5151,10 +5252,20 @@ function Linha({
    Weslei não receberia nada. Sem WhatsApp: o caminho é tentar de novo.
 */
 
-function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | null }) {
+function Offline({
+  tentar,
+  motivo,
+  semFicha,
+  comparar,
+}: {
+  tentar: () => void;
+  motivo?: string | null;
+  semFicha?: { termo: string | null; perfil: boolean } | null;
+  comparar: (url: string) => void;
+}) {
   /* Link que abre um perfil (lista de produtos), não um produto: não é
      pausa, é o link. Diz o que fazer (26/09). */
-  if (motivo && /perfil|nao abre um anuncio/i.test(motivo)) {
+  if ((motivo && /perfil|nao abre um anuncio/i.test(motivo)) || semFicha?.perfil) {
     return (
       <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
         <p className="text-sm font-medium">Esse link abre uma lista de produtos, não um produto.</p>
@@ -5164,24 +5275,94 @@ function Offline({ tentar, motivo }: { tentar: () => void; motivo?: string | nul
       </div>
     );
   }
+  /* SEMPRE FUNCIONA (Weslei, 19/10): sem a comparação das lojas deste
+     anúncio, o produto é buscado no catálogo pelo nome, com "Comprar com
+     segurança" (link de afiliado no clique) e "Comparar preço". */
   return (
-    <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
-      <p className="text-sm font-medium">A conferência de links está pausada neste momento.</p>
-      <p className="mt-1 text-sm leading-relaxed text-secondary-ink">
-        Não sei dizer quando volta, então prefiro não te deixar esperando. Enquanto isso, veja logo
-        abaixo os produtos que já comparei, com o preço e a data de cada um.
+    <BuscaPeloNome termoInicial={semFicha?.termo ?? null} comparar={comparar} tentar={tentar} />
+  );
+}
+
+function BuscaPeloNome({
+  termoInicial,
+  comparar,
+  tentar,
+}: {
+  termoInicial: string | null;
+  comparar: (url: string) => void;
+  tentar: () => void;
+}) {
+  const [termo, setTermo] = useState(termoInicial ?? "");
+  const [busca, setBusca] = useState<{
+    carregando: boolean;
+    erro: string | null;
+    resposta: RespostaBusca | null;
+  }>({ carregando: false, erro: null, resposta: null });
+  const [buscado, setBuscado] = useState<string | null>(null);
+
+  const procurar = useCallback(async (q: string) => {
+    const t = q.trim();
+    if (t.length < 2) return;
+    setBuscado(t);
+    setBusca({ carregando: true, erro: null, resposta: null });
+    const r = await buscarProdutos(t, "home", "produto");
+    setBusca({ carregando: false, erro: r.erro, resposta: r.resposta });
+  }, []);
+
+  useEffect(() => {
+    if (termoInicial) void procurar(termoInicial);
+  }, [termoInicial, procurar]);
+
+  return (
+    <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+      <p className="text-sm font-semibold">
+        {buscado && busca.carregando
+          ? `Procurando “${buscado}”…`
+          : buscado && busca.resposta
+            ? `Encontrei estes produtos para “${buscado}”`
+            : "Qual é o produto?"}
       </p>
-      {motivo && (
-        <p className="mt-2 rounded border border-border bg-card px-2 py-1 text-xs text-secondary-ink/80">
-          Detalhe técnico: {semMarca(motivo)}
-        </p>
+      <p className="mt-1 text-xs leading-relaxed text-secondary-ink">
+        Não consegui abrir as lojas deste anúncio agora. Estes são os produtos do catálogo com esse
+        nome: toque em “Comparar preço” para ver todas as lojas de cada um.
+      </p>
+      <form
+        className="mt-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void procurar(termo);
+        }}
+      >
+        <input
+          value={termo}
+          onChange={(e) => setTermo(e.target.value)}
+          placeholder="Nome do produto"
+          aria-label="Nome do produto"
+          className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-[#f5f5f7] px-3 text-sm outline-none focus:border-[#7547E8] focus:bg-background dark:bg-white/5"
+        />
+        <button
+          type="submit"
+          disabled={busca.carregando || termo.trim().length < 2}
+          className="min-h-11 shrink-0 rounded-xl bg-[#0071e3] px-4 text-sm font-bold text-white disabled:opacity-60"
+        >
+          Buscar
+        </button>
+      </form>
+      {buscado && (
+        <ResultadosDaBusca
+          carregando={busca.carregando}
+          erro={busca.erro}
+          resposta={busca.resposta}
+          comparar={comparar}
+          compacto
+        />
       )}
       <button
         type="button"
         onClick={tentar}
-        className="mt-3 w-full rounded-md bg-ml-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+        className="mt-3 text-xs font-semibold text-[#0066cc] underline-offset-2 hover:underline"
       >
-        Tentar de novo
+        Tentar comparar este link de novo
       </button>
     </div>
   );

@@ -1895,6 +1895,29 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   anúncio do catálogo agora / às HH:MM: pode mudar" (a resposta fica até
   6 h guardada; lidoEm).
 
+## Comparação sem a extensão (19/10)
+- Weslei, 19/10 (print "A conferência de links está pausada neste
+  momento"): "Isso não pode ocorrer, deve sempre funcionar". A extensão
+  ficou sem contato de 02:25 a 16:45 UTC (notebook desligado).
+- Com a extensão parada (roboAtivo falso), sem pedido aceito, pedido que
+  falhou ou que ninguém pegou em 90 s (NINGUEM_PEGOU_MS), o SERVIDOR compara
+  (/api/public/comparar-agora, src/lib/comparar-agora.ts): só a API oficial
+  (/products/{id} + /products/{id}/items), nada gravado. Ficha do link (/p/):
+  a oferta do anúncio do link ou, sem ele, a oferta em destaque
+  (buy_box_winner) é a referência; as outras lojas da MESMA ficha (só
+  condição nova, uma linha por loja, a mesma loja só com outro anúncio mais
+  barato) vão para a tabela com "Mesmo produto, na mesma página de
+  catálogo" (sem a frase de conferência pela foto). Links: só o meli.la já
+  gerado para o mesmo anúncio (link_do_anuncio); sem ele, VerNaLoja gera no
+  clique e cai na reserva. analise.modoServidor: aviso no topo e sem a
+  seção dos 3 marketplaces. Anúncio fora da ficha, link sem ficha (anúncio
+  avulso) ou API sem resposta: BuscaPeloNome (catálogo pelo nome do
+  endereço, "Comprar com segurança" e "Comparar preço"). Testes em
+  tests/comparar-agora.test.ts.
+- Limite: produto nunca comparado antes, com a extensão parada, não tem
+  link de afiliado pronto (o gerador só existe na sessão logada do Chrome);
+  o botão fica no "gerar no clique" até a extensão voltar.
+
 ## Pausa remota da extensão (10/10)
 - Weslei, 10/10: "Pause a extensão por enquanto, não estou com o notebook
   neste momento". A extensão só trabalha com o que o banco entrega

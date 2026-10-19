@@ -37,6 +37,7 @@ import { Route as ApiPublicBuscarRouteImport } from './routes/api/public/buscar'
 import { Route as ApiPublicBuscarFotoRouteImport } from './routes/api/public/buscar-foto'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
 import { Route as ApiPublicCompararRouteImport } from './routes/api/public/comparar'
+import { Route as ApiPublicCompararAgoraRouteImport } from './routes/api/public/comparar-agora'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
 import { Route as ApiPublicCronGarimpoRouteImport } from './routes/api/public/cron-garimpo'
 import { Route as ApiPublicFotosRouteImport } from './routes/api/public/fotos'
@@ -197,6 +198,11 @@ const ApiPublicCompararRoute = ApiPublicCompararRouteImport.update({
   path: '/api/public/comparar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCompararAgoraRoute = ApiPublicCompararAgoraRouteImport.update({
+  id: '/api/public/comparar-agora',
+  path: '/api/public/comparar-agora',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicConferirProdutoRoute =
   ApiPublicConferirProdutoRouteImport.update({
     id: '/api/public/conferir-produto',
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
+  '/api/public/comparar-agora': typeof ApiPublicCompararAgoraRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
   '/api/public/fotos': typeof ApiPublicFotosRoute
@@ -368,6 +375,7 @@ export interface FileRoutesByTo {
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
+  '/api/public/comparar-agora': typeof ApiPublicCompararAgoraRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
   '/api/public/fotos': typeof ApiPublicFotosRoute
@@ -417,6 +425,7 @@ export interface FileRoutesById {
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
   '/api/public/comparar': typeof ApiPublicCompararRoute
+  '/api/public/comparar-agora': typeof ApiPublicCompararAgoraRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
   '/api/public/fotos': typeof ApiPublicFotosRoute
@@ -467,6 +476,7 @@ export interface FileRouteTypes {
     | '/api/public/buscar-foto'
     | '/api/public/classificar'
     | '/api/public/comparar'
+    | '/api/public/comparar-agora'
     | '/api/public/conferir-produto'
     | '/api/public/cron-garimpo'
     | '/api/public/fotos'
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | '/api/public/buscar-foto'
     | '/api/public/classificar'
     | '/api/public/comparar'
+    | '/api/public/comparar-agora'
     | '/api/public/conferir-produto'
     | '/api/public/cron-garimpo'
     | '/api/public/fotos'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/api/public/buscar-foto'
     | '/api/public/classificar'
     | '/api/public/comparar'
+    | '/api/public/comparar-agora'
     | '/api/public/conferir-produto'
     | '/api/public/cron-garimpo'
     | '/api/public/fotos'
@@ -612,6 +624,7 @@ export interface RootRouteChildren {
   ApiPublicBuscarFotoRoute: typeof ApiPublicBuscarFotoRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
   ApiPublicCompararRoute: typeof ApiPublicCompararRoute
+  ApiPublicCompararAgoraRoute: typeof ApiPublicCompararAgoraRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
   ApiPublicCronGarimpoRoute: typeof ApiPublicCronGarimpoRoute
   ApiPublicFotosRoute: typeof ApiPublicFotosRoute
@@ -830,6 +843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCompararRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/comparar-agora': {
+      id: '/api/public/comparar-agora'
+      path: '/api/public/comparar-agora'
+      fullPath: '/api/public/comparar-agora'
+      preLoaderRoute: typeof ApiPublicCompararAgoraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/conferir-produto': {
       id: '/api/public/conferir-produto'
       path: '/api/public/conferir-produto'
@@ -989,6 +1009,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBuscarFotoRoute: ApiPublicBuscarFotoRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,
   ApiPublicCompararRoute: ApiPublicCompararRoute,
+  ApiPublicCompararAgoraRoute: ApiPublicCompararAgoraRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
   ApiPublicCronGarimpoRoute: ApiPublicCronGarimpoRoute,
   ApiPublicFotosRoute: ApiPublicFotosRoute,

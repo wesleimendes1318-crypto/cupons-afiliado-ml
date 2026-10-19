@@ -132,7 +132,7 @@ const cacheVendedor = new Map<number, string | null>();
 /* Nomes das lojas: memória, depois a tabela apelidos_ml, e só o que faltar
    vai à API (no máximo 25 por comparação). Cada loja custa uma consulta, uma
    vez na vida, em vez de uma por comparação. */
-async function apelidos(ids: number[], trilha: string[]) {
+export async function apelidos(ids: number[], trilha: string[]) {
   const nomes = new Map<number, string | null>();
   const faltam = ids.filter((id) => {
     if (cacheVendedor.has(id)) {
@@ -413,7 +413,7 @@ type BuscaCatalogo = { results?: { id?: string; name?: string; status?: string }
 /* A mesma ficha é lida na escolha e depois na comparação: guarda 5 minutos
    para não gastar duas consultas (limite da API, 429 em 24/09). */
 const cacheOfertas = new Map<string, { em: number; lista: Record<string, unknown>[] }>();
-async function ofertasDoCatalogo(catalogo: string) {
+export async function ofertasDoCatalogo(catalogo: string) {
   const c = cacheOfertas.get(catalogo);
   if (c && Date.now() - c.em < 5 * 60 * 1000) return c.lista;
   const r = await mlGet<{ results?: Record<string, unknown>[] }>(
