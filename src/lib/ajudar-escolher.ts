@@ -16,6 +16,7 @@ import { qualidadeAceita, qualidadeDoParecido } from "@/lib/qualidade";
 import { perguntarAoLlm } from "@/lib/cheaper-inference";
 import { ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 import { avaliacoesValidas, type Avaliacoes } from "@/lib/avaliacoes";
+import { seguraParaRecomendar } from "@/lib/recomendacao-segura";
 
 type Detalhes = {
   caracteristicas?: { nome: string; valor: string }[];
@@ -214,8 +215,19 @@ export function totalDaOpcao(o: Opcao): number | null {
     : null;
 }
 
-export function decisaoDaTela(opcoes: Opcao[], enviado: Opcao | null = null) {
+export function decisaoDaTela(
+  opcoes: Opcao[],
+  enviado: Opcao | null = null,
+  /* Custo de cada oferta do mesmo produto (custosDoMesmoProduto da análise);
+     sem ele, o das opções. Base da régua de recomendação segura. */
+  precos: number[] | null = null,
+) {
   const colado = opcoes.find((o) => o.tipo === "colado") ?? null;
+  const precosMesmo =
+    precos ??
+    [...opcoes.filter((o) => o.tipo !== "parecido"), ...(enviado ? [enviado] : [])].map(
+      (o) => totalDaOpcao(o) ?? o.preco,
+    );
   /* Anúncio enviado sem link (enviadoSemLink): entra só como referência de
      preço; vencendo, melhorMesmo fica null e a compra é pelo site. */
   const ref = colado ?? enviado;
@@ -228,7 +240,9 @@ export function decisaoDaTela(opcoes: Opcao[], enviado: Opcao | null = null) {
       (o) =>
         o.tipo === "mesmo" &&
         totalDaOpcao(o) != null &&
-        (totalColado == null || (totalDaOpcao(o) as number) <= totalColado - 0.5),
+        (totalColado == null || (totalDaOpcao(o) as number) <= totalColado - 0.5) &&
+        /* Segurança de quem compra (Weslei, 18/10): mesma régua da tela. */
+        seguraParaRecomendar({ ...o, preco: totalDaOpcao(o) }, precosMesmo),
     )
     .sort((x, y) => {
       const d = (totalDaOpcao(x) ?? 0) - (totalDaOpcao(y) ?? 0);

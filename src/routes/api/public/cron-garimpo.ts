@@ -11,7 +11,7 @@ import {
 } from "@/lib/qualidade";
 import { pecaNoLugarDoAparelho } from "@/lib/conferir-produto";
 import { menorPrecoDoColado } from "@/lib/menor-preco";
-import { precoMuitoAbaixo, precosDoMesmoProduto } from "@/lib/preco-suspeito";
+import { custosDoMesmoProduto, precoMuitoAbaixo, precosDoMesmoProduto } from "@/lib/preco-suspeito";
 import { descontoReal } from "@/lib/regra-economia";
 import { textoDoPagamento, type Precos } from "@/lib/pagamento";
 import { html, linhaDoFrete, telegram } from "@/lib/telegram";
@@ -85,7 +85,11 @@ function achadoDoPedido(p: {
 }): Achado | null {
   const a = p.analise as Record<string, unknown> | null;
   if (!a || !p.url_alvo || !p.link) return null;
-  const { colado, melhorMesmo, alternativa } = decisaoDaTela(opcoesDaAnalise(a, p.link));
+  const { colado, melhorMesmo, alternativa } = decisaoDaTela(
+    opcoesDaAnalise(a, p.link),
+    null,
+    custosDoMesmoProduto(a),
+  );
   if (!colado) return null;
   const escolha = alternativa ?? (melhorMesmo?.tipo === "mesmo" ? melhorMesmo : null);
   if (!escolha) {

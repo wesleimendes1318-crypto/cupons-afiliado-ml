@@ -47,6 +47,7 @@ import {
 import { SeloCep, useCepDestino } from "@/components/CepDestino";
 import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo";
 import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
+import { seguraParaRecomendar } from "@/lib/recomendacao-segura";
 import { aplicarPrazo } from "@/lib/prazo-entrega";
 import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
@@ -2043,6 +2044,18 @@ function Resultado({
       : a?.freteGratis === false && a?.custoFrete != null && a.custoFrete > 0
         ? Math.round((precoColado + a.custoFrete) * 100) / 100
         : precoColado;
+  /* Custo de cada linha da tabela (as mesmas de linhasLojas) para o cliente:
+     produto + frete conhecido. Base do aviso "preço muito abaixo" e da régua
+     de recomendação segura (18/10). */
+  const precosDaTabela = [
+    totalColado,
+    ...alternativas
+      .filter((o) => !destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina).mesmaPagina)
+      .map((o) => totalDaLoja(o) ?? o.final),
+    ...refsBase
+      .filter((r) => !destinoDaLoja(r.link, r.semAfiliado).mesmaPagina)
+      .map((r) => totalDaLoja(r) ?? r.final),
+  ].filter((p): p is number => p != null);
   const candidatas = [
     ...alternativas.map((o, i) => ({
       o: {
@@ -2071,6 +2084,8 @@ function Resultado({
         custoFrete: r.custoFrete ?? null,
         mesmaLoja: r.mesmaLoja ?? null,
         lojaOficial: r.lojaOficial ?? null,
+        mercadoLider: r.mercadoLider ?? null,
+        avaliacoes: r.avaliacoes ?? null,
         verificadoIA: true,
         achadoNaBusca: true,
         motivo: "mais_barata",
@@ -2095,7 +2110,19 @@ function Resultado({
         Boolean(c.o.link || c.o.url) &&
         (totalColado == null
           ? (c.o.ganho ?? 0) > 0
-          : (totalDaLoja(c.o) as number) <= totalColado - 0.5),
+          : (totalDaLoja(c.o) as number) <= totalColado - 0.5) &&
+        /* SEGURANÇA DE QUEM COMPRA (Weslei, 18/10): nota baixa nunca; preço
+           muito abaixo das outras lojas só com o link de afiliado já gerado
+           e boa avaliação. Continua na tabela, com o aviso. */
+        seguraParaRecomendar(
+          {
+            preco: totalDaLoja(c.o),
+            link: c.o.link,
+            avaliacoes: c.o.avaliacoes,
+            lojaOficial: c.o.lojaOficial,
+          },
+          precosDaTabela,
+        ),
     )
     /* Mesmo total (diferença menor que R$ 0,50): a loja oficial vem primeiro. */
     .sort((x, y) => {
@@ -2580,6 +2607,7 @@ function Resultado({
               semAnimacao={alternativa != null}
               compacto={i > 0}
               lojaAquiTemCupom={a?.temCupom === true}
+              precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
             />
           ))}
 
@@ -4415,8 +4443,13 @@ function TodasAsLojas({
     .some((l) => l.final != null && menor != null && l.final <= menor - 0.5);
   /* Preço muito abaixo do resto (02/10, geladeira de ~R$ 5.000 por R$ 2.345 e
      R$ 3.400, sem frete grátis): olhar de especialista avisa antes da compra. */
-  const finais = ordem.map((l) => l.final).filter((v): v is number => v != null);
-  const muitoAbaixo = (l: LinhaLoja) => !l.colado && precoMuitoAbaixo(l.final, finais);
+  /* Pelo custo para o cliente (18/10): produto + frete de valor conhecido. */
+  const custo = (l: LinhaLoja) =>
+    l.final != null && l.freteGratis === false && l.custoFrete != null && l.custoFrete > 0
+      ? Math.round((l.final + l.custoFrete) * 100) / 100
+      : l.final;
+  const finais = ordem.map(custo).filter((v): v is number => v != null);
+  const muitoAbaixo = (l: LinhaLoja) => !l.colado && precoMuitoAbaixo(custo(l), finais);
   const botaoDaLoja = (l: LinhaLoja, destaque: boolean) =>
     l.link ? (
       <a
@@ -4646,8 +4679,12 @@ function OutraLojaComCupom({
   semAnimacao = false,
   compacto,
   lojaAquiTemCupom,
+  precoBemAbaixo = false,
 }: {
   semAnimacao?: boolean;
+  /* Passou na régua de segurança (link de afiliado + boa avaliação), mas o
+     preço segue bem abaixo das outras lojas: o aviso aparece aqui também. */
+  precoBemAbaixo?: boolean;
   oferta: OutraLoja;
   dispositivo: Dispositivo;
   vendedorAqui: string | null;
@@ -4761,6 +4798,11 @@ function OutraLojaComCupom({
           {oferta.verificadoIA && (
             <p className="mt-1 text-xs font-semibold text-success">
               ✓ Mesmo produto: foto e anúncio conferidos
+            </p>
+          )}
+          {precoBemAbaixo && (
+            <p className="mt-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
+              Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
             </p>
           )}
         </div>

@@ -1000,6 +1000,29 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   comparação mais recente do MESMO produto (senão o do anúncio colado dela),
   com o aviso de que o preço pode ser diferente.
 
+## Recomendação segura (18/10)
+- Weslei, 18/10 (ar-condicionado LG, pedido 1000048: R$ 1.199 numa loja
+  sem selo contra R$ 2.250 a R$ 4.800 nas outras saía como "Minha
+  recomendação"): "Pode recomendar, desde que seja afiliado. Nestes casos
+  considere a avaliação também. De forma geral preciso oferecer segurança
+  para quem compra".
+- Régua única src/lib/recomendacao-segura.ts (seguraParaRecomendar, testes
+  em tests/recomendacao-segura.test.ts), na tela (candidatas do
+  BuscaPorLink) e em decisaoDaTela (bot, "Me ajude a escolher", garimpo):
+  - nota baixa conhecida (abaixo de 4,5) nunca vira recomendação;
+  - preço muito abaixo das outras lojas (abaixo de 70% da mediana, 3 ou
+    mais preços) só com o link de afiliado JÁ gerado (o programa aceitou o
+    vendedor) E nota 4,5 ou mais com pelo menos 5 avaliações guardadas na
+    comparação; sem nota, só loja oficial (a régua do canal).
+  - A conta é pelo CUSTO para o cliente: produto + frete de valor conhecido
+    (custosDoMesmoProduto; pó facial R$ 8 + R$ 9,99 de frete contra R$ 20
+    com frete grátis não é "muito abaixo"). O aviso da tabela usa a mesma
+    conta.
+- Quem não passa continua na tabela com o aviso "Preço muito abaixo das
+  outras lojas: confira o vendedor antes de comprar"; a recomendação vai
+  para a próxima loja segura (selo "Melhor opção"). Quem passa ganha o
+  mesmo aviso no cartão "Minha recomendação".
+
 ## Largura e zoom no celular (18/10)
 - Weslei, 18/10 (print do iPhone: o site na metade esquerda da tela):
   "Ajuste o redimensionamento e zoom em todas as versões". Causa: os

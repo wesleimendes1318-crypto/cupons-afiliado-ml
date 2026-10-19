@@ -37,3 +37,26 @@ export function precosDoMesmoProduto(a: Bruto | null | undefined): number[] {
     ...lojas.map((o) => (o ? (num(o["final"]) ?? num(o["preco"])) : null)),
   ].filter((p): p is number => p != null);
 }
+
+/** Custo de cada oferta do mesmo produto para o cliente: produto + frete
+    quando o frete pago tem valor conhecido (18/10: pó facial R$ 8 com frete
+    de R$ 9,99 contra R$ 20 com frete grátis não é "preço muito abaixo").
+    Base da régua de recomendação segura (src/lib/recomendacao-segura.ts). */
+export function custosDoMesmoProduto(a: Bruto | null | undefined): number[] {
+  if (!a) return [];
+  const custo = (o: Bruto, preco: number | null) => {
+    if (preco == null) return null;
+    const frete = num(o["custoFrete"]);
+    return o["freteGratis"] === false && frete != null
+      ? Math.round((preco + frete) * 100) / 100
+      : preco;
+  };
+  const lojas = [
+    ...((Array.isArray(a["outrasLojas"]) ? a["outrasLojas"] : []) as Bruto[]),
+    ...((Array.isArray(a["referencias"]) ? a["referencias"] : []) as Bruto[]),
+  ];
+  return [
+    custo(a, num(a["preco"])),
+    ...lojas.map((o) => (o ? custo(o, num(o["final"]) ?? num(o["preco"])) : null)),
+  ].filter((p): p is number => p != null);
+}

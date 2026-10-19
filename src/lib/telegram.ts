@@ -16,6 +16,7 @@ import {
 import { nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
 import { linhaDasAvaliacoes } from "@/lib/avaliacoes";
 import { ehLinkDeCompra, gerarUrlAfiliadoAmazon } from "@/lib/afiliado";
+import { custosDoMesmoProduto } from "@/lib/preco-suspeito";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
 
@@ -137,7 +138,11 @@ export function mensagemDaComparacao(
      ou geração que falhou): entra na conta do preço e, sendo o melhor, a
      compra é pelo site, que gera o link do anúncio no clique. */
   const enviado = enviadoSemLink(analise, opcoes);
-  const { colado, melhorMesmo, alternativa } = decisaoDaTela(opcoes, enviado);
+  const { colado, melhorMesmo, alternativa } = decisaoDaTela(
+    opcoes,
+    enviado,
+    custosDoMesmoProduto(analise),
+  );
   const ref = colado ?? enviado;
   const titulo =
     typeof analise["titulo"] === "string" ? analise["titulo"] : "Produto que você enviou";
