@@ -821,7 +821,11 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   resta() = 0, sem links da recomendação); fica incompleto
   (cortadoPorCliente) e a segunda volta refaz depois dos clientes.
 - Nunca enfileirar pedidos internos em lote grande de uma vez (20 em
-  10/10 às 11:24 seguraram a fila por 13 min).
+  10/10 às 11:24 seguraram a fila por 13 min). Trava no banco (19/10,
+  extensão sem contato por 12 h e 58 internos acumulados):
+  pedir_link_agente não enfileira com 20 ou mais internos pendentes
+  (sinc_config.agentes_fila_max). expirar_pedidos e limpar_vencidos só
+  para o servidor.
 - ABA DO GERADOR DORMINDO (10/10): desde 10/10 ~01:00 UTC cada link do
   anúncio colado levava 30-45 s e terminava sempre no segundo :00 (tabela
   geracoes; antes, 1 s; o lote da tabela chegava a 100-300 s): o Chrome só
