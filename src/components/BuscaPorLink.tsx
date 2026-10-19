@@ -2231,6 +2231,17 @@ function Resultado({
     });
   const recomendada = candidatas[0] ?? null;
   const trocar = recomendada != null;
+  /* Loja com preço menor que ficou fora da recomendação (preço muito abaixo
+     sem avaliação, frete pago de valor desconhecido): a "Melhor opção" não
+     diz "a mais barata" (19/10, ar-condicionado: R$ 1.199 na tabela). */
+  const haMaisBarataNaoIndicada =
+    precoColado != null &&
+    [...alternativas, ...refsBase].some(
+      (o) =>
+        o.final != null &&
+        o.final <= precoColado - 0.5 &&
+        !destinoDaLoja(o.link, o.semAfiliado).mesmaPagina,
+    );
 
   /* MELHOR ALTERNATIVA (Weslei, 28/09: conjunto Woven da loja oficial adidas,
      R$ 83 abaixo do anúncio colado, "a opção de melhor benefício para o
@@ -2735,6 +2746,7 @@ function Resultado({
               semAnimacao={alternativa != null}
               precos={a?.precos ?? null}
               avaliacoes={a?.avaliacoes ?? null}
+              ressalva={haMaisBarataNaoIndicada}
             />
           )}
         </div>
@@ -2966,7 +2978,10 @@ function MelhorOpcao({
   semAnimacao = false,
   precos = null,
   avaliacoes = null,
+  ressalva = false,
 }: {
+  /* Há loja mais barata na tabela que não foi indicada (com o motivo nela). */
+  ressalva?: boolean;
   semAnimacao?: boolean;
   /* Avaliação das pessoas do anúncio (10/10). */
   avaliacoes?: DadosAvaliacoes | null;
@@ -3018,11 +3033,13 @@ function MelhorOpcao({
         <p className="mt-1 text-xs text-success">
           {!comparou
             ? "Produto conferido, com compra segura pelo botão abaixo."
-            : comparadas > 0
-              ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
-              : comparadas === 0
-                ? semIguais
-                : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
+            : comparadas > 0 && ressalva
+              ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a melhor opção com compra segura. Na tabela, o motivo de cada loja mais barata não ser indicada.`
+              : comparadas > 0
+                ? `Comparei com ${comparadas} ${comparadas === 1 ? "outra loja" : "outras lojas"}: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`
+                : comparadas === 0
+                  ? semIguais
+                  : `Comparei com as outras lojas: esta é a mais barata${temCupom ? ", com o cupom" : ""}.`}
         </p>
       )}
       {link ? (
