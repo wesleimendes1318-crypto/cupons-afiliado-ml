@@ -960,6 +960,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   1ª comparação depois da pausa caiu na verificação do Mercado Livre
   (resolvida pelo Weslei no Chrome do notebook); as seguintes saíram
   completas, todas com meli.la.
+- EXTENSÃO RECUSADA 4 DIAS (19/10 02:25 a 23/10): ela estava ligada, mas
+  lê a chave publicável no javascript do site, e o
+  import.meta.env["..."] (colchetes) embutia o .env inteiro com a chave do
+  banco do Lovable; o banco novo respondia 401 (bad_checksum) a tudo e o
+  visto_em parou. Acesso a env só com ponto (src/vite-env.d.ts). Extensão
+  "parada": antes de culpar o notebook, olhar os 401 nos logs do Supabase
+  (edge_logs, prefixo da chave).
 - BANCO DO LOVABLE NUNCA MAIS (Weslei, 23/10: "Não usaremos o banco do
   lovable. Não deve usar 1 crédito sequer!"): o histórico antigo NÃO será
   copiado. Proibido qualquer ferramenta do Lovable que toque o banco ou gaste
