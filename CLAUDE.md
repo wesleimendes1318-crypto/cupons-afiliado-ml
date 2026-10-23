@@ -1848,6 +1848,46 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Limites: a API não fixa comentário (fixar no Studio); link em Shorts não
   é clicável; privado por padrão (SHORTS_PRIVACIDADE).
 
+## Navegação, aberturas e reenquadramento (23/10)
+- Weslei, 23/10: "invista na melhoria de navegação, detalhes, aberturas,
+  precisa ser profissional e bem completo, além do reenquadramento deixando
+  a visualização mais organizada".
+- ABERTURA ÚNICA (src/components/Abertura.tsx: Abertura, useAbertura,
+  BotaoAbertura, RegiaoAbertura): seta que gira, área que cresce com
+  animação (grid 0fr -> 1fr), aria-expanded/aria-controls, Esc fecha e
+  devolve o foco, conteúdo aberto abaixo da tela vem para a vista, monta só
+  na 1ª abertura. Usada em "Ver detalhes do produto/características",
+  "Ver análise completa", "Comparar com o seu", detalhes de cada loja e
+  "Ficou em dúvida?". <details> nativos (perguntas, "O link não abriu?",
+  prazo, garimpo) com a classe abertura-nativa (seta e abertura suave).
+- PAINÉIS (<dialog class="painel">: avaliações, fotos e detalhes): entram
+  com leve subida; no celular viram folha que sobe do pé, com alça; a
+  página atrás não rola.
+- RESULTADO NO PC (lg): colado e "Minhas sugestões" em largura inteira;
+  abaixo, a DECISÃO à esquerda (prazo + recomendação/Melhor opção, fixa ao
+  rolar com a variante painel-fixo = lg e altura >= 700 px) e as provas à
+  direita (Melhor alternativa, lojas, Parecidos); depois uma faixa de ações
+  (acompanhar, compartilhar com "Copiar", "Ficou em dúvida?" com o lado a
+  lado mais largo) e, no fim, os 3 marketplaces. Entre 640 e 1023 px, uma
+  coluna. "Minhas sugestões" resume os números medidos ("Achei o mesmo
+  produto em N outras lojas e M parecidos. A melhor economia é de R$ X no
+  mesmo produto"/"no custo final, já com o frete").
+- LOJAS: lista (não tabela) com nome, selos, estrelas e frete à esquerda,
+  preço e diferença à direita, botão "Comprar" com escudo em TODAS as
+  linhas (também o que gera o link no clique; "Abrir" saiu); Pix x
+  parcelado em linha inteira no celular; "Menor preço | Mais bem
+  avaliadas" quando 2+ lojas têm nota (o selo e a recomendação não mudam).
+- Recomendação: a economia é a manchete ("R$ X a menos"), depois de onde
+  vem e "Vendido por" (nome longo quebra a linha; antes vazava no celular
+  e sobre "Vendedor" nos 3 marketplaces).
+- Cabeçalho: "Categorias" (PC a partir de 1280 px; no celular na linha de
+  links). Barra de seções na ordem em que as seções aparecem na tela, com
+  as pontas do trilho esmaecidas no celular. Celular: sem a trilha
+  "Início › Comparação" (estado e "Atualizar comparação" numa linha); em
+  320 px a barra de compra diz "Comprar".
+- Medido com Playwright (pedidos reais 1000184 e 1000213) em 320, 390,
+  768, 1024, 1366 e 1440 px: largura certa em todas.
+
 ## Navegação soft (10/10)
 - Weslei, 10/10: "atue como especialista de design UX e UI, deixe a
   navegação soft" (canvas claude.ai/artifact/XZDdoFRbkAGaofGojMfGoy) e

@@ -14,10 +14,14 @@ import { Link2, Send } from "lucide-react";
 
 import { LINK_CANAL } from "@/lib/telegram-publico";
 
+/* "Categorias" (23/10, navegação mais completa): no PC só a partir de
+   1280 px (em 1024 px o campo "Cole o link de outro produto" ocupa o
+   espaço); no celular, na linha de links. */
 const LINKS = [
-  { to: "/meus-precos", rotulo: "Meus preços" },
-  { to: "/guias", rotulo: "Guias" },
-  { to: "/sobre", rotulo: "Sobre" },
+  { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
+  { to: "/meus-precos", rotulo: "Meus preços", pc: "sm:inline-flex" },
+  { to: "/guias", rotulo: "Guias", pc: "sm:inline-flex" },
+  { to: "/sobre", rotulo: "Sobre", pc: "sm:inline-flex" },
 ] as const;
 
 /* O campo do link da tela inicial está escondido atrás do cabeçalho? */
@@ -148,7 +152,10 @@ export function CabecalhoSite() {
               <Link
                 key={l.to}
                 to={l.to}
-                className="hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 sm:inline-flex"
+                className={
+                  "hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 " +
+                  l.pc
+                }
                 activeProps={{ className: "font-semibold text-[#7547E8]" }}
               >
                 {l.rotulo}
@@ -174,13 +181,13 @@ export function CabecalhoSite() {
           página; só o cabeçalho fica fixo). */}
       <nav
         aria-label="Páginas do site (celular)"
-        className="flex justify-center gap-1 border-b border-black/5 bg-white/90 px-2 py-1 sm:hidden dark:border-white/10 dark:bg-neutral-950/90"
+        className="flex justify-center gap-0.5 border-b border-black/5 bg-white/90 px-1 py-1 sm:hidden dark:border-white/10 dark:bg-neutral-950/90"
       >
         {LINKS.map((l) => (
           <Link
             key={l.to}
             to={l.to}
-            className="rounded-full px-3 py-1.5 text-[13px] font-medium text-[#1d1d1f] dark:text-white/90"
+            className="rounded-full px-2.5 py-1.5 text-[13px] font-medium text-[#1d1d1f] dark:text-white/90"
             activeProps={{ className: "font-semibold text-[#7547E8]" }}
           >
             {l.rotulo}

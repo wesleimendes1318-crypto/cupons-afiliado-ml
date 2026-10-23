@@ -405,7 +405,7 @@ function CartaoOferta({
       )}
 
       {temDetalhe && (
-        <details className="group mt-2 text-[12px] text-secondary-ink">
+        <details className="abertura-nativa group mt-2 text-[12px] text-secondary-ink">
           <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1 font-semibold text-[#0071e3] [&::-webkit-details-marker]:hidden">
             Ver análise técnica detalhada
             <ChevronDown

@@ -4,7 +4,7 @@
    data confirmada) sai da tabela, da Melhor opção e dos Parecidos e fica num
    bloco recolhido; nada sem data confirmada passa como rápido. */
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Gift, Truck, X } from "lucide-react";
+import { CalendarDays, Gift, Truck, X, ChevronDown } from "lucide-react";
 
 import {
   AVISO_PRAZO,
@@ -229,11 +229,12 @@ export function AvisosDoPrazo({
         </p>
       )}
       {r.fora.length > 0 && (
-        <details className="rounded-2xl border border-border/70 bg-card p-3 text-xs">
-          <summary className="cursor-pointer font-semibold">
+        <details className="abertura-nativa rounded-2xl border border-border/70 bg-card p-3 text-xs">
+          <summary className="flex items-center justify-between gap-2 font-semibold">
             {maisBaratasFora.length > 0
               ? `${maisBaratasFora.length} ${maisBaratasFora.length > 1 ? "lojas mais baratas entregam" : "loja mais barata entrega"} após ${data}`
               : `${r.fora.length} ${r.fora.length > 1 ? "opções ficaram" : "opção ficou"} de fora (entrega após ${data} ou sem prazo confirmado)`}
+            <ChevronDown className="seta-abertura size-3.5 shrink-0" aria-hidden="true" />
           </summary>
           <ul className="mt-2 space-y-1.5">
             {r.fora.map((f, i) => (

@@ -3,6 +3,9 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Coluna da decisão fixa ao rolar (resultado, 23/10): só no PC com altura
+   para ela caber inteira; em tela baixa ela rola junto com a página. */
+@custom-variant painel-fixo (@media (min-width: 1024px) and (min-height: 700px));
 
 /*
  * Design system definition.
@@ -1052,5 +1055,133 @@ html {
   select,
   textarea {
     font-size: 16px !important;
+  }
+}
+
+/* ABERTURAS E PAINÉIS (Weslei, 23/10: "navegação, detalhes, aberturas,
+   precisa ser profissional e bem completo").
+   1) Painéis (<dialog>: avaliações, fotos e detalhes) entram com um leve
+      subir + aparecer; no celular viram folha que sobe do pé da tela, com a
+      alça no topo. O fundo escurece aos poucos.
+   2) Com um painel aberto, a página atrás não rola (sem pulo da barra).
+   3) Perguntas e "O link não abriu?" (<details>): seta que gira e abertura
+      suave onde o navegador suporta; nos outros, abre na hora.
+   Tudo desliga com prefers-reduced-motion. */
+@keyframes painel-entra {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes painel-sobe {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes fundo-escurece {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+dialog.painel[open] {
+  animation: painel-entra 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+dialog.painel[open]::backdrop {
+  background: rgb(0 0 0 / 0.42);
+  backdrop-filter: blur(2px);
+  animation: fundo-escurece 0.32s ease-out;
+}
+@media (max-width: 639px) {
+  dialog.painel {
+    margin: auto 0 0;
+    width: 100vw;
+    max-width: 100vw;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  dialog.painel[open] {
+    animation: painel-sobe 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  dialog.painel::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    z-index: 2;
+    width: 36px;
+    height: 5px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.18);
+  }
+  .dark dialog.painel::before {
+    background: rgb(255 255 255 / 0.25);
+  }
+}
+html:has(dialog[open]) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+details.abertura-nativa > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.abertura-nativa > summary::-webkit-details-marker {
+  display: none;
+}
+details.abertura-nativa > summary .seta-abertura {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+details.abertura-nativa[open] > summary .seta-abertura {
+  transform: rotate(180deg);
+}
+@supports selector(::details-content) {
+  details.abertura-nativa {
+    interpolate-size: allow-keywords;
+  }
+  details.abertura-nativa::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      block-size 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 0.3s ease,
+      content-visibility 0.3s allow-discrete;
+  }
+  details.abertura-nativa[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+/* Trilho com rolagem lateral (seções do resultado, celular): as pontas
+   esmaecem só do lado em que ainda há conteúdo (data-ponta). */
+.trilho-esmaece[data-ponta="inicio"] {
+  mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+.trilho-esmaece[data-ponta="fim"] {
+  mask-image: linear-gradient(90deg, transparent, #000 15%);
+}
+.trilho-esmaece[data-ponta="meio"] {
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.painel[open],
+  dialog.painel[open]::backdrop {
+    animation: none;
+  }
+  details.abertura-nativa > summary .seta-abertura,
+  details.abertura-nativa::details-content {
+    transition: none;
   }
 }

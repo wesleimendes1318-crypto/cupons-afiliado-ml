@@ -2831,9 +2831,15 @@ function Index() {
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {PERGUNTAS.map((p) => (
-              <details key={p.pergunta} className="cartao-conteudo p-4">
-                <summary className="cursor-pointer text-base font-bold">{p.pergunta}</summary>
-                <p className="mt-2 text-sm leading-relaxed text-secondary-ink">{p.resposta}</p>
+              <details key={p.pergunta} className="abertura-nativa cartao-conteudo self-start p-0">
+                <summary className="flex min-h-12 items-center justify-between gap-3 rounded-[inherit] p-4 text-base font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]">
+                  {p.pergunta}
+                  <ChevronDown
+                    className="seta-abertura size-4 shrink-0 text-secondary-ink"
+                    aria-hidden="true"
+                  />
+                </summary>
+                <p className="px-4 pb-4 text-sm leading-relaxed text-secondary-ink">{p.resposta}</p>
               </details>
             ))}
           </div>

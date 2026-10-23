@@ -5,7 +5,10 @@ import { useEffect, useRef, useState } from "react";
    (Resumo, Lojas, Alternativas, 3 marketplaces, Dúvidas). A pílula ativa
    acompanha a seção visível; o toque leva até a seção com rolagem suave (sem
    movimento com "reduzir movimento"). No celular a barra rola na horizontal.
-   Só aparecem as seções que existem neste resultado. */
+   Só aparecem as seções que existem neste resultado.
+   23/10: as pílulas seguem a ordem em que as seções aparecem na tela (no PC
+   "Dúvidas" vem antes dos 3 marketplaces; no celular, depois), e o trilho do
+   celular esmaece a ponta que ainda tem pílulas escondidas. */
 
 export type Secao = { id: string; nome: string; conta?: number | null };
 
@@ -15,8 +18,53 @@ const LINHA_DE_LEITURA = 140;
 
 export function BarraDeSecoes({ secoes }: { secoes: Secao[] }) {
   const [ativa, setAtiva] = useState<string | null>(secoes[0]?.id ?? null);
+  const [ordem, setOrdem] = useState<string | null>(null);
+  const [ponta, setPonta] = useState<"nenhuma" | "inicio" | "meio" | "fim">("nenhuma");
   const trilho = useRef<HTMLDivElement>(null);
   const ids = secoes.map((s) => s.id).join(",");
+
+  /* Ordem visual: pela posição de cada seção na página (muda com a largura). */
+  useEffect(() => {
+    const ordenar = () => {
+      const pos = ids
+        .split(",")
+        .map((id) => {
+          const el = document.getElementById(id);
+          const r = el?.getBoundingClientRect();
+          return { id, y: r && r.height > 0 ? r.top + window.scrollY : Number.POSITIVE_INFINITY };
+        })
+        .sort((a, b) => a.y - b.y)
+        .map((x) => x.id)
+        .join(",");
+      setOrdem((o) => (o === pos ? o : pos));
+    };
+    ordenar();
+    const t = window.setTimeout(ordenar, 600);
+    window.addEventListener("resize", ordenar);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("resize", ordenar);
+    };
+  }, [ids]);
+
+  /* Pontas do trilho: qual lado ainda tem pílulas fora da vista. */
+  useEffect(() => {
+    const caixa = trilho.current;
+    if (!caixa) return;
+    const medir = () => {
+      const resto = caixa.scrollWidth - caixa.clientWidth;
+      if (resto <= 2) return setPonta("nenhuma");
+      const x = caixa.scrollLeft;
+      setPonta(x <= 2 ? "inicio" : x >= resto - 2 ? "fim" : "meio");
+    };
+    medir();
+    caixa.addEventListener("scroll", medir, { passive: true });
+    window.addEventListener("resize", medir);
+    return () => {
+      caixa.removeEventListener("scroll", medir);
+      window.removeEventListener("resize", medir);
+    };
+  }, [ids]);
 
   /* Depois de um toque, a pílula escolhida fica ativa até a rolagem suave
      terminar (a página pode não conseguir levar a seção até o topo). */
@@ -79,6 +127,12 @@ export function BarraDeSecoes({ secoes }: { secoes: Secao[] }) {
   }, [ativa]);
 
   if (secoes.length < 2) return null;
+  const posicao = (ordem ?? ids).split(",");
+  const visiveis = [...secoes].sort(
+    (a, b) =>
+      (posicao.indexOf(a.id) + 1 || Number.MAX_SAFE_INTEGER) -
+      (posicao.indexOf(b.id) + 1 || Number.MAX_SAFE_INTEGER),
+  );
 
   const ir = (id: string) => {
     const el = document.getElementById(id);
@@ -93,13 +147,14 @@ export function BarraDeSecoes({ secoes }: { secoes: Secao[] }) {
     <div className="sticky top-14 z-20 -mx-4 mb-1 bg-white/90 px-4 py-2 backdrop-blur-xl dark:bg-neutral-950/90 sm:top-[60px] sm:-mx-5 sm:px-5">
       <div
         ref={trilho}
-        className="relative overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        data-ponta={ponta}
+        className="trilho-esmaece relative overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <nav
           aria-label="Seções do resultado"
           className="flex w-max gap-1 rounded-full bg-[#e9e9ee] p-1 dark:bg-white/10"
         >
-          {secoes.map((s) => {
+          {visiveis.map((s) => {
             const atual = s.id === ativa;
             return (
               <button

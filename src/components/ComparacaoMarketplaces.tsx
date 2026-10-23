@@ -483,7 +483,7 @@ function Vendedor({ c, direita = false }: { c: Coluna; direita?: boolean }) {
     <span
       className={"flex flex-col gap-0.5 " + (direita ? "items-end text-right" : "items-center")}
     >
-      <span className="break-words">{o.loja ?? "Não informado"}</span>
+      <span className="max-w-full [overflow-wrap:anywhere]">{o.loja ?? "Não informado"}</span>
       {o.ehColado && (
         <span className="text-[11px] text-secondary-ink">o anúncio que você colou</span>
       )}
@@ -1102,7 +1102,10 @@ export function ComparacaoMarketplaces({
                       }
                     >
                       <dt
-                        className={r === "Total" ? "font-bold" : "font-medium text-secondary-ink"}
+                        className={
+                          "shrink-0 " +
+                          (r === "Total" ? "font-bold" : "font-medium text-secondary-ink")
+                        }
                       >
                         {r}
                       </dt>

@@ -81,7 +81,7 @@ export function PainelAvaliacoes({
         if (e.target === ref.current) ref.current?.close();
       }}
       aria-labelledby={idTitulo}
-      className="m-auto max-h-[88vh] w-[min(560px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-border bg-white p-0 text-[#1d1d1f] shadow-2xl backdrop:bg-black/40 dark:bg-neutral-900 dark:text-white"
+      className="painel m-auto max-h-[88vh] w-[min(560px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-border bg-white p-0 text-[#1d1d1f] shadow-2xl backdrop:bg-black/40 dark:bg-neutral-900 dark:text-white"
     >
       <div className="flex max-h-[88vh] flex-col">
         <div className="flex items-start gap-3 border-b border-border p-4">
