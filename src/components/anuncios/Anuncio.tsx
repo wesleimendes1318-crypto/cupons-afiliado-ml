@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-const CLIENTE = (import.meta.env["VITE_ADSENSE_CLIENT_ID"] ?? "").trim();
+const CLIENTE = (import.meta.env.VITE_ADSENSE_CLIENT_ID ?? "").trim();
 
 /** Só aceita o formato oficial do Google. Qualquer outra coisa mantém tudo desligado. */
 export const ADSENSE_ATIVO = /^ca-pub-\d{10,}$/.test(CLIENTE);

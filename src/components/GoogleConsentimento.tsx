@@ -20,9 +20,9 @@ declare global {
   }
 }
 
-const GA_ID = (import.meta.env["VITE_GA_ID"] ?? "").trim();
+const GA_ID = (import.meta.env.VITE_GA_ID ?? "").trim();
 const GA_ATIVO = /^G-[A-Z0-9]{4,}$/.test(GA_ID);
-const ADSENSE_CLIENTE = (import.meta.env["VITE_ADSENSE_CLIENT_ID"] ?? "").trim();
+const ADSENSE_CLIENTE = (import.meta.env.VITE_ADSENSE_CLIENT_ID ?? "").trim();
 
 /* Vai no <head> (ver __root.tsx): define o gtag e nega tudo por padrão. */
 export const SCRIPT_CONSENTIMENTO_PADRAO = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'granted',security_storage:'granted',wait_for_update:500});gtag('set','ads_data_redaction',true);`;
