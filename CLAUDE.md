@@ -960,10 +960,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   1ª comparação depois da pausa caiu na verificação do Mercado Livre
   (resolvida pelo Weslei no Chrome do notebook); as seguintes saíram
   completas, todas com meli.la.
-- Histórico do banco antigo (pedidos, vitrine, links, inscritos do bot,
-  Acompanhar preço, canal): copiar quando o Lovable religar o banco (créditos
-  renovam em 21/10); depois, desligar as rotinas (pg_cron) de lá para nada
-  rodar em dobro.
+- BANCO DO LOVABLE NUNCA MAIS (Weslei, 23/10: "Não usaremos o banco do
+  lovable. Não deve usar 1 crédito sequer!"): o histórico antigo NÃO será
+  copiado. Proibido qualquer ferramenta do Lovable que toque o banco ou gaste
+  crédito: query_database, get_database_status, enable_database,
+  send_message, create_project, remix_project. Banco = só o Supabase
+  itgdvxvqbwjcvmglfval (mcp__Supabase__*). Do Lovable só list_edits,
+  get_project e deploy_project (publicar não gasta crédito, 17/10).
 
 ## Qualidade primeiro nas vitrines (18/10)
 - Weslei, 18/10: "Garanta sempre produtos com qualidade!!!!! Boas

@@ -7,7 +7,7 @@ segurança do que é mostrado".
 
 Cada agente é uma rotina agendada (Claude Code Routines) que dispara na
 sessão de trabalho do site (session_016BmUTiRLhMctThes4VX2w1), que tem o
-repositório e o conector do Lovable (banco e publicação); uma sessão nova
+repositório, o conector do Supabase (banco) e o do Lovable (só publicação); uma sessão nova
 não recebe esse conector. Cada um segue o CLAUDE.md e este arquivo, faz o
 seu checklist e termina com um relatório curto (uma linha quando está tudo
 certo). Rotinas: Guardião trig_01T54UgwjPgup899tBkJrcM2, Pesquisa
@@ -21,9 +21,11 @@ seguem as mesmas regras:
   do push, `list_edits` "completed" e `deploy_project`.
 - Banco (desde 18/10/2026): Supabase próprio do Weslei, projeto
   `itgdvxvqbwjcvmglfval` (`mcp__Supabase__execute_sql` /
-  `mcp__Supabase__apply_migration`). O `mcp__Lovable__query_database` aponta
-  para o banco ANTIGO, pausado por falta de crédito: não usar. O site
-  continua publicado pelo Lovable (`deploy_project`, não gasta crédito).
+  `mcp__Supabase__apply_migration`). Banco do Lovable NUNCA (Weslei, 23/10:
+  "Não deve usar 1 crédito sequer!"): proibidos `query_database`,
+  `get_database_status`, `enable_database`, `send_message` e tudo que gaste
+  crédito. Do Lovable só `list_edits`, `get_project` e `deploy_project`
+  (publicar não gasta crédito).
   Migrações só aditivas, com arquivo em `supabase/migrations/`.
 - Nunca pedir nem escrever chaves. Nunca expor comissão, ganhos, vendas ou
   qualquer dado do painel de afiliados (privado do Weslei).
@@ -56,15 +58,15 @@ seguem as mesmas regras:
 | Marca, layout e melhorias | terça e sexta 10:10 | Telas no PC e celular, identidade visual, contraste e teclado, SEO, textos e selos com dado; uma melhoria pequena e validada por vez. |
 | Dados (relatório semanal) | segunda 08:45 | Já existia: painel, campanhas, benchmark, decisões da semana. |
 
-**Banco sem resposta pela consulta do Lovable (16/10: erro 504 por horas).**
+**Banco sem resposta pelo conector do Supabase.**
 Antes de dizer "não deu para conferir", qualquer agente lê
 `GET https://melhorescolha.io/api/public/saude` (o próprio servidor do site,
 só leitura, sem dado de cliente): `banco` ok/falhou e o tempo, versão e pausa
 da extensão, há quantos minutos saiu o último pedido pronto, pedidos de
 cliente da última hora (falhou, pronto sem link, parados > 20 min) e quantos
 brinquedos a página tem. `banco: falhou` no site = o cliente também está sem
-comparação: avisar o Weslei como grave. `banco: ok` = só a ferramenta do
-Lovable está fora; o relatório usa esses números.
+comparação: avisar o Weslei como grave. `banco: ok` = só o conector está
+fora; o relatório usa esses números.
 
 ## Auditoria automática no banco
 
