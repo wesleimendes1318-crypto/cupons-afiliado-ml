@@ -1568,6 +1568,22 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
 - Extensão: atenderMultiloja (alarme de 1 min e "atenderAgora") pega os
   pedidos e chama compararOutrosMarketplaces, uma por vez; a conferência
   continua esperando as do Mercado Livre.
+- UM MARKETPLACE POR VEZ (Weslei, 23/10: "não deve pesquisar em todos de
+  uma vez, mas sim no marketplace escolhido"; "melhore a animação de
+  busca"): cada coluna tem o seu "Comparar aqui" e o aviso tem um botão por
+  loja ("Comparar na Amazon Brasil" / "Comparar na Shopee"). Banco
+  (20261023160000_multiloja_por_marketplace.sql, sem atualizar a extensão):
+  pedir_multiloja(p_pedido, p_chave, p_marketplace); multiloja_solicitacoes
+  com quer_*/entregue_*; multiloja_vale só libera o escolhido e ainda não
+  entregue; gravar_multiloja SOMA ao resultado do outro marketplace
+  (resumo com "em" por loja; conferência que falha = resumo.<mk>.incompleto
+  e "Tentar de novo"); pedido do outro feito no meio da busca volta para a
+  fila sozinho. Rota /api/public/multiloja devolve o que já foi comparado +
+  pendentes. Tela: a coluna escolhida mostra o giro, "Buscando o mesmo
+  produto · há N s · leva de 30 s a 2 min", faixa azul sob o nome e
+  esqueleto com brilho onde o preço vai aparecer; as outras ficam borradas
+  com o botão. Testado no banco com transação desfeita (Amazon só, Shopee
+  pedida no meio, soma dos dois).
 - Link colado da Amazon, da Shopee ou de outra loja: ver "Reconhecimento
   universal de links (10/10)".
 

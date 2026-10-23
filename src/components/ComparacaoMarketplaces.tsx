@@ -28,6 +28,7 @@ import {
   Check,
   ChevronDown,
   Info,
+  LoaderCircle,
   MapPin,
   Minus,
   Search,
@@ -66,6 +67,7 @@ import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 type Estado = "carregando" | "sob_demanda" | "aguardando" | "pronto" | "inativo";
+type Mk = "amazon" | "shopee";
 
 export type ColadoParaComparar = {
   titulo: string | null;
@@ -84,11 +86,15 @@ function useMultiloja(pedidoId: number | null, chave: string | null, tituloColad
     estado: Estado;
     dados: RespostaMultiloja | null;
     aviso: string | null;
-  }>({ estado: "carregando", dados: null, aviso: null });
+    /* UM MARKETPLACE POR VEZ (Weslei, 23/10: "não deve pesquisar em todos
+       de uma vez, mas sim no marketplace escolhido"): os que o cliente pediu
+       e ainda estão sendo conferidos, com a hora em que a busca começou. */
+    pendentes: Partial<Record<Mk, number>>;
+  }>({ estado: "carregando", dados: null, aviso: null, pendentes: {} });
   const [rodada, setRodada] = useState(0);
   useEffect(() => {
     if (pedidoId == null) {
-      setR({ estado: "inativo", dados: null, aviso: null });
+      setR({ estado: "inativo", dados: null, aviso: null, pendentes: {} });
       return;
     }
     let vivo = true;
@@ -110,28 +116,46 @@ function useMultiloja(pedidoId: number | null, chave: string | null, tituloColad
             })
           | null;
         if (!vivo) return;
-        /* 1º minuto a cada 5 s; depois a cada 15 s, até a rota parar de
-           pedir espera (ela desiste 6 min depois do pedido). */
-        if (j?.aguardar && tentativas < 38) {
-          setR((x) => ({ ...x, estado: "aguardando", aviso: null }));
-          espera = setTimeout(() => void consultar(), tentativas < 12 ? 5_000 : 15_000);
-          return;
-        }
         if (j?.sobDemanda) {
           setR({
             estado: "sob_demanda",
             dados: null,
             aviso: j.semResposta ? "A busca não respondeu agora. Tente de novo." : null,
+            pendentes: {},
           });
           return;
         }
         if (!j?.ativo) {
-          setR({ estado: "inativo", dados: null, aviso: null });
+          setR({ estado: "inativo", dados: null, aviso: null, pendentes: {} });
           return;
         }
-        setR({ estado: "pronto", dados: limparResultado(j, tituloColado), aviso: null });
+        const temDados = j.lojas?.length > 0 || Boolean(j.resumo);
+        /* 1º minuto a cada 5 s; depois a cada 15 s, até a rota parar de
+           pedir espera (ela desiste 6 min depois do pedido). */
+        if (j.aguardar && tentativas < 38) {
+          const lista = j.pendentes?.length ? j.pendentes : null;
+          setR((x) => {
+            const pendentes: Partial<Record<Mk, number>> = {};
+            for (const mk of lista ?? (Object.keys(x.pendentes) as Mk[]))
+              pendentes[mk] = x.pendentes[mk] ?? Date.now();
+            return {
+              estado: temDados ? "pronto" : "aguardando",
+              dados: temDados ? limparResultado(j, tituloColado) : x.dados,
+              aviso: null,
+              pendentes,
+            };
+          });
+          espera = setTimeout(() => void consultar(), tentativas < 12 ? 5_000 : 15_000);
+          return;
+        }
+        setR({
+          estado: temDados ? "pronto" : "sob_demanda",
+          dados: temDados ? limparResultado(j, tituloColado) : null,
+          aviso: j.semResposta ? "A busca não respondeu agora. Tente de novo." : null,
+          pendentes: {},
+        });
       } catch {
-        if (vivo) setR({ estado: "inativo", dados: null, aviso: null });
+        if (vivo) setR({ estado: "inativo", dados: null, aviso: null, pendentes: {} });
       }
     };
     void consultar();
@@ -141,45 +165,69 @@ function useMultiloja(pedidoId: number | null, chave: string | null, tituloColad
     };
   }, [pedidoId, rodada, tituloColado]);
 
-  const pedir = useCallback(async () => {
-    if (pedidoId == null || !chave) return;
-    setR({ estado: "aguardando", dados: null, aviso: null });
-    try {
-      const { data, error } = await supabase.rpc(
-        "pedir_multiloja" as never,
-        { p_pedido: pedidoId, p_chave: chave } as never,
-      );
-      const d = data as { ok?: boolean; motivo?: string } | null;
-      if (error || !d?.ok) {
-        setR({
-          estado: "sob_demanda",
-          dados: null,
-          aviso:
+  const pedir = useCallback(
+    async (mk: Mk) => {
+      if (pedidoId == null || !chave) return;
+      /* A coluna escolhida já mostra a busca; as outras ficam como estão. */
+      setR((x) => ({
+        ...x,
+        estado: x.dados ? "pronto" : "aguardando",
+        aviso: null,
+        pendentes: { ...x.pendentes, [mk]: x.pendentes[mk] ?? Date.now() },
+      }));
+      const desfazer = (aviso: string) =>
+        setR((x) => {
+          const pendentes = { ...x.pendentes };
+          delete pendentes[mk];
+          return {
+            ...x,
+            estado: x.dados ? "pronto" : "sob_demanda",
+            aviso,
+            pendentes,
+          };
+        });
+      try {
+        const { data, error } = await supabase.rpc(
+          "pedir_multiloja" as never,
+          { p_pedido: pedidoId, p_chave: chave, p_marketplace: mk } as never,
+        );
+        const d = data as { ok?: boolean; motivo?: string } | null;
+        if (error || !d?.ok) {
+          desfazer(
             d?.motivo === "limite"
               ? "Muitas buscas ao mesmo tempo agora. Tente em instantes."
               : "Não deu para pedir a busca agora. Tente de novo.",
-        });
-        return;
-      }
-      /* Cutuca a extensão na hora (sem ela, o alarme de 1 min cobre). */
-      try {
-        window.postMessage(
-          { de: "cupons-afiliado-ml", tipo: "pedido-novo", id: pedidoId },
-          window.location.origin,
-        );
+          );
+          return;
+        }
+        /* Cutuca a extensão na hora (sem ela, o alarme de 1 min cobre). */
+        try {
+          window.postMessage(
+            { de: "cupons-afiliado-ml", tipo: "pedido-novo", id: pedidoId },
+            window.location.origin,
+          );
+        } catch {
+          /* sem extensão: o alarme cobre */
+        }
+        setRodada((x) => x + 1);
       } catch {
-        /* sem extensão: o alarme cobre */
+        desfazer("Não deu para pedir a busca agora. Tente de novo.");
       }
-      setRodada((x) => x + 1);
-    } catch {
-      setR({
-        estado: "sob_demanda",
-        dados: null,
-        aviso: "Não deu para pedir a busca agora. Tente de novo.",
-      });
-    }
-  }, [pedidoId, chave]);
+    },
+    [pedidoId, chave],
+  );
   return { ...r, pedir };
+}
+
+/* Segundos desde o começo da busca (o relógio da coluna que está buscando). */
+function useSegundos(desde: number | undefined) {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    if (desde == null) return;
+    const t = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [desde]);
+  return desde == null ? 0 : Math.max(0, Math.round((agora - desde) / 1000));
 }
 
 const semMovimento = () =>
@@ -191,6 +239,7 @@ type Situacao =
   | "mesmo"
   | "sob_demanda"
   | "conferindo"
+  | "carregando"
   | "nao_localizado"
   | "nao_consultado"
   | "indisponivel"
@@ -205,11 +254,14 @@ type Coluna = {
   /* Há parecido deste marketplace em "Alternativas parecidas". */
   temAlternativa: boolean;
   suspeito: boolean;
+  /* Busca em andamento neste marketplace: quando começou. */
+  desde?: number | undefined;
 };
 
 const TEXTO_DA_SITUACAO: Record<Exclude<Situacao, "mesmo">, [string, string]> = {
-  sob_demanda: ["Ainda não comparado", "toque em Ver preço"],
+  sob_demanda: ["Ainda não comparado", "toque em Comparar aqui"],
   conferindo: ["Conferindo", "de 30 s a 2 min"],
+  carregando: ["", ""],
   nao_localizado: ["Não localizado", "nesta análise"],
   nao_consultado: ["Não consultado", "nesta análise"],
   indisponivel: ["Conferência", "indisponível agora"],
@@ -219,7 +271,53 @@ const TEXTO_DA_SITUACAO: Record<Exclude<Situacao, "mesmo">, [string, string]> = 
 /* Fundo da linha Total (como no exemplo: a linha que decide). */
 const FUNDO_TOTAL = "bg-[#f3f6fb] dark:bg-white/[0.06]";
 
+/* Valor que está chegando: barra com brilho que atravessa (esqueleto). */
+function Esqueleto({ largura = "w-16" }: { largura?: string }) {
+  return (
+    <span className="inline-flex items-center">
+      <span aria-hidden="true" className={"esqueleto inline-block h-3.5 rounded-full " + largura} />
+      <span className="sr-only">Buscando</span>
+    </span>
+  );
+}
+
+/* BUSCA EM ANDAMENTO (Weslei, 23/10: "melhore a animação de busca"): o
+   marketplace escolhido gira, diz o que está fazendo e há quanto tempo,
+   contra o tempo medido (de 30 s a 2 min); o resto da coluna brilha no
+   lugar onde o preço vai aparecer. Nada de prazo inventado. */
+function Buscando({ c }: { c: Coluna }) {
+  const s = useSegundos(c.desde);
+  return (
+    <span className="inline-flex items-center gap-2 text-left" role="status" aria-live="polite">
+      <LoaderCircle
+        className="animate-giro-calmo size-5 shrink-0 text-[#0071e3]"
+        aria-hidden="true"
+      />
+      <span className="flex flex-col leading-tight">
+        <span className="font-semibold">Buscando o mesmo produto</span>
+        <span className="text-[11px] text-secondary-ink tabular-nums">
+          {s > 0 ? `há ${s} s · ` : ""}leva de 30 s a 2 min
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/* Faixa que corre sob o nome do marketplace enquanto ele é buscado. */
+function BarraDeBusca() {
+  return (
+    <span
+      aria-hidden="true"
+      className="relative mt-1 block h-1 w-24 overflow-hidden rounded-full bg-[#0071e3]/15"
+    >
+      <span className="animate-barra-busca absolute inset-y-0 left-0 w-1/3 rounded-full bg-[#0071e3]" />
+    </span>
+  );
+}
+
 function Correspondencia({ c }: { c: Coluna }) {
+  if (c.situacao === "conferindo") return <Buscando c={c} />;
+  if (c.situacao === "carregando") return <Esqueleto largura="w-24" />;
   if (c.situacao === "mesmo")
     return (
       <span className="inline-flex items-center gap-2 font-semibold">
@@ -234,8 +332,7 @@ function Correspondencia({ c }: { c: Coluna }) {
     <span className="inline-flex items-center gap-2 text-left">
       <span
         className={
-          "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-300 text-white dark:bg-white/25" +
-          (c.situacao === "conferindo" ? " motion-safe:animate-pulse" : "")
+          "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-300 text-white dark:bg-white/25"
         }
       >
         <Minus className="size-3.5" strokeWidth={3} aria-hidden="true" />
@@ -332,19 +429,34 @@ function Acao({
   colado: ColadoParaComparar;
   gerarLink?: ((url: string) => ReactNode) | undefined;
   verAlternativa: (j: Jogador) => void;
-  pedir: () => void;
+  pedir: (mk: Mk) => void;
   podePedir: boolean;
 }) {
   const o = c.oferta;
-  if (c.situacao === "sob_demanda")
+  const mk = c.jogador === "mercadolivre" ? null : c.jogador;
+  if (c.situacao === "conferindo" || c.situacao === "carregando")
+    return (
+      <span
+        aria-hidden="true"
+        className="esqueleto flex h-10 w-full items-center justify-center rounded-xl"
+      />
+    );
+  if (c.situacao === "indisponivel" && mk && podePedir)
+    return (
+      <button type="button" onClick={() => pedir(mk)} className={BOTAO_SECUNDARIO}>
+        <Search className="size-4 shrink-0" aria-hidden="true" />
+        Tentar de novo
+      </button>
+    );
+  if (c.situacao === "sob_demanda" && mk)
     return podePedir ? (
       <button
         type="button"
-        onClick={pedir}
+        onClick={() => pedir(mk)}
         className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#0071e3]/40 bg-[#0071e3]/5 px-3 py-2.5 text-[13px] font-semibold text-[#0058b0] transition-colors duration-200 ease-out hover:bg-[#0071e3]/10 dark:text-[#6cb4ff]"
       >
         <Search className="size-4 shrink-0" aria-hidden="true" />
-        Ver preço
+        Comparar aqui
       </button>
     ) : (
       <span className="text-[11px] text-secondary-ink">Atualize a comparação para ver</span>
@@ -358,8 +470,7 @@ function Acao({
         <ChevronDown className="size-4 shrink-0" aria-hidden="true" />
       </button>
     );
-  if (!o && c.jogador === "amazon" && c.situacao !== "conferindo")
-    return <ConferirNaLoja titulo={colado.titulo} />;
+  if (!o && c.jogador === "amazon") return <ConferirNaLoja titulo={colado.titulo} />;
   return <span className="text-secondary-ink">—</span>;
 }
 
@@ -594,7 +705,7 @@ export function ComparacaoMarketplaces({
   /* Chave do pedido: só com ela o cliente pede a busca na Amazon e na Shopee. */
   chavePedido?: string | null;
 }) {
-  const { estado, dados, aviso, pedir } = useMultiloja(
+  const { estado, dados, aviso, pendentes, pedir } = useMultiloja(
     pedidoId,
     chavePedido ?? null,
     colado.titulo ?? null,
@@ -635,24 +746,31 @@ export function ComparacaoMarketplaces({
         (b.semelhanca ?? 0) - (a.semelhanca ?? 0) ||
         a.preco - b.preco,
     );
-  const consultado = (mk: "amazon" | "shopee") =>
+  const consultado = (mk: Mk) =>
     Boolean(dados?.resumo?.[mk]) || lojas.some((l) => l.marketplace === mk);
+  const falhou = (mk: Mk) =>
+    dados?.resumo?.[mk]?.incompleto === true ||
+    (dados?.incompleto === true && !dados?.resumo?.[mk]);
 
   const colunas: Coluna[] = ORDEM_DAS_COLUNAS.map((j) => {
     const oferta = j === "mercadolivre" ? ml : j === "amazon" ? amazon : shopee;
+    /* Cada marketplace no seu estado: o que o cliente pediu e está sendo
+       conferido busca; o que ele não pediu continua borrado com o botão. */
     const situacao: Situacao = oferta
       ? "mesmo"
       : j === "mercadolivre"
         ? "sem_preco"
-        : estado === "sob_demanda"
-          ? "sob_demanda"
-          : estado === "aguardando" || estado === "carregando"
-            ? "conferindo"
-            : dados?.incompleto
+        : pendentes[j] != null
+          ? "conferindo"
+          : estado === "carregando"
+            ? "carregando"
+            : falhou(j)
               ? "indisponivel"
               : consultado(j)
                 ? "nao_localizado"
-                : "nao_consultado";
+                : estado === "inativo"
+                  ? "nao_consultado"
+                  : "sob_demanda";
     return {
       jogador: j,
       oferta,
@@ -661,6 +779,7 @@ export function ComparacaoMarketplaces({
           ? 0
           : Math.max(0, mesmosExternos.filter((l) => l.marketplace === j).length - 1),
       situacao,
+      desde: j === "mercadolivre" ? undefined : pendentes[j],
       temAlternativa: j !== "mercadolivre" && parecidos.some((l) => l.marketplace === j),
       suspeito:
         j !== "mercadolivre" && oferta != null && precoMuitoAbaixo(oferta.preco, precosDoMesmo),
@@ -687,12 +806,34 @@ export function ComparacaoMarketplaces({
     if (![...ancoras.values()].includes(`alternativa-${l.marketplace}`))
       ancoras.set(`${l.marketplace}:${l.id}`, `alternativa-${l.marketplace}`);
   const busca = colado.titulo ? termoDeBuscaExterna(colado.titulo) : "";
+  const buscando = (Object.keys(pendentes) as Mk[]).filter((mk) => pendentes[mk] != null);
+  const aPedir = colunas
+    .filter((c) => c.situacao === "sob_demanda" && c.jogador !== "mercadolivre")
+    .map((c) => c.jogador as Mk);
 
   /* Conteúdo de cada linha da tabela, por coluna. Ainda não buscado (sob
      demanda): valores borrados e "Ver preço". */
   const celula = (c: Coluna, rotulo: (typeof ROTULOS)[number]): ReactNode => {
     const o = c.oferta;
     const borrado = c.situacao === "sob_demanda";
+    if (
+      (c.situacao === "conferindo" || c.situacao === "carregando") &&
+      rotulo !== "Correspondência" &&
+      rotulo !== "Ação"
+    )
+      return (
+        <Esqueleto
+          largura={
+            rotulo === "Total"
+              ? "w-20"
+              : rotulo === "Vendedor"
+                ? "w-24"
+                : rotulo === "Frete"
+                  ? "w-12"
+                  : "w-16"
+          }
+        />
+      );
     switch (rotulo) {
       case "Correspondência":
         return <Correspondencia c={c} />;
@@ -723,7 +864,7 @@ export function ComparacaoMarketplaces({
             colado={colado}
             gerarLink={gerarLink}
             verAlternativa={verAlternativa}
-            pedir={() => void pedir()}
+            pedir={(mk) => void pedir(mk)}
             podePedir={podePedir}
           />
         );
@@ -758,10 +899,10 @@ export function ComparacaoMarketplaces({
         )}
       </div>
       <p className="mt-1 text-[11px] text-secondary-ink">
-        {estado === "aguardando"
-          ? "Conferindo o mesmo produto e a qualidade na Amazon e na Shopee: costuma levar de 30 segundos a 2 minutos."
-          : estado === "sob_demanda" || estado === "carregando"
-            ? "Comparei no Mercado Livre. A Amazon e a Shopee entram quando você pedir."
+        {buscando.length > 0
+          ? `Conferindo o mesmo produto e a qualidade na ${buscando.map((mk) => NOME_DO_JOGADOR[mk]).join(" e na ")}: costuma levar de 30 segundos a 2 minutos.`
+          : !leitura && (estado === "sob_demanda" || estado === "carregando")
+            ? "Comparei no Mercado Livre. Escolha em qual outra loja quer comparar."
             : leitura || "A mesma análise em cada marketplace."}
       </p>
 
@@ -775,11 +916,16 @@ export function ComparacaoMarketplaces({
             análise
           </span>
         </p>
-        {estado === "sob_demanda" && (
+        {aPedir.length > 0 && estado !== "carregando" && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3">
             <p className="min-w-0 flex-1 text-[13px] leading-snug">
-              <strong>Quer ver na Amazon e na Shopee?</strong> Eu busco o mesmo produto e confiro a
-              foto, as características e a qualidade.
+              <strong>
+                {aPedir.length > 1
+                  ? "Quer comparar em outra loja? Escolha onde buscar."
+                  : `Quer comparar também na ${NOME_DO_JOGADOR[aPedir[0] as Mk]}?`}
+              </strong>{" "}
+              Eu busco o mesmo produto só na loja que você escolher e confiro a foto, as
+              características e a qualidade.
               {aviso && (
                 <span className="mt-0.5 block text-[12px] font-semibold text-amber-800 dark:text-amber-300">
                   {aviso}
@@ -787,14 +933,19 @@ export function ComparacaoMarketplaces({
               )}
             </p>
             {podePedir ? (
-              <button
-                type="button"
-                onClick={() => void pedir()}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#0071e3] px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:w-auto @xl:shrink-0"
-              >
-                <Search className="size-4" aria-hidden="true" />
-                Comparar também na Amazon e na Shopee
-              </button>
+              <div className="flex w-full flex-wrap gap-2 @xl:w-auto @xl:shrink-0">
+                {aPedir.map((mk) => (
+                  <button
+                    key={mk}
+                    type="button"
+                    onClick={() => void pedir(mk)}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0071e3] px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none"
+                  >
+                    <Search className="size-4" aria-hidden="true" />
+                    Comparar na {NOME_DO_JOGADOR[mk]}
+                  </button>
+                ))}
+              </div>
             ) : (
               <span className="text-[12px] text-secondary-ink">
                 Atualize a comparação para buscar.
@@ -827,7 +978,7 @@ export function ComparacaoMarketplaces({
             )}
           </div>
         )}
-        {!v && !m && decisao.ofertas.length > 0 && estado !== "aguardando" && (
+        {!v && !m && decisao.ofertas.length > 0 && buscando.length === 0 && (
           <p className="mt-2 text-xs text-secondary-ink">
             Nenhum marketplace confirmou o custo total com o frete: compare o preço do produto e
             confira o frete no anúncio.
@@ -873,11 +1024,16 @@ export function ComparacaoMarketplaces({
               <span
                 className={
                   "mx-px flex flex-col items-center justify-end gap-1 rounded-t-xl px-3 pb-2.5 pt-2 text-center " +
-                  (ehVencedor(c) ? "bg-success/10" : "bg-muted")
+                  (ehVencedor(c)
+                    ? "bg-success/10"
+                    : c.situacao === "conferindo"
+                      ? "bg-[#0071e3]/[0.07]"
+                      : "bg-muted")
                 }
               >
                 {ehVencedor(c) && <SeloMelhor />}
                 <NomeDoMarketplace j={c.jogador} grande />
+                {c.situacao === "conferindo" && <BarraDeBusca />}
                 {(c.oferta?.prime || ehMenor(c)) && (
                   <span className="flex flex-wrap justify-center gap-1">
                     {c.oferta?.prime && <SeloPrime />}
@@ -924,12 +1080,16 @@ export function ComparacaoMarketplaces({
               <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
                 <span className="min-w-[7rem]">
                   <NomeDoMarketplace j={c.jogador} grande />
+                  {c.situacao === "conferindo" && <BarraDeBusca />}
                 </span>
                 <span className="ml-auto shrink-0 text-[13px]">
                   <Correspondencia c={c} />
                 </span>
               </div>
-              {(c.oferta || c.situacao === "sob_demanda") && (
+              {(c.oferta ||
+                c.situacao === "sob_demanda" ||
+                c.situacao === "conferindo" ||
+                c.situacao === "carregando") && (
                 <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
                   {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
                     <div
@@ -945,7 +1105,9 @@ export function ComparacaoMarketplaces({
                         {r}
                       </dt>
                       <dd className="min-w-0 text-right">
-                        {c.situacao === "sob_demanda" ? (
+                        {c.situacao === "sob_demanda" ||
+                        c.situacao === "conferindo" ||
+                        c.situacao === "carregando" ? (
                           celula(c, r)
                         ) : r === "Total" ? (
                           <Total c={c} colado={colado} direita />
@@ -965,7 +1127,7 @@ export function ComparacaoMarketplaces({
                   colado={colado}
                   gerarLink={gerarLink}
                   verAlternativa={verAlternativa}
-                  pedir={() => void pedir()}
+                  pedir={(mk) => void pedir(mk)}
                   podePedir={podePedir}
                 />
               </div>

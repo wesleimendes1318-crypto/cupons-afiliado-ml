@@ -431,6 +431,26 @@
   }
 }
 
+/* Busca num marketplace (23/10): a faixa corre sob o nome da loja que está
+   sendo comparada. Parada com "reduzir movimento" (a frase e o relógio da
+   coluna continuam dizendo que está buscando). */
+@keyframes barra-busca {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@utility animate-barra-busca {
+  animation: barra-busca 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* Identidade das páginas de conteúdo
    =================================
    As páginas editoriais (guias, categorias, institucionais) tinham só preto

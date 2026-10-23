@@ -28,7 +28,14 @@ export type LojaExterna = OfertaExterna & {
 };
 
 /* O que cada marketplace leu e conferiu (a tela diz "li N, conferi M"). */
-export type ResumoMarketplace = { lidas: number; conferidas: number; motivo: string | null };
+export type ResumoMarketplace = {
+  lidas: number;
+  conferidas: number;
+  motivo: string | null;
+  /* A conferência pela foto deste marketplace não respondeu (23/10: cada
+     marketplace tem a sua rodada; o cliente pode tentar de novo). */
+  incompleto?: boolean;
+};
 
 /** Os candidatos de um marketplace para a conferência pela foto: na faixa
     de preço, sem peça no lugar do aparelho nem usado, os 3 mais parecidos

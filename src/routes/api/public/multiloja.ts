@@ -28,10 +28,15 @@ const CACHE_MS = 6 * 3600_000;
    primeiro na cota do modelo). */
 const ESPERA_EXTENSAO_MS = 6 * 60_000;
 
+type Mk = "amazon" | "shopee";
+const MARKETPLACES: Mk[] = ["amazon", "shopee"];
+
 type Resposta = {
   ativo: boolean;
   lojas: LojaExterna[];
-  resumo?: Record<string, ResumoMarketplace>;
+  resumo?: Partial<Record<string, ResumoMarketplace>>;
+  /* Pedidos pelo cliente e ainda sendo conferidos. */
+  pendentes?: Mk[];
   aguardar?: boolean;
   adiado?: boolean;
   /* O cliente ainda não pediu (ou o pedido venceu sem resposta). */
@@ -71,10 +76,10 @@ export const Route = createFileRoute("/api/public/multiloja")({
           .select("resultado,criado_em")
           .eq("pedido_id", entrada.pedido)
           .maybeSingle();
-        if (guardado && Date.now() - Date.parse(guardado.criado_em) < CACHE_MS)
-          return Response.json(limparResultado(guardado.resultado), {
-            headers: { "Cache-Control": "no-store" },
-          });
+        const base =
+          guardado && Date.now() - Date.parse(guardado.criado_em) < CACHE_MS
+            ? limparResultado(guardado.resultado)
+            : null;
 
         const { data: ped } = await db
           .from("pedidos_link")
@@ -85,23 +90,40 @@ export const Route = createFileRoute("/api/public/multiloja")({
           return Response.json({ ativo: false, lojas: [] } satisfies Resposta, {
             headers: { "Cache-Control": "no-store" },
           });
-        /* Só busca quando o cliente pediu (botão no site). */
+        /* Só busca quando o cliente pediu (botão no site), e só o marketplace
+           que ele escolheu (Weslei, 23/10: "não deve pesquisar em todos de
+           uma vez"): o que já foi comparado volta junto com o que ainda está
+           sendo conferido (pendentes). */
         const { data: sol } = await db
           .from("multiloja_solicitacoes")
-          .select("solicitado_em,concluido_em")
+          .select("solicitado_em,concluido_em,quer_amazon,quer_shopee")
           .eq("pedido_id", entrada.pedido)
           .maybeSingle();
-        const pedidoAberto =
-          sol &&
-          sol.concluido_em == null &&
-          Date.now() - Date.parse(sol.solicitado_em) < ESPERA_EXTENSAO_MS;
-        if (!pedidoAberto)
+        const aberta = Boolean(sol && sol.concluido_em == null);
+        const noPrazo = aberta && Date.now() - Date.parse(sol.solicitado_em) < ESPERA_EXTENSAO_MS;
+        const completo = (mk: Mk) => {
+          const r = base?.resumo?.[mk];
+          return Boolean(r && !r.incompleto);
+        };
+        const quer = (mk: Mk) =>
+          ((mk === "amazon" ? sol?.quer_amazon : sol?.quer_shopee) ?? true) === true;
+        const faltam = aberta ? MARKETPLACES.filter((mk) => quer(mk) && !completo(mk)) : [];
+        if (base)
+          return Response.json(
+            {
+              ...base,
+              ...(noPrazo && faltam.length ? { pendentes: faltam, aguardar: true } : {}),
+              ...(!noPrazo && faltam.length ? { semResposta: true } : {}),
+            } satisfies Resposta,
+            { headers: { "Cache-Control": "no-store" } },
+          );
+        if (!noPrazo)
           return Response.json(
             {
               ativo: true,
               lojas: [],
               sobDemanda: true,
-              ...(sol && sol.concluido_em == null ? { semResposta: true } : {}),
+              ...(aberta ? { semResposta: true } : {}),
             } satisfies Resposta,
             { headers: { "Cache-Control": "no-store" } },
           );
@@ -109,9 +131,10 @@ export const Route = createFileRoute("/api/public/multiloja")({
         /* Sem as APIs (09/10): quem compara é a extensão, pela sessão logada,
            e grava em multiloja_resultados (gravar_multiloja). */
         if (!cfg.amazon && !cfg.shopee)
-          return Response.json({ ativo: true, lojas: [], aguardar: true } satisfies Resposta, {
-            headers: { "Cache-Control": "no-store" },
-          });
+          return Response.json(
+            { ativo: true, lojas: [], aguardar: true, pendentes: faltam } satisfies Resposta,
+            { headers: { "Cache-Control": "no-store" } },
+          );
 
         const { count } = await db
           .from("multiloja_resultados")

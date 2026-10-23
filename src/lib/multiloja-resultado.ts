@@ -17,6 +17,8 @@ export type RespostaMultiloja = {
   incompleto?: boolean;
   aguardar?: boolean;
   adiado?: boolean;
+  /* Marketplaces que o cliente pediu e ainda estão sendo conferidos. */
+  pendentes?: ("amazon" | "shopee")[];
 };
 
 /* Foto só dos endereços das marketplaces (o resultado da extensão vem de
@@ -44,6 +46,7 @@ function limparResumo(r: unknown): RespostaMultiloja["resumo"] {
       lidas: inteiro(x["lidas"]),
       conferidas: inteiro(x["conferidas"]),
       motivo: texto(x["motivo"], 120),
+      ...(x["incompleto"] === true ? { incompleto: true } : {}),
     };
   }
   return Object.keys(saida).length ? saida : undefined;
