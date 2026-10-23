@@ -1091,6 +1091,14 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   estrelas (não mais sozinha numa linha). Campanhas no celular: o texto
   começa depois da faixa da arte. Botões flutuantes "Início"/topo só com os
   ícones no celular.
+- COLADO x SUGESTÕES (Weslei, 23/10: "tem que ficar muito claro o que é o
+  produto que o cliente colou e quais são as sugestões"): no resultado, o
+  anúncio colado fica num quadro cinza com o rótulo "O produto que você
+  colou" (largura inteira no PC) e logo abaixo o título "Minhas sugestões"
+  (TituloSugestoes) antes de recomendação, alternativa, tabela e
+  Parecidos. Pílula "Seu produto" na BarraDeSecoes; a Melhor opção que é o
+  próprio colado diz "É o próprio anúncio que você colou."; na tabela, a
+  linha "Anúncio colado" com "você colou".
 - Milhar com ponto ("12.000 BTUs") é lido inteiro em src/lib/diferencas.ts
   (saía "Cabe 3 BTUS a menos"); "Cabe" só para L, mL e kg (testes em
   tests/diferencas.test.ts).

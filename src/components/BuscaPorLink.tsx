@@ -2581,7 +2581,7 @@ function Resultado({
   const temAlternativas =
     parecidosSemAlternativa.length > 0 || (alternativa != null && !leituraFalhou);
   const secoes: Secao[] = [
-    { id: "secao-resumo", nome: "Resumo" },
+    { id: "secao-resumo", nome: "Seu produto" },
     ...(mostraTabela && linhasLojas.length >= 2
       ? [{ id: "secao-lojas", nome: "Lojas", conta: linhasLojas.length }]
       : []),
@@ -2612,7 +2612,7 @@ function Resultado({
       <div
         className={
           "relative mt-3 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)]" +
-          (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_1fr] sm:gap-x-5" : "")
+          (temColuna ? " sm:grid sm:grid-cols-2 sm:grid-rows-[auto_auto_auto_1fr] sm:gap-x-5" : "")
         }
       >
         {barra && (
@@ -2626,62 +2626,77 @@ function Resultado({
             custoFrete={barra.custoFrete}
           />
         )}
-        <div
+        {/* O PRODUTO QUE O CLIENTE COLOU x SUGESTÕES (Weslei, 23/10: "tem que
+            ficar muito claro o que é o produto que o cliente colou e quais
+            são as sugestões"): o colado num quadro cinza com o rótulo; tudo
+            o que vem depois fica sob "Minhas sugestões". */}
+        <section
           id="secao-resumo"
-          className="flex scroll-mt-36 items-start gap-3 sm:col-start-1 sm:row-start-1"
+          aria-label="O produto que você colou"
+          className="scroll-mt-36 rounded-2xl bg-[#f5f5f7] p-3 ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10 sm:col-span-2 sm:row-start-1"
         >
-          <Foto src={a?.imagem} className="size-16 shrink-0 rounded-2xl border border-border/70" />
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
-              {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
-            </p>
-            {a?.aviso && (
-              <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
-                O anúncio informa: {a.aviso}
+          <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
+            <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
+          </p>
+          <div className="flex items-start gap-3">
+            <Foto
+              src={a?.imagem}
+              className="size-16 shrink-0 rounded-2xl border border-border/70 bg-white"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
+                {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
               </p>
-            )}
-            {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
-              <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-                <strong>Atenção: neste anúncio a foto e o texto não batem.</strong>{" "}
-                {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
-                envia antes de comprar.
-              </p>
-            ) : fotoDeOutro ? (
-              /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
+              {a?.aviso && (
+                <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
+                  O anúncio informa: {a.aviso}
+                </p>
+              )}
+              {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
+                <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  <strong>Atenção: neste anúncio a foto e o texto não batem.</strong>{" "}
+                  {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
+                  envia antes de comprar.
+                </p>
+              ) : fotoDeOutro ? (
+                /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
                foto com foto): o cliente precisa saber antes de comprar (28/09,
                agasalho da SHOPMASP com a foto do conjunto Woven). */
-              <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-                <strong>Atenção:</strong> a foto deste anúncio é a mesma de outro produto (
-                {semEntidades(fotoDeOutro.titulo)}
-                {fotoDeOutro.muda ? `; muda: ${fotoDeOutro.muda}` : ""}). Confirme com o vendedor
-                qual produto ele envia antes de comprar.
+                <p className="mt-1 rounded border border-amber-400/70 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  <strong>Atenção:</strong> a foto deste anúncio é a mesma de outro produto (
+                  {semEntidades(fotoDeOutro.titulo)}
+                  {fotoDeOutro.muda ? `; muda: ${fotoDeOutro.muda}` : ""}). Confirme com o vendedor
+                  qual produto ele envia antes de comprar.
+                </p>
+              ) : null}
+              <p className="mt-0.5 text-xs text-secondary-ink">
+                {a?.preco != null && (
+                  <span className="text-base font-bold tabular-nums text-foreground">
+                    {brl(a.preco)}
+                  </span>
+                )}
+                {textoDoPagamento(a?.preco, a?.precos) && (
+                  <span className="font-medium"> {textoDoPagamento(a?.preco, a?.precos)}</span>
+                )}
+                {a?.temCupom && <span> · sem o cupom</span>}
+                {a?.vendedor && <span> · {a.vendedor}</span>}
+                {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
+                <Avaliacoes
+                  a={a?.avaliacoes}
+                  de={{ url: urlColada }}
+                  titulo={a?.titulo}
+                  link={semLink ? null : link}
+                  className="ml-1.5 inline-flex"
+                />
               </p>
-            ) : null}
-            <p className="mt-0.5 text-xs text-secondary-ink">
-              {a?.preco != null && (
-                <span className="text-base font-bold tabular-nums text-foreground">
-                  {brl(a.preco)}
-                </span>
-              )}
-              {textoDoPagamento(a?.preco, a?.precos) && (
-                <span className="font-medium"> {textoDoPagamento(a?.preco, a?.precos)}</span>
-              )}
-              {a?.temCupom && <span> · sem o cupom</span>}
-              {a?.vendedor && <span> · {a.vendedor}</span>}
-              {a?.lojaOficial === true && <SeloLojaOficial className="ml-1.5 inline-flex" />}
-              <Avaliacoes
-                a={a?.avaliacoes}
-                de={{ url: urlColada }}
-                titulo={a?.titulo}
-                link={semLink ? null : link}
-                className="ml-1.5 inline-flex"
-              />
-            </p>
-            <DetalhesDoProduto detalhes={a?.detalhes} />
+              <DetalhesDoProduto detalhes={a?.detalhes} />
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="sm:col-start-1 sm:row-start-2">
+        {!leituraFalhou && <TituloSugestoes className="sm:col-span-2 sm:row-start-2" />}
+
+        <div className="sm:col-start-1 sm:row-start-3">
           {!leituraFalhou && pedidoId != null && (
             <FiltroPrazo
               limite={limitePrazo}
@@ -2752,7 +2767,7 @@ function Resultado({
         </div>
 
         {temColuna && (
-          <div className="sm:col-start-2 sm:row-span-3 sm:row-start-1">
+          <div className="sm:col-start-2 sm:row-span-2 sm:row-start-3">
             {/* Melhor alternativa no topo da coluna, acima da tabela e dos Parecidos
               (Weslei, 03/10). */}
             {alternativa && !leituraFalhou && (
@@ -2803,7 +2818,7 @@ function Resultado({
         {!a?.modoServidor && (
           <div
             id="secao-marketplaces"
-            className={"scroll-mt-36" + (temColuna ? " sm:col-span-2 sm:row-start-4" : "")}
+            className={"scroll-mt-36" + (temColuna ? " sm:col-span-2 sm:row-start-5" : "")}
           >
             <ComparacaoMarketplaces
               pedidoId={pedidoId}
@@ -2817,7 +2832,7 @@ function Resultado({
           </div>
         )}
 
-        <div className="sm:col-start-1 sm:row-start-3">
+        <div className="sm:col-start-1 sm:row-start-4">
           {!leituraFalhou && pedidoId != null && !semLink && (
             <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
           )}
@@ -2960,6 +2975,19 @@ function Resultado({
   );
 }
 
+/* Separa o produto colado do que eu sugiro (23/10): tudo abaixo deste título
+   é sugestão, e cada cartão diz se é o mesmo produto ou um parecido. */
+function TituloSugestoes({ className = "" }: { className?: string }) {
+  return (
+    <div className={"mt-5 " + className}>
+      <p className="text-lg font-semibold tracking-tight">Minhas sugestões</p>
+      <p className="text-xs text-secondary-ink">
+        Comparei com outras lojas. Cada sugestão diz se é o mesmo produto ou um parecido.
+      </p>
+    </div>
+  );
+}
+
 /* ---------------------------------------- a loja do anúncio é a melhor */
 
 function MelhorOpcao({
@@ -3024,6 +3052,7 @@ function MelhorOpcao({
           <FormaDePagamento preco={preco} precos={precos} className="text-right" />
         </span>
       </div>
+      <p className="mt-1 text-xs font-semibold">É o próprio anúncio que você colou.</p>
       {completando ? (
         <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-ml-blue">
           <LoaderCircle className="animate-giro-calmo size-3.5 shrink-0" aria-hidden="true" />
