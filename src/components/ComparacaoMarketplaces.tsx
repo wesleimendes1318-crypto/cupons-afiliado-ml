@@ -196,7 +196,9 @@ function useMultiloja(pedidoId: number | null, chave: string | null, tituloColad
           desfazer(
             d?.motivo === "limite"
               ? "Muitas buscas ao mesmo tempo agora. Tente em instantes."
-              : "Não deu para pedir a busca agora. Tente de novo.",
+              : d?.motivo === "sem_foto"
+                ? "Ainda não li a foto e o nome deste anúncio para conferir em outra loja. Toque em Atualizar comparação e tente de novo."
+                : "Não deu para pedir a busca agora. Tente de novo.",
           );
           return;
         }
