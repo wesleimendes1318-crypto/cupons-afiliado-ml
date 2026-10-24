@@ -2907,143 +2907,154 @@ function Resultado({
           />
         )}
 
-        {/* DECISÃO: filtro de prazo, a recomendação e o botão. */}
+        {/* Decisão e lojas num bloco próprio (24/10): a coluna fixa ao rolar
+            para no fim das lojas, sem passar por cima das ações e dos 3
+            marketplaces abaixo. */}
         <div
           className={
             temColuna
-              ? "lg:col-start-1 lg:row-start-3 lg:self-start painel-fixo:sticky painel-fixo:top-[8.25rem] painel-fixo:-mx-2 painel-fixo:max-h-[calc(100dvh-9rem)] painel-fixo:overflow-y-auto painel-fixo:overscroll-contain painel-fixo:px-2 painel-fixo:pb-3 painel-fixo:[scrollbar-width:thin]"
+              ? "lg:col-span-2 lg:row-start-3 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-x-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,13fr)] xl:gap-x-8"
               : ""
           }
         >
-          {/* Só a melhor em destaque; todas as outras lojas estão na tabela.
+          {/* DECISÃO: filtro de prazo, a recomendação e o botão. */}
+          <div
+            className={
+              temColuna
+                ? "lg:col-start-1 lg:row-start-1 lg:self-start painel-fixo:sticky painel-fixo:top-[8.25rem] painel-fixo:-mx-2 painel-fixo:max-h-[calc(100dvh-9rem)] painel-fixo:overflow-y-auto painel-fixo:overscroll-contain painel-fixo:px-2 painel-fixo:pb-3 painel-fixo:[scrollbar-width:thin]"
+                : ""
+            }
+          >
+            {/* Só a melhor em destaque; todas as outras lojas estão na tabela.
               A recomendação vem primeiro na coluna (24/10). */}
-          <div id="secao-recomendacao" className="scroll-mt-36">
-            {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
-              <OutraLojaComCupom
-                key={`${oferta.vendedor ?? "loja"}-${i}`}
-                oferta={oferta}
-                dispositivo={dispositivo}
-                vendedorAqui={a?.vendedor ?? null}
-                cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
-                precoAqui={a?.preco ?? null}
-                titulo={a?.titulo ?? null}
-                principal={trocar && i === 0}
-                semAnimacao={alternativa != null}
-                compacto={i > 0}
-                lojaAquiTemCupom={a?.temCupom === true}
-                precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
-              />
-            ))}
-          </div>
-          {limitePrazo && filtroPrazo && (
-            <AvisosDoPrazo
-              limite={limitePrazo}
-              r={filtroPrazo}
-              melhorNoPrazo={
-                recomendada
-                  ? {
-                      nome: recomendada.o.vendedor ?? "outra loja",
-                      total: totalDaLoja(recomendada.o),
-                    }
-                  : filtroPrazo.coladoAtende
-                    ? { nome: "o anúncio que você colou", total: totalColado }
-                    : paraReceber
-                      ? { nome: paraReceber.nome, total: paraReceber.total }
-                      : null
-              }
-              paraReceber={paraReceber}
-            />
-          )}
-          {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
-          {estaEAMelhor && !(filtroPrazo?.algumAtende && !filtroPrazo.coladoAtende) && (
-            <MelhorOpcao
-              vendedor={a?.vendedor ?? null}
-              preco={a?.preco ?? null}
-              link={semLink ? null : link}
-              urlColada={urlColada}
-              comparou={a?.procurouOutra === true}
-              completando={completando}
-              dispositivo={dispositivo}
-              temCupom={a?.temCupom === true}
-              /* -1: pedido de versão antiga, sem a lista de lojas. */
-              comparadas={a?.referencias ? referencias.length : -1}
-              olhados={a?.buscaFora?.leitura?.comPreco ?? null}
-              conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
-              iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
-              semAnimacao={alternativa != null}
-              precos={a?.precos ?? null}
-              avaliacoes={a?.avaliacoes ?? null}
-              ressalva={haMaisBarataNaoIndicada}
-            />
-          )}
-
-          {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
-            <>
-              <a
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-ml-blue py-3 text-center text-sm font-bold text-white transition hover:brightness-95"
-              >
-                <ShieldCheck className="size-4" aria-hidden="true" />
-                {textoDoBotao(dispositivo, "Comprar com segurança")}
-              </a>
-              <AvisoDoBotao d={dispositivo} />
-            </>
-          )}
-
-          {/* Melhor alternativa logo abaixo da recomendação (24/10; antes no
-              topo da coluna das lojas). */}
-          {alternativa && !leituraFalhou && temColuna && (
-            <div
-              id={parecidosSemAlternativa.length ? undefined : "secao-alternativas"}
-              className="mt-4 scroll-mt-36 empty:hidden"
-            >
-              <MelhorAlternativa
-                p={alternativa}
-                precoBase={precoDoMesmo}
-                cb={podeSerAlternativa(alternativa, baseAlt).cb}
-                dispositivo={dispositivo}
-                tituloColado={a?.titulo ?? null}
-                detalhesColado={a?.detalhes ?? null}
-                colado={coladoResumo}
-                pedidoId={pedidoId}
-              />
+            <div id="secao-recomendacao" className="scroll-mt-36">
+              {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
+                <OutraLojaComCupom
+                  key={`${oferta.vendedor ?? "loja"}-${i}`}
+                  oferta={oferta}
+                  dispositivo={dispositivo}
+                  vendedorAqui={a?.vendedor ?? null}
+                  cupomAqui={a?.temCupom ? (a?.cupom?.titulo ?? null) : null}
+                  precoAqui={a?.preco ?? null}
+                  titulo={a?.titulo ?? null}
+                  principal={trocar && i === 0}
+                  semAnimacao={alternativa != null}
+                  compacto={i > 0}
+                  lojaAquiTemCupom={a?.temCupom === true}
+                  precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
+                />
+              ))}
             </div>
-          )}
+            {limitePrazo && filtroPrazo && (
+              <AvisosDoPrazo
+                limite={limitePrazo}
+                r={filtroPrazo}
+                melhorNoPrazo={
+                  recomendada
+                    ? {
+                        nome: recomendada.o.vendedor ?? "outra loja",
+                        total: totalDaLoja(recomendada.o),
+                      }
+                    : filtroPrazo.coladoAtende
+                      ? { nome: "o anúncio que você colou", total: totalColado }
+                      : paraReceber
+                        ? { nome: paraReceber.nome, total: paraReceber.total }
+                        : null
+                }
+                paraReceber={paraReceber}
+              />
+            )}
+            {/* O anúncio colado, com o link de afiliado, está sempre na tabela de lojas. */}
+            {estaEAMelhor && !(filtroPrazo?.algumAtende && !filtroPrazo.coladoAtende) && (
+              <MelhorOpcao
+                vendedor={a?.vendedor ?? null}
+                preco={a?.preco ?? null}
+                link={semLink ? null : link}
+                urlColada={urlColada}
+                comparou={a?.procurouOutra === true}
+                completando={completando}
+                dispositivo={dispositivo}
+                temCupom={a?.temCupom === true}
+                /* -1: pedido de versão antiga, sem a lista de lojas. */
+                comparadas={a?.referencias ? referencias.length : -1}
+                olhados={a?.buscaFora?.leitura?.comPreco ?? null}
+                conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
+                iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
+                semAnimacao={alternativa != null}
+                precos={a?.precos ?? null}
+                avaliacoes={a?.avaliacoes ?? null}
+                ressalva={haMaisBarataNaoIndicada}
+              />
+            )}
 
-          {/* Data de entrega: refinador recolhido abaixo das recomendações. No
-              celular ele vem depois das lojas (cópia abaixo da coluna). */}
-          {filtro && <div className={temColuna ? "hidden lg:block" : ""}>{filtro}</div>}
-        </div>
+            {!leituraFalhou && !semLink && !estaEAMelhor && !trocar && (
+              <>
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-ml-blue py-3 text-center text-sm font-bold text-white transition hover:brightness-95"
+                >
+                  <ShieldCheck className="size-4" aria-hidden="true" />
+                  {textoDoBotao(dispositivo, "Comprar com segurança")}
+                </a>
+                <AvisoDoBotao d={dispositivo} />
+              </>
+            )}
 
-        {temColuna && (
-          <div className="lg:col-start-2 lg:row-start-3 lg:flex lg:flex-col lg:gap-5">
-            {mostraTabela && (
-              <div id="secao-lojas" className="scroll-mt-36 empty:hidden">
-                <TodasAsLojas
-                  linhas={linhasLojas}
-                  melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
-                  cep={a?.cepDestino ?? null}
+            {/* Melhor alternativa logo abaixo da recomendação (24/10; antes no
+              topo da coluna das lojas). */}
+            {alternativa && !leituraFalhou && temColuna && (
+              <div
+                id={parecidosSemAlternativa.length ? undefined : "secao-alternativas"}
+                className="mt-4 scroll-mt-36 empty:hidden"
+              >
+                <MelhorAlternativa
+                  p={alternativa}
+                  precoBase={precoDoMesmo}
+                  cb={podeSerAlternativa(alternativa, baseAlt).cb}
+                  dispositivo={dispositivo}
+                  tituloColado={a?.titulo ?? null}
+                  detalhesColado={a?.detalhes ?? null}
+                  colado={coladoResumo}
+                  pedidoId={pedidoId}
                 />
               </div>
             )}
-            <div
-              id={parecidosSemAlternativa.length ? "secao-alternativas" : undefined}
-              className="scroll-mt-36 empty:hidden"
-            >
-              <Parecidos
-                lista={parecidosSemAlternativa}
-                tituloColado={a?.titulo}
-                precoColado={a?.preco}
-                detalhesColado={a?.detalhes ?? null}
-                colado={coladoResumo}
-                pedidoId={pedidoId}
-              />
-            </div>
+
+            {/* Data de entrega: refinador recolhido abaixo das recomendações. No
+              celular ele vem depois das lojas (cópia abaixo da coluna). */}
+            {filtro && <div className={temColuna ? "hidden lg:block" : ""}>{filtro}</div>}
           </div>
-        )}
-        {temColuna && filtro && <div className="lg:hidden">{filtro}</div>}
+
+          {temColuna && (
+            <div className="lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5">
+              {mostraTabela && (
+                <div id="secao-lojas" className="scroll-mt-36 empty:hidden">
+                  <TodasAsLojas
+                    linhas={linhasLojas}
+                    melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
+                    cep={a?.cepDestino ?? null}
+                  />
+                </div>
+              )}
+              <div
+                id={parecidosSemAlternativa.length ? "secao-alternativas" : undefined}
+                className="scroll-mt-36 empty:hidden"
+              >
+                <Parecidos
+                  lista={parecidosSemAlternativa}
+                  tituloColado={a?.titulo}
+                  precoColado={a?.preco}
+                  detalhesColado={a?.detalhes ?? null}
+                  colado={coladoResumo}
+                  pedidoId={pedidoId}
+                />
+              </div>
+            </div>
+          )}
+          {temColuna && filtro && <div className="lg:hidden">{filtro}</div>}
+        </div>
 
         {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
           largura inteira no PC (abaixo de tudo); no celular, logo depois da
