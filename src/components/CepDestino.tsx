@@ -274,13 +274,19 @@ export function SeloCep({
         regiao?.aproximado && <span> · aproximado</span>
       )}{" "}
       ·{" "}
+      {/* Ainda no CEP padrão (24/10): o pedido do CEP vira um botão visível,
+          porque frete e prazo de cada loja dependem dele. */}
       <button
         type="button"
         onClick={() => setAberto((x) => !x)}
         aria-expanded={aberto}
-        className="font-bold text-ml-blue hover:underline"
+        className={
+          !regiao || regiao.padrao
+            ? "ml-0.5 inline-flex min-h-8 items-center rounded-full bg-ml-blue/10 px-3 font-bold text-ml-blue hover:bg-ml-blue/15"
+            : "font-bold text-ml-blue hover:underline"
+        }
       >
-        {regiao ? "Alterar" : "Informar CEP"}
+        {!regiao || regiao.padrao ? "Informar meu CEP" : "Alterar"}
       </button>
       {aberto && (
         <form

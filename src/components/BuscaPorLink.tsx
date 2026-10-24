@@ -28,6 +28,7 @@ import { ComoFunciona } from "@/components/ComoFunciona";
 import {
   BadgeCheck,
   Check,
+  ClipboardPaste,
   ChevronDown,
   Copy,
   History,
@@ -1413,6 +1414,23 @@ export default function BuscaPorLink({
 
   const carregando =
     fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
+
+  /* Só mostra "Colar" onde o navegador deixa ler a área de transferência. */
+  const [podeColar, setPodeColar] = useState(false);
+  useEffect(() => setPodeColar(typeof navigator.clipboard?.readText === "function"), []);
+  const colarDaAreaDeTransferencia = async () => {
+    try {
+      const texto = (await navigator.clipboard.readText()).trim();
+      if (texto) {
+        setUrl(texto);
+        void buscar(texto);
+        return;
+      }
+    } catch {
+      /* permissão negada: o campo recebe o foco para colar à mão */
+    }
+    document.getElementById("campo-link-produto")?.focus();
+  };
   /* Link de outra loja com produto identificado é resultado (11/10): o topo
      encolhe e a tela usa a largura toda, como na comparação de sempre. */
   const resultadoOutraLoja = Boolean(outraLoja && outraLoja.analise.origem !== "invalido");
@@ -1445,25 +1463,43 @@ export default function BuscaPorLink({
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <textarea
-          id="campo-link-produto"
-          rows={1}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onFocus={pedirLocalizacao}
-          onPaste={(e) => {
-            const colado = e.clipboardData.getData("text");
-            if (colado && colado.trim().length > 20) {
-              setUrl(colado);
-              setTimeout(() => buscar(colado), 0);
-            }
-          }}
-          /* Curto para caber numa linha também com a letra de 16 px do
+        <div className="relative flex min-w-0 flex-1">
+          <textarea
+            id="campo-link-produto"
+            rows={1}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onFocus={pedirLocalizacao}
+            onPaste={(e) => {
+              const colado = e.clipboardData.getData("text");
+              if (colado && colado.trim().length > 20) {
+                setUrl(colado);
+                setTimeout(() => buscar(colado), 0);
+              }
+            }}
+            /* Curto para caber numa linha também com a letra de 16 px do
              celular (sem ela o iPhone aumenta o zoom ao tocar, 18/10). */
-          placeholder="Cole o link aqui"
-          aria-label="Link do anúncio do produto"
-          className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5"
-        />
+            placeholder="Cole o link aqui"
+            aria-label="Link do anúncio do produto"
+            className={
+              "min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5" +
+              (podeColar && !url ? " pr-24" : "")
+            }
+          />
+          {/* "Colar" (24/10): no celular, colar no campo pede segurar o dedo e
+            escolher Colar; aqui é um toque e a comparação já começa. */}
+          {podeColar && !url && (
+            <button
+              type="button"
+              onClick={() => void colarDaAreaDeTransferencia()}
+              disabled={carregando}
+              className="absolute right-1.5 top-1/2 inline-flex h-8 -translate-y-1/2 items-center gap-1.5 rounded-full bg-[#7547E8] px-3 text-xs font-bold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] disabled:opacity-60"
+            >
+              <ClipboardPaste className="size-3.5" aria-hidden="true" />
+              Colar
+            </button>
+          )}
+        </div>
         <div className="flex gap-2 sm:self-start">
           {/* Busca por foto (09/10): câmera ou galeria, sempre com o
               consentimento antes de enviar. */}
@@ -2883,6 +2919,7 @@ function Resultado({
               comFrete={veredito.comFrete}
               total={totalDaLoja(veredito.o)}
               dispositivo={dispositivo}
+              precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(veredito.o), precosDaTabela)}
             />
           )}
         </div>
@@ -3238,12 +3275,15 @@ function VereditoEconomia({
   comFrete,
   total,
   dispositivo,
+  precoBemAbaixo = false,
 }: {
   oferta: OutraLoja;
   economia: number;
   comFrete: boolean;
   total: number | null;
   dispositivo: Dispositivo;
+  /* O mesmo aviso da recomendação (24/10): o topo nunca manda comprar sem ele. */
+  precoBemAbaixo?: boolean;
 }) {
   const direto =
     ehLinkDeAfiliado(oferta.link) &&
@@ -3285,6 +3325,11 @@ function VereditoEconomia({
               ? ", já com o frete para o seu CEP."
               : "."}
         </p>
+        {precoBemAbaixo && (
+          <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
+          </p>
+        )}
       </div>
       {direto ? (
         <div>
