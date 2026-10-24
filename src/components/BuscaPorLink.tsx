@@ -5528,77 +5528,89 @@ function OutraLojaComCupom({
           comparação usava o preço COM cupom (R$ 364,57) sem dizer isso, e a
           conta não fechava para quem lia (24/09).
           No celular fica escondida: a tabela de lojas logo acima já mostra os
-          mesmos preços, e o botão de compra precisa aparecer sem rolar. */}
-      <div className="mt-3 hidden overflow-hidden rounded-md border border-success/30 bg-card text-sm sm:block">
-        <table className="w-full table-fixed border-collapse">
-          <thead>
-            <tr className="bg-muted/60 text-xs">
-              <th className="w-[34%] px-2 py-1.5 text-left font-semibold text-secondary-ink"></th>
-              <th className="px-2 py-1.5 text-right font-semibold text-secondary-ink break-words">
-                Anúncio colado
-                {vendedorAqui ? <span className="block font-normal">{vendedorAqui}</span> : null}
-              </th>
-              <th className="px-2 py-1.5 text-right font-bold text-success break-words">
-                {oferta.vendedor ?? "Outra loja"}
-                <span className="block font-normal">mais barata</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="tabular-nums">
-            <tr className="bg-card">
-              <td className="px-2 py-1.5 text-secondary-ink">Preço</td>
-              <td className="px-2 py-1.5 text-right">{brl(precoAqui)}</td>
-              <td className="px-2 py-1.5 text-right">{brl(oferta.preco)}</td>
-            </tr>
-            {(descontoAqui > 0 || temCupomLa) && (
-              <tr className="bg-muted/40">
-                <td className="px-2 py-1.5 text-secondary-ink">Cupom</td>
-                <td className="px-2 py-1.5 text-right">
-                  {descontoAqui > 0 ? (
-                    <>
-                      −{brl(descontoAqui)}
-                      {cupomAqui ? (
-                        <span className="block text-xs text-secondary-ink">{cupomAqui}</span>
-                      ) : null}
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  {temCupomLa && oferta.economia ? (
-                    <>
-                      −{brl(oferta.economia)}
-                      <span className="block text-xs text-secondary-ink">{oferta.cupomTitulo}</span>
-                    </>
-                  ) : (
-                    "—"
-                  )}
+          mesmos preços, e o botão de compra precisa aparecer sem rolar.
+          No PC fica recolhida (24/10): a manchete já diz quanto a menos. */}
+      <Abertura
+        rotulo="Ver a conta da economia"
+        rotuloAberto="Esconder a conta"
+        className="mt-2 hidden sm:block"
+        classeConteudo="pt-2"
+      >
+        <div className="overflow-hidden rounded-md border border-success/30 bg-card text-sm">
+          <table className="w-full table-fixed border-collapse">
+            <thead>
+              <tr className="bg-muted/60 text-xs">
+                <th className="w-[34%] px-2 py-1.5 text-left font-semibold text-secondary-ink"></th>
+                <th className="px-2 py-1.5 text-right font-semibold text-secondary-ink break-words">
+                  Anúncio colado
+                  {vendedorAqui ? <span className="block font-normal">{vendedorAqui}</span> : null}
+                </th>
+                <th className="px-2 py-1.5 text-right font-bold text-success break-words">
+                  {oferta.vendedor ?? "Outra loja"}
+                  <span className="block font-normal">mais barata</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              <tr className="bg-card">
+                <td className="px-2 py-1.5 text-secondary-ink">Preço</td>
+                <td className="px-2 py-1.5 text-right">{brl(precoAqui)}</td>
+                <td className="px-2 py-1.5 text-right">{brl(oferta.preco)}</td>
+              </tr>
+              {(descontoAqui > 0 || temCupomLa) && (
+                <tr className="bg-muted/40">
+                  <td className="px-2 py-1.5 text-secondary-ink">Cupom</td>
+                  <td className="px-2 py-1.5 text-right">
+                    {descontoAqui > 0 ? (
+                      <>
+                        −{brl(descontoAqui)}
+                        {cupomAqui ? (
+                          <span className="block text-xs text-secondary-ink">{cupomAqui}</span>
+                        ) : null}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    {temCupomLa && oferta.economia ? (
+                      <>
+                        −{brl(oferta.economia)}
+                        <span className="block text-xs text-secondary-ink">
+                          {oferta.cupomTitulo}
+                        </span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </tr>
+              )}
+              <tr className="bg-card font-bold">
+                <td className="px-2 py-1.5">Você paga</td>
+                <td className="px-2 py-1.5 text-right text-secondary-ink">{brl(atual)}</td>
+                <td className="px-2 py-1.5 text-right text-base text-success">
+                  {brl(oferta.final)}
                 </td>
               </tr>
-            )}
-            <tr className="bg-card font-bold">
-              <td className="px-2 py-1.5">Você paga</td>
-              <td className="px-2 py-1.5 text-right text-secondary-ink">{brl(atual)}</td>
-              <td className="px-2 py-1.5 text-right text-base text-success">{brl(oferta.final)}</td>
-            </tr>
-          </tbody>
-        </table>
-        {diferenca != null && diferenca > 0 && (
-          <div className="border-t border-success/30 bg-success/15 px-3 py-2">
-            <p className="flex items-baseline justify-between gap-3">
-              <span className="font-bold text-success">Você economiza</span>
-              <span className="text-base font-extrabold tabular-nums text-success">
-                {brl(diferenca)}
-              </span>
-            </p>
-            <p className="mt-0.5 text-xs tabular-nums text-secondary-ink">
-              {brl(atual)} − {brl(oferta.final)} = {brl(diferenca)}
-              {pct != null ? ` (${pct}% a menos)` : ""}
-            </p>
-          </div>
-        )}
-      </div>
+            </tbody>
+          </table>
+          {diferenca != null && diferenca > 0 && (
+            <div className="border-t border-success/30 bg-success/15 px-3 py-2">
+              <p className="flex items-baseline justify-between gap-3">
+                <span className="font-bold text-success">Você economiza</span>
+                <span className="text-base font-extrabold tabular-nums text-success">
+                  {brl(diferenca)}
+                </span>
+              </p>
+              <p className="mt-0.5 text-xs tabular-nums text-secondary-ink">
+                {brl(atual)} − {brl(oferta.final)} = {brl(diferenca)}
+                {pct != null ? ` (${pct}% a menos)` : ""}
+              </p>
+            </div>
+          )}
+        </div>
+      </Abertura>
       {(oferta.minimo != null || oferta.vence) && (
         <dl className="mt-2 divide-y divide-success/20 text-sm">
           {oferta.minimo != null && (
