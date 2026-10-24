@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /* NAVEGAÇÃO SOFT (design de 10/10, "Navegação soft — resultado da
    comparação"): barra de seções fixa logo abaixo do cabeçalho, com pílulas
@@ -16,7 +16,9 @@ export type Secao = { id: string; nome: string; conta?: number | null };
    escondido atrás deles. */
 const LINHA_DE_LEITURA = 140;
 
-export function BarraDeSecoes({ secoes }: { secoes: Secao[] }) {
+/* inicio (24/10): o CEP do frete na mesma linha das pílulas (uma barra só
+   antes do resultado). */
+export function BarraDeSecoes({ secoes, inicio = null }: { secoes: Secao[]; inicio?: ReactNode }) {
   const [ativa, setAtiva] = useState<string | null>(secoes[0]?.id ?? null);
   const [ordem, setOrdem] = useState<string | null>(null);
   const [ponta, setPonta] = useState<"nenhuma" | "inicio" | "meio" | "fim">("nenhuma");
@@ -144,11 +146,13 @@ export function BarraDeSecoes({ secoes }: { secoes: Secao[] }) {
   };
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 mb-1 bg-white/90 px-4 py-2 backdrop-blur-xl dark:bg-neutral-950/90 sm:top-[60px] sm:-mx-5 sm:px-5">
+    <div className="sticky top-14 z-20 -mx-4 mb-1 flex flex-col border-b border-slate-200/50 bg-white/75 px-4 py-2 backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/75 sm:top-[60px] sm:-mx-5 sm:px-5 lg:flex-row lg:items-center lg:gap-4">
+      {/* No celular o CEP fica fora da barra fixa (ela não cresce). */}
+      {inicio && <div className="hidden min-w-0 shrink-0 lg:block lg:max-w-[45%]">{inicio}</div>}
       <div
         ref={trilho}
         data-ponta={ponta}
-        className="trilho-esmaece relative overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="trilho-esmaece relative min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <nav
           aria-label="Seções do resultado"

@@ -16,6 +16,7 @@ import {
   type PrazoDoItem,
   type ResultadoPrazo,
 } from "@/lib/prazo-entrega";
+import { Abertura } from "@/components/Abertura";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -39,11 +40,21 @@ export function FiltroPrazo({
     { rotulo: "Receba amanhã", data: obterAmanhaBrasilia() },
     { rotulo: "Este fim de semana", data: obterFimDeSemanaBrasilia() },
   ];
+  /* Refinador recolhido abaixo das recomendações (24/10): a recomendação
+     vem primeiro; com uma data escolhida, o rótulo mostra a data. */
   return (
-    <div className="mt-3 rounded-2xl border border-border/70 bg-[#f5f5f7] p-3 dark:bg-white/5">
-      <p className="flex items-center gap-1.5 text-sm font-semibold">
-        <Gift className="size-4 text-[#0071e3]" aria-hidden />É presente ou tem data para chegar?
-      </p>
+    <Abertura
+      className="mt-3 rounded-2xl border border-border/70 bg-[#f5f5f7] px-3 py-1 dark:bg-white/5"
+      estilo="linha"
+      padrao={limite != null}
+      icone={<Gift className="size-4 shrink-0 text-[#0071e3]" aria-hidden />}
+      rotulo={
+        limite
+          ? `Entregas até ${formatarDataCompleta(limite)}`
+          : "Precisa receber até uma data específica? Selecione aqui"
+      }
+      classeConteudo="pb-2"
+    >
       {!cep ? (
         <p className="mt-1 text-xs text-secondary-ink">
           Informe o seu CEP acima para ver o prazo de entrega de cada loja.
@@ -101,7 +112,7 @@ export function FiltroPrazo({
         </div>
       )}
       {cep && <p className="mt-2 text-[11px] leading-snug text-secondary-ink">{AVISO_PRAZO}</p>}
-    </div>
+    </Abertura>
   );
 }
 

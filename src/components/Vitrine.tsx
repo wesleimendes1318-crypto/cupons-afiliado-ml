@@ -541,11 +541,13 @@ function Cartao({ i }: { i: ItemVitrine }) {
             {(i.url_produto || destino) && (
               <button
                 type="button"
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent("comparar-link", { detail: i.url_produto ?? destino }),
-                  )
-                }
+                onClick={() => {
+                  const alvo = i.url_produto ?? destino ?? "";
+                  /* Fora da tela inicial (categorias) ninguém ouve o evento: abre a comparação lá. */
+                  if (window.location.pathname === "/")
+                    window.dispatchEvent(new CustomEvent("comparar-link", { detail: alvo }));
+                  else window.location.href = `/?link=${encodeURIComponent(alvo)}`;
+                }}
                 className="inline-flex min-h-7 items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline"
               >
                 <RefreshCw className="size-3.5" aria-hidden="true" />
