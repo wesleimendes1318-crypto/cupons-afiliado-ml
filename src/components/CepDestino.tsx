@@ -218,9 +218,11 @@ export function useCepDestino(ativo: boolean) {
 export function SeloCep({
   regiao,
   trocar,
+  className = "mt-2",
 }: {
   regiao: Regiao | null;
   trocar: (r: Regiao) => void;
+  className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
   const [cep, setCep] = useState("");
@@ -263,7 +265,7 @@ export function SeloCep({
       }(${regiao.cep})`
     : "informe seu CEP";
   return (
-    <div className="mt-2 text-xs text-secondary-ink">
+    <div className={"text-xs text-secondary-ink " + className}>
       <span aria-hidden>📍</span> Frete para:{" "}
       <span className="font-semibold text-foreground">{onde}</span>
       {regiao?.padrao ? (
