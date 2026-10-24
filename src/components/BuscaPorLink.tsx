@@ -21,6 +21,7 @@
 */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 
 import { AcompanharPreco } from "@/components/AcompanharPreco";
 import { ComoFunciona } from "@/components/ComoFunciona";
@@ -977,6 +978,31 @@ export default function BuscaPorLink({
   const urlDoPedido = useRef<string | null>(null);
   const perfilRegistrado = useRef<string | null>(null);
 
+  /* Cada comparação fica no endereço (?link=, 24/10): o "voltar" volta ao
+     produto anterior ou à tela limpa, e recarregar ou compartilhar mantém o
+     produto na tela. */
+  const router = useRouter();
+  const alvoNoEndereco = useRef<string | null>(null);
+  const substituirEndereco = useRef(false);
+  const gravarNoEndereco = useCallback(
+    (alvo: string) => {
+      alvoNoEndereco.current = alvo;
+      const q = new URLSearchParams(window.location.search);
+      if (window.location.pathname !== "/" || q.get("link") === alvo) return;
+      /* Encurtado resolvido ou chegada pelo app (?text=): troca o endereço
+         em vez de empilhar, senão o "voltar" cai num laço. */
+      const replace =
+        substituirEndereco.current || (window.location.search !== "" && !q.has("link"));
+      substituirEndereco.current = false;
+      void router.navigate({
+        href: `/?link=${encodeURIComponent(alvo)}`,
+        replace,
+        resetScroll: false,
+      });
+    },
+    [router],
+  );
+
   const limparTimers = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     if (prazo.current) clearTimeout(prazo.current);
@@ -995,6 +1021,7 @@ export default function BuscaPorLink({
       const alvo = bruta.trim();
       if (!alvo) return;
 
+      gravarNoEndereco(alvo);
       limparTimers();
       atual.current = null;
       setErro(null);
@@ -1037,6 +1064,7 @@ export default function BuscaPorLink({
           /* Encurtado que era do Mercado Livre: compara como sempre. */
           if (j.origem === "mercadolivre" && melhorLinkML(j.urlLimpa)) {
             setOutraLoja(null);
+            substituirEndereco.current = true;
             window.dispatchEvent(new CustomEvent("comparar-link", { detail: j.urlLimpa }));
             return;
           }
@@ -1244,7 +1272,7 @@ export default function BuscaPorLink({
       }, LIMITE_MS);
       consultar();
     },
-    [limparTimers],
+    [limparTimers, gravarNoEndereco],
   );
 
   /* A vitrine pede "comparar de novo" um produto: coloca o link na caixa,
@@ -1295,10 +1323,46 @@ export default function BuscaPorLink({
     }
     if (!alvo || !/^https?:\/\/|\shttps?:\/\//i.test(alvo)) return;
     setUrl(alvo);
+    substituirEndereco.current = true;
     document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "start" });
     void buscar(alvo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* "Voltar", "avançar" ou o logo mudaram o ?link= do endereço: mostra o
+     produto dele ou a tela limpa. A chegada é tratada no efeito acima. */
+  const linkNoEndereco = useRouterState({
+    select: (s) => new URLSearchParams(s.location.searchStr).get("link"),
+  });
+  const enderecoLido = useRef(false);
+  useEffect(() => {
+    if (!enderecoLido.current) {
+      enderecoLido.current = true;
+      return;
+    }
+    if (linkNoEndereco === alvoNoEndereco.current) return;
+    if (linkNoEndereco) {
+      setUrl(linkNoEndereco);
+      void buscar(linkNoEndereco);
+      return;
+    }
+    alvoNoEndereco.current = null;
+    identificacao.current++;
+    limparTimers();
+    atual.current = null;
+    chaveAtual.current = null;
+    urlDoPedido.current = null;
+    setUrl("");
+    setFase("parado");
+    setPedido(null);
+    setErro(null);
+    setDemorando(false);
+    setMotivo(null);
+    setCompletando(false);
+    setOutraLoja(null);
+    setSemFicha(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkNoEndereco]);
 
   const copiar = (texto: string, marca: string) => {
     navigator.clipboard
@@ -1744,6 +1808,16 @@ function CodigoNaHora({
     },
     [],
   );
+
+  /* Voltou do Mercado Livre pelo "voltar" (página restaurada da memória do
+     navegador): o botão não pode ficar travado em "Abrindo o produto...". */
+  useEffect(() => {
+    const aoVoltar = (e: PageTransitionEvent) => {
+      if (e.persisted) setRedirecionando(false);
+    };
+    window.addEventListener("pageshow", aoVoltar);
+    return () => window.removeEventListener("pageshow", aoVoltar);
+  }, []);
 
   /* Loja com código JÁ gerado: aparece pronto para copiar, sem clique e sem
      pedir geração nova (só leitura). Pode ser o código de outro cupom válido
