@@ -812,6 +812,10 @@ export function ComparacaoMarketplaces({
   const aPedir = colunas
     .filter((c) => c.situacao === "sob_demanda" && c.jogador !== "mercadolivre")
     .map((c) => c.jogador as Mk);
+  /* Amazon e Shopee ainda não pedidas: só o convite, sem repetir a oferta do
+     Mercado Livre (já está na recomendação) numa tabela de colunas vazias. */
+  const compacto =
+    aPedir.length === 2 && buscando.length === 0 && lojas.length === 0 && estado !== "carregando";
 
   /* Conteúdo de cada linha da tabela, por coluna. Ainda não buscado (sob
      demanda): valores borrados e "Ver preço". */
@@ -910,16 +914,23 @@ export function ComparacaoMarketplaces({
 
       {/* MESMO PRODUTO */}
       <div className="mt-3 rounded-3xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-5">
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-          <strong className="text-xl tracking-tight">Mesmo produto</strong>
-          <span className="hidden h-4 w-px bg-border sm:inline-block" aria-hidden="true" />
-          <span className="text-[13px] text-secondary-ink">
-            {totalOfertas} {totalOfertas === 1 ? "oferta confirmada" : "ofertas confirmadas"} nesta
-            análise
-          </span>
-        </p>
+        {!compacto && (
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <strong className="text-xl tracking-tight">Mesmo produto</strong>
+            <span className="hidden h-4 w-px bg-border sm:inline-block" aria-hidden="true" />
+            <span className="text-[13px] text-secondary-ink">
+              {totalOfertas} {totalOfertas === 1 ? "oferta confirmada" : "ofertas confirmadas"}{" "}
+              nesta análise
+            </span>
+          </p>
+        )}
         {aPedir.length > 0 && estado !== "carregando" && (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3">
+          <div
+            className={
+              (compacto ? "" : "mt-3 ") +
+              "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3"
+            }
+          >
             <p className="min-w-0 flex-1 text-[13px] leading-snug">
               <strong>
                 {aPedir.length > 1
@@ -955,7 +966,7 @@ export function ComparacaoMarketplaces({
             )}
           </div>
         )}
-        {(v || m) && (
+        {!compacto && (v || m) && (
           <div className="mt-2 space-y-1 text-xs leading-relaxed">
             {v && (
               <p>
@@ -980,7 +991,7 @@ export function ComparacaoMarketplaces({
             )}
           </div>
         )}
-        {!v && !m && decisao.ofertas.length > 0 && buscando.length === 0 && (
+        {!compacto && !v && !m && decisao.ofertas.length > 0 && buscando.length === 0 && (
           <p className="mt-2 text-xs text-secondary-ink">
             Nenhum marketplace confirmou o custo total com o frete: compare o preço do produto e
             confira o frete no anúncio.
@@ -988,157 +999,163 @@ export function ComparacaoMarketplaces({
         )}
 
         {/* Espaço largo: tabela; as linhas se alinham entre as colunas (subgrid). */}
-        <div
-          className="mt-4 hidden grid-flow-col grid-cols-[minmax(7.5rem,0.7fr)_repeat(3,minmax(0,1fr))] grid-rows-[repeat(7,auto)] text-[13px] @2xl:grid"
-          role="group"
-          aria-label="Mesmo produto nos 3 marketplaces"
-        >
-          <div className="row-span-7 grid grid-rows-subgrid">
-            <span aria-hidden="true" />
-            {ROTULOS.map((r, i) => (
-              <span
-                key={r}
-                className={
-                  "flex items-center border-l border-t border-border px-4 py-3 " +
-                  (r === "Total"
-                    ? FUNDO_TOTAL + " font-bold text-foreground"
-                    : "bg-muted/60 font-medium text-secondary-ink") +
-                  (i === 0 ? " rounded-tl-xl" : "") +
-                  (i === ROTULOS.length - 1 ? " rounded-bl-xl border-b" : "")
-                }
-              >
-                {r}
-              </span>
-            ))}
-          </div>
-          {colunas.map((c, idx) => (
-            <div
-              key={c.jogador}
-              role="group"
-              aria-label={NOME_DO_JOGADOR[c.jogador]}
-              className={
-                "relative row-span-7 grid grid-rows-subgrid " +
-                (ehVencedor(c)
-                  ? "z-10 rounded-xl shadow-lg shadow-success/15 ring-2 ring-success/60"
-                  : "")
-              }
-            >
-              <span
-                className={
-                  "mx-px flex flex-col items-center justify-end gap-1 rounded-t-xl px-3 pb-2.5 pt-2 text-center " +
-                  (ehVencedor(c)
-                    ? "bg-success/10"
-                    : c.situacao === "conferindo"
-                      ? "bg-[#0071e3]/[0.07]"
-                      : "bg-muted")
-                }
-              >
-                {ehVencedor(c) && <SeloMelhor />}
-                <NomeDoMarketplace j={c.jogador} grande />
-                {c.situacao === "conferindo" && <BarraDeBusca />}
-                {(c.oferta?.prime || ehMenor(c)) && (
-                  <span className="flex flex-wrap justify-center gap-1">
-                    {c.oferta?.prime && <SeloPrime />}
-                    {ehMenor(c) && <SeloMenorNoProduto />}
-                  </span>
-                )}
-              </span>
+        {!compacto && (
+          <div
+            className="mt-4 hidden grid-flow-col grid-cols-[minmax(7.5rem,0.7fr)_repeat(3,minmax(0,1fr))] grid-rows-[repeat(7,auto)] text-[13px] @2xl:grid"
+            role="group"
+            aria-label="Mesmo produto nos 3 marketplaces"
+          >
+            <div className="row-span-7 grid grid-rows-subgrid">
+              <span aria-hidden="true" />
               {ROTULOS.map((r, i) => (
                 <span
                   key={r}
                   className={
-                    "flex items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
-                    (r === "Total" ? FUNDO_TOTAL : "bg-card") +
-                    (i === ROTULOS.length - 1 ? " border-b" : "") +
-                    (i === ROTULOS.length - 1 && idx === colunas.length - 1 ? " rounded-br-xl" : "")
+                    "flex items-center border-l border-t border-border px-4 py-3 " +
+                    (r === "Total"
+                      ? FUNDO_TOTAL + " font-bold text-foreground"
+                      : "bg-muted/60 font-medium text-secondary-ink") +
+                    (i === 0 ? " rounded-tl-xl" : "") +
+                    (i === ROTULOS.length - 1 ? " rounded-bl-xl border-b" : "")
                   }
                 >
-                  {celula(c, r)}
+                  {r}
                 </span>
               ))}
             </div>
-          ))}
-        </div>
-
-        {/* Espaço estreito (celular): um cartão por marketplace. */}
-        <ul className="mt-4 space-y-3 @2xl:hidden">
-          {colunas.map((c) => (
-            <li
-              key={c.jogador}
-              className={
-                "rounded-2xl border bg-card p-3 " +
-                (ehVencedor(c)
-                  ? "border-success/60 shadow-lg shadow-success/15 ring-2 ring-success/40"
-                  : "border-border")
-              }
-            >
-              {(ehVencedor(c) || ehMenor(c) || c.oferta?.prime) && (
-                <div className="mb-2 flex flex-wrap gap-1.5">
+            {colunas.map((c, idx) => (
+              <div
+                key={c.jogador}
+                role="group"
+                aria-label={NOME_DO_JOGADOR[c.jogador]}
+                className={
+                  "relative row-span-7 grid grid-rows-subgrid " +
+                  (ehVencedor(c)
+                    ? "z-10 rounded-xl shadow-lg shadow-success/15 ring-2 ring-success/60"
+                    : "")
+                }
+              >
+                <span
+                  className={
+                    "mx-px flex flex-col items-center justify-end gap-1 rounded-t-xl px-3 pb-2.5 pt-2 text-center " +
+                    (ehVencedor(c)
+                      ? "bg-success/10"
+                      : c.situacao === "conferindo"
+                        ? "bg-[#0071e3]/[0.07]"
+                        : "bg-muted")
+                  }
+                >
                   {ehVencedor(c) && <SeloMelhor />}
-                  {ehMenor(c) && <SeloMenorNoProduto />}
-                  {c.oferta?.prime && <SeloPrime />}
-                </div>
-              )}
-              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-                <span className="min-w-[7rem]">
                   <NomeDoMarketplace j={c.jogador} grande />
                   {c.situacao === "conferindo" && <BarraDeBusca />}
+                  {(c.oferta?.prime || ehMenor(c)) && (
+                    <span className="flex flex-wrap justify-center gap-1">
+                      {c.oferta?.prime && <SeloPrime />}
+                      {ehMenor(c) && <SeloMenorNoProduto />}
+                    </span>
+                  )}
                 </span>
-                <span className="ml-auto shrink-0 text-[13px]">
-                  <Correspondencia c={c} />
-                </span>
+                {ROTULOS.map((r, i) => (
+                  <span
+                    key={r}
+                    className={
+                      "flex items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
+                      (r === "Total" ? FUNDO_TOTAL : "bg-card") +
+                      (i === ROTULOS.length - 1 ? " border-b" : "") +
+                      (i === ROTULOS.length - 1 && idx === colunas.length - 1
+                        ? " rounded-br-xl"
+                        : "")
+                    }
+                  >
+                    {celula(c, r)}
+                  </span>
+                ))}
               </div>
-              {(c.oferta ||
-                c.situacao === "sob_demanda" ||
-                c.situacao === "conferindo" ||
-                c.situacao === "carregando") && (
-                <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
-                  {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
-                    <div
-                      key={r}
-                      className={
-                        "flex items-start justify-between gap-3 border-t border-border px-3 py-2 first:border-t-0 " +
-                        (r === "Total" ? FUNDO_TOTAL : "")
-                      }
-                    >
-                      <dt
+            ))}
+          </div>
+        )}
+
+        {/* Espaço estreito (celular): um cartão por marketplace. */}
+        {!compacto && (
+          <ul className="mt-4 space-y-3 @2xl:hidden">
+            {colunas.map((c) => (
+              <li
+                key={c.jogador}
+                className={
+                  "rounded-2xl border bg-card p-3 " +
+                  (ehVencedor(c)
+                    ? "border-success/60 shadow-lg shadow-success/15 ring-2 ring-success/40"
+                    : "border-border")
+                }
+              >
+                {(ehVencedor(c) || ehMenor(c) || c.oferta?.prime) && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {ehVencedor(c) && <SeloMelhor />}
+                    {ehMenor(c) && <SeloMenorNoProduto />}
+                    {c.oferta?.prime && <SeloPrime />}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+                  <span className="min-w-[7rem]">
+                    <NomeDoMarketplace j={c.jogador} grande />
+                    {c.situacao === "conferindo" && <BarraDeBusca />}
+                  </span>
+                  <span className="ml-auto shrink-0 text-[13px]">
+                    <Correspondencia c={c} />
+                  </span>
+                </div>
+                {(c.oferta ||
+                  c.situacao === "sob_demanda" ||
+                  c.situacao === "conferindo" ||
+                  c.situacao === "carregando") && (
+                  <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
+                    {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
+                      <div
+                        key={r}
                         className={
-                          "shrink-0 " +
-                          (r === "Total" ? "font-bold" : "font-medium text-secondary-ink")
+                          "flex items-start justify-between gap-3 border-t border-border px-3 py-2 first:border-t-0 " +
+                          (r === "Total" ? FUNDO_TOTAL : "")
                         }
                       >
-                        {r}
-                      </dt>
-                      <dd className="min-w-0 text-right">
-                        {c.situacao === "sob_demanda" ||
-                        c.situacao === "conferindo" ||
-                        c.situacao === "carregando" ? (
-                          celula(c, r)
-                        ) : r === "Total" ? (
-                          <Total c={c} colado={colado} direita />
-                        ) : r === "Vendedor" ? (
-                          <Vendedor c={c} direita />
-                        ) : (
-                          celula(c, r)
-                        )}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              <div className="mt-3">
-                <Acao
-                  c={c}
-                  colado={colado}
-                  gerarLink={gerarLink}
-                  verAlternativa={verAlternativa}
-                  pedir={(mk) => void pedir(mk)}
-                  podePedir={podePedir}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
+                        <dt
+                          className={
+                            "shrink-0 " +
+                            (r === "Total" ? "font-bold" : "font-medium text-secondary-ink")
+                          }
+                        >
+                          {r}
+                        </dt>
+                        <dd className="min-w-0 text-right">
+                          {c.situacao === "sob_demanda" ||
+                          c.situacao === "conferindo" ||
+                          c.situacao === "carregando" ? (
+                            celula(c, r)
+                          ) : r === "Total" ? (
+                            <Total c={c} colado={colado} direita />
+                          ) : r === "Vendedor" ? (
+                            <Vendedor c={c} direita />
+                          ) : (
+                            celula(c, r)
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                <div className="mt-3">
+                  <Acao
+                    c={c}
+                    colado={colado}
+                    gerarLink={gerarLink}
+                    verAlternativa={verAlternativa}
+                    pedir={(mk) => void pedir(mk)}
+                    podePedir={podePedir}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* ALTERNATIVAS PARECIDAS */}
