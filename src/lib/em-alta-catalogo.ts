@@ -51,6 +51,9 @@ const META_POR_CATEGORIA = 240;
 /* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
    avança para outros produtos e subcategorias. */
 const FRESCO_MS = 20 * 3600_000;
+/* 25/10: produto à mostra só é relido depois de 48 h (some com 72 h): as
+   execuções vão para produtos novos até a meta. */
+const RELER_MS = 48 * 3600_000;
 /* 1 por execução e no máximo 1 a cada 15 min (25/10: o agente passou a
    rodar a cada minuto para chegar a 240 por categoria; o teto diário dos
    agentes é dividido com sazonal, brinquedos, campanhas e hub). */
@@ -228,7 +231,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
             tentativa(a) - tentativa(b),
         )[0]!;
   const recentes = new Set(
-    linhas.filter((l) => agoraMs - Date.parse(l.atualizado_em) < FRESCO_MS).map((l) => l.produto),
+    linhas.filter((l) => agoraMs - Date.parse(l.atualizado_em) < RELER_MS).map((l) => l.produto),
   );
 
   /* Memória do agente: descartes, listas esgotadas e filhos. */
