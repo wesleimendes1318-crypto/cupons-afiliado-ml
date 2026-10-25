@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { VerNaLoja } from "@/components/BuscaPorLink";
-import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { Truck } from "lucide-react";
+import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
 
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
@@ -69,8 +70,6 @@ type Cartao = {
 };
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const recente = (iso: string) => Date.now() - Date.parse(iso) < 24 * 3600_000;
-
 function cartaoDo(i: Item): Cartao | null {
   if (i.preco == null) return null;
   if (
@@ -110,18 +109,15 @@ const chaveDoBrinquedo = (url: string) =>
 
 function CartaoBrinquedo({
   c,
-  naHome,
   avaliacao = null,
 }: {
   c: Cartao;
-  naHome: boolean;
   avaliacao?: ResumoAvaliacoes | null;
 }) {
   const i = c.item;
   const faixa = faixaPorId(i.faixa);
   /* Botão direto sempre que houver link de afiliado (Weslei, 05/10). */
   const podeComprar = !!c.link;
-  const antigo = !recente(i.atendido_em);
   return (
     <li className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
       {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
@@ -198,49 +194,15 @@ function CartaoBrinquedo({
             )}
           </p>
         )}
-        <div className="mt-auto pt-3">
+        <div className="mt-auto space-y-1.5 pt-3">
           {podeComprar ? (
-            <a
-              href={c.link as string}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              data-origem="brinquedos"
-              className="flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#1d7a3e] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1d7a3e]"
-            >
-              <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
-              Comprar com segurança
-            </a>
+            <ComprarComSeguranca link={c.link as string} origem="brinquedos" />
           ) : c.tipo !== "desconto" ? (
             /* Sem link guardado: o link de afiliado do próprio anúncio sai no
                clique (regra nº 1: sempre o link do Weslei). */
-            <div className="mb-1.5">
-              <VerNaLoja url={i.url} cartao />
-            </div>
+            <VerNaLoja url={i.url} grande />
           ) : null}
-          {(!podeComprar || antigo) &&
-            (() => {
-              const classe = podeComprar
-                ? "mt-1.5 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-semibold text-[#0058b0] hover:bg-[#f5f5f7]"
-                : "flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#0071e3] px-2 py-2 text-[11px] font-bold text-white hover:brightness-110";
-              const texto = podeComprar ? "Atualizar preço" : "Ver o preço de agora";
-              return naHome ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.dispatchEvent(new CustomEvent("comparar-link", { detail: i.url }))
-                  }
-                  className={classe}
-                >
-                  <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                  {texto}
-                </button>
-              ) : (
-                <a href={`/?link=${encodeURIComponent(i.url)}`} className={classe}>
-                  <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                  {texto}
-                </a>
-              );
-            })()}
+          <CompararPreco url={i.url} />
           <VerDetalhesVitrine
             chave={chaveDoBrinquedo(i.url)}
             titulo={i.nome}
@@ -272,12 +234,12 @@ const ABAS = [
 ];
 
 export function BrinquedosPorIdade({
-  naHome = false,
   className = "",
   inicial,
   titulo = "h2",
   avisoSemItens = false,
 }: {
+  /* Sem efeito desde 25/10 ("Comparar preço" decide sozinho, BotoesCartao). */
   naHome?: boolean;
   className?: string;
   /* Página /brinquedos (16/10): sem produto comparado agora, um aviso com o
@@ -452,12 +414,7 @@ export function BrinquedosPorIdade({
           className="-mx-5 mt-4 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5"
         >
           {lista.slice(0, 15).map((c) => (
-            <CartaoBrinquedo
-              key={c.item.produto}
-              c={c}
-              naHome={naHome}
-              avaliacao={avaliacaoDo(c)}
-            />
+            <CartaoBrinquedo key={c.item.produto} c={c} avaliacao={avaliacaoDo(c)} />
           ))}
         </ul>
       )}
