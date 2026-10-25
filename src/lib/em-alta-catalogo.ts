@@ -16,7 +16,7 @@
    Meta: 240 por categoria (Weslei, 25/10: "pelo menos +200 em CADA
    categoria"; antes 24 e 100); a categoria com menos produtos vem primeiro e, acabando a lista
    principal, as subcategorias oficiais (as maiores). Tetos por execução:
-   32 chamadas à API, 16 produtos, 4 na fila; cada produto volta à fila no
+   64 chamadas à API, 30 produtos, 1 na fila; cada produto volta à fila no
    máximo a cada 48 h. */
 import { categoriaDoMaisVendido } from "@/lib/categoria-em-alta";
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
@@ -39,7 +39,8 @@ export const CATEGORIAS_EM_ALTA: Record<string, string[]> = {
   brinquedos: ["MLB1132"],
 };
 
-const TETO_API = 32;
+/* 25/10: 64 chamadas e 30 produtos por execução (meta de 240 no mesmo dia). */
+const TETO_API = 64;
 /* Weslei, 09/10: "pelo menos 20 anúncios em cada" categoria. */
 /* 09/10, noite: "aumentar todos os dias o número de anúncios": 48. */
 /* 09/10, noite: "Avalie 100 anúncios por categoria. Precisa ser incluído e
@@ -56,7 +57,7 @@ const FRESCO_MS = 20 * 3600_000;
 const FILA_POR_VEZ = 1;
 const FILA_INTERVALO_MS = 15 * 60_000;
 const VOLTA_MS = 48 * 3600_000;
-const PRODUTOS_POR_EXECUCAO = 16;
+const PRODUTOS_POR_EXECUCAO = 30;
 /* MAIS DESEJADOS (Weslei, 09/10, noite: "adicione os itens mais
    desejados"; "os produtos de informática devem ser os mais pesquisados,
    também os bonitinhos"): os termos mais buscados da categoria na lista
@@ -64,7 +65,7 @@ const PRODUTOS_POR_EXECUCAO = 16;
    catálogo; até 3 buscas e 2 produtos por busca a cada execução. O cartão
    diz "Em alta nas buscas" (dado da lista oficial). Em Informática, além
    disso, buscas fixas de periféricos bonitos e coloridos. */
-const BUSCAS_POR_EXECUCAO = 3;
+const BUSCAS_POR_EXECUCAO = 5;
 /* 25/10 (Weslei: "combinar com o que os dados do Google recomendam"): os
    50 produtos mais desejados pelos brasileiros no Google em 2025 (lista
    divulgada pelo Google, nossomeio.com.br/conheca-os-50-produtos-mais-
@@ -136,7 +137,7 @@ const BUSCAS_CURADORIA: Record<string, string[]> = {
    categoria (Moda -> Calçados -> Tênis). Chamadas para listas e filhos
    param aqui; o resto do teto fica para as fichas dos produtos. */
 const FILHOS_POR_NIVEL = [8, 6];
-const TETO_ARVORE = TETO_API - 12;
+const TETO_ARVORE = TETO_API - 30;
 /* Memória (em_alta_vistos): produto descartado fica 7 dias fora; lista
    sem produto novo, 20 h; filhos de uma categoria, 7 dias. */
 const DESCARTE_MS = 7 * 24 * 3600_000;
