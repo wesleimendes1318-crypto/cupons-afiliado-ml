@@ -181,15 +181,23 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
   let chamadas = 0;
   const erros: string[] = [];
 
-  const { data: estado } = await t
-    .from("em_alta_catalogo")
-    .select("produto,categoria_site,atualizado_em,enfileirado_em");
-  const linhas = (estado ?? []) as Array<{
+  /* Em páginas de 1000 (25/10: o banco entrega no máximo 1000 por leitura;
+     acima disso o agente não via os produtos já lidos e relia os mesmos). */
+  const linhas: Array<{
     produto: string;
     categoria_site: string;
     atualizado_em: string;
     enfileirado_em: string | null;
-  }>;
+  }> = [];
+  for (let de = 0; ; de += 1000) {
+    const { data: pagina } = await t
+      .from("em_alta_catalogo")
+      .select("produto,categoria_site,atualizado_em,enfileirado_em")
+      .order("produto")
+      .range(de, de + 999);
+    linhas.push(...(pagina ?? []));
+    if ((pagina ?? []).length < 1000) break;
+  }
   const agoraMs = Date.now();
   const ultimo = (c: string) =>
     Math.max(
@@ -235,15 +243,18 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
   );
 
   /* Memória do agente: descartes, listas esgotadas e filhos. */
-  const { data: memoria } = await t
-    .from("em_alta_vistos")
-    .select("chave,motivo,visto_em")
-    .gte("visto_em", new Date(agoraMs - DESCARTE_MS).toISOString());
-  const vistos = new Map(
-    ((memoria ?? []) as Array<{ chave: string; motivo: string | null; visto_em: string }>).map(
-      (m) => [m.chave, m],
-    ),
-  );
+  const memoria: Array<{ chave: string; motivo: string | null; visto_em: string }> = [];
+  for (let de = 0; ; de += 1000) {
+    const { data: pagina } = await t
+      .from("em_alta_vistos")
+      .select("chave,motivo,visto_em")
+      .gte("visto_em", new Date(agoraMs - DESCARTE_MS).toISOString())
+      .order("chave")
+      .range(de, de + 999);
+    memoria.push(...(pagina ?? []));
+    if ((pagina ?? []).length < 1000) break;
+  }
+  const vistos = new Map(memoria.map((m) => [m.chave, m]));
   const lembrar: Array<{ chave: string; motivo: string; visto_em: string }> = [];
   const anotar = (chave: string, motivo: string) =>
     lembrar.push({ chave, motivo, visto_em: new Date().toISOString() });
