@@ -2011,11 +2011,15 @@ function Index() {
           <EmAltaCatalogo naHome limite={12} />
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
-          {buscaParada && <AnimacaoAcompanhar className="mt-8" />}
-
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
-            o convite aparece abaixo dele). */}
-          {buscaParada && <ConviteTelegram formato="cartao" origem="home" className="mt-8" />}
+            o convite aparece abaixo dele). No PC largo (25/10), lado a lado
+            com o acompanhar preço: a home fica uma faixa mais curta. */}
+          {buscaParada && (
+            <div className="xl:mt-8 xl:grid xl:grid-cols-2 xl:gap-6">
+              <AnimacaoAcompanhar className="mt-8 xl:mt-0" />
+              <ConviteTelegram formato="cartao" origem="home" className="mt-8 xl:mt-0" />
+            </div>
+          )}
           {buscaParada && <InstalarApp className="mt-4" />}
 
           {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
