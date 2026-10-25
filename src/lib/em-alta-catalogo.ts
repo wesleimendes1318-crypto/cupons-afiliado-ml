@@ -13,8 +13,8 @@
       afiliado no clique) e põe os primeiros na fila de comparação
       (pedir_link_agente: teto diário dos agentes e cota da conferência).
       Comparados, entram na vitrine pelas regras de sempre.
-   Meta: pelo menos 24 por categoria (Weslei, 09/10: "pelo menos 20 em
-   cada"); a categoria com menos produtos vem primeiro e, acabando a lista
+   Meta: 240 por categoria (Weslei, 25/10: "pelo menos +200 em CADA
+   categoria"; antes 24 e 100); a categoria com menos produtos vem primeiro e, acabando a lista
    principal, as subcategorias oficiais (as maiores). Tetos por execução:
    32 chamadas à API, 16 produtos, 4 na fila; cada produto volta à fila no
    máximo a cada 48 h. */
@@ -44,13 +44,15 @@ const TETO_API = 32;
 /* 09/10, noite: "aumentar todos os dias o número de anúncios": 48. */
 /* 09/10, noite: "Avalie 100 anúncios por categoria. Precisa ser incluído e
    removido sem depender de créditos": 100, com o pg_cron a cada 30 min. */
-const META_POR_CATEGORIA = 100;
+/* 25/10: "Pelo menos +200 em CADA categoria": 240 (folga para os que saem
+   pela nota), com o pg_cron a cada 10 min. */
+const META_POR_CATEGORIA = 240;
 /* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
    avança para outros produtos e subcategorias. */
 const FRESCO_MS = 20 * 3600_000;
-/* 2 por execução (48 execuções/dia): o teto diário dos agentes é dividido
-   com sazonal, brinquedos, campanhas e hub. */
-const FILA_POR_VEZ = 2;
+/* 1 por execução (144 execuções/dia desde 25/10; antes 2 em 48): o teto
+   diário dos agentes é dividido com sazonal, brinquedos, campanhas e hub. */
+const FILA_POR_VEZ = 1;
 const VOLTA_MS = 48 * 3600_000;
 const PRODUTOS_POR_EXECUCAO = 16;
 /* MAIS DESEJADOS (Weslei, 09/10, noite: "adicione os itens mais
@@ -61,6 +63,12 @@ const PRODUTOS_POR_EXECUCAO = 16;
    diz "Em alta nas buscas" (dado da lista oficial). Em Informática, além
    disso, buscas fixas de periféricos bonitos e coloridos. */
 const BUSCAS_POR_EXECUCAO = 3;
+/* 25/10 (Weslei: "combinar com o que os dados do Google recomendam"): os
+   50 produtos mais desejados pelos brasileiros no Google em 2025 (lista
+   divulgada pelo Google, nossomeio.com.br/conheca-os-50-produtos-mais-
+   desejados-pelos-brasileiros-no-google-em-2025) viram buscas no catálogo
+   da categoria; o nome do produto ainda decide a categoria
+   (categoriaDoMaisVendido) e o preço é sempre o da oferta real. */
 const BUSCAS_CURADORIA: Record<string, string[]> = {
   informatica: [
     "teclado rosa",
@@ -69,6 +77,57 @@ const BUSCAS_CURADORIA: Record<string, string[]> = {
     "kit teclado e mouse colorido",
     "teclado mecanico branco",
     "suporte notebook ajustavel",
+    "placa de video rx 7600",
+    "placa de video rx 580",
+    "ipad 10",
+    "kindle",
+  ],
+  celulares: [
+    "poco x7 pro",
+    "iphone 17",
+    "iphone 16",
+    "galaxy s24",
+    "samsung a55",
+    "smartwatch garmin",
+  ],
+  eletronicos: [
+    "playstation 5",
+    "controle ps5",
+    "smart tv 43 polegadas",
+    "smart tv 55 polegadas",
+    "smart tv 65 polegadas",
+    "camera de seguranca wifi",
+  ],
+  brinquedos: [
+    "boneco labubu",
+    "jogos de tabuleiro",
+    "moto eletrica infantil",
+    "patinete infantil",
+  ],
+  moda: [
+    "tenis corre 4",
+    "crocs feminino",
+    "oculos ray ban",
+    "tenis feminino academia",
+    "relogio masculino",
+  ],
+  beleza: ["perfume arabe", "perfume floratta", "cicaplast", "bepantol derma", "body splash"],
+  casa: [
+    "cabeceira de cama",
+    "escorredor de louca",
+    "mesa de jantar 6 cadeiras",
+    "cadeira de praia",
+  ],
+  eletrodomesticos: [
+    "fogao de inducao",
+    "forno eletrico de embutir",
+    "cafeteira eletrica",
+    "pipoqueira eletrica",
+    "ventilador de coluna",
+    "lava e seca samsung",
+    "chaleira eletrica",
+    "lava loucas",
+    "ar condicionado 18000 btus",
   ],
 };
 /* Árvore oficial: filhos por nível (as maiores primeiro), até os netos da

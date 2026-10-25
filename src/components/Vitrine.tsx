@@ -8,7 +8,7 @@
 
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
+import { BadgeCheck, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
@@ -25,6 +25,7 @@ import {
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
@@ -500,21 +501,12 @@ function Cartao({ i }: { i: ItemVitrine }) {
         {/* BOTÃO DIRETO (Weslei, 05/10: "não tem o botão de consultar os
             produtos diretamente"): compra pelo link de afiliado (a melhor
             loja com frete grátis confirmado ou o próprio anúncio), com o
-            preço de quando foi comparado ("visto em"); "Atualizar preço"
-            compara de novo na hora. Detalhes e atualizar ficam numa linha
-            discreta abaixo da compra (18/10: menos informação de cara). */}
+            preço de quando foi comparado ("visto em"); "Comparar preço"
+            compara de novo na hora (25/10: mesmo rodapé em todo cartão,
+            BotoesCartao). Detalhes fica numa linha discreta abaixo. */}
         <div className="mt-auto flex flex-col gap-1.5 pt-2.5">
           {ehLinkDeAfiliado(destino) ? (
-            <a
-              href={destino}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              data-origem="vitrine"
-              className="inline-flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-success px-2 text-[11px] font-bold text-white transition hover:brightness-95 active:scale-[0.98] min-[400px]:text-xs"
-            >
-              <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
-              Comprar com segurança
-            </a>
+            <ComprarComSeguranca link={destino} origem="vitrine" />
           ) : (
             /* Sem link guardado (10/10: o da ficha do catálogo abria outra
                loja e foi descartado): o link do PRÓPRIO anúncio é gerado no
@@ -523,9 +515,10 @@ function Cartao({ i }: { i: ItemVitrine }) {
             !temEconomia &&
             i.url_produto &&
             /^MLB\d/.test(itemDoEndereco(i.url_produto) ?? "") && (
-              <VerNaLoja url={i.url_produto} cartao />
+              <VerNaLoja url={i.url_produto} grande />
             )
           )}
+          {(i.url_produto || destino) && <CompararPreco url={i.url_produto ?? destino ?? ""} />}
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <VerDetalhesVitrine
               chave={i.chave}
@@ -538,22 +531,6 @@ function Cartao({ i }: { i: ItemVitrine }) {
               rotulo="Detalhes"
               className="min-h-7"
             />
-            {(i.url_produto || destino) && (
-              <button
-                type="button"
-                onClick={() => {
-                  const alvo = i.url_produto ?? destino ?? "";
-                  /* Fora da tela inicial (categorias) ninguém ouve o evento: abre a comparação lá. */
-                  if (window.location.pathname === "/")
-                    window.dispatchEvent(new CustomEvent("comparar-link", { detail: alvo }));
-                  else window.location.href = `/?link=${encodeURIComponent(alvo)}`;
-                }}
-                className="inline-flex min-h-7 items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline"
-              >
-                <RefreshCw className="size-3.5" aria-hidden="true" />
-                Atualizar preço
-              </button>
-            )}
           </div>
         </div>
       </div>

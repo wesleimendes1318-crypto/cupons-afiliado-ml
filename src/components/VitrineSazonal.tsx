@@ -15,7 +15,10 @@
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { BadgeCheck, ChevronLeft, ChevronRight, Link2, RefreshCw, ShieldCheck } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
+import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { VerNaLoja } from "@/components/BuscaPorLink";
+import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 
 import { CenarioCampanha } from "@/components/CenarioCampanha";
 import {
@@ -266,23 +269,16 @@ function classificacao(o: Oferta) {
 export function CartaoOferta({
   o,
   className = "",
-  naHome = true,
   atraso = 0,
 }: {
   o: Oferta;
   className?: string;
-  /* Fora da home, "Atualizar preço" abre a comparação pelo endereço. */
-  naHome?: boolean;
   atraso?: number;
 }) {
   const c = classificacao(o);
   const avaliacoes = useContext(ContextoAvaliacoes);
   const avaliacao = avaliacaoDaOferta(avaliacoes, o.chave, o.link);
   const quando = o.recente ? "Conferido hoje" : `Preço de ${dataCurta(o.vistoEm) ?? "antes"}`;
-  const atualizar = !o.link || !o.recente;
-  const classeAtualizar = o.link
-    ? "mt-1.5 text-[#0058b0] hover:bg-[#f5f5f7]"
-    : "bg-[#0071e3] py-2 font-bold text-white hover:brightness-110";
   return (
     <li
       className={`campanha-entra campanha-cartao group flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
@@ -343,41 +339,17 @@ export function CartaoOferta({
         <LinhaAvaliacoes resumo={avaliacao} titulo={o.titulo} link={o.link} />
         <SeloBemAvaliado resumo={avaliacao} className="mt-0.5 self-start" />
         <p className="mt-0.5 text-[10px] text-[#86868b]">{quando}</p>
-        <div className="mt-auto pt-3">
-          {o.link && (
-            <a
-              href={o.link}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              data-origem="sazonal"
-              className="campanha-botao flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#14692e] px-1.5 py-1.5 text-[11px] font-bold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14692e]"
-            >
-              <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-              Comprar com segurança
-            </a>
-          )}
-          {atualizar &&
+        <div className="mt-auto space-y-1.5 pt-3">
+          {o.link ? (
+            <ComprarComSeguranca link={o.link} origem="sazonal" />
+          ) : (
+            /* Sem link guardado: o do próprio anúncio sai no clique. */
             o.urlProduto &&
-            (naHome ? (
-              <button
-                type="button"
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent("comparar-link", { detail: o.urlProduto }))
-                }
-                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[12px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${classeAtualizar}`}
-              >
-                <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                {o.link ? "Atualizar preço" : "Ver o preço de agora"}
-              </button>
-            ) : (
-              <a
-                href={`/?link=${encodeURIComponent(o.urlProduto)}`}
-                className={`campanha-botao flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[12px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${classeAtualizar}`}
-              >
-                <RefreshCw className="size-3.5 shrink-0" aria-hidden="true" />
-                {o.link ? "Atualizar preço" : "Ver o preço de agora"}
-              </a>
-            ))}
+            /^MLB\d/.test(itemDoEndereco(o.urlProduto) ?? "") && (
+              <VerNaLoja url={o.urlProduto} grande />
+            )
+          )}
+          {(o.urlProduto || o.link) && <CompararPreco url={(o.urlProduto ?? o.link)!} />}
           <VerDetalhesVitrine
             chave={o.chave}
             titulo={o.titulo}
@@ -484,7 +456,7 @@ export function GradeOfertas({
       <ContextoAvaliacoes.Provider value={avaliacoes}>
         <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
           {lista.map((o, i) => (
-            <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
+            <CartaoOferta key={o.chave} o={o} atraso={i} className={largura} />
           ))}
           {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
         </ul>
@@ -500,7 +472,7 @@ export function GradeOfertas({
           className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0"
         >
           {lista.map((o, i) => (
-            <CartaoOferta key={o.chave} o={o} naHome={naHome} atraso={i} className={largura} />
+            <CartaoOferta key={o.chave} o={o} atraso={i} className={largura} />
           ))}
           <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />
         </ul>
