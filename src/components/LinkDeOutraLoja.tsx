@@ -1014,7 +1014,12 @@ function BarraDeCompra({
     const doc = document.documentElement;
     const celular = window.matchMedia?.("(max-width: 639px)").matches;
     doc.style.setProperty("--folga-compra", visivel && celular ? "84px" : "0px");
-    return () => doc.style.setProperty("--folga-compra", "0px");
+    /* As abas do celular descem enquanto a compra está na tela. */
+    doc.toggleAttribute("data-compra", Boolean(visivel && celular));
+    return () => {
+      doc.style.setProperty("--folga-compra", "0px");
+      doc.removeAttribute("data-compra");
+    };
   }, [visivel]);
   return (
     <div

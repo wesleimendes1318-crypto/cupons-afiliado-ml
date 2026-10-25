@@ -15,6 +15,7 @@ import { BannerConsentimento } from "../components/BannerConsentimento";
 import { MedicaoCliques } from "../components/MedicaoCliques";
 import { BotoesNavegacao } from "../components/BotoesNavegacao";
 import { CabecalhoSite } from "../components/CabecalhoSite";
+import { NavegacaoInferiorMobile } from "../components/NavegacaoInferiorMobile";
 import {
   GoogleConsentimento,
   SCRIPT_CONSENTIMENTO_PADRAO,
@@ -84,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Melhor Escolha — compare preços de produtos do Mercado Livre" },
       {
         name: "description",
@@ -169,6 +170,7 @@ function RootComponent() {
       {comCabecalho && <CabecalhoSite />}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      {comCabecalho && <NavegacaoInferiorMobile />}
       <BotoesNavegacao />
       <BannerConsentimento />
       <GoogleConsentimento />

@@ -1822,7 +1822,7 @@ function Index() {
           />
           <div
             className={
-              "relative mx-auto grid max-w-[1400px] gap-6 px-4 pt-7 sm:px-6 sm:pt-9 lg:px-8 " +
+              "relative mx-auto grid max-w-[1400px] gap-6 px-4 pt-4 sm:px-6 sm:pt-9 lg:px-8 " +
               (buscaParada
                 ? "pb-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start lg:gap-10 lg:pb-10"
                 : "pb-0")
@@ -1841,9 +1841,9 @@ function Index() {
                 )}
                 <h1
                   className={
-                    "mt-4 font-extrabold leading-[1.02] tracking-tight " +
+                    "mt-3 font-extrabold leading-[1.02] tracking-tight sm:mt-4 " +
                     (buscaParada
-                      ? "text-[2.15rem] sm:text-5xl lg:text-[4.1rem]"
+                      ? "text-[1.95rem] sm:text-5xl lg:text-[4.1rem]"
                       : "text-2xl sm:text-3xl")
                   }
                 >
@@ -1852,7 +1852,7 @@ function Index() {
                   Uma melhor escolha.
                 </h1>
                 {buscaParada && (
-                  <p className="mt-3 max-w-[46ch] text-base leading-snug text-white/95 sm:text-lg">
+                  <p className="mt-2 max-w-[46ch] text-[15px] leading-snug text-white/95 sm:mt-3 sm:text-lg">
                     Compare preços em diferentes lojas do Mercado Livre.
                     <br className="hidden sm:block" /> Confira as opções antes de comprar.
                   </p>
@@ -1860,7 +1860,7 @@ function Index() {
               </div>
               <div
                 className={
-                  "relative z-10 mt-5 text-foreground " +
+                  "relative z-10 mt-4 text-foreground sm:mt-5 " +
                   (buscaParada ? "[&>section]:mx-0 lg:[&>section]:max-w-none" : "")
                 }
               >
@@ -2897,7 +2897,7 @@ function Index() {
       </section>
 
       {cupomSelecionados.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
+        <div className="fixed inset-x-0 bottom-[var(--folga-abas,0px)] z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
           <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold">

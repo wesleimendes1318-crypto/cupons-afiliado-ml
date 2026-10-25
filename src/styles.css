@@ -1185,3 +1185,30 @@ details.abertura-nativa[open] > summary .seta-abertura {
     transition: none;
   }
 }
+
+/* App no celular (25/10): abas de baixo (NavegacaoInferiorMobile) e toque
+   de app nativo. --folga-abas sobe a navegação rápida e as barras fixas;
+   com a barra de compra na tela (data-compra) as abas descem e a folga zera. */
+@media (max-width: 639px) {
+  :root:has([data-abas-inferiores]) {
+    --folga-abas: calc(51px + max(8px, env(safe-area-inset-bottom)));
+  }
+  :root[data-compra] {
+    --folga-abas: 0px;
+  }
+  body:has([data-abas-inferiores]) {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  a,
+  input {
+    touch-action: manipulation;
+  }
+  nav {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
