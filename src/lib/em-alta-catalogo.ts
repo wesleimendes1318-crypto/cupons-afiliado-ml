@@ -144,6 +144,26 @@ const BUSCAS_CURADORIA: Record<string, string[]> = {
     "pijama feminino",
     "cueca boxer kit",
     "meia kit",
+    "tenis puma",
+    "tenis fila",
+    "tenis asics",
+    "tenis skechers",
+    "tenis converse all star",
+    "tenis infantil",
+    "sapatenis masculino",
+    "sapato social masculino",
+    "rasteirinha feminina",
+    "chinelo slide",
+    "mochila feminina",
+    "pochete",
+    "bolsa transversal",
+    "mala de bordo",
+    "relogio casio",
+    "oculos de sol masculino",
+    "jaqueta jeans",
+    "blusa de frio feminina",
+    "legging fitness",
+    "conjunto fitness feminino",
   ],
   beleza: ["perfume arabe", "perfume floratta", "cicaplast", "bepantol derma", "body splash"],
   casa: [
@@ -378,7 +398,9 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
           origem: b.origem,
           busca: b.termo,
         });
-        if (++n >= 3 || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
+        /* Curadoria: até 6 da busca (25/10, Moda esgotava 3 por termo). */
+        if (++n >= (b.origem === "curadoria" ? 6 : 3) || candidatos.length >= PRODUTOS_POR_EXECUCAO)
+          break;
       }
       anotar(`busca:${b.termo}`, String(n));
     } catch (e) {
