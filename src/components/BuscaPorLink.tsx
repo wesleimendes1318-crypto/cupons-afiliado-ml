@@ -1290,6 +1290,21 @@ export default function BuscaPorLink({
     return () => window.removeEventListener("comparar-link", ouvir);
   }, [buscar]);
 
+  /* Ctrl+V / Cmd+V em qualquer lugar da página (PC, 25/10): link colado fora
+     de um campo vai direto para a comparação, sem clicar na caixa antes. */
+  useEffect(() => {
+    const colar = (e: ClipboardEvent) => {
+      const alvo = e.target as HTMLElement | null;
+      if (alvo?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const colado = e.clipboardData?.getData("text")?.trim() ?? "";
+      if (colado.length <= 20 || !/https?:\/\//i.test(colado)) return;
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("comparar-link", { detail: colado }));
+    };
+    document.addEventListener("paste", colar);
+    return () => document.removeEventListener("paste", colar);
+  }, []);
+
   /* Link no endereço (?link=..., 02/10): o bot do Telegram manda o cliente
      para cá e a comparação abre sozinha (a mesma de menos de 1 h volta na
      hora, sem novo pedido). */
@@ -1493,6 +1508,7 @@ export default function BuscaPorLink({
               type="button"
               onClick={() => void colarDaAreaDeTransferencia()}
               disabled={carregando}
+              title="No computador, Ctrl+V em qualquer lugar da página também compara"
               className="absolute right-1.5 top-1/2 inline-flex h-8 -translate-y-1/2 items-center gap-1.5 rounded-full bg-[#7547E8] px-3 text-xs font-bold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] disabled:opacity-60"
             >
               <ClipboardPaste className="size-3.5" aria-hidden="true" />

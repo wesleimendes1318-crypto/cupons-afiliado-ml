@@ -269,7 +269,7 @@ export function SeloCep({
       <span aria-hidden>📍</span> Frete para:{" "}
       <span className="font-semibold text-foreground">{onde}</span>
       {regiao?.padrao ? (
-        <span> · padrão, informe o seu</span>
+        <span className="lg:hidden"> · padrão, informe o seu</span>
       ) : (
         regiao?.aproximado && <span> · aproximado</span>
       )}{" "}

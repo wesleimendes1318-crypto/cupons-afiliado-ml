@@ -2014,3 +2014,18 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   com todas as filas liberadas de uma vez, o Mercado Livre pediu uma
   verificação em 2 leituras (pedidos 1305 e 1306); o freio da extensão
   agiu e as leituras seguintes passaram.
+
+## Versão para computador (25/10)
+- Weslei, 25/10: "invista na versao web". Só PC (lg/xl); o celular não muda.
+- Resultado: as pílulas da barra de seções nunca encolhem (a última, "3
+  marketplaces", saía cortada em 1440 px) e o CEP usa o resto da linha; no
+  PC o CEP padrão mostra só "Frete para: ... · Informar meu CEP" (o "padrão,
+  informe o seu" fica no celular).
+- Ctrl+V / Cmd+V em qualquer lugar da página (fora de um campo) com um link
+  dispara comparar-link (BuscaPorLink); dica no title do botão "Colar".
+- Cabeçalho em 1024 px: links sem quebra de linha e o campo do topo encolhe
+  (min-w-0) para o botão do Telegram não vazar.
+- Home a partir de 1280 px: "Acompanhar preço" e o convite do Telegram lado a
+  lado (uma faixa a menos).
+- Em aberto com o Weslei: vídeo "Como funciona" dentro do cartão do link no
+  PC (autoplay pedido em 27/09) e o segundo botão de compra na recomendação.

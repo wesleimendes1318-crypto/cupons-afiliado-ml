@@ -106,7 +106,7 @@ export function CabecalhoSite() {
             onSubmit={comparar}
             aria-hidden={!mostrarCampo}
             className={
-              "hidden h-10 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
+              "hidden h-10 min-w-0 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
               (mostrarCampo ? "opacity-100" : "pointer-events-none opacity-0")
             }
           >
@@ -153,7 +153,7 @@ export function CabecalhoSite() {
               key={l.to}
               to={l.to}
               className={
-                "hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 " +
+                "hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] whitespace-nowrap transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 " +
                 l.pc
               }
               activeProps={{ className: "font-semibold text-[#7547E8]" }}
