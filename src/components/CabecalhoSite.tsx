@@ -5,9 +5,9 @@
    NAVEGAÇÃO SOFT (design de 10/10): fixo no topo, em vidro (desfoque) com uma
    linha fina; na tela inicial, depois que o campo do link sai da tela, aparece
    "Cole o link de outro produto" (PC) ou o ícone do link (celular), para
-   comparar outro produto sem voltar ao topo. No celular os links das páginas
-   ficam numa linha própria logo abaixo, que rola com a página (sem menu
-   escondido). */
+   comparar outro produto sem voltar ao topo. No celular (25/10) o topo é
+   uma barra de app limpa (marca + Telegram): as páginas ficam nas abas de
+   baixo (NavegacaoInferiorMobile). */
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Link2, Send } from "lucide-react";
@@ -16,7 +16,7 @@ import { LINK_CANAL } from "@/lib/telegram-publico";
 
 /* "Categorias" (23/10, navegação mais completa): no PC só a partir de
    1280 px (em 1024 px o campo "Cole o link de outro produto" ocupa o
-   espaço); no celular, na linha de links. */
+   espaço); no celular, nas abas de baixo. */
 const LINKS = [
   { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
   { to: "/meus-precos", rotulo: "Meus preços", pc: "sm:inline-flex" },
@@ -53,7 +53,7 @@ function useCampoForaDaTela(ativo: boolean) {
   return fora;
 }
 
-function irAoCampo() {
+export function irAoCampo() {
   const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   document
     .getElementById("colar-link")
@@ -79,121 +79,103 @@ export function CabecalhoSite() {
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-neutral-950/90">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-[60px] sm:gap-4 sm:px-6 lg:px-8">
-          <Link
-            to="/"
-            aria-label="Melhor Escolha, página inicial"
-            className="flex shrink-0 items-center gap-2 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-          >
-            <img
-              src="/logo.png"
-              alt=""
-              width={40}
-              height={40}
-              className="size-9 rounded-[22%] shadow-sm sm:size-10"
-            />
-            <span className="text-base font-extrabold tracking-tight text-[#21134A] dark:text-white sm:text-lg">
-              Melhor Escolha
-            </span>
-          </Link>
+    <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-neutral-950/90">
+      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-[60px] sm:gap-4 sm:px-6 lg:px-8">
+        <Link
+          to="/"
+          aria-label="Melhor Escolha, página inicial"
+          className="flex shrink-0 items-center gap-2 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+        >
+          <img
+            src="/logo.png"
+            alt=""
+            width={40}
+            height={40}
+            className="size-9 rounded-[22%] shadow-sm sm:size-10"
+          />
+          <span className="text-base font-extrabold tracking-tight text-[#21134A] dark:text-white sm:text-lg">
+            Melhor Escolha
+          </span>
+        </Link>
 
-          {/* PC: comparar outro produto direto do cabeçalho (a partir de 1024 px;
+        {/* PC: comparar outro produto direto do cabeçalho (a partir de 1024 px;
               no tablet o campo não cabe ao lado dos links, 18/10). */}
-          {naInicial && (
-            <form
-              role="search"
-              onSubmit={comparar}
-              aria-hidden={!mostrarCampo}
-              className={
-                "hidden h-10 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
-                (mostrarCampo ? "opacity-100" : "pointer-events-none opacity-0")
-              }
-            >
-              <label htmlFor="link-topo" className="sr-only">
-                Link de outro produto
-              </label>
-              <Link2 className="size-4 shrink-0 text-[#6b6b70]" aria-hidden="true" />
-              <input
-                id="link-topo"
-                type="text"
-                inputMode="url"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                tabIndex={mostrarCampo ? 0 : -1}
-                placeholder="Cole o link de outro produto"
-                className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0f1729] outline-none placeholder:text-[#6b6b70] dark:text-white"
-              />
-              <button
-                type="submit"
-                tabIndex={mostrarCampo ? 0 : -1}
-                className="h-8 shrink-0 rounded-full bg-[#0071e3] px-3.5 text-xs font-semibold text-white transition duration-150 ease-out hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none"
-              >
-                Comparar
-              </button>
-            </form>
-          )}
-
-          <nav aria-label="Páginas do site" className="ml-auto flex items-center gap-1 sm:gap-2">
-            {/* Celular e tablet: o ícone do link leva ao campo (alvo de 44 px). */}
-            {naInicial && mostrarCampo && (
-              <button
-                type="button"
-                onClick={irAoCampo}
-                aria-label="Colar link de outro produto"
-                title="Colar link de outro produto"
-                className="inline-flex size-11 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white lg:hidden"
-              >
-                <Link2 className="size-5" aria-hidden="true" />
-              </button>
-            )}
-            {LINKS.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className={
-                  "hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 " +
-                  l.pc
-                }
-                activeProps={{ className: "font-semibold text-[#7547E8]" }}
-              >
-                {l.rotulo}
-              </Link>
-            ))}
-            <a
-              href={LINK_CANAL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-origem="topo"
-              aria-label="Ofertas no Telegram: abrir o canal de ofertas comparadas (abre em nova aba)"
-              className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#7547E8]/50 px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
-            >
-              <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
-              <span className="hidden min-[400px]:inline">Ofertas no Telegram</span>
-              {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
-              <span className="hidden min-[360px]:inline min-[400px]:hidden">Ofertas</span>
-            </a>
-          </nav>
-        </div>
-      </header>
-      {/* Celular: os links numa linha própria, sem menu escondido (rola com a
-          página; só o cabeçalho fica fixo). */}
-      <nav
-        aria-label="Páginas do site (celular)"
-        className="flex justify-center gap-0.5 border-b border-black/5 bg-white/90 px-1 py-1 sm:hidden dark:border-white/10 dark:bg-neutral-950/90"
-      >
-        {LINKS.map((l) => (
-          <Link
-            key={l.to}
-            to={l.to}
-            className="rounded-full px-2.5 py-1.5 text-[13px] font-medium text-[#1d1d1f] dark:text-white/90"
-            activeProps={{ className: "font-semibold text-[#7547E8]" }}
+        {naInicial && (
+          <form
+            role="search"
+            onSubmit={comparar}
+            aria-hidden={!mostrarCampo}
+            className={
+              "hidden h-10 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
+              (mostrarCampo ? "opacity-100" : "pointer-events-none opacity-0")
+            }
           >
-            {l.rotulo}
-          </Link>
-        ))}
-      </nav>
-    </>
+            <label htmlFor="link-topo" className="sr-only">
+              Link de outro produto
+            </label>
+            <Link2 className="size-4 shrink-0 text-[#6b6b70]" aria-hidden="true" />
+            <input
+              id="link-topo"
+              type="text"
+              inputMode="url"
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              tabIndex={mostrarCampo ? 0 : -1}
+              placeholder="Cole o link de outro produto"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0f1729] outline-none placeholder:text-[#6b6b70] dark:text-white"
+            />
+            <button
+              type="submit"
+              tabIndex={mostrarCampo ? 0 : -1}
+              className="h-8 shrink-0 rounded-full bg-[#0071e3] px-3.5 text-xs font-semibold text-white transition duration-150 ease-out hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none"
+            >
+              Comparar
+            </button>
+          </form>
+        )}
+
+        <nav aria-label="Páginas do site" className="ml-auto flex items-center gap-1 sm:gap-2">
+          {/* Tablet: o ícone do link leva ao campo (alvo de 44 px); no celular
+                ele fica nas abas de baixo. */}
+          {naInicial && mostrarCampo && (
+            <button
+              type="button"
+              onClick={irAoCampo}
+              aria-label="Colar link de outro produto"
+              title="Colar link de outro produto"
+              className="hidden size-11 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white sm:inline-flex lg:hidden"
+            >
+              <Link2 className="size-5" aria-hidden="true" />
+            </button>
+          )}
+          {LINKS.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className={
+                "hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 " +
+                l.pc
+              }
+              activeProps={{ className: "font-semibold text-[#7547E8]" }}
+            >
+              {l.rotulo}
+            </Link>
+          ))}
+          <a
+            href={LINK_CANAL}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-origem="topo"
+            aria-label="Ofertas no Telegram: abrir o canal de ofertas comparadas (abre em nova aba)"
+            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#7547E8]/50 px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
+          >
+            <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
+            <span className="hidden min-[400px]:inline">Ofertas no Telegram</span>
+            {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
+            <span className="hidden min-[360px]:inline min-[400px]:hidden">Ofertas</span>
+          </a>
+        </nav>
+      </div>
+    </header>
   );
 }

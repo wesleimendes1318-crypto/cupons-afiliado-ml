@@ -4189,7 +4189,12 @@ function BarraFixa({
     const raiz = document.documentElement;
     const celular = window.matchMedia?.("(max-width: 639px)").matches;
     raiz.style.setProperty("--folga-compra", visivel && celular ? "84px" : "0px");
-    return () => raiz.style.setProperty("--folga-compra", "0px");
+    /* As abas do celular descem enquanto a compra está na tela. */
+    raiz.toggleAttribute("data-compra", Boolean(visivel && celular));
+    return () => {
+      raiz.style.setProperty("--folga-compra", "0px");
+      raiz.removeAttribute("data-compra");
+    };
   }, [visivel]);
   const frete =
     freteGratis === true
