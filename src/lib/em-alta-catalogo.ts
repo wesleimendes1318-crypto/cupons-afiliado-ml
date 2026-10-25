@@ -50,9 +50,11 @@ const META_POR_CATEGORIA = 240;
 /* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
    avança para outros produtos e subcategorias. */
 const FRESCO_MS = 20 * 3600_000;
-/* 1 por execução (144 execuções/dia desde 25/10; antes 2 em 48): o teto
-   diário dos agentes é dividido com sazonal, brinquedos, campanhas e hub. */
+/* 1 por execução e no máximo 1 a cada 15 min (25/10: o agente passou a
+   rodar a cada minuto para chegar a 240 por categoria; o teto diário dos
+   agentes é dividido com sazonal, brinquedos, campanhas e hub). */
 const FILA_POR_VEZ = 1;
+const FILA_INTERVALO_MS = 15 * 60_000;
 const VOLTA_MS = 48 * 3600_000;
 const PRODUTOS_POR_EXECUCAO = 16;
 /* MAIS DESEJADOS (Weslei, 09/10, noite: "adicione os itens mais
@@ -481,13 +483,16 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
   const porProduto = new Map(linhas.map((l) => [l.produto, l]));
   const agora = new Date().toISOString();
   let enfileirados = 0;
+  const filaLivre = linhas.every(
+    (l) => !l.enfileirado_em || agoraMs - Date.parse(l.enfileirado_em) >= FILA_INTERVALO_MS,
+  );
   const gravar = [];
   for (const l of prontas) {
     const antes = porProduto.get(l.produto);
     let enfileirado = antes?.enfileirado_em ?? null;
     const velho = !enfileirado || Date.now() - Date.parse(enfileirado) > VOLTA_MS;
     let pedido: number | null = null;
-    if (velho && enfileirados < FILA_POR_VEZ) {
+    if (velho && enfileirados < FILA_POR_VEZ && filaLivre) {
       const { data, error } = await t.rpc("pedir_link_agente", {
         p_url: l.url,
         p_fonte: "em_alta",
