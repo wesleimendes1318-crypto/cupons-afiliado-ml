@@ -2008,7 +2008,7 @@ function Index() {
           <Vitrine />
 
           {/* Mais vendidos agora, por categoria (09/10). */}
-          <EmAltaCatalogo naHome limite={12} />
+          <EmAltaCatalogo naHome limite={24} />
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
           {/* Convite do Telegram na home só com a caixa parada (com resultado,

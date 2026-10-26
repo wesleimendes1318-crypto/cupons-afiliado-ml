@@ -73,6 +73,23 @@ export function EmAltaCatalogo({
      todo dia sem uma página infinita de uma vez). */
   const [mostrar, setMostrar] = useState(24);
   const [aba, setAba] = useState<string | null>(categoria ?? null);
+  /* Home (Weslei, 26/10: "O site ainda não tem a quantidade olhando"):
+     quantos cada categoria tem, na aba e no "Ver todos" da página dela. */
+  const [totais, setTotais] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (categoria) return;
+    void supabase.rpc("em_alta_contagem" as never).then(({ data }) => {
+      if (Array.isArray(data))
+        setTotais(
+          Object.fromEntries(
+            (data as Array<{ categoria_site: string; total: number }>).map((r) => [
+              r.categoria_site,
+              r.total,
+            ]),
+          ),
+        );
+    });
+  }, [categoria]);
   useEffect(() => {
     let vivo = true;
     void (async () => {
@@ -146,7 +163,7 @@ export function EmAltaCatalogo({
           >
             <Flame className="size-5 text-[#ff6b00]" aria-hidden="true" />
             {categoria
-              ? `Mais vendidos e mais buscados em ${NOME[categoria] ?? "esta categoria"}`
+              ? `Mais vendidos e mais buscados em ${NOME[categoria] ?? "esta categoria"} (${todos.length})`
               : "Mais vendidos e mais buscados agora"}
           </h2>
           <p className="mt-1 text-sm text-secondary-ink">
@@ -181,6 +198,7 @@ export function EmAltaCatalogo({
               }
             >
               {NOME[s] ?? s}
+              {totais[s] ? ` (${totais[s]})` : ""}
             </button>
           ))}
         </div>
@@ -254,6 +272,18 @@ export function EmAltaCatalogo({
           </li>
         ))}
       </ul>
+      {!categoria && atual && (
+        <div className="mt-4 text-center">
+          <a
+            href={`/categorias/${atual}`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#0071e3]/40 bg-card px-5 py-2.5 text-sm font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+          >
+            Ver todos{totais[atual] ? ` os ${totais[atual]}` : ""} de{" "}
+            {NOME[atual] ?? "esta categoria"}
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </a>
+        </div>
+      )}
       {grade && todos.length > lista.length && (
         <div className="mt-4 text-center">
           <button
