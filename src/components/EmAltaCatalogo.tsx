@@ -94,12 +94,21 @@ export function EmAltaCatalogo({
     let vivo = true;
     void (async () => {
       try {
-        const { data } = await supabase.rpc(
-          "em_alta_por_categoria_v3" as never,
-          { p_categoria: categoria ?? null, p_por_categoria: limite } as never,
-        );
-        if (!vivo || !Array.isArray(data)) return;
-        const lidos = data as ItemEmAlta[];
+        /* Páginas de 1000 (teto de linhas do banco por leitura; 26/10: a
+           categoria passa de 1000 com 200 novos por dia). */
+        const lidos: ItemEmAlta[] = [];
+        for (let de = 0; ; de += 1000) {
+          const { data } = await supabase
+            .rpc(
+              "em_alta_por_categoria_v3" as never,
+              { p_categoria: categoria ?? null, p_por_categoria: limite } as never,
+            )
+            .range(de, de + 999);
+          const pagina = Array.isArray(data) ? (data as ItemEmAlta[]) : [];
+          lidos.push(...pagina);
+          if (pagina.length < 1000) break;
+        }
+        if (!vivo) return;
         /* Avaliações de cada anúncio (10/10), lidas pela extensão. */
         const mapa = await lerAvaliacoesPorItens(
           lidos.map((i) => itemDoEndereco(i.url)).filter((x): x is string => !!x),

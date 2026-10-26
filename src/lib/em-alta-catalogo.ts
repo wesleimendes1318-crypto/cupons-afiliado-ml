@@ -47,7 +47,12 @@ const TETO_API = 64;
    removido sem depender de créditos": 100, com o pg_cron a cada 30 min. */
 /* 25/10: "Pelo menos +200 em CADA categoria": 240 (folga para os que saem
    pela nota), com o pg_cron a cada 10 min. */
-const META_POR_CATEGORIA = 240;
+/* 26/10 (Weslei: "Aumente 200 produtos em cada categoria todos os dias,
+   sempre mantendo listas vivas"): a meta sobe 200 por dia a partir de
+   26/10; o que é relido e reprovado (ou some da lista oficial) sai. */
+const INICIO_CRESCIMENTO = Date.parse("2026-10-26T03:00:00Z");
+const metaPorCategoria = (agoraMs: number) =>
+  240 + 200 * Math.max(0, Math.floor((agoraMs - INICIO_CRESCIMENTO) / 86_400_000));
 /* Produto lido há menos de 20 h fica para a próxima: a execução seguinte
    avança para outros produtos e subcategorias. */
 const FRESCO_MS = 20 * 3600_000;
@@ -273,7 +278,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         .map((e) => Date.parse(e.inicio)),
     );
   const prioridade = (c: string) =>
-    visiveis(c) < META_POR_CATEGORIA && agoraMs - tentativa(c) > 2 * 3600_000 ? 0 : 1;
+    visiveis(c) < metaPorCategoria(agoraMs) && agoraMs - tentativa(c) > 2 * 3600_000 ? 0 : 1;
   const nomes = Object.keys(CATEGORIAS_EM_ALTA);
   /* Abaixo da meta (e sem tentativa nas últimas 2 h) primeiro, com menos
      produtos na frente; depois o rodízio pela tentativa mais antiga. */
@@ -315,7 +320,7 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
   /* 1. Fontes: a lista oficial da categoria e, enquanto faltar produto,
         as das subcategorias e das sub-subcategorias (as maiores primeiro). */
   const bases = CATEGORIAS_EM_ALTA[categoria]!;
-  const expandir = visiveis(categoria) < META_POR_CATEGORIA * 2;
+  const expandir = visiveis(categoria) < metaPorCategoria(agoraMs) * 2;
   const fila: Array<{ cat: string; peso: number; nivel: number }> = bases.map((cat) => ({
     cat,
     peso: 0,
@@ -385,7 +390,9 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
       chamadas += 1;
       feitas += 1;
       const r = await mlGet<{ results?: Array<{ id?: string }> }>(
-        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(b.termo)}&limit=6`,
+        /* 26/10: 20 por busca e, a cada dia, a página seguinte (até a
+           5ª): o mesmo termo traz produtos novos todo dia. */
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(b.termo)}&limit=20&offset=${20 * (Math.floor(agoraMs / 86_400_000) % 5)}`,
       );
       let n = 0;
       for (const p of r.results ?? []) {
@@ -398,9 +405,8 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
           origem: b.origem,
           busca: b.termo,
         });
-        /* Curadoria: até 6 da busca (25/10, Moda esgotava 3 por termo). */
-        if (++n >= (b.origem === "curadoria" ? 6 : 3) || candidatos.length >= PRODUTOS_POR_EXECUCAO)
-          break;
+        /* Até 10 da busca (26/10: 200 novos por categoria por dia). */
+        if (++n >= 10 || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;
       }
       anotar(`busca:${b.termo}`, String(n));
     } catch (e) {
