@@ -185,6 +185,23 @@ export function Vitrine({
   /* Interesse principal do visitante (perfil anônimo do navegador, só com
      consentimento de análise). Lido depois de montar: o servidor não conhece. */
   const [interesse, setInteresse] = useState<ClusterInteresse | null>(null);
+  /* 26/10 (Weslei: "O número de produtos não parece condizer com o total
+     real"): o número de cada categoria soma os mais vendidos dela, que o
+     "Ver todos" também mostra. */
+  const [maisVendidos, setMaisVendidos] = useState<Record<string, number>>({});
+  useEffect(() => {
+    void supabase.rpc("em_alta_contagem" as never).then(({ data }) => {
+      if (Array.isArray(data))
+        setMaisVendidos(
+          Object.fromEntries(
+            (data as Array<{ categoria_site: string; total: number }>).map((r) => [
+              r.categoria_site,
+              r.total,
+            ]),
+          ),
+        );
+    });
+  }, []);
   useEffect(() => {
     const ler = () => setInteresse(clusterPredominante(obterPerfil()));
     ler();
@@ -378,7 +395,7 @@ export function Vitrine({
                     <h3 className="text-base font-bold">
                       {NOME_CATEGORIA[c] ?? c}{" "}
                       <span className="text-sm font-normal text-secondary-ink">
-                        ({daCategoria.length})
+                        ({daCategoria.length + (maisVendidos[c] ?? 0)})
                       </span>
                     </h3>
                     {/* 26/10: "Ver todos" abre a página da categoria, com os
