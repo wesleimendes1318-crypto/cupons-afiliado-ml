@@ -23,7 +23,11 @@ import {
   type ClusterInteresse,
 } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
-import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
+import {
+  itemDoEndereco,
+  lerAvaliacoesPorItens,
+  type ResumoAvaliacoes,
+} from "@/lib/avaliacoes-detalhe";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
 import { propsFotoCartao } from "@/lib/foto";
@@ -35,7 +39,7 @@ import {
   lerAvaliacoesDaVitrine,
   type MapaAvaliacoes,
 } from "@/lib/avaliacoes-vitrine";
-import { passaNaQualidade } from "@/lib/qualidade-avaliacao";
+import { passaNaQualidade, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -71,7 +75,75 @@ type ItemVitrine = {
   alt_vantagem: string | null;
   alt_frete_gratis: boolean | null;
   alt_muda: string | null;
+  /* 26/10 (Weslei: "padronização"): mais vendido da lista oficial que
+     completa a fileira da categoria no mesmo cartão. */
+  maisVendido?: "vendidos" | "tendencia" | "curadoria";
+  resumo?: ResumoAvaliacoes | undefined;
+  freteGratis?: boolean;
+  lojaOficial?: boolean;
 };
+
+type LinhaEmAlta = {
+  produto: string;
+  categoria_site: string;
+  nome: string;
+  imagem: string | null;
+  preco: number;
+  frete_gratis: boolean;
+  loja_oficial: boolean;
+  url: string;
+  atualizado_em: string;
+  origem: "vendidos" | "tendencia" | "curadoria";
+};
+
+/* Mais vendidos de cada categoria (lista oficial, até 8 por categoria) no
+   formato do cartão da vitrine, sem os de nota baixa ou sem avaliação. */
+async function lerMaisVendidos(): Promise<ItemVitrine[]> {
+  const { data } = await supabase.rpc(
+    "em_alta_por_categoria_v3" as never,
+    { p_categoria: null, p_por_categoria: 8 } as never,
+  );
+  const linhas = Array.isArray(data) ? (data as LinhaEmAlta[]) : [];
+  const notas = await lerAvaliacoesPorItens(
+    linhas.map((l) => itemDoEndereco(l.url)).filter((x): x is string => !!x),
+  );
+  return linhas
+    .map((l) => ({ l, resumo: notas.get(itemDoEndereco(l.url) ?? "") }))
+    .filter(({ resumo }) => !reprovadaPelaAvaliacao(resumo))
+    .map(({ l, resumo }) => ({
+      chave: `em_alta:${l.produto}`,
+      titulo: l.nome,
+      imagem: l.imagem,
+      categoria: null,
+      categoria_site: l.categoria_site,
+      loja: null,
+      preco: Number(l.preco),
+      url_produto: l.url,
+      link: null,
+      melhor_loja: null,
+      melhor_preco: null,
+      melhor_link: null,
+      economia: null,
+      lojas_comparadas: null,
+      vezes: null,
+      visto_em: l.atualizado_em,
+      cupom_codigo: null,
+      cupom_desconto: null,
+      alt_preco: null,
+      alt_economia: null,
+      alt_titulo: null,
+      alt_link: null,
+      alt_loja: null,
+      alt_oficial: null,
+      alt_vantagem: null,
+      alt_frete_gratis: null,
+      alt_muda: null,
+      maisVendido: l.origem,
+      resumo,
+      freteGratis: l.frete_gratis,
+      lojaOficial: l.loja_oficial,
+    }));
+}
 
 /* Maior economia que a comparação achou: a do mesmo produto ou, quando maior,
    a da melhor alternativa (parecido), que o selo diz "Até R$ X de desconto". */
@@ -189,6 +261,17 @@ export function Vitrine({
      real"): o número de cada categoria soma os mais vendidos dela, que o
      "Ver todos" também mostra. */
   const [maisVendidos, setMaisVendidos] = useState<Record<string, number>>({});
+  /* Fileira de 5 em toda categoria (26/10): os mais vendidos completam o
+     que ainda não foi comparado. */
+  const [extras, setExtras] = useState<ItemVitrine[]>([]);
+  useEffect(() => {
+    if (categoriaFixa) return;
+    lerMaisVendidos()
+      .then(setExtras)
+      .catch(() => {
+        /* sem a lista: a fileira fica com os comparados */
+      });
+  }, [categoriaFixa]);
   useEffect(() => {
     void supabase.rpc("em_alta_contagem" as never).then(({ data }) => {
       if (Array.isArray(data))
@@ -241,9 +324,9 @@ export function Vitrine({
 
   /* Categorias do próprio site, na ordem do site; "Mais achados" por último. */
   const categorias = useMemo(() => {
-    const presentes = new Set(itens.map((i) => i.categoria_site ?? "outros"));
+    const presentes = new Set([...itens, ...extras].map((i) => i.categoria_site ?? "outros"));
     return [...CATEGORIAS.map((c) => c.slug), "outros"].filter((s) => presentes.has(s));
-  }, [itens]);
+  }, [itens, extras]);
 
   const lista = useMemo(() => {
     let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
@@ -259,6 +342,15 @@ export function Vitrine({
     return l.slice(0, categoria == null ? 120 : 48);
   }, [itens, aba, categoria, interesse]);
 
+  /* Categoria escolhida: depois dos comparados, os mais vendidos dela. */
+  const daEscolhida = useMemo(() => {
+    if (categoria == null) return [];
+    const titulos = new Set(lista.map((i) => i.titulo.toLowerCase()));
+    return extras.filter(
+      (e) => e.categoria_site === categoria && !titulos.has(e.titulo.toLowerCase()),
+    );
+  }, [extras, lista, categoria]);
+
   /* "Do seu interesse": até 5 do tipo que o visitante mais compara, na aba
      aberta, com a maior economia primeiro. */
   const paraVoce = useMemo(() => {
@@ -273,7 +365,7 @@ export function Vitrine({
     if (!carregou) return null;
     if (!itens.some((i) => (i.categoria_site ?? "outros") === categoriaFixa))
       return <>{vazio ?? null}</>;
-  } else if (!itens.length) return null;
+  } else if (!itens.length && !extras.length) return null;
 
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "recentes", rotulo: "Pesquisados agora" },
@@ -352,7 +444,7 @@ export function Vitrine({
         {/* Arte da categoria escolhida (09/10: toda vitrine com arte). */}
         {!categoriaFixa && categoria && <FaixaArte slug={categoria} />}
 
-        {lista.length === 0 ? (
+        {lista.length === 0 && !(categoria == null ? extras : daEscolhida).length ? (
           <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">
             Ainda não há produtos nesta lista.
           </p>
@@ -388,7 +480,14 @@ export function Vitrine({
             )}
             {categorias.map((c) => {
               const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
-              if (!daCategoria.length) return null;
+              const titulos = new Set(daCategoria.map((i) => i.titulo.toLowerCase()));
+              const fileira = [
+                ...daCategoria.slice(0, 5),
+                ...extras
+                  .filter((e) => e.categoria_site === c && !titulos.has(e.titulo.toLowerCase()))
+                  .slice(0, Math.max(0, 5 - daCategoria.length)),
+              ];
+              if (!fileira.length) return null;
               return (
                 <div key={c}>
                   <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -420,7 +519,7 @@ export function Vitrine({
                     )}
                   </div>
                   <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {daCategoria.slice(0, 5).map((i) => (
+                    {fileira.map((i) => (
                       <Cartao key={i.chave} i={i} />
                     ))}
                   </ul>
@@ -430,7 +529,7 @@ export function Vitrine({
           </div>
         ) : (
           <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-            {lista.map((i) => (
+            {[...lista, ...daEscolhida].map((i) => (
               <Cartao key={i.chave} i={i} />
             ))}
           </ul>
@@ -444,7 +543,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
   const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
   const destino = destinoDe(i);
   const avaliacoes = useContext(ContextoAvaliacoes);
-  const avaliacao = avaliacaoDaOferta(avaliacoes, i.chave, destino);
+  const avaliacao = i.resumo ?? avaliacaoDaOferta(avaliacoes, i.chave, destino);
   /* Alternativa parecida que economiza mais que o mesmo produto: o selo vira
      "Até R$ X de desconto" (não é idêntico, por isso o "Até"). */
   const temAlternativa = (i.alt_economia ?? 0) > (temEconomia ? (i.economia ?? 0) : 0);
@@ -491,7 +590,11 @@ function Cartao({ i }: { i: ItemVitrine }) {
         {/* Selo do preço numa linha de altura fixa (os títulos alinham); o
             de nota alta vai junto das estrelas. */}
         <p className="flex min-h-5 flex-wrap items-center gap-1">
-          {temAlternativa ? (
+          {i.maisVendido ? (
+            <span className="whitespace-nowrap rounded-full bg-[#fff1e6] px-1.5 py-0.5 text-[10px] font-bold leading-tight text-[#a34700]">
+              {i.maisVendido === "tendencia" ? "Em alta nas buscas" : "Entre os mais vendidos"}
+            </span>
+          ) : temAlternativa ? (
             <span className="inline-flex max-w-full items-center gap-0.5 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-success">
               <TrendingDown className="size-3 shrink-0" aria-hidden="true" />
               Até {brl(i.alt_economia)} de desconto
@@ -508,7 +611,12 @@ function Cartao({ i }: { i: ItemVitrine }) {
         <p className="mt-1 line-clamp-2 text-xs font-medium leading-snug">{i.titulo}</p>
         <p className="mt-1 text-base font-extrabold tabular-nums">{brl(preco)}</p>
         <p className="truncate text-[11px] text-secondary-ink">
-          {temEconomia ? (
+          {i.maisVendido ? (
+            <>
+              {i.lojaOficial ? "Loja oficial · " : ""}
+              {i.freteGratis ? "Frete grátis" : "Frete: confira no anúncio"}
+            </>
+          ) : temEconomia ? (
             <>
               na {i.melhor_loja} <span className="line-through">{brl(i.preco)}</span>
             </>
@@ -521,7 +629,8 @@ function Cartao({ i }: { i: ItemVitrine }) {
         {temAlternativa && <Alternativa i={i} />}
         {i.cupom_codigo && <CupomDaLoja codigo={i.cupom_codigo} desconto={i.cupom_desconto} />}
         <p className="mt-1 text-[10px] text-secondary-ink/80">
-          visto em {quando(i.visto_em)}
+          {i.maisVendido ? "preço de referência de " : "visto em "}
+          {quando(i.visto_em)}
           {(i.lojas_comparadas ?? 0) > 0
             ? ` · ${i.lojas_comparadas} ${i.lojas_comparadas === 1 ? "loja" : "lojas"}`
             : ""}
@@ -542,7 +651,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
                oferta destacada, que pode ter outro preço). */
             !temEconomia &&
             i.url_produto &&
-            /^MLB\d/.test(itemDoEndereco(i.url_produto) ?? "") && (
+            (i.maisVendido || /^MLB\d/.test(itemDoEndereco(i.url_produto) ?? "")) && (
               <VerNaLoja url={i.url_produto} grande />
             )
           )}
