@@ -381,14 +381,25 @@ export function Vitrine({
                         ({daCategoria.length})
                       </span>
                     </h3>
-                    {daCategoria.length > 5 && (
-                      <button
-                        type="button"
-                        onClick={() => setCategoria(c)}
+                    {/* 26/10: "Ver todos" abre a página da categoria, com os
+                        comparados e os mais vendidos dela (200+). */}
+                    {c !== "outros" ? (
+                      <a
+                        href={`/categorias/${c}`}
                         className="text-sm font-semibold text-ml-blue hover:underline"
                       >
                         Ver todos
-                      </button>
+                      </a>
+                    ) : (
+                      daCategoria.length > 5 && (
+                        <button
+                          type="button"
+                          onClick={() => setCategoria(c)}
+                          className="text-sm font-semibold text-ml-blue hover:underline"
+                        >
+                          Ver todos
+                        </button>
+                      )
                     )}
                   </div>
                   <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
