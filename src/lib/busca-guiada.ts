@@ -52,6 +52,12 @@ export type Interpretacao = {
 const PROMPT = `Voce ajuda compradores no Brasil a achar produtos vendidos no Mercado Livre.
 Converta o pedido em ate 3 buscas curtas de produto para o catalogo (2 a 5 palavras cada,
 com marca e modelo quando fizer sentido; prefira produtos de marca conhecida e boa qualidade).
+Mantenha os atributos tecnicos do pedido (medidas, quantidade de lugares, material, voltagem,
+capacidade, marca) e tire palavras de venda que nao identificam o produto ("barato", "bom",
+"melhor", "oferta", "promocao"). Ex.: "mesa boa de madeira pra 4 pessoas" -> "mesa de jantar
+4 cadeiras madeira". Se o pedido e o aparelho ou movel, nunca busque peca de reposicao
+(carcaca, tampa, refil, capa, suporte). Sem faixa de preco citada, varie as buscas para cobrir
+opcoes de entrada, intermediarias e topo de linha.
 Se o pedido citar preco ("ate R$ 200", "entre 100 e 300"), preencha precoMin/precoMax em reais.
 Nunca invente preco, loja ou desconto. Pedido fora de compras: buscas vazias.
 resumo: uma frase curta e simpatica em portugues dizendo o que vai buscar (sem prometer preco,

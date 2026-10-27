@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   aplicarEscolha,
+  buscarTexto,
+  diversificarPorPreco,
+  faixasDePreco,
   contarFilhos,
   ESCOLHA_VAZIA,
   filtrosDisponiveis,
@@ -61,4 +64,58 @@ test("aplicar escolha e ordenar", () => {
     [50, 120, 200, 400],
   );
   assert.equal(ordenar(ITENS, "relevancia"), ITENS);
+});
+
+test("busca por texto dentro da categoria", () => {
+  const mesas = [
+    item("Conjunto Mesa de Jantar 4 Cadeiras Madeira", "mesas", 900),
+    item("Mesa Redonda Tampo de Vidro 6 Cadeiras", "mesas", 1500),
+    item("Mesa de Jantar Retangular 14 Lugares", "mesas", 3000),
+  ];
+  assert.equal(buscarTexto(mesas, "4 cadeiras").length, 1);
+  assert.equal(buscarTexto(mesas, "madeira").length, 1);
+  assert.equal(buscarTexto(mesas, "redondas").length, 1);
+  assert.equal(buscarTexto(mesas, "tampo de vidro").length, 1);
+  assert.equal(buscarTexto(mesas, "  ").length, 3);
+  assert.equal(buscarTexto(mesas, "sofá").length, 0);
+});
+
+test("faixas de preço pela mediana, arredondadas", () => {
+  const f = faixasDePreco([300, 500, 800, 900, 1000, 1200, 2500]);
+  assert.deepEqual(
+    f.map((x) => x.id),
+    ["0-500", "500-1500", "1500+"],
+  );
+  assert.equal(f[0]!.rotulo, "Até R$ 500");
+  assert.equal(aplicarEscolha(ITENS, { ...ESCOLHA_VAZIA, faixa: "0-150" }).length, 2);
+  assert.equal(aplicarEscolha(ITENS, { ...ESCOLHA_VAZIA, faixa: "300+" }).length, 1);
+  assert.equal(faixasDePreco([10, 20]).length, 4); // poucos preços: as fixas
+});
+
+test("diversidade de preços no topo, perto do ticket do visitante", () => {
+  const lista = [100, 110, 120, 130, 500, 510, 520, 530, 2000, 2100, 2200, 2300].map((p) =>
+    item(`P${p}`, "x", p),
+  );
+  const d = diversificarPorPreco(lista, 0, 6)
+    .slice(0, 6)
+    .map((i) => i.preco);
+  assert.deepEqual(d, [500, 100, 2000, 510, 110, 2100]);
+  const t = diversificarPorPreco(lista, 2150, 4)
+    .slice(0, 4)
+    .map((i) => i.preco);
+  assert.deepEqual(t, [2000, 500, 2100, 100]);
+  assert.equal(diversificarPorPreco(lista).length, lista.length);
+  assert.equal(new Set(diversificarPorPreco(lista)).size, lista.length);
+});
+
+test("buscas das subcategorias com poucos produtos", async () => {
+  const { buscasDosNosRasos, termosDoNo } = await import("../src/lib/em-alta-catalogo");
+  assert.deepEqual(termosDoNo({ slug: "mesas", nome: "Mesas e conjuntos de jantar" }).length, 3);
+  assert.deepEqual(termosDoNo({ slug: "x", nome: "Redes, cadeiras de praia e gazebos" }), [
+    "redes, cadeiras de praia e gazebos",
+    "cadeiras de praia",
+  ]);
+  const termos = buscasDosNosRasos("casa", { mesas: 2 });
+  assert.ok(termos.includes("mesa de jantar 4 cadeiras"));
+  assert.ok(!buscasDosNosRasos("casa", { mesas: 40 }).includes("mesa de jantar 4 cadeiras"));
 });

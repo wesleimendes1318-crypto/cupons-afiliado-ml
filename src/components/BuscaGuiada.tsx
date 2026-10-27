@@ -24,6 +24,8 @@ import {
   type ResumoAvaliacoes,
 } from "@/lib/avaliacoes-detalhe";
 import { faixaDaNota, idsDoEndereco, mesclarSemRepetir } from "@/lib/busca-resultados";
+import { diversificarPorPreco } from "@/lib/catalogo-no";
+import { useTicketMedio } from "@/hooks/use-ticket-medio";
 import { obterSugestoes, produtosDaBusca, type ProdutoConhecido } from "@/lib/busca-sugestoes";
 import { atributoProduto, registrarAcaoVisitante } from "@/lib/perfil-visitante";
 
@@ -235,6 +237,8 @@ export type ConsultaBusca = {
   q: string;
   contexto: ContextoBusca;
   modo: "guiada" | "produto";
+  /* Busca dentro de uma categoria (slug do nó da árvore). */
+  no?: string;
 };
 
 const LOTE = 16;
@@ -313,6 +317,7 @@ export function ResultadosDaBusca({
   compacto = false,
   consulta = null,
   buscarTermo,
+  soCatalogo = false,
   semResultado = "Não achei um produto com anúncio ativo para essa busca. Tente com outras palavras ou cole o link do produto acima.",
 }: {
   carregando: boolean;
@@ -326,10 +331,13 @@ export function ResultadosDaBusca({
   consulta?: ConsultaBusca | null;
   /* Toque numa busca relacionada. */
   buscarTermo?: (t: string) => void;
+  /* Dentro de uma categoria (27/10): só o catálogo, sem os produtos já
+     conhecidos de outras categorias e sem a arte da busca. */
+  soCatalogo?: boolean;
 }) {
   const recuo = compacto ? "pt-3" : "px-5 pb-6 sm:px-7";
   const q = consulta?.q ?? "";
-  const guiada = consulta?.modo === "guiada";
+  const guiada = consulta?.modo === "guiada" && !soCatalogo;
 
   /* 1. O que o site já conhece (uma leitura por visita). */
   const [conhecidos, setConhecidos] = useState<ProdutoConhecido[]>([]);
@@ -393,6 +401,19 @@ export function ResultadosDaBusca({
         .map((x) => x.c),
     [cartoesBase, notas],
   );
+  /* Diversidade de preços (27/10): no 1º lote, depois dos 2 mais fiéis ao
+     que foi digitado, entrada, intermediário e topo de linha se alternam
+     (a faixa do visitante um pouco mais). */
+  const ticket = useTicketMedio();
+  const cartoesVariados = useMemo(() => {
+    const resto = cartoes.slice(2, LOTE);
+    if (resto.some((c) => c.preco == null)) return cartoes;
+    return [
+      ...cartoes.slice(0, 2),
+      ...diversificarPorPreco(resto as Array<CartaoDaBusca & { preco: number }>, ticket),
+      ...cartoes.slice(LOTE),
+    ];
+  }, [cartoes, ticket]);
 
   async function lerPaginas(desde: number, alvo: number, base: number) {
     if (!consulta) return;
@@ -403,7 +424,7 @@ export function ResultadosDaBusca({
     const novos: Resultado[] = [];
     /* No máximo 2 páginas por toque (cada uma traz até 8 do catálogo). */
     for (let n = 0; n < 2 && total < alvo; n++) {
-      const r = await buscarProdutos(consulta.q, consulta.contexto, consulta.modo, p);
+      const r = await buscarProdutos(consulta.q, consulta.contexto, consulta.modo, p, consulta.no);
       if (minha !== geracao.current) return;
       const achados = r.resposta?.resultados ?? [];
       p += 1;
@@ -451,10 +472,10 @@ export function ResultadosDaBusca({
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [cartoes.length, visiveis]);
 
-  const mostrados = cartoes.slice(0, visiveis);
+  const mostrados = cartoesVariados.slice(0, visiveis);
   const temMais = cartoes.length > visiveis || (!fim && !!consulta);
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
-  const arte = q ? arteDaBusca(q) : null;
+  const arte = q && !soCatalogo ? arteDaBusca(q) : null;
   const procurando = carregando && cartoes.length === 0;
 
   return (

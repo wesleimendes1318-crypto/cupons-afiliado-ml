@@ -148,7 +148,7 @@ function PaginaCategoria() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6 sm:pt-6">
+      <main className="mx-auto max-w-6xl scroll-mt-24 px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
         <nav aria-label="Você está em" className="mb-3 text-xs text-secondary-ink">
           <Link to="/" className="hover:underline">
             Início

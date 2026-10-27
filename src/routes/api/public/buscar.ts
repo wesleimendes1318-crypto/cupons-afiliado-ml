@@ -7,6 +7,8 @@ import {
   normalizarBusca,
   type RespostaBusca,
 } from "@/lib/busca-guiada";
+import { NOS, subarvore } from "@/content/taxonomia";
+import { classificar, departamentoDe } from "@/lib/classificar";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* Busca guiada do site (05/10). A mesma pergunta (normalizada) volta do
@@ -25,6 +27,10 @@ const entradaSchema = z.object({
   /* "produto": o texto é o título de um anúncio (link de outra loja); busca
      o MESMO produto, sem interpretar, só na categoria prevista (11/10). */
   modo: z.enum(["guiada", "produto"]).optional(),
+  /* Busca dentro de uma categoria (27/10, "Consultar opções com IA"): o
+     slug do nó da árvore; o pedido é lido no contexto dele e o que for de
+     outro departamento fica de fora. */
+  no: z.string().trim().max(80).optional(),
   /* "Ver mais opções" (27/10): 0 é a 1ª página; cada uma traz até 8. */
   pagina: z
     .number()
@@ -60,9 +66,14 @@ export const Route = createFileRoute("/api/public/buscar")({
           return json(request, { erro: "Escreva o que você procura." }, 400);
         }
         const contexto = entrada.contexto ?? "home";
+        const no = entrada.no ? (NOS[entrada.no] ?? null) : null;
+        if (entrada.no && !no) return json(request, { erro: "Categoria não encontrada." }, 400);
+        const contextoTexto = no
+          ? `categoria ${no.caminho.map((s) => NOS[s]!.nome).join(" > ")}; busque so produtos dessa categoria`
+          : CONTEXTOS[contexto];
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
-        const chave1 = `${modoProduto ? "produto" : contexto}|${normalizarBusca(entrada.q)}`;
+        const chave1 = `${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina ? `${chave1}|p${pagina}` : chave1;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
@@ -95,7 +106,7 @@ export const Route = createFileRoute("/api/public/buscar")({
             const primeira = pagina ? await lerGuardada(chave1) : null;
             achado = await buscaGuiada(
               entrada.q,
-              CONTEXTOS[contexto],
+              contextoTexto,
               pagina,
               primeira?.buscas?.length
                 ? {
@@ -109,6 +120,17 @@ export const Route = createFileRoute("/api/public/buscar")({
           }
         } catch {
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
+        }
+
+        /* Na categoria: só o mesmo departamento, a própria subárvore na frente. */
+        if (no) {
+          const dep = no.caminho[0]!;
+          const daqui = new Set(subarvore(no.slug));
+          achado.resultados = achado.resultados
+            .map((r, k) => ({ r, k, c: classificar({ nome: r.nome, fonte: dep }).no }))
+            .filter((x) => departamentoDe(x.c) === dep)
+            .sort((a, b) => Number(daqui.has(b.c)) - Number(daqui.has(a.c)) || a.k - b.k)
+            .map((x) => x.r);
         }
 
         /* Fila da vitrine: só produto com anúncio ativo, ainda não comparado
