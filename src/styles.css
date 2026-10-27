@@ -1219,3 +1219,53 @@ details.abertura-nativa[open] > summary .seta-abertura {
     0 0 0 3px rgba(22, 163, 74, 0.12),
     0 4px 14px -6px rgba(22, 163, 74, 0.55);
 }
+
+/* "Como funciona" (27/10): os 3 passos sobem em cascata 1x ao abrir, com pulso
+   no ícone; o atraso vem da posição do <li>. Só roda sem redução de movimento. */
+@keyframes passo-chama-atencao {
+  0% {
+    opacity: 0.7;
+    transform: translateY(6px) scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes icone-brilho-pulso {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(117, 71, 232, 0));
+  }
+  50% {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 8px rgba(117, 71, 232, 0.45));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animar-passo {
+    animation: passo-chama-atencao 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards;
+  }
+  .animar-passo .passo-icone {
+    animation: icone-brilho-pulso 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s;
+  }
+  .animar-passo:nth-child(2) {
+    animation-delay: 0.55s;
+  }
+  .animar-passo:nth-child(2) .passo-icone {
+    animation-delay: 0.65s;
+  }
+  .animar-passo:nth-child(3) {
+    animation-delay: 0.9s;
+  }
+  .animar-passo:nth-child(3) .passo-icone {
+    animation-delay: 1s;
+  }
+}
