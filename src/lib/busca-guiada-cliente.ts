@@ -18,6 +18,10 @@ export type Resposta = {
   resultados: Resultado[];
   enfileirados: number;
   lidoEm?: string;
+  /* Intenção entendida (filtro final no navegador). */
+  tipoProduto?: string | null;
+  contextoUso?: string | null;
+  termosNegativos?: string[];
 };
 
 /** "agora" ou "às 14:05" (horário de Brasília): a busca fica guardada até
