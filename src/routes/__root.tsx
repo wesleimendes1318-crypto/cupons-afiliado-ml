@@ -21,6 +21,8 @@ import {
   SCRIPT_CONSENTIMENTO_PADRAO,
 } from "../components/GoogleConsentimento";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ehLinkDeCompra } from "../lib/afiliado";
+import { ouvirComprasDoVisitante } from "../lib/perfil-visitante";
 
 function NotFoundComponent() {
   return (
@@ -164,6 +166,8 @@ function RootComponent() {
   const caminho = useRouterState({ select: (s) => s.location.pathname });
   /* Cabeçalho único (home-v2, 06/10); telas técnicas ficam sem ele. */
   const comCabecalho = !/^\/(login|\.lovable|admin)/.test(caminho);
+  /* Perfil local do visitante (27/10): clique de compra num cartão. */
+  useEffect(() => ouvirComprasDoVisitante((href) => ehLinkDeCompra(href)), []);
 
   return (
     <QueryClientProvider client={queryClient}>

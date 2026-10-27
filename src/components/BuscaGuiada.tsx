@@ -25,6 +25,7 @@ import {
 } from "@/lib/avaliacoes-detalhe";
 import { faixaDaNota, idsDoEndereco, mesclarSemRepetir } from "@/lib/busca-resultados";
 import { obterSugestoes, produtosDaBusca, type ProdutoConhecido } from "@/lib/busca-sugestoes";
+import { atributoProduto, registrarAcaoVisitante } from "@/lib/perfil-visitante";
 
 export type { ContextoBusca } from "@/lib/busca-guiada-cliente";
 
@@ -109,6 +110,7 @@ export function BuscaGuiada({
   async function buscar(texto: string) {
     const pergunta = texto.trim();
     if (pergunta.length < 2 || carregando) return;
+    registrarAcaoVisitante({ tipo: "busca", termo: pergunta });
     setQ(pergunta);
     setBuscada(pergunta);
     setCarregando(true);
@@ -823,6 +825,13 @@ function CartaoBusca({
   return (
     <li
       id={`busca-${c.chave}`}
+      {...atributoProduto({
+        chave: c.item || c.chave,
+        titulo: c.nome,
+        preco: c.preco,
+        foto: c.imagem,
+        freteGratis: c.freteGratis,
+      })}
       data-indice={indice}
       tabIndex={-1}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]"

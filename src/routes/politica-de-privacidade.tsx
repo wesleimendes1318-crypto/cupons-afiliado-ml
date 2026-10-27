@@ -33,7 +33,7 @@ function Privacidade() {
       etiqueta="LGPD"
       titulo="Política de Privacidade"
       resumo="O que fazemos com dados de quem visita este site, escrito para ser entendido."
-      atualizacao="24/09/2026"
+      atualizacao="27/10/2026"
     >
       <h2>Quem é o responsável</h2>
       <p>
@@ -104,6 +104,16 @@ function Privacidade() {
           política de cookies
         </Link>
         .
+      </p>
+
+      <h2>Recomendações no seu aparelho</h2>
+      <p>
+        A vitrine mostra primeiro produtos parecidos com o que você buscou, abriu ou comprou
+        aqui. Essa lista de preferências (categorias, termos buscados, faixa de preço e
+        preferência por frete grátis, com um código aleatório sem ligação com você) fica
+        guardada apenas no armazenamento local do seu navegador: não é enviada para nossos
+        servidores, não é compartilhada e não é vendida. Você apaga tudo a qualquer momento em
+        "Limpar preferências", na vitrine, ou limpando os dados do site no navegador.
       </p>
 
       <h2>Medição de audiência</h2>

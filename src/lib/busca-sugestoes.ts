@@ -36,6 +36,9 @@ export type RecenteConhecido = { titulo: string; url: string; imagem: string | n
 export type Sugestao =
   | { tipo: "recente"; texto: string; url: string; imagem: string | null }
   | { tipo: "termo"; texto: string }
+  /* Campo vazio (27/10): últimos termos do perfil local e recomendados. */
+  | { tipo: "historico"; texto: string }
+  | { tipo: "recomendado"; texto: string; url: string; imagem: string | null; preco: number | null }
   | { tipo: "produto"; texto: string; url: string; imagem: string | null; preco: number | null }
   | { tipo: "categoria"; texto: string; slug: string };
 

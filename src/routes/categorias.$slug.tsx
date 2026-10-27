@@ -10,6 +10,7 @@ import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstituci
 import { Vitrine } from "@/components/Vitrine";
 import { buscarCategoria } from "@/content/categorias";
 import { buscarNo, DEPARTAMENTOS, NOS, subarvore } from "@/content/taxonomia";
+import { useVisitaCategoria } from "@/lib/perfil-visitante";
 import { supabase } from "@/integrations/supabase/client";
 import { ARTE_NEUTRA, arteDaCategoria, srcArte } from "@/lib/artes";
 
@@ -130,6 +131,8 @@ const BOTAO_SECUNDARIO =
 
 function PaginaCategoria() {
   const { no, categoria, contagem } = Route.useLoaderData();
+  /* Perfil local: a aba antiga equivalente (as da vitrine). */
+  useVisitaCategoria(no.legado ?? no.slug);
   const arte = arteDoNo(no.caminho);
   const avaliar = categoria?.comoAvaliar.filter(semCupom) ?? [];
   const cuidados = categoria?.cuidados.filter(semCupom) ?? [];

@@ -33,7 +33,7 @@ function Cookies() {
       etiqueta="Privacidade"
       titulo="Política de Cookies"
       resumo="O que fica guardado no seu navegador e como você controla isso."
-      atualizacao="24/09/2026"
+      atualizacao="27/10/2026"
     >
       <h2>O que são cookies</h2>
       <p>
@@ -49,6 +49,12 @@ function Cookies() {
         Fazem o site abrir, manter a sessão de navegação e lembrar a sua decisão sobre
         privacidade, para não perguntar de novo a cada visita. Sem eles o site não funciona,
         por isso não dependem de consentimento.
+      </p>
+      <p>
+        Também ficam só no seu aparelho as suas últimas buscas e as preferências da vitrine
+        (categorias e faixa de preço que você mais consulta), para mostrar primeiro o que
+        combina com você. Isso nunca é enviado ao site nem a terceiros, e o botão "Limpar
+        preferências" na vitrine apaga tudo na hora.
       </p>
 
       <h3>2. Medição de audiência — só com a sua autorização</h3>
