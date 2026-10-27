@@ -26,7 +26,8 @@ async function admin(): Promise<Admin> {
 async function lerConfig(chaves: string[]) {
   const db = await admin();
   const { data } = await db.from("sinc_config").select("chave,valor").in("chave", chaves);
-  return Object.fromEntries((data ?? []).map((l) => [l.chave, l.valor])) as Record<string, string>;
+  const lista = Array.isArray(data) ? data : [];
+  return Object.fromEntries(lista.map((l) => [l.chave, l.valor])) as Record<string, string>;
 }
 
 async function gravarConfig(pares: Record<string, string>) {
