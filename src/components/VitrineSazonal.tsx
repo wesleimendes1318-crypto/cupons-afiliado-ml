@@ -65,6 +65,7 @@ import {
   type MapaAvaliacoes,
 } from "@/lib/avaliacoes-vitrine";
 import { passaNaQualidade, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
+import { atributoProduto } from "@/lib/perfil-visitante";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -281,6 +282,7 @@ export function CartaoOferta({
   const quando = o.recente ? "Conferido hoje" : `Preço de ${dataCurta(o.vistoEm) ?? "antes"}`;
   return (
     <li
+      {...atributoProduto({ chave: o.chave, titulo: o.titulo, preco: o.preco, foto: o.imagem })}
       className={`campanha-entra campanha-cartao group flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
       style={{ animationDelay: `${Math.min(atraso, 8) * 50}ms` }}
     >

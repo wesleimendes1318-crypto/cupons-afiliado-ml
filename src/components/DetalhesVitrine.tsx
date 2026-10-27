@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Images, LoaderCircle, ShieldCheck, X } from 
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { propsFotoGrande } from "@/lib/foto";
+import { registrarAcaoVisitante } from "@/lib/perfil-visitante";
 
 type Carac = { nome: string; valor: string };
 type Detalhes = {
@@ -70,13 +71,21 @@ export function VerDetalhesVitrine({
   gatilho?: ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
+  /* Abrir fotos e detalhes é interesse aprofundado (+4 no perfil local). */
+  const abrir = () => {
+    setAberto(true);
+    registrarAcaoVisitante({
+      tipo: "detalhes",
+      produto: { chave, titulo, preco: preco ?? null, foto: imagem ?? null },
+    });
+  };
   if (!/^MLB\d{5,}$/.test(chave)) return gatilho ? <>{gatilho}</> : null;
   return (
     <>
       {gatilho ? (
         <button
           type="button"
-          onClick={() => setAberto(true)}
+          onClick={abrir}
           aria-label={`Ver fotos e detalhes: ${titulo}`}
           className={`block cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
         >
@@ -85,7 +94,7 @@ export function VerDetalhesVitrine({
       ) : (
         <button
           type="button"
-          onClick={() => setAberto(true)}
+          onClick={abrir}
           className={`inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
         >
           <Images className="size-3.5" aria-hidden="true" />

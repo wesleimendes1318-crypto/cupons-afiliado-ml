@@ -16,6 +16,7 @@ import { CATEGORIAS } from "@/content/categorias";
 import { supabase } from "@/integrations/supabase/client";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
+import { atributoProduto } from "@/lib/perfil-visitante";
 
 export type ItemEmAlta = {
   produto: string;
@@ -273,6 +274,14 @@ export function CartaoEmAlta({
 }) {
   return (
     <li
+      {...atributoProduto({
+        chave: i.produto,
+        titulo: i.nome,
+        categoria: i.categoria_site,
+        preco: i.preco,
+        foto: i.imagem,
+        freteGratis: i.frete_gratis,
+      })}
       className={
         "group flex flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] " +
         (grade ? "min-w-0" : "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto")

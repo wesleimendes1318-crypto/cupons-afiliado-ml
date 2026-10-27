@@ -132,6 +132,7 @@ export function CabecalhoSite() {
                 setValor(e.target.value);
                 sugestoes.abrir();
               }}
+              onFocus={sugestoes.abrir}
               onKeyDown={(e) => void sugestoes.teclar(e)}
               tabIndex={mostrarCampo ? 0 : -1}
               placeholder="Cole o link ou digite o produto que procura..."

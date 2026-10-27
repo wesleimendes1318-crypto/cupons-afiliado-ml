@@ -22,6 +22,7 @@ import {
   type ResumoAvaliacoes,
 } from "@/lib/avaliacoes-detalhe";
 import { passaNaQualidade, seloDeAvaliacao } from "@/lib/qualidade-avaliacao";
+import { atributoProduto } from "@/lib/perfil-visitante";
 
 /* BRINQUEDOS POR IDADE (Weslei, 05/10). Produtos que o agente mapeou na
    API oficial (mais vendidos e buscas por idade) e que JÁ passaram pela
@@ -119,7 +120,17 @@ function CartaoBrinquedo({
   /* Botão direto sempre que houver link de afiliado (Weslei, 05/10). */
   const podeComprar = !!c.link;
   return (
-    <li className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none">
+    <li
+      {...atributoProduto({
+        chave: chaveDoBrinquedo(i.url),
+        titulo: i.nome,
+        categoria: "brinquedos",
+        preco: c.preco,
+        foto: i.imagem,
+        freteGratis: c.freteGratis,
+      })}
+      className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none"
+    >
       {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
           competindo com a foto"); tocar nela abre fotos e detalhes. */}
       <VerDetalhesVitrine

@@ -59,7 +59,7 @@ import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
 import { roboAtivo } from "@/lib/robo";
-import { registrarInteracaoVisitante } from "@/lib/perfil-visitante";
+import { atributoProduto, registrarAcaoVisitante } from "@/lib/perfil-visitante";
 import {
   qualidadeAceita,
   qualidadeDoParecido,
@@ -1022,6 +1022,10 @@ export default function BuscaPorLink({
     async (bruta: string, nova = false) => {
       const alvo = bruta.trim();
       if (!alvo) return;
+      /* Busca por texto entra no perfil local na hora (+3); a por link,
+         quando o produto é lido. */
+      if (!/^https?:\/\/|\.(com|br|la|ee)\b/i.test(alvo))
+        registrarAcaoVisitante({ tipo: "busca", termo: alvo });
 
       gravarNoEndereco(alvo);
       limparTimers();
@@ -1398,16 +1402,18 @@ export default function BuscaPorLink({
     if (fase !== "pronto" || !pedido?.analise || !alvo) return;
     const item = itemDoHistorico(alvo, pedido.analise);
     if (!item) return;
-    /* Perfil de interesse (só com consentimento de análise): uma vez por
-       pedido, mesmo que a segunda volta atualize a análise. */
+    /* Perfil local do visitante (busca por link, +3): uma vez por pedido,
+       mesmo que a segunda volta atualize a análise. */
     const marca = `${atual.current ?? ""}|${alvo}`;
     if (perfilRegistrado.current !== marca) {
       perfilRegistrado.current = marca;
-      registrarInteracaoVisitante({
-        titulo: item.titulo,
-        preco: item.melhor ?? pedido.analise.preco,
+      registrarAcaoVisitante({
+        tipo: "busca",
+        termo: item.titulo,
         categoria: pedido.analise.categoria ?? null,
-        freteGratisEscolhido: melhorComFreteGratis(pedido.analise),
+        preco: item.melhor ?? pedido.analise.preco,
+        freteGratis: melhorComFreteGratis(pedido.analise),
+        produto: { chave: alvo, titulo: item.titulo, foto: item.imagem },
       });
     }
     setHistorico((h) => {
@@ -1477,6 +1483,14 @@ export default function BuscaPorLink({
       id="colar-link"
       data-origem="resultado"
       data-pedido={fase === "pronto" && atual.current != null ? String(atual.current) : undefined}
+      {...(fase === "pronto" && pedido?.analise?.titulo
+        ? atributoProduto({
+            chave: urlDoPedido.current,
+            titulo: pedido.analise.titulo,
+            preco: pedido.analise.preco,
+            foto: pedido.analise.imagem ?? null,
+          })
+        : {})}
       className={
         "mx-auto rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition-[max-width] sm:p-5 " +
         /* Com resultado, usa a largura da tela (Weslei, 28/09: "aproveite
@@ -1508,7 +1522,11 @@ export default function BuscaPorLink({
               setUrl(e.target.value);
               sugestoes.abrir();
             }}
-            onFocus={pedirLocalizacao}
+            onFocus={() => {
+              pedirLocalizacao();
+              /* Campo vazio: últimas buscas e recomendados do perfil local. */
+              sugestoes.abrir();
+            }}
             onKeyDown={(e) => {
               if (sugestoes.teclar(e)) return;
               /* Enter busca (texto) ou compara (link); Shift+Enter quebra a linha. */

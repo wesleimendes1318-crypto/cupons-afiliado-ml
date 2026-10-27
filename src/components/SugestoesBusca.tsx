@@ -22,6 +22,7 @@ import {
   type RecenteConhecido,
   type Sugestao,
 } from "@/lib/busca-sugestoes";
+import { obterPerfil, sugestoesDoPerfil } from "@/lib/perfil-visitante";
 
 const ESPERA_MS = 180;
 
@@ -118,7 +119,12 @@ export function useSugestoesBusca(valor: string, buscar: (alvo: string) => void)
   }, [valor]);
 
   const lista = useMemo(
-    () => (aberto ? obterSugestoes(termo, { produtos, recentes }) : []),
+    () =>
+      !aberto
+        ? []
+        : termo.trim()
+          ? obterSugestoes(termo, { produtos, recentes })
+          : sugestoesDoPerfil(obterPerfil(), produtos),
     [aberto, termo, produtos, recentes],
   );
   useEffect(() => setAtivo(-1), [lista]);
@@ -145,7 +151,7 @@ export function useSugestoesBusca(valor: string, buscar: (alvo: string) => void)
       void router.navigate({ to: "/categorias/$slug", params: { slug: s.slug } });
       return;
     }
-    buscar(s.tipo === "termo" ? s.texto : s.url);
+    buscar(s.tipo === "termo" || s.tipo === "historico" ? s.texto : s.url);
   };
 
   /** true quando a tecla foi usada pela lista (quem chama não faz mais nada). */
@@ -195,6 +201,8 @@ export function useSugestoesBusca(valor: string, buscar: (alvo: string) => void)
 const SECOES: Record<Sugestao["tipo"], string> = {
   recente: "Buscas recentes",
   termo: "Buscas sugeridas",
+  historico: "Suas últimas buscas",
+  recomendado: "Recomendados para você",
   produto: "Produtos em destaque",
   categoria: "Categorias",
 };
@@ -243,7 +251,7 @@ export function SugestoesBusca({
                 (i === ativo ? "bg-[#0071e3]/10" : "")
               }
             >
-              {s.tipo === "produto" || s.tipo === "recente" ? (
+              {s.tipo === "produto" || s.tipo === "recente" || s.tipo === "recomendado" ? (
                 s.imagem ? (
                   <img
                     src={s.imagem}
@@ -254,6 +262,8 @@ export function SugestoesBusca({
                 ) : (
                   <History className="size-4 shrink-0 text-[#86868b]" aria-hidden="true" />
                 )
+              ) : s.tipo === "historico" ? (
+                <History className="size-4 shrink-0 text-[#86868b]" aria-hidden="true" />
               ) : s.tipo === "categoria" ? (
                 <LayoutGrid className="size-4 shrink-0 text-[#0071e3]" aria-hidden="true" />
               ) : (
@@ -263,11 +273,13 @@ export function SugestoesBusca({
                 <span className="line-clamp-1">
                   {s.tipo === "categoria" ? `Ir para ${s.texto}` : s.texto}
                 </span>
-                {s.tipo === "produto" && s.preco != null && s.preco > 0 && (
-                  <span className="block text-[12px] tabular-nums text-[#6e6e73]">
-                    Visto por {brl(s.preco)} · toque para comparar agora
-                  </span>
-                )}
+                {(s.tipo === "produto" || s.tipo === "recomendado") &&
+                  s.preco != null &&
+                  s.preco > 0 && (
+                    <span className="block text-[12px] tabular-nums text-[#6e6e73]">
+                      Visto por {brl(s.preco)} · toque para comparar agora
+                    </span>
+                  )}
               </span>
             </div>
           </li>

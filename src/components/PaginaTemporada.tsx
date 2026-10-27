@@ -8,6 +8,8 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, BadgeCheck, Link2 } from "lucide-react";
 import { useState } from "react";
 
+import { useVisitaCategoria } from "@/lib/perfil-visitante";
+
 import { CenarioCampanha } from "@/components/CenarioCampanha";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
@@ -52,6 +54,7 @@ const TEXTO: Record<string, { titulo: string; slogan: string; resumo: string; di
 export function PaginaTemporada({ id }: { id: Temporada["id"] }) {
   const t = TEMPORADAS.find((x) => x.id === id)!;
   const textos = TEXTO[id] ?? TEXTO["natal"]!;
+  useVisitaCategoria(id === "criancas" ? "brinquedos" : id);
   /* Lista curada da campanha no banco (ou a conta local sem a leitura). */
   const { lista, carregou } = useOfertasDaTemporada(t);
   /* Campanha encerrada (passou o último dia): sem contagem nem compra.

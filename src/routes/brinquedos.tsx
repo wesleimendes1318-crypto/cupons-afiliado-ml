@@ -8,6 +8,7 @@ import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { supabase } from "@/integrations/supabase/client";
 import { FAIXAS, pareceBrinquedo } from "@/lib/brinquedos";
+import { useVisitaCategoria } from "@/lib/perfil-visitante";
 
 /* Página dos brinquedos por idade (05/10): a lista vem do servidor para
    sair no HTML (busca do Google) e se atualiza no navegador. */
@@ -116,6 +117,7 @@ export const Route = createFileRoute("/brinquedos")({
 
 function PaginaBrinquedos() {
   const { itens } = Route.useLoaderData();
+  useVisitaCategoria("brinquedos");
   return (
     <div className="fundo-conteudo min-h-screen">
       <main className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">

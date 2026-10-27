@@ -8,7 +8,7 @@
 
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, TrendingDown } from "lucide-react";
+import { BadgeCheck, Sparkles, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
@@ -16,11 +16,12 @@ import { recomendavel } from "@/lib/vitrine-recomendavel";
 import { supabase } from "@/integrations/supabase/client";
 import {
   EVENTO_PERFIL,
-  clusterPredominante,
-  detectarCluster,
+  atributoProduto,
+  calcularRecomendados,
+  categoriaFavorita,
   limparPerfil,
   obterPerfil,
-  type ClusterInteresse,
+  type PerfilVisitante,
 } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import {
@@ -187,9 +188,6 @@ function comQualidade(lista: ItemVitrine[], mapa: MapaAvaliacoes): ItemVitrine[]
   return out;
 }
 
-const doInteresse = (i: ItemVitrine, c: ClusterInteresse) =>
-  detectarCluster(i.titulo ?? "", i.categoria) === c;
-
 /* Código de cupom já gerado da loja, pronto para copiar. */
 function CupomDaLoja({ codigo, desconto }: { codigo: string; desconto: string | null }) {
   const [copiou, setCopiou] = useState(false);
@@ -255,9 +253,10 @@ export function Vitrine({
   const [carregou, setCarregou] = useState(false);
   const [aba, setAba] = useState<Aba>("recentes");
   const [categoria, setCategoria] = useState<string | null>(categoriaFixa ?? null);
-  /* Interesse principal do visitante (perfil anônimo do navegador, só com
-     consentimento de análise). Lido depois de montar: o servidor não conhece. */
-  const [interesse, setInteresse] = useState<ClusterInteresse | null>(null);
+  /* Perfil local do visitante (src/lib/perfil-visitante.ts). Lido depois de
+     montar: o servidor não conhece. */
+  const [perfil, setPerfil] = useState<PerfilVisitante | null>(null);
+  const favorita = categoriaFavorita(perfil);
   /* 26/10 (Weslei: "O número de produtos não parece condizer com o total
      real"): o número de cada categoria soma os mais vendidos dela, que o
      "Ver todos" também mostra. */
@@ -287,7 +286,7 @@ export function Vitrine({
     });
   }, []);
   useEffect(() => {
-    const ler = () => setInteresse(clusterPredominante(obterPerfil()));
+    const ler = () => setPerfil(obterPerfil());
     ler();
     window.addEventListener(EVENTO_PERFIL, ler);
     return () => window.removeEventListener(EVENTO_PERFIL, ler);
@@ -323,25 +322,29 @@ export function Vitrine({
     };
   }, [categoriaFixa]);
 
-  /* Categorias do próprio site, na ordem do site; "Mais achados" por último. */
+  /* Categorias do próprio site, na ordem do site; "Mais achados" por último.
+     ABA INTELIGENTE (27/10): a favorita do visitante vem primeiro. */
   const categorias = useMemo(() => {
     const presentes = new Set([...itens, ...extras].map((i) => i.categoria_site ?? "outros"));
-    return [...CATEGORIAS.map((c) => c.slug), "outros"].filter((s) => presentes.has(s));
-  }, [itens, extras]);
+    const ordem = [...CATEGORIAS.map((c) => c.slug), "outros"].filter((s) => presentes.has(s));
+    return favorita && ordem.includes(favorita)
+      ? [favorita, ...ordem.filter((s) => s !== favorita)]
+      : ordem;
+  }, [itens, extras, favorita]);
 
   const lista = useMemo(() => {
     let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
     if (aba === "economias")
       l = l.filter((i) => maiorEconomia(i) > 0).sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
-    /* Em "Pesquisados agora", o que é do interesse do visitante sobe; o resto
+    /* Em "Pesquisados agora", a categoria favorita do visitante sobe; o resto
        mantém a ordem da aba (o mais recente primeiro). */
-    if (interesse && aba === "recentes")
+    if (favorita && aba === "recentes")
       l = [...l].sort(
-        (a, b) => Number(doInteresse(b, interesse)) - Number(doInteresse(a, interesse)),
+        (a, b) => Number(b.categoria_site === favorita) - Number(a.categoria_site === favorita),
       );
     return l.slice(0, categoria == null ? 120 : 48);
-  }, [itens, aba, categoria, interesse]);
+  }, [itens, aba, categoria, favorita]);
 
   /* Categoria escolhida: depois dos comparados, os mais vendidos dela. */
   const daEscolhida = useMemo(() => {
@@ -352,15 +355,12 @@ export function Vitrine({
     );
   }, [extras, lista, categoria]);
 
-  /* "Do seu interesse": até 5 do tipo que o visitante mais compara, na aba
-     aberta, com a maior economia primeiro. */
-  const paraVoce = useMemo(() => {
-    if (!interesse || categoria != null) return [];
-    return lista
-      .filter((i) => doInteresse(i, interesse))
-      .sort((a, b) => maiorEconomia(b) - maiorEconomia(a))
-      .slice(0, 5);
-  }, [lista, interesse, categoria]);
+  /* "Recomendados para o seu perfil" (27/10): comparados e mais vendidos
+     pontuados pelo gosto do visitante (calcularRecomendados). */
+  const recomendados = useMemo(
+    () => (categoriaFixa ? [] : calcularRecomendados([...itens, ...extras], perfil).slice(0, 10)),
+    [itens, extras, perfil, categoriaFixa],
+  );
 
   if (categoriaFixa) {
     if (!carregou) return null;
@@ -390,6 +390,40 @@ export function Vitrine({
             </p>
           </div>
         </div>
+
+        {recomendados.length > 0 && (
+          <div
+            className="mt-4 rounded-3xl bg-[#0071e3]/[0.04] p-3 ring-1 ring-[#0071e3]/15 sm:p-4"
+            data-origem="recomendados"
+          >
+            <div className="mb-2.5 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+              <div className="min-w-0">
+                <h3 className="flex items-center gap-1.5 text-base font-bold sm:text-lg">
+                  <Sparkles className="size-4 shrink-0 text-[#0071e3]" aria-hidden="true" />
+                  Recomendados para o seu perfil
+                </h3>
+                <p className="text-xs text-secondary-ink">
+                  Baseado nos produtos e categorias que você pesquisou. Fica só neste aparelho.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  limparPerfil();
+                  setPerfil(null);
+                }}
+                className="min-h-8 text-xs font-semibold text-secondary-ink underline-offset-2 hover:underline"
+              >
+                Limpar preferências
+              </button>
+            </div>
+            <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
+              {recomendados.map((i) => (
+                <Cartao key={i.chave} i={i} />
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap gap-2" role="tablist">
           {abas.map((a) => (
@@ -437,7 +471,11 @@ export function Vitrine({
                     : "border border-border bg-card")
                 }
               >
+                {c === favorita && (
+                  <Sparkles className="mr-1 inline size-3 align-[-1px]" aria-hidden="true" />
+                )}
                 {NOME_CATEGORIA[c] ?? c}
+                {c === favorita && <span className="sr-only"> (sua favorita)</span>}
               </button>
             ))}
           </div>
@@ -453,33 +491,6 @@ export function Vitrine({
         ) : categoria == null ? (
           /* "Todas": uma seção por categoria, cada uma com seus produtos. */
           <div className="mt-4 space-y-7">
-            {paraVoce.length > 0 && (
-              <div>
-                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <h3 className="text-base font-bold">Do seu interesse</h3>
-                    <p className="text-xs text-secondary-ink">
-                      Recomendações baseadas nas suas últimas pesquisas (ficam só neste navegador).
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      limparPerfil();
-                      setInteresse(null);
-                    }}
-                    className="text-xs font-semibold text-secondary-ink hover:underline"
-                  >
-                    Limpar histórico de interesses
-                  </button>
-                </div>
-                <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                  {paraVoce.map((i) => (
-                    <Cartao key={i.chave} i={i} />
-                  ))}
-                </ul>
-              </div>
-            )}
             {categorias.map((c) => {
               const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
               const titulos = new Set(daCategoria.map((i) => i.titulo.toLowerCase()));
@@ -575,6 +586,14 @@ function Cartao({ i }: { i: ItemVitrine }) {
   return (
     <li
       key={i.chave}
+      {...atributoProduto({
+        chave: i.chave,
+        titulo: i.titulo,
+        categoria: i.categoria_site,
+        preco,
+        foto: i.imagem,
+        freteGratis: i.freteGratis ?? null,
+      })}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card"
     >
       <VerDetalhesVitrine
