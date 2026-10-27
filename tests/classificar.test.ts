@@ -270,3 +270,37 @@ test("filtros por título", () => {
   assert.deepEqual(t("polegadas", 'smart tv 55" 4k'), ["50-55"]);
   assert.deepEqual(t("conexao_fone", "fone bluetooth tws"), ["bluetooth"]);
 });
+
+test("títulos que parecem de outro nó (achados no teste com o catálogo inteiro)", () => {
+  const nao = (nome: string, dominio: string, errado: string) =>
+    assert.notEqual(c(nome, dominio).no, errado, nome);
+  nao("Capa Para Moto Honda 100% Impermeável", "MLB-VEHICLE_COVERS", "capas-de-celular");
+  nao(
+    "Capa Gps Bmw Navigator Vi - Case Proteção Gps Moto Bmw",
+    "MLB-GPS_COVERS",
+    "capas-de-celular",
+  );
+  nao("Chapa Prancha De Cabelo Taiff Elegance Red Íon", "MLB-HAIR_STRAIGHTENERS", "frigideiras");
+  nao("Óculos De Sol Quadrado Doxa Bambu com Proteção UV", "MLB-SUNGLASSES", "epi");
+  nao(
+    "Limpador Facial Gel-espuma Com Niacinamida",
+    "MLB-ELECTRIC_FACIAL_BRUSHES_AND_SPONGES",
+    "produtos-de-limpeza",
+  );
+  nao(
+    "Organizador de Maquiagem Giratório 360° Acrílico",
+    "MLB-MAKEUP_ORGANIZERS",
+    "organizadores-de-cozinha",
+  );
+  nao(
+    "Manta Líquida Emborrachada Impermeabilizante 3,6kg",
+    "MLB-WATERPROOFING_PROTECTORS_AND_SURFACE_TREATMENTS",
+    "cobertores-e-edredons",
+  );
+  // e o que já funcionava continua
+  assert.equal(
+    c("Capinha Case Para Moto G52 Silicone", "MLB-CELLPHONE_CASES_AND_COVERS").no,
+    "capas-de-celular",
+  );
+  assert.equal(c("Óculos Proteção Univet 548 Transparente Balístico").no, "epi");
+});
