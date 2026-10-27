@@ -8,31 +8,20 @@
 
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, Sparkles, TrendingDown } from "lucide-react";
+import { BadgeCheck, TrendingDown } from "lucide-react";
 
 import { CATEGORIAS } from "@/content/categorias";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
 import { recomendavel } from "@/lib/vitrine-recomendavel";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  EVENTO_PERFIL,
-  atributoProduto,
-  calcularRecomendados,
-  categoriaFavorita,
-  limparPerfil,
-  obterPerfil,
-  type PerfilVisitante,
-} from "@/lib/perfil-visitante";
+import { atributoProduto } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
-import {
-  itemDoEndereco,
-  lerAvaliacoesPorItens,
-  type ResumoAvaliacoes,
-} from "@/lib/avaliacoes-detalhe";
+import { itemDoEndereco, type ResumoAvaliacoes } from "@/lib/avaliacoes-detalhe";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
 import { propsFotoCartao } from "@/lib/foto";
-import { FaixaArte } from "@/components/FaixaArte";
+import { TrilhoRecomendacao } from "@/components/recomendacoes/TrilhoRecomendacao";
+import { ordenarPorPontuacao } from "@/lib/vitrines-ranking";
 import { SeloMarketplace } from "@/components/SeloMarketplace";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import {
@@ -41,7 +30,7 @@ import {
   lerAvaliacoesDaVitrine,
   type MapaAvaliacoes,
 } from "@/lib/avaliacoes-vitrine";
-import { passaNaQualidade, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
+import { passaNaQualidade } from "@/lib/qualidade-avaliacao";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -84,68 +73,6 @@ type ItemVitrine = {
   freteGratis?: boolean;
   lojaOficial?: boolean;
 };
-
-type LinhaEmAlta = {
-  produto: string;
-  categoria_site: string;
-  nome: string;
-  imagem: string | null;
-  preco: number;
-  frete_gratis: boolean;
-  loja_oficial: boolean;
-  url: string;
-  atualizado_em: string;
-  origem: "vendidos" | "tendencia" | "curadoria";
-};
-
-/* Mais vendidos de cada categoria (lista oficial, até 8 por categoria) no
-   formato do cartão da vitrine, sem os de nota baixa ou sem avaliação. */
-async function lerMaisVendidos(): Promise<ItemVitrine[]> {
-  const { data } = await supabase.rpc(
-    "em_alta_por_categoria_v3" as never,
-    { p_categoria: null, p_por_categoria: 8 } as never,
-  );
-  const linhas = Array.isArray(data) ? (data as LinhaEmAlta[]) : [];
-  const notas = await lerAvaliacoesPorItens(
-    linhas.map((l) => itemDoEndereco(l.url)).filter((x): x is string => !!x),
-  );
-  return linhas
-    .map((l) => ({ l, resumo: notas.get(itemDoEndereco(l.url) ?? "") }))
-    .filter(({ resumo }) => !reprovadaPelaAvaliacao(resumo))
-    .map(({ l, resumo }) => ({
-      chave: `em_alta:${l.produto}`,
-      titulo: l.nome,
-      imagem: l.imagem,
-      categoria: null,
-      categoria_site: l.categoria_site,
-      loja: null,
-      preco: Number(l.preco),
-      url_produto: l.url,
-      link: null,
-      melhor_loja: null,
-      melhor_preco: null,
-      melhor_link: null,
-      economia: null,
-      lojas_comparadas: null,
-      vezes: null,
-      visto_em: l.atualizado_em,
-      cupom_codigo: null,
-      cupom_desconto: null,
-      alt_preco: null,
-      alt_economia: null,
-      alt_titulo: null,
-      alt_link: null,
-      alt_loja: null,
-      alt_oficial: null,
-      alt_vantagem: null,
-      alt_frete_gratis: null,
-      alt_muda: null,
-      maisVendido: l.origem,
-      resumo,
-      freteGratis: l.frete_gratis,
-      lojaOficial: l.loja_oficial,
-    }));
-}
 
 /* Maior economia que a comparação achou: a do mesmo produto ou, quando maior,
    a da melhor alternativa (parecido), que o selo diz "Até R$ X de desconto". */
@@ -238,12 +165,16 @@ const quando = (iso: string) => {
 
 type Aba = "recentes" | "economias" | "procurados";
 
+/* Economia mínima para o 3º bloco da home ("diferença relevante"). */
+const ECONOMIA_RELEVANTE = 10;
+
 export function Vitrine({
   categoriaFixa,
   vazio,
 }: {
   /* Página de categoria (09/10): só os produtos dela, sem os filtros de
-     categoria. */
+     categoria. Sem ela (home, 27/10): só as oportunidades com economia real,
+     numa fileira. */
   categoriaFixa?: string;
   /* Mostrado quando a categoria fixa ainda não tem produto. */
   vazio?: ReactNode;
@@ -252,45 +183,6 @@ export function Vitrine({
   const [avaliacoes, setAvaliacoes] = useState<MapaAvaliacoes>(() => new Map());
   const [carregou, setCarregou] = useState(false);
   const [aba, setAba] = useState<Aba>("recentes");
-  const [categoria, setCategoria] = useState<string | null>(categoriaFixa ?? null);
-  /* Perfil local do visitante (src/lib/perfil-visitante.ts). Lido depois de
-     montar: o servidor não conhece. */
-  const [perfil, setPerfil] = useState<PerfilVisitante | null>(null);
-  const favorita = categoriaFavorita(perfil);
-  /* 26/10 (Weslei: "O número de produtos não parece condizer com o total
-     real"): o número de cada categoria soma os mais vendidos dela, que o
-     "Ver todos" também mostra. */
-  const [maisVendidos, setMaisVendidos] = useState<Record<string, number>>({});
-  /* Fileira de 5 em toda categoria (26/10): os mais vendidos completam o
-     que ainda não foi comparado. */
-  const [extras, setExtras] = useState<ItemVitrine[]>([]);
-  useEffect(() => {
-    if (categoriaFixa) return;
-    lerMaisVendidos()
-      .then(setExtras)
-      .catch(() => {
-        /* sem a lista: a fileira fica com os comparados */
-      });
-  }, [categoriaFixa]);
-  useEffect(() => {
-    void supabase.rpc("em_alta_contagem" as never).then(({ data }) => {
-      if (Array.isArray(data))
-        setMaisVendidos(
-          Object.fromEntries(
-            (data as Array<{ categoria_site: string; total: number }>).map((r) => [
-              r.categoria_site,
-              r.total,
-            ]),
-          ),
-        );
-    });
-  }, []);
-  useEffect(() => {
-    const ler = () => setPerfil(obterPerfil());
-    ler();
-    window.addEventListener(EVENTO_PERFIL, ler);
-    return () => window.removeEventListener(EVENTO_PERFIL, ler);
-  }, []);
 
   useEffect(() => {
     let vivo = true;
@@ -322,51 +214,63 @@ export function Vitrine({
     };
   }, [categoriaFixa]);
 
-  /* Categorias do próprio site, na ordem do site; "Mais achados" por último.
-     ABA INTELIGENTE (27/10): a favorita do visitante vem primeiro. */
-  const categorias = useMemo(() => {
-    const presentes = new Set([...itens, ...extras].map((i) => i.categoria_site ?? "outros"));
-    const ordem = [...CATEGORIAS.map((c) => c.slug), "outros"].filter((s) => presentes.has(s));
-    return favorita && ordem.includes(favorita)
-      ? [favorita, ...ordem.filter((s) => s !== favorita)]
-      : ordem;
-  }, [itens, extras, favorita]);
-
   const lista = useMemo(() => {
-    let l = categoria ? itens.filter((i) => (i.categoria_site ?? "outros") === categoria) : itens;
+    let l = itens.filter((i) => (i.categoria_site ?? "outros") === categoriaFixa);
     if (aba === "economias")
       l = l.filter((i) => maiorEconomia(i) > 0).sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
-    /* Em "Pesquisados agora", a categoria favorita do visitante sobe; o resto
-       mantém a ordem da aba (o mais recente primeiro). */
-    if (favorita && aba === "recentes")
-      l = [...l].sort(
-        (a, b) => Number(b.categoria_site === favorita) - Number(a.categoria_site === favorita),
-      );
-    return l.slice(0, categoria == null ? 120 : 48);
-  }, [itens, aba, categoria, favorita]);
+    return l.slice(0, 48);
+  }, [itens, aba, categoriaFixa]);
 
-  /* Categoria escolhida: depois dos comparados, os mais vendidos dela. */
-  const daEscolhida = useMemo(() => {
-    if (categoria == null) return [];
-    const titulos = new Set(lista.map((i) => i.titulo.toLowerCase()));
-    return extras.filter(
-      (e) => e.categoria_site === categoria && !titulos.has(e.titulo.toLowerCase()),
+  /* OPORTUNIDADES COM ECONOMIA REAL (3º bloco da home, 27/10): o mesmo
+     produto mais barato em outra loja, com frete grátis confirmado nela
+     (semEconomiaSemFrete zera o resto), sem repetir título, na ordem do
+     ranking (nota lida, economia, frete). */
+  const oportunidades = useMemo(() => {
+    if (categoriaFixa) return [];
+    const titulos = new Set<string>();
+    const comEconomia = itens
+      .filter((i) => (i.economia ?? 0) >= ECONOMIA_RELEVANTE && i.melhor_preco != null)
+      .filter((i) => {
+        const k = i.titulo.toLowerCase();
+        if (titulos.has(k)) return false;
+        titulos.add(k);
+        return true;
+      })
+      .sort((a, b) => (b.economia ?? 0) - (a.economia ?? 0));
+    return ordenarPorPontuacao(comEconomia, (i) => {
+      const a = avaliacaoDaOferta(avaliacoes, i.chave, destinoDe(i))?.avaliacoes;
+      return {
+        nota: a?.nota,
+        totalAvaliacoes: a?.total,
+        economiaReais: i.economia,
+        freteGratis: true,
+      };
+    }).slice(0, 12);
+  }, [itens, avaliacoes, categoriaFixa]);
+
+  if (!categoriaFixa) {
+    if (oportunidades.length < 3) return null;
+    return (
+      <ContextoAvaliacoes.Provider value={avaliacoes}>
+        <div data-origem="vitrine">
+          <TrilhoRecomendacao
+            id="economia-real"
+            icone={<TrendingDown className="size-5 text-success" />}
+            titulo="Oportunidades com economia real"
+            subtitulo="O mesmo produto mais barato em outra loja, com frete grátis confirmado. Preço de quando foi comparado: atualize antes de comprar."
+          >
+            {oportunidades.map((i) => (
+              <Cartao key={i.chave} i={i} trilho />
+            ))}
+          </TrilhoRecomendacao>
+        </div>
+      </ContextoAvaliacoes.Provider>
     );
-  }, [extras, lista, categoria]);
+  }
 
-  /* "Recomendados para o seu perfil" (27/10): comparados e mais vendidos
-     pontuados pelo gosto do visitante (calcularRecomendados). */
-  const recomendados = useMemo(
-    () => (categoriaFixa ? [] : calcularRecomendados([...itens, ...extras], perfil).slice(0, 10)),
-    [itens, extras, perfil, categoriaFixa],
-  );
-
-  if (categoriaFixa) {
-    if (!carregou) return null;
-    if (!itens.some((i) => (i.categoria_site ?? "outros") === categoriaFixa))
-      return <>{vazio ?? null}</>;
-  } else if (!itens.length && !extras.length) return null;
+  if (!carregou) return null;
+  if (!lista.length && aba === "recentes") return <>{vazio ?? null}</>;
 
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "recentes", rotulo: "Pesquisados agora" },
@@ -380,9 +284,7 @@ export function Vitrine({
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-xl font-extrabold sm:text-2xl">
-              {categoriaFixa
-                ? `${NOME_CATEGORIA[categoriaFixa] ?? "Produtos"} que já comparei`
-                : "Produtos que já comparei"}
+              {`${NOME_CATEGORIA[categoriaFixa] ?? "Produtos"} que já comparei`}
             </h2>
             <p className="mt-1 text-sm text-secondary-ink">
               Preço de quando foi comparado. Toque em "Atualizar preço" para ver o preço de agora.
@@ -390,40 +292,6 @@ export function Vitrine({
             </p>
           </div>
         </div>
-
-        {recomendados.length > 0 && (
-          <div
-            className="mt-4 rounded-3xl bg-[#0071e3]/[0.04] p-3 ring-1 ring-[#0071e3]/15 sm:p-4"
-            data-origem="recomendados"
-          >
-            <div className="mb-2.5 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-              <div className="min-w-0">
-                <h3 className="flex items-center gap-1.5 text-base font-bold sm:text-lg">
-                  <Sparkles className="size-4 shrink-0 text-[#0071e3]" aria-hidden="true" />
-                  Recomendados para o seu perfil
-                </h3>
-                <p className="text-xs text-secondary-ink">
-                  Baseado nos produtos e categorias que você pesquisou. Fica só neste aparelho.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  limparPerfil();
-                  setPerfil(null);
-                }}
-                className="min-h-8 text-xs font-semibold text-secondary-ink underline-offset-2 hover:underline"
-              >
-                Limpar preferências
-              </button>
-            </div>
-            <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-              {recomendados.map((i) => (
-                <Cartao key={i.chave} i={i} />
-              ))}
-            </ul>
-          </div>
-        )}
 
         <div className="mt-3 flex flex-wrap gap-2" role="tablist">
           {abas.map((a) => (
@@ -445,104 +313,13 @@ export function Vitrine({
           ))}
         </div>
 
-        {!categoriaFixa && categorias.length > 1 && (
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => setCategoria(null)}
-              className={
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold " +
-                (categoria == null
-                  ? "bg-foreground text-background"
-                  : "border border-border bg-card")
-              }
-            >
-              Todas
-            </button>
-            {categorias.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCategoria(c)}
-                className={
-                  "shrink-0 rounded-full px-3 py-1 text-xs font-semibold " +
-                  (categoria === c
-                    ? "bg-foreground text-background"
-                    : "border border-border bg-card")
-                }
-              >
-                {c === favorita && (
-                  <Sparkles className="mr-1 inline size-3 align-[-1px]" aria-hidden="true" />
-                )}
-                {NOME_CATEGORIA[c] ?? c}
-                {c === favorita && <span className="sr-only"> (sua favorita)</span>}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* Arte da categoria escolhida (09/10: toda vitrine com arte); em
-            "Todas", a neutra de economia (27/10). */}
-        {!categoriaFixa && <FaixaArte slug={categoria} />}
-
-        {lista.length === 0 && !(categoria == null ? extras : daEscolhida).length ? (
+        {lista.length === 0 ? (
           <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">
             Ainda não há produtos nesta lista.
           </p>
-        ) : categoria == null ? (
-          /* "Todas": uma seção por categoria, cada uma com seus produtos. */
-          <div className="mt-4 space-y-7">
-            {categorias.map((c) => {
-              const daCategoria = lista.filter((i) => (i.categoria_site ?? "outros") === c);
-              const titulos = new Set(daCategoria.map((i) => i.titulo.toLowerCase()));
-              const fileira = [
-                ...daCategoria.slice(0, 5),
-                ...extras
-                  .filter((e) => e.categoria_site === c && !titulos.has(e.titulo.toLowerCase()))
-                  .slice(0, Math.max(0, 5 - daCategoria.length)),
-              ];
-              if (!fileira.length) return null;
-              return (
-                <div key={c}>
-                  <div className="mb-2 flex items-baseline justify-between gap-2">
-                    <h3 className="text-base font-bold">
-                      {NOME_CATEGORIA[c] ?? c}{" "}
-                      <span className="text-sm font-normal text-secondary-ink">
-                        ({daCategoria.length + (maisVendidos[c] ?? 0)})
-                      </span>
-                    </h3>
-                    {/* 26/10: "Ver todos" abre a página da categoria, com os
-                        comparados e os mais vendidos dela (200+). */}
-                    {c !== "outros" ? (
-                      <a
-                        href={`/categorias/${c}`}
-                        className="text-sm font-semibold text-ml-blue hover:underline"
-                      >
-                        Ver todos
-                      </a>
-                    ) : (
-                      daCategoria.length > 5 && (
-                        <button
-                          type="button"
-                          onClick={() => setCategoria(c)}
-                          className="text-sm font-semibold text-ml-blue hover:underline"
-                        >
-                          Ver todos
-                        </button>
-                      )
-                    )}
-                  </div>
-                  <ul className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {fileira.map((i) => (
-                      <Cartao key={i.chave} i={i} />
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
         ) : (
           <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-            {[...lista, ...daEscolhida].map((i) => (
+            {lista.map((i) => (
               <Cartao key={i.chave} i={i} />
             ))}
           </ul>
@@ -552,7 +329,7 @@ export function Vitrine({
   );
 }
 
-function Cartao({ i }: { i: ItemVitrine }) {
+function Cartao({ i, trilho = false }: { i: ItemVitrine; trilho?: boolean }) {
   const temEconomia = (i.economia ?? 0) > 0 && i.melhor_preco != null;
   const destino = destinoDe(i);
   const avaliacoes = useContext(ContextoAvaliacoes);
@@ -595,7 +372,12 @@ function Cartao({ i }: { i: ItemVitrine }) {
         url: i.url_produto,
         freteGratis: i.freteGratis ?? null,
       })}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card"
+      className={
+        "group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card" +
+        (trilho
+          ? " w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-[30%] lg:w-[23%] xl:w-[18.5%]"
+          : "")
+      }
     >
       <VerDetalhesVitrine
         chave={i.chave}

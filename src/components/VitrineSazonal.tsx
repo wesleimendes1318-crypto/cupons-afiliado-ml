@@ -742,7 +742,13 @@ export function useOfertasDaTemporada(t: Temporada) {
   return { lista, carregou: campanhas ? carregouCampanhas : carregou };
 }
 
-export function VitrineSazonal() {
+export function VitrineSazonal({
+  soAtiva = false,
+}: {
+  /* Home (27/10, 5º bloco): só campanha ativa com ofertas reais; sem a
+     contagem de campanha futura nem o "Melhor preço entre as lojas". */
+  soAtiva?: boolean;
+} = {}) {
   const [temporadas, setTemporadas] = useState(() => temporadasEmDestaque());
   /* Aba esquecida aberta: ao voltar depois de 10 min, refaz o calendário
      (a campanha que acabou some). */
@@ -792,6 +798,7 @@ export function VitrineSazonal() {
      entraram na mesma campanha"): só a contagem de dias, sem ofertas. */
   const futuras = temporadas.filter((t) => antecipada(t) && !t.ofertasAntecipadas);
 
+  if (soAtiva && !secoes.some((x) => x.lista.length > 0)) return null;
   if (!secoes.length && !futuras.length && menores.length < 2) return null;
 
   return (
@@ -799,12 +806,12 @@ export function VitrineSazonal() {
       {secoes.map(({ c, lista, total }) =>
         lista.length > 0 ? (
           <SecaoCampanha key={c.id} c={c} lista={lista} total={total} />
-        ) : carregou && !c.rotulo ? (
+        ) : carregou && !c.rotulo && !soAtiva ? (
           <CartaoCampanhaCompacta key={c.id} c={c} futura={false} />
         ) : null,
       )}
 
-      {menores.length >= 2 && (
+      {!soAtiva && menores.length >= 2 && (
         <section
           aria-labelledby="campanha-menor-preco"
           className="campanha-entra overflow-hidden rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-7"
@@ -826,9 +833,7 @@ export function VitrineSazonal() {
         </section>
       )}
 
-      {futuras.map((t) => (
-        <CartaoCampanhaCompacta key={t.id} c={t} futura />
-      ))}
+      {!soAtiva && futuras.map((t) => <CartaoCampanhaCompacta key={t.id} c={t} futura />)}
     </div>
   );
 }

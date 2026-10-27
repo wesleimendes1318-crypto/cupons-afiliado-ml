@@ -43,8 +43,7 @@ import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
-import { RecomendacoesHome } from "@/components/recomendacoes/RecomendacoesHome";
-import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
+import { MaisDesejadosHome, RecomendacoesHome } from "@/components/recomendacoes/RecomendacoesHome";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { VitrineSazonal } from "@/components/VitrineSazonal";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
@@ -1993,20 +1992,16 @@ function Index() {
             caixa e acima das campanhas. */}
           <BuscaGuiada contexto="home" naHome className="mt-8" />
 
-          {/* Temporadas em destaque (Dia das Crianças, Black Friday, Natal):
-            seções prioritárias, acima da vitrine geral (05/10). */}
-          <VitrineSazonal />
-
-          {/* Brinquedos por idade (05/10): curadoria do agente, já comparada. */}
-          <BrinquedosPorIdade naHome className="mt-8" />
-
+          {/* HIERARQUIA COMERCIAL (Weslei, 27/10: "página infinita e
+            desordenada"): cada bloco é uma fileira compacta, na ordem
+            2) mais desejados, 3) economia real, 4) para você, 5) temporada
+            ativa, 6) mais vendidos por categoria (até 12 por aba). Brinquedos
+            por idade saiu da home: fica em /brinquedos e na temporada. */}
+          <MaisDesejadosHome />
           <Vitrine />
-
-          {/* Trilhos de recomendação pelo gosto do visitante (27/10). */}
           <RecomendacoesHome />
-
-          {/* Mais vendidos agora, por categoria (09/10). */}
-          <EmAltaCatalogo naHome limite={24} />
+          <VitrineSazonal soAtiva />
+          <EmAltaCatalogo naHome limite={12} />
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
