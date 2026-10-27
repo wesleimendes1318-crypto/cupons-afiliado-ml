@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 
 export const Route = createFileRoute("/meus-precos")({
   component: MeusPrecos,
@@ -160,12 +161,23 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
     >
       <div className="flex gap-3">
         {i.imagem ? (
-          <img
-            src={i.imagem}
-            alt=""
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="size-16 shrink-0 rounded-md border border-border bg-white object-contain p-1"
+          <VerDetalhesVitrine
+            chave={i.url}
+            titulo={i.titulo ?? "Produto acompanhado"}
+            imagem={i.imagem}
+            preco={i.preco_atual}
+            link={i.link}
+            urlProduto={i.url}
+            className="shrink-0"
+            gatilho={
+              <img
+                src={i.imagem}
+                alt=""
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="size-16 shrink-0 rounded-md border border-border bg-white object-contain p-1"
+              />
+            }
           />
         ) : (
           <div className="size-16 shrink-0 rounded-md border border-border bg-muted" />

@@ -9,7 +9,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Images, LoaderCircle, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { ehLinkDeAfiliado } from "@/lib/afiliado";
+import { ehLinkDeCompra } from "@/lib/afiliado";
+import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { propsFotoGrande } from "@/lib/foto";
 import { registrarAcaoVisitante } from "@/lib/perfil-visitante";
 
@@ -55,6 +56,8 @@ export function VerDetalhesVitrine({
   rotulo = "Ver fotos e detalhes",
   gatilho = null,
   detalhes,
+  fotos,
+  compra,
 }: {
   chave: string;
   titulo: string;
@@ -72,6 +75,13 @@ export function VerDetalhesVitrine({
   gatilho?: ReactNode;
   /* Detalhes já lidos na comparação (27/10): dispensam a busca no banco. */
   detalhes?: Detalhes | null;
+  /* Fotos já conhecidas (segunda foto do catálogo, Amazon, Shopee): entram
+     na galeria mesmo sem anúncio do Mercado Livre (Weslei, 27/10: carrossel
+     em todo o site). */
+  fotos?: (string | null | undefined)[] | null;
+  /* Botão de compra do rodapé quando não há link pronto (ex.: VerNaLoja,
+     que gera o link de afiliado no clique). */
+  compra?: ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
   /* Abrir fotos e detalhes é interesse aprofundado (+4 no perfil local). */
@@ -88,13 +98,24 @@ export function VerDetalhesVitrine({
       },
     });
   };
-  if (!/^MLB\d{5,}$/.test(chave)) return gatilho ? <>{gatilho}</> : null;
+  /* Anúncio do Mercado Livre (detalhes e galeria oficial); sem ele, o
+     carrossel abre só com as fotos que já temos. */
+  const mlb = /^MLB\d{5,}$/.test(chave)
+    ? chave
+    : (itemDoEndereco(urlProduto)?.replace(/^MLBP/, "MLB") ?? null);
+  const extras = (fotos ?? []).filter((u): u is string => !!u);
+  if (!mlb && !imagem && !extras.length) return gatilho ? <>{gatilho}</> : null;
   return (
     <>
       {gatilho ? (
         <button
           type="button"
-          onClick={abrir}
+          onClick={(e) => {
+            /* A foto nunca leva para fora (link do cartão pai). */
+            e.stopPropagation();
+            e.preventDefault();
+            abrir();
+          }}
           aria-label={`Ver fotos e detalhes: ${titulo}`}
           className={`${/(^|\s)(hidden|flex|grid)(\s|$)/.test(className) ? "" : "block "}cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
         >
@@ -118,7 +139,10 @@ export function VerDetalhesVitrine({
           preco={preco ?? null}
           link={link ?? null}
           vistoEm={vistoEm ?? null}
-          produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? chave}
+          mlb={mlb}
+          produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? mlb}
+          fotos={extras}
+          compra={compra}
           inicial={
             detalhes ? { titulo, imagem: imagem ?? null, detalhes, comparado_em: null } : undefined
           }
@@ -136,7 +160,10 @@ function Painel({
   preco,
   link,
   vistoEm,
+  mlb,
   produto,
+  fotos,
+  compra,
   inicial,
   fechar,
 }: {
@@ -146,12 +173,17 @@ function Painel({
   preco: number | null;
   link: string | null;
   vistoEm: string | null;
+  mlb: string | null;
   produto: string | null;
+  fotos: string[];
+  compra: ReactNode;
   inicial?: Resposta | undefined;
   fechar: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [dados, setDados] = useState<Resposta | null | undefined>(inicial ?? cache.get(chave));
+  const [dados, setDados] = useState<Resposta | null | undefined>(
+    inicial ?? (mlb ? cache.get(chave) : null),
+  );
   const [descricaoToda, setDescricaoToda] = useState(false);
   /* Menos informação de cara (Weslei, 18/10): destaques à vista;
      características e descrição abrem quando a pessoa quiser. */
@@ -162,12 +194,12 @@ function Painel({
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) d.showModal();
-    if (inicial || cache.has(chave)) return;
+    if (inicial || !mlb || cache.has(chave)) return;
     let vivo = true;
     void (async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data } = await (supabase as any).rpc("detalhes_da_vitrine", { p_chave: chave });
+        const { data } = await (supabase as any).rpc("detalhes_da_vitrine", { p_chave: mlb });
         const r = (Array.isArray(data) ? data[0] : null) as Resposta | null;
         cache.set(chave, r ?? null);
         if (vivo) setDados(r ?? null);
@@ -178,7 +210,7 @@ function Painel({
     return () => {
       vivo = false;
     };
-  }, [chave, inicial]);
+  }, [chave, mlb, inicial]);
 
   /* Galeria: a foto do anúncio e as do catálogo oficial (ou, sem catálogo,
      as do próprio anúncio: "sempre deve permitir ver mais fotos", 27/10). */
@@ -210,7 +242,9 @@ function Painel({
   const longa = descricao.length > 420;
   const foto = imagem ?? dados?.imagem ?? null;
   const galeria = [
-    ...new Set([foto, ...(doCatalogo ?? [])].filter((u): u is string => !!u).map(fotoGrande)),
+    ...new Set(
+      [foto, ...fotos, ...(doCatalogo ?? [])].filter((u): u is string => !!u).map(fotoGrande),
+    ),
   ];
   const n = galeria.length;
   const ir = (k: number) => {
@@ -225,6 +259,14 @@ function Painel({
     <dialog
       ref={ref}
       onClose={fechar}
+      onKeyDown={(e) => {
+        /* Setas do teclado passam as fotos (Esc fecha pelo próprio dialog). */
+        if (n < 2) return;
+        if (e.key === "ArrowLeft") ir(atual - 1);
+        else if (e.key === "ArrowRight") ir(atual + 1);
+        else return;
+        e.preventDefault();
+      }}
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
       }}
@@ -341,15 +383,14 @@ function Painel({
               )}
             </section>
           )}
-          {dados === undefined ? (
+          {!mlb && !inicial ? null : dados === undefined ? (
             <p className="flex items-center gap-2 text-[#6e6e73]">
               <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
               Carregando os detalhes do anúncio…
             </p>
           ) : !det || (!carac.length && !dest.length && !descricao) ? (
             <p className="rounded-2xl bg-[#f5f5f7] p-3 text-[#424245]">
-              Ainda não tenho os detalhes deste anúncio. Use "Atualizar preço" para comparar de novo
-              e ver as características.
+              Ainda não li as características deste anúncio. Confira no anúncio antes de comprar.
             </p>
           ) : (
             <>
@@ -444,7 +485,10 @@ function Painel({
           )}
         </div>
 
-        {link && ehLinkDeAfiliado(link) && (
+        {!(link && ehLinkDeCompra(link)) && compra && (
+          <div className="border-t border-border p-4">{compra}</div>
+        )}
+        {link && ehLinkDeCompra(link) && (
           <div className="border-t border-border p-4">
             <a
               href={link}
