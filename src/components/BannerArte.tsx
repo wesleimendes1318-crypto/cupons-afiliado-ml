@@ -90,7 +90,7 @@ export function BannerArte({
             {etiqueta}
           </p>
         )}
-        <Titulo className="mt-2.5 text-[26px] font-extrabold leading-[1.12] tracking-tight sm:text-[32px] lg:text-[38px]">
+        <Titulo className="mt-3 text-[26px] font-extrabold leading-tight tracking-tight sm:text-[32px] lg:text-[38px]">
           {titulo}
         </Titulo>
         {resumo && (

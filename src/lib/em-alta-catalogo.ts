@@ -18,6 +18,7 @@
    principal, as subcategorias oficiais (as maiores). Tetos por execução:
    64 chamadas à API, 30 produtos, 1 na fila; cada produto volta à fila no
    máximo a cada 48 h. */
+import { NOS, subarvore, type NoTaxonomia } from "@/content/taxonomia";
 import { categoriaDoMaisVendido } from "@/lib/categoria-em-alta";
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
@@ -189,6 +190,40 @@ const BUSCAS_CURADORIA: Record<string, string[]> = {
     "ar condicionado 18000 btus",
   ],
 };
+/* SUBCATEGORIAS RASAS (Weslei, 27/10: "Mesas e conjuntos de jantar" com 2
+   produtos). Folha da árvore do site (src/content/taxonomia.ts) com menos
+   de 12 produtos à mostra ganha buscas com os termos dela, intercaladas
+   com as outras (no máximo 1 a cada 2 buscas da execução). Termos próprios
+   quando o nome sozinho busca mal; senão, as partes do nome. */
+const MINIMO_NO = 12;
+const TERMOS_DO_NO: Record<string, string[]> = {
+  mesas: ["mesa de jantar 4 cadeiras", "mesa de jantar 6 cadeiras", "conjunto sala de jantar"],
+};
+
+export function termosDoNo(no: Pick<NoTaxonomia, "slug" | "nome">): string[] {
+  if (TERMOS_DO_NO[no.slug]) return TERMOS_DO_NO[no.slug]!;
+  const nome = no.nome
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .trim();
+  const partes = nome
+    .split(/,\s*|\s+e\s+/)
+    .map((p) => p.trim())
+    .filter((p) => p.split(/\s+/).length >= 2);
+  return [...new Set([nome, ...partes])].slice(0, 3);
+}
+
+/** Termos das folhas da categoria do site com menos de 12 produtos (as
+    mais vazias primeiro). */
+export function buscasDosNosRasos(categoria: string, contagem: Record<string, number>): string[] {
+  return Object.values(NOS)
+    .filter((n) => n.legado === categoria && !n.filhos.length)
+    .map((n) => ({ n, total: subarvore(n.slug).reduce((s, x) => s + (contagem[x] ?? 0), 0) }))
+    .filter((x) => x.total < MINIMO_NO)
+    .sort((a, b) => a.total - b.total)
+    .flatMap((x) => termosDoNo(x.n));
+}
+
 /* Árvore oficial: filhos por nível (as maiores primeiro), até os netos da
    categoria (Moda -> Calçados -> Tênis). Chamadas para listas e filhos
    param aqui; o resto do teto fica para as fichas dos produtos. */
@@ -380,6 +415,27 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
   (BUSCAS_CURADORIA[categoria] ?? []).forEach((termo, n) =>
     buscas.push({ termo, origem: "curadoria", peso: 80 + n, cat: bases[0]! }),
   );
+  /* Subcategorias rasas: 1 a cada 2 buscas, na frente das demais. */
+  {
+    const { data: cont } = await t.rpc("em_alta_contagem_nos");
+    const contagem = Object.fromEntries(
+      ((cont ?? []) as Array<{ categoria_no: string; total: number }>).map((r) => [
+        r.categoria_no,
+        r.total,
+      ]),
+    );
+    const rasas = buscasDosNosRasos(categoria, contagem).map((termo, n) => ({
+      termo,
+      origem: "curadoria" as const,
+      peso: 50 + n,
+      cat: bases[0]!,
+    }));
+    const outras = buscas.splice(0);
+    for (let k = 0; k < Math.max(rasas.length, outras.length); k++) {
+      if (rasas[k]) buscas.push(rasas[k]!);
+      if (outras[k]) buscas.push(outras[k]!);
+    }
+  }
   let feitas = 0;
   for (const b of buscas) {
     if (feitas >= BUSCAS_POR_EXECUCAO || candidatos.length >= PRODUTOS_POR_EXECUCAO) break;

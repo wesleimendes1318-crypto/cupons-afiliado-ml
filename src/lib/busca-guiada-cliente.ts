@@ -44,6 +44,8 @@ export async function buscarProdutos(
   modo: "guiada" | "produto" = "guiada",
   /** "Ver mais opções": 0 é a 1ª página. */
   pagina = 0,
+  /** Slug do nó da árvore: busca dentro daquela categoria (27/10). */
+  no?: string,
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
   try {
     const r = await fetch("/api/public/buscar", {
@@ -54,6 +56,7 @@ export async function buscarProdutos(
         contexto,
         modo,
         ...(pagina ? { pagina } : {}),
+        ...(no ? { no } : {}),
       }),
     });
     const j = (await r.json()) as Resposta & { erro?: string };

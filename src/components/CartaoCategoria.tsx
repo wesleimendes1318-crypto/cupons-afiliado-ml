@@ -1,10 +1,36 @@
 /* Cartão de categoria com a arte (09/10): miniatura enquadrada nos objetos
    da arte e o nome abaixo. Usado em "Explore por categoria" (home), na
-   lista de categorias e em "Outras categorias". Sem arte, ícone neutro. */
+   lista de categorias e em "Outras categorias".
+   27/10 (Weslei: "nenhuma categoria deve exibir o ícone roxo vazio"): sem
+   arte própria, a foto real do produto mais vendido do departamento, em
+   quadro branco; sem produto, a arte neutra. */
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, ShoppingBag } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-import { arteDaCategoria, srcArte } from "@/lib/artes";
+import { subarvore } from "@/content/taxonomia";
+import { supabase } from "@/integrations/supabase/client";
+import { ARTE_NEUTRA, arteDaCategoria, srcArte } from "@/lib/artes";
+import { propsFotoCartao } from "@/lib/foto";
+
+/* Foto do 1º da lista de mais vendidos do nó (undefined: lendo). */
+function useFotoDoNo(slug: string, ativo: boolean) {
+  const [foto, setFoto] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!ativo) return;
+    let vivo = true;
+    void supabase
+      .rpc("em_alta_por_no" as never, { p_nos: subarvore(slug), p_limite: 1 } as never)
+      .then(({ data }) => {
+        const p = Array.isArray(data) ? (data as Array<{ imagem: string | null }>)[0] : null;
+        if (vivo) setFoto(p?.imagem ?? null);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [slug, ativo]);
+  return foto;
+}
 
 export function CartaoCategoria({
   slug,
@@ -21,7 +47,9 @@ export function CartaoCategoria({
   total?: number | undefined;
   className?: string;
 }) {
-  const arte = arteDaCategoria(slug);
+  const propria = arteDaCategoria(slug);
+  const foto = useFotoDoNo(slug, !propria);
+  const arte = propria ?? (foto === null ? ARTE_NEUTRA : null);
   const classe =
     "group flex h-full flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] " +
     className;
@@ -39,10 +67,21 @@ export function CartaoCategoria({
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.04]"
             style={{ objectPosition: arte.focoCelular }}
           />
-        ) : (
-          <span className="absolute inset-0 grid place-items-center text-[#7547E8]">
-            <ShoppingBag className="size-8" aria-hidden="true" />
+        ) : foto ? (
+          <span className="absolute inset-0 bg-white">
+            <img
+              {...propsFotoCartao(foto)}
+              width={300}
+              height={300}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 h-full w-full object-contain p-4 transition-transform duration-500 motion-safe:group-hover:scale-[1.04]"
+            />
           </span>
+        ) : (
+          <span className="absolute inset-0 animate-pulse bg-white" aria-hidden="true" />
         )}
       </span>
       <span className="flex flex-1 items-center justify-between gap-2 px-3.5 py-3">
