@@ -230,7 +230,9 @@ export const ARVORE: Def[] = [
           n("capas-de-celular", "Capas", {
             ml: /mlb-cellphone_cases_and_covers/,
             titulo:
-              /^(?:capas?|capinhas?|cases?)\b.*\b(?:celular|iphone|galaxy|samsung|motorola|xiaomi|redmi|moto)\b/,
+              /^(?:capas?|capinhas?|cases?)\b.*\b(?:celular|iphone|galaxy|samsung|motorola|xiaomi|redmi|moto ?(?:g|e|edge) ?\d+)\b/,
+            // capa para moto (veículo) e de GPS não é capa de celular
+            nao: /\b(?:para|pra|de) moto\b|\bgps\b/,
           }),
           n("peliculas", "Películas", {
             ml: /mlb-cellphone_tablet_and_gps_screen_protectors|protetores de cameras/,
@@ -805,6 +807,7 @@ export const ARVORE: Def[] = [
       n("frigideiras", "Frigideiras", {
         ml: /mlb-frying_pans/,
         titulo: /^(?:frigideira|wok|chapa|bistequeira)\b/,
+        nao: /cabelo|prancha/,
       }),
       n("leiteiras", "Leiteiras e fervedores", {
         ml: /mlb-milk_pots|> fervedores/,
@@ -828,6 +831,7 @@ export const ARVORE: Def[] = [
         ml: /cozinha > armazenamento e organizacao/,
         titulo:
           /^(?:potes?|kit potes|porta (?:condimentos|temperos)|escorredor de loucas?|organizador)\b/,
+        nao: /maquiagem|esmaltes?\b|cosmetic/,
       }),
       n("bar-e-vinho", "Bar e vinho", { ml: /artigos de vinho e bar/ }),
     ]),
@@ -844,6 +848,7 @@ export const ARVORE: Def[] = [
         n("cobertores-e-edredons", "Cobertores e edredons", {
           ml: /mlb-comforters|mlb-quilts_and_coverlets|mlb-blankets/,
           titulo: /^(?:cobertor|edredom|manta|colcha|cobre leito)\b/,
+          nao: /liquida|impermeabiliz|asfaltica/,
         }),
         n("toalhas", "Toalhas", {
           ml: /mlb-bath_towels|mlb-facial_towels|mlb-tablecloths|mlb-kitchen_towels|mlb-placemats/,
@@ -944,7 +949,7 @@ export const ARVORE: Def[] = [
       n("produtos-de-limpeza", "Produtos de limpeza", {
         ml: /cuidado da casa e lavanderia > produtos de limpeza/,
         titulo: /^(?:detergente|desinfetante|agua sanitaria|limpador|multiuso|alvejante|limpa)\b/,
-        nao: /lava roupas|roupas/,
+        nao: /lava roupas|roupas|facial|rosto|pele\b/,
       }),
       n("lavanderia-produtos", "Sabão, amaciante e tira-manchas", {
         ml: /produtos de lavanderia/,
@@ -1408,6 +1413,7 @@ export const ARVORE: Def[] = [
         ml: /seguranca laboral > protecao pessoal|mlb-safety_gloves|mlb-safety_glasses/,
         titulo:
           /^(?:luvas?|oculos|protetor auricular|abafador|mascara pff\d?|capacete|botina|bota)\b.*\b(?:seguranca|protecao|epi|pff|nitrilica|vaqueta|bico)\b/,
+        nao: /\bde sol\b/,
       }),
       n("sinalizacao-e-seguranca", "Sinalização e segurança do trabalho", {
         ml: /industria e comercio > seguranca laboral/,
