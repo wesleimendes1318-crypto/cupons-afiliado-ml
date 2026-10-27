@@ -576,6 +576,9 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
     }
     gravar.push({
       ...l,
+      /* Relido: a classificação da taxonomia roda de novo em até 10 min
+         (operacao?tarefa=classificar); até lá vale a anterior. */
+      classificado_em: null,
       atualizado_em: agora,
       enfileirado_em: enfileirado,
       ...(pedido != null ? { pedido_id: pedido } : {}),

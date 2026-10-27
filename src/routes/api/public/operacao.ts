@@ -11,6 +11,7 @@ import { gerirCampanhas } from "@/lib/agente-campanhas";
 import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
 import { atualizarEmAlta } from "@/lib/em-alta-catalogo";
+import { classificarCatalogo } from "@/lib/classificar-catalogo";
 import { enviarAlertas } from "@/lib/alertas-telegram";
 import { gerarArteCampanha } from "@/lib/gerar-arte-campanha";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -30,6 +31,9 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
                       (src/lib/curadoria-brinquedos.ts);
    - ?tarefa=arte&tema=<tema>[&forcar=1] gera e salva a arte realista do
                       tema (uma vez; src/lib/gerar-arte-campanha.ts);
+   - ?tarefa=classificar classifica os mais vendidos na taxonomia do site
+                      (departamento > categoria > subcategoria), só nas
+                      colunas da classificação (src/lib/classificar-catalogo.ts);
    - ?tarefa=campanhas sincroniza as campanhas (calendário, mais vendidos),
                       escolhe os produtos com a curadoria e expira o que
                       passou do prazo (src/lib/agente-campanhas.ts);
@@ -89,6 +93,13 @@ async function executar(request: Request) {
   if (tarefa === "em_alta") {
     const categoria = new URL(request.url).searchParams.get("categoria");
     const resumo = await registrarExecucao(db, "em_alta", () => atualizarEmAlta(db, { categoria }));
+    return Response.json(resumo);
+  }
+  if (tarefa === "classificar") {
+    const limite = Number(new URL(request.url).searchParams.get("limite")) || undefined;
+    const resumo = await registrarExecucao(db, "classificar", () =>
+      classificarCatalogo(db, { limite }),
+    );
     return Response.json(resumo);
   }
   if (tarefa === "campanhas") {
