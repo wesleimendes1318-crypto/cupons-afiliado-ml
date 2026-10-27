@@ -38,7 +38,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { CartaoCategoria } from "@/components/CartaoCategoria";
+import { GradeDepartamentos } from "@/components/GradeDepartamentos";
 import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import BuscaPorLink from "@/components/BuscaPorLink";
@@ -1237,14 +1237,6 @@ const MOSTRAR_CUPONS = false;
 /* "Explore por categoria" (home-v2). Com as artes novas (Weslei, 09/10:
    "ajuste as vitrines e categorias, inclua as artes"), enquadradas nos
    objetos (src/lib/artes.ts). */
-const CATEGORIAS_HOME = [
-  { nome: "Tecnologia", slug: "eletronicos" },
-  { nome: "Casa e cozinha", slug: "casa" },
-  { nome: "Beleza", slug: "beleza" },
-  { nome: "Moda", slug: "moda" },
-  { nome: "Brinquedos", slug: "brinquedos", paginaPropria: true },
-] as const;
-
 function Index() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["cupons"],
@@ -1980,17 +1972,7 @@ function Index() {
                   Todas as categorias
                 </Link>
               </div>
-              <ul className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0">
-                {CATEGORIAS_HOME.map((c) => (
-                  <li key={c.nome} className="w-[42%] shrink-0 snap-start sm:w-auto">
-                    <CartaoCategoria
-                      slug={c.slug}
-                      nome={c.nome}
-                      paginaPropria={"paginaPropria" in c && c.paginaPropria}
-                    />
-                  </li>
-                ))}
-              </ul>
+              <GradeDepartamentos />
             </section>
           )}
 
