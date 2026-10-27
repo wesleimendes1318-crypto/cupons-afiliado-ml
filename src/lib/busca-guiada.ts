@@ -15,7 +15,7 @@
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
-import { ordenarPelaIntencao } from "@/lib/busca-sugestoes";
+import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
 import { pareceFalso } from "@/lib/falsificado";
 
 export type ResultadoBusca = {
@@ -40,13 +40,30 @@ export type RespostaBusca = {
   /** Faixa de preço entendida (as páginas seguintes usam a mesma). */
   precoMin?: number | null;
   precoMax?: number | null;
+  /** Intenção entendida (as páginas seguintes filtram igual). */
+  tipoProduto?: string | null;
+  contextoUso?: string | null;
+  termosNegativos?: string[];
+  dominiosPermitidos?: string[];
 };
 
+/** Intenção universal (27/10, "tomada para banheiro" não traz HDMI, antena
+    nem móvel). Os campos novos são opcionais: respostas guardadas antes
+    continuam valendo. */
 export type Interpretacao = {
+  /** 2 a 3 termos que o catálogo do Mercado Livre indexa. */
   buscas: string[];
   precoMin: number | null;
   precoMax: number | null;
   resumo: string;
+  /** Substantivo central ("tomada", "pneu", "racao"). */
+  tipoProduto?: string | null;
+  /** Finalidade ("eletrica_residencial", "automotivo", "pet_gatos"). */
+  contextoUso?: string | null;
+  /** Palavras que, no título, mostram outro produto (exclusão estrita). */
+  termosNegativos?: string[];
+  /** Domínios MLB que o modelo sugere; só somam aos previstos pela API. */
+  dominiosPermitidos?: string[];
 };
 
 const PROMPT = `Voce ajuda compradores no Brasil a achar produtos vendidos no Mercado Livre.
@@ -60,9 +77,17 @@ capacidade, marca) e tire palavras de venda que nao identificam o produto ("bara
 opcoes de entrada, intermediarias e topo de linha.
 Se o pedido citar preco ("ate R$ 200", "entre 100 e 300"), preencha precoMin/precoMax em reais.
 Nunca invente preco, loja ou desconto. Pedido fora de compras: buscas vazias.
+tipoProduto: o substantivo central do produto, uma palavra sem acento ("tomada", "pneu", "racao").
+contextoUso: a finalidade em snake_case ("eletrica_residencial", "automotivo", "pet_gatos", "festa").
+termosNegativos: ate 10 palavras que, no titulo, indicam OUTRO produto com o mesmo nome, peca ou item
+de outro contexto. Ex.: "tomada para banheiro" -> ["hdmi", "antena", "rj45", "coaxial", "telefone",
+"gabinete", "armario"]; "racao para gatos" -> ["comedouro", "brinquedo", "arranhador"]; "pneu aro 14"
+-> ["miniatura", "chaveiro", "camara de ar", "calibrador"]. Nunca repita palavras do pedido.
+dominiosPermitidos: so se tiver certeza, ids de dominio do Mercado Livre ("MLB-TIRES"); senao [].
 resumo: uma frase curta e simpatica em portugues dizendo o que vai buscar (sem prometer preco,
 sem falar de inteligencia artificial, sem links).
-Responda SO com JSON: {"buscas": ["..."], "precoMin": null, "precoMax": null, "resumo": "..."}
+Responda SO com JSON: {"buscas": ["..."], "tipoProduto": "...", "contextoUso": "...",
+"termosNegativos": ["..."], "dominiosPermitidos": [], "precoMin": null, "precoMax": null, "resumo": "..."}
 Pedido`;
 
 const num = (v: unknown) => {
@@ -102,34 +127,121 @@ async function interpretar(q: string, contexto: string | null): Promise<Interpre
   }
   if (bruto) {
     const { lerJson } = await import("@/lib/conferir-produto");
-    const j = lerJson<{
-      buscas?: unknown;
-      precoMin?: unknown;
-      precoMax?: unknown;
-      resumo?: unknown;
-    }>(bruto);
-    const buscas = (Array.isArray(j?.buscas) ? j.buscas : [])
-      .map((b) =>
-        String(b ?? "")
-          .trim()
-          .slice(0, 60),
-      )
-      .filter((b) => b.length >= 2 && !/https?:|www\./i.test(b))
-      .slice(0, 3);
-    const resumo = String(j?.resumo ?? "").trim();
-    if (j)
-      return {
-        buscas,
-        precoMin: num(j.precoMin),
-        precoMax: num(j.precoMax),
-        resumo:
-          resumo && !/https?:|www\.|intelig[eê]ncia artificial|\bIA\b/i.test(resumo)
-            ? resumo.slice(0, 200)
-            : "",
-      };
+    const lida = intencaoDoModelo(lerJson<JsonDoModelo>(bruto), q);
+    if (lida) return lida;
   }
   /* Sem modelo: a frase da pessoa é a busca. */
-  return { buscas: [q.slice(0, 60)], precoMin: null, precoMax: null, resumo: "" };
+  return {
+    buscas: [q.slice(0, 60)],
+    precoMin: null,
+    precoMax: null,
+    resumo: "",
+    tipoProduto: tipoDoProduto(q),
+    contextoUso: null,
+    termosNegativos: [],
+  };
+}
+
+type JsonDoModelo = Partial<
+  Record<
+    | "buscas"
+    | "precoMin"
+    | "precoMax"
+    | "resumo"
+    | "tipoProduto"
+    | "contextoUso"
+    | "termosNegativos"
+    | "dominiosPermitidos",
+    unknown
+  >
+>;
+
+const lista = (v: unknown) => (Array.isArray(v) ? v : []).map((x) => String(x ?? "").trim());
+
+/** Camada A: valida o JSON do modelo (nada de link, domínio fora do formato
+    oficial ou termo negativo que a própria pessoa digitou). */
+export function intencaoDoModelo(j: JsonDoModelo | null, q: string): Interpretacao | null {
+  if (!j) return null;
+  const buscas = lista(j.buscas)
+    .map((b) => b.slice(0, 60))
+    .filter((b) => b.length >= 2 && !/https?:|www\./i.test(b))
+    .slice(0, 3);
+  const resumo = String(j.resumo ?? "").trim();
+  const tipo = normalizar(String(j.tipoProduto ?? "")).split(" ")[0] ?? "";
+  const tipoProduto = tipo.length >= 3 ? tipo : tipoDoProduto(buscas[0] ?? q);
+  const pedido = ` ${normalizar(q)} `;
+  const termosNegativos = [
+    ...new Set(
+      lista(j.termosNegativos)
+        .map((t) => normalizar(t).slice(0, 30))
+        .filter((t) => t.length >= 3 && t !== tipoProduto && !pedido.includes(` ${t} `)),
+    ),
+  ].slice(0, 12);
+  const contexto = normalizar(String(j.contextoUso ?? ""))
+    .replace(/ /g, "_")
+    .slice(0, 40);
+  return {
+    buscas,
+    precoMin: num(j.precoMin),
+    precoMax: num(j.precoMax),
+    resumo:
+      resumo && !/https?:|www\.|intelig[eê]ncia artificial|\bIA\b/i.test(resumo)
+        ? resumo.slice(0, 200)
+        : "",
+    tipoProduto,
+    contextoUso: contexto || null,
+    termosNegativos,
+    dominiosPermitidos: lista(j.dominiosPermitidos)
+      .filter((d) => /^MLB-[A-Z0-9_]+$/.test(d))
+      .slice(0, 6),
+  };
+}
+
+/* Negativos que valem sem o modelo. Por tipo: conector de outro sinal no
+   lugar da tomada elétrica. Universais: miniatura, chaveiro e brinquedo no
+   lugar do item de verdade (pneu, ração, peça de carro), salvo busca de
+   presente ou infantil. */
+const NEGATIVOS_ELETRICA = [
+  "hdmi",
+  "antena",
+  "coaxial",
+  "rj45",
+  "rj11",
+  "keystone",
+  "cat5",
+  "cat5e",
+  "cat6",
+  "vga",
+  "telefone",
+];
+const NEGATIVOS_POR_TIPO: Record<string, string[]> = {
+  tomada: NEGATIVOS_ELETRICA,
+  tomadas: NEGATIVOS_ELETRICA,
+  interruptor: NEGATIVOS_ELETRICA,
+};
+const NEGATIVOS_UNIVERSAIS = ["miniatura", "chaveiro", "maquete", "de brinquedo"];
+const BUSCA_INFANTIL =
+  /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|colecao|colecionavel)\b/;
+
+/** Camadas B e D: o título mostra outro produto? (termo negativo do modelo,
+    do tipo ou universal, com plural simples; o que a pessoa digitou nunca
+    exclui). */
+export function foraDaIntencao(
+  nome: string,
+  intencao: Pick<Interpretacao, "tipoProduto" | "termosNegativos" | "contextoUso">,
+  consulta: string,
+): boolean {
+  const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
+  const t = ` ${normalizar(nome)} `;
+  const termos = [
+    ...(intencao.termosNegativos ?? []),
+    ...(NEGATIVOS_POR_TIPO[intencao.tipoProduto ?? ""] ?? []),
+    ...(BUSCA_INFANTIL.test(pedido) ? [] : NEGATIVOS_UNIVERSAIS),
+  ];
+  return termos.some((n) => {
+    if (` ${pedido} `.includes(` ${n} `)) return false;
+    return [n, `${n}s`, `${n}es`].some((f) => t.includes(` ${f} `));
+  });
 }
 
 /** Busca no catálogo oficial e devolve os produtos com anúncio ativo (o
@@ -152,6 +264,12 @@ export async function buscarNoCatalogo(
     /** Produto do catálogo sem oferta destacada ("No winners found", comum
         em autopeças) entra sem preço e sem anúncio: só "Comparar preço". */
     aceitarSemOferta?: boolean;
+    /** Busca guiada: domínios previstos para cada busca (mesma ordem). */
+    dominiosPorBusca?: Array<Set<string> | null>;
+    /** Busca guiada: sem domínio, o tipo de cada busca filtra o nome. */
+    tipoDaBusca?: boolean;
+    /** Título fora da intenção (termo negativo): nem lê a oferta. */
+    rejeitar?: (nome: string) => boolean;
   } = {},
 ) {
   const max = opcoes.max ?? 8;
@@ -162,8 +280,10 @@ export async function buscarNoCatalogo(
   const vistos = new Set<string>();
   let chamadas = 0;
   const TETO = 18;
-  for (const busca of buscas) {
+  for (const [b, busca] of buscas.entries()) {
     if (resultados.length >= max || chamadas >= TETO) break;
+    const dominios = opcoes.dominiosPorBusca?.[b] ?? opcoes.dominios ?? null;
+    const tipo = opcoes.tipoDaBusca ? tipoDoProduto(busca) : opcoes.tipo;
     let lista: Array<{
       id?: string;
       name?: string;
@@ -188,10 +308,10 @@ export async function buscarNoCatalogo(
       vistos.add(id);
       /* Réplica, "1:1", linha AAA ou clone sem marca nunca entra (27/10). */
       if (pareceFalso(p.name)) continue;
+      if (opcoes.rejeitar?.(String(p.name ?? ""))) continue;
       /* Outra categoria nunca entra (11/10: bebedouro pet x fonte de Buda). */
-      if (opcoes.dominios && !opcoes.dominios.has(String(p.domain_id ?? ""))) continue;
-      if (!opcoes.dominios && opcoes.tipo && !nomeTemOTipo(String(p.name ?? ""), opcoes.tipo))
-        continue;
+      if (dominios && !dominios.has(String(p.domain_id ?? ""))) continue;
+      if (!dominios && tipo && !nomeTemOTipo(String(p.name ?? ""), tipo)) continue;
       try {
         chamadas += 1;
         /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
@@ -262,9 +382,20 @@ export async function buscaGuiada(
   intencaoAnterior: Interpretacao | null = null,
 ) {
   const intencao = intencaoAnterior ?? (await interpretar(q, contexto));
-  const achados = await buscarNoCatalogo(intencao.buscas, {
+  /* Camada C: só os domínios que a API oficial prevê para cada busca (mais
+     os do modelo); sem previsão, o tipo da busca tem de estar no nome. */
+  const doModelo = intencao.dominiosPermitidos ?? [];
+  const dominiosPorBusca = await Promise.all(
+    intencao.buscas.map(async (b) => {
+      const s = await dominiosPrevistos(b);
+      return s ? new Set([...s, ...doModelo]) : null;
+    }),
+  );
+  const opcoes = {
     precoMin: intencao.precoMin,
     precoMax: intencao.precoMax,
+    tipoDaBusca: true,
+    rejeitar: (nome: string) => foraDaIntencao(nome, intencao, q),
     ...(pagina > 0
       ? {
           limite: 8,
@@ -272,7 +403,11 @@ export async function buscaGuiada(
           offset: offsetDaPagina(pagina, 6, 8),
         }
       : {}),
-  });
+  };
+  let achados = await buscarNoCatalogo(intencao.buscas, { ...opcoes, dominiosPorBusca });
+  /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo. */
+  if (!achados.length && dominiosPorBusca.some(Boolean))
+    achados = await buscarNoCatalogo(intencao.buscas, opcoes);
   /* Busca universal (27/10): o mais fiel ao que foi digitado vem primeiro
      (modelo exato) e peça/acessório só se a busca é pela peça. */
   const resultados = ordenarPelaIntencao(q, achados, (r) => r.nome);

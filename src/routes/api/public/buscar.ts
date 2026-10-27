@@ -114,6 +114,10 @@ export const Route = createFileRoute("/api/public/buscar")({
                     precoMin: primeira.precoMin ?? null,
                     precoMax: primeira.precoMax ?? null,
                     resumo: primeira.resumo,
+                    tipoProduto: primeira.tipoProduto ?? null,
+                    contextoUso: primeira.contextoUso ?? null,
+                    termosNegativos: primeira.termosNegativos ?? [],
+                    dominiosPermitidos: primeira.dominiosPermitidos ?? [],
                   }
                 : null,
             );
@@ -178,6 +182,10 @@ export const Route = createFileRoute("/api/public/buscar")({
           lidoEm: new Date().toISOString(),
           precoMin: achado.intencao.precoMin,
           precoMax: achado.intencao.precoMax,
+          tipoProduto: achado.intencao.tipoProduto ?? null,
+          contextoUso: achado.intencao.contextoUso ?? null,
+          termosNegativos: achado.intencao.termosNegativos ?? [],
+          dominiosPermitidos: achado.intencao.dominiosPermitidos ?? [],
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)
