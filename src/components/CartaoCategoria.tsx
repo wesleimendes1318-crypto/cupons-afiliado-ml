@@ -11,11 +11,14 @@ export function CartaoCategoria({
   nome,
   /* Brinquedos tem página própria (/brinquedos, por idade). */
   paginaPropria = false,
+  total,
   className = "",
 }: {
   slug: string;
   nome: string;
   paginaPropria?: boolean;
+  /* Quantos produtos a categoria tem (lista de categorias, 27/10). */
+  total?: number | undefined;
   className?: string;
 }) {
   const arte = arteDaCategoria(slug);
@@ -45,6 +48,11 @@ export function CartaoCategoria({
       <span className="flex flex-1 items-center justify-between gap-2 px-3.5 py-3">
         <span className="text-sm font-bold leading-snug text-foreground sm:text-[15px]">
           {nome}
+          {total ? (
+            <span className="block text-xs font-normal text-secondary-ink">
+              {total.toLocaleString("pt-BR")} produtos
+            </span>
+          ) : null}
         </span>
         <ChevronRight
           className="size-4 shrink-0 text-[#7547E8] transition group-hover:translate-x-0.5"
