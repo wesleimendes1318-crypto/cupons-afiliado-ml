@@ -15,7 +15,7 @@ import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { FaixaArte } from "@/components/FaixaArte";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import { SeloMarketplace } from "@/components/SeloMarketplace";
-import { carregarProdutos } from "@/components/SugestoesBusca";
+import { carregarProdutos, SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { arteDaBusca } from "@/lib/artes";
 import {
@@ -124,17 +124,21 @@ export function BuscaGuiada({
     setCarregando(false);
   }
 
-  function enviar(e: FormEvent) {
-    e.preventDefault();
-    void buscar(q);
-  }
-
   function comparar(url: string) {
     if (naHome) {
       window.dispatchEvent(new CustomEvent("comparar-link", { detail: url }));
     } else {
       window.location.href = `/?link=${encodeURIComponent(url)}`;
     }
+  }
+
+  /* Sugestões enquanto digita (Weslei, 27/10: "em todos os campos de busca"). */
+  const sugestoes = useSugestoesBusca(q, (t) => void buscar(t), comparar);
+
+  function enviar(e: FormEvent) {
+    e.preventDefault();
+    sugestoes.fechar();
+    void buscar(q);
   }
 
   return (
@@ -161,7 +165,7 @@ export function BuscaGuiada({
             <label htmlFor={idCampo} className="sr-only">
               O que você procura?
             </label>
-            <div className="relative min-w-0 flex-1">
+            <div ref={sugestoes.caixa} className="relative min-w-0 flex-1">
               <Search
                 className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#86868b]"
                 aria-hidden="true"
@@ -169,11 +173,18 @@ export function BuscaGuiada({
               <input
                 id={idCampo}
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                {...sugestoes.propsCampo}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  sugestoes.abrir();
+                }}
+                onKeyDown={(e) => void sugestoes.teclar(e)}
+                autoComplete="off"
                 maxLength={160}
                 placeholder={EXEMPLO[contexto]}
                 className="h-12 w-full rounded-full border border-transparent bg-[#f5f5f7] pl-10 pr-4 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus-visible:border-[#0071e3] focus-visible:ring-4 focus-visible:ring-[#0071e3]/20"
               />
+              <SugestoesBusca estado={sugestoes} />
             </div>
             <button
               type="submit"

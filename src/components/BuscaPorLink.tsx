@@ -6033,6 +6033,14 @@ function BuscaPeloNome({
   useEffect(() => {
     if (termoInicial) void procurar(termoInicial);
   }, [termoInicial, procurar]);
+  const sugestoes = useSugestoesBusca(
+    termo,
+    (t) => {
+      setTermo(t);
+      void procurar(t);
+    },
+    comparar,
+  );
 
   return (
     <div className="mt-4 rounded-2xl border border-border bg-card p-4">
@@ -6048,15 +6056,23 @@ function BuscaPeloNome({
         nome: toque em “Comparar preço” para ver todas as lojas de cada um.
       </p>
       <form
-        className="mt-3 flex gap-2"
+        ref={sugestoes.caixa}
+        className="relative mt-3 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
+          sugestoes.fechar();
           void procurar(termo);
         }}
       >
         <input
           value={termo}
-          onChange={(e) => setTermo(e.target.value)}
+          {...sugestoes.propsCampo}
+          onChange={(e) => {
+            setTermo(e.target.value);
+            sugestoes.abrir();
+          }}
+          onKeyDown={(e) => void sugestoes.teclar(e)}
+          autoComplete="off"
           placeholder="Nome do produto"
           aria-label="Nome do produto"
           className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-[#f5f5f7] px-3 text-sm outline-none focus:border-[#7547E8] focus:bg-background dark:bg-white/5"
@@ -6068,6 +6084,7 @@ function BuscaPeloNome({
         >
           Buscar
         </button>
+        <SugestoesBusca estado={sugestoes} />
       </form>
       {buscado && (
         <ResultadosDaBusca
