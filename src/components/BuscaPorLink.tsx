@@ -1407,6 +1407,40 @@ export default function BuscaPorLink({
 
   /* Guarda o resultado no histórico do aparelho (atualiza quando a segunda
      volta muda a análise). */
+  /* Anúncio colado sem leitura (muro de verificação do Mercado Livre, 27/10):
+     nome, foto e preço do anúncio na ficha oficial, pelo servidor (a mesma
+     leitura da comparação sem a extensão). Nunca inventa: sem ficha, fica o
+     "Não consegui ler este anúncio agora". */
+  const [fichaColado, setFichaColado] = useState<{ url: string; a: Analise } | null>(null);
+  const fichaPedida = useRef<string | null>(null);
+  useEffect(() => {
+    const alvo = urlDoPedido.current;
+    if (fase !== "pronto" || !alvo || !pedido?.analise || pedido.analise.titulo) return;
+    if (fichaPedida.current === alvo) return;
+    fichaPedida.current = alvo;
+    void compararPeloServidor(alvo).then((r) => {
+      if (!r || urlDoPedido.current !== alvo) return;
+      /* Anúncio fora da lista da ficha: só o nome do produto (sem preço). */
+      const a = r.ok ? r.analise : r.termo ? ({ titulo: r.termo } as Analise) : null;
+      if (a?.titulo) setFichaColado({ url: alvo, a });
+    });
+  }, [fase, pedido]);
+  const pedidoTela = useMemo(() => {
+    const a = pedido?.analise;
+    const f = fichaColado?.url === urlDoPedido.current ? fichaColado?.a : null;
+    if (!pedido || !a || a.titulo || !f) return pedido;
+    return {
+      ...pedido,
+      analise: {
+        ...a,
+        titulo: f.titulo,
+        imagem: a.imagem ?? f.imagem ?? null,
+        preco: a.preco ?? f.preco ?? null,
+        vendedor: a.vendedor ?? f.vendedor ?? null,
+      },
+    };
+  }, [pedido, fichaColado]);
+
   useEffect(() => {
     const alvo = urlDoPedido.current;
     if (fase !== "pronto" || !pedido?.analise || !alvo) return;
@@ -1673,7 +1707,7 @@ export default function BuscaPorLink({
       )}
       {fase === "pronto" && pedido && (
         <Resultado
-          pedido={pedido}
+          pedido={pedidoTela ?? pedido}
           copiar={copiar}
           copiado={copiado}
           urlColada={
