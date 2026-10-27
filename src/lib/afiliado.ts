@@ -4,6 +4,8 @@
    é descartado e o botão passa a gerar o link de afiliado no clique (o
    endereço do anúncio continua em `url`). */
 
+import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
+
 export const ehLinkDeAfiliado = (u: unknown): u is string =>
   typeof u === "string" && /^https:\/\/meli\.la\/[A-Za-z0-9]+\/?$/.test(u.trim());
 
@@ -30,9 +32,11 @@ function limparLista<T extends ComLink>(l: T[] | null | undefined): T[] | null |
   return Array.isArray(l) ? l.map((x) => (x && typeof x === "object" ? limparItem(x) : x)) : l;
 }
 
-/** Tira da análise todo link que não é de afiliado (colado, lojas, parecidos, referências). */
+/** Tira da análise todo link que não é de afiliado (colado, lojas, parecidos, referências)
+    e o título que é da página de verificação do Mercado Livre (pedidos antigos). */
 export function analiseSoComAfiliado<
   A extends {
+    titulo?: string | null;
     vendedor?: string | null;
     outraLoja?: ComLink | null;
     outrasLojas?: ComLink[] | null;
@@ -43,6 +47,7 @@ export function analiseSoComAfiliado<
   if (!a || typeof a !== "object") return a;
   return {
     ...a,
+    ...(ehTituloDeDesafio(a.titulo) ? { titulo: null } : {}),
     ...("vendedor" in a ? { vendedor: nomeDeLojaValido(a.vendedor) } : {}),
     outraLoja: a.outraLoja ? limparItem(a.outraLoja) : a.outraLoja,
     outrasLojas: limparLista(a.outrasLojas),

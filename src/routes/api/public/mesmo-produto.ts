@@ -4,6 +4,7 @@ import { z } from "zod";
 import { freteParaCep, gravarConfig } from "@/lib/ml-api";
 import { compararMesmoProduto, idsDoLink } from "@/lib/mesmo-produto";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
+import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 
 /* Mesmo produto em outras lojas, pela API oficial do Mercado Livre.
 
@@ -27,7 +28,13 @@ const entradaSchema = z.object({
     .catch(null),
   preco: z.number().positive().max(1e7).nullish().catch(null),
   vendedor: z.string().max(160).nullish().catch(null),
-  titulo: z.string().max(300).nullish().catch(null),
+  /* Texto do muro de verificação não é nome: não vira busca por nome. */
+  titulo: z
+    .string()
+    .max(300)
+    .refine((t) => !ehTituloDeDesafio(t))
+    .nullish()
+    .catch(null),
   gtin: z
     .string()
     .regex(/^\d{8,14}$/)

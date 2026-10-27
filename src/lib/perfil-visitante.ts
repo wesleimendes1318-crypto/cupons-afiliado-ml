@@ -23,6 +23,7 @@ import {
   type Sugestao,
 } from "@/lib/busca-sugestoes";
 import { pareceFalso } from "@/lib/falsificado";
+import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 
 export type ProdutoInteragido = {
   chave: string;
@@ -118,12 +119,16 @@ function validar(p: Partial<PerfilVisitante> | null): PerfilVisitante | null {
     idAnonimo: typeof p.idAnonimo === "string" ? p.idAnonimo : idNovo(),
     categorias,
     termosRecentes: Array.isArray(p.termosRecentes)
-      ? p.termosRecentes.filter((t) => typeof t?.termo === "string").slice(0, MAX_TERMOS)
+      ? p.termosRecentes
+          .filter((t) => typeof t?.termo === "string" && !ehTituloDeDesafio(t.termo))
+          .slice(0, MAX_TERMOS)
       : [],
     ticketMedio: num(p.ticketMedio),
     precosNaMedia: num(p.precosNaMedia),
     produtosInteragidos: Array.isArray(p.produtosInteragidos)
-      ? p.produtosInteragidos.filter((x) => typeof x?.titulo === "string").slice(0, MAX_PRODUTOS)
+      ? p.produtosInteragidos
+          .filter((x) => typeof x?.titulo === "string" && !ehTituloDeDesafio(x.titulo))
+          .slice(0, MAX_PRODUTOS)
       : [],
     sensivelAFreteGratis: p.sensivelAFreteGratis === true,
     atualizadoEm: num(p.atualizadoEm) || Date.now(),

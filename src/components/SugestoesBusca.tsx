@@ -23,6 +23,7 @@ import {
   type Sugestao,
 } from "@/lib/busca-sugestoes";
 import { obterPerfil, sugestoesDoPerfil } from "@/lib/perfil-visitante";
+import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 
 const ESPERA_MS = 180;
 
@@ -89,7 +90,9 @@ export function carregarProdutos(): Promise<ProdutoConhecido[]> {
 function lerRecentes(): RecenteConhecido[] {
   try {
     const lista = JSON.parse(window.localStorage.getItem("me_historico_v1") ?? "[]");
-    return Array.isArray(lista) ? (lista as RecenteConhecido[]) : [];
+    return Array.isArray(lista)
+      ? (lista as RecenteConhecido[]).filter((r) => !ehTituloDeDesafio(r?.titulo))
+      : [];
   } catch {
     return [];
   }

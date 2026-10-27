@@ -624,3 +624,10 @@ test('link do colado sai da oferta lida, nunca da ficha sem o anuncio (pedido 12
   assert.equal(enderecoDaOfertaLida('https://www.mercadolivre.com.br/up/MLBU123456789', 'https://www.mercadolivre.com.br/up/MLBU123456789', null, 'MLB7777777777'),
     'https://produto.mercadolivre.com.br/MLB-7777777777');
 });
+
+test('titulo do muro de verificacao nao e produto', async () => {
+  const { ehTituloDeDesafio } = await import('../comparador.js');
+  assert.equal(ehTituloDeDesafio('Por segurança, complete esta etapa'), true);
+  assert.equal(ehTituloDeDesafio('Câmera de Segurança Wi-Fi'), false);
+  assert.equal(ehCaptcha('', 'https://www.mercadolivre.com.br/gz/account-verification?go=https%3A%2F%2Fproduto.mercadolivre.com.br%2FMLB-123456789'), true);
+});
