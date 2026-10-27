@@ -592,6 +592,7 @@ function Cartao({ i }: { i: ItemVitrine }) {
         categoria: i.categoria_site,
         preco,
         foto: i.imagem,
+        url: i.url_produto,
         freteGratis: i.freteGratis ?? null,
       })}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card"

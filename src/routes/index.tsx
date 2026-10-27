@@ -43,6 +43,7 @@ import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { Vitrine } from "@/components/Vitrine";
+import { RecomendacoesHome } from "@/components/recomendacoes/RecomendacoesHome";
 import { BrinquedosPorIdade } from "@/components/BrinquedosPorIdade";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { VitrineSazonal } from "@/components/VitrineSazonal";
@@ -2000,6 +2001,9 @@ function Index() {
           <BrinquedosPorIdade naHome className="mt-8" />
 
           <Vitrine />
+
+          {/* Trilhos de recomendação pelo gosto do visitante (27/10). */}
+          <RecomendacoesHome />
 
           {/* Mais vendidos agora, por categoria (09/10). */}
           <EmAltaCatalogo naHome limite={24} />

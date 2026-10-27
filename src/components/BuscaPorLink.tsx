@@ -1413,7 +1413,7 @@ export default function BuscaPorLink({
         categoria: pedido.analise.categoria ?? null,
         preco: item.melhor ?? pedido.analise.preco,
         freteGratis: melhorComFreteGratis(pedido.analise),
-        produto: { chave: alvo, titulo: item.titulo, foto: item.imagem },
+        produto: { chave: alvo, titulo: item.titulo, foto: item.imagem, url: alvo },
       });
     }
     setHistorico((h) => {
@@ -1489,6 +1489,7 @@ export default function BuscaPorLink({
             titulo: pedido.analise.titulo,
             preco: pedido.analise.preco,
             foto: pedido.analise.imagem ?? null,
+            url: urlDoPedido.current,
           })
         : {})}
       className={
