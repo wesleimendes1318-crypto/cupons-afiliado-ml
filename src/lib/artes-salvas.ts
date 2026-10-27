@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import type { TemaVisualId } from "@/lib/campanha-visual";
 
 let cache: Promise<Map<string, string>> | null = null;
 
@@ -24,7 +23,8 @@ function carregar() {
   return cache;
 }
 
-export function useArteSalva(tema: TemaVisualId): string | null {
+/** Tema de campanha ou "dep:<slug>" (arte de departamento, 27/10). */
+export function useArteSalva(tema: string): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let vivo = true;
