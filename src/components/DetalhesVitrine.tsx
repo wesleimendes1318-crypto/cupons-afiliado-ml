@@ -54,6 +54,7 @@ export function VerDetalhesVitrine({
   className = "",
   rotulo = "Ver fotos e detalhes",
   gatilho = null,
+  detalhes,
 }: {
   chave: string;
   titulo: string;
@@ -69,6 +70,8 @@ export function VerDetalhesVitrine({
      diferenças, mas que mais detalhes sejam consultados"). Sem detalhes
      possíveis, a foto aparece sem botão. */
   gatilho?: ReactNode;
+  /* Detalhes já lidos na comparação (27/10): dispensam a busca no banco. */
+  detalhes?: Detalhes | null;
 }) {
   const [aberto, setAberto] = useState(false);
   /* Abrir fotos e detalhes é interesse aprofundado (+4 no perfil local). */
@@ -76,7 +79,13 @@ export function VerDetalhesVitrine({
     setAberto(true);
     registrarAcaoVisitante({
       tipo: "detalhes",
-      produto: { chave, titulo, preco: preco ?? null, foto: imagem ?? null, url: urlProduto ?? null },
+      produto: {
+        chave,
+        titulo,
+        preco: preco ?? null,
+        foto: imagem ?? null,
+        url: urlProduto ?? null,
+      },
     });
   };
   if (!/^MLB\d{5,}$/.test(chave)) return gatilho ? <>{gatilho}</> : null;
@@ -87,7 +96,7 @@ export function VerDetalhesVitrine({
           type="button"
           onClick={abrir}
           aria-label={`Ver fotos e detalhes: ${titulo}`}
-          className={`block cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
+          className={`${/(^|\s)(hidden|flex|grid)(\s|$)/.test(className) ? "" : "block "}cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}
         >
           {gatilho}
         </button>
@@ -109,7 +118,10 @@ export function VerDetalhesVitrine({
           preco={preco ?? null}
           link={link ?? null}
           vistoEm={vistoEm ?? null}
-          produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? null}
+          produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? chave}
+          inicial={
+            detalhes ? { titulo, imagem: imagem ?? null, detalhes, comparado_em: null } : undefined
+          }
           fechar={() => setAberto(false)}
         />
       )}
@@ -125,6 +137,7 @@ function Painel({
   link,
   vistoEm,
   produto,
+  inicial,
   fechar,
 }: {
   chave: string;
@@ -134,10 +147,11 @@ function Painel({
   link: string | null;
   vistoEm: string | null;
   produto: string | null;
+  inicial?: Resposta | undefined;
   fechar: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [dados, setDados] = useState<Resposta | null | undefined>(cache.get(chave));
+  const [dados, setDados] = useState<Resposta | null | undefined>(inicial ?? cache.get(chave));
   const [descricaoToda, setDescricaoToda] = useState(false);
   /* Menos informação de cara (Weslei, 18/10): destaques à vista;
      características e descrição abrem quando a pessoa quiser. */
@@ -148,7 +162,7 @@ function Painel({
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) d.showModal();
-    if (cache.has(chave)) return;
+    if (inicial || cache.has(chave)) return;
     let vivo = true;
     void (async () => {
       try {
@@ -164,10 +178,10 @@ function Painel({
     return () => {
       vivo = false;
     };
-  }, [chave]);
+  }, [chave, inicial]);
 
-  /* Galeria: a foto do anúncio e as do catálogo oficial (quando o produto
-     é de catálogo). */
+  /* Galeria: a foto do anúncio e as do catálogo oficial (ou, sem catálogo,
+     as do próprio anúncio: "sempre deve permitir ver mais fotos", 27/10). */
   const [doCatalogo, setDoCatalogo] = useState<string[] | null>(
     produto ? (fotosCache.get(produto) ?? null) : [],
   );

@@ -4,7 +4,8 @@ import { mlGet } from "@/lib/ml-api";
 import { excedeuLimite } from "@/lib/public-ai-api";
 
 /* FOTOS DO PRODUTO (Weslei, 05/10: "precisa dar opção de ver as fotos").
-   Galeria do produto de CATÁLOGO pela API oficial (/products/{id}), só
+   Galeria do produto de CATÁLOGO (/products/{id}) ou do anúncio (/items/{id})
+   pela API oficial, só
    leitura: o site guarda uma foto por anúncio. Só o endereço das fotos
    (mlstatic, https) sai daqui. Cache por instância (6 h) e no navegador/CDN
    (1 dia) para não repetir chamada à API. */
@@ -32,8 +33,10 @@ export const Route = createFileRoute("/api/public/fotos")({
           return resposta({ fotos: guardado.fotos });
         if (excedeuLimite(request)) return resposta({ fotos: [] }, 429, false);
         try {
-          const p = await mlGet<{ pictures?: Array<{ url?: string; secure_url?: string }> }>(
-            `/products/${produto}`,
+          type ComFotos = { pictures?: Array<{ url?: string; secure_url?: string }> };
+          /* Sem ficha de catálogo com esse id, é um anúncio: as fotos dele (27/10). */
+          const p = await mlGet<ComFotos>(`/products/${produto}`).catch(() =>
+            mlGet<ComFotos>(`/items/${produto}?attributes=pictures`),
           );
           const fotos = [
             ...new Set(
