@@ -98,9 +98,14 @@ function lerRecentes(): RecenteConhecido[] {
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 
-/** Estado da lista para um campo. `buscar` recebe o link (recente/produto)
-    ou o texto (busca sugerida); categoria abre a página dela. */
-export function useSugestoesBusca(valor: string, buscar: (alvo: string) => void) {
+/** Estado da lista para um campo. `buscar` recebe o texto (busca sugerida)
+    e, sem `comparar`, também o link (recente/produto); categoria abre a
+    página dela. */
+export function useSugestoesBusca(
+  valor: string,
+  buscar: (alvo: string) => void,
+  comparar?: (url: string) => void,
+) {
   const router = useRouter();
   const id = useId();
   const area = useRef<HTMLElement | null>(null);
@@ -151,7 +156,8 @@ export function useSugestoesBusca(valor: string, buscar: (alvo: string) => void)
       void router.navigate({ to: "/categorias/$slug", params: { slug: s.slug } });
       return;
     }
-    buscar(s.tipo === "termo" || s.tipo === "historico" ? s.texto : s.url);
+    if (s.tipo === "termo" || s.tipo === "historico") buscar(s.texto);
+    else (comparar ?? buscar)(s.url);
   };
 
   /** true quando a tecla foi usada pela lista (quem chama não faz mais nada). */

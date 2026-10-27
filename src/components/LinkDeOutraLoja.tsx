@@ -11,6 +11,7 @@ import {
 import { ArrowUpRight, ChevronDown, Loader2, Search, ShieldCheck, Store } from "lucide-react";
 
 import { ResultadosDaBusca, type ConsultaBusca } from "@/components/BuscaGuiada";
+import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { GarimpoNoPlayer, type MudancaGarimpo } from "@/components/GarimpoNoPlayer";
 import { buscarProdutos, type Resposta } from "@/lib/busca-guiada-cliente";
 import { nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
@@ -214,8 +215,18 @@ export function LinkDeOutraLoja({
   const nome = nomeTermo ? nomeParaTela(nomeTermo) : null;
   const semNome = !identificando && !nome && !(origem === "amazon" && analise.identificador);
 
+  const sugestoes = useSugestoesBusca(
+    termo,
+    (t) => {
+      setTermo(t);
+      void buscar(t, origem === "invalido" ? "guiada" : "produto");
+    },
+    comparar,
+  );
+
   function enviar(e: FormEvent) {
     e.preventDefault();
+    sugestoes.fechar();
     void buscar(termo, origem === "invalido" ? "guiada" : "produto");
   }
 
@@ -424,14 +435,25 @@ export function LinkDeOutraLoja({
 
       {/* Sem nome no link: a pessoa escreve. */}
       {semNome && (
-        <form onSubmit={enviar} className="flex max-w-xl gap-2" role="search">
+        <form
+          ref={sugestoes.caixa}
+          onSubmit={enviar}
+          className="relative flex max-w-xl gap-2"
+          role="search"
+        >
           <label htmlFor={idCampo} className="sr-only">
             Qual é o produto?
           </label>
           <input
             id={idCampo}
             value={termo}
-            onChange={(e) => setTermo(e.target.value)}
+            {...sugestoes.propsCampo}
+            onChange={(e) => {
+              setTermo(e.target.value);
+              sugestoes.abrir();
+            }}
+            onKeyDown={(e) => void sugestoes.teclar(e)}
+            autoComplete="off"
             maxLength={160}
             placeholder="Qual é o produto? Ex.: Echo Dot 5ª geração"
             className="h-11 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-sm text-foreground placeholder:text-[#86868b] focus:outline-none focus-visible:border-[#0071e3] focus-visible:ring-4 focus-visible:ring-[#0071e3]/20"
@@ -444,6 +466,7 @@ export function LinkDeOutraLoja({
             <Search className="size-4" aria-hidden="true" />
             Buscar
           </button>
+          <SugestoesBusca estado={sugestoes} />
         </form>
       )}
 

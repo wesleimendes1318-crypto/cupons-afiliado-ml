@@ -16,6 +16,7 @@ import { Link } from "@tanstack/react-router";
 import { Flame, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 
 import { ResultadosDaBusca, type ConsultaBusca } from "@/components/BuscaGuiada";
+import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { CartaoEmAlta, type ItemEmAlta } from "@/components/EmAltaCatalogo";
 import { useTicketMedio } from "@/hooks/use-ticket-medio";
 import { buscarProdutos, type Resposta } from "@/lib/busca-guiada-cliente";
@@ -85,6 +86,15 @@ export function CatalogoCategoria({
   const [mostrar, setMostrar] = useState(24);
   const [texto, setTexto] = useState("");
   const [termo, setTermo] = useState("");
+  /* Sugestões enquanto digita (27/10); a busca sugerida filtra a categoria. */
+  const sugestoes = useSugestoesBusca(
+    texto,
+    (t) => {
+      setTexto(t);
+      setTermo(t);
+    },
+    comparar,
+  );
   /* Mais da categoria de cima (página com poucos produtos). */
   const [doPai, setDoPai] = useState<Item[]>([]);
   const [consulta, setConsulta] = useState<ConsultaBusca | null>(null);
@@ -269,8 +279,10 @@ export function CatalogoCategoria({
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
+          sugestoes.fechar();
           setTermo(texto.trim());
         }}
+        ref={sugestoes.caixa}
         className="relative mt-4"
       >
         <label htmlFor="busca-na-categoria" className="sr-only">
@@ -286,10 +298,13 @@ export function CatalogoCategoria({
           enterKeyHint="search"
           autoComplete="off"
           value={texto}
+          {...sugestoes.propsCampo}
           onChange={(e) => {
             setTexto(e.target.value);
             setMostrar(24);
+            sugestoes.abrir();
           }}
+          onKeyDown={(e) => void sugestoes.teclar(e)}
           placeholder={`Buscar em ${no.nome}... (ex: ${exemploDaBusca(slug)})`}
           className="min-h-12 w-full rounded-full border border-border bg-card pl-11 pr-12 text-[16px] shadow-[var(--shadow-card)] outline-none placeholder:text-secondary-ink/80 focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/25 [&::-webkit-search-cancel-button]:hidden"
         />
@@ -306,6 +321,7 @@ export function CatalogoCategoria({
             <X className="size-4" aria-hidden="true" />
           </button>
         )}
+        <SugestoesBusca estado={sugestoes} />
       </form>
       {itens && termo.length >= 2 && encontrados.length < POUCOS_NA_BUSCA && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[#f5f5f7] px-4 py-3 dark:bg-white/5">
