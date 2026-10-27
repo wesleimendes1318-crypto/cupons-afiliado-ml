@@ -7,8 +7,9 @@
       lê o caminho da categoria (/categories/{id}, guardado 30 dias em
       em_alta_vistos como cat:<id>);
    2. classifica pela taxonomia (src/lib/classificar.ts);
-   3. grava SÓ as colunas da classificação (gravar_classificacao). Nunca
-      muda categoria_site, preço, link nem nada que o site já usa.
+   3. grava as colunas da classificação e a aba antiga (categoria_site)
+      pela classificação, guardando a anterior em _categoria_site_antes
+      (gravar_classificacao). Nunca muda preço nem link.
    Sem modelo de linguagem e sem custo: só endereços públicos da API. */
 import { classificar, VERSAO_TAXONOMIA } from "@/lib/classificar";
 import { mlGet } from "@/lib/ml-api";
@@ -125,6 +126,8 @@ export async function classificarCatalogo(db: Db, opcoes: { limite?: number | un
       categoria_no: r.no,
       confianca_categoria: r.confianca,
       classificacao_motivo: `${prefixo} ${r.motivo}`,
+      /* Aba antiga segue a classificação (Weslei, 27/10: "Todos os 702"). */
+      categoria_site: r.no === "fora" ? null : r.legado,
     });
   }
 
