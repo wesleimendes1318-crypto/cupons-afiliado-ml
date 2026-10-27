@@ -91,6 +91,7 @@ import {
 } from "@/lib/avaliacoes-detalhe";
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
+import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
@@ -786,7 +787,10 @@ function lerHistorico(): ItemHistorico[] {
   try {
     const bruto = window.localStorage.getItem(CHAVE_HISTORICO);
     const lista = bruto ? (JSON.parse(bruto) as ItemHistorico[]) : [];
-    return Array.isArray(lista) ? lista.slice(0, 5) : [];
+    /* Comparação antiga com o título da página de verificação: fora. */
+    return Array.isArray(lista)
+      ? lista.filter((h) => !ehTituloDeDesafio(h?.titulo)).slice(0, 5)
+      : [];
   } catch {
     return [];
   }
@@ -1682,6 +1686,7 @@ export default function BuscaPorLink({
           chavePedido={chaveAtual.current}
           cepTela={regiao && !regiao.padrao ? regiao.cep : null}
           seloCep={<SeloCep regiao={regiao} trocar={trocarCep} className="" />}
+          tentar={() => void buscar(url, true)}
         />
       )}
 
@@ -2328,7 +2333,10 @@ function Resultado({
   chavePedido = null,
   cepTela = null,
   seloCep = null,
+  tentar,
 }: {
+  /* Refaz a leitura (anúncio que não foi lido). */
+  tentar?: () => void;
   pedidoId?: number | null;
   chavePedido?: string | null;
   /* CEP do frete, levado para a barra de seções (24/10). */
@@ -2985,8 +2993,19 @@ function Resultado({
               />
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-[15px]">
-                  {semEntidades(a?.titulo) ?? "Produto do link que você colou"}
+                  {semEntidades(a?.titulo) ?? "Não consegui ler este anúncio agora"}
                 </p>
+                {/* Sem nome lido (ex.: o Mercado Livre pediu verificação):
+                    diz a verdade e oferece refazer, sem inventar o produto. */}
+                {!semEntidades(a?.titulo) && tentar && (
+                  <button
+                    type="button"
+                    onClick={tentar}
+                    className="mt-1 text-xs font-semibold text-[#0066cc] underline-offset-2 hover:underline"
+                  >
+                    Tentar de novo
+                  </button>
+                )}
                 {a?.aviso && (
                   <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
                     O anúncio informa: {a.aviso}

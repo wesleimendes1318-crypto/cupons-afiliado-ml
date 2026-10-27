@@ -11,7 +11,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
-         escolherAlternativas, ehCaptcha, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
+         escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
@@ -1378,6 +1378,10 @@ function extrairAnuncio(t, finalUrl, status) {
     titulo = titulo.replace(/\s*\|\s*(Parcelamento|Mercado\s*Livre)[\s\S]*$/i, '')
                    .replace(/\s*-\s*R\$\s*[\d.,]+\s*$/, '').trim();
   }
+  /* Pagina de verificacao nao e anuncio: nada dela vira produto. */
+  if (ehCaptcha(t, finalUrl) || ehTituloDeDesafio(titulo)) {
+    return { ok: false, captcha: true, falha: 'o Mercado Livre pediu uma verificacao de seguranca nesta sessao' };
+  }
 
   /* Preco: varias formas, da mais confiavel para a menos (pagina de oferta
      "deal" nao trazia a primeira e o site escondia o resultado, 25/09). */
@@ -1521,7 +1525,7 @@ async function lerAnuncioNoWorker(url, profundidade = 0) {
        a conta ser marcada, entao aqui se puxa o freio do dia inteiro e nao se
        tenta contornar o desafio de jeito nenhum. Quem resolve captcha e o
        Weslei, na mao, no navegador dele. */
-    if (/\/captcha\/wall/i.test(r.url) || /Por seguran.a, complete esta etapa/i.test(buf.slice(0, 20000))) {
+    if (ehCaptcha(buf, r.url)) {
       await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler um anuncio', 'leitura', r.url);
       return { ok: false, captcha: true,
                falha: 'o Mercado Livre pediu uma verificacao de seguranca nesta sessao' };
@@ -1612,6 +1616,11 @@ function analiseNaPagina(url) {
       if (titulo) {
         titulo = titulo.replace(/\s*\|\s*(Parcelamento|Mercado\s*Livre)[\s\S]*$/i, '')
                        .replace(/\s*-\s*R\$\s*[\d.,]+\s*$/, '').trim();
+      }
+      /* Pagina de verificacao (mesma regra de ehCaptcha/ehTituloDeDesafio). */
+      if (/\/captcha\/wall|\/gz\/account-verification|\/gz\/webdevice/i.test(d.u)
+          || /^\s*por seguran.a,? complete esta etapa/i.test(titulo || '')) {
+        return { ok: false, captcha: true, falha: 'o Mercado Livre pediu uma verificacao de seguranca nesta sessao' };
       }
 
       var preco = null;
@@ -2977,6 +2986,11 @@ async function lerNaJanelaAnonima(url, func = htmlDaPagina) {
 
 /* Roda NA ABA do anuncio: preco e loja como aparecem na tela. */
 function precoELojaDaTela() {
+  /* Muro de verificacao: o h1 dele nao e o nome do produto (27/10). */
+  if (/\/captcha\/wall|\/gz\/account-verification|\/gz\/webdevice/i.test(location.href)
+      || /^\s*por seguran.a,? complete esta etapa/i.test(((document.querySelector('h1') || {}).textContent || document.title || '').trim())) {
+    return { captcha: true };
+  }
   const num = el => {
     if (!el) return null;
     const fr = ((el.querySelector('[class*="fraction"]') || {}).textContent || '').replace(/\D/g, '');
@@ -3034,6 +3048,11 @@ async function lerTelaDoAnuncio(url) {
     const r = (saida && saida.result) || null;
     /* Endereco FINAL (depois do meli.la): e dele que sai o link de afiliado. */
     if (r) r.url = (await chrome.tabs.get(aba.id)).url || null;
+    /* O endereco do muro leva o anuncio no go=...MLB e passava por anuncio. */
+    if (r && (r.captcha || ehCaptcha('', r.url) || ehTituloDeDesafio(r.titulo))) {
+      await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler um anuncio na aba', 'leitura', r.url || url);
+      return null;
+    }
     return r;
   } finally {
     try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ }
@@ -4108,6 +4127,8 @@ async function atenderPedidos() {
 
           /* Titulo sem entidade HTML (D&#x27;agua): vai para a busca e para a tela. */
           if (a && a.titulo) a.titulo = desescapar(a.titulo);
+          /* Texto do muro de verificacao nunca vira nome nem termo de busca. */
+          if (a && ehTituloDeDesafio(a.titulo)) a.titulo = null;
           marcar('anuncio');
           if (a && a.faltou) gravarDiagnostico(sincToken, 'anuncio-incompleto', a.faltou).catch(() => {});
           /* OUTROS MARKETPLACES: so quando o cliente pede no site (sob
@@ -4270,6 +4291,12 @@ async function atenderPedidos() {
                nada melhor: o mesmo produto costuma estar anunciado FORA da
                ficha de catalogo, mais barato. Comparacao em 100% dos links. */
             marcar('api');
+            /* Anuncio sem leitura (muro de verificacao): nome e foto da ficha
+               oficial do catalogo do link, nunca inventados. */
+            if (api && api.produto && !a.titulo && api.produto.titulo) {
+              a.titulo = api.produto.titulo;
+              if (!a.imagem && api.produto.imagem) a.imagem = api.produto.imagem;
+            }
             apiAchou = !!(api && api.procurou && (api.opcoes || []).length);
             /* Frete do anuncio colado pela lista oficial de ofertas. */
             if (api && api.produto && api.produto.freteGratis != null) freteAqui = api.produto.freteGratis;

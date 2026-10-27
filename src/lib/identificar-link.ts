@@ -14,6 +14,7 @@
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { determinarCampeaoDoSegmento, type Campeao } from "@/lib/campeao-segmento";
 import { RE_FOTO_PERMITIDA } from "@/lib/conferir-produto";
+import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 
 export type LinkIdentificado = AnaliseLink & {
   /** Preço anunciado na loja do link (lido na página; nunca estimado). */
@@ -117,7 +118,8 @@ export function limparTitulo(bruto: string): string | null {
   const partes = t.split(/\s+[|–—]\s+|\s+-\s+/).filter(Boolean);
   if (partes.length > 1) t = partes.reduce((a, b) => (b.length > a.length ? b : a));
   t = t.trim();
-  if (t.length < 5 || t.length > 200 || RE_TITULO_GENERICO.test(t)) return null;
+  if (t.length < 5 || t.length > 200 || RE_TITULO_GENERICO.test(t) || ehTituloDeDesafio(t))
+    return null;
   if (!/\p{L}{3}/u.test(t)) return null;
   return t;
 }

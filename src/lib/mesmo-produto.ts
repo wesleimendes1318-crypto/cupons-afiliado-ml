@@ -226,6 +226,8 @@ export type Comparacao = {
   produto: {
     item: string | null;
     titulo: string | null;
+    /* Foto da ficha oficial (para o colado que não foi lido). */
+    imagem?: string | null;
     preco: number | null;
     vendedor: string | null;
     freteGratis?: boolean | null;
@@ -708,6 +710,7 @@ export async function compararMesmoProduto(
     const produto = {
       item: itemAtual,
       titulo,
+      imagem: fichas.get(catalogo)?.imagem ?? null,
       preco,
       vendedor: vendedorAqui,
       freteGratis: freteAqui,

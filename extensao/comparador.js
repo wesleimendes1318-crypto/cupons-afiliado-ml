@@ -141,6 +141,14 @@ function decodeURIComponentSeguro(s) {
   try { return decodeURIComponent(s); } catch (e) { return s; }
 }
 
+/* Titulo da PAGINA DE VERIFICACAO (27/10): a leitura pela tela abriu o muro
+   do Mercado Livre e "Por seguranca, complete esta etapa" virou o nome do
+   produto colado (30 pedidos) e termo de busca. Nunca e nome de produto. */
+const RE_TITULO_DESAFIO = /^\s*(por seguran.a,? complete esta etapa|confirme que voc. n.o . um rob.|verifica..o de seguran.a|robot check|just a moment|attention required|access denied|acesso negado)/i;
+export function ehTituloDeDesafio(titulo) {
+  return typeof titulo === 'string' && RE_TITULO_DESAFIO.test(titulo);
+}
+
 export function ehCaptcha(html, url) {
   return /\/captcha\/wall|\/gz\/account-verification|\/gz\/webdevice/i.test(String(url || ''))
       || /Por seguran.a, complete esta etapa|suspicious-traffic-frontend|gz-account-verification/i.test(String(html || '').slice(0, 30000));
