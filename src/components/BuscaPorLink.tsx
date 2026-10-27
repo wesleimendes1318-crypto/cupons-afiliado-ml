@@ -3730,13 +3730,13 @@ export function VerNaLoja({
             : cartao
               ? classeCartao
               : grande
-                ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+                ? "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
                 : classePequena + " border-ml-blue bg-ml-blue text-white hover:brightness-110"
         }
       >
-        {(pilula || !comTexto) && (
+        {(pilula || grande || !comTexto) && (
           <ShieldCheck
-            className={(pilula ? "size-4" : "size-3.5") + " shrink-0"}
+            className={(pilula || grande ? "size-4" : "size-3.5") + " shrink-0"}
             aria-hidden="true"
           />
         )}
@@ -3758,7 +3758,7 @@ export function VerNaLoja({
               : cartao
                 ? classeCartao
                 : grande
-                  ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+                  ? "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
                   : classePequena + " border-ml-blue bg-ml-blue text-white hover:brightness-110"
           }
         >
@@ -3787,14 +3787,14 @@ export function VerNaLoja({
           : cartao
             ? classeCartao
             : grande
-              ? "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
+              ? "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
               : classePequena +
                 " border-ml-blue/60 bg-card text-ml-blue hover:bg-ml-blue/5 disabled:opacity-60"
       }
     >
-      {(pilula || !comTexto) && (
+      {(pilula || grande || !comTexto) && (
         <ShieldCheck
-          className={(pilula ? "size-4" : "size-3.5") + " shrink-0"}
+          className={(pilula || grande ? "size-4" : "size-3.5") + " shrink-0"}
           aria-hidden="true"
         />
       )}
@@ -6056,6 +6056,7 @@ function BuscaPeloNome({
           erro={busca.erro}
           resposta={busca.resposta}
           comparar={comparar}
+          consulta={{ q: buscado, contexto: "home", modo: "produto" }}
           compacto
         />
       )}

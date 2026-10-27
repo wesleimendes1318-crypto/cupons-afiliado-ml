@@ -32,6 +32,7 @@ import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
 import { propsFotoCartao } from "@/lib/foto";
 import { FaixaArte } from "@/components/FaixaArte";
+import { SeloMarketplace } from "@/components/SeloMarketplace";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import {
   avaliacaoDaOferta,
@@ -441,8 +442,9 @@ export function Vitrine({
             ))}
           </div>
         )}
-        {/* Arte da categoria escolhida (09/10: toda vitrine com arte). */}
-        {!categoriaFixa && categoria && <FaixaArte slug={categoria} />}
+        {/* Arte da categoria escolhida (09/10: toda vitrine com arte); em
+            "Todas", a neutra de economia (27/10). */}
+        {!categoriaFixa && <FaixaArte slug={categoria} />}
 
         {lista.length === 0 && !(categoria == null ? extras : daEscolhida).length ? (
           <p className="mt-4 rounded-md border border-border bg-card p-4 text-sm text-secondary-ink">
@@ -590,6 +592,9 @@ function Cartao({ i }: { i: ItemVitrine }) {
         {/* Selo do preço numa linha de altura fixa (os títulos alinham); o
             de nota alta vai junto das estrelas. */}
         <p className="flex min-h-5 flex-wrap items-center gap-1">
+          {/* Loja da oferta do botão; com o mesmo produto confirmado em
+              outro marketplace, "Disponível em 2+ lojas" (27/10). */}
+          <SeloMarketplace links={[destino ?? i.url_produto, i.url_produto, i.melhor_link]} />
           {i.maisVendido ? (
             <span className="whitespace-nowrap rounded-full bg-[#fff1e6] px-1.5 py-0.5 text-[10px] font-bold leading-tight text-[#a34700]">
               {i.maisVendido === "tendencia" ? "Em alta nas buscas" : "Entre os mais vendidos"}

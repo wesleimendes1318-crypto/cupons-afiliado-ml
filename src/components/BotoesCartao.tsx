@@ -2,10 +2,11 @@
    padrão"; alguns cartões não tinham "Comparar preço"): em toda vitrine,
    "Comprar com segurança" largo (link de afiliado) e "Comparar preço" logo
    abaixo, no mesmo desenho dos Mais vendidos. */
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 
+/* 27/10: escudo e brilho sutil (botao-seguro, styles.css). */
 const CLASSE_COMPRAR =
-  "block w-full rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95";
+  "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95";
 
 export function ComprarComSeguranca({ link, origem }: { link: string; origem: string }) {
   return (
@@ -16,6 +17,7 @@ export function ComprarComSeguranca({ link, origem }: { link: string; origem: st
       data-origem={origem}
       className={CLASSE_COMPRAR}
     >
+      <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
       Comprar com segurança ↗
     </a>
   );

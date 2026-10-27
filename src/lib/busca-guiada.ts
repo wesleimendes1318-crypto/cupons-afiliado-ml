@@ -16,6 +16,7 @@
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
 import { ordenarPelaIntencao } from "@/lib/busca-sugestoes";
+import { pareceFalso } from "@/lib/falsificado";
 
 export type ResultadoBusca = {
   produto: string;
@@ -24,6 +25,9 @@ export type ResultadoBusca = {
   imagem: string | null;
   preco: number | null;
   url: string;
+  /** Frete grátis do anúncio de referência (null: não informado). */
+  freteGratis?: boolean | null;
+  lojaOficial?: boolean;
 };
 
 export type RespostaBusca = {
@@ -33,9 +37,12 @@ export type RespostaBusca = {
   enfileirados: number;
   /** Quando os preços foram lidos (a resposta fica guardada até 6 h). */
   lidoEm?: string;
+  /** Faixa de preço entendida (as páginas seguintes usam a mesma). */
+  precoMin?: number | null;
+  precoMax?: number | null;
 };
 
-type Interpretacao = {
+export type Interpretacao = {
   buscas: string[];
   precoMin: number | null;
   precoMax: number | null;
@@ -130,6 +137,8 @@ export async function buscarNoCatalogo(
     porBusca?: number;
     /** Produtos lidos por busca (padrão 6). */
     limite?: number;
+    /** A partir de qual posição da busca oficial ("Ver mais opções"). */
+    offset?: number;
     /** Só produtos destes domínios (categoria prevista pela API oficial). */
     dominios?: Set<string> | null;
     /** Sem domínio previsto: o nome do produto tem de trazer este tipo. */
@@ -142,6 +151,7 @@ export async function buscarNoCatalogo(
   const max = opcoes.max ?? 8;
   const porBusca = opcoes.porBusca ?? 4;
   const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 20);
+  const offset = Math.min(Math.max(Math.floor(opcoes.offset ?? 0), 0), 900);
   const resultados: ResultadoBusca[] = [];
   const vistos = new Set<string>();
   let chamadas = 0;
@@ -157,7 +167,7 @@ export async function buscarNoCatalogo(
     try {
       chamadas += 1;
       const r = await mlGet<{ results?: typeof lista }>(
-        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(busca)}&limit=${limite}`,
+        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(busca)}&limit=${limite}${offset ? `&offset=${offset}` : ""}`,
       );
       lista = r.results ?? [];
     } catch (e) {
@@ -170,6 +180,8 @@ export async function buscarNoCatalogo(
       const id = String(p.id ?? "").toUpperCase();
       if (!/^MLB\d+$/.test(id) || vistos.has(id)) continue;
       vistos.add(id);
+      /* Réplica, "1:1", linha AAA ou clone sem marca nunca entra (27/10). */
+      if (pareceFalso(p.name)) continue;
       /* Outra categoria nunca entra (11/10: bebedouro pet x fonte de Buda). */
       if (opcoes.dominios && !opcoes.dominios.has(String(p.domain_id ?? ""))) continue;
       if (!opcoes.dominios && opcoes.tipo && !nomeTemOTipo(String(p.name ?? ""), opcoes.tipo))
@@ -179,7 +191,13 @@ export async function buscarNoCatalogo(
         /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
            cartão tem de ser o do anúncio que o botão abre. */
         const o = await mlGet<{
-          results?: Array<{ item_id?: string; price?: number; condition?: string }>;
+          results?: Array<{
+            item_id?: string;
+            price?: number;
+            condition?: string;
+            shipping?: { free_shipping?: boolean };
+            official_store_id?: number | null;
+          }>;
         }>(`/products/${id}/items?limit=5`);
         const oferta = o.results?.find((x) => x.condition === "new");
         const item = oferta?.item_id;
@@ -195,6 +213,11 @@ export async function buscarNoCatalogo(
           imagem: foto ? foto.replace(/^http:/, "https:") : null,
           preco,
           url: `https://www.mercadolivre.com.br/p/${id}?pdp_filters=item_id%3A${item}`,
+          freteGratis:
+            typeof oferta?.shipping?.free_shipping === "boolean"
+              ? oferta.shipping.free_shipping
+              : null,
+          lojaOficial: oferta?.official_store_id != null,
         });
         desta += 1;
       } catch (e) {
@@ -218,12 +241,31 @@ export async function buscarNoCatalogo(
   return resultados;
 }
 
-/** Interpreta, busca no catálogo e devolve até 8 produtos com anúncio ativo. */
-export async function buscaGuiada(q: string, contexto: string | null) {
-  const intencao = await interpretar(q, contexto);
+/** Posição na busca oficial de cada página de "Ver mais opções": a 1ª lê
+    6 por busca; as seguintes, 8 por busca a partir daí. */
+export const offsetDaPagina = (pagina: number, primeira: number, demais: number) =>
+  pagina <= 0 ? 0 : primeira + (pagina - 1) * demais;
+
+/** Interpreta, busca no catálogo e devolve até 8 produtos com anúncio ativo.
+    Página > 0 ("Ver mais opções", 27/10): as mesmas buscas da 1ª página
+    (sem interpretar de novo, quando vierem), mais adiante no catálogo. */
+export async function buscaGuiada(
+  q: string,
+  contexto: string | null,
+  pagina = 0,
+  intencaoAnterior: Interpretacao | null = null,
+) {
+  const intencao = intencaoAnterior ?? (await interpretar(q, contexto));
   const achados = await buscarNoCatalogo(intencao.buscas, {
     precoMin: intencao.precoMin,
     precoMax: intencao.precoMax,
+    ...(pagina > 0
+      ? {
+          limite: 8,
+          porBusca: Math.ceil(8 / Math.max(1, intencao.buscas.length)) + 1,
+          offset: offsetDaPagina(pagina, 6, 8),
+        }
+      : {}),
   });
   /* Busca universal (27/10): o mais fiel ao que foi digitado vem primeiro
      (modelo exato) e peça/acessório só se a busca é pela peça. */
@@ -254,7 +296,7 @@ export async function dominiosPrevistos(titulo: string): Promise<Set<string> | n
     frase; o título limpo (tipo, marca, modelo) vai ao catálogo e só entra
     produto da MESMA categoria prevista para o título (ou, sem previsão, com
     o tipo do produto no nome). */
-export async function buscarMesmoProduto(titulo: string) {
+export async function buscarMesmoProduto(titulo: string, pagina = 0) {
   /* 4 a 6 palavras-chave + formato, material e capacidade (11/10). */
   const longo = termoDoProduto(titulo, 6);
   const curto = termoDoProduto(titulo, 4);
@@ -265,6 +307,7 @@ export async function buscarMesmoProduto(titulo: string) {
         max: 8,
         porBusca: 6,
         limite: 10,
+        offset: offsetDaPagina(pagina, 10, 10),
         dominios,
         tipo: tipoDoProduto(titulo),
         aceitarSemOferta: true,

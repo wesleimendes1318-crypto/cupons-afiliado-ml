@@ -13,6 +13,7 @@ import { ACESSORIO, NOS, ORDEM } from "@/content/taxonomia";
 import { analisarLink } from "@/lib/analisar-link";
 import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import { termoDoProduto } from "@/lib/termo-busca";
+import { pareceFalso } from "@/lib/falsificado";
 
 export const MIN_CARACTERES = 2;
 
@@ -21,6 +22,13 @@ export type ProdutoConhecido = {
   imagem: string | null;
   preco: number | null;
   url: string;
+  /** Link de afiliado guardado do anúncio (vitrine). */
+  link?: string | null;
+  /** Link da melhor loja na comparação (outro marketplace = "2+ lojas"). */
+  outroLink?: string | null;
+  /** Quando o preço foi lido. */
+  vistoEm?: string | null;
+  freteGratis?: boolean | null;
 };
 
 export type RecenteConhecido = { titulo: string; url: string; imagem: string | null };
@@ -108,6 +116,26 @@ function melhores<T>(consulta: string, itens: T[], texto: (i: T) => string, limi
     .sort((a, b) => b.p - a.p)
     .slice(0, limite)
     .map((x) => x.i);
+}
+
+/** Produtos já conhecidos (vitrine e em alta) que casam com todas as
+    palavras da busca: a resposta imediata da busca por texto (27/10). Sem
+    repetidos, sem falso e sem peça quando a busca é pelo aparelho. */
+export function produtosDaBusca(
+  consulta: string,
+  produtos: ProdutoConhecido[],
+  limite = 16,
+): ProdutoConhecido[] {
+  const acessorio = buscaDeAcessorio(consulta);
+  const vistos = new Set<string>();
+  const unicos = produtos.filter((p) => {
+    const chave = normalizar(p.titulo ?? "");
+    if (!chave || !p.url || vistos.has(chave) || pareceFalso(p.titulo)) return false;
+    if (!acessorio && ehPecaOuAcessorio(p.titulo)) return false;
+    vistos.add(chave);
+    return true;
+  });
+  return melhores(consulta, unicos, (p) => p.titulo, limite);
 }
 
 /** Sugestões para o que está digitado, na ordem da lista: recentes, buscas

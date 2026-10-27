@@ -25,9 +25,10 @@ import {
 
 const ESPERA_MS = 180;
 
-/* Vitrine (produtos já comparados) + mais vendidos em alta, uma vez por visita. */
+/* Vitrine (produtos já comparados) + mais vendidos em alta, uma vez por
+   visita. Também é a resposta imediata da busca por texto (27/10). */
 let produtosDaVisita: Promise<ProdutoConhecido[]> | null = null;
-function carregarProdutos(): Promise<ProdutoConhecido[]> {
+export function carregarProdutos(): Promise<ProdutoConhecido[]> {
   produtosDaVisita ??= (async () => {
     const [vitrine, emAlta] = await Promise.all([
       supabase.rpc("vitrine" as never, { p_limite: 120 } as never),
@@ -43,19 +44,39 @@ function carregarProdutos(): Promise<ProdutoConhecido[]> {
       imagem: string | null;
       preco: number | null;
       url_produto: string | null;
+      link: string | null;
+      melhor_link: string | null;
+      visto_em: string | null;
     }>;
     const e = (Array.isArray(emAlta.data) ? emAlta.data : []) as Array<{
       nome: string | null;
       imagem: string | null;
       preco: number | null;
       url: string | null;
+      atualizado_em: string | null;
+      frete_gratis: boolean | null;
     }>;
     return [
-      ...v.map((i) => ({ titulo: i.titulo, imagem: i.imagem, preco: i.preco, url: i.url_produto })),
-      ...e.map((i) => ({ titulo: i.nome, imagem: i.imagem, preco: i.preco, url: i.url })),
+      ...v.map((i) => ({
+        titulo: i.titulo,
+        imagem: i.imagem,
+        preco: i.preco,
+        url: i.url_produto,
+        link: i.link,
+        outroLink: i.melhor_link,
+        vistoEm: i.visto_em,
+      })),
+      ...e.map((i) => ({
+        titulo: i.nome,
+        imagem: i.imagem,
+        preco: i.preco,
+        url: i.url,
+        vistoEm: i.atualizado_em,
+        freteGratis: i.frete_gratis,
+      })),
     ]
-      .filter((i): i is ProdutoConhecido => Boolean(i.titulo && i.url))
-      .map((i) => ({ ...i, preco: i.preco != null ? Number(i.preco) : null }));
+      .filter((i) => Boolean(i.titulo && i.url))
+      .map((i) => ({ ...i, preco: i.preco != null ? Number(i.preco) : null }) as ProdutoConhecido);
   })().catch(() => {
     produtosDaVisita = null;
     return [];

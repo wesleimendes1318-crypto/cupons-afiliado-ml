@@ -11,6 +11,8 @@
    objetos quando o quadro corta; "tom" diz se o texto vai claro ou escuro
    sobre a arte. */
 
+import { classificar } from "@/lib/classificar";
+
 export type ArteId =
   | "tecnologia-games"
   | "home-office"
@@ -145,3 +147,16 @@ export const arteDaCategoria = (slug: string | null | undefined): Arte | null =>
   const id = slug ? ARTE_DA_CATEGORIA[slug] : undefined;
   return id ? ARTES[id] : null;
 };
+
+/* Arte neutra de valor e economia: vitrine geral ("Todas") e o que não tem
+   arte própria (27/10: nenhuma vitrine sem arte). */
+export const ARTE_NEUTRA: Arte = ARTES["escolhas-bolso"];
+
+/* Arte do topo dos resultados de uma busca por texto (27/10): o motor de
+   categorias lê o termo; acessório de celular e fone vão para a arte de
+   celulares; termo genérico fica com a neutra. */
+export function arteDaBusca(q: string): Arte {
+  if (/\b(capinhas?|capas?|carregador(es)?|fones?|pel[ií]culas?|cabos?)\b/i.test(q))
+    return ARTES["celular-acessorios"];
+  return arteDaCategoria(classificar({ nome: q }).legado) ?? ARTE_NEUTRA;
+}
