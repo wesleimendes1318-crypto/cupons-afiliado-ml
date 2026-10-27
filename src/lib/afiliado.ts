@@ -139,3 +139,14 @@ export function urlBuscaAmazon(termo: unknown, tag = TAG_AMAZON): string | null 
   if (!t) return null;
   return `https://www.amazon.com.br/s?k=${encodeURIComponent(t)}&tag=${encodeURIComponent(tag)}`;
 }
+
+/** Marketplace do link de afiliado ou do endereço do anúncio. */
+export function marketplaceDe(u: string | null | undefined): Marketplace | null {
+  if (!u) return null;
+  const m = marketplaceDoLink(u);
+  if (m) return m;
+  if (/^https:\/\/([a-z0-9-]+\.)*mercadoli[vb]re\.com(\.br)?\//i.test(u)) return "mercadolivre";
+  if (/^https:\/\/(www\.)?amazon\.com\.br\//i.test(u)) return "amazon";
+  if (/^https:\/\/([a-z0-9-]+\.)*shopee\.com\.br\//i.test(u)) return "shopee";
+  return null;
+}

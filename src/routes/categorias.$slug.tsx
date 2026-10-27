@@ -11,7 +11,7 @@ import { Vitrine } from "@/components/Vitrine";
 import { buscarCategoria } from "@/content/categorias";
 import { buscarNo, DEPARTAMENTOS, NOS, subarvore } from "@/content/taxonomia";
 import { supabase } from "@/integrations/supabase/client";
-import { arteDaCategoria, srcArte } from "@/lib/artes";
+import { ARTE_NEUTRA, arteDaCategoria, srcArte } from "@/lib/artes";
 
 const BASE = "https://melhorescolha.io/categorias";
 
@@ -116,8 +116,12 @@ const semCupom = (t: string) => !/cupo/i.test(t);
 const totalDe = (slug: string, contagem: Record<string, number>) =>
   subarvore(slug).reduce((s, x) => s + (contagem[x] ?? 0), 0);
 /* Arte do próprio nó ou do ancestral mais próximo que tenha uma. */
+/* 27/10 (nenhuma vitrine sem arte): sem arte na linhagem, a da categoria
+   antiga equivalente e, por fim, a neutra de economia. */
 const arteDoNo = (caminho: string[]) =>
-  [...caminho].reverse().map(arteDaCategoria).find(Boolean) ?? null;
+  [...caminho].reverse().map(arteDaCategoria).find(Boolean) ??
+  arteDaCategoria(NOS[caminho[caminho.length - 1] ?? ""]?.legado) ??
+  ARTE_NEUTRA;
 
 const BOTAO_PRIMARIO =
   "inline-flex min-h-11 items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:brightness-110";

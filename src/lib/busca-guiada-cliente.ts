@@ -8,6 +8,8 @@ export type Resultado = {
   imagem: string | null;
   preco: number | null;
   url: string;
+  freteGratis?: boolean | null;
+  lojaOficial?: boolean;
 };
 
 export type Resposta = {
@@ -40,12 +42,19 @@ export async function buscarProdutos(
   contexto: ContextoBusca = "home",
   /** "produto": título de um anúncio; busca o MESMO produto na mesma categoria. */
   modo: "guiada" | "produto" = "guiada",
+  /** "Ver mais opções": 0 é a 1ª página. */
+  pagina = 0,
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
   try {
     const r = await fetch("/api/public/buscar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q: pergunta.slice(0, 160), contexto, modo }),
+      body: JSON.stringify({
+        q: pergunta.slice(0, 160),
+        contexto,
+        modo,
+        ...(pagina ? { pagina } : {}),
+      }),
     });
     const j = (await r.json()) as Resposta & { erro?: string };
     if (!r.ok || j.erro)

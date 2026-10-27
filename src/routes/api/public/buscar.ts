@@ -15,12 +15,23 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
    fila de comparação, no máximo 2 por busca e 8 por hora no site todo
    (a extensão compara um por vez, com o freio de sempre). */
 
+/* Teto só de proteção (cada página gasta até 18 leituras da API oficial):
+   30 páginas são até 240 produtos para a mesma busca. */
+const PAGINAS = 30;
+
 const entradaSchema = z.object({
   q: z.string().trim().min(2).max(160),
   contexto: z.enum(["home", "natal", "criancas"]).optional(),
   /* "produto": o texto é o título de um anúncio (link de outra loja); busca
      o MESMO produto, sem interpretar, só na categoria prevista (11/10). */
   modo: z.enum(["guiada", "produto"]).optional(),
+  /* "Ver mais opções" (27/10): 0 é a 1ª página; cada uma traz até 8. */
+  pagina: z
+    .number()
+    .int()
+    .min(0)
+    .max(PAGINAS - 1)
+    .optional(),
 });
 
 const CONTEXTOS = {
@@ -50,30 +61,52 @@ export const Route = createFileRoute("/api/public/buscar")({
         }
         const contexto = entrada.contexto ?? "home";
         const modoProduto = entrada.modo === "produto";
-        const chave = `${modoProduto ? "produto" : contexto}|${normalizarBusca(entrada.q)}`;
+        const pagina = entrada.pagina ?? 0;
+        const chave1 = `${modoProduto ? "produto" : contexto}|${normalizarBusca(entrada.q)}`;
+        const chave = pagina ? `${chave1}|p${pagina}` : chave1;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as any;
-        const guardada: { data: { resposta: RespostaBusca } | null } = await db
-          .from("busca_guiada")
-          .select("resposta")
-          .eq("chave", chave)
-          .gte("criado_em", new Date(Date.now() - CACHE_MS).toISOString())
-          .order("criado_em", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (guardada.data?.resposta) return json(request, guardada.data.resposta);
+        const lerGuardada = async (c: string): Promise<RespostaBusca | null> => {
+          const r: { data: { resposta: RespostaBusca } | null } = await db
+            .from("busca_guiada")
+            .select("resposta")
+            .eq("chave", c)
+            .gte("criado_em", new Date(Date.now() - CACHE_MS).toISOString())
+            .order("criado_em", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          return r.data?.resposta ?? null;
+        };
+        const guardada = await lerGuardada(chave);
+        if (guardada) return json(request, guardada);
 
         let achado: Awaited<ReturnType<typeof buscaGuiada>>;
         try {
           if (modoProduto) {
-            const r = await buscarMesmoProduto(entrada.q);
+            const r = await buscarMesmoProduto(entrada.q, pagina);
             achado = {
               intencao: { buscas: r.buscas, precoMin: null, precoMax: null, resumo: "" },
               resultados: r.resultados,
             };
-          } else achado = await buscaGuiada(entrada.q, CONTEXTOS[contexto]);
+          } else {
+            /* Páginas seguintes: as buscas e a faixa de preço da 1ª. */
+            const primeira = pagina ? await lerGuardada(chave1) : null;
+            achado = await buscaGuiada(
+              entrada.q,
+              CONTEXTOS[contexto],
+              pagina,
+              primeira?.buscas?.length
+                ? {
+                    buscas: primeira.buscas,
+                    precoMin: primeira.precoMin ?? null,
+                    precoMax: primeira.precoMax ?? null,
+                    resumo: primeira.resumo,
+                  }
+                : null,
+            );
+          }
         } catch {
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
         }
@@ -81,7 +114,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         /* Fila da vitrine: só produto com anúncio ativo, ainda não comparado
            na semana, dentro do teto por hora. */
         let enfileirados = 0;
-        if (achado.resultados.length) {
+        if (achado.resultados.length && !pagina) {
           const hora = new Date(Date.now() - 3600_000).toISOString();
           const { data: ultimas } = await db
             .from("busca_guiada")
@@ -121,6 +154,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           resultados: achado.resultados,
           enfileirados,
           lidoEm: new Date().toISOString(),
+          precoMin: achado.intencao.precoMin,
+          precoMax: achado.intencao.precoMax,
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)

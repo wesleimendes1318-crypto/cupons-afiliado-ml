@@ -10,7 +10,7 @@ import {
 } from "react";
 import { ArrowUpRight, ChevronDown, Loader2, Search, ShieldCheck, Store } from "lucide-react";
 
-import { ResultadosDaBusca } from "@/components/BuscaGuiada";
+import { ResultadosDaBusca, type ConsultaBusca } from "@/components/BuscaGuiada";
 import { GarimpoNoPlayer, type MudancaGarimpo } from "@/components/GarimpoNoPlayer";
 import { buscarProdutos, type Resposta } from "@/lib/busca-guiada-cliente";
 import { nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
@@ -89,6 +89,7 @@ export function LinkDeOutraLoja({
   const idCampo = useId();
   const [termo, setTermo] = useState(analise.termoIdentificado ?? "");
   const [busca, setBusca] = useState<Estado>(VAZIO);
+  const [consulta, setConsulta] = useState<ConsultaBusca | null>(null);
   /* Players abertos nesta tela (sozinhos ou pelo toque). */
   const [abertos, setAbertos] = useState<PlayerAfiliado[]>([]);
   /* Fase e resultado de cada garimpo (o placar e o veredito leem daqui). */
@@ -142,6 +143,7 @@ export function LinkDeOutraLoja({
   async function buscar(texto: string, modo: "guiada" | "produto") {
     const q = texto.trim();
     if (q.length < 2 || busca.carregando) return;
+    setConsulta({ q, contexto: "home", modo });
     setBusca({ carregando: true, erro: null, resposta: null });
     const r = await buscarProdutos(q, "home", modo);
     setBusca({ carregando: false, erro: r.erro, resposta: r.resposta });
@@ -400,6 +402,7 @@ export function LinkDeOutraLoja({
                   erro={busca.erro}
                   resposta={busca.resposta}
                   comparar={comparar}
+                  consulta={consulta}
                   semResultado="Não achei este produto com anúncio ativo nas lojas do Mercado Livre agora, na mesma categoria. Tente escrever o nome de outro jeito."
                 />
               )}
@@ -452,6 +455,8 @@ export function LinkDeOutraLoja({
           erro={busca.erro}
           resposta={busca.resposta}
           comparar={comparar}
+          consulta={consulta}
+          buscarTermo={(t) => void buscar(t, "guiada")}
           semResultado="Não achei este produto com anúncio ativo nas lojas do Mercado Livre agora, na mesma categoria. Tente escrever o nome de outro jeito."
         />
       )}

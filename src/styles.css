@@ -1212,3 +1212,10 @@ details.abertura-nativa[open] > summary .seta-abertura {
     -webkit-user-select: none;
   }
 }
+
+/* Botão "Comprar com segurança" (27/10): brilho verde sutil, sem animação. */
+.botao-seguro {
+  box-shadow:
+    0 0 0 3px rgba(22, 163, 74, 0.12),
+    0 4px 14px -6px rgba(22, 163, 74, 0.55);
+}
