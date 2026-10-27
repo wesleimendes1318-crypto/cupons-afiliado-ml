@@ -80,7 +80,7 @@ const n = (
 ): Def => ({ slug, nome, ...regras, filhos });
 
 /* Acessório no começo do nome: o anúncio é do acessório, não do produto. */
-const ACESSORIO =
+export const ACESSORIO =
   /^(?:kit\s+(?:de\s+)?\d*\s*)?(?:capas?|cases?|capinhas?|estojos?|bolsas? para|suportes?|peliculas?|cabos?|carregador(?:es)?|controles? remotos?|pecas?|refis?|refil|tampas?|protetor(?:es)?|adesivos?|skins?|alca|pulseiras?|base para|fonte para|bateria para|filtro para|borracha para|mangueira para|placa para|resistencia para)\b/;
 
 export const ARVORE: Def[] = [

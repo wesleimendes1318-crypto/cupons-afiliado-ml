@@ -12,6 +12,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Link2, Send } from "lucide-react";
 
+import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { LINK_CANAL } from "@/lib/telegram-publico";
 
 /* "Categorias" (23/10, navegação mais completa): no PC só a partir de
@@ -67,15 +68,22 @@ export function CabecalhoSite() {
   const mostrarCampo = useCampoForaDaTela(naInicial);
   const [valor, setValor] = useState("");
 
+  /* Link ou texto: a caixa da home compara ou busca (mesma busca universal). */
+  const enviar = (alvo: string) => {
+    window.dispatchEvent(new CustomEvent("comparar-link", { detail: alvo }));
+    setValor("");
+  };
+  const sugestoes = useSugestoesBusca(valor, enviar);
+
   const comparar = (e: FormEvent) => {
     e.preventDefault();
     const alvo = valor.trim();
+    sugestoes.fechar();
     if (!alvo) {
       irAoCampo();
       return;
     }
-    window.dispatchEvent(new CustomEvent("comparar-link", { detail: alvo }));
-    setValor("");
+    enviar(alvo);
   };
 
   return (
@@ -102,26 +110,31 @@ export function CabecalhoSite() {
               no tablet o campo não cabe ao lado dos links, 18/10). */}
         {naInicial && (
           <form
+            ref={sugestoes.caixa}
             role="search"
             onSubmit={comparar}
             aria-hidden={!mostrarCampo}
             className={
-              "hidden h-10 min-w-0 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
+              "relative hidden h-10 min-w-0 max-w-[460px] flex-1 items-center gap-2 rounded-full border border-[#e4e4e7] bg-white pl-3.5 pr-1 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 lg:flex " +
               (mostrarCampo ? "opacity-100" : "pointer-events-none opacity-0")
             }
           >
             <label htmlFor="link-topo" className="sr-only">
-              Link de outro produto
+              Link ou nome de outro produto
             </label>
             <Link2 className="size-4 shrink-0 text-[#6b6b70]" aria-hidden="true" />
             <input
               id="link-topo"
               type="text"
-              inputMode="url"
               value={valor}
-              onChange={(e) => setValor(e.target.value)}
+              {...sugestoes.propsCampo}
+              onChange={(e) => {
+                setValor(e.target.value);
+                sugestoes.abrir();
+              }}
+              onKeyDown={(e) => void sugestoes.teclar(e)}
               tabIndex={mostrarCampo ? 0 : -1}
-              placeholder="Cole o link de outro produto"
+              placeholder="Cole o link ou digite o produto que procura..."
               className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0f1729] outline-none placeholder:text-[#6b6b70] dark:text-white"
             />
             <button
@@ -129,8 +142,9 @@ export function CabecalhoSite() {
               tabIndex={mostrarCampo ? 0 : -1}
               className="h-8 shrink-0 rounded-full bg-[#0071e3] px-3.5 text-xs font-semibold text-white transition duration-150 ease-out hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none"
             >
-              Comparar
+              Buscar
             </button>
+            <SugestoesBusca estado={sugestoes} />
           </form>
         )}
 

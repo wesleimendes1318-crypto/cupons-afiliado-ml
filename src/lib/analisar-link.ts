@@ -26,9 +26,6 @@ export interface AnaliseLink {
   encurtado?: boolean;
 }
 
-export const MENSAGEM_SEM_LINK =
-  "Não encontrei um link aqui. Cole o endereço do anúncio (de qualquer loja) ou escreva o nome do produto.";
-
 const RE_URL = /(?:https?:\/\/|www\.)[^\s"'<>]+/gi;
 
 const RE_ML =

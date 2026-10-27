@@ -89,7 +89,6 @@ export function LinkDeOutraLoja({
   const idCampo = useId();
   const [termo, setTermo] = useState(analise.termoIdentificado ?? "");
   const [busca, setBusca] = useState<Estado>(VAZIO);
-  const [buscado, setBuscado] = useState<string | null>(null);
   /* Players abertos nesta tela (sozinhos ou pelo toque). */
   const [abertos, setAbertos] = useState<PlayerAfiliado[]>([]);
   /* Fase e resultado de cada garimpo (o placar e o veredito leem daqui). */
@@ -143,7 +142,6 @@ export function LinkDeOutraLoja({
   async function buscar(texto: string, modo: "guiada" | "produto") {
     const q = texto.trim();
     if (q.length < 2 || busca.carregando) return;
-    setBuscado(q);
     setBusca({ carregando: true, erro: null, resposta: null });
     const r = await buscarProdutos(q, "home", modo);
     setBusca({ carregando: false, erro: r.erro, resposta: r.resposta });
@@ -157,7 +155,6 @@ export function LinkDeOutraLoja({
     automatica.current = marca;
     setGarimpos({});
     setBusca(VAZIO);
-    setBuscado(null);
     const comeco: PlayerAfiliado[] = [];
     if (inicial === "mercadolivre") {
       if (nomeTermo) comeco.push("mercadolivre");
@@ -169,6 +166,17 @@ export function LinkDeOutraLoja({
     if (comeco.includes("mercadolivre") && nomeTermo) void buscar(nomeTermo, "produto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analise.urlLimpa, termoGarimpo, identificando, inicial]);
+
+  /* Texto digitado (busca universal, 27/10): busca o produto na hora, sem
+     aviso de "link" nem pergunta antes. */
+  useEffect(() => {
+    if (origem !== "invalido" || !nomeTermo) return;
+    if (automatica.current === `texto|${nomeTermo}`) return;
+    automatica.current = `texto|${nomeTermo}`;
+    setBusca(VAZIO);
+    void buscar(nomeTermo, "guiada");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origem, nomeTermo]);
 
   function abrir(p: PlayerAfiliado) {
     if (p === "mercadolivre" && !termoMl) return;
@@ -314,12 +322,7 @@ export function LinkDeOutraLoja({
 
   return (
     <div ref={raiz} className="mt-4 space-y-4" data-origem={`link_${origem}`} aria-live="polite">
-      {origem === "invalido" ? (
-        <p className="rounded-2xl bg-[#f5f5f7] p-4 text-sm font-medium text-foreground dark:bg-white/5">
-          Não encontrei um link aqui. Cole o endereço do anúncio (de qualquer loja) ou escreva o
-          nome do produto.
-        </p>
-      ) : (
+      {origem !== "invalido" && (
         <div ref={topo} className="space-y-3">
           <CartaoAncora
             loja={lojaDoLink}
@@ -415,21 +418,6 @@ export function LinkDeOutraLoja({
           />
         ) : null;
       })}
-
-      {/* Texto solto: a busca pelo nome é sob demanda. */}
-      {origem === "invalido" && nome && !buscado && (
-        <div>
-          <p className="text-sm text-secondary-ink">Quer que eu procure pelo nome?</p>
-          <button
-            type="button"
-            onClick={() => void buscar(nomeTermo ?? "", "guiada")}
-            className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#0071e3] px-4 text-sm font-bold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-          >
-            <Search className="size-4" aria-hidden="true" />
-            Buscar “{(nome ?? "").slice(0, 40)}”
-          </button>
-        </div>
-      )}
 
       {/* Sem nome no link: a pessoa escreve. */}
       {semNome && (
