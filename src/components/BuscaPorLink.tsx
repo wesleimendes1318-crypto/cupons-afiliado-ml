@@ -93,6 +93,7 @@ import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -842,7 +843,11 @@ function Historico({
       <ul className="mt-2 grid gap-2 sm:grid-cols-2">
         {lista.map((h) => (
           <li key={h.url} className="flex items-center gap-2 rounded-md border border-border p-1.5">
-            <Foto src={h.imagem} className="size-10 shrink-0 rounded" />
+            <Foto
+              src={h.imagem}
+              className="size-10 shrink-0 rounded"
+              ver={{ titulo: h.titulo, url: h.url }}
+            />
             <div className="min-w-0 flex-1">
               <p className="line-clamp-1 text-xs font-medium">{h.titulo}</p>
               <p className="text-[11px] tabular-nums text-secondary-ink">
@@ -2170,13 +2175,40 @@ function Foto({
   src,
   className,
   nitida = false,
+  ver,
 }: {
   src: string | null | undefined;
   className: string;
   /* Foto grande na tela: a versão de 640 px primeiro (src/lib/foto.ts). */
   nitida?: boolean;
+  /* Toda foto de produto abre a galeria com mais fotos (Weslei, 27/10:
+     "sempre deve permitir ver mais fotos!"). Sem anúncio conhecido, só a foto. */
+  ver?: {
+    titulo?: string | null | undefined;
+    item?: string | null | undefined;
+    url?: string | null | undefined;
+    preco?: number | null | undefined;
+    link?: string | null | undefined;
+    detalhes?: Detalhes | null | undefined;
+  };
 }) {
   const [tentativa, setTentativa] = useState(0);
+  const id = ver ? (ver.item ?? itemDoEndereco(ver.url)) : null;
+  if (ver && id) {
+    return (
+      <VerDetalhesVitrine
+        chave={id.replace(/^MLBP/, "MLB")}
+        titulo={semEntidades(ver.titulo) ?? "Produto"}
+        imagem={src ?? null}
+        preco={ver.preco ?? null}
+        link={ver.link ?? null}
+        urlProduto={id.startsWith("MLBP") ? `/p/${id.replace(/^MLBP/, "MLB")}` : (ver.url ?? null)}
+        detalhes={ver.detalhes ?? null}
+        gatilho={<Foto src={src} className="size-full rounded-[inherit]" nitida={nitida} />}
+        className={className}
+      />
+    );
+  }
   const lista = [nitida ? fotoNitida(src, "cartao") : null, fotoML(src), src].filter(
     (x, i, a): x is string => !!x && a.indexOf(x) === i,
   );
@@ -2666,7 +2698,7 @@ function Resultado({
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
-  ];
+  ].map((l) => ({ ...l, titulo: a?.titulo ?? null }));
   /* Loja recusada pelo programa (semAfiliado/mesmaPagina) sai da tabela
      (02/10, geladeira: "CGDCHEABF36260 R$ 2.345" com o aviso "escolha em
      Outras opções", mas o link da ficha abre o perfil com só a Magalu de
@@ -2942,6 +2974,13 @@ function Resultado({
                 src={a?.imagem}
                 nitida
                 className="size-16 shrink-0 rounded-2xl border border-border/70 bg-white p-1 sm:size-20"
+                ver={{
+                  titulo: a?.titulo,
+                  url: urlColada,
+                  preco: a?.preco,
+                  link: semLink ? null : link,
+                  detalhes: a?.detalhes,
+                }}
               />
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-[15px]">
@@ -3839,6 +3878,8 @@ export function VerNaLoja({
 type LinhaLoja = {
   chave: string;
   nome: string;
+  /* Título do produto (é o mesmo em toda linha): nome da galeria de fotos. */
+  titulo?: string | null;
   imagem: string | null | undefined;
   final: number | null;
   diferenca: number | null;
@@ -4120,7 +4161,18 @@ function MelhorAlternativa({
       )}
 
       <div className="mt-3 flex items-center gap-3 rounded-2xl bg-muted/50 p-3">
-        <Foto src={p.imagem} className="size-16 shrink-0 rounded-xl bg-card object-contain" />
+        <Foto
+          src={p.imagem}
+          className="size-16 shrink-0 rounded-xl bg-card object-contain"
+          ver={{
+            titulo: p.titulo,
+            item: p.item,
+            url: p.url,
+            preco: p.preco,
+            link: p.link,
+            detalhes: p.detalhes,
+          }}
+        />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-sm font-semibold leading-snug">
             {semEntidades(p.titulo)}
@@ -4909,6 +4961,14 @@ function Parecidos({
                   src={p.imagem}
                   nitida
                   className="absolute inset-0 h-full w-full object-contain p-2"
+                  ver={{
+                    titulo: p.titulo,
+                    item: p.item,
+                    url: p.url,
+                    preco: p.preco,
+                    link: p.link,
+                    detalhes: p.detalhes,
+                  }}
                 />
               </div>
               {/* Cabeçalho: foto, título e quem vende. */}
@@ -4916,6 +4976,14 @@ function Parecidos({
                 <Foto
                   src={p.imagem}
                   className="hidden size-14 shrink-0 rounded-xl border border-border sm:block"
+                  ver={{
+                    titulo: p.titulo,
+                    item: p.item,
+                    url: p.url,
+                    preco: p.preco,
+                    link: p.link,
+                    detalhes: p.detalhes,
+                  }}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-semibold leading-snug">
@@ -5312,6 +5380,14 @@ function LinhaDaLoja({
         <Foto
           src={l.imagem}
           className="hidden size-10 rounded-lg border border-border/60 p-0.5 sm:block"
+          ver={{
+            titulo: l.titulo,
+            item: l.item,
+            url: l.url,
+            preco: l.final,
+            link: l.link,
+            detalhes: l.detalhes,
+          }}
         />
         <div className="min-w-0">
           <p className="text-[13px] font-semibold leading-snug [overflow-wrap:anywhere]">
@@ -5514,7 +5590,18 @@ function OutraLojaComCupom({
   if (compacto) {
     return (
       <div className="mt-2 flex items-center gap-2 rounded-lg border border-success/40 bg-success/5 p-2">
-        <Foto src={oferta.imagem} className="size-12 shrink-0 rounded" />
+        <Foto
+          src={oferta.imagem}
+          className="size-12 shrink-0 rounded"
+          ver={{
+            titulo,
+            item: itemDaOferta(oferta),
+            url: oferta.url,
+            preco: oferta.final,
+            link: oferta.link,
+            detalhes: oferta.detalhes,
+          }}
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{oferta.vendedor ?? "Outra loja"}</p>
           <p className="text-xs tabular-nums text-secondary-ink">
@@ -5552,6 +5639,14 @@ function OutraLojaComCupom({
         <Foto
           src={oferta.imagem}
           className="size-14 shrink-0 rounded-xl sm:size-16 bg-white object-contain p-1 ring-1 ring-success/20"
+          ver={{
+            titulo,
+            item: itemDaOferta(oferta),
+            url: oferta.url,
+            preco: oferta.final,
+            link: oferta.link,
+            detalhes: oferta.detalhes,
+          }}
         />
         <div className="min-w-0 flex-1">
           {/* A economia é a manchete (23/10): o número grande, depois de onde
