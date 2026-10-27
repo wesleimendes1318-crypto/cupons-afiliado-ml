@@ -18,6 +18,7 @@ import { SeloMarketplace } from "@/components/SeloMarketplace";
 import { carregarProdutos, SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { arteDaBusca } from "@/lib/artes";
+import { foraDaIntencao } from "@/lib/busca-intencao";
 import {
   itemDoEndereco,
   useAvaliacoesPorItens,
@@ -388,13 +389,17 @@ export function ResultadosDaBusca({
     () => mesclarSemRepetir([resposta?.resultados ?? [], extras], (r) => r.url),
     [resposta, extras],
   );
+  /* Filtro final da intenção também aqui: produtos do site e respostas
+     guardadas antes dele ("tomada para banheiro" sem HDMI nem antena). */
   const cartoesBase = useMemo(
     () =>
       mesclarSemRepetir(
         [locais.map(doSite), remotos.map((r) => doCatalogo(r, resposta?.lidoEm))],
         (c) => c.url,
+      ).filter(
+        (c) => !q || consulta?.modo === "produto" || !foraDaIntencao(c.nome, resposta ?? {}, q),
       ),
-    [locais, remotos, resposta?.lidoEm],
+    [locais, remotos, resposta, q, consulta?.modo],
   );
   const notas = useAvaliacoesPorItens(cartoesBase.map((c) => c.avaliacao));
   /* A nota reordena só dentro de cada lote de 16: o que já está na tela

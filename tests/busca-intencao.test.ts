@@ -167,3 +167,28 @@ describe("leitura da intenção do modelo", () => {
     expect(i.resumo).toBe("");
   });
 });
+
+describe("filtro em todas as fontes (print do Weslei, 27/10 16:52)", () => {
+  const PRINT = [
+    "Tomada Para Móveis Hdmi Preto Lumitek",
+    "Tomada Para Painel 16A 30024 - Transmobil",
+    "Tomada Para Móveis 10a Lumitek - Preto",
+    "Tomada para Antena de TV Simon",
+  ];
+
+  test("sem a intenção do servidor (resposta guardada ou produto do site), o tipo da consulta basta", () => {
+    expect(PRINT.filter((n) => !foraDaIntencao(n, {}, "tomada para banheiro"))).toEqual([]);
+    expect(foraDaIntencao("Tomada 20a Com Tampa Ip54 Banheiro", {}, "tomada para banheiro")).toBe(
+      false,
+    );
+  });
+
+  test("quem busca tomada de móveis continua achando", () => {
+    expect(foraDaIntencao(PRINT[2]!, {}, "tomada para moveis")).toBe(false);
+  });
+
+  test("arte da busca de tomada não é a de ferramentas", async () => {
+    const { arteDaBusca, ARTE_NEUTRA } = await import("@/lib/artes");
+    expect(arteDaBusca("tomada para banheiro").id).toBe(ARTE_NEUTRA.id);
+  });
+});

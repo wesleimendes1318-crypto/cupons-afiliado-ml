@@ -15,7 +15,10 @@
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
+import { foraDaIntencao } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
+
+export { foraDaIntencao };
 import { pareceFalso } from "@/lib/falsificado";
 
 export type ResultadoBusca = {
@@ -195,53 +198,6 @@ export function intencaoDoModelo(j: JsonDoModelo | null, q: string): Interpretac
       .filter((d) => /^MLB-[A-Z0-9_]+$/.test(d))
       .slice(0, 6),
   };
-}
-
-/* Negativos que valem sem o modelo. Por tipo: conector de outro sinal no
-   lugar da tomada elétrica. Universais: miniatura, chaveiro e brinquedo no
-   lugar do item de verdade (pneu, ração, peça de carro), salvo busca de
-   presente ou infantil. */
-const NEGATIVOS_ELETRICA = [
-  "hdmi",
-  "antena",
-  "coaxial",
-  "rj45",
-  "rj11",
-  "keystone",
-  "cat5",
-  "cat5e",
-  "cat6",
-  "vga",
-  "telefone",
-];
-const NEGATIVOS_POR_TIPO: Record<string, string[]> = {
-  tomada: NEGATIVOS_ELETRICA,
-  tomadas: NEGATIVOS_ELETRICA,
-  interruptor: NEGATIVOS_ELETRICA,
-};
-const NEGATIVOS_UNIVERSAIS = ["miniatura", "chaveiro", "maquete", "de brinquedo"];
-const BUSCA_INFANTIL =
-  /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|colecao|colecionavel)\b/;
-
-/** Camadas B e D: o título mostra outro produto? (termo negativo do modelo,
-    do tipo ou universal, com plural simples; o que a pessoa digitou nunca
-    exclui). */
-export function foraDaIntencao(
-  nome: string,
-  intencao: Pick<Interpretacao, "tipoProduto" | "termosNegativos" | "contextoUso">,
-  consulta: string,
-): boolean {
-  const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
-  const t = ` ${normalizar(nome)} `;
-  const termos = [
-    ...(intencao.termosNegativos ?? []),
-    ...(NEGATIVOS_POR_TIPO[intencao.tipoProduto ?? ""] ?? []),
-    ...(BUSCA_INFANTIL.test(pedido) ? [] : NEGATIVOS_UNIVERSAIS),
-  ];
-  return termos.some((n) => {
-    if (` ${pedido} `.includes(` ${n} `)) return false;
-    return [n, `${n}s`, `${n}es`].some((f) => t.includes(` ${f} `));
-  });
 }
 
 /** Busca no catálogo oficial e devolve os produtos com anúncio ativo (o

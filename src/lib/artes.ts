@@ -171,5 +171,9 @@ export const arteSalva = (url: string, descricao: string): Arte => ({
 export function arteDaBusca(q: string): Arte {
   if (/\b(capinhas?|capas?|carregador(es)?|fones?|pel[ií]culas?|cabos?)\b/i.test(q))
     return ARTES["celular-acessorios"];
-  return arteDaCategoria(classificar({ nome: q }).legado) ?? ARTE_NEUTRA;
+  const c = classificar({ nome: q });
+  /* Tomada, interruptor, disjuntor: nenhuma arte é deles (a de ferramentas
+     mostra furadeira). */
+  if (c.no === "materiais-eletricos") return ARTE_NEUTRA;
+  return arteDaCategoria(c.legado) ?? ARTE_NEUTRA;
 }
