@@ -905,11 +905,12 @@ function ContinuarDeOndeParou({
           type="button"
           onClick={() => comparar(h.url)}
           title="Comparar de novo com o preço de agora"
-          className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EEE9FD] px-3.5 py-1.5 font-medium text-[#21134A] transition-colors hover:bg-[#7547E8] hover:text-white dark:bg-white/10 dark:text-foreground"
+          className="group inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EEE9FD] px-3.5 py-1.5 font-medium text-[#21134A] transition-colors hover:bg-[#7547E8] hover:text-white dark:bg-white/10 dark:text-foreground"
         >
           <span className="max-w-[140px] truncate">{h.titulo}</span>
           {h.economia != null && (
-            <span className="shrink-0 font-semibold tabular-nums text-success">
+            /* Contraste AA (27/10): verde escuro no lilás, branco no roxo do hover. */
+            <span className="shrink-0 font-semibold tabular-nums text-[#166534] group-hover:text-white dark:text-success dark:group-hover:text-white">
               {brl(h.economia)} a menos
             </span>
           )}
