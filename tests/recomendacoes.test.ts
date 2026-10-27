@@ -92,6 +92,16 @@ describe("recompra", () => {
     const s = item("Shampoo Barato 300ml", 10, { categoria_no: "shampoos", posicao: 1 });
     expect(selecionarRecompra([s], () => resumo(3.9, 100), null)).toEqual([]);
   });
+
+  test("falsificado e sem avaliações ficam fora", () => {
+    const replica = item("Perfume Importado Réplica 1:1 100ml", 60, {
+      categoria_no: "perfumes",
+      posicao: 1,
+    });
+    const semAval = item("Shampoo Novo 300ml", 20, { categoria_no: "shampoos", posicao: 2 });
+    const notas = new Map([[semAval.produto, { ...resumo(0, 0), avaliacoes: null, sem: true }]]);
+    expect(selecionarRecompra([replica, semAval], (i) => notas.get(i.produto), null)).toEqual([]);
+  });
 });
 
 describe("você também pode se interessar", () => {
