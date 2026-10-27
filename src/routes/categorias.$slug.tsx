@@ -12,7 +12,7 @@ import { buscarCategoria } from "@/content/categorias";
 import { buscarNo, DEPARTAMENTOS, NOS, subarvore } from "@/content/taxonomia";
 import { useVisitaCategoria } from "@/lib/perfil-visitante";
 import { supabase } from "@/integrations/supabase/client";
-import { ARTE_NEUTRA, arteDaCategoria, srcArte } from "@/lib/artes";
+import { ARTE_NEUTRA, arteDaCategoria, arteSalva, srcArte, type Arte } from "@/lib/artes";
 
 const BASE = "https://melhorescolha.io/categorias";
 
@@ -36,7 +36,20 @@ export const Route = createFileRoute("/categorias/$slug")({
     } catch {
       /* sem contagem: a página abre igual, só sem os números iniciais */
     }
-    return { no, categoria: buscarCategoria(params.slug), contagem };
+    /* Arte gerada do departamento sem arte no acervo (27/10), no HTML. */
+    let arteDep: string | null = null;
+    try {
+      const { data } = await supabase.rpc("artes_campanhas" as never);
+      const r = Array.isArray(data)
+        ? (data as Array<{ tema: string; url: string }>).find(
+            (x) => x.tema === `dep:${no.caminho[0]}`,
+          )
+        : null;
+      if (r && /^https:\/\//.test(r.url)) arteDep = r.url;
+    } catch {
+      /* sem arte salva: a da categoria antiga ou a neutra */
+    }
+    return { no, categoria: buscarCategoria(params.slug), contagem, arteDep };
   },
   head: ({ params, loaderData }) => {
     if (!loaderData) {
@@ -44,13 +57,13 @@ export const Route = createFileRoute("/categorias/$slug")({
         meta: [{ title: "Categoria não encontrada" }, { name: "robots", content: "noindex" }],
       };
     }
-    const { no, categoria, contagem } = loaderData;
+    const { no, categoria, contagem, arteDep } = loaderData;
     const url = `${BASE}/${params.slug}`;
     const titulo = `${no.nome}: compare preços antes de comprar`;
     const descricao =
       categoria?.chamada ??
       `Os mais vendidos de ${no.nome.toLowerCase()} no Mercado Livre, só com nota 4,5 ou mais, com filtros e comparação de preço antes de comprar.`;
-    const arte = arteDoNo(no.caminho);
+    const arte = arteDoNo(no.caminho, arteDep);
     /* Página vazia não entra no Google (some sozinha quando ganha produto). */
     const vazia = contagem !== null && totalDe(no.slug, contagem) === 0;
     return {
@@ -63,7 +76,12 @@ export const Route = createFileRoute("/categorias/$slug")({
         { property: "og:type", content: "website" },
         { property: "og:url", content: url },
         ...(arte
-          ? [{ property: "og:image", content: `https://melhorescolha.io${srcArte(arte.id)}` }]
+          ? [
+              {
+                property: "og:image",
+                content: arte.src ?? `https://melhorescolha.io${srcArte(arte.id)}`,
+              },
+            ]
           : []),
       ],
       links: [{ rel: "canonical", href: url }],
@@ -119,8 +137,10 @@ const totalDe = (slug: string, contagem: Record<string, number>) =>
 /* Arte do próprio nó ou do ancestral mais próximo que tenha uma. */
 /* 27/10 (nenhuma vitrine sem arte): sem arte na linhagem, a da categoria
    antiga equivalente e, por fim, a neutra de economia. */
-const arteDoNo = (caminho: string[]) =>
+/* 27/10: antes da antiga, a arte gerada para o próprio departamento. */
+const arteDoNo = (caminho: string[], arteDep: string | null = null): Arte =>
   [...caminho].reverse().map(arteDaCategoria).find(Boolean) ??
+  (arteDep ? arteSalva(arteDep, NOS[caminho[0] ?? ""]?.nome ?? "") : null) ??
   arteDaCategoria(NOS[caminho[caminho.length - 1] ?? ""]?.legado) ??
   ARTE_NEUTRA;
 
@@ -130,10 +150,10 @@ const BOTAO_SECUNDARIO =
   "inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-[#7547E8]";
 
 function PaginaCategoria() {
-  const { no, categoria, contagem } = Route.useLoaderData();
+  const { no, categoria, contagem, arteDep } = Route.useLoaderData();
   /* Perfil local: a aba antiga equivalente (as da vitrine). */
   useVisitaCategoria(no.legado ?? no.slug);
-  const arte = arteDoNo(no.caminho);
+  const arte = arteDoNo(no.caminho, arteDep);
   const avaliar = categoria?.comoAvaliar.filter(semCupom) ?? [];
   const cuidados = categoria?.cuidados.filter(semCupom) ?? [];
   const perguntas =

@@ -44,9 +44,9 @@ export function BannerArte({
       {/* Arte: faixa no celular, fundo inteiro no PC. */}
       <div className="relative h-44 overflow-hidden min-[480px]:h-56 sm:absolute sm:inset-0 sm:h-auto">
         <picture>
-          <source media="(max-width: 639px)" srcSet={srcArte(arte.id, true)} />
+          <source media="(max-width: 639px)" srcSet={arte.src ?? srcArte(arte.id, true)} />
           <img
-            src={srcArte(arte.id)}
+            src={arte.src ?? srcArte(arte.id)}
             width={LARGURA_ARTE}
             height={ALTURA_ARTE}
             alt=""

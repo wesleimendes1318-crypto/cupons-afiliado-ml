@@ -13,7 +13,7 @@ import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
 import { atualizarEmAlta } from "@/lib/em-alta-catalogo";
 import { classificarCatalogo } from "@/lib/classificar-catalogo";
 import { enviarAlertas } from "@/lib/alertas-telegram";
-import { gerarArteCampanha } from "@/lib/gerar-arte-campanha";
+import { gerarArteCampanha, gerarArteDepartamento } from "@/lib/gerar-arte-campanha";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
 
 /* ROTINA DE INTELIGÊNCIA (Weslei, 05/10), chamada pelas tarefas do banco
@@ -77,6 +77,13 @@ async function executar(request: Request) {
   }
   if (tarefa === "arte") {
     const u = new URL(request.url);
+    const departamento = u.searchParams.get("departamento");
+    if (departamento) {
+      const resumo = await registrarExecucao(db, "arte", () =>
+        gerarArteDepartamento(db, departamento, u.searchParams.get("forcar") === "1"),
+      );
+      return Response.json(resumo);
+    }
     const tema = u.searchParams.get("tema") as TemaVisualId | null;
     if (!tema || !TEMAS_VISUAIS[tema])
       return Response.json({ ok: false, erro: "tema inválido" }, { status: 400 });

@@ -30,6 +30,24 @@ export const PROMPTS_ARTE: Record<TemaVisualId, string> = {
   neutro: `${BASE} Theme: smart shopping comparison. Products: white over-ear headphones and a light grey running sneaker on white pedestals, a small gift box. Palette: white, light grey and calm blue (#0071E3) accents with soft green check marks. Background: very light grey with soft blue glow.`,
 };
 
+/* ARTES DOS DEPARTAMENTOS SEM ARTE (Weslei, 27/10: "deixe a vitrine e as
+   artes bonitas, com qualidade"). Mesmo estilo das artes de categoria do
+   acervo (public/artes/): cena fotorrealista de casa, luz natural, objetos à
+   direita e área livre à esquerda para o texto do site. Salvas em
+   campanha_artes com a chave "dep:<slug>". */
+const BASE_DEP =
+  "Photorealistic lifestyle product photograph for an e-commerce category banner, landscape. Bright warm natural daylight from a large window, soft shadows, shallow depth of field, clean modern Brazilian home interior, high-end catalog quality, realistic materials. All products are grouped on the right half of the frame; the left third is a calm, softly blurred, uncluttered wall and floor area left empty for text. No people, no animals, no words, no letters, no numbers, no logos, no brand names, no labels, no watermarks. Generic unbranded products only.";
+
+export const PROMPTS_DEPARTAMENTO: Record<string, string> = {
+  moveis: `${BASE_DEP} Theme: furniture. A light oak dining table with four upholstered chairs, a sideboard with a ceramic vase and a corner of a soft linen sofa, in a bright living and dining room. Palette: oak wood, off-white, sage green.`,
+  saude: `${BASE_DEP} Theme: health and wellness. On a light marble bathroom counter: a white digital blood pressure monitor with arm cuff, unlabeled amber supplement bottles, a digital thermometer, a glass of water and a eucalyptus sprig. Palette: white, soft mint, light wood.`,
+  pet: `${BASE_DEP} Theme: pet shop. On a light wooden living room floor: a round plush pet bed, ceramic food and water bowls, an unlabeled bag of pet food, a rope toy and a small cat scratching post. Palette: cream, warm beige, terracotta.`,
+  esportes: `${BASE_DEP} Theme: sports and fitness. A home gym corner on a light wooden floor: hex dumbbells on a small rack, a rolled yoga mat, a kettlebell, running sneakers and a sports water bottle. Palette: graphite, white, energetic orange accents.`,
+  bebes: `${BASE_DEP} Theme: baby and maternity. A calm nursery: a light wood crib, a modern stroller, soft plush toys, a neat stack of diapers and a knitted blanket. Palette: soft pastel blue, blush pink, cream.`,
+  mercado: `${BASE_DEP} Theme: grocery and food. A kitchen pantry counter: glass jars with coffee beans, rice and pasta, unlabeled paper bags of ground coffee, a basket of fresh fruit and an unlabeled olive oil bottle. Palette: warm wood, cream, natural greens.`,
+  papelaria: `${BASE_DEP} Theme: stationery and office. A tidy desk by the window: stacked notebooks, pens in a ceramic cup, colored pencils, blank sticky notes, a desk organizer and a small lamp. Palette: white, light wood, soft yellow and blue accents.`,
+};
+
 function b64ParaBytes(b64: string) {
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
@@ -117,6 +135,17 @@ async function comGemini(prompt: string) {
 
 /** Gera e salva a arte do tema. Não regera a mesma versão (só com forcar). */
 export async function gerarArteCampanha(db: Db, tema: TemaVisualId, forcar = false) {
+  return gerarArte(db, tema, PROMPTS_ARTE[tema], forcar);
+}
+
+/** Arte de um departamento sem arte no acervo (chave "dep:<slug>"). */
+export async function gerarArteDepartamento(db: Db, slug: string, forcar = false) {
+  const prompt = PROMPTS_DEPARTAMENTO[slug];
+  if (!prompt) return { ok: false, tema: slug, erros: ["departamento sem prompt"] };
+  return gerarArte(db, `dep:${slug}`, prompt, forcar);
+}
+
+async function gerarArte(db: Db, tema: string, prompt: string, forcar: boolean) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = db as any;
   const { data: atual } = await t
@@ -126,7 +155,6 @@ export async function gerarArteCampanha(db: Db, tema: TemaVisualId, forcar = fal
     .maybeSingle();
   if (atual?.url && atual.versao === VERSAO_ARTE && !forcar)
     return { ok: true, tema, url: atual.url, reaproveitada: true };
-  const prompt = PROMPTS_ARTE[tema];
   let r: Awaited<ReturnType<typeof comOpenAi>> | Awaited<ReturnType<typeof comGemini>> =
     await comOpenAi(prompt);
   const erros: string[] = [];
@@ -138,7 +166,7 @@ export async function gerarArteCampanha(db: Db, tema: TemaVisualId, forcar = fal
     erros.push(r.erro);
     return { ok: false, tema, erros };
   }
-  const caminho = `${tema}-v${VERSAO_ARTE}-${Date.now()}.${r.ext}`;
+  const caminho = `${tema.replace(":", "-")}-v${VERSAO_ARTE}-${Date.now()}.${r.ext}`;
   const up = await t.storage.from("campanhas").upload(caminho, r.bytes, {
     contentType: r.tipo,
     upsert: true,

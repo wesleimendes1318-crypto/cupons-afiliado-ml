@@ -34,6 +34,9 @@ export type Arte = {
   /* object-position no banner largo e no quadro do celular/miniatura. */
   foco: string;
   focoCelular: string;
+  /* Arte gerada e salva no servidor (departamentos sem arte no acervo,
+     27/10): endereço público no lugar do arquivo de public/artes/. */
+  src?: string;
 };
 
 export const ARTES: Record<ArteId, Arte> = {
@@ -151,6 +154,16 @@ export const arteDaCategoria = (slug: string | null | undefined): Arte | null =>
 /* Arte neutra de valor e economia: vitrine geral ("Todas") e o que não tem
    arte própria (27/10: nenhuma vitrine sem arte). */
 export const ARTE_NEUTRA: Arte = ARTES["escolhas-bolso"];
+
+/** Arte salva de um departamento (campanha_artes, chave "dep:<slug>"). */
+export const arteSalva = (url: string, descricao: string): Arte => ({
+  ...ARTE_NEUTRA,
+  descricao,
+  tom: "claro",
+  foco: "72% 55%",
+  focoCelular: "74% 55%",
+  src: url,
+});
 
 /* Arte do topo dos resultados de uma busca por texto (27/10): o motor de
    categorias lê o termo; acessório de celular e fone vão para a arte de

@@ -8,9 +8,10 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
-import { subarvore } from "@/content/taxonomia";
+import { NOS, subarvore } from "@/content/taxonomia";
 import { supabase } from "@/integrations/supabase/client";
-import { ARTE_NEUTRA, arteDaCategoria, srcArte } from "@/lib/artes";
+import { ARTE_NEUTRA, arteDaCategoria, arteSalva, srcArte } from "@/lib/artes";
+import { useArteSalva } from "@/lib/artes-salvas";
 import { propsFotoCartao } from "@/lib/foto";
 
 /* Foto do 1º da lista de mais vendidos do nó (undefined: lendo). */
@@ -47,7 +48,10 @@ export function CartaoCategoria({
   total?: number | undefined;
   className?: string;
 }) {
-  const propria = arteDaCategoria(slug);
+  /* Arte do acervo; senão a gerada para o departamento; senão a foto real. */
+  const salva = useArteSalva(`dep:${slug}`);
+  const propria =
+    arteDaCategoria(slug) ?? (salva ? arteSalva(salva, NOS[slug]?.nome ?? nome) : null);
   const foto = useFotoDoNo(slug, !propria);
   const arte = propria ?? (foto === null ? ARTE_NEUTRA : null);
   const classe =
@@ -58,7 +62,7 @@ export function CartaoCategoria({
       <span className="relative block aspect-[4/3] overflow-hidden bg-[#f5f5f7] dark:bg-white/5">
         {arte ? (
           <img
-            src={srcArte(arte.id, true)}
+            src={arte.src ?? srcArte(arte.id, true)}
             width={1280}
             height={720}
             alt=""
