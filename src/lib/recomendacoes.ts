@@ -25,6 +25,7 @@ import {
   reprovadaPelaAvaliacao,
 } from "@/lib/qualidade-avaliacao";
 import { combinaComTemporada, type Temporada } from "@/lib/sazonal";
+import { pontuarItemVitrine } from "@/lib/vitrines-ranking";
 
 export type ItemRec = ItemEmAlta & { categoria_no?: string | null };
 export type NotaDe = (i: ItemRec) => ResumoAvaliacoes | undefined;
@@ -121,6 +122,8 @@ function filtrarOrdenar(
   aceita: (i: ItemRec) => boolean,
   /* Complementos SÃO acessórios (carregador, suporte): só a peça avulsa sai. */
   aceitaAcessorio = false,
+  /* Ordem própria do trilho (vitrines-ranking.ts) no lugar do perfil. */
+  ranking?: (i: ItemRec) => number,
 ): ItemRec[] {
   const vistos = new Set<string>();
   return itens
@@ -142,11 +145,48 @@ function filtrarOrdenar(
       i,
       k,
       boa: notaBoa(notaDe(i)) ? 1 : 0,
-      p: perfil ? pontuarItem(paraPontuar(i), perfil) : 0,
+      p: ranking ? ranking(i) : perfil ? pontuarItem(paraPontuar(i), perfil) : 0,
     }))
     .sort((a, b) => b.boa - a.boa || b.p - a.p || a.k - b.k)
     .map((x) => x.i)
     .slice(0, POR_TRILHO);
+}
+
+/** 0. Mais desejados e em alta (2º bloco da home): procura comprovada na
+    lista oficial (mais vendidos ou buscas em alta, sem a curadoria) e nota
+    4,8+ com 50+ avaliações lidas; enquanto a extensão não leu notas
+    suficientes, completa com nota 4,5+ lida. Ordem: pontuarItemVitrine. */
+export function selecionarMaisDesejados(itens: ItemRec[], notaDe: NotaDe): ItemRec[] {
+  const pontos = (i: ItemRec) => {
+    const a = nota(notaDe(i));
+    return pontuarItemVitrine({
+      nota: a?.nota,
+      totalAvaliacoes: a?.total,
+      freteGratis: i.frete_gratis,
+      origemEmAlta: i.origem,
+      lojaOficial: i.loja_oficial,
+    });
+  };
+  const procurado = (i: ItemRec) => i.origem !== "curadoria";
+  const top = filtrarOrdenar(
+    itens,
+    notaDe,
+    null,
+    (i) => procurado(i) && muitoBemAvaliado(notaDe(i)),
+    false,
+    pontos,
+  );
+  if (top.length >= 8) return top;
+  const ja = new Set(top.map((i) => normalizar(i.nome)));
+  const resto = filtrarOrdenar(
+    itens,
+    notaDe,
+    null,
+    (i) => procurado(i) && notaBoa(notaDe(i)) && !ja.has(normalizar(i.nome)),
+    false,
+    pontos,
+  );
+  return [...top, ...resto].slice(0, POR_TRILHO);
 }
 
 /** 1. Recompra: reposição entre os mais vendidos (top 20) ou muito bem

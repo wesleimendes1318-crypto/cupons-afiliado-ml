@@ -1,13 +1,14 @@
-/* TRILHOS DE RECOMENDAÇÃO NA HOME (Weslei, 27/10), abaixo da vitrine:
-   1) Seu histórico, 2) Você também pode se interessar, 3) Mais vendidos para
-   você na temporada, 4) Itens que as pessoas costumam comprar de novo,
-   5) Pensados para você em [nicho], 6) Semelhantes ao que te interessa.
+/* TRILHOS DE RECOMENDAÇÃO NA HOME (Weslei, 27/10), abaixo da vitrine.
+   Pessoais (só com histórico ou buscas): Seu histórico, Semelhantes ao que
+   te interessa, Combina com o que você procura, Mais vendidos no seu nicho,
+   Mais vendidos para você na temporada. Para todos: Itens que as pessoas
+   costumam comprar de novo. E o 2º bloco, Mais desejados e em alta.
    Fontes: mais vendidos oficiais já lidos (em_alta_catalogo), notas lidas nos
    anúncios e o perfil local do aparelho; a seleção fica em
    src/lib/recomendacoes.ts. Trilho com poucos produtos não aparece. Todo
    botão de compra é o VerNaLoja (link de afiliado gerado no clique). */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, Gift, History, Repeat, Shuffle, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Flame, Gift, History, Repeat, Shuffle, Sparkles, Target } from "lucide-react";
 
 import { CartaoEmAlta } from "@/components/EmAltaCatalogo";
 import { VerNaLoja } from "@/components/BuscaPorLink";
@@ -19,7 +20,9 @@ import { classificar } from "@/lib/classificar";
 import { propsFotoCartao } from "@/lib/foto";
 import {
   atributoProduto,
+  limparPerfil,
   limparProdutosVistos,
+  temInteracoes,
   usePerfilVisitante,
   type PerfilVisitante,
 } from "@/lib/perfil-visitante";
@@ -31,6 +34,7 @@ import {
   nosComplementares,
   referenciaDoVisitante,
   selecionarComplementos,
+  selecionarMaisDesejados,
   selecionarPensados,
   selecionarRecompra,
   selecionarSazonal,
@@ -139,15 +143,49 @@ function Fileira({
 
 const ICONE = "size-5";
 
+/* 2º BLOCO DA HOME (27/10): "Mais desejados e em alta", uma fileira só,
+   com procura comprovada e nota alta lida (selecionarMaisDesejados). */
+export function MaisDesejadosHome() {
+  const itens = useItens("todas", lerTodasCategorias);
+  const notaDe = useNotas(itens);
+  const lista = selecionarMaisDesejados(itens, notaDe);
+  if (lista.length < MINIMO) return null;
+  return (
+    <TrilhoRecomendacao
+      id="mais-desejados"
+      icone={<Flame className={ICONE + " text-[#ff6b00]"} />}
+      titulo="Mais desejados e em alta"
+      subtitulo="Entre os mais vendidos e mais buscados do Mercado Livre, com nota alta de quem comprou."
+      acao={
+        <a
+          href="#em-alta-titulo"
+          className="min-h-9 whitespace-nowrap text-sm font-semibold text-[#0071e3] hover:underline"
+        >
+          Ver mais<span className="hidden sm:inline"> produtos em alta</span>
+        </a>
+      }
+    >
+      <Fileira itens={lista} notaDe={notaDe} />
+    </TrilhoRecomendacao>
+  );
+}
+
+/* 4º BLOCO (27/10): com histórico ou buscas, os trilhos pessoais vêm
+   primeiro, num fundo de foco sutil; visitante novo vê só a recompra (a
+   tendência já está no 2º bloco) e trilho vazio não aparece. */
 export function RecomendacoesHome() {
   const perfil = usePerfilVisitante();
+  const pessoal = temInteracoes(perfil);
   /* Temporada pelo relógio do aparelho, depois de montar (o servidor não sabe o dia daqui). */
   const [temporada, setTemporada] = useState<Temporada | null>(null);
   useEffect(() => setTemporada(temporadasComOfertas()[0] ?? null), []);
   return (
     <div data-origem="recomendacoes">
-      <TrilhoHistorico perfil={perfil} />
-      <TrilhosDeProdutos perfil={perfil} temporada={temporada} />
+      <TrilhosDeProdutos
+        perfil={perfil}
+        temporada={pessoal ? temporada : null}
+        historico={pessoal ? <TrilhoHistorico perfil={perfil} /> : null}
+      />
     </div>
   );
 }
@@ -268,9 +306,11 @@ function CartaoHistorico({ h }: { h: ItemHistorico }) {
 function TrilhosDeProdutos({
   perfil,
   temporada,
+  historico,
 }: {
   perfil: PerfilVisitante | null;
   temporada: Temporada | null;
+  historico: ReactNode;
 }) {
   const nosComp = useMemo(() => nosComplementares(perfil), [perfil]);
   const comp = useItens(nosComp.length ? nosComp.join(",") : null, () => lerPorNos(nosComp, 300));
@@ -311,27 +351,85 @@ function TrilhosDeProdutos({
   const lSem = unicos(selecionarSemelhantes(sem, notaSem, perfil, ref));
   const lPens = nicho ? unicos(selecionarPensados(pens, notaPens, perfil)) : [];
 
+  const semelhantes = ref && lSem.length > 0 && (
+    <TrilhoRecomendacao
+      id="semelhantes"
+      icone={<Target className={ICONE + " text-[#0071e3]"} />}
+      titulo="Semelhantes ao que te interessa"
+      subtitulo={`Parecidos com "${ref.titulo.slice(0, 60)}${ref.titulo.length > 60 ? "…" : ""}", pelo mesmo preço ou menos.`}
+    >
+      <Fileira
+        itens={lSem}
+        notaDe={notaSem}
+        selo={(i) => (
+          <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold leading-tight text-success">
+            {chipDoSemelhante(ref, i, notaSem(i))}
+          </span>
+        )}
+      />
+    </TrilhoRecomendacao>
+  );
+
   return (
     <>
-      {lComp.length > 0 && (
-        <TrilhoRecomendacao
-          id="complementos"
-          icone={<Shuffle className={ICONE + " text-[#0071e3]"} />}
-          titulo="Você também pode se interessar"
-          subtitulo="Complementos do que você pesquisou, com frete grátis primeiro."
-        >
-          <Fileira itens={lComp} notaDe={notaComp} />
-        </TrilhoRecomendacao>
-      )}
-      {temporada && lSaz.length > 0 && (
-        <TrilhoRecomendacao
-          id="sazonal"
-          icone={<Gift className={ICONE + " text-[#c4122f]"} />}
-          titulo={`Mais vendidos ${perfil ? "para você " : ""}em ${temporada.nome}`}
-          subtitulo={`${temporada.emoji} Ideias de ${temporada.nome} com frete grátis${perfil ? ", na faixa de preço que você costuma ver" : ""}.`}
-        >
-          <Fileira itens={lSaz} notaDe={notaSaz} />
-        </TrilhoRecomendacao>
+      {historico != null && (
+        /* Some sozinho quando nenhum trilho pessoal tem produto. */
+        <div className="mt-8 hidden rounded-[28px] bg-[#0071e3]/[0.04] px-4 pb-6 ring-1 ring-[#0071e3]/15 has-[section]:block sm:px-6">
+          <div className="flex items-center justify-between gap-3 pt-4">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#0058b0]">
+              <Sparkles className="size-3.5" aria-hidden="true" />
+              Para você
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  window.localStorage.removeItem("me_historico_v1");
+                } catch {
+                  /* armazenamento bloqueado */
+                }
+                limparPerfil();
+              }}
+              className="min-h-9 whitespace-nowrap text-xs font-semibold text-secondary-ink underline-offset-2 hover:underline"
+            >
+              Limpar preferências
+            </button>
+          </div>
+          <div className="-mt-6">
+            {historico}
+            {semelhantes}
+            {lComp.length > 0 && (
+              <TrilhoRecomendacao
+                id="complementos"
+                icone={<Shuffle className={ICONE + " text-[#0071e3]"} />}
+                titulo="Combina com o que você procura"
+                subtitulo="Complementos do que você pesquisou, com frete grátis primeiro."
+              >
+                <Fileira itens={lComp} notaDe={notaComp} />
+              </TrilhoRecomendacao>
+            )}
+            {nicho && lPens.length > 0 && (
+              <TrilhoRecomendacao
+                id="pensados"
+                icone={<Sparkles className={ICONE + " text-[#0071e3]"} />}
+                titulo={`Mais vendidos no seu nicho: ${NOS[nicho]!.nome}`}
+                subtitulo="Nota 4,5 ou mais de quem comprou e frete grátis confirmado."
+              >
+                <Fileira itens={lPens} notaDe={notaPens} />
+              </TrilhoRecomendacao>
+            )}
+            {temporada && lSaz.length > 0 && (
+              <TrilhoRecomendacao
+                id="sazonal"
+                icone={<Gift className={ICONE + " text-[#c4122f]"} />}
+                titulo={`Mais vendidos para você em ${temporada.nome}`}
+                subtitulo={`${temporada.emoji} Ideias de ${temporada.nome} com frete grátis, na faixa de preço que você costuma ver.`}
+              >
+                <Fileira itens={lSaz} notaDe={notaSaz} />
+              </TrilhoRecomendacao>
+            )}
+          </div>
+        </div>
       )}
       {lRec.length > 0 && (
         <TrilhoRecomendacao
@@ -341,34 +439,6 @@ function TrilhosDeProdutos({
           subtitulo="Produtos de reposição entre os mais vendidos ou muito bem avaliados por quem comprou."
         >
           <Fileira itens={lRec} notaDe={notaRec} />
-        </TrilhoRecomendacao>
-      )}
-      {nicho && lPens.length > 0 && (
-        <TrilhoRecomendacao
-          id="pensados"
-          icone={<Sparkles className={ICONE + " text-[#0071e3]"} />}
-          titulo={`Pensados para você em ${NOS[nicho]!.nome}`}
-          subtitulo="Nota 4,5 ou mais de quem comprou e frete grátis confirmado."
-        >
-          <Fileira itens={lPens} notaDe={notaPens} />
-        </TrilhoRecomendacao>
-      )}
-      {ref && lSem.length > 0 && (
-        <TrilhoRecomendacao
-          id="semelhantes"
-          icone={<Target className={ICONE + " text-[#0071e3]"} />}
-          titulo="Semelhantes ao que te interessa"
-          subtitulo={`Parecidos com "${ref.titulo.slice(0, 60)}${ref.titulo.length > 60 ? "…" : ""}", pelo mesmo preço ou menos.`}
-        >
-          <Fileira
-            itens={lSem}
-            notaDe={notaSem}
-            selo={(i) => (
-              <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold leading-tight text-success">
-                {chipDoSemelhante(ref, i, notaSem(i))}
-              </span>
-            )}
-          />
         </TrilhoRecomendacao>
       )}
     </>

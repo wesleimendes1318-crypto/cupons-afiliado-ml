@@ -10,6 +10,7 @@ import {
   montarHistorico,
   nichoDoVisitante,
   selecionarComplementos,
+  selecionarMaisDesejados,
   selecionarPensados,
   selecionarRecompra,
   selecionarSazonal,
@@ -222,5 +223,32 @@ describe("seu histórico", () => {
     expect(h.map((x) => x.titulo)).toEqual(["Air Fryer Mondial 4L", "Fone JBL Tune 520"]);
     expect(h[0]!.preco).toBe(349);
     expect(montarHistorico([], null)).toEqual([]);
+  });
+});
+
+describe("mais desejados e em alta", () => {
+  test("4,8+ com volume primeiro, pelo ranking; curadoria, réplica e peça fora", () => {
+    const vendido = item("Air Fryer Mondial 4L Preta", 300, { origem: "vendidos" });
+    const oficial = item("Air Fryer Philips Walita 4,1L", 450, {
+      origem: "vendidos",
+      loja_oficial: true,
+    });
+    const curadoria = item("Liquidificador Arno Power 1200W", 200, { origem: "curadoria" });
+    const replica = item("Tênis Réplica Primeira Linha", 150, { origem: "vendidos" });
+    const peca = item("Tela Display Compatível Galaxy A10", 80, { origem: "tendencia" });
+    const notas = new Map(
+      [vendido, oficial, curadoria, replica, peca].map((i) => [i.produto, resumo(4.9, 500)]),
+    );
+    const lista = selecionarMaisDesejados([vendido, oficial, curadoria, replica, peca], (i) =>
+      notas.get(i.produto),
+    );
+    expect(lista).toEqual([oficial, vendido]);
+  });
+
+  test("sem nota lida não entra; 4,5 lida completa a fileira", () => {
+    const a = item("Garrafa Térmica Stanley 1L", 200, { origem: "vendidos" });
+    const b = item("Mochila Notebook Impermeável", 120, { origem: "tendencia" });
+    const notas = new Map([[a.produto, resumo(4.6, 10)]]);
+    expect(selecionarMaisDesejados([a, b], (i) => notas.get(i.produto))).toEqual([a]);
   });
 });

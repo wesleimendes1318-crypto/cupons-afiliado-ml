@@ -174,7 +174,7 @@ export function EmAltaCatalogo({
             <Flame className="size-5 text-[#ff6b00]" aria-hidden="true" />
             {categoria
               ? `Mais vendidos e mais buscados em ${NOME[categoria] ?? "esta categoria"} (${todos.length})`
-              : "Mais vendidos e mais buscados agora"}
+              : "Mais vendidos por categoria"}
           </h2>
           <p className="mt-1 text-sm text-secondary-ink">
             Listas oficiais de mais vendidos e de buscas em alta do Mercado Livre de{" "}
