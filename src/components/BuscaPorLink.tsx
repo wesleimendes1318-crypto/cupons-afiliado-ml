@@ -2234,15 +2234,16 @@ function Foto({
 }) {
   const [tentativa, setTentativa] = useState(0);
   const id = ver ? (ver.item ?? itemDoEndereco(ver.url)) : null;
-  if (ver && id) {
+  /* Sem anúncio conhecido, o carrossel abre com a foto que temos (27/10). */
+  if (ver && (id || src)) {
     return (
       <VerDetalhesVitrine
-        chave={id.replace(/^MLBP/, "MLB")}
+        chave={id ? id.replace(/^MLBP/, "MLB") : (src ?? "")}
         titulo={semEntidades(ver.titulo) ?? "Produto"}
         imagem={src ?? null}
         preco={ver.preco ?? null}
         link={ver.link ?? null}
-        urlProduto={id.startsWith("MLBP") ? `/p/${id.replace(/^MLBP/, "MLB")}` : (ver.url ?? null)}
+        urlProduto={id?.startsWith("MLBP") ? `/p/${id.replace(/^MLBP/, "MLB")}` : (ver.url ?? null)}
         detalhes={ver.detalhes ?? null}
         gatilho={<Foto src={src} className="size-full rounded-[inherit]" nitida={nitida} />}
         className={className}
@@ -4413,7 +4414,11 @@ function BarraFixa({
         aria-hidden={!visivel}
       >
         <div className="flex items-center gap-3 rounded-[18px] border border-[#ececf0] bg-white/90 px-3.5 py-3 shadow-[0_6px_24px_rgba(15,23,41,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90">
-          <Foto src={imagem} className="size-10 shrink-0 rounded-xl bg-muted object-contain" />
+          <Foto
+            src={imagem}
+            className="size-10 shrink-0 rounded-xl bg-muted object-contain"
+            ver={{ titulo, url: urlGerar, preco, link }}
+          />
           <div className="min-w-0 flex-1 leading-tight">
             <p className="text-[11px] font-semibold text-[#15803d]">Melhor opção</p>
             {preco != null ? (
@@ -6564,13 +6569,33 @@ function LadoALado({ opcoes, padrao }: { opcoes: OpcaoEscolha[]; padrao?: string
             nome="Produto"
             a={
               <span className="flex items-start gap-1.5">
-                <Foto src={A.imagem} className="size-9 shrink-0 rounded" />
+                <Foto
+                  src={A.imagem}
+                  className="size-9 shrink-0 rounded"
+                  ver={{
+                    titulo: A.titulo,
+                    url: A.url,
+                    preco: A.preco,
+                    link: A.link,
+                    detalhes: A.detalhes,
+                  }}
+                />
                 <span className="line-clamp-3">{semEntidades(A.titulo)}</span>
               </span>
             }
             b={
               <span className="flex items-start gap-1.5">
-                <Foto src={B.imagem} className="size-9 shrink-0 rounded" />
+                <Foto
+                  src={B.imagem}
+                  className="size-9 shrink-0 rounded"
+                  ver={{
+                    titulo: B.titulo,
+                    url: B.url,
+                    preco: B.preco,
+                    link: B.link,
+                    detalhes: B.detalhes,
+                  }}
+                />
                 <span className="line-clamp-3">{semEntidades(B.titulo)}</span>
               </span>
             }

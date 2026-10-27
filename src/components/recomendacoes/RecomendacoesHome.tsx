@@ -43,6 +43,7 @@ import {
   type ItemRec,
 } from "@/lib/recomendacoes";
 import { temporadasComOfertas, type Temporada } from "@/lib/sazonal";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 
 const MINIMO = 3;
 
@@ -257,15 +258,26 @@ function CartaoHistorico({ h }: { h: ItemHistorico }) {
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-white">
         {h.imagem ? (
-          <img
-            {...propsFotoCartao(h.imagem)}
-            alt=""
-            width={300}
-            height={300}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-3"
+          <VerDetalhesVitrine
+            chave={h.url}
+            titulo={h.titulo}
+            imagem={h.imagem}
+            preco={h.preco}
+            urlProduto={h.url}
+            compra={ehDoMercadoLivre(h.url) ? <VerNaLoja url={h.url} grande /> : undefined}
+            className="absolute inset-0"
+            gatilho={
+              <img
+                {...propsFotoCartao(h.imagem)}
+                alt=""
+                width={300}
+                height={300}
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-contain p-3"
+              />
+            }
           />
         ) : (
           <History className="absolute inset-0 m-auto size-6 text-[#86868b]" aria-hidden="true" />

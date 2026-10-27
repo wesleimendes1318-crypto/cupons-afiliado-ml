@@ -36,6 +36,7 @@ import {
   type OfertaPlacar,
   type Veredito,
 } from "@/lib/placar-garimpo";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 
 /* RECONHECIMENTO UNIVERSAL DE LINKS (Weslei, 10/10) + GARIMPO NO PLAYER DE
    ORIGEM E CAMPEÃO DO NICHO (11/10) + REDESIGN PREMIUM ESTILO APPLE (11/10,
@@ -517,16 +518,26 @@ function CartaoAncora({
       <div className="flex gap-3 sm:gap-4">
         <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5 sm:size-20">
           {imagem ? (
-            <img
-              src={imagem}
-              alt=""
-              width={80}
-              height={80}
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-              className="absolute inset-0 h-full w-full object-contain p-1.5"
+            <VerDetalhesVitrine
+              chave={link ?? titulo ?? "link"}
+              titulo={titulo ?? "O produto do seu link"}
+              imagem={imagem}
+              preco={preco}
+              link={link}
+              className="absolute inset-0"
+              gatilho={
+                <img
+                  src={imagem}
+                  alt=""
+                  width={80}
+                  height={80}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="absolute inset-0 h-full w-full object-contain p-1.5"
+                />
+              }
             />
           ) : (
             <div
@@ -648,16 +659,27 @@ function BannerVeredito({ veredito: v }: { veredito: Veredito }) {
       <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/10 p-2.5">
         <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-white">
           {o.imagem ? (
-            <img
-              src={o.imagem}
-              alt=""
-              width={48}
-              height={48}
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-              className="absolute inset-0 h-full w-full object-contain p-1"
+            <VerDetalhesVitrine
+              chave={`${o.player}:${o.id}`}
+              titulo={o.titulo}
+              imagem={o.imagem}
+              preco={o.preco}
+              link={o.link}
+              urlProduto={o.link}
+              className="absolute inset-0"
+              gatilho={
+                <img
+                  src={o.imagem}
+                  alt=""
+                  width={48}
+                  height={48}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="absolute inset-0 h-full w-full object-contain p-1"
+                />
+              }
             />
           ) : null}
         </div>
@@ -1048,16 +1070,26 @@ function BarraDeCompra({
       <div className="flex items-center gap-3">
         <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
           {compra.imagem ? (
-            <img
-              src={compra.imagem}
-              alt=""
-              width={40}
-              height={40}
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-              className="absolute inset-0 h-full w-full object-contain p-0.5"
+            <VerDetalhesVitrine
+              chave={compra.link}
+              titulo={compra.titulo}
+              imagem={compra.imagem}
+              preco={compra.preco}
+              link={compra.link}
+              className="absolute inset-0"
+              gatilho={
+                <img
+                  src={compra.imagem}
+                  alt=""
+                  width={40}
+                  height={40}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="absolute inset-0 h-full w-full object-contain p-0.5"
+                />
+              }
             />
           ) : null}
         </div>

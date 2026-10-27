@@ -63,6 +63,7 @@ import {
 import { limparResultado, type RespostaMultiloja } from "@/lib/multiloja-resultado";
 import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -612,11 +613,21 @@ function CartaoAlternativa({
       <div className="mt-3 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-3 [grid-template-areas:'foto_info'_'preco_preco'] @md/cartao:grid-cols-[5.5rem_minmax(0,1fr)_minmax(11rem,auto)] @md/cartao:[grid-template-areas:'foto_info_preco']">
         <div className="relative h-24 overflow-hidden rounded-xl bg-white [grid-area:foto]">
           {l.imagem ? (
-            <img
-              src={l.imagem}
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-contain p-1.5 transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.02]"
+            <VerDetalhesVitrine
+              chave={`${l.marketplace}:${l.id}`}
+              titulo={l.titulo}
+              imagem={l.imagem}
+              preco={l.preco}
+              link={l.link}
+              className="absolute inset-0"
+              gatilho={
+                <img
+                  src={l.imagem}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-contain p-1.5 transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.02]"
+                />
+              }
             />
           ) : (
             <span className="absolute inset-0 flex items-center justify-center text-[11px] text-secondary-ink">

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Flame } from "lucide-react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import { itemDoEndereco, lerAvaliacoesPorItens, type MapaPorItem } from "@/lib/avaliacoes-detalhe";
 import { bemAvaliadosPrimeiro, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
@@ -300,9 +301,18 @@ export function CartaoEmAlta({
     >
       {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
           competindo com a foto"); os selos vão logo abaixo. */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-white">
-        <FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />
-      </div>
+      {/* Tocar na foto abre o carrossel com todas as fotos (27/10). */}
+      <VerDetalhesVitrine
+        chave={i.produto}
+        titulo={i.nome}
+        imagem={i.imagem}
+        preco={Number(i.preco)}
+        urlProduto={i.url}
+        fotos={[i.imagem2]}
+        compra={<VerNaLoja url={i.url} grande />}
+        gatilho={<FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />}
+        className="relative aspect-[4/3] w-full overflow-hidden bg-white"
+      />
       <div className="flex flex-1 flex-col border-t border-border/60 p-3">
         <p className="flex min-h-5 flex-wrap items-center gap-1">
           {selo}
@@ -352,20 +362,15 @@ export function CartaoEmAlta({
 }
 
 /* Foto principal e, quando o catálogo tem, a segunda foto real: crossfade
-   no mouse (PC) ou no toque na foto (celular). Caixa de altura fixa e
-   imagens absolutas: nada muda de tamanho (sem salto de layout). */
+   no mouse (PC); o toque abre o carrossel. Caixa de altura fixa e imagens
+   absolutas: nada muda de tamanho (sem salto de layout). */
 function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: string | null }) {
-  const [alternada, setAlternada] = useState(false);
   if (!imagem) return null;
   const segunda = imagem2 && imagem2 !== imagem ? imagem2 : null;
   const classe =
     "absolute inset-0 h-full w-full object-contain px-3 pb-2 pt-8 transition-[opacity,transform] duration-300 ease-out motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none";
   return (
-    <span
-      className="absolute inset-0"
-      onClick={segunda ? () => setAlternada((a) => !a) : undefined}
-      aria-hidden="true"
-    >
+    <span className="absolute inset-0" aria-hidden="true">
       <img
         {...propsFotoCartao(imagem)}
         alt=""
@@ -374,14 +379,7 @@ function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: s
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
-        className={
-          classe +
-          (segunda
-            ? alternada
-              ? " opacity-0"
-              : " [@media(hover:hover)]:group-hover:opacity-0"
-            : "")
-        }
+        className={classe + (segunda ? " [@media(hover:hover)]:group-hover:opacity-0" : "")}
       />
       {segunda && (
         <img
@@ -392,12 +390,7 @@ function FotoComSegunda({ imagem, imagem2 }: { imagem: string | null; imagem2: s
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          className={
-            classe +
-            (alternada
-              ? " opacity-100"
-              : " opacity-0 [@media(hover:hover)]:group-hover:opacity-100")
-          }
+          className={classe + " opacity-0 [@media(hover:hover)]:group-hover:opacity-100"}
         />
       )}
     </span>

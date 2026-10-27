@@ -16,6 +16,7 @@ import {
   parecidoIndicavel,
   type EstadoPlayer,
 } from "@/lib/placar-garimpo";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 
 /* GARIMPO NO PLAYER (Weslei, 11/10): o mesmo produto procurado na Amazon
    ou na Shopee pela extensão (busca com a sessão + conferência pela foto).
@@ -340,17 +341,27 @@ function CartaoOferta({
       <div className="mt-3 flex gap-3">
         <div className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 sm:size-24">
           {o.imagem ? (
-            <img
-              src={o.imagem}
-              alt=""
-              width={96}
-              height={96}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-              className="absolute inset-0 h-full w-full object-contain p-1.5"
+            <VerDetalhesVitrine
+              chave={`${o.marketplace}:${o.id}`}
+              titulo={o.titulo}
+              imagem={o.imagem}
+              preco={o.preco}
+              link={o.link}
+              className="absolute inset-0"
+              gatilho={
+                <img
+                  src={o.imagem}
+                  alt=""
+                  width={96}
+                  height={96}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="absolute inset-0 h-full w-full object-contain p-1.5"
+                />
+              }
             />
           ) : null}
         </div>
