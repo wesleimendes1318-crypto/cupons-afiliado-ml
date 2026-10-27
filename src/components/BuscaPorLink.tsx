@@ -76,6 +76,7 @@ import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LinkDeOutraLoja, type LinkIdentificadoTela } from "@/components/LinkDeOutraLoja";
+import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { ResultadosDaBusca } from "@/components/BuscaGuiada";
 import { buscarProdutos, type Resposta as RespostaBusca } from "@/lib/busca-guiada-cliente";
 import { Avaliacoes } from "@/components/Avaliacoes";
@@ -1426,6 +1427,21 @@ export default function BuscaPorLink({
     [buscar],
   );
   const foto = useBuscaPorFoto(compararDaFoto);
+  /* Busca universal (27/10): sugestões enquanto digita; a escolhida compara
+     (link) ou busca (texto) na hora. */
+  const sugestoes = useSugestoesBusca(url, compararDaFoto);
+  /* Loja do link reconhecida na hora, só pelo endereço (selo no campo). */
+  const lojaDoLink = useMemo(() => {
+    const a = analisarLink(url);
+    if (a.origem === "invalido") return null;
+    return a.origem === "amazon" ? "Amazon Brasil" : (a.nomeLoja ?? null);
+  }, [url]);
+  /* Placeholder com as duas utilidades; mais curto no celular. */
+  const [placeholder, setPlaceholder] = useState("Cole o link ou busque o produto...");
+  useEffect(() => {
+    if (window.matchMedia?.("(min-width: 640px)").matches)
+      setPlaceholder("Cole o link ou digite o produto que procura...");
+  }, []);
 
   const carregando =
     fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo";
@@ -1448,7 +1464,9 @@ export default function BuscaPorLink({
   };
   /* Link de outra loja com produto identificado é resultado (11/10): o topo
      encolhe e a tela usa a largura toda, como na comparação de sempre. */
-  const resultadoOutraLoja = Boolean(outraLoja && outraLoja.analise.origem !== "invalido");
+  const resultadoOutraLoja = Boolean(
+    outraLoja && (outraLoja.analise.origem !== "invalido" || outraLoja.analise.termoIdentificado),
+  );
   const parada = fase === "parado" && !pedido && !resultadoOutraLoja;
   useEffect(() => {
     aoMudarEstado?.(parada);
@@ -1470,37 +1488,61 @@ export default function BuscaPorLink({
     >
       <div className="mb-1 flex items-center gap-2">
         <Link2 aria-hidden="true" className="size-5 text-[#7547E8]" />
-        <h2 className="text-lg font-bold tracking-tight sm:text-xl">Cole o link do produto</h2>
+        <h2 className="text-lg font-bold tracking-tight sm:text-xl">
+          Cole o link ou busque o produto
+        </h2>
       </div>
       <p className="mb-2 text-xs text-secondary-ink">
-        Procuro o mesmo produto em outras lojas dentro do Mercado Livre e mostro onde sai mais
-        barato.
+        Com o link, procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Pelo
+        nome, mostro os produtos certos para comparar.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex min-w-0 flex-1">
+        <div ref={sugestoes.caixa} className="relative flex min-w-0 flex-1">
           <textarea
             id="campo-link-produto"
             rows={1}
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            {...sugestoes.propsCampo}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              sugestoes.abrir();
+            }}
             onFocus={pedirLocalizacao}
+            onKeyDown={(e) => {
+              if (sugestoes.teclar(e)) return;
+              /* Enter busca (texto) ou compara (link); Shift+Enter quebra a linha. */
+              if (e.key === "Enter" && !e.shiftKey && url.trim() && !carregando) {
+                e.preventDefault();
+                sugestoes.fechar();
+                void buscar(url);
+              }
+            }}
             onPaste={(e) => {
               const colado = e.clipboardData.getData("text");
               if (colado && colado.trim().length > 20) {
                 setUrl(colado);
+                sugestoes.fechar();
                 setTimeout(() => buscar(colado), 0);
               }
             }}
-            /* Curto para caber numa linha também com a letra de 16 px do
-             celular (sem ela o iPhone aumenta o zoom ao tocar, 18/10). */
-            placeholder="Cole o link aqui"
-            aria-label="Link do anúncio do produto"
+            /* Letra de 16 px no celular (sem ela o iPhone aumenta o zoom ao
+               tocar, 18/10). */
+            placeholder={placeholder}
+            aria-label="Link do anúncio ou nome do produto"
             className={
               "min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5" +
-              (podeColar && !url ? " pr-24" : "")
+              (lojaDoLink ? " pr-32" : podeColar && !url ? " pr-24" : "")
             }
           />
+          {/* Selo da loja no lugar do "Colar": aparece na hora em que o link
+              é colado, sem empurrar nada na tela. */}
+          {lojaDoLink && (
+            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 max-w-[120px] -translate-y-1/2 items-center truncate rounded-full bg-[#0071e3]/10 px-2.5 text-[11px] font-semibold text-[#0071e3] dark:text-[#4da3ff]">
+              {lojaDoLink}
+            </span>
+          )}
+          <SugestoesBusca estado={sugestoes} />
           {/* "Colar" (24/10): no celular, colar no campo pede segurar o dedo e
             escolher Colar; aqui é um toque e a comparação já começa. */}
           {podeColar && !url && (
@@ -1526,11 +1568,18 @@ export default function BuscaPorLink({
           />
           <button
             type="button"
-            onClick={() => buscar(url)}
+            onClick={() => {
+              sugestoes.fechar();
+              void buscar(url);
+            }}
             disabled={carregando || !url.trim()}
             className="min-h-11 flex-1 shrink-0 rounded-xl bg-ml-yellow px-5 py-2.5 text-sm font-bold text-[#21134A] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:text-base"
           >
-            {carregando ? "Comparando..." : "Comparar preços"}
+            {carregando
+              ? "Comparando..."
+              : url.trim() && !lojaDoLink
+                ? "Buscar"
+                : "Comparar preços"}
           </button>
         </div>
       </div>
@@ -1562,6 +1611,12 @@ export default function BuscaPorLink({
 
       {outraLoja && fase === "parado" && !pedido && (
         <LinkDeOutraLoja
+          /* Texto novo é busca nova (a anterior em andamento não segura). */
+          key={
+            outraLoja.analise.origem === "invalido"
+              ? `texto|${outraLoja.analise.termoIdentificado ?? ""}`
+              : "link"
+          }
           analise={outraLoja.analise}
           identificando={outraLoja.identificando}
           comparar={(alvo) => {

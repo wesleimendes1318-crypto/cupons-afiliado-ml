@@ -15,6 +15,7 @@
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
+import { ordenarPelaIntencao } from "@/lib/busca-sugestoes";
 
 export type ResultadoBusca = {
   produto: string;
@@ -220,10 +221,13 @@ export async function buscarNoCatalogo(
 /** Interpreta, busca no catálogo e devolve até 8 produtos com anúncio ativo. */
 export async function buscaGuiada(q: string, contexto: string | null) {
   const intencao = await interpretar(q, contexto);
-  const resultados = await buscarNoCatalogo(intencao.buscas, {
+  const achados = await buscarNoCatalogo(intencao.buscas, {
     precoMin: intencao.precoMin,
     precoMax: intencao.precoMax,
   });
+  /* Busca universal (27/10): o mais fiel ao que foi digitado vem primeiro
+     (modelo exato) e peça/acessório só se a busca é pela peça. */
+  const resultados = ordenarPelaIntencao(q, achados, (r) => r.nome);
   return { intencao, resultados };
 }
 
