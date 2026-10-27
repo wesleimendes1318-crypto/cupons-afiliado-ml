@@ -1904,11 +1904,23 @@ function Index() {
                   texto: "E compre com segurança pelo link.",
                 },
               ].map((p) => (
-                <li key={p.titulo} className="flex items-center gap-3 sm:justify-center sm:px-4">
-                  <p.icone className="size-8 shrink-0 text-[#7547E8]" aria-hidden="true" />
+                <li
+                  key={p.titulo}
+                  className="animar-passo group flex select-none items-center gap-3 rounded-2xl p-2 transition-all duration-300 hover:bg-muted/40 active:scale-[0.98] sm:justify-center sm:rounded-none sm:px-4 sm:py-2"
+                >
+                  <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#7547E8]/10 transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#7547E8]/15 group-active:scale-95">
+                    <p.icone
+                      className="passo-icone size-6 text-[#7547E8] transition-all duration-300 group-hover:rotate-6 group-hover:text-[#6032d6]"
+                      aria-hidden="true"
+                    />
+                  </div>
                   <span>
-                    <span className="block text-base font-bold">{p.titulo}</span>
-                    <span className="block text-sm text-secondary-ink">{p.texto}</span>
+                    <span className="block text-base font-bold transition-colors duration-200 group-hover:text-primary">
+                      {p.titulo}
+                    </span>
+                    <span className="block text-sm text-secondary-ink transition-colors duration-200 group-hover:text-foreground">
+                      {p.texto}
+                    </span>
                   </span>
                 </li>
               ))}
