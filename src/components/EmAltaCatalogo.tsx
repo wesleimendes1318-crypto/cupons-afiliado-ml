@@ -5,7 +5,7 @@
    (o link de afiliado é gerado no clique, VerNaLoja) e "Comparar preço"
    (abre a comparação com as outras lojas). Nada de desconto inventado:
    o selo é só "Entre os mais vendidos" (lista oficial). */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Flame } from "lucide-react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
@@ -266,11 +266,17 @@ export function CartaoEmAlta({
   resumo,
   grade,
   onComparar,
+  trilho = false,
+  selo = null,
 }: {
   i: ItemEmAlta;
   resumo: ReturnType<MapaPorItem["get"]>;
   grade: boolean;
   onComparar: (url: string) => void;
+  /* Trilho de recomendação (27/10): rolagem lateral também no PC. */
+  trilho?: boolean;
+  /* Chip extra na linha dos selos ("R$ 38 a menos"). */
+  selo?: ReactNode;
 }) {
   return (
     <li
@@ -280,11 +286,16 @@ export function CartaoEmAlta({
         categoria: i.categoria_site,
         preco: i.preco,
         foto: i.imagem,
+        url: i.url,
         freteGratis: i.frete_gratis,
       })}
       className={
         "group flex flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] " +
-        (grade ? "min-w-0" : "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto")
+        (grade
+          ? "min-w-0"
+          : trilho
+            ? "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-[30%] lg:w-[23%] xl:w-[18.5%]"
+            : "w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-auto")
       }
     >
       {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
@@ -294,6 +305,7 @@ export function CartaoEmAlta({
       </div>
       <div className="flex flex-1 flex-col border-t border-border/60 p-3">
         <p className="flex min-h-5 flex-wrap items-center gap-1">
+          {selo}
           {i.origem === "tendencia" ? (
             <span
               className="whitespace-nowrap rounded-full bg-[#eef4ff] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]"

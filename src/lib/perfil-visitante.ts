@@ -13,7 +13,7 @@
    - Armazenamento bloqueado (janela anônima, Safari restrito): o perfil vive
      só na memória da aba, sem erro na tela. */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { classificar } from "@/lib/classificar";
 import {
@@ -30,6 +30,8 @@ export type ProdutoInteragido = {
   categoria: string | null;
   preco: number | null;
   foto: string | null;
+  /** Endereço do produto (para "Ver de novo" e a compra no histórico). */
+  url?: string | null;
   em: number;
 };
 
@@ -53,6 +55,7 @@ export type ProdutoDaAcao = {
   categoria?: string | null;
   preco?: number | null;
   foto?: string | null;
+  url?: string | null;
   freteGratis?: boolean | null;
 };
 
@@ -231,6 +234,7 @@ function lembrarProduto(
       categoria: slug,
       preco: precoValido(prod.preco) ? prod.preco : null,
       foto: prod.foto ?? null,
+      url: prod.url ?? null,
       em: agora,
     },
     ...p.produtosInteragidos.filter((x) => x.chave !== chave),
@@ -280,6 +284,25 @@ export function limparPerfil(): void {
   avisar();
 }
 
+/** "Limpar histórico": esquece os produtos vistos, mantém o gosto. */
+export function limparProdutosVistos(agora = Date.now()): void {
+  const p = obterPerfil(agora);
+  if (!p) return;
+  gravar({ ...p, produtosInteragidos: [] });
+}
+
+/** Perfil atual, relido a cada mudança (trilhos e vitrine em tempo real). */
+export function usePerfilVisitante(): PerfilVisitante | null {
+  const [perfil, setPerfil] = useState<PerfilVisitante | null>(null);
+  useEffect(() => {
+    const ler = () => setPerfil(obterPerfil());
+    ler();
+    window.addEventListener(EVENTO_PERFIL, ler);
+    return () => window.removeEventListener(EVENTO_PERFIL, ler);
+  }, []);
+  return perfil;
+}
+
 /** Categoria com mais afinidade (pelo menos uma visita ativa: 2 pontos). */
 export function categoriaFavorita(perfil: PerfilVisitante | null): string | null {
   if (!perfil) return null;
@@ -298,7 +321,7 @@ export function categoriaFavorita(perfil: PerfilVisitante | null): string | null
 const VAZIAS = new Set(
   "de da do das dos para com sem e o a os as em no na um uma kit novo nova original".split(" "),
 );
-const palavrasDe = (s: string) =>
+export const palavrasDe = (s: string) =>
   normalizar(s)
     .split(" ")
     .filter((w) => w.length >= 2 && !VAZIAS.has(w));

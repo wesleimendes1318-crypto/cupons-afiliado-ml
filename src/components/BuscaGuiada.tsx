@@ -851,6 +851,7 @@ function CartaoBusca({
         titulo: c.nome,
         preco: c.preco,
         foto: c.imagem,
+        url: c.url,
         freteGratis: c.freteGratis,
       })}
       data-indice={indice}

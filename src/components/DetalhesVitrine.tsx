@@ -76,7 +76,7 @@ export function VerDetalhesVitrine({
     setAberto(true);
     registrarAcaoVisitante({
       tipo: "detalhes",
-      produto: { chave, titulo, preco: preco ?? null, foto: imagem ?? null },
+      produto: { chave, titulo, preco: preco ?? null, foto: imagem ?? null, url: urlProduto ?? null },
     });
   };
   if (!/^MLB\d{5,}$/.test(chave)) return gatilho ? <>{gatilho}</> : null;

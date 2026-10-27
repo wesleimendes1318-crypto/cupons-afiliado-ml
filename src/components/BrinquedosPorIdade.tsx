@@ -127,6 +127,7 @@ function CartaoBrinquedo({
         categoria: "brinquedos",
         preco: c.preco,
         foto: i.imagem,
+        url: i.url,
         freteGratis: c.freteGratis,
       })}
       className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none"
