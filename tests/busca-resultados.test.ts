@@ -47,6 +47,9 @@ describe("resultados da busca por texto", () => {
     expect(arteDaBusca("fone bluetooth").id).toBe("celular-acessorios");
     expect(arteDaBusca("panela de pressão").id).toBe(arteDaCategoria("casa")!.id);
     expect(arteDaBusca("presente para mãe")).toBe(ARTE_NEUTRA);
+    /* 28/10: decoração de Natal mostrava panelas. */
+    expect(arteDaBusca("decoração de natal").src).toBe("/campanhas/estudio-natal.webp");
+    expect(arteDaBusca("cortina blackout")).toBe(ARTE_NEUTRA);
   });
 
   test("resposta imediata: só o que casa, sem réplica e sem peça", () => {

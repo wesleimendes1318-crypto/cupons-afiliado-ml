@@ -32,6 +32,17 @@ const CATALOGO: Record<string, Produto[]> = {
     },
   ],
 };
+/* 28/10, "decoração de natal": nenhum título diz "decoração" e o 1º do
+   catálogo não tem oferta (o 2º pede leitura mais funda). */
+CATALOGO["enfeites de natal"] = [
+  { id: "MLB40", name: "Kit 30 Bolas De Natal Vermelha", domain_id: "MLB-CHRISTMAS_BALLS" },
+];
+CATALOGO["decoração de natal"] = [
+  { id: "MLB49", name: "Kit 6 Bolas De Natal Douradas", domain_id: "MLB-CHRISTMAS_BALLS" },
+  { id: "MLB41", name: "Árvore De Natal Pinheiro 1,80m", domain_id: "MLB-CHRISTMAS_TREES" },
+  { id: "MLB42", name: "Jogo De Panelas Tramontina", domain_id: "MLB-COOKWARE_SETS" },
+];
+const SEM_OFERTA = new Set(["MLB40", "MLB49"]);
 const DOMINIOS: Record<string, string[]> = {
   "tomada 2p+t 10a": ["MLB-WALL_OUTLETS"],
   "tomada 20a banheiro": ["MLB-WALL_OUTLETS"],
@@ -39,6 +50,8 @@ const DOMINIOS: Record<string, string[]> = {
   "pneu aro 14": ["MLB-TIRES"],
   "aspirador robo": ["MLB-ROBOT_VACUUMS"],
 };
+const CATEGORIA: Record<string, string> = { "guirlanda natal": "MLB1234" };
+DOMINIOS["guirlanda natal"] = ["MLB-CHRISTMAS_DECORATIONS"];
 let respostaModelo = "";
 
 /* API oficial falsa pelo fetch (como em comparar-agora.test.ts). */
@@ -48,9 +61,21 @@ beforeAll(() => {
     const u = new URL(String(entrada));
     const q = u.searchParams.get("q") ?? "";
     if (u.pathname.includes("domain_discovery"))
-      return Response.json((DOMINIOS[q] ?? []).map((domain_id) => ({ domain_id })));
+      return Response.json(
+        (DOMINIOS[q] ?? []).map((domain_id) => ({ domain_id, category_id: CATEGORIA[q] })),
+      );
+    if (u.pathname.startsWith("/highlights/"))
+      return Response.json({
+        content: [
+          { id: "MLB50", type: "PRODUCT" },
+          { id: "MLB777", type: "ITEM" },
+        ],
+      });
+    if (/^\/products\/MLB\d+$/.test(u.pathname))
+      return Response.json({ id: "MLB50", name: "Pisca Pisca 100 Leds Natal" });
     if (u.pathname === "/products/search") return Response.json({ results: CATALOGO[q] ?? [] });
     const id = u.pathname.split("/")[2]!;
+    if (SEM_OFERTA.has(id)) return Response.json({ message: "No winners found" }, { status: 404 });
     return Response.json({
       results: [{ item_id: id.replace("MLB", "MLB9"), price: 50, condition: "new" }],
     });
@@ -120,6 +145,16 @@ describe("busca com intenção universal", () => {
     modelo({ buscas: ["pneu aro 14"], tipoProduto: "pneu" });
     expect(await nomes("pneu aro 14")).toEqual(["Pneu Aro 14 175/65r14 Pirelli P400"]);
     DOMINIOS["pneu aro 14"] = ["MLB-TIRES"];
+  });
+
+  test("sem nada no catálogo: os mais vendidos da categoria prevista", async () => {
+    modelo({ buscas: ["guirlanda natal"], tipoProduto: "guirlanda", resumo: "" });
+    expect(await nomes("guirlanda natal")).toEqual(["Pisca Pisca 100 Leds Natal"]);
+  });
+
+  test("pedido amplo/sazonal: decoração de natal acha produto pela palavra do pedido", async () => {
+    modelo({ buscas: ["enfeites de natal"], tipoProduto: "decoracao", resumo: "" });
+    expect(await nomes("decoração de natal")).toEqual(["Árvore De Natal Pinheiro 1,80m"]);
   });
 });
 

@@ -200,6 +200,68 @@ export function intencaoDoModelo(j: JsonDoModelo | null, q: string): Interpretac
   };
 }
 
+type ProdutoDoCatalogo = {
+  id?: string;
+  name?: string;
+  domain_id?: string;
+  pictures?: Array<{ url?: string }>;
+};
+
+/** O produto com o anúncio de referência (1ª oferta NOVA da lista oficial),
+    ou null sem oferta ativa ou fora da faixa de preço. */
+async function comOferta(
+  p: ProdutoDoCatalogo,
+  opcoes: { precoMin?: number | null; precoMax?: number | null; aceitarSemOferta?: boolean },
+): Promise<ResultadoBusca | null> {
+  const id = String(p.id ?? "").toUpperCase();
+  const foto = p.pictures?.[0]?.url ?? null;
+  const imagem = foto ? foto.replace(/^http:/, "https:") : null;
+  const nome = String(p.name ?? "").slice(0, 120);
+  try {
+    /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
+       cartão tem de ser o do anúncio que o botão abre. */
+    const o = await mlGet<{
+      results?: Array<{
+        item_id?: string;
+        price?: number;
+        condition?: string;
+        shipping?: { free_shipping?: boolean };
+        official_store_id?: number | null;
+      }>;
+    }>(`/products/${id}/items?limit=5`);
+    const oferta = o.results?.find((x) => x.condition === "new");
+    const item = oferta?.item_id;
+    if (!item || !/^MLB\d+$/.test(item)) return null;
+    const preco = num(oferta?.price);
+    if (opcoes.precoMax && preco && preco > opcoes.precoMax * 1.05) return null;
+    if (opcoes.precoMin && preco && preco < opcoes.precoMin * 0.95) return null;
+    return {
+      produto: id,
+      item,
+      nome,
+      imagem,
+      preco,
+      url: `https://www.mercadolivre.com.br/p/${id}?pdp_filters=item_id%3A${item}`,
+      freteGratis:
+        typeof oferta?.shipping?.free_shipping === "boolean" ? oferta.shipping.free_shipping : null,
+      lojaOficial: oferta?.official_store_id != null,
+    };
+  } catch (e) {
+    /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,
+       o sem oferta destacada entra sem preço (a comparação acha as lojas). */
+    if (opcoes.aceitarSemOferta && e instanceof ErroApiMl && e.status === 404)
+      return {
+        produto: id,
+        item: "",
+        nome,
+        imagem,
+        preco: null,
+        url: `https://www.mercadolivre.com.br/p/${id}`,
+      };
+    return null;
+  }
+}
+
 /** Busca no catálogo oficial e devolve os produtos com anúncio ativo (o
     anúncio de referência é a 1ª oferta da lista oficial). */
 export async function buscarNoCatalogo(
@@ -240,12 +302,7 @@ export async function buscarNoCatalogo(
     if (resultados.length >= max || chamadas >= TETO) break;
     const dominios = opcoes.dominiosPorBusca?.[b] ?? opcoes.dominios ?? null;
     const tipo = opcoes.tipoDaBusca ? tipoDoProduto(busca) : opcoes.tipo;
-    let lista: Array<{
-      id?: string;
-      name?: string;
-      domain_id?: string;
-      pictures?: Array<{ url?: string }>;
-    }> = [];
+    let lista: ProdutoDoCatalogo[] = [];
     try {
       chamadas += 1;
       const r = await mlGet<{ results?: typeof lista }>(
@@ -268,55 +325,11 @@ export async function buscarNoCatalogo(
       /* Outra categoria nunca entra (11/10: bebedouro pet x fonte de Buda). */
       if (dominios && !dominios.has(String(p.domain_id ?? ""))) continue;
       if (!dominios && tipo && !nomeTemOTipo(String(p.name ?? ""), tipo)) continue;
-      try {
-        chamadas += 1;
-        /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
-           cartão tem de ser o do anúncio que o botão abre. */
-        const o = await mlGet<{
-          results?: Array<{
-            item_id?: string;
-            price?: number;
-            condition?: string;
-            shipping?: { free_shipping?: boolean };
-            official_store_id?: number | null;
-          }>;
-        }>(`/products/${id}/items?limit=5`);
-        const oferta = o.results?.find((x) => x.condition === "new");
-        const item = oferta?.item_id;
-        if (!item || !/^MLB\d+$/.test(item)) continue;
-        const preco = num(oferta?.price);
-        if (opcoes.precoMax && preco && preco > opcoes.precoMax * 1.05) continue;
-        if (opcoes.precoMin && preco && preco < opcoes.precoMin * 0.95) continue;
-        const foto = p.pictures?.[0]?.url ?? null;
-        resultados.push({
-          produto: id,
-          item,
-          nome: String(p.name ?? "").slice(0, 120),
-          imagem: foto ? foto.replace(/^http:/, "https:") : null,
-          preco,
-          url: `https://www.mercadolivre.com.br/p/${id}?pdp_filters=item_id%3A${item}`,
-          freteGratis:
-            typeof oferta?.shipping?.free_shipping === "boolean"
-              ? oferta.shipping.free_shipping
-              : null,
-          lojaOficial: oferta?.official_store_id != null,
-        });
+      chamadas += 1;
+      const r = await comOferta(p, opcoes);
+      if (r) {
+        resultados.push(r);
         desta += 1;
-      } catch (e) {
-        /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,
-           o sem oferta destacada entra sem preço (a comparação acha as lojas). */
-        if (opcoes.aceitarSemOferta && e instanceof ErroApiMl && e.status === 404) {
-          const foto = p.pictures?.[0]?.url ?? null;
-          resultados.push({
-            produto: id,
-            item: "",
-            nome: String(p.name ?? "").slice(0, 120),
-            imagem: foto ? foto.replace(/^http:/, "https:") : null,
-            preco: null,
-            url: `https://www.mercadolivre.com.br/p/${id}`,
-          });
-          desta += 1;
-        }
       }
     }
   }
@@ -364,10 +377,87 @@ export async function buscaGuiada(
   /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo. */
   if (!achados.length && dominiosPorBusca.some(Boolean))
     achados = await buscarNoCatalogo(intencao.buscas, opcoes);
+  /* Pedido amplo ou sazonal (28/10, "decoração de natal" voltava vazio): o
+     título raramente traz o tipo ("decoração"), e os 1ºs do catálogo podem
+     não ter oferta. Sem domínio nem tipo, lendo mais fundo, e o nome tem de
+     trazer uma palavra do pedido; por fim, os mais vendidos da categoria. */
+  if (!achados.length) {
+    const palavras = palavrasDoPedido([q, ...intencao.buscas]);
+    achados = await buscarNoCatalogo([...new Set([...intencao.buscas, q.slice(0, 60)])], {
+      ...opcoes,
+      tipoDaBusca: false,
+      limite: 20,
+      rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
+    });
+  }
+  if (!achados.length && pagina === 0) achados = await maisVendidosDaCategoria(q, opcoes);
   /* Busca universal (27/10): o mais fiel ao que foi digitado vem primeiro
      (modelo exato) e peça/acessório só se a busca é pela peça. */
   const resultados = ordenarPelaIntencao(q, achados, (r) => r.nome);
   return { intencao, resultados };
+}
+
+const VAZIAS_DO_PEDIDO = new Set([
+  "para",
+  "como",
+  "mais",
+  "entre",
+  "sobre",
+  "melhor",
+  "barato",
+  "barata",
+  "promocao",
+  "oferta",
+]);
+
+/** Palavras que identificam o pedido (4+ letras, sem acento). */
+export function palavrasDoPedido(textos: string[]) {
+  return [
+    ...new Set(
+      textos.flatMap((t) =>
+        normalizar(t)
+          .split(" ")
+          .filter((p) => p.length >= 4 && /[a-z]/.test(p) && !VAZIAS_DO_PEDIDO.has(p)),
+      ),
+    ),
+  ];
+}
+
+/** Mais vendidos da categoria que a API oficial prevê para o pedido (lista
+    oficial /highlights), só os produtos de catálogo com oferta ativa. */
+async function maisVendidosDaCategoria(
+  q: string,
+  opcoes: {
+    precoMin?: number | null;
+    precoMax?: number | null;
+    rejeitar?: (nome: string) => boolean;
+  },
+) {
+  const resultados: ResultadoBusca[] = [];
+  try {
+    const d = await mlGet<Array<{ category_id?: string }>>(
+      `/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(termoDoProduto(q, 12))}`,
+    );
+    const cat = String((Array.isArray(d) ? d[0]?.category_id : "") ?? "");
+    if (!/^MLB\d+$/.test(cat)) return resultados;
+    const h = await mlGet<{ content?: Array<{ id?: string; type?: string }> }>(
+      `/highlights/MLB/category/${cat}`,
+    );
+    let chamadas = 2;
+    for (const x of h.content ?? []) {
+      if (resultados.length >= 8 || chamadas >= 18) break;
+      if (x.type !== "PRODUCT" || !/^MLB\d+$/.test(String(x.id ?? ""))) continue;
+      chamadas += 1;
+      const p = await mlGet<ProdutoDoCatalogo>(`/products/${x.id}`).catch(() => null);
+      if (!p?.name || pareceFalso(p.name) || opcoes.rejeitar?.(p.name)) continue;
+      chamadas += 1;
+      const r = await comOferta({ ...p, id: String(x.id) }, opcoes);
+      if (r) resultados.push(r);
+    }
+  } catch (e) {
+    if (!(e instanceof ErroApiMl)) throw e;
+  }
+  return resultados;
 }
 
 /** Categorias (domínios) que a API oficial prevê para o título, até 4. */
