@@ -12,6 +12,7 @@
       apresentado como igual é o pior erro possível.
    A foto não é guardada nem registrada em lugar nenhum. */
 import { buscarNoCatalogo, type ResultadoBusca } from "@/lib/busca-guiada";
+import { foraDoModelo } from "@/lib/busca-intencao";
 import { perguntarAoLlm } from "@/lib/cheaper-inference";
 import { gerarComModelos, lerJson } from "@/lib/conferir-produto";
 
@@ -91,8 +92,7 @@ export async function identificarPelaFoto(base64: string): Promise<Identificacao
 /** Produto do catálogo que não traz a marca e o modelo lidos não é o da
     foto (28/10: "Nike TC 7900" trouxe um organizador de calçados). */
 export function bateComAFoto(id: Identificacao, nomeDoCatalogo: string) {
-  const nome = normal(nomeDoCatalogo);
-  return [id.marca, id.modelo].every((v) => !v || normal(v).length < 2 || nome.includes(normal(v)));
+  return !foraDoModelo(nomeDoCatalogo, id.marca, id.modelo);
 }
 
 /** Certeza para comparar sozinho: marca e modelo lidos, confiança alta e

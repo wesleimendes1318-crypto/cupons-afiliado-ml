@@ -73,8 +73,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           : CONTEXTOS[contexto];
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
-        /* "v2" (27/10): respostas guardadas antes do filtro da intenção não voltam. */
-        const chave1 = `v2|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        /* "v3" (28/10): respostas guardadas antes do filtro de marca/modelo não voltam. */
+        const chave1 = `v3|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina ? `${chave1}|p${pagina}` : chave1;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
@@ -119,6 +119,8 @@ export const Route = createFileRoute("/api/public/buscar")({
                     contextoUso: primeira.contextoUso ?? null,
                     termosNegativos: primeira.termosNegativos ?? [],
                     dominiosPermitidos: primeira.dominiosPermitidos ?? [],
+                    marca: primeira.marca ?? null,
+                    modelo: primeira.modelo ?? null,
                   }
                 : null,
             );
@@ -175,8 +177,14 @@ export const Route = createFileRoute("/api/public/buscar")({
           }
         }
 
+        const { marca, modelo } = achado.intencao;
+        const exato = [marca, modelo].filter(Boolean).join(" ");
         const resposta: RespostaBusca = {
-          resumo: achado.intencao.resumo,
+          /* Modelo citado e nada igual: diz isso em vez de mostrar outro. */
+          resumo:
+            exato && !achado.resultados.length && !pagina
+              ? `Não encontrei o ${exato} com anúncio ativo agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
+              : achado.intencao.resumo,
           buscas: achado.intencao.buscas,
           resultados: achado.resultados,
           enfileirados,
@@ -187,6 +195,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           contextoUso: achado.intencao.contextoUso ?? null,
           termosNegativos: achado.intencao.termosNegativos ?? [],
           dominiosPermitidos: achado.intencao.dominiosPermitidos ?? [],
+          marca: marca ?? null,
+          modelo: modelo ?? null,
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)
