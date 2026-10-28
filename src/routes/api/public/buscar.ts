@@ -179,11 +179,26 @@ export const Route = createFileRoute("/api/public/buscar")({
 
         const { marca, modelo } = achado.intencao;
         const exato = [marca, modelo].filter(Boolean).join(" ");
+        /* Modelo citado fora do catálogo oficial (28/10, Nike TC 7900: só
+           anúncios avulsos, que a API não lista): a extensão busca nos
+           anúncios como uma pessoa faria. */
+        let anuncios: { id: number; chave: string } | null = null;
+        if (exato && !achado.resultados.length && !pagina && !modoProduto) {
+          const { data } = await db.rpc("pedir_busca_anuncios", {
+            p_termo: achado.intencao.buscas[0] ?? entrada.q,
+            p_marca: marca ?? null,
+            p_modelo: modelo ?? null,
+          });
+          const p = data as { ok?: boolean; id?: number; chave?: string } | null;
+          if (p?.ok && p.id && p.chave) anuncios = { id: p.id, chave: p.chave };
+        }
         const resposta: RespostaBusca = {
           /* Modelo citado e nada igual: diz isso em vez de mostrar outro. */
           resumo:
             exato && !achado.resultados.length && !pagina
-              ? `Não encontrei o ${exato} com anúncio ativo agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
+              ? anuncios
+                ? `O ${exato} não está no catálogo oficial. Estou procurando nos anúncios das lojas do Mercado Livre, só o modelo exato.`
+                : `Não encontrei o ${exato} com anúncio ativo agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
               : achado.intencao.resumo,
           buscas: achado.intencao.buscas,
           resultados: achado.resultados,
@@ -197,6 +212,7 @@ export const Route = createFileRoute("/api/public/buscar")({
           dominiosPermitidos: achado.intencao.dominiosPermitidos ?? [],
           marca: marca ?? null,
           modelo: modelo ?? null,
+          anuncios,
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)

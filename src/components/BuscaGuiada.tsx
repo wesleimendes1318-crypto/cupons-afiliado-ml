@@ -6,6 +6,7 @@ import { propsFotoCartao } from "@/lib/foto";
 import {
   buscarProdutos,
   quandoFoiLido,
+  useAnunciosPeloNome,
   type ContextoBusca,
   type Resposta,
   type Resultado,
@@ -385,10 +386,20 @@ export function ResultadosDaBusca({
   const lista = useRef<HTMLUListElement>(null);
   const geracao = useRef(0);
 
+  /* Modelo fora do catálogo oficial: anúncios lidos pela extensão (28/10). */
+  const anuncios = useAnunciosPeloNome(resposta);
+  const exato = [resposta?.marca, resposta?.modelo].filter(Boolean).join(" ");
   const remotos = useMemo(
-    () => mesclarSemRepetir([resposta?.resultados ?? [], extras], (r) => r.url),
-    [resposta, extras],
+    () =>
+      mesclarSemRepetir([resposta?.resultados ?? [], extras, anuncios?.itens ?? []], (r) => r.url),
+    [resposta, extras, anuncios],
   );
+  const resumoTela =
+    anuncios?.estado === "pronto" && anuncios.itens.length
+      ? `Achei o ${exato} em ${anuncios.itens.length === 1 ? "1 anúncio" : `${anuncios.itens.length} anúncios`} das lojas do Mercado Livre, do mais barato ao mais caro.`
+      : anuncios && anuncios.estado !== "buscando"
+        ? `Não encontrei o ${exato} à venda no Mercado Livre agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
+        : resposta?.resumo;
   /* Filtro final da intenção também aqui: produtos do site e respostas
      guardadas antes dele ("tomada para banheiro" sem HDMI nem antena). */
   const cartoesBase = useMemo(
@@ -533,7 +544,16 @@ export function ResultadosDaBusca({
               comparar={comparar}
             />
           )}
-          {resposta?.resumo && <p className="mt-3 text-sm text-secondary-ink">{resposta.resumo}</p>}
+          {resumoTela && <p className="mt-3 text-sm text-secondary-ink">{resumoTela}</p>}
+          {anuncios?.estado === "buscando" && (
+            <p
+              className="mt-3 inline-flex items-center gap-1.5 text-xs text-secondary-ink"
+              aria-live="polite"
+            >
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              Procurando o {exato} nos anúncios… leva até 1 minuto.
+            </p>
+          )}
           {carregando && (
             <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-secondary-ink">
               <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
@@ -541,7 +561,9 @@ export function ResultadosDaBusca({
             </p>
           )}
           {cartoes.length === 0 ? (
-            !carregando && (
+            !carregando &&
+            anuncios?.estado !== "buscando" &&
+            !(anuncios && !anuncios.itens.length) && (
               <p className="mt-3 rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm">{semResultado}</p>
             )
           ) : (

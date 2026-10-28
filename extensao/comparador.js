@@ -1133,3 +1133,29 @@ export function sugeridosExtras(ordem, escolhidos, precoRef, max = 2) {
   }
   return saida;
 }
+
+/* BUSCA POR NOME NOS ANUNCIOS (28/10, Weslei: "muito assertiva, no modelo,
+   versoes tudo"). Da busca do Mercado Livre so ficam os anuncios com a marca
+   e o modelo pedidos no titulo, na MESMA versao (Pro, Max, Plus, Mini...),
+   sem replica nem usado. A mesma regra do site (foraDoModelo). */
+const VERSOES_MODELO = ['max', 'pro', 'plus', 'mini', 'lite', 'ultra', 'slim', 'kids', 'note', 'neo', 'fe'];
+const RE_NAO_E_O_MODELO = /\b(replica|1 1|primeira linha|linha aaa|aaa|inspirad[oa]|similar|usad[oa]|recondicionad[oa])\b/;
+function versoesDoTexto(t) {
+  const p = new Set(normPalavra(t).split(' '));
+  return VERSOES_MODELO.filter(v => p.has(v)).sort().join(',');
+}
+export function anunciosDoModelo(lista, marca, modelo) {
+  const pedidos = [marca, modelo].filter(v => v && norm(v).length >= 2).map(norm);
+  if (!pedidos.length) return [];
+  const versao = versoesDoTexto(`${marca || ''} ${modelo || ''}`);
+  const vistos = new Set();
+  return (lista || []).filter(c => {
+    if (!c || !c.titulo || !c.item || vistos.has(c.item) || !(c.preco > 0)) return false;
+    const t = norm(c.titulo);
+    if (!pedidos.every(p => t.includes(p))) return false;
+    if (RE_NAO_E_O_MODELO.test(normPalavra(c.titulo))) return false;
+    if (modelo && versoesDoTexto(c.titulo) !== versao) return false;
+    vistos.add(c.item);
+    return true;
+  }).sort((a, b) => a.preco - b.preco);
+}
