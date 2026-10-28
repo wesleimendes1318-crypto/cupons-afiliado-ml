@@ -1965,6 +1965,10 @@ function Index() {
         )}
 
         <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
+          {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
+            caixa; acima de "Explore por categoria" (Weslei, 27/10). */}
+          <BuscaGuiada contexto="home" naHome className="mt-8" />
+
           {buscaParada && (
             /* Explore por categoria (home-v2), com as artes (09/10). */
             <section aria-labelledby="explore-categoria" className="mt-8">
@@ -1987,10 +1991,6 @@ function Index() {
               <GradeDepartamentos />
             </section>
           )}
-
-          {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
-            caixa e acima das campanhas. */}
-          <BuscaGuiada contexto="home" naHome className="mt-8" />
 
           {/* HIERARQUIA COMERCIAL (Weslei, 27/10: "página infinita e
             desordenada"): cada bloco é uma fileira compacta, na ordem
