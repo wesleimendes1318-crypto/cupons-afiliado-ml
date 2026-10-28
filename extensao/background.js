@@ -5367,12 +5367,26 @@ function armarAlarmes() {
   }
 }
 
+/* 28/10: o cache do vendedor (v1_..v4_<MLB>) nunca era apagado e encheu o
+   storage ("kQuotaBytes quota exceeded"): nenhum set gravava, nem o freio nem
+   a pausa das avaliacoes, e a leitura batia na verificacao a cada minuto.
+   Apaga o vencido e os prefixos antigos. */
+async function limparCacheVelho() {
+  const tudo = await chrome.storage.local.get(null);
+  const fora = Object.keys(tudo).filter(k => /^v[0-9]_MLB/i.test(k) &&
+    (!k.startsWith('v4_') || !(tudo[k] && Date.now() - tudo[k].ts < TTL_VEND)));
+  if (fora.length) await chrome.storage.local.remove(fora);
+  return fora.length;
+}
+
 chrome.runtime.onInstalled.addListener(() => {
+  limparCacheVelho().catch(() => {});
   armarAlarmes();
   /* Sem forcar: cada "Recarregar" da extensao baixava a lista inteira. */
   obterIndice().catch(() => {});
 });
 chrome.runtime.onStartup.addListener(() => {
+  limparCacheVelho().catch(() => {});
   armarAlarmes();
   sinalDeVida().catch(() => {});
   obterIndice().catch(() => {});
