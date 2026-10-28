@@ -12,6 +12,7 @@
    sobre a arte. */
 
 import { classificar } from "@/lib/classificar";
+import { NOS } from "@/content/taxonomia";
 
 export type ArteId =
   | "tecnologia-games"
@@ -165,6 +166,16 @@ export const arteSalva = (url: string, descricao: string): Arte => ({
   src: url,
 });
 
+/* Arte da temporada de Natal (estúdio verde com presentes, sem texto). */
+export const ARTE_NATAL: Arte = {
+  ...ARTE_NEUTRA,
+  descricao: "Presentes de Natal com laço dourado e pinheiro",
+  tom: "claro",
+  foco: "30% 45%",
+  focoCelular: "25% 50%",
+  src: "/campanhas/estudio-natal.webp",
+};
+
 /* Arte do topo dos resultados de uma busca por texto (27/10): o motor de
    categorias lê o termo; acessório de celular e fone vão para a arte de
    celulares; termo genérico fica com a neutra. */
@@ -175,5 +186,10 @@ export function arteDaBusca(q: string): Arte {
   /* Tomada, interruptor, disjuntor: nenhuma arte é deles (a de ferramentas
      mostra furadeira). */
   if (c.no === "materiais-eletricos") return ARTE_NEUTRA;
+  const caminho = NOS[c.no ?? ""]?.caminho ?? [];
+  /* 28/10: "decoração de natal" mostrava panelas. Natal tem a arte da
+     temporada; em Casa, a da cozinha só vale para cozinha e mesa. */
+  if (caminho.includes("natal")) return ARTE_NATAL;
+  if (caminho[0] === "casa" && caminho[1] !== "cozinha-e-mesa") return ARTE_NEUTRA;
   return arteDaCategoria(c.legado) ?? ARTE_NEUTRA;
 }

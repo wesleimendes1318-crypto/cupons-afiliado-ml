@@ -27,8 +27,8 @@ export function FaixaArte({
   const cat = daCategoria ? CATEGORIAS.find((c) => c.slug === slug) : undefined;
   const img = (
     <img
-      src={srcArte(arte.id, true)}
-      srcSet={srcSetArte(arte.id)}
+      src={arte.src ?? srcArte(arte.id, true)}
+      srcSet={arte.src ? undefined : srcSetArte(arte.id)}
       sizes="(min-width: 1280px) 1200px, 100vw"
       alt=""
       width={1280}
