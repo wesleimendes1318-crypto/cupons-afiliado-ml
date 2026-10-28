@@ -28,6 +28,7 @@ import {
 } from "@/lib/perfil-visitante";
 import {
   NOS_RECOMPRA,
+  POR_TRILHO,
   chipDoSemelhante,
   montarHistorico,
   nichoDoVisitante,
@@ -264,7 +265,7 @@ function CartaoHistorico({ h }: { h: ItemHistorico }) {
             imagem={h.imagem}
             preco={h.preco}
             urlProduto={h.url}
-            compra={ehDoMercadoLivre(h.url) ? <VerNaLoja url={h.url} grande /> : undefined}
+            compra={ehDoMercadoLivre(h.url) ? <VerNaLoja url={h.url} grande /> : null}
             className="absolute inset-0"
             gatilho={
               <img
@@ -351,10 +352,13 @@ function TrilhosDeProdutos({
   const notaSem = useNotas(sem);
 
   const usados = new Set<string>();
+  /* Só o 1º lote de cada trilho fica reservado: o "ver mais" segue sem teto
+     e pode trazer, no fim, um produto que outro trilho mostra mais adiante. */
   const unicos = (l: ItemRec[]) => {
     const r = l.filter((i) => !usados.has(i.produto));
-    if (r.length >= MINIMO) r.forEach((i) => usados.add(i.produto));
-    return r.length >= MINIMO ? r : [];
+    if (r.length < MINIMO) return [];
+    r.slice(0, POR_TRILHO).forEach((i) => usados.add(i.produto));
+    return r;
   };
   const lComp = unicos(selecionarComplementos(comp, notaComp, perfil));
   const lSaz = unicos(selecionarSazonal(saz, notaSaz, perfil, temporada));
@@ -368,6 +372,14 @@ function TrilhosDeProdutos({
       id="semelhantes"
       icone={<Target className={ICONE + " text-[#0071e3]"} />}
       titulo="Semelhantes ao que te interessa"
+      verTodos={
+        area
+          ? {
+              href: `/categorias/${area}`,
+              rotulo: `Ver todos em ${NOS[area]?.nome ?? "categorias"}`,
+            }
+          : null
+      }
       subtitulo={`Parecidos com "${ref.titulo.slice(0, 60)}${ref.titulo.length > 60 ? "…" : ""}", pelo mesmo preço ou menos.`}
     >
       <Fileira
@@ -426,6 +438,10 @@ function TrilhosDeProdutos({
                 icone={<Sparkles className={ICONE + " text-[#0071e3]"} />}
                 titulo={`Mais vendidos no seu nicho: ${NOS[nicho]!.nome}`}
                 subtitulo="Nota 4,5 ou mais de quem comprou e frete grátis confirmado."
+                verTodos={{
+                  href: `/categorias/${nicho}`,
+                  rotulo: `Ver todos em ${NOS[nicho]!.nome}`,
+                }}
               >
                 <Fileira itens={lPens} notaDe={notaPens} />
               </TrilhoRecomendacao>

@@ -183,6 +183,8 @@ export function Vitrine({
   const [avaliacoes, setAvaliacoes] = useState<MapaAvaliacoes>(() => new Map());
   const [carregou, setCarregou] = useState(false);
   const [aba, setAba] = useState<Aba>("recentes");
+  /* 24 de cada vez, sem teto (Weslei, 28/10: "Jamais limitar"). */
+  const [mostrar, setMostrar] = useState(24);
 
   useEffect(() => {
     let vivo = true;
@@ -219,7 +221,7 @@ export function Vitrine({
     if (aba === "economias")
       l = l.filter((i) => maiorEconomia(i) > 0).sort((a, b) => maiorEconomia(b) - maiorEconomia(a));
     else if (aba === "procurados") l = [...l].sort((a, b) => (b.vezes ?? 0) - (a.vezes ?? 0));
-    return l.slice(0, 48);
+    return l;
   }, [itens, aba, categoriaFixa]);
 
   /* OPORTUNIDADES COM ECONOMIA REAL (3º bloco da home, 27/10): o mesmo
@@ -246,7 +248,7 @@ export function Vitrine({
         economiaReais: i.economia,
         freteGratis: true,
       };
-    }).slice(0, 12);
+    });
   }, [itens, avaliacoes, categoriaFixa]);
 
   if (!categoriaFixa) {
@@ -300,7 +302,10 @@ export function Vitrine({
               type="button"
               role="tab"
               aria-selected={aba === a.id}
-              onClick={() => setAba(a.id)}
+              onClick={() => {
+                setAba(a.id);
+                setMostrar(24);
+              }}
               className={
                 "rounded-full px-3 py-1.5 text-sm font-semibold transition-colors " +
                 (aba === a.id
@@ -319,10 +324,21 @@ export function Vitrine({
           </p>
         ) : (
           <ul className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
-            {lista.map((i) => (
+            {lista.slice(0, mostrar).map((i) => (
               <Cartao key={i.chave} i={i} />
             ))}
           </ul>
+        )}
+        {lista.length > mostrar && (
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setMostrar((m) => m + 24)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#0071e3]/40 bg-card px-5 py-2.5 text-sm font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+            >
+              Ver mais {Math.min(24, lista.length - mostrar)} produtos
+            </button>
+          </div>
         )}
       </section>
     </ContextoAvaliacoes.Provider>

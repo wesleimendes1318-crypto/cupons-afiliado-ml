@@ -30,7 +30,9 @@ import { pontuarItemVitrine } from "@/lib/vitrines-ranking";
 export type ItemRec = ItemEmAlta & { categoria_no?: string | null };
 export type NotaDe = (i: ItemRec) => ResumoAvaliacoes | undefined;
 
-const POR_TRILHO = 12;
+/* Cartões de cada trilho que entram na reserva contra repetição entre
+   trilhos (o 1º lote visível); a lista em si não tem teto (28/10). */
+export const POR_TRILHO = 12;
 const RE_USADO = /\b(usad[oa]s?|seminov[oa]s?|recondicionad[oa]s?|vitrine|sem caixa|open box)\b/i;
 
 /* Nós de reposição frequente (higiene, beleza de uso diário, limpeza, pet,
@@ -148,8 +150,7 @@ function filtrarOrdenar(
       p: ranking ? ranking(i) : perfil ? pontuarItem(paraPontuar(i), perfil) : 0,
     }))
     .sort((a, b) => b.boa - a.boa || b.p - a.p || a.k - b.k)
-    .map((x) => x.i)
-    .slice(0, POR_TRILHO);
+    .map((x) => x.i);
 }
 
 /** 0. Mais desejados e em alta (2º bloco da home): procura comprovada na
@@ -176,7 +177,7 @@ export function selecionarMaisDesejados(itens: ItemRec[], notaDe: NotaDe): ItemR
     false,
     pontos,
   );
-  if (top.length >= 8) return top;
+  /* Os 4,8+ vêm primeiro; os 4,5+ seguem depois deles ("ver mais"). */
   const ja = new Set(top.map((i) => normalizar(i.nome)));
   const resto = filtrarOrdenar(
     itens,
@@ -186,7 +187,7 @@ export function selecionarMaisDesejados(itens: ItemRec[], notaDe: NotaDe): ItemR
     false,
     pontos,
   );
-  return [...top, ...resto].slice(0, POR_TRILHO);
+  return [...top, ...resto];
 }
 
 /** 1. Recompra: reposição entre os mais vendidos (top 20) ou muito bem
@@ -364,7 +365,6 @@ export function montarHistorico(
     quando?: number;
   }>,
   perfil: PerfilVisitante | null,
-  limite = 8,
 ): ItemHistorico[] {
   const todos: ItemHistorico[] = [
     ...comparados
@@ -381,12 +381,10 @@ export function montarHistorico(
       .map((p) => ({ titulo: p.titulo, url: p.url!, imagem: p.foto, preco: p.preco, em: p.em })),
   ].sort((a, b) => b.em - a.em);
   const vistos = new Set<string>();
-  return todos
-    .filter((h) => {
-      const k = normalizar(h.titulo);
-      if (!k || vistos.has(k)) return false;
-      vistos.add(k);
-      return true;
-    })
-    .slice(0, limite);
+  return todos.filter((h) => {
+    const k = normalizar(h.titulo);
+    if (!k || vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
 }
