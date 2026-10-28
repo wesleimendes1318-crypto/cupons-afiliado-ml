@@ -88,6 +88,13 @@ export async function identificarPelaFoto(base64: string): Promise<Identificacao
   ]).catch(() => null);
 }
 
+/** Produto do catálogo que não traz a marca e o modelo lidos não é o da
+    foto (28/10: "Nike TC 7900" trouxe um organizador de calçados). */
+export function bateComAFoto(id: Identificacao, nomeDoCatalogo: string) {
+  const nome = normal(nomeDoCatalogo);
+  return [id.marca, id.modelo].every((v) => !v || normal(v).length < 2 || nome.includes(normal(v)));
+}
+
 /** Certeza para comparar sozinho: marca e modelo lidos, confiança alta e
     os dois no nome do produto do catálogo. */
 export function ehCerteza(id: Identificacao, nomeDoCatalogo: string) {
@@ -109,7 +116,11 @@ export async function buscarPelaFoto(base64: string): Promise<ResultadoFoto> {
       ? [identificado.categoria, identificado.marca, identificado.modelo].filter(Boolean).join(" ")
       : "",
   ].filter((b, i, l) => b.trim().length >= 3 && l.indexOf(b) === i);
-  const candidatos = await buscarNoCatalogo(buscas, { max: 4, porBusca: 3 });
+  const candidatos = await buscarNoCatalogo(buscas, {
+    max: 4,
+    porBusca: 3,
+    rejeitar: (nome) => !bateComAFoto(identificado, nome),
+  });
   const confiante = candidatos.length > 0 && ehCerteza(identificado, candidatos[0]!.nome);
   return { identificado, candidatos, confiante };
 }
