@@ -36,7 +36,8 @@ Olhe a foto com cuidado: formato, cor, logotipo, textos e codigos impressos (lei
 Responda SO com JSON:
 {"e_produto": true|false, "produto": "nome curto para buscar no catalogo (marca + linha + modelo + variacao essencial, 2 a 8 palavras)", "marca": "ou null", "modelo": "codigo/nome do modelo ou null", "categoria": "ou null", "texto_lido": "textos e codigos lidos na foto ou null", "confianca": 0-100}
 Regras: nunca invente marca ou modelo que nao da para ver ou deduzir com seguranca; na duvida use null e baixe a confianca.
-Foto de pessoa, documento, tela de conversa ou algo que nao e produto a venda: e_produto false.`;
+Print de tela de loja, site ou app mostrando um produto (pagina do produto, anuncio, vitrine) E produto: use o nome e o codigo escritos na tela; ignore barra do navegador, precos e botoes.
+Foto de pessoa, documento, tela de conversa sem produto ou algo que nao e produto a venda: e_produto false.`;
 
 const txt = (v: unknown, max = 80) => {
   const s = typeof v === "string" ? v.trim() : "";
@@ -50,18 +51,7 @@ const normal = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 
-export async function identificarPelaFoto(base64: string): Promise<Identificacao | null> {
-  let bruto: string | null = null;
-  const dataUrl = `data:image/jpeg;base64,${base64}`;
-  const llm = await perguntarAoLlm(PROMPT, 16_000, [dataUrl], "high");
-  if (llm.ok) bruto = llm.texto;
-  else {
-    const r = await gerarComModelos(
-      [{ text: PROMPT }, { inline_data: { mime_type: "image/jpeg", data: base64 } }],
-      { prazo: 15_000 },
-    );
-    if (r.ok) bruto = r.texto;
-  }
+function interpretar(bruto: string | null): Identificacao | null {
   if (!bruto) return null;
   const j = lerJson<Record<string, unknown>>(bruto);
   if (!j || j["e_produto"] === false) return null;
@@ -76,6 +66,26 @@ export async function identificarPelaFoto(base64: string): Promise<Identificacao
     textoLido: txt(j["texto_lido"], 160),
     confianca: Number.isFinite(c) ? Math.max(0, Math.min(100, Math.round(c))) : 0,
   };
+}
+
+/* 28/10: em fila (Cheaper 8 s -> GPT sem crédito -> Gemini) a foto morria no
+   tempo do 1º motor. Agora os dois correm juntos e vale a 1ª leitura boa. */
+export async function identificarPelaFoto(base64: string): Promise<Identificacao | null> {
+  const dataUrl = `data:image/jpeg;base64,${base64}`;
+  const ler = async (bruto: Promise<string | null>) => {
+    const id = interpretar(await bruto);
+    if (!id) throw new Error("sem leitura");
+    return id;
+  };
+  return Promise.any([
+    ler(perguntarAoLlm(PROMPT, 26_000, [dataUrl], "high").then((r) => (r.ok ? r.texto : null))),
+    ler(
+      gerarComModelos(
+        [{ text: PROMPT }, { inline_data: { mime_type: "image/jpeg", data: base64 } }],
+        { prazo: 24_000 },
+      ).then((r) => (r.ok ? r.texto : null)),
+    ),
+  ]).catch(() => null);
 }
 
 /** Certeza para comparar sozinho: marca e modelo lidos, confiança alta e
@@ -94,6 +104,10 @@ export async function buscarPelaFoto(base64: string): Promise<ResultadoFoto> {
   const buscas = [
     identificado.produto,
     [identificado.marca, identificado.modelo].filter(Boolean).join(" "),
+    /* Só com modelo lido: "tênis" sozinho traria qualquer tênis. */
+    identificado.modelo
+      ? [identificado.categoria, identificado.marca, identificado.modelo].filter(Boolean).join(" ")
+      : "",
   ].filter((b, i, l) => b.trim().length >= 3 && l.indexOf(b) === i);
   const candidatos = await buscarNoCatalogo(buscas, { max: 4, porBusca: 3 });
   const confiante = candidatos.length > 0 && ehCerteza(identificado, candidatos[0]!.nome);
