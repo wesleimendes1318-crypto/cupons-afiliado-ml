@@ -69,8 +69,14 @@ export function useBuscaPorFoto(comparar: (url: string) => void) {
         const candidatos = (j?.candidatos ?? []).filter((c) =>
           /^https:\/\/www\.mercadolivre\.com\.br\/p\/MLB\d+/.test(c.url),
         );
-        if (!j?.identificado || !candidatos.length) {
+        if (!j?.identificado) {
           setEstado({ fase: "erro", mensagem: SEM_PRODUTO });
+          return;
+        }
+        /* Lido, mas fora do catálogo oficial: vira busca pelo nome (28/10). */
+        if (!candidatos.length) {
+          setEstado({ fase: "parado" });
+          comparar(j.identificado.produto);
           return;
         }
         if (j.confiante) {
