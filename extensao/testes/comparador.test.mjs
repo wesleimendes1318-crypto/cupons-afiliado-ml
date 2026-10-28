@@ -631,3 +631,21 @@ test('titulo do muro de verificacao nao e produto', async () => {
   assert.equal(ehTituloDeDesafio('Câmera de Segurança Wi-Fi'), false);
   assert.equal(ehCaptcha('', 'https://www.mercadolivre.com.br/gz/account-verification?go=https%3A%2F%2Fproduto.mercadolivre.com.br%2FMLB-123456789'), true);
 });
+
+test('anuncios do modelo: so a marca, o modelo e a versao pedidos', async () => {
+  const { anunciosDoModelo } = await import('../comparador.js');
+  const lista = [
+    { item: 'MLB1', titulo: 'Tênis Nike Tc 7900 Feminino Bege', preco: 799.9 },
+    { item: 'MLB2', titulo: 'Vans Old Skool Adultos', preco: 120 },
+    { item: 'MLB3', titulo: 'Tênis Nike TC7900 Premium', preco: 699 },
+    { item: 'MLB4', titulo: 'Tenis Nike Tc 7900 Primeira Linha', preco: 199 },
+    { item: 'MLB5', titulo: 'Tênis Nike Winflo 11', preco: 400 },
+  ];
+  assert.deepEqual(anunciosDoModelo(lista, 'Nike', 'TC 7900').map(c => c.item), ['MLB3', 'MLB1']);
+  const iphones = [
+    { item: 'MLB6', titulo: 'Apple iPhone 15 Pro 128 GB', preco: 6000 },
+    { item: 'MLB7', titulo: 'Apple iPhone 15 128 GB Preto', preco: 4500 },
+  ];
+  assert.deepEqual(anunciosDoModelo(iphones, 'Apple', 'iPhone 15').map(c => c.item), ['MLB7']);
+  assert.deepEqual(anunciosDoModelo(lista, null, null), []);
+});

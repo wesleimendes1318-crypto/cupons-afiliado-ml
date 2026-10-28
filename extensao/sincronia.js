@@ -640,3 +640,22 @@ export async function gravarMultiloja(token, pedido, resultado) {
     return true;
   } catch (e) { return false; }
 }
+
+/* Busca por nome nos anuncios (28/10): pedidos do site quando o catalogo
+   oficial nao tem a marca e o modelo pedidos. */
+export async function buscasAnunciosPendentes(token) {
+  if (!token) return [];
+  try {
+    const r = await chamarRpc(SUPABASE + '/rest/v1/rpc/buscas_anuncios_pendentes', { p_token: token });
+    return Array.isArray(r) ? r : [];
+  } catch (e) { return []; }
+}
+
+export async function gravarBuscaAnuncios(token, id, resultado, erro = null) {
+  if (!token || !id) return false;
+  try {
+    await chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_busca_anuncios',
+      { p_token: token, p_id: id, p_resultado: resultado, p_erro: erro });
+    return true;
+  } catch (e) { return false; }
+}

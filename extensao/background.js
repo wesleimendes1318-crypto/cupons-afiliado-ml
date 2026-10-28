@@ -8,12 +8,13 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
-         avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes } from './sincronia.js';
+         avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
+         buscasAnunciosPendentes, gravarBuscaAnuncios } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
-         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida } from './comparador.js';
+         identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
@@ -3976,6 +3977,56 @@ async function atenderGarimpos() {
   return { feitos };
 }
 
+/* BUSCA POR NOME NOS ANUNCIOS (28/10, Weslei: "a ia de busca deve ser muito
+   assertiva, no modelo, versoes tudo"). O Nike TC 7900 nao tem produto no
+   catalogo oficial, so anuncios avulsos, que a API nao lista. Quando o site
+   nao acha a marca e o modelo no catalogo, pede aqui: a mesma busca que uma
+   pessoa faria, uma pagina por pedido, e so os anuncios com a marca, o modelo
+   e a versao pedidos no titulo (anunciosDoModelo). */
+let atendendoBuscasAnuncios = false;
+async function atenderBuscasAnuncios() {
+  if (atendendoBuscasAnuncios) return { pulou: true };
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return { semToken: true };
+  atendendoBuscasAnuncios = true;
+  let feitos = 0;
+  try {
+    for (const b of await buscasAnunciosPendentes(sincToken)) {
+      let resultado = null, erro = null;
+      try { resultado = await anunciosPeloNome(b); } catch (e) { erro = String(e.message || e).slice(0, 200); }
+      await gravarBuscaAnuncios(sincToken, b.id, resultado, erro);
+      feitos++;
+    }
+  } finally {
+    atendendoBuscasAnuncios = false;
+  }
+  return { feitos };
+}
+
+async function anunciosPeloNome(b) {
+  const url = urlDeBusca(b.termo);
+  /* A semelhanca do titulo e medida so contra a marca e o modelo (a cor do
+     pedido, "Beige Navy", raramente esta no titulo). */
+  const referencia = [b.marca, b.modelo].filter(Boolean).join(' ') || b.termo;
+  const diag = { url };
+  const html = await lerCatalogo(url, 3000000);
+  const achados = ofertasDaBusca(html, referencia, null, diag);
+  let lidos = [...achados, ...(achados.outros || [])];
+  if (!lidos.length) {
+    try {
+      const tela = await lerBuscaNaAba(url);
+      diag.aba = tela.itens || 0;
+      lidos = candidatosDeCartoes(tela.cartoes, referencia, null, diag);
+    } catch (e) { diag.aba = String(e.message || e).slice(0, 80); }
+  }
+  const itens = anunciosDoModelo(lidos, b.marca, b.modelo).slice(0, 12).map(c => ({
+    item: c.item, url: c.url, titulo: String(c.titulo).slice(0, 160), preco: c.preco,
+    imagem: c.imagem || null, freteGratis: typeof c.freteGratis === 'boolean' ? c.freteGratis : null
+  }));
+  return { itens, lidos: lidos.length, cartoes: diag.cartoes || diag.polycards || 0,
+           titulos: (diag.titulosVistos || []).slice(0, 8), url, lidoEm: new Date().toISOString() };
+}
+
 async function atenderPedidos() {
   if (atendendo) { chegouPedidoNovo = true; return { atendidos: 0, pulou: true }; }
   const { sincToken } = await chrome.storage.local.get('sincToken');
@@ -4955,6 +5006,7 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         atenderPedidosDeLoja().catch(e => console.warn('[loja]', e.message));
         atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
         atenderGarimpos().catch(e => console.warn('[garimpo]', e.message));
+        atenderBuscasAnuncios().catch(e => console.warn('[busca-anuncios]', e.message));
         responder({ ok: true });
       } else if (msg.tipo === 'estadoGeral') {
         const st = await chrome.storage.local.get(['ultimoAtendimento', 'anonimaBloqueadaAte', 'sincToken']);
@@ -5411,6 +5463,8 @@ chrome.alarms.onAlarm.addListener(async a => {
     atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
     // Garimpo no player do link colado (Amazon/Shopee) ou no campeao.
     atenderGarimpos().catch(e => console.warn('[garimpo]', e.message));
+    // Busca por nome nos anuncios (modelo fora do catalogo oficial).
+    atenderBuscasAnuncios().catch(e => console.warn('[busca-anuncios]', e.message));
     return;
   }
   if (a.name === 'versao') {

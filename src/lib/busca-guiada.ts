@@ -50,6 +50,7 @@ export type RespostaBusca = {
   dominiosPermitidos?: string[];
   marca?: string | null;
   modelo?: string | null;
+  anuncios?: { id: number; chave: string } | null;
 };
 
 /** Intenção universal (27/10, "tomada para banheiro" não traz HDMI, antena
