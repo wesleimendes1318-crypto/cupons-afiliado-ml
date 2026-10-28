@@ -48,6 +48,8 @@ export type RespostaBusca = {
   contextoUso?: string | null;
   termosNegativos?: string[];
   dominiosPermitidos?: string[];
+  marca?: string | null;
+  modelo?: string | null;
 };
 
 /** Intenção universal (27/10, "tomada para banheiro" não traz HDMI, antena
@@ -67,6 +69,9 @@ export type Interpretacao = {
   termosNegativos?: string[];
   /** Domínios MLB que o modelo sugere; só somam aos previstos pela API. */
   dominiosPermitidos?: string[];
+  /** Só quando a pessoa citou: o título do produto tem de trazer os dois. */
+  marca?: string | null;
+  modelo?: string | null;
 };
 
 const PROMPT = `Voce ajuda compradores no Brasil a achar produtos vendidos no Mercado Livre.
@@ -86,11 +91,14 @@ termosNegativos: ate 10 palavras que, no titulo, indicam OUTRO produto com o mes
 de outro contexto. Ex.: "tomada para banheiro" -> ["hdmi", "antena", "rj45", "coaxial", "telefone",
 "gabinete", "armario"]; "racao para gatos" -> ["comedouro", "brinquedo", "arranhador"]; "pneu aro 14"
 -> ["miniatura", "chaveiro", "camara de ar", "calibrador"]. Nunca repita palavras do pedido.
+marca e modelo: SO se o pedido cita um produto especifico (ex.: "Nike TC 7900 Beige Navy" -> marca "Nike",
+modelo "TC 7900"; "iphone 15 pro" -> marca "Apple", modelo "iPhone 15 Pro"); modelo sem cor nem tamanho;
+pedido generico ("tenis de corrida", "presente ate R$ 200"): null nos dois.
 dominiosPermitidos: so se tiver certeza, ids de dominio do Mercado Livre ("MLB-TIRES"); senao [].
 resumo: uma frase curta e simpatica em portugues dizendo o que vai buscar (sem prometer preco,
 sem falar de inteligencia artificial, sem links).
 Responda SO com JSON: {"buscas": ["..."], "tipoProduto": "...", "contextoUso": "...",
-"termosNegativos": ["..."], "dominiosPermitidos": [], "precoMin": null, "precoMax": null, "resumo": "..."}
+"termosNegativos": ["..."], "marca": null, "modelo": null, "dominiosPermitidos": [], "precoMin": null, "precoMax": null, "resumo": "..."}
 Pedido`;
 
 const num = (v: unknown) => {
@@ -154,10 +162,17 @@ type JsonDoModelo = Partial<
     | "tipoProduto"
     | "contextoUso"
     | "termosNegativos"
-    | "dominiosPermitidos",
+    | "dominiosPermitidos"
+    | "marca"
+    | "modelo",
     unknown
   >
 >;
+
+const textoCurto = (v: unknown) => {
+  const s = typeof v === "string" ? v.trim().slice(0, 40) : "";
+  return s && !/^null$/i.test(s) && !/https?:|www\./i.test(s) ? s : null;
+};
 
 const lista = (v: unknown) => (Array.isArray(v) ? v : []).map((x) => String(x ?? "").trim());
 
@@ -194,6 +209,8 @@ export function intencaoDoModelo(j: JsonDoModelo | null, q: string): Interpretac
     tipoProduto,
     contextoUso: contexto || null,
     termosNegativos,
+    marca: textoCurto(j.marca),
+    modelo: textoCurto(j.modelo),
     dominiosPermitidos: lista(j.dominiosPermitidos)
       .filter((d) => /^MLB-[A-Z0-9_]+$/.test(d))
       .slice(0, 6),
