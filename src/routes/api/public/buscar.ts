@@ -185,7 +185,11 @@ export const Route = createFileRoute("/api/public/buscar")({
         let anuncios: { id: number; chave: string } | null = null;
         if (exato && !achado.resultados.length && !pagina && !modoProduto) {
           const { data } = await db.rpc("pedir_busca_anuncios", {
-            p_termo: achado.intencao.buscas[0] ?? entrada.q,
+            // O que a pessoa digitou: a busca do modelo pode trazer palavra a mais ("feminino").
+            p_termo:
+              entrada.q.trim().split(/\s+/).length <= 8
+                ? entrada.q
+                : [marca, modelo].filter(Boolean).join(" "),
             p_marca: marca ?? null,
             p_modelo: modelo ?? null,
           });
