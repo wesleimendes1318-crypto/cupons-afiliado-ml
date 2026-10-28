@@ -89,6 +89,21 @@ describe("recompra", () => {
     expect(lista[0]).toBe(hidratante);
   });
 
+  test("sem teto: o trilho devolve todos os aprovados (ver mais, 28/10)", () => {
+    const marcas =
+      "Elseve Pantene Dove Seda Tresemme Head Clear Garnier Johnson Palmolive Natura Boticario Lowell Wella Loreal Kerastase Nivea Avon Salon Haskell".split(
+        " ",
+      );
+    const lista = selecionarRecompra(
+      marcas.map((m, k) =>
+        item(`Shampoo ${m} 400ml`, 20 + k, { categoria_no: "shampoos", posicao: 1 }),
+      ),
+      () => undefined,
+      null,
+    );
+    expect(lista.length).toBe(marcas.length);
+  });
+
   test("nota baixa lida tira o item", () => {
     const s = item("Shampoo Barato 300ml", 10, { categoria_no: "shampoos", posicao: 1 });
     expect(selecionarRecompra([s], () => resumo(3.9, 100), null)).toEqual([]);
