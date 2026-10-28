@@ -228,6 +228,14 @@ export function BotaoTelegram({ p, texto }: { p: PaletaCampanha; texto: string }
 
 /* Classificação do cartão: o que está sendo comparado, com o dado. */
 function classificacao(o: Oferta) {
+  /* Curadoria manual (ex.: Em alta no TikTok): sem 2ª loja medida, não afirma comparação. */
+  if (!(o.antes > o.preco)) {
+    return {
+      chip: "Preço conferido",
+      chipClasse: "bg-[#f0f0f3] text-[#3a3a3c]",
+      linha: <>Preço do anúncio, sem comparação com outras lojas</>,
+    };
+  }
   if (o.tipo === "menor") {
     const selo = seloDoMenorPreco(o.lojas ?? null, o.preco, o.antes);
     return {
