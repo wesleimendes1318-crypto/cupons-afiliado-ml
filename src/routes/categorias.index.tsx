@@ -118,7 +118,11 @@ function Categorias() {
           return (
             <section key={d.slug} aria-labelledby={`mapa-${d.slug}`}>
               <h2 id={`mapa-${d.slug}`} className="text-base font-extrabold tracking-tight">
-                <Link to="/categorias/$slug" params={{ slug: d.slug }} className="hover:underline">
+                <Link
+                  to="/categorias/$slug"
+                  params={{ slug: d.slug }}
+                  className="inline-flex min-h-8 items-center hover:underline"
+                >
                   {d.nome}
                 </Link>
               </h2>

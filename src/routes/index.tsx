@@ -3046,7 +3046,7 @@ function ComparadorModal({
         if (!estado) fechar();
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Qual compensa mais</DialogTitle>
           <DialogDescription>
@@ -3476,7 +3476,7 @@ export function CondicoesModal({
 
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && fechar()}>
-      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-lg border-border bg-card p-0 text-card-foreground shadow-modal sm:rounded-lg">
+      <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-lg border-border bg-card p-0 text-card-foreground shadow-modal sm:rounded-lg">
         <DialogHeader className="border-b border-border px-5 py-5 pr-14 text-left sm:px-6">
           <DialogTitle className="text-xl font-semibold">
             {cupom.desconto ?? "Condições do cupom"}

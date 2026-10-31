@@ -1487,7 +1487,7 @@ export default function BuscaPorLink({
     return a.origem === "amazon" ? "Amazon Brasil" : (a.nomeLoja ?? null);
   }, [url]);
   /* Placeholder com as duas utilidades; mais curto no celular. */
-  const [placeholder, setPlaceholder] = useState("Cole o link ou busque o produto...");
+  const [placeholder, setPlaceholder] = useState("Link ou nome do produto");
   useEffect(() => {
     if (window.matchMedia?.("(min-width: 640px)").matches)
       setPlaceholder("Cole o link ou digite o produto que procura...");
@@ -1592,6 +1592,7 @@ export default function BuscaPorLink({
             /* Letra de 16 px no celular (sem ela o iPhone aumenta o zoom ao
                tocar, 18/10). */
             placeholder={placeholder}
+            enterKeyHint="search"
             aria-label="Link do anúncio ou nome do produto"
             className={
               "min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5" +
@@ -2336,7 +2337,7 @@ function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: ()
             className="inline-flex h-11 items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0f1729] transition-colors duration-150 hover:bg-[#f2f2f5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 dark:text-white sm:h-8"
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
-            Atualizar<span className="hidden min-[360px]:inline"> comparação</span>
+            Atualizar<span className="hidden min-[390px]:inline"> comparação</span>
           </button>
         </div>
       </div>
@@ -5504,7 +5505,7 @@ function LinhaDaLoja({
             />
           )}
         </div>
-        <div className="max-w-[9.5rem] text-right tabular-nums sm:max-w-none">
+        <div className="max-w-[7.5rem] text-right tabular-nums sm:max-w-none">
           <span
             className={
               "block font-bold leading-tight " +

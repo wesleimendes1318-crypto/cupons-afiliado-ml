@@ -87,7 +87,7 @@ const TITULOS: Record<ContextoBusca, { linha1: string; linha2: string; apoio: st
    cabe inteiro no celular de 390 px; 16/10, em /brinquedos aparecia "fone
    bluetooth até R$" cortado). */
 const EXEMPLO: Record<ContextoBusca, string> = {
-  home: "Ex.: air fryer até R$ 400",
+  home: "Ex.: air fryer barata",
   natal: "Ex.: presente para mãe",
   criancas: "Ex.: LEGO para 6 anos",
 };
@@ -182,6 +182,7 @@ export function BuscaGuiada({
                 }}
                 onKeyDown={(e) => void sugestoes.teclar(e)}
                 autoComplete="off"
+                enterKeyHint="search"
                 maxLength={160}
                 placeholder={EXEMPLO[contexto]}
                 className="h-12 w-full rounded-full border border-transparent bg-[#f5f5f7] pl-10 pr-4 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus-visible:border-[#0071e3] focus-visible:ring-4 focus-visible:ring-[#0071e3]/20"
@@ -210,7 +211,7 @@ export function BuscaGuiada({
                   type="button"
                   onClick={() => void buscar(s)}
                   disabled={carregando}
-                  className="rounded-full border border-border bg-[#f5f5f7] px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-[#e8e8ed] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                  className="inline-flex min-h-9 items-center rounded-full border border-border bg-[#f5f5f7] px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-[#e8e8ed] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
                 >
                   {s}
                 </button>
