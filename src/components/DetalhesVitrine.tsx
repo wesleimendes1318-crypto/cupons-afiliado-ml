@@ -271,9 +271,9 @@ function Painel({
         if (e.target === ref.current) ref.current?.close();
       }}
       aria-labelledby={`det-${chave}`}
-      className="painel m-auto max-h-[88vh] w-[min(640px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-border bg-white p-0 text-[#1d1d1f] shadow-2xl backdrop:bg-black/40"
+      className="painel m-auto max-h-[88dvh] w-[min(640px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-border bg-white p-0 text-[#1d1d1f] shadow-2xl backdrop:bg-black/40"
     >
-      <div className="flex max-h-[88vh] flex-col">
+      <div className="flex max-h-[88dvh] flex-col">
         <div className="flex items-start gap-3 border-b border-border p-4">
           <div className="min-w-0 flex-1">
             <h3 id={`det-${chave}`} className="text-[15px] font-bold leading-snug">

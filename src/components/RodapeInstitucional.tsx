@@ -52,7 +52,7 @@ export function AvisoAfiliado({ className }: { className?: string }) {
 }
 
 const LINK =
-  "text-sm text-[#5b5870] transition-colors hover:text-[#7547E8] dark:text-white/70 dark:hover:text-white";
+  "inline-flex min-h-8 items-center text-sm text-[#5b5870] transition-colors hover:text-[#7547E8] dark:text-white/70 dark:hover:text-white";
 
 export function RodapeInstitucional() {
   return (
@@ -130,7 +130,7 @@ export function RodapeInstitucional() {
           {COLUNAS.map((c) => (
             <nav key={c.titulo} aria-label={c.titulo} className="md:px-8">
               <p className="font-bold text-[#21134A] dark:text-white">{c.titulo}</p>
-              <ul className="mt-3 space-y-2.5">
+              <ul className="mt-2 space-y-1 md:mt-3 md:space-y-2.5">
                 {c.links.map((l) => (
                   <li key={l.to}>
                     <Link to={l.to} className={LINK}>

@@ -1103,6 +1103,17 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   (saía "Cabe 3 BTUS a menos"); "Cabe" só para L, mL e kg (testes em
   tests/diferencas.test.ts).
 
+- Revisão do celular (31/10, 360/390/430 px, resultado medido com o pedido
+  1001232): placeholder do campo principal no celular "Link ou nome do
+  produto" (o antigo quebrava em 2 linhas e cortava ao lado do "Colar");
+  "Atualizar comparação" só com "comparação" a partir de 390 px (em 360
+  saía do quadro); coluna do preço da lista de lojas com 7,5rem no celular
+  (nomes como "RSG ECOMMERCE" quebravam no meio); painéis e diálogos em dvh
+  (vh do iPhone passa da tela com a barra do Safari); aviso de cookies com
+  folga da barra do iPhone (safe-area); alvos de toque de 32-36 px nos links
+  do rodapé, departamentos e sugestões da busca guiada; teclado com "Buscar"
+  (enterKeyHint) nos dois campos de busca.
+
 ## Publicação
 - Branch claude/ml-etiquetas-cupons-k6tgkj e main recebem o mesmo commit.
 - Depois do push: esperar list_edits "completed" e chamar deploy_project.

@@ -39,7 +39,7 @@ export function BannerConsentimento() {
     <div
       role="dialog"
       aria-label="Preferências de cookies"
-      className="fixed inset-x-0 bottom-0 z-[60] border-t border-border bg-card/98 p-4 shadow-[0_-8px_28px_rgba(0,0,0,0.12)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-[60] border-t border-border bg-card/98 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_rgba(0,0,0,0.12)] backdrop-blur"
     >
       <div className="mx-auto max-w-3xl">
         <p className="text-sm font-bold">Cookies e privacidade</p>
