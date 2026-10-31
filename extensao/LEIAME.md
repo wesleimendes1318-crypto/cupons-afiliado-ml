@@ -283,3 +283,11 @@ que faz `git pull` do ramo main a cada 30 minutos. A extensao, carregada de
 C:\cupons-afiliado-ml\extensao, confere a versao do manifest.json no disco a
 cada 15 minutos e se recarrega sozinha quando ela muda (espera terminar o
 atendimento em andamento).
+
+### v1.170.0 - link de afiliado de terceiro sempre convertido (31/10)
+
+Toda geracao de link (pedido do site, atendimento, link avulso) passa antes
+por `resolverEncurtado`: meli.la e mercadolivre.com.br/sec/... de outro
+afiliado sao abertos sem cookie ate o produto, limpos (sem matt_word,
+matt_tool) e so entao o link sai com a etiqueta do Weslei. Encurtado que nao
+abre da erro: nunca se gera em cima do link de outra pessoa.

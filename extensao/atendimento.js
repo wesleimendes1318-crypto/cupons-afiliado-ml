@@ -30,7 +30,7 @@ const ehProdutoML = u => /\/p\/MLB\d+/i.test(u) || /\/MLB-?\d+/i.test(u);
 
 /* Encurtado do Mercado Livre: exige um salto a mais e costuma carregar a
    etiqueta de quem compartilhou. */
-const ehCurtoML = u => /^https?:\/\/(meli\.la|(www\.)?mercadolivre\.com\.br\/sec)\//i.test(u);
+export const ehCurtoML = u => /^https?:\/\/(meli\.la|(www\.)?mercadolivre\.com\.br\/sec)\//i.test(u);
 
 const ENTIDADES = { '&quot;': '"', '&amp;': '&', '&#39;': "'", '&apos;': "'", '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' };
 const desescapar = s => (s || '').replace(/&(?:quot|amp|#39|apos|lt|gt|nbsp);/g, m => ENTIDADES[m] || m);
@@ -67,12 +67,15 @@ export function limparUrl(bruta) {
   return u.toString();
 }
 
-/* Um meli.la pode ser de outro afiliado. Resolvemos SEM mandar o cookie,
-   para nao registrar o clique na conta de quem gerou aquele link. */
-async function resolverEncurtado(url) {
-  if (new URL(url).hostname.toLowerCase() !== 'meli.la') return url;
+/* Um encurtado (meli.la ou mercadolivre.com.br/sec/...) pode ser de outro
+   afiliado. Resolvemos SEM mandar o cookie, para nao registrar o clique na
+   conta de quem gerou aquele link, e o link sai do endereco final limpo
+   (sem matt_word/matt_tool de terceiro). Sem destino: erro, nunca gerar
+   em cima do encurtado de outra pessoa (31/10). */
+export async function resolverEncurtado(url) {
+  if (!ehCurtoML(url)) return url;
   const r = await fetch(url, { redirect: 'follow', credentials: 'omit' });
-  if (!r.url || r.url === url) throw new Error('Nao consegui abrir esse link encurtado.');
+  if (!r.url || r.url === url || ehCurtoML(r.url)) throw new Error('Nao consegui abrir esse link encurtado.');
   return limparUrl(r.url);
 }
 

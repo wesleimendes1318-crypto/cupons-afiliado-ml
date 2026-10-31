@@ -15,7 +15,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
-import { criarAtendimento, lerResposta, limparUrl, avaliar, avaliarCupom,
+import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
 import { garimparNoPlayer } from './garimpo.js';
@@ -1811,6 +1811,10 @@ function chaveDoLink(url) {
    ja existe, devolve sem chamar o Mercado Livre; se o cadastro bloquear
    (pausa geral, teto do dia, geracao em andamento), nao cria. */
 async function gerarNaAba(tabId, url, tag = TAG_PADRAO, tipo = 'link', chave = null) {
+  /* Link de afiliado de TERCEIRO (meli.la, /sec/): vira o produto antes de
+     gerar, em todo caminho (pedido, atendimento, avulso). Gerar em cima do
+     encurtado levaria a venda para a etiqueta de quem o criou (31/10). */
+  url = await resolverEncurtado(url);
   const { sincToken } = await chrome.storage.local.get('sincToken');
   const k = chave || chaveDoLink(url);
   const res = await reservarGeracao(sincToken, tipo, k);
