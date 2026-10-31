@@ -1121,7 +1121,7 @@ export default function BuscaPorLink({
           setCompletando(false);
           setPedido({
             status: "pronto",
-            link: soAfiliado(r.link),
+            link: soAfiliado(r.link, alvo),
             codigo: null,
             erro: null,
             analise: analiseSoComAfiliado(r.analise),
@@ -1203,7 +1203,7 @@ export default function BuscaPorLink({
         /* Só link de afiliado (meli.la) chega à tela; o resto vira o botão que
            gera o link no clique. */
         const linha = cru
-          ? { ...cru, link: soAfiliado(cru.link), analise: analiseSoComAfiliado(cru.analise) }
+          ? { ...cru, link: soAfiliado(cru.link, alvo), analise: analiseSoComAfiliado(cru.analise) }
           : null;
 
         if (linha?.status === "processando") {
@@ -4413,7 +4413,7 @@ function BarraFixa({
         }
         aria-hidden={!visivel}
       >
-        <div className="flex items-center gap-3 rounded-[18px] border border-[#ececf0] bg-white/90 px-3.5 py-3 shadow-[0_6px_24px_rgba(15,23,41,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90">
+        <div className="flex items-center gap-3 rounded-[18px] border border-[#ececf0] vidro-barra px-3.5 py-3 shadow-[0_6px_24px_rgba(15,23,41,0.10)] dark:border-white/10">
           <Foto
             src={imagem}
             className="size-10 shrink-0 rounded-xl bg-muted object-contain"

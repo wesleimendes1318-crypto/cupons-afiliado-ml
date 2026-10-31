@@ -146,7 +146,7 @@ export function BarraDeSecoes({ secoes, inicio = null }: { secoes: Secao[]; inic
   };
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 mb-1 flex flex-col border-b border-slate-200/50 bg-white/75 px-4 py-2 backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/75 sm:top-[60px] sm:-mx-5 sm:px-5 lg:flex-row lg:items-center lg:gap-4">
+    <div className="sticky top-14 z-20 -mx-4 mb-1 flex flex-col border-b border-slate-200/50 vidro-barra px-4 py-2 dark:border-white/10 sm:top-[60px] sm:-mx-5 sm:px-5 lg:flex-row lg:items-center lg:gap-4">
       {/* No celular o CEP fica fora da barra fixa (ela não cresce). */}
       {/* PC (25/10): as pílulas nunca encolhem (a última saía cortada em 1440 px); o CEP usa o resto. */}
       {inicio && <div className="hidden min-w-0 lg:block lg:flex-1">{inicio}</div>}

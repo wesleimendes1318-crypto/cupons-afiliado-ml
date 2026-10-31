@@ -1062,7 +1062,7 @@ function BarraDeCompra({
   return (
     <div
       className={
-        "fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-white/90 p-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md transition-[transform,opacity] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none dark:border-white/10 dark:bg-neutral-900/90 sm:hidden " +
+        "fixed inset-x-0 bottom-0 z-40 border-t border-black/5 vidro-barra p-3 pb-[max(12px,env(safe-area-inset-bottom))] transition-[transform,opacity] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none dark:border-white/10 sm:hidden " +
         (visivel ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0")
       }
       aria-hidden={!visivel}

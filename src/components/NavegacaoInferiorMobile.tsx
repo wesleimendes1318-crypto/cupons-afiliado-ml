@@ -27,7 +27,7 @@ export function NavegacaoInferiorMobile() {
     <nav
       data-abas-inferiores
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-black/[0.06] bg-white/90 px-1 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur-xl backdrop-saturate-150 transition-transform duration-300 ease-out motion-reduce:transition-none sm:hidden dark:border-white/10 dark:bg-neutral-950/90 [[data-compra]_&]:pointer-events-none [[data-compra]_&]:translate-y-full"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-black/[0.06] vidro-barra px-1 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-300 ease-out motion-reduce:transition-none sm:hidden dark:border-white/10 [[data-compra]_&]:pointer-events-none [[data-compra]_&]:translate-y-full"
     >
       <Link
         to="/"

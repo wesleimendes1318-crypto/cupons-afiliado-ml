@@ -9,6 +9,7 @@ import {
   gerarUrlAfiliadoAmazon,
   urlBuscaAmazon,
   marketplaceDoLink,
+  soAfiliado,
 } from "../src/lib/afiliado";
 
 test("trava do Mercado Livre continua só meli.la", () => {
@@ -109,4 +110,19 @@ test("Amazon: ASIN puro e termo de busca com a tag (Conferir na Amazon)", () => 
   assert.equal(gerarUrlAfiliadoAmazon(""), null);
   assert.equal(gerarUrlAfiliadoAmazon("amazon.com.br/dp/B0ABCDEFGH"), null);
   assert.equal(gerarUrlAfiliadoAmazon("https://golpe.com/dp/B0ABCDEFGH"), null);
+});
+
+test("soAfiliado: meli.la de terceiro colado nunca volta como link de compra (31/10)", () => {
+  assert.equal(soAfiliado("https://meli.la/AbC123", "https://meli.la/AbC123"), null);
+  assert.equal(soAfiliado("https://meli.la/AbC123", "Olha isto: https://meli.la/AbC123 boa"), null);
+  assert.equal(
+    soAfiliado("https://meli.la/Xyz9", "https://meli.la/AbC123"),
+    "https://meli.la/Xyz9",
+  );
+  assert.equal(soAfiliado("https://meli.la/AbC", "https://meli.la/AbC123"), "https://meli.la/AbC");
+  assert.equal(
+    soAfiliado("https://meli.la/AbC123", "https://produto.mercadolivre.com.br/MLB-1"),
+    "https://meli.la/AbC123",
+  );
+  assert.equal(soAfiliado("https://meli.la/AbC123"), "https://meli.la/AbC123");
 });

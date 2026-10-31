@@ -2029,3 +2029,21 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   lado (uma faixa a menos).
 - Em aberto com o Weslei: vídeo "Como funciona" dentro do cartão do link no
   PC (autoplay pedido em 27/09) e o segundo botão de compra na recomendação.
+
+## Vidro líquido nas barras e botões (31/10)
+- Weslei, 31/10: "instala o expo-glass-effect e põe o vidro só nas barras e
+  botões do meu site". O expo-glass-effect é só do app nativo (Expo/iOS) e
+  não roda no site: NÃO instalar. O mesmo visual sai em CSS, nas utilidades
+  vidro-barra e vidro-botao (src/styles.css): fundo translúcido + blur e
+  saturação, sólido sem suporte a backdrop-filter ou com "reduzir
+  transparência". Escrever só backdrop-filter (o Lightning CSS põe o
+  -webkit-; escrever os dois fazia sumir o sem prefixo).
+- vidro-barra: cabeçalho, barra de seções, abas de baixo, barras de compra
+  do celular, barra de filtros e de cupons selecionados. vidro-botao:
+  pílula flutuante Início/topo, "Ofertas no Telegram" do cabeçalho e as
+  variantes outline/secondary do Button. Cartões, conteúdo e botões de
+  compra (verde/azul sólidos) NÃO levam vidro.
+- Link colado (31/10, "converta links afiliados de terceiros para o meu"):
+  soAfiliado(link, colado) nunca devolve como link de compra o meli.la que
+  o cliente colou; o botão gera o DELE no clique. Complementa a extensão
+  1.170.0 (resolverEncurtado antes de gerar, PR #51).
