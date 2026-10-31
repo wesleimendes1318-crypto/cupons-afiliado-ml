@@ -87,7 +87,7 @@ export function CabecalhoSite() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-neutral-950/90">
+    <header className="sticky top-0 z-40 border-b border-black/[0.06] vidro-barra dark:border-white/10">
       <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-[60px] sm:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
@@ -182,7 +182,7 @@ export function CabecalhoSite() {
             rel="noopener noreferrer"
             data-origem="topo"
             aria-label="Ofertas no Telegram: abrir o canal de ofertas comparadas (abre em nova aba)"
-            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#7547E8]/50 px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
+            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 vidro-botao rounded-full border border-[#7547E8]/50 px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
           >
             <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
             <span className="hidden min-[400px]:inline">Ofertas no Telegram</span>

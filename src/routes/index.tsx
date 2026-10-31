@@ -2360,7 +2360,7 @@ function Index() {
               contagem, a ordem e os atalhos — e o resto mora na gaveta. A barra
               gruda no topo porque a lista tem quase 9.000px: sem isso, refinar a
               busca obriga a rolar tudo de volta. */}
-                <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div className="sticky top-0 z-30 -mx-4 border-b border-border vidro-barra px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <div className="flex" role="tablist" aria-label="Qualidade do cupom">
                       {(
@@ -2894,7 +2894,7 @@ function Index() {
       </section>
 
       {cupomSelecionados.length > 0 && (
-        <div className="fixed inset-x-0 bottom-[var(--folga-abas,0px)] z-40 border-t border-border bg-card/95 p-3 shadow-modal backdrop-blur">
+        <div className="fixed inset-x-0 bottom-[var(--folga-abas,0px)] z-40 border-t border-border vidro-barra p-3 shadow-modal">
           <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold">

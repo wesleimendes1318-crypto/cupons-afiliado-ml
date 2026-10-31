@@ -213,6 +213,62 @@
   --ring: oklch(0.68 0.17 255);
 }
 
+/* VIDRO LÍQUIDO (Weslei, 31/10: "põe o vidro só nas barras e botões").
+   O expo-glass-effect é só do app nativo (iOS); no site o mesmo visual sai
+   em CSS: fundo translúcido + desfoque e saturação do que passa por baixo,
+   borda clara de 1 px e brilho no alto. SÓ barras (cabeçalho, seções, abas,
+   barra de compra) e botões neutros/flutuantes; cartões e conteúdo não.
+   Sem suporte a backdrop-filter ou com "reduzir transparência": sólido. */
+@utility vidro-barra {
+  background-color: rgb(255 255 255 / 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  &:is(.dark *) {
+    background-color: rgb(23 23 23 / 0.8);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: rgb(255 255 255 / 0.97);
+    &:is(.dark *) {
+      background-color: rgb(23 23 23 / 0.97);
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: rgb(255 255 255);
+    &:is(.dark *) {
+      background-color: rgb(23 23 23);
+    }
+  }
+}
+
+@utility vidro-botao {
+  background-color: rgb(255 255 255 / 0.55);
+  backdrop-filter: blur(12px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.75),
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 2px 8px rgb(15 23 41 / 0.06);
+  &:hover {
+    background-color: rgb(255 255 255 / 0.75);
+  }
+  &:is(.dark *) {
+    background-color: rgb(255 255 255 / 0.08);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 0 0 1px rgb(255 255 255 / 0.1);
+  }
+  &:is(.dark *):hover {
+    background-color: rgb(255 255 255 / 0.14);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: rgb(255 255 255 / 0.95);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: rgb(255 255 255);
+    &:is(.dark *) {
+      background-color: rgb(38 38 38);
+    }
+  }
+}
+
 @utility campo-filtro {
   width: 100%;
   min-height: 2.5rem;

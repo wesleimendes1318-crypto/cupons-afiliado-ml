@@ -9,8 +9,21 @@ import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 export const ehLinkDeAfiliado = (u: unknown): u is string =>
   typeof u === "string" && /^https:\/\/meli\.la\/[A-Za-z0-9]+\/?$/.test(u.trim());
 
-/** O link, se for de afiliado; senão null. */
-export const soAfiliado = (u: unknown): string | null => (ehLinkDeAfiliado(u) ? u.trim() : null);
+/** O link, se for de afiliado; senão null. Com `colado`: o meli.la que o
+    cliente colou nunca volta como link de compra (Weslei, 31/10: "converta
+    links afiliados de terceiros para o meu"); o botão gera o DELE no clique. */
+export const soAfiliado = (u: unknown, colado?: string | null): string | null =>
+  ehLinkDeAfiliado(u) && !mesmoMeliLa(u, colado) ? u.trim() : null;
+
+/* O colado pode ser o texto todo do compartilhar ("Olha: https://meli.la/X"). */
+const mesmoMeliLa = (link: string, colado: unknown) => {
+  const codigo = /meli\.la\/([A-Za-z0-9]+)/i.exec(link)?.[1];
+  return (
+    !!codigo &&
+    typeof colado === "string" &&
+    new RegExp(`meli\\.la/${codigo}(?![A-Za-z0-9])`, "i").test(colado)
+  );
+};
 
 type ComLink = { link?: string | null | undefined; vendedor?: string | null; loja?: string | null };
 
