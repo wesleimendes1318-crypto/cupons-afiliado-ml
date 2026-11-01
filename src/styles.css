@@ -220,10 +220,13 @@
    barra de compra) e botões neutros/flutuantes; cartões e conteúdo não.
    Sem suporte a backdrop-filter ou com "reduzir transparência": sólido. */
 @utility vidro-barra {
-  background-color: rgb(255 255 255 / 0.8);
-  backdrop-filter: blur(20px) saturate(180%);
+  background-color: rgb(255 255 255 / 0.62);
+  /* brilho no alto, como o vidro da Apple (não usa box-shadow: cada barra tem a sua) */
+  background-image: linear-gradient(to bottom, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0) 60%);
+  backdrop-filter: blur(24px) saturate(200%);
   &:is(.dark *) {
-    background-color: rgb(23 23 23 / 0.8);
+    background-color: rgb(23 23 23 / 0.62);
+    background-image: linear-gradient(to bottom, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0) 60%);
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     background-color: rgb(255 255 255 / 0.97);
@@ -240,8 +243,9 @@
 }
 
 @utility vidro-botao {
-  background-color: rgb(255 255 255 / 0.55);
-  backdrop-filter: blur(12px) saturate(180%);
+  background-color: rgb(255 255 255 / 0.5);
+  background-image: linear-gradient(to bottom, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.1));
+  backdrop-filter: blur(14px) saturate(200%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.75),
     0 0 0 1px rgb(0 0 0 / 0.06),

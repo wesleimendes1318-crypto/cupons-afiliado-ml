@@ -190,7 +190,7 @@ export function GarimpoNoPlayer({
             <button
               type="button"
               onClick={() => void comecar()}
-              className="inline-flex min-h-10 items-center rounded-full border border-border px-4 text-[13px] font-semibold text-foreground hover:bg-[#f5f5f7] dark:hover:bg-white/10"
+              className="inline-flex min-h-10 items-center vidro-botao rounded-full border border-border px-4 text-[13px] font-semibold text-foreground dark:hover:bg-white/10"
             >
               Tentar de novo
             </button>
@@ -200,7 +200,7 @@ export function GarimpoNoPlayer({
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 data-origem="garimpo_amazon_busca"
-                className="inline-flex min-h-10 items-center gap-1 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground hover:bg-[#f5f5f7] dark:hover:bg-white/10"
+                className="inline-flex min-h-10 items-center gap-1 vidro-botao rounded-full border border-border px-4 text-[13px] font-semibold text-foreground dark:hover:bg-white/10"
               >
                 Conferir na loja <ArrowUpRight className="size-3.5" aria-hidden="true" />
               </a>

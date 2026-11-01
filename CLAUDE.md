@@ -2047,12 +2047,15 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   não roda no site: NÃO instalar. O mesmo visual sai em CSS, nas utilidades
   vidro-barra e vidro-botao (src/styles.css): fundo translúcido + blur e
   saturação, sólido sem suporte a backdrop-filter ou com "reduzir
-  transparência". Escrever só backdrop-filter (o Lightning CSS põe o
+  transparência" (01/11: 62% com brilho em degradê no alto; 80% quase não
+  aparecia). Escrever só backdrop-filter (o Lightning CSS põe o
   -webkit-; escrever os dois fazia sumir o sem prefixo).
 - vidro-barra: cabeçalho, barra de seções, abas de baixo, barras de compra
   do celular, barra de filtros e de cupons selecionados. vidro-botao:
   pílula flutuante Início/topo, "Ofertas no Telegram" do cabeçalho e as
-  variantes outline/secondary do Button. Cartões, conteúdo e botões de
+  variantes outline/secondary do Button; 01/11: chips da busca guiada,
+  câmera, "Atualizar comparação", secundários do garimpo e setas das fotos.
+  O vidro só aparece onde algo colorido passa por trás. Cartões, conteúdo e botões de
   compra (verde/azul sólidos) NÃO levam vidro.
 - Link colado (31/10, "converta links afiliados de terceiros para o meu"):
   soAfiliado(link, colado) nunca devolve como link de compra o meli.la que
