@@ -30,7 +30,7 @@ export function BotaoFoto({
       aria-label="Buscar pela foto do produto"
       title="Buscar pela foto do produto"
       className={
-        "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border bg-card text-[#7547E8] transition hover:border-[#7547E8] hover:bg-[#F7F5FC] disabled:cursor-not-allowed disabled:opacity-60 sm:self-start " +
+        "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center vidro-botao rounded-xl border text-[#7547E8] transition hover:border-[#7547E8] disabled:cursor-not-allowed disabled:opacity-60 sm:self-start " +
         (aberto ? "border-[#7547E8] bg-[#F7F5FC]" : "border-border")
       }
     >

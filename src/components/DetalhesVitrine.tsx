@@ -335,7 +335,7 @@ function Painel({
                     type="button"
                     onClick={() => ir(atual - 1)}
                     aria-label="Foto anterior"
-                    className="grid size-8 place-items-center rounded-full border border-border bg-white hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                    className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
                   >
                     <ChevronLeft className="size-4" aria-hidden="true" />
                   </button>
@@ -346,7 +346,7 @@ function Painel({
                     type="button"
                     onClick={() => ir(atual + 1)}
                     aria-label="Próxima foto"
-                    className="grid size-8 place-items-center rounded-full border border-border bg-white hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                    className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
                   >
                     <ChevronRight className="size-4" aria-hidden="true" />
                   </button>

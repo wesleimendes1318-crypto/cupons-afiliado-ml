@@ -2334,7 +2334,7 @@ function IdadeDaComparacao({ em, atualizar }: { em: string | null; atualizar: ()
           <button
             type="button"
             onClick={atualizar}
-            className="inline-flex h-11 items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0f1729] transition-colors duration-150 hover:bg-[#f2f2f5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 dark:text-white sm:h-8"
+            className="inline-flex h-11 items-center gap-1.5 vidro-botao rounded-full border border-[#e4e4e7] px-3 text-xs font-semibold text-[#0f1729] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:border-white/15 dark:bg-white/5 dark:text-white sm:h-8"
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
             Atualizar<span className="hidden min-[390px]:inline"> comparação</span>

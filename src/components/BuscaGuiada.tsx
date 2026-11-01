@@ -211,7 +211,7 @@ export function BuscaGuiada({
                   type="button"
                   onClick={() => void buscar(s)}
                   disabled={carregando}
-                  className="inline-flex min-h-9 items-center rounded-full border border-border bg-[#f5f5f7] px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-[#e8e8ed] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                  className="inline-flex min-h-9 items-center vidro-botao rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
                 >
                   {s}
                 </button>
