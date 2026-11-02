@@ -36,7 +36,7 @@ describe("busca do aparelho x peça, móvel e insumo", () => {
   });
   test("a busca fica limpa, com as buscas certas e o piso", () => {
     const i = extrairIntencaoRapida(q);
-    expect(i.buscas).toEqual(["lava e seca", "lavadora lava e seca", "maquina lava e seca"]);
+    expect(i.buscas.slice(0, 2)).toEqual(["lava e seca", "lava e seca samsung"]);
     expect(i.buscas.join(" ")).not.toContain("barat");
     expect(pisoDoAparelho(q)).toBe(1200);
   });

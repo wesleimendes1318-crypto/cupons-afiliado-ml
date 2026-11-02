@@ -69,29 +69,85 @@ const NEGATIVOS_LAVADORA = [
   "placa",
   "amortecedor",
 ];
-type RegraAparelho = { re: RegExp; negativos: string[]; buscas?: string[]; piso?: number };
+/** dominios: só produtos destas categorias oficiais do Mercado Livre (o
+    catálogo devolve nicho, placa e mop na busca "lava e seca"); categorias:
+    os mais vendidos de cada uma completam a lista. Conferidos em 02/11 no
+    catálogo em alta do site. */
+type RegraAparelho = {
+  re: RegExp;
+  negativos: string[];
+  buscas?: string[];
+  piso?: number;
+  dominios?: string[];
+  categorias?: string[];
+};
 const APARELHOS: RegraAparelho[] = [
   {
     re: /\b(lava e seca|lava seca|lavadora e secadora)\b/,
     negativos: NEGATIVOS_LAVADORA,
-    buscas: ["lava e seca", "lavadora lava e seca"],
+    buscas: [
+      "lava e seca",
+      "lava e seca samsung",
+      "lava e seca lg",
+      "lava e seca electrolux",
+      "lava e seca midea",
+      "lavadora e secadora",
+    ],
     piso: 1200,
+    dominios: ["MLB-WASHING_MACHINES", "MLB-LAUNDRY_CENTERS"],
+    categorias: ["MLB21168", "MLB455298"],
   },
   {
     re: /\b(lavadoras?( de roupas?)?|maquinas? de lavar( roupas?)?|lava roupas?)\b/,
     negativos: NEGATIVOS_LAVADORA,
+    buscas: [
+      "maquina de lavar",
+      "lavadora de roupas brastemp",
+      "lavadora de roupas electrolux",
+      "lavadora de roupas consul",
+      "lavadora de roupas samsung",
+    ],
+    dominios: ["MLB-WASHING_MACHINES", "MLB-LAUNDRY_CENTERS"],
+    categorias: ["MLB21168"],
   },
-  { re: /\b(geladeiras?|refrigerador(es)?)\b/, negativos: [], piso: 1000 },
+  {
+    re: /\b(geladeiras?|refrigerador(es)?)\b/,
+    negativos: [],
+    piso: 1000,
+    dominios: ["MLB-REFRIGERATORS"],
+    categorias: ["MLB181294"],
+  },
   {
     re: /\bar condicionado\b/,
     negativos: ["climatizador", "mini ar", "usb", "tubulacao"],
-    buscas: ["ar condicionado split"],
+    buscas: [
+      "ar condicionado split inverter",
+      "ar condicionado split 9000 btus",
+      "ar condicionado split 12000 btus",
+    ],
     piso: 800,
+    dominios: ["MLB-AIR_CONDITIONERS"],
+    categorias: ["MLB1646"],
+  },
+  {
+    re: /\b(tv|tvs|smart tv|televis(ao|oes|or|ores))\b/,
+    negativos: [],
+    dominios: ["MLB-TELEVISIONS"],
+    categorias: ["MLB1002"],
   },
 ];
 
 const regrasDoPedido = (consulta: string) =>
   buscaDeAparelho(consulta) ? APARELHOS.filter((r) => r.re.test(normalizar(consulta))) : [];
+
+/** Categoria oficial e buscas do aparelho pedido (a 1ª regra com
+    categoria), ou null quando a busca não é por um desses aparelhos. */
+export function regraDoAparelho(consulta: string) {
+  const r = regrasDoPedido(consulta).find((x) => x.dominios?.length);
+  return r
+    ? { buscas: r.buscas ?? [], dominios: r.dominios ?? [], categorias: r.categorias ?? [] }
+    : null;
+}
 
 /** Preço mínimo de um aparelho de verdade (lava e seca, geladeira, ar,
     TV de 43" ou mais), só quando a pessoa não pediu preço nem a peça. */
