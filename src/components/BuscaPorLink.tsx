@@ -3164,7 +3164,9 @@ function Resultado({
                   precoAqui={a?.preco ?? null}
                   titulo={a?.titulo ?? null}
                   principal={trocar && i === 0}
-                  semAnimacao={alternativa != null}
+                  /* CTA PRINCIPAL ÚNICO (Weslei, 02/11): só a recomendação do
+                     mesmo produto respira; a Melhor alternativa é secundária. */
+                  semAnimacao={false}
                   compacto={i > 0}
                   lojaAquiTemCupom={a?.temCupom === true}
                   precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
@@ -3206,7 +3208,7 @@ function Resultado({
                 olhados={a?.buscaFora?.leitura?.comPreco ?? null}
                 conferidosIA={a?.buscaFora?.leitura?.ia?.conferidos ?? null}
                 iaIndisponivel={a?.buscaFora?.leitura?.ia?.indisponivel === true}
-                semAnimacao={alternativa != null}
+                semAnimacao={false}
                 precos={a?.precos ?? null}
                 avaliacoes={a?.avaliacoes ?? null}
                 ressalva={haMaisBarataNaoIndicada}
@@ -3849,7 +3851,7 @@ export function VerNaLoja({
               ? classeCartao
               : grande
                 ? "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
-                : classePequena + " border-ml-blue bg-ml-blue text-white hover:brightness-110"
+                : classePequena + " border-ml-blue/60 bg-card text-ml-blue hover:bg-ml-blue/5"
         }
       >
         {(pilula || grande || !comTexto) && (
@@ -4300,7 +4302,7 @@ function MelhorAlternativa({
                 href={p.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="animate-botao-destaque mt-3 block w-full rounded-full bg-success py-3 text-center text-sm font-bold text-white transition-colors hover:brightness-95"
+                className="mt-3 block w-full rounded-full border-2 border-success bg-card py-2.5 text-center text-sm font-bold text-success transition-colors hover:bg-success/5"
               >
                 <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
                 {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(p.preco)}`).replace(
