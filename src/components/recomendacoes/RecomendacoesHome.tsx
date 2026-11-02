@@ -165,7 +165,7 @@ export function MaisDesejadosHome() {
         </a>
       }
     >
-      <Fileira itens={lista} notaDe={notaDe} />
+      {Fileira({ itens: lista, notaDe: notaDe })}
     </TrilhoRecomendacao>
   );
 }
@@ -427,7 +427,7 @@ function TrilhosDeProdutos({
                 titulo="Combina com o que você procura"
                 subtitulo="Complementos do que você pesquisou, com frete grátis primeiro."
               >
-                <Fileira itens={lComp} notaDe={notaComp} />
+                {Fileira({ itens: lComp, notaDe: notaComp })}
               </TrilhoRecomendacao>
             )}
             {nicho && lPens.length > 0 && (
@@ -441,7 +441,7 @@ function TrilhosDeProdutos({
                   rotulo: `Ver todos em ${NOS[nicho]!.nome}`,
                 }}
               >
-                <Fileira itens={lPens} notaDe={notaPens} />
+                {Fileira({ itens: lPens, notaDe: notaPens })}
               </TrilhoRecomendacao>
             )}
             {temporada && lSaz.length > 0 && (
@@ -451,7 +451,7 @@ function TrilhosDeProdutos({
                 titulo={`Mais vendidos para você em ${temporada.nome}`}
                 subtitulo={`${temporada.emoji} Ideias de ${temporada.nome} com frete grátis, na faixa de preço que você costuma ver.`}
               >
-                <Fileira itens={lSaz} notaDe={notaSaz} />
+                {Fileira({ itens: lSaz, notaDe: notaSaz })}
               </TrilhoRecomendacao>
             )}
           </div>
@@ -464,7 +464,7 @@ function TrilhosDeProdutos({
           titulo="Itens que as pessoas costumam comprar de novo"
           subtitulo="Produtos de reposição entre os mais vendidos ou muito bem avaliados por quem comprou."
         >
-          <Fileira itens={lRec} notaDe={notaRec} />
+          {Fileira({ itens: lRec, notaDe: notaRec })}
         </TrilhoRecomendacao>
       )}
     </>
