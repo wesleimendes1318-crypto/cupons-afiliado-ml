@@ -1,7 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Link2 } from "lucide-react";
 
-import { AdInArticle } from "@/components/anuncios/Anuncio";
 import { BannerArte } from "@/components/BannerArte";
 import { CartaoCategoria } from "@/components/CartaoCategoria";
 import { CatalogoCategoria } from "@/components/CatalogoCategoria";
@@ -236,8 +235,6 @@ function PaginaCategoria() {
         {/* Mais vendidos da lista oficial da subárvore, com subcategorias,
             filtros e ordem (27/10). */}
         <CatalogoCategoria key={no.slug} slug={no.slug} contagemInicial={contagem ?? {}} />
-
-        <AdInArticle />
 
         {(avaliar.length > 0 || cuidados.length > 0) && (
           <section id="dicas" className="mt-10 scroll-mt-20" aria-labelledby="dicas-titulo">

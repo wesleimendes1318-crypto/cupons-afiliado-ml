@@ -6,11 +6,12 @@
      aviso de cookies, e troca de volta se ele mudar de ideia.
    - Google Analytics 4 só carrega com medição autorizada e com
      VITE_GA_ID válido (G-XXXXXXX). AdSense só carrega com publicidade
-     autorizada e VITE_ADSENSE_CLIENT_ID válido. Sem ID, nada é baixado. */
+     autorizada e VITE_ADSENSE_CLIENT válido. Sem ID, nada é baixado.
+     Nunca Anúncios Automáticos: só as unidades manuais de <Anuncio>. */
 
 import { useEffect } from "react";
 
-import { ADSENSE_ATIVO } from "@/components/anuncios/Anuncio";
+import { ADSENSE_ATIVO, ADSENSE_CLIENTE } from "@/components/Anuncio";
 import { useConsentimento } from "@/hooks/useConsentimento";
 
 declare global {
@@ -22,7 +23,6 @@ declare global {
 
 const GA_ID = (import.meta.env.VITE_GA_ID ?? "").trim();
 const GA_ATIVO = /^G-[A-Z0-9]{4,}$/.test(GA_ID);
-const ADSENSE_CLIENTE = (import.meta.env.VITE_ADSENSE_CLIENT_ID ?? "").trim();
 
 /* Vai no <head> (ver __root.tsx): define o gtag e nega tudo por padrão. */
 export const SCRIPT_CONSENTIMENTO_PADRAO = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'granted',security_storage:'granted',wait_for_update:500});gtag('set','ads_data_redaction',true);`;
