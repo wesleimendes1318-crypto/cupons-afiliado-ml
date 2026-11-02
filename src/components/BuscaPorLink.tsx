@@ -1140,8 +1140,10 @@ export default function BuscaPorLink({
           setOutraLoja({
             analise: {
               ...j,
-              identificador: j.identificador ?? analise.identificador,
-              urlLimpa: j.urlLimpa ?? analise.urlLimpa,
+              ...(!j.identificador && analise.identificador
+                ? { identificador: analise.identificador }
+                : {}),
+              urlLimpa: j.urlLimpa || analise.urlLimpa,
             },
             identificando: false,
           });
