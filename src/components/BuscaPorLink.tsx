@@ -3229,7 +3229,9 @@ function Resultado({
           className={
             colunas
               ? "lg:col-span-2 lg:row-start-3 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-x-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,13fr)] xl:gap-x-8"
-              : ""
+              : temColuna
+                ? "lg:col-span-2 lg:row-start-3"
+                : ""
           }
         >
           {/* DECISÃO: filtro de prazo, a recomendação e o botão. */}
@@ -3350,7 +3352,7 @@ function Resultado({
               className={
                 colunas
                   ? "lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5"
-                  : "lg:col-span-2 lg:row-start-3 lg:flex lg:flex-col lg:gap-5"
+                  : "mt-4 lg:flex lg:flex-col lg:gap-5"
               }
             >
               {mostraTabela && (
