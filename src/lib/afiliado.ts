@@ -168,3 +168,33 @@ export function marketplaceDe(u: string | null | undefined): Marketplace | null 
   if (/^https:\/\/([a-z0-9-]+\.)*shopee\.com\.br\//i.test(u)) return "shopee";
   return null;
 }
+
+/** Ações do rodapé de "Ver fotos e detalhes" (Weslei, 02/11: nunca um beco
+    sem saída). `comprar`: link de afiliado pronto (meli.la, Amazon com a tag,
+    Shopee curto) ou, no Mercado Livre, o endereço para gerar o link no clique
+    (VerNaLoja). `comparar`: endereço do produto para o comparador. */
+export function acoesDoProduto(
+  link: string | null | undefined,
+  urlProduto: string | null | undefined,
+): { comprar: { href: string } | { gerar: string } | null; comparar: string | null } {
+  const abs = (u: string | null | undefined) =>
+    !u
+      ? null
+      : /^\/p\/MLB\d+/i.test(u)
+        ? `https://www.mercadolivre.com.br${u}`
+        : /^https:\/\//i.test(u.trim())
+          ? u.trim()
+          : null;
+  const url = abs(urlProduto);
+  const comparar = url ?? abs(link);
+  if (ehLinkDeCompra(link)) return { comprar: { href: link.trim() }, comparar };
+  for (const u of [url, abs(link)]) {
+    const m = marketplaceDe(u);
+    if (m === "amazon") {
+      const a = gerarUrlAfiliadoAmazon(u);
+      if (a) return { comprar: { href: a }, comparar };
+    }
+    if (m === "mercadolivre" && u) return { comprar: { gerar: u }, comparar };
+  }
+  return { comprar: null, comparar };
+}

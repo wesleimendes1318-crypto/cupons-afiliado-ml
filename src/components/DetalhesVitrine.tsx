@@ -2,14 +2,16 @@
    expandir o anúncio para analisar detalhes, descrição, características").
    Abre um painel com o que a comparação leu no anúncio: foto, título,
    características, destaques e descrição (RPC pública detalhes_da_vitrine).
-   Preço é o de quando foi comparado, com a data. O botão de compra só aparece
-   com link de afiliado (meli.la). Nada é inventado: sem detalhes guardados,
+   Preço é o de quando foi comparado, com a data. Rodapé fixo com Comprar
+   (sempre link de afiliado) e Comparar preço. Nada é inventado: sem detalhes guardados,
    o painel diz isso e oferece comparar de novo. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Images, LoaderCircle, ShieldCheck, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Images, LoaderCircle, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { ehLinkDeCompra } from "@/lib/afiliado";
+import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { VerNaLoja } from "@/components/BuscaPorLink";
+import { acoesDoProduto } from "@/lib/afiliado";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { propsFotoGrande } from "@/lib/foto";
 import { registrarAcaoVisitante } from "@/lib/perfil-visitante";
@@ -143,6 +145,7 @@ export function VerDetalhesVitrine({
           produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? mlb}
           fotos={extras}
           compra={compra}
+          urlProduto={urlProduto ?? null}
           inicial={
             detalhes ? { titulo, imagem: imagem ?? null, detalhes, comparado_em: null } : undefined
           }
@@ -164,6 +167,7 @@ function Painel({
   produto,
   fotos,
   compra,
+  urlProduto,
   inicial,
   fechar,
 }: {
@@ -177,6 +181,7 @@ function Painel({
   produto: string | null;
   fotos: string[];
   compra: ReactNode;
+  urlProduto: string | null;
   inicial?: Resposta | undefined;
   fechar: () => void;
 }) {
@@ -254,6 +259,7 @@ function Painel({
     if (el) el.scrollTo({ left: alvo * el.clientWidth, behavior: "smooth" });
   };
   const data = dataCurta(vistoEm ?? dados?.comparado_em ?? null);
+  const acoes = acoesDoProduto(link, urlProduto);
 
   return (
     <dialog
@@ -485,21 +491,27 @@ function Painel({
           )}
         </div>
 
-        {!(link && ehLinkDeCompra(link)) && compra && (
-          <div className="border-t border-border p-4">{compra}</div>
-        )}
-        {link && ehLinkDeCompra(link) && (
-          <div className="border-t border-border p-4">
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              data-origem="vitrine_detalhes"
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-success py-2.5 text-sm font-bold text-white transition hover:brightness-95"
-            >
-              <ShieldCheck className="size-4" aria-hidden="true" />
-              Comprar com segurança
-            </a>
+        {/* Barra de compra fixa (Weslei, 02/11: nunca um beco sem saída):
+            Comprar com o link de afiliado (pronto, o `compra` do cartão ou
+            gerado no clique) e Comparar preço, sempre ao alcance do polegar. */}
+        {(acoes.comprar || compra || acoes.comparar) && (
+          <div className="space-y-2 border-t border-border bg-white/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+            {acoes.comprar && "href" in acoes.comprar ? (
+              <ComprarComSeguranca link={acoes.comprar.href} origem="vitrine_detalhes" />
+            ) : compra ? (
+              compra
+            ) : acoes.comprar ? (
+              <VerNaLoja url={acoes.comprar.gerar} grande />
+            ) : null}
+            {acoes.comparar && (
+              /* Na tela inicial a comparação abre por baixo: o painel fecha. */
+              <div onClickCapture={() => ref.current?.close()}>
+                <CompararPreco url={acoes.comparar} />
+              </div>
+            )}
+            <p className="text-center text-[11px] text-muted-foreground">
+              ✓ Você compra direto na loja oficial · Sem taxa extra
+            </p>
           </div>
         )}
       </div>
