@@ -41,8 +41,9 @@ export function envioDasTags(tags: unknown): EnvioInternacional {
   let pais: string | null = null;
   for (const t of lista) {
     const m = /^cbt_(?:fulfillment|item|shipping)_([a-z]{2,3})$/.exec(t);
-    if (m && PAISES[m[1]]) {
-      pais = PAISES[m[1]];
+    const sigla = m?.[1];
+    if (sigla && PAISES[sigla]) {
+      pais = PAISES[sigla];
       break;
     }
   }
@@ -64,10 +65,10 @@ export function tributosDoTexto(texto: string | null | undefined): Tributos | nu
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;|\u00a0/g, " ")
     .replace(/\s+/g, " ");
-  const bloco = /Tributa[çc][õo]es\s+estimadas([\s\S]{0,600})/i.exec(t);
+  const bloco = /Tributa[çc][õo]es\s+estimadas([\s\S]{0,600})/i.exec(t)?.[1];
   if (!bloco) return null;
-  const ii = /Imposto\s+de\s+importa[çc][ãa]o\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(bloco[1]);
-  const icms = /ICMS\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(bloco[1]);
+  const ii = /Imposto\s+de\s+importa[çc][ãa]o\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(bloco);
+  const icms = /ICMS\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(bloco);
   const vII = numeroBr(ii?.[1]);
   const vICMS = numeroBr(icms?.[1]);
   if (vII == null && vICMS == null) return null;
