@@ -3414,6 +3414,21 @@ function Resultado({
               cep={a?.cepDestino ?? null}
               gerarLink={gerarLinkMl}
               chavePedido={chavePedido}
+              vendedoresMl={ordenarPorCustoTotal(linhasLojas)
+                .filter((l) => l.final != null)
+                .map((l) => ({
+                  chave: l.chave,
+                  loja: l.colado ? "Anúncio que você colou" : l.nome,
+                  preco: l.final as number,
+                  freteGratis: l.freteGratis ?? null,
+                  custoFrete: l.custoFrete ?? null,
+                  internacional: l.internacional ?? null,
+                  tributos: tributosValidos(l.tributosEstimados) ?? null,
+                  total: custoTotalDaOferta(l),
+                  link: l.link && ehLinkDeAfiliado(l.link) ? l.link : null,
+                  urlLoja: l.url,
+                  melhor: l.chave === (recomendada?.chave ?? "colado"),
+                }))}
             />
           </div>
         )}
@@ -4795,6 +4810,21 @@ function BarraFixa({
             )}
             {frete && <p className="text-[11px] text-secondary-ink">{frete}</p>}
           </div>
+          {/* Comparar sempre ao lado de comprar (Weslei, 02/11): leva à tabela
+              "Compare com clareza" (sites e vendedores). */}
+          <button
+            type="button"
+            tabIndex={visivel ? 0 : -1}
+            onClick={() =>
+              (
+                document.getElementById("secao-marketplaces") ??
+                document.getElementById("secao-lojas")
+              )?.scrollIntoView({ block: "start" })
+            }
+            className="vidro-botao inline-flex h-11 shrink-0 items-center rounded-full border border-[#0071e3]/40 px-3 text-[13px] font-semibold text-[#0058b0] active:scale-[0.98]"
+          >
+            Comparar
+          </button>
           {link ? (
             <a
               href={link}
@@ -4805,8 +4835,8 @@ function BarraFixa({
             >
               <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
               {/* 320 px: "Comprar" (o texto longo empurrava o preço para baixo do botão). */}
-              <span className="min-[360px]:hidden">Comprar</span>
-              <span className="hidden min-[360px]:inline">Comprar com segurança</span>
+              <span className="min-[430px]:hidden">Comprar</span>
+              <span className="hidden min-[430px]:inline">Comprar com segurança</span>
             </a>
           ) : urlGerar ? (
             <span className="max-w-[50%] shrink-0">
@@ -5642,7 +5672,7 @@ function TodasAsLojas({
 }) {
   /* Ordem da lista (23/10): menor preço (padrão) ou mais bem avaliadas. O
      selo e a recomendação não mudam com a ordem. */
-  const [ordenar, setOrdenar] = useState<"preco" | "avaliacao">("preco");
+  const [ordenar, setOrdenar] = useState<"preco" | "anunciado" | "avaliacao">("preco");
   /* 3 lojas à vista (Weslei, 02/11: menos informação de cara); as outras
      abrem em "Ver outras N lojas". A recomendada e o colado sempre à vista. */
   const [todas, setTodas] = useState(false);
@@ -5692,7 +5722,10 @@ function TodasAsLojas({
             (nota(y)?.total ?? 0) - (nota(x)?.total ?? 0) ||
             (x.final ?? 1e12) - (y.final ?? 1e12),
         )
-      : ordem;
+      : ordenar === "anunciado"
+        ? /* Preço anunciado (Weslei, 02/11): só o produto, sem frete nem tributos. */
+          [...ordem].sort((x, y) => (x.final ?? 1e12) - (y.final ?? 1e12))
+        : ordem;
   return (
     <div className="mt-4 first:lg:mt-0">
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
@@ -5706,7 +5739,7 @@ function TodasAsLojas({
             {cep ? ` · frete para ${cep}` : ""}
           </p>
         </div>
-        {comNota >= 2 && (
+        {
           <div
             role="group"
             aria-label="Ordenar as lojas"
@@ -5714,8 +5747,9 @@ function TodasAsLojas({
           >
             {(
               [
-                ["preco", "Menor preço"],
-                ["avaliacao", "Mais bem avaliadas"],
+                ["preco", "Custo final"],
+                ["anunciado", "Preço anunciado"],
+                ...(comNota >= 2 ? ([["avaliacao", "Mais bem avaliadas"]] as const) : []),
               ] as const
             ).map(([v, r]) => (
               <button
@@ -5734,7 +5768,7 @@ function TodasAsLojas({
               </button>
             ))}
           </div>
-        )}
+        }
       </div>
       <ul
         aria-label="Lojas com o mesmo produto"

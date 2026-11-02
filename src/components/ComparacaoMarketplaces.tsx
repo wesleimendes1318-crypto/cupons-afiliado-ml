@@ -77,6 +77,123 @@ export type ColadoParaComparar = {
   totalConfirmado: number | null;
 };
 
+/* Um vendedor do mesmo produto na tabela por site (Weslei, 02/11: "compare
+   1 player e os próprios vendedores"). total = custo final confirmado
+   (produto + frete + tributos lidos) ou null. */
+export type VendedorNaTabela = {
+  chave: string;
+  loja: string;
+  preco: number;
+  freteGratis: boolean | null;
+  custoFrete: number | null;
+  internacional?: boolean | null;
+  tributos?: number | null;
+  total: number | null;
+  link: string | null;
+  urlLoja?: string | null;
+  colado?: boolean;
+  melhor?: boolean;
+};
+
+type Aba = "sites" | Jogador;
+
+function TabelaVendedores({
+  vendedores,
+  base,
+  gerarLink,
+  vazio,
+}: {
+  vendedores: VendedorNaTabela[];
+  /* O anúncio colado como primeira coluna (base da comparação). */
+  base: VendedorNaTabela | null;
+  gerarLink?: ((url: string) => ReactNode) | undefined;
+  vazio: ReactNode;
+}) {
+  if (vendedores.length === 0) return <div className="mt-3">{vazio}</div>;
+  const cols = base ? [base, ...vendedores.filter((v) => !v.colado)] : vendedores;
+  const temTributo = cols.some((c) => c.internacional === true);
+  const fundo = (c: VendedorNaTabela) => (c.melhor ? "bg-success/10 " : "");
+  const linha = (rotulo: string, valor: (c: VendedorNaTabela) => ReactNode, forte = false) => (
+    <tr>
+      <th
+        scope="row"
+        className="sticky left-0 z-10 border-t border-border bg-card px-3 py-2.5 text-left text-[12px] font-medium text-secondary-ink"
+      >
+        {rotulo}
+      </th>
+      {cols.map((c) => (
+        <td
+          key={c.chave}
+          className={
+            "border-t border-border px-3 py-2.5 align-top tabular-nums [overflow-wrap:anywhere] " +
+            fundo(c) +
+            (forte ? "font-bold" : "")
+          }
+        >
+          {valor(c)}
+        </td>
+      ))}
+    </tr>
+  );
+  return (
+    <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+      <table
+        className="w-full border-separate border-spacing-0 text-[13px]"
+        style={{ minWidth: `${120 + cols.length * 150}px` }}
+      >
+        <thead>
+          <tr>
+            <th className="sticky left-0 z-10 w-28 bg-card" />
+            {cols.map((c) => (
+              <th
+                key={c.chave}
+                className={"min-w-[150px] px-3 py-2.5 text-left align-bottom " + fundo(c)}
+              >
+                {c.melhor && <SeloMelhor />}
+                {c.total == null && !c.colado && (
+                  <span className="block text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                    Custo a confirmar
+                  </span>
+                )}
+                <span className="block font-semibold [overflow-wrap:anywhere]">
+                  {c.colado ? "O seu" : c.loja}
+                </span>
+                {c.colado && (
+                  <span className="block text-[11px] font-normal text-secondary-ink">{c.loja}</span>
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {linha("Produto", (c) => brl(c.preco))}
+          {temTributo &&
+            linha("Tributos", (c) =>
+              c.internacional === true
+                ? c.tributos != null
+                  ? brl(c.tributos)
+                  : "Não informados"
+                : "Nenhum",
+            )}
+          {linha("Frete", (c) => celulaDoFrete({ ...c, notaFrete: null, prime: false }))}
+          {linha("Custo final", (c) => (c.total != null ? brl(c.total) : "A confirmar"), true)}
+          {linha("Ação", (c) =>
+            c.colado ? (
+              <span className="text-[11px] text-secondary-ink">Base da comparação</span>
+            ) : c.link ? (
+              <BotaoComprar link={c.link} origem="comparacao_vendedores" compacto />
+            ) : c.urlLoja && gerarLink ? (
+              <div className="w-full">{gerarLink(c.urlLoja)}</div>
+            ) : (
+              <span className="text-secondary-ink">—</span>
+            ),
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /* SOB DEMANDA (Weslei, 10/10: "para não gastar muitas requisições"): a
    Amazon e a Shopee só são buscadas quando o cliente pede (pedir_multiloja,
    com a chave do pedido). Antes disso a rota responde sobDemanda e a tela
@@ -708,6 +825,7 @@ export function ComparacaoMarketplaces({
   cep,
   gerarLink,
   chavePedido,
+  vendedoresMl = [],
 }: {
   pedidoId: number | null;
   colado: ColadoParaComparar;
@@ -722,6 +840,9 @@ export function ComparacaoMarketplaces({
   gerarLink?: (url: string) => ReactNode;
   /* Chave do pedido: só com ela o cliente pede a busca na Amazon e na Shopee. */
   chavePedido?: string | null;
+  /* Todos os vendedores do mesmo produto no Mercado Livre, já na ordem do
+     custo final (aba "Mercado Livre" da tabela). */
+  vendedoresMl?: VendedorNaTabela[];
 }) {
   const { estado, dados, aviso, pendentes, pedir } = useMultiloja(
     pedidoId,
@@ -729,6 +850,7 @@ export function ComparacaoMarketplaces({
     colado.titulo ?? null,
   );
   const podePedir = Boolean(chavePedido);
+  const [aba, setAba] = useState<Aba>("sites");
   const [destaque, setDestaque] = useState<Jogador | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -766,6 +888,38 @@ export function ComparacaoMarketplaces({
     );
   const consultado = (mk: Mk) =>
     Boolean(dados?.resumo?.[mk]) || lojas.some((l) => l.marketplace === mk);
+  const vendedoresDe = (mk: Mk): VendedorNaTabela[] =>
+    mesmosExternos
+      .filter((l) => l.marketplace === mk)
+      .map((l) => {
+        const o = ofertaExterna(l);
+        return {
+          chave: `${mk}:${l.id}`,
+          loja: o.loja ?? NOME_DO_JOGADOR[mk],
+          preco: o.preco,
+          freteGratis: o.freteGratis,
+          custoFrete: o.custoFrete,
+          total: totalConfirmado(o),
+          link: o.link,
+        };
+      })
+      .sort((a, b) => (a.total ?? 1e12) - (b.total ?? 1e12) || a.preco - b.preco);
+  const baseColado: VendedorNaTabela | null =
+    colado.preco != null
+      ? {
+          chave: "colado",
+          loja: "Mercado Livre",
+          preco: colado.preco,
+          freteGratis: colado.totalConfirmado === colado.preco ? true : null,
+          custoFrete:
+            colado.totalConfirmado != null && colado.totalConfirmado > colado.preco
+              ? Math.round((colado.totalConfirmado - colado.preco) * 100) / 100
+              : null,
+          total: colado.totalConfirmado,
+          link: null,
+          colado: true,
+        }
+      : null;
   const falhou = (mk: Mk) =>
     dados?.resumo?.[mk]?.incompleto === true ||
     (dados?.incompleto === true && !dados?.resumo?.[mk]);
@@ -928,256 +1082,337 @@ export function ComparacaoMarketplaces({
             : leitura || "A mesma análise em cada marketplace."}
       </p>
 
-      {/* MESMO PRODUTO */}
+      {/* MESMO PRODUTO: entre sites ou entre os vendedores de um site. */}
       <div className="mt-3 rounded-3xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:p-5">
-        {!compacto && (
-          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <strong className="text-xl tracking-tight">Mesmo produto</strong>
-            <span className="hidden h-4 w-px bg-border sm:inline-block" aria-hidden="true" />
-            <span className="text-[13px] text-secondary-ink">
-              {totalOfertas} {totalOfertas === 1 ? "oferta confirmada" : "ofertas confirmadas"}{" "}
-              nesta análise
-            </span>
-          </p>
-        )}
-        {aPedir.length > 0 && estado !== "carregando" && (
-          <div
-            className={
-              (compacto ? "" : "mt-3 ") +
-              "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3"
-            }
-          >
-            <p className="min-w-0 flex-1 text-[13px] leading-snug">
-              <strong>
-                {aPedir.length > 1
-                  ? "Quer comparar em outra loja? Escolha onde buscar."
-                  : `Quer comparar também na ${NOME_DO_JOGADOR[aPedir[0] as Mk]}?`}
-              </strong>{" "}
-              Eu busco o mesmo produto só na loja que você escolher e confiro a foto, as
-              características e a qualidade.
-              {aviso && (
-                <span className="mt-0.5 block text-[12px] font-semibold text-amber-800 dark:text-amber-300">
-                  {aviso}
-                </span>
-              )}
+        <div
+          role="tablist"
+          aria-label="O que comparar"
+          className="-mx-1 mb-3 flex gap-1 overflow-x-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {(
+            [
+              ["sites", "Entre sites"],
+              ["mercadolivre", `Mercado Livre · ${vendedoresMl.filter((v) => !v.colado).length}`],
+              [
+                "amazon",
+                `Amazon${consultado("amazon") ? ` · ${vendedoresDe("amazon").length}` : ""}`,
+              ],
+              [
+                "shopee",
+                `Shopee${consultado("shopee") ? ` · ${vendedoresDe("shopee").length}` : ""}`,
+              ],
+            ] as const
+          ).map(([v, r]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={aba === v}
+              onClick={() => setAba(v)}
+              className={
+                "min-h-9 shrink-0 rounded-full px-4 text-[13px] font-semibold transition-colors duration-200 " +
+                (aba === v
+                  ? "bg-foreground text-background"
+                  : "bg-muted text-secondary-ink hover:text-foreground")
+              }
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        {aba !== "sites" ? (
+          <>
+            <p className="text-[13px] text-secondary-ink">
+              {aba === "mercadolivre"
+                ? "Todos os vendedores do mesmo produto, do menor para o maior custo final. Importado sem tributos lidos fica no fim."
+                : `Os vendedores do mesmo produto na ${NOME_DO_JOGADOR[aba]}, conferidos pela foto.`}
             </p>
-            {podePedir ? (
-              <div className="flex w-full flex-wrap gap-2 @xl:w-auto @xl:shrink-0">
-                {aPedir.map((mk) => (
+            <TabelaVendedores
+              vendedores={aba === "mercadolivre" ? vendedoresMl : vendedoresDe(aba)}
+              base={aba === "mercadolivre" ? null : baseColado}
+              gerarLink={gerarLink}
+              vazio={
+                aba === "mercadolivre" ? (
+                  <p className="text-[13px] text-secondary-ink">
+                    Sem outras lojas do mesmo produto.
+                  </p>
+                ) : pendentes[aba] != null ? (
+                  <p className="text-[13px] text-secondary-ink">
+                    Buscando na {NOME_DO_JOGADOR[aba]}: leva de 30 segundos a 2 minutos.
+                  </p>
+                ) : consultado(aba) ? (
+                  <p className="text-[13px] text-secondary-ink">
+                    Não localizei o mesmo produto na {NOME_DO_JOGADOR[aba]} nesta análise.
+                  </p>
+                ) : podePedir ? (
                   <button
-                    key={mk}
                     type="button"
-                    onClick={() => void pedir(mk)}
-                    className="inline-flex min-w-0 flex-1 basis-40 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#0071e3] px-3.5 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none @xl:basis-auto"
+                    onClick={() => void pedir(aba)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0071e3] px-3.5 py-2.5 text-[13px] font-semibold text-white hover:brightness-95"
                   >
                     <Search className="size-4 shrink-0" aria-hidden="true" />
-                    Comparar na {NOME_DO_JOGADOR[mk]}
+                    Comparar na {NOME_DO_JOGADOR[aba]}
                   </button>
-                ))}
-              </div>
-            ) : (
-              <span className="text-[12px] text-secondary-ink">
-                Atualize a comparação para buscar.
-              </span>
-            )}
-          </div>
-        )}
-        {!compacto && (v || m) && (
-          <div className="mt-2 space-y-1 text-xs leading-relaxed">
-            {v && (
-              <p>
-                <strong>🔥 Melhor escolha: {NOME_DO_JOGADOR[v.jogador]}</strong>
-                {(() => {
-                  const t = totalConfirmado(v);
-                  return t != null ? ` · total de ${brl(t)} confirmado` : "";
-                })()}
-                .
-              </p>
-            )}
-            {m && (
-              <p className="text-amber-900 dark:text-amber-200">
-                <strong>
-                  Menor preço no produto (frete a confirmar): {NOME_DO_JOGADOR[m.jogador]}
-                </strong>
-                {v ? `, ${brl(v.preco - m.preco)} a menos no produto` : ""}.{" "}
-                {m.prime
-                  ? "Frete grátis só para assinantes Prime: confira antes de comprar."
-                  : "Confira o frete no anúncio antes de comprar."}
-              </p>
-            )}
-          </div>
-        )}
-        {!compacto && !v && !m && decisao.ofertas.length > 0 && buscando.length === 0 && (
-          <p className="mt-2 text-xs text-secondary-ink">
-            Nenhum marketplace confirmou o custo total com o frete: compare o preço do produto e
-            confira o frete no anúncio.
-          </p>
-        )}
-
-        {/* Espaço largo: tabela; as linhas se alinham entre as colunas (subgrid). */}
-        {!compacto && (
-          <div
-            className="mt-4 hidden grid-flow-col grid-cols-[minmax(7.5rem,0.7fr)_repeat(3,minmax(0,1fr))] grid-rows-[repeat(7,auto)] text-[13px] @2xl:grid"
-            role="group"
-            aria-label="Mesmo produto nos 3 marketplaces"
-          >
-            <div className="row-span-7 grid grid-rows-subgrid">
-              <span aria-hidden="true" />
-              {ROTULOS.map((r, i) => (
-                <span
-                  key={r}
-                  className={
-                    "flex items-center border-l border-t border-border px-4 py-3 " +
-                    (r === "Total"
-                      ? FUNDO_TOTAL + " font-bold text-foreground"
-                      : "bg-muted/60 font-medium text-secondary-ink") +
-                    (i === 0 ? " rounded-tl-xl" : "") +
-                    (i === ROTULOS.length - 1 ? " rounded-bl-xl border-b" : "")
-                  }
-                >
-                  {r}
+                ) : (
+                  <p className="text-[13px] text-secondary-ink">
+                    Atualize a comparação para buscar.
+                  </p>
+                )
+              }
+            />
+          </>
+        ) : (
+          <>
+            {!compacto && (
+              <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <strong className="text-xl tracking-tight">Mesmo produto</strong>
+                <span className="hidden h-4 w-px bg-border sm:inline-block" aria-hidden="true" />
+                <span className="text-[13px] text-secondary-ink">
+                  {totalOfertas} {totalOfertas === 1 ? "oferta confirmada" : "ofertas confirmadas"}{" "}
+                  nesta análise
                 </span>
-              ))}
-            </div>
-            {colunas.map((c, idx) => (
+              </p>
+            )}
+            {aPedir.length > 0 && estado !== "carregando" && (
               <div
-                key={c.jogador}
-                role="group"
-                aria-label={NOME_DO_JOGADOR[c.jogador]}
-                className="relative row-span-7 grid grid-rows-subgrid"
-              >
-                <span
-                  className={
-                    "mx-px flex flex-col items-center justify-end gap-1 rounded-t-xl px-3 pb-2.5 pt-2 text-center " +
-                    (ehVencedor(c)
-                      ? "bg-success/10"
-                      : c.situacao === "conferindo"
-                        ? "bg-[#0071e3]/[0.07]"
-                        : "bg-muted")
-                  }
-                >
-                  {ehVencedor(c) && <SeloMelhor />}
-                  <NomeDoMarketplace j={c.jogador} grande />
-                  {c.situacao === "conferindo" && <BarraDeBusca />}
-                  {(c.oferta?.prime || ehMenor(c)) && (
-                    <span className="flex flex-wrap justify-center gap-1">
-                      {c.oferta?.prime && <SeloPrime />}
-                      {ehMenor(c) && <SeloMenorNoProduto />}
-                    </span>
-                  )}
-                </span>
-                {ROTULOS.map((r, i) => (
-                  <span
-                    key={r}
-                    className={
-                      "flex min-w-0 items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
-                      (r === "Total"
-                        ? FUNDO_TOTAL
-                        : ehVencedor(c)
-                          ? "bg-success/[0.04]"
-                          : "bg-card") +
-                      (i === ROTULOS.length - 1 ? " border-b" : "") +
-                      (i === ROTULOS.length - 1 && (idx === colunas.length - 1 || ehVencedor(c))
-                        ? " rounded-b-xl"
-                        : "")
-                    }
-                  >
-                    {celula(c, r)}
-                  </span>
-                ))}
-                {/* Moldura do vencedor desenhada POR DENTRO da coluna: nada
-                    sai da tabela nem passa por cima das colunas vizinhas. */}
-                {ehVencedor(c) && (
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-inset ring-success/55"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Espaço estreito (celular): um cartão por marketplace. */}
-        {!compacto && (
-          <ul className="mt-4 space-y-3 @2xl:hidden">
-            {colunas.map((c) => (
-              <li
-                key={c.jogador}
                 className={
-                  "rounded-2xl border bg-card p-3 " +
-                  (ehVencedor(c)
-                    ? "border-success/60 shadow-lg shadow-success/15 ring-2 ring-success/40"
-                    : "border-border")
+                  (compacto ? "" : "mt-3 ") +
+                  "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3"
                 }
               >
-                {(ehVencedor(c) || ehMenor(c) || c.oferta?.prime) && (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {ehVencedor(c) && <SeloMelhor />}
-                    {ehMenor(c) && <SeloMenorNoProduto />}
-                    {c.oferta?.prime && <SeloPrime />}
+                <p className="min-w-0 flex-1 text-[13px] leading-snug">
+                  <strong>
+                    {aPedir.length > 1
+                      ? "Quer comparar em outra loja? Escolha onde buscar."
+                      : `Quer comparar também na ${NOME_DO_JOGADOR[aPedir[0] as Mk]}?`}
+                  </strong>{" "}
+                  Eu busco o mesmo produto só na loja que você escolher e confiro a foto, as
+                  características e a qualidade.
+                  {aviso && (
+                    <span className="mt-0.5 block text-[12px] font-semibold text-amber-800 dark:text-amber-300">
+                      {aviso}
+                    </span>
+                  )}
+                </p>
+                {podePedir ? (
+                  <div className="flex w-full flex-wrap gap-2 @xl:w-auto @xl:shrink-0">
+                    {aPedir.map((mk) => (
+                      <button
+                        key={mk}
+                        type="button"
+                        onClick={() => void pedir(mk)}
+                        className="inline-flex min-w-0 flex-1 basis-40 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#0071e3] px-3.5 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none @xl:basis-auto"
+                      >
+                        <Search className="size-4 shrink-0" aria-hidden="true" />
+                        Comparar na {NOME_DO_JOGADOR[mk]}
+                      </button>
+                    ))}
                   </div>
+                ) : (
+                  <span className="text-[12px] text-secondary-ink">
+                    Atualize a comparação para buscar.
+                  </span>
                 )}
-                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-                  <span className="min-w-[7rem]">
-                    <NomeDoMarketplace j={c.jogador} grande />
-                    {c.situacao === "conferindo" && <BarraDeBusca />}
-                  </span>
-                  <span className="ml-auto shrink-0 text-[13px]">
-                    <Correspondencia c={c} />
-                  </span>
+              </div>
+            )}
+            {!compacto && (v || m) && (
+              <div className="mt-2 space-y-1 text-xs leading-relaxed">
+                {v && (
+                  <p>
+                    <strong>🔥 Melhor escolha: {NOME_DO_JOGADOR[v.jogador]}</strong>
+                    {(() => {
+                      const t = totalConfirmado(v);
+                      return t != null ? ` · total de ${brl(t)} confirmado` : "";
+                    })()}
+                    .
+                  </p>
+                )}
+                {m && (
+                  <p className="text-amber-900 dark:text-amber-200">
+                    <strong>
+                      Menor preço no produto (frete a confirmar): {NOME_DO_JOGADOR[m.jogador]}
+                    </strong>
+                    {v ? `, ${brl(v.preco - m.preco)} a menos no produto` : ""}.{" "}
+                    {m.prime
+                      ? "Frete grátis só para assinantes Prime: confira antes de comprar."
+                      : "Confira o frete no anúncio antes de comprar."}
+                  </p>
+                )}
+              </div>
+            )}
+            {!compacto && !v && !m && decisao.ofertas.length > 0 && buscando.length === 0 && (
+              <p className="mt-2 text-xs text-secondary-ink">
+                Nenhum marketplace confirmou o custo total com o frete: compare o preço do produto e
+                confira o frete no anúncio.
+              </p>
+            )}
+
+            {/* Espaço largo: tabela; as linhas se alinham entre as colunas (subgrid). */}
+            {!compacto && (
+              <div
+                className="mt-4 hidden grid-flow-col grid-cols-[minmax(7.5rem,0.7fr)_repeat(3,minmax(0,1fr))] grid-rows-[repeat(7,auto)] text-[13px] @2xl:grid"
+                role="group"
+                aria-label="Mesmo produto nos 3 marketplaces"
+              >
+                <div className="row-span-7 grid grid-rows-subgrid">
+                  <span aria-hidden="true" />
+                  {ROTULOS.map((r, i) => (
+                    <span
+                      key={r}
+                      className={
+                        "flex items-center border-l border-t border-border px-4 py-3 " +
+                        (r === "Total"
+                          ? FUNDO_TOTAL + " font-bold text-foreground"
+                          : "bg-muted/60 font-medium text-secondary-ink") +
+                        (i === 0 ? " rounded-tl-xl" : "") +
+                        (i === ROTULOS.length - 1 ? " rounded-bl-xl border-b" : "")
+                      }
+                    >
+                      {r}
+                    </span>
+                  ))}
                 </div>
-                {(c.oferta ||
-                  c.situacao === "sob_demanda" ||
-                  c.situacao === "conferindo" ||
-                  c.situacao === "carregando") && (
-                  <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
-                    {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
-                      <div
+                {colunas.map((c, idx) => (
+                  <div
+                    key={c.jogador}
+                    role="group"
+                    aria-label={NOME_DO_JOGADOR[c.jogador]}
+                    className="relative row-span-7 grid grid-rows-subgrid"
+                  >
+                    <span
+                      className={
+                        "mx-px flex flex-col items-center justify-end gap-1 rounded-t-xl px-3 pb-2.5 pt-2 text-center " +
+                        (ehVencedor(c)
+                          ? "bg-success/10"
+                          : c.situacao === "conferindo"
+                            ? "bg-[#0071e3]/[0.07]"
+                            : "bg-muted")
+                      }
+                    >
+                      {ehVencedor(c) && <SeloMelhor />}
+                      <NomeDoMarketplace j={c.jogador} grande />
+                      {c.situacao === "conferindo" && <BarraDeBusca />}
+                      {(c.oferta?.prime || ehMenor(c)) && (
+                        <span className="flex flex-wrap justify-center gap-1">
+                          {c.oferta?.prime && <SeloPrime />}
+                          {ehMenor(c) && <SeloMenorNoProduto />}
+                        </span>
+                      )}
+                    </span>
+                    {ROTULOS.map((r, i) => (
+                      <span
                         key={r}
                         className={
-                          "flex items-start justify-between gap-3 border-t border-border px-3 py-2 first:border-t-0 " +
-                          (r === "Total" ? FUNDO_TOTAL : "")
+                          "flex min-w-0 items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
+                          (r === "Total"
+                            ? FUNDO_TOTAL
+                            : ehVencedor(c)
+                              ? "bg-success/[0.04]"
+                              : "bg-card") +
+                          (i === ROTULOS.length - 1 ? " border-b" : "") +
+                          (i === ROTULOS.length - 1 && (idx === colunas.length - 1 || ehVencedor(c))
+                            ? " rounded-b-xl"
+                            : "")
                         }
                       >
-                        <dt
-                          className={
-                            "shrink-0 " +
-                            (r === "Total" ? "font-bold" : "font-medium text-secondary-ink")
-                          }
-                        >
-                          {r}
-                        </dt>
-                        <dd className="min-w-0 text-right">
-                          {c.situacao === "sob_demanda" ||
-                          c.situacao === "conferindo" ||
-                          c.situacao === "carregando" ? (
-                            celula(c, r)
-                          ) : r === "Total" ? (
-                            <Total c={c} colado={colado} direita />
-                          ) : r === "Vendedor" ? (
-                            <Vendedor c={c} direita />
-                          ) : (
-                            celula(c, r)
-                          )}
-                        </dd>
-                      </div>
+                        {celula(c, r)}
+                      </span>
                     ))}
-                  </dl>
-                )}
-                <div className="mt-3">
-                  <Acao
-                    c={c}
-                    colado={colado}
-                    gerarLink={gerarLink}
-                    verAlternativa={verAlternativa}
-                    pedir={(mk) => void pedir(mk)}
-                    podePedir={podePedir}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+                    {/* Moldura do vencedor desenhada POR DENTRO da coluna: nada
+                    sai da tabela nem passa por cima das colunas vizinhas. */}
+                    {ehVencedor(c) && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-inset ring-success/55"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Espaço estreito (celular): um cartão por marketplace. */}
+            {!compacto && (
+              <ul className="mt-4 space-y-3 @2xl:hidden">
+                {colunas.map((c) => (
+                  <li
+                    key={c.jogador}
+                    className={
+                      "rounded-2xl border bg-card p-3 " +
+                      (ehVencedor(c)
+                        ? "border-success/60 shadow-lg shadow-success/15 ring-2 ring-success/40"
+                        : "border-border")
+                    }
+                  >
+                    {(ehVencedor(c) || ehMenor(c) || c.oferta?.prime) && (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {ehVencedor(c) && <SeloMelhor />}
+                        {ehMenor(c) && <SeloMenorNoProduto />}
+                        {c.oferta?.prime && <SeloPrime />}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+                      <span className="min-w-[7rem]">
+                        <NomeDoMarketplace j={c.jogador} grande />
+                        {c.situacao === "conferindo" && <BarraDeBusca />}
+                      </span>
+                      <span className="ml-auto shrink-0 text-[13px]">
+                        <Correspondencia c={c} />
+                      </span>
+                    </div>
+                    {(c.oferta ||
+                      c.situacao === "sob_demanda" ||
+                      c.situacao === "conferindo" ||
+                      c.situacao === "carregando") && (
+                      <dl className="mt-3 overflow-hidden rounded-xl border border-border text-[13px]">
+                        {(["Produto", "Frete", "Total", "Vendedor"] as const).map((r) => (
+                          <div
+                            key={r}
+                            className={
+                              "flex items-start justify-between gap-3 border-t border-border px-3 py-2 first:border-t-0 " +
+                              (r === "Total" ? FUNDO_TOTAL : "")
+                            }
+                          >
+                            <dt
+                              className={
+                                "shrink-0 " +
+                                (r === "Total" ? "font-bold" : "font-medium text-secondary-ink")
+                              }
+                            >
+                              {r}
+                            </dt>
+                            <dd className="min-w-0 text-right">
+                              {c.situacao === "sob_demanda" ||
+                              c.situacao === "conferindo" ||
+                              c.situacao === "carregando" ? (
+                                celula(c, r)
+                              ) : r === "Total" ? (
+                                <Total c={c} colado={colado} direita />
+                              ) : r === "Vendedor" ? (
+                                <Vendedor c={c} direita />
+                              ) : (
+                                celula(c, r)
+                              )}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                    <div className="mt-3">
+                      <Acao
+                        c={c}
+                        colado={colado}
+                        gerarLink={gerarLink}
+                        verAlternativa={verAlternativa}
+                        pedir={(mk) => void pedir(mk)}
+                        podePedir={podePedir}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
 
