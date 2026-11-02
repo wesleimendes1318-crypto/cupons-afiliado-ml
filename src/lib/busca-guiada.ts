@@ -733,6 +733,9 @@ export async function buscaGuiada(
         limite: LIDOS_NA_PRIMEIRA,
         aceitarSemOferta: true,
         pisoPreco: null,
+        porBusca: 20,
+        max: MAXIMO_PAGINA,
+        teto: 60,
       }).catch(() => []),
     );
   }
