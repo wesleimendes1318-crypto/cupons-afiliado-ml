@@ -605,3 +605,18 @@ test("comparação: célula do frete, o que muda, marca, rótulo e qualidade", a
   assert.equal(m.qualidadeDoCartao("inferior").nivel, "inferior");
   assert.equal(m.qualidadeDoCartao(null).texto, "Qualidade não confirmada");
 });
+
+test("candidatos: 127 V x 220 V e faixa de preço ficam fora", async () => {
+  const { escolherCandidatos } = await import("../src/lib/coletor-multiloja");
+  const original = { titulo: "Lava e Seca Brastemp 11kg 220V Branca", preco: 3000 };
+  const e = escolherCandidatos(
+    [
+      { titulo: "Lava e Seca Brastemp 11kg 127V Branca", preco: 2800 },
+      { titulo: "Lava e Seca Brastemp 11kg 220V Branca", preco: 2900, faixa: true },
+      { titulo: "Lava e Seca Brastemp 11kg 220V Branca", preco: 2950 },
+      { titulo: "Lava e Seca Brastemp 11kg Branca", preco: 1100 },
+    ],
+    original,
+  );
+  assert.deepEqual(e.map((o) => o.preco), [2950]);
+});
