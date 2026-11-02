@@ -3592,6 +3592,7 @@ function VereditoEconomia({
               ? ", já com o frete para o seu CEP."
               : "."}
         </p>
+        <SeloInternacional o={oferta} className="mt-2" />
         {precoBemAbaixo && (
           <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
             Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
@@ -5900,6 +5901,7 @@ function OutraLojaComCupom({
               {`Produto ${brl(oferta.final)} · frete para seu CEP ${brl(oferta.custoFrete as number)} · total ${brl(oferta.final + (oferta.custoFrete as number))}`}
             </p>
           )}
+          <SeloInternacional o={oferta} className="mt-1" />
           {oferta.lojaOficial === true && (
             <p className="mt-1 text-xs font-semibold text-ml-blue [overflow-wrap:anywhere]">
               <BadgeCheck className="inline size-3.5 align-[-3px]" aria-hidden="true" /> Vendido
