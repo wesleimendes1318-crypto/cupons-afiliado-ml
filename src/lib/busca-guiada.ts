@@ -432,6 +432,22 @@ export async function buscarNoCatalogo(
 }
 
 const LIDOS_NA_PRIMEIRA = 24;
+export const MINIMO_RESULTADOS = 20;
+const MAXIMO_PAGINA = 30;
+const JANELA_DAS_SEGUINTES = 80;
+
+/** Posições extras da busca oficial lidas em cada página (de 20 em 20).
+    1ª: 24-104 (depois dos 24 iniciais); página p: 80 posições a partir de
+    104 + (p-1) x 80. Uma página nunca lê a janela da outra. */
+export function janelaDaPagina(pagina: number): number[] {
+  const inicio =
+    pagina <= 0 ? LIDOS_NA_PRIMEIRA : LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES * pagina;
+  const fimJanela = pagina <= 0 ? LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES : inicio + JANELA_DAS_SEGUINTES;
+  const saida: number[] = [];
+  for (let o = pagina <= 0 ? inicio : inicio - JANELA_DAS_SEGUINTES + JANELA_DAS_SEGUINTES; o < fimJanela; o += 20)
+    saida.push(o);
+  return saida;
+}
 
 /** Posição na busca oficial de cada página de "Ver mais opções": a 1ª lê
     16 por busca; as seguintes, 8 por busca a partir daí. */
@@ -511,30 +527,54 @@ export async function buscaGuiada(
       rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
     });
   }
-  /* PELO MENOS 20 (Weslei, 02/11): lê mais fundo nas mesmas buscas. */
-  if (pagina === 0 && achados.length && achados.length < 20) {
-    for (const offset of [20, 40, 60]) {
-      if (achados.length >= 20) break;
-      const vistos = new Set(achados.map((r) => r.produto));
-      const mais = await buscarNoCatalogo(intencao.buscas, {
-        ...opcoes,
-        dominiosPorBusca,
-        limite: 20,
-        offset,
-        porBusca: 24,
-      });
-      const novos = mais.filter((r) => !vistos.has(r.produto));
-      if (!mais.length) break;
-      achados = [...achados, ...novos].slice(0, 24);
+  /* PELO MENOS 20 SEMPRE (Weslei, 02/11): cada página tem a sua janela da
+     busca oficial (a 1ª: posições 0-104; cada "Carregar mais": 80 posições
+     seguintes), lida de 20 em 20 até juntar 20 produtos válidos. Sem
+     sobreposição entre páginas: o "+20" nunca repete o que já está na tela. */
+  const juntar = (novos: ResultadoBusca[]) => {
+    const vistos = new Set(achados.map((r) => r.produto));
+    achados = [...achados, ...novos.filter((r) => !vistos.has(r.produto))].slice(0, MAXIMO_PAGINA);
+  };
+  if (achados.length < MINIMO_RESULTADOS) {
+    for (const offset of janelaDaPagina(pagina)) {
+      if (achados.length >= MINIMO_RESULTADOS) break;
+      juntar(
+        await buscarNoCatalogo(intencao.buscas, {
+          ...opcoes,
+          dominiosPorBusca,
+          limite: 20,
+          offset,
+          porBusca: 24,
+        }),
+      );
+    }
+  }
+  /* Ainda curto na 1ª página: a mesma busca com as marcas que apareceram
+     (ex.: "geladeira frost free brastemp"), sempre no mesmo filtro. */
+  if (pagina === 0 && achados.length && achados.length < MINIMO_RESULTADOS && !regra) {
+    const base = intencao.buscas[0] ?? q.slice(0, 60);
+    const marcas = marcasDosResultados(achados)
+      .map((m) => m.marca)
+      .filter((m) => !normalizar(base).includes(normalizar(m)))
+      .slice(0, 4);
+    if (marcas.length) {
+      const variantes = marcas.map((m) => `${base} ${m}`);
+      const dominio = dominiosPorBusca[0] ?? null;
+      juntar(
+        await buscarNoCatalogo(variantes, {
+          ...opcoes,
+          dominiosPorBusca: variantes.map(() => dominio),
+          limite: 20,
+          porBusca: 12,
+        }),
+      );
     }
   }
   /* Aparelho: a posição na lista oficial de mais vendidos marca cada um
-     (ordem "Mais vendidos" na tela) e, com menos de 12, a lista completa. */
+     (ordem "Mais vendidos" na tela) e, abaixo de 20, a lista completa. */
   const listas = regra ? await lerMaisVendidos(regra.categorias) : undefined;
-  if (pagina === 0 && achados.length < 20) {
-    const vistos = new Set(achados.map((r) => r.produto));
-    const mais = await maisVendidosDaCategoria(q, opcoes, listas);
-    achados = [...achados, ...mais.filter((r) => !vistos.has(r.produto))].slice(0, 24);
+  if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
+    juntar(await maisVendidosDaCategoria(q, opcoes, listas));
   }
   if (listas) {
     const posicao = posicoesMaisVendidos(listas);
