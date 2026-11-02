@@ -19,7 +19,6 @@ describe("busca do aparelho x peça, móvel e insumo", () => {
       "Lavadora e Secadora LG VC4 11kg Inteligência Artificial AIDD Inox",
       "Máquina de Lavar Lava e Seca Midea Healthguard 11kg Branca LSE11",
       "Lava e Seca Electrolux 11kg Perfect Care Inverter com Motor Inverter",
-      "Lavadora Brastemp 12kg com Ciclo Tira Manchas e Dispenser de Sabão",
     ])
       expect(fica(q, nome)).toBe(true);
     for (const nome of [
@@ -31,6 +30,8 @@ describe("busca do aparelho x peça, móvel e insumo", () => {
       "Lava Louças Brastemp 8 Serviços Branca",
       "Armário Para Máquina de Lavar Lava e Seca 2 Portas",
       "Amortecedor Máquina Lava e Seca LG",
+      "Lavadora Brastemp 12kg com Ciclo Tira Manchas e Dispenser de Sabão",
+      "Máquina de Lavar Electrolux 12kg Essential Care",
     ])
       expect(fica(q, nome)).toBe(false);
   });

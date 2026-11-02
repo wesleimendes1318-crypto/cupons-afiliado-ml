@@ -180,6 +180,11 @@ export function foraDaIntencao(
   if (foraDoModelo(nome, intencao.marca, intencao.modelo)) return true;
   if (itemSecundarioFora(consulta, nome)) return true;
   const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
+  // Weslei, 02/11: "lava e seca" trazia lavadora que só lava. Pedido com as
+  // duas funções exige a secagem no nome.
+  if (/\blava(dora)?s? e seca(dora)?s?\b|\blava ?seca\b/.test(pedido) &&
+      !/\bseca(dora|gem)?s?\b|\blava ?seca\b|\bwasher ?dryer\b/.test(normalizar(nome)))
+    return true;
   const tipo = intencao.tipoProduto ?? tipoDoProduto(consulta) ?? "";
   const t = ` ${normalizar(nome)} `;
   const termos = [
