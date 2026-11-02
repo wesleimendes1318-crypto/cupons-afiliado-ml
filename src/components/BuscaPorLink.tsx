@@ -1135,7 +1135,16 @@ export default function BuscaPorLink({
             window.dispatchEvent(new CustomEvent("comparar-link", { detail: j.urlLimpa }));
             return;
           }
-          setOutraLoja({ analise: j, identificando: false });
+          /* O código do produto lido do endereço fica (a extensão gera o
+             link de afiliado da origem por ele). */
+          setOutraLoja({
+            analise: {
+              ...j,
+              identificador: j.identificador ?? analise.identificador,
+              urlLimpa: j.urlLimpa ?? analise.urlLimpa,
+            },
+            identificando: false,
+          });
         } catch {
           if (identificacao.current === vez) setOutraLoja({ analise, identificando: false });
         }
