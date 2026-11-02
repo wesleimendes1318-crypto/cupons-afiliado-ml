@@ -9,6 +9,7 @@ import {
 } from "@/lib/busca-guiada";
 import { NOS, subarvore } from "@/content/taxonomia";
 import { classificar, departamentoDe } from "@/lib/classificar";
+import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* Busca guiada do site (05/10). A mesma pergunta (normalizada) volta do
@@ -201,8 +202,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           resumo:
             exato && !achado.resultados.length && !pagina
               ? anuncios
-                ? `O ${exato} não está no catálogo oficial. Estou procurando nos anúncios das lojas do Mercado Livre, só o modelo exato.`
-                : `Não encontrei o ${exato} com anúncio ativo agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
+                ? "Conferindo opções disponíveis compatíveis com o seu pedido…"
+                : MENSAGEM_SEM_OPCOES
               : achado.intencao.resumo,
           buscas: achado.intencao.buscas,
           resultados: achado.resultados,

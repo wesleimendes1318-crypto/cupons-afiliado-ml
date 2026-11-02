@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
+import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
 import { ArrowRight, Check, Flame, Loader2, Search, Sparkles, Star } from "lucide-react";
 import { propsFotoCartao } from "@/lib/foto";
 import {
@@ -332,7 +334,7 @@ export function ResultadosDaBusca({
   consulta = null,
   buscarTermo,
   soCatalogo = false,
-  semResultado = "Não achei um produto com anúncio ativo para essa busca. Tente com outras palavras ou cole o link do produto acima.",
+  semResultado = MENSAGEM_SEM_OPCOES,
 }: {
   carregando: boolean;
   erro: string | null;
@@ -397,10 +399,11 @@ export function ResultadosDaBusca({
   );
   const resumoTela =
     anuncios?.estado === "pronto" && anuncios.itens.length
-      ? `Achei o ${exato} em ${anuncios.itens.length === 1 ? "1 anúncio" : `${anuncios.itens.length} anúncios`} das lojas do Mercado Livre, do mais barato ao mais caro.`
+      ? `Encontrei ${anuncios.itens.length === 1 ? "1 opção compatível" : `${anuncios.itens.length} opções compatíveis`} com o seu pedido, do mais barato ao mais caro.`
       : anuncios && anuncios.estado !== "buscando"
-        ? `Não encontrei o ${exato} à venda no Mercado Livre agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
-        : resposta?.resumo;
+        ? MENSAGEM_SEM_OPCOES
+        : resposta?.resumo ||
+          (resposta?.resultados.length ? "Opções encontradas para o que você pediu:" : null);
   /* Filtro final da intenção também aqui: produtos do site e respostas
      guardadas antes dele ("tomada para banheiro" sem HDMI nem antena). */
   const cartoesBase = useMemo(
@@ -504,27 +507,20 @@ export function ResultadosDaBusca({
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
   const arte = q && !soCatalogo ? arteDaBusca(q) : null;
   const procurando = carregando && cartoes.length === 0;
+  const esperando = carregando || anuncios?.estado === "buscando";
+  useAvisarOcupado(esperando);
 
   return (
-    <div aria-busy={carregando || carregandoMais}>
+    <div aria-busy={esperando || carregandoMais} data-busca-ocupada={esperando ? "" : undefined}>
       {arte && (carregando || resposta || cartoes.length > 0) && (
         <div className={compacto ? "" : "px-5 sm:px-7"}>
           <FaixaArte arte={arte} className="mb-1" />
         </div>
       )}
 
-      {procurando && (
-        <div className={recuo}>
-          <p className="mt-3 text-sm text-secondary-ink">
-            Procurando os produtos certos para você…
-          </p>
-          <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((k) => (
-              <li key={k} className="h-72 animate-pulse rounded-2xl bg-[#f5f5f7]" />
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className={recuo + " empty:hidden"}>
+        <EsperaAtiva ativo={esperando} esqueletos={cartoes.length === 0} className="mt-3" />
+      </div>
 
       {erro && !carregando && (
         <p
@@ -545,21 +541,6 @@ export function ResultadosDaBusca({
             />
           )}
           {resumoTela && <p className="mt-3 text-sm text-secondary-ink">{resumoTela}</p>}
-          {anuncios?.estado === "buscando" && (
-            <p
-              className="mt-3 inline-flex items-center gap-1.5 text-xs text-secondary-ink"
-              aria-live="polite"
-            >
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              Procurando o {exato} nos anúncios… leva até 1 minuto.
-            </p>
-          )}
-          {carregando && (
-            <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-secondary-ink">
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              Já mostrei o que conheço; buscando mais opções no catálogo…
-            </p>
-          )}
           {cartoes.length === 0 ? (
             !carregando &&
             anuncios?.estado !== "buscando" &&
@@ -571,7 +552,10 @@ export function ResultadosDaBusca({
               <p className="sr-only" aria-live="polite">
                 {`${mostrados.length} produtos na tela.`}
               </p>
-              <ul ref={lista} className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              <ul
+                ref={lista}
+                className="animate-cartao mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+              >
                 {mostrados.map((c, k) => (
                   <FragmentoComCuradoria
                     key={c.chave}

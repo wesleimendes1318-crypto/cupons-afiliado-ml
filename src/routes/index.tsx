@@ -66,6 +66,7 @@ import { roboAtivo } from "@/lib/robo";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
 import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
+import { useEsperasAtivas } from "@/components/EsperaAtiva";
 
 /* PERGUNTAS FREQUENTES: visíveis na página e nos dados estruturados
    (FAQPage). O nome da marca aparece só de forma descritiva, com o aviso de
@@ -1255,6 +1256,8 @@ function Index() {
   const [vitrine, setVitrine] = useState<"recomendados" | "todos">("recomendados");
   /* Caixa do link parada (sem comparação na tela): decide o convite do Telegram de baixo. */
   const [buscaParada, setBuscaParada] = useState(true);
+  /* Enquanto algo carrega, nada de "Quer comparar outro produto?" (02/11). */
+  const esperas = useEsperasAtivas();
   /* Os filtros nascem abertos: esconde-los fez a lista de lojas, categorias e
      faixas de economia sumirem aos olhos de quem chega. */
   const [painelAberto, setPainelAberto] = useState(true);
@@ -2026,7 +2029,7 @@ function Index() {
 
           {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
             da caixa do link. */}
-          {!buscaParada && <CompararOutro />}
+          {!buscaParada && esperas === 0 && <CompararOutro />}
           {buscaParada && (
           <nav aria-label="Acesso rápido" className="mt-8 grid gap-3 sm:grid-cols-3">
             {[

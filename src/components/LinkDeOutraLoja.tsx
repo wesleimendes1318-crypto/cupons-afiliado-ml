@@ -378,15 +378,8 @@ export function LinkDeOutraLoja({
               className="scroll-mt-36 rounded-3xl border border-black/5 bg-card p-4 shadow-sm dark:border-white/10 sm:p-5"
             >
               <p className="text-[12px] font-semibold text-secondary-ink">No Mercado Livre</p>
-              {busca.carregando ? (
-                <p className="mt-1 inline-flex items-center gap-2 text-sm text-secondary-ink">
-                  <Loader2
-                    className="size-4 animate-spin motion-reduce:animate-none"
-                    aria-hidden="true"
-                  />
-                  Buscando o melhor preço para você no Mercado Livre…
-                </p>
-              ) : busca.resposta ? (
+              {/* Carregando: a espera ativa vem de ResultadosDaBusca logo abaixo. */}
+              {busca.carregando ? null : busca.resposta ? (
                 <>
                   <h3
                     className={

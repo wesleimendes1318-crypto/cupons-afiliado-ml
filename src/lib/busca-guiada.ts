@@ -15,7 +15,7 @@
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
-import { foraDaIntencao } from "@/lib/busca-intencao";
+import { comAcessorio, extrairIntencaoRapida, foraDaIntencao } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
 
 export { foraDaIntencao };
@@ -98,7 +98,7 @@ pedido generico ("tenis de corrida", "presente ate R$ 200"): null nos dois.
 dominiosPermitidos: so se tiver certeza, ids de dominio do Mercado Livre ("MLB-TIRES"); senao [].
 resumo: uma frase curta e simpatica em portugues dizendo o que vai buscar (sem prometer preco,
 sem falar de inteligencia artificial, sem links).
-Responda SO com JSON: {"buscas": ["..."], "tipoProduto": "...", "contextoUso": "...",
+Responda SO com JSON minificado, sem texto antes ou depois: {"buscas": ["..."], "tipoProduto": "...", "contextoUso": "...",
 "termosNegativos": ["..."], "marca": null, "modelo": null, "dominiosPermitidos": [], "precoMin": null, "precoMax": null, "resumo": "..."}
 Pedido`;
 
@@ -118,40 +118,58 @@ export function normalizarBusca(q: string) {
     .slice(0, 120);
 }
 
-async function interpretar(q: string, contexto: string | null): Promise<Interpretacao> {
-  const prompt = `${PROMPT}${contexto ? ` (contexto: ${contexto})` : ""}: ${JSON.stringify(q.slice(0, 160))}`;
+/* VELOCIDADE (Weslei, 02/11: "Garanta agilidade quando a busca é por
+   texto"): a heurística local sai na hora e a interpretação remota tem no
+   máximo 3,5 s; passou disso, vale a heurística. */
+const PRAZO_INTERPRETACAO_MS = 3_500;
+
+async function interpretarComModelo(prompt: string, q: string): Promise<Interpretacao | null> {
   let bruto: string | null = null;
+  const inicio = Date.now();
   try {
     /* Cheaper Inference primeiro (09/10), GPT de reserva; depois Gemini/Gemma. */
     const { perguntarAoLlm } = await import("@/lib/cheaper-inference");
-    const gpt = await perguntarAoLlm(prompt, 9_000);
+    const gpt = await perguntarAoLlm(prompt, PRAZO_INTERPRETACAO_MS);
     if (gpt.ok) bruto = gpt.texto;
     else {
+      const resta = PRAZO_INTERPRETACAO_MS - (Date.now() - inicio);
+      if (resta < 800) return null;
       const { gerarComModelos } = await import("@/lib/conferir-produto");
       const r = await gerarComModelos([{ text: prompt }], {
         ordem: ["gemini-flash-lite-latest", "gemma-4-26b-a4b-it"],
-        prazo: 9_000,
+        prazo: resta,
       });
       if (r.ok) bruto = r.texto;
     }
   } catch {
     bruto = null;
   }
-  if (bruto) {
-    const { lerJson } = await import("@/lib/conferir-produto");
-    const lida = intencaoDoModelo(lerJson<JsonDoModelo>(bruto), q);
-    if (lida) return lida;
-  }
-  /* Sem modelo: a frase da pessoa é a busca. */
-  return {
-    buscas: [q.slice(0, 60)],
-    precoMin: null,
-    precoMax: null,
-    resumo: "",
-    tipoProduto: tipoDoProduto(q),
-    contextoUso: null,
-    termosNegativos: [],
-  };
+  if (!bruto) return null;
+  const { lerJson } = await import("@/lib/conferir-produto");
+  return intencaoDoModelo(lerJson<JsonDoModelo>(bruto), q);
+}
+
+async function interpretar(q: string, contexto: string | null): Promise<Interpretacao> {
+  const prompt = `${PROMPT}${contexto ? ` (contexto: ${contexto})` : ""}: ${JSON.stringify(q.slice(0, 160))}`;
+  const rapida = extrairIntencaoRapida(q);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const lida = await Promise.race([
+    interpretarComModelo(prompt, q).catch(() => null),
+    new Promise<null>((r) => {
+      timer = setTimeout(() => r(null), PRAZO_INTERPRETACAO_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (!lida || !lida.buscas.length) return rapida;
+  /* Faixa de preço lida na frase vale quando o modelo não trouxe. */
+  return comAcessorio(
+    {
+      ...lida,
+      precoMin: lida.precoMin ?? rapida.precoMin,
+      precoMax: lida.precoMax ?? rapida.precoMax,
+    },
+    q,
+  );
 }
 
 type JsonDoModelo = Partial<
@@ -280,6 +298,21 @@ async function comOferta(
   }
 }
 
+/** Roda fn em até n itens ao mesmo tempo; devolve na ordem (falha = null). */
+async function emParalelo<T, R>(itens: T[], n: number, fn: (x: T) => Promise<R | null>) {
+  const saida: Array<R | null> = new Array(itens.length).fill(null);
+  let proximo = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(n, itens.length) }, async () => {
+      while (proximo < itens.length) {
+        const k = proximo++;
+        saida[k] = await fn(itens[k] as T).catch(() => null);
+      }
+    }),
+  );
+  return saida;
+}
+
 /** Busca no catálogo oficial e devolve os produtos com anúncio ativo (o
     anúncio de referência é a 1ª oferta da lista oficial). */
 export async function buscarNoCatalogo(
@@ -312,28 +345,33 @@ export async function buscarNoCatalogo(
   const porBusca = opcoes.porBusca ?? 4;
   const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 20);
   const offset = Math.min(Math.max(Math.floor(opcoes.offset ?? 0), 0), 900);
-  const resultados: ResultadoBusca[] = [];
-  const vistos = new Set<string>();
-  let chamadas = 0;
   const TETO = 18;
-  for (const [b, busca] of buscas.entries()) {
-    if (resultados.length >= max || chamadas >= TETO) break;
+  /* PARALELO (Weslei, 02/11: busca por texto rápida). 1) as buscas ao mesmo
+     tempo; 2) os candidatos de todas, na ordem de antes, com as ofertas lidas
+     6 por vez; 3) a escolha final na mesma ordem e com os mesmos limites. */
+  const listas = await Promise.all(
+    buscas.slice(0, TETO).map(async (busca) => {
+      try {
+        const r = await mlGet<{ results?: ProdutoDoCatalogo[] }>(
+          `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(busca)}&limit=${limite}${offset ? `&offset=${offset}` : ""}`,
+        );
+        return r.results ?? [];
+      } catch (e) {
+        if (!(e instanceof ErroApiMl)) throw e;
+        return [] as ProdutoDoCatalogo[];
+      }
+    }),
+  );
+  const vistos = new Set<string>();
+  /* Até 2 de folga por busca: oferta sem estoque não deixa a busca curta. */
+  const candidatos: Array<{ b: number; p: ProdutoDoCatalogo }> = [];
+  let vagas = TETO - listas.length;
+  listas.forEach((lista, b) => {
     const dominios = opcoes.dominiosPorBusca?.[b] ?? opcoes.dominios ?? null;
-    const tipo = opcoes.tipoDaBusca ? tipoDoProduto(busca) : opcoes.tipo;
-    let lista: ProdutoDoCatalogo[] = [];
-    try {
-      chamadas += 1;
-      const r = await mlGet<{ results?: typeof lista }>(
-        `/products/search?status=active&site_id=MLB&q=${encodeURIComponent(busca)}&limit=${limite}${offset ? `&offset=${offset}` : ""}`,
-      );
-      lista = r.results ?? [];
-    } catch (e) {
-      if (!(e instanceof ErroApiMl)) throw e;
-      continue;
-    }
+    const tipo = opcoes.tipoDaBusca ? tipoDoProduto(buscas[b] ?? "") : opcoes.tipo;
     let desta = 0;
     for (const p of lista) {
-      if (resultados.length >= max || chamadas >= TETO || desta >= porBusca) break;
+      if (vagas <= 0 || desta >= porBusca + 2) break;
       const id = String(p.id ?? "").toUpperCase();
       if (!/^MLB\d+$/.test(id) || vistos.has(id)) continue;
       vistos.add(id);
@@ -343,14 +381,20 @@ export async function buscarNoCatalogo(
       /* Outra categoria nunca entra (11/10: bebedouro pet x fonte de Buda). */
       if (dominios && !dominios.has(String(p.domain_id ?? ""))) continue;
       if (!dominios && tipo && !nomeTemOTipo(String(p.name ?? ""), tipo)) continue;
-      chamadas += 1;
-      const r = await comOferta(p, opcoes);
-      if (r) {
-        resultados.push(r);
-        desta += 1;
-      }
+      candidatos.push({ b, p });
+      desta += 1;
+      vagas -= 1;
     }
-  }
+  });
+  const ofertas = await emParalelo(candidatos, 6, ({ p }) => comOferta(p, opcoes));
+  const resultados: ResultadoBusca[] = [];
+  const porCada = new Map<number, number>();
+  candidatos.forEach(({ b }, k) => {
+    const r = ofertas[k];
+    if (!r || resultados.length >= max || (porCada.get(b) ?? 0) >= porBusca) return;
+    resultados.push(r);
+    porCada.set(b, (porCada.get(b) ?? 0) + 1);
+  });
   return resultados;
 }
 
@@ -461,17 +505,18 @@ async function maisVendidosDaCategoria(
     const h = await mlGet<{ content?: Array<{ id?: string; type?: string }> }>(
       `/highlights/MLB/category/${cat}`,
     );
-    let chamadas = 2;
-    for (const x of h.content ?? []) {
-      if (resultados.length >= 8 || chamadas >= 18) break;
-      if (x.type !== "PRODUCT" || !/^MLB\d+$/.test(String(x.id ?? ""))) continue;
-      chamadas += 1;
-      const p = await mlGet<ProdutoDoCatalogo>(`/products/${x.id}`).catch(() => null);
-      if (!p?.name || pareceFalso(p.name) || opcoes.rejeitar?.(p.name)) continue;
-      chamadas += 1;
-      const r = await comOferta({ ...p, id: String(x.id) }, opcoes);
-      if (r) resultados.push(r);
-    }
+    /* Paralelo (02/11): ficha e oferta de cada um, 6 por vez; mesmo teto de
+       16 chamadas (8 produtos) e a ordem da lista oficial. */
+    const ids = (h.content ?? [])
+      .filter((x) => x.type === "PRODUCT" && /^MLB\d+$/.test(String(x.id ?? "")))
+      .slice(0, 8)
+      .map((x) => String(x.id));
+    const achados = await emParalelo(ids, 6, async (id) => {
+      const p = await mlGet<ProdutoDoCatalogo>(`/products/${id}`).catch(() => null);
+      if (!p?.name || pareceFalso(p.name) || opcoes.rejeitar?.(p.name)) return null;
+      return comOferta({ ...p, id }, opcoes);
+    });
+    for (const r of achados) if (r) resultados.push(r);
   } catch (e) {
     if (!(e instanceof ErroApiMl)) throw e;
   }

@@ -342,7 +342,7 @@ export function CatalogoCategoria({
         </div>
       )}
       {consultaDaBusca && (
-        <section aria-label={`Opções de ${termo || consulta.q} no catálogo`} className="mt-4">
+        <section aria-label={`Opções de ${termo || consulta.q}`} className="mt-4">
           <ResultadosDaBusca
             compacto
             soCatalogo
@@ -351,7 +351,7 @@ export function CatalogoCategoria({
             erro={erroConsulta}
             resposta={resposta}
             comparar={comparar}
-            semResultado="O catálogo oficial não tem anúncio ativo para essa busca nesta categoria. Tente outras palavras."
+            semResultado="Não encontrei opções ativas com esse termo nesta categoria agora. Experimente usar outras palavras ou colar o link de um anúncio."
           />
         </section>
       )}
@@ -442,7 +442,7 @@ export function CatalogoCategoria({
               ? termo
                 ? `Nenhum produto com “${termo}” nesses filtros.`
                 : "Nenhum produto com esses filtros."
-              : `Ainda não há produtos bem avaliados em ${no.nome.toLowerCase()}: veja abaixo as opções do catálogo.`}
+              : `Ainda não há produtos bem avaliados em ${no.nome.toLowerCase()}: veja abaixo outras opções desta categoria.`}
           </p>
           {aprovados.length > 0 && (
             <button
@@ -490,7 +490,7 @@ export function CatalogoCategoria({
             erro={erroConsulta}
             resposta={resposta}
             comparar={comparar}
-            semResultado="O catálogo oficial não respondeu com anúncios ativos agora."
+            semResultado="Não encontrei opções ativas nesta categoria agora. Tente de novo em instantes ou cole o link de um anúncio."
           />
         </section>
       )}

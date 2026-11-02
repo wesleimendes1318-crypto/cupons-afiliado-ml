@@ -22,12 +22,12 @@ const PERGUNTAS = [
   {
     pergunta: "Como escolher um brinquedo pela idade?",
     resposta:
-      "Confira a idade mínima indicada pelo fabricante. Para menores de 3 anos, evite peças pequenas que soltam. Na lista, cada brinquedo mostra a idade informada no catálogo quando ela existe.",
+      "Confira a idade mínima indicada pelo fabricante. Para menores de 3 anos, evite peças pequenas que soltam. Na lista, cada brinquedo mostra a idade informada na ficha do produto quando ela existe.",
   },
   {
     pergunta: 'O que quer dizer "Menor preço encontrado"?',
     resposta:
-      "Que este anúncio era a oferta nova mais barata entre as ofertas do mesmo produto no catálogo quando foi comparado, e nenhuma outra loja tinha o mesmo produto mais barato. O frete aparece à parte em cada cartão.",
+      "Que este anúncio era a oferta nova mais barata entre as ofertas do mesmo produto quando foi comparado, e nenhuma outra loja tinha o mesmo produto mais barato. O frete aparece à parte em cada cartão.",
   },
   {
     pergunta: "Quais brinquedos servem para doação?",
