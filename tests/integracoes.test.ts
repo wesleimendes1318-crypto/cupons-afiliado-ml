@@ -620,3 +620,17 @@ test("candidatos: 127 V x 220 V e faixa de preço ficam fora", async () => {
   );
   assert.deepEqual(e.map((o) => o.preco), [2950]);
 });
+
+test("candidatos: nota ruim fica fora e bem avaliado sobe", async () => {
+  const { escolherCandidatos } = await import("../src/lib/coletor-multiloja");
+  const original = { titulo: "Fone JBL Tune 520BT Preto", preco: 300 };
+  const e = escolherCandidatos(
+    [
+      { titulo: "Fone JBL Tune 520BT Preto", preco: 250, avaliacoes: { nota: 3.2, total: 80 } },
+      { titulo: "Fone JBL Tune 520BT Preto", preco: 280, avaliacoes: { nota: 4.8, total: 500 } },
+      { titulo: "Fone JBL Tune 520BT Preto", preco: 270 },
+    ],
+    original,
+  );
+  assert.deepEqual(e.map((o) => o.preco), [280, 270]);
+});
