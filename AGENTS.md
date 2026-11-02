@@ -23,3 +23,5 @@ Toda conta de custo de oferta (tela, bot, garimpo) passa por `custoTotalDaOferta
 
 - The post-search shopping assistant (`src/lib/assistente-busca.ts`, `/api/public/assistente-busca`) only picks and orders products already on screen and drops any model answer quoting a price not in the chosen items; this keeps it from inventing products or prices.
 - "Load more" in text search continues from a server cursor (`proximo`) over the catalog (capped at position 120) and then brand variants; pages never re-read each other's window, so "+20" does not repeat cards.
+
+- AdSense: only `src/components/Anuncio.tsx`, only in the Guides article template, inert without `VITE_ADSENSE_CLIENT` + ad consent; never Auto Ads (protects affiliate clicks and placement policy; see docs/adsense.md).
