@@ -122,11 +122,11 @@ export const ordemInicial = (q: string): OrdemBusca =>
 export function pontuacaoRecomendada(
   posicaoPreco: number,
   dados: {
-    nota?: number | null;
-    avaliacoes?: number | null;
-    maisVendido?: number | null;
-    lojaOficial?: boolean;
-    freteGratis?: boolean | null;
+    nota?: number | null | undefined;
+    avaliacoes?: number | null | undefined;
+    maisVendido?: number | null | undefined;
+    lojaOficial?: boolean | undefined;
+    freteGratis?: boolean | null | undefined;
   },
 ): number {
   let bonus = 0;

@@ -144,7 +144,7 @@ export async function buscarProdutos(
   /** Slug do nó da árvore: busca dentro daquela categoria (27/10). */
   no?: string,
   /** "Carregar mais": de onde continuar e o que já está na tela. */
-  mais?: { cursor?: number | null; vistos?: string[] },
+  mais?: { cursor?: number | null | undefined; vistos?: string[] },
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
   try {
     const r = await fetch("/api/public/buscar", {

@@ -36,10 +36,10 @@ export function AssistenteBusca({
 }: {
   consulta: string;
   cartoes: CartaoAssistente[];
-  notas: Map<string, ResumoAvaliacoes>;
+  notas: { get(k: string): ResumoAvaliacoes | undefined };
   escolhidos: number | null;
   aoEscolher: (ids: string[] | null) => void;
-  buscarTermo?: (t: string) => void;
+  buscarTermo?: ((t: string) => void) | undefined;
 }) {
   const id = useId();
   const [pedido, setPedido] = useState("");

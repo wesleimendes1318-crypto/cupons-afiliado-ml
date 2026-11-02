@@ -11,11 +11,11 @@ export type ItemAssistente = {
   id: string;
   nome: string;
   preco: number | null;
-  freteGratis?: boolean | null;
-  lojaOficial?: boolean;
-  nota?: number | null;
-  avaliacoes?: number | null;
-  maisVendido?: number | null;
+  freteGratis?: boolean | null | undefined;
+  lojaOficial?: boolean | undefined;
+  nota?: number | null | undefined;
+  avaliacoes?: number | null | undefined;
+  maisVendido?: number | null | undefined;
 };
 
 export type RespostaAssistente = {

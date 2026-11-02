@@ -479,7 +479,7 @@ export async function buscaGuiada(
   contexto: string | null,
   pagina = 0,
   intencaoAnterior: Interpretacao | null = null,
-  anterior: { variantes?: string[]; excluir?: string[]; cursor?: number } = {},
+  anterior: { variantes?: string[]; excluir?: string[]; cursor?: number | undefined } = {},
 ) {
   const lida = intencaoAnterior ?? (await interpretar(q, contexto));
   /* APARELHO (Weslei, 02/11: "voltou 1 máquina e muito cara"): a busca do
