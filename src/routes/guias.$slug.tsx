@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowRight, Calculator, Lightbulb } from "lucide-react";
 
-import { Anuncio } from "@/components/Anuncio";
+import { Anuncio, ADSENSE_SLOT_GUIA_MEIO, ADSENSE_SLOT_GUIA_FIM } from "@/components/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { buscarGuia, GUIAS, type Bloco } from "@/content/guias";
 
@@ -159,7 +159,7 @@ function PaginaGuia() {
       ))}
 
       {/* Publicidade: só nos artigos dos Guias, entre parágrafos (docs/adsense.md). */}
-      <Anuncio key={`meio-${guia.slug}`} slot={import.meta.env.VITE_ADSENSE_SLOT_GUIA_MEIO} />
+      <Anuncio key={`meio-${guia.slug}`} slot={ADSENSE_SLOT_GUIA_MEIO} />
 
       {guia.blocos.slice(meio).map((bloco, indice) => (
         <RenderBloco key={meio + indice} bloco={bloco} />
@@ -178,7 +178,7 @@ function PaginaGuia() {
         ))}
       </div>
 
-      <Anuncio key={`fim-${guia.slug}`} slot={import.meta.env.VITE_ADSENSE_SLOT_GUIA_FIM} />
+      <Anuncio key={`fim-${guia.slug}`} slot={ADSENSE_SLOT_GUIA_FIM} />
 
       {outros.length > 0 && (
         <>
