@@ -23,6 +23,7 @@ import {
   regraDoAparelho,
 } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
+import { marcasDosResultados } from "@/lib/busca-resultados";
 
 export { foraDaIntencao };
 import { pareceFalso } from "@/lib/falsificado";
@@ -436,16 +437,18 @@ export const MINIMO_RESULTADOS = 20;
 const MAXIMO_PAGINA = 30;
 const JANELA_DAS_SEGUINTES = 80;
 
-/** Posições extras da busca oficial lidas em cada página (de 20 em 20).
-    1ª: 24-104 (depois dos 24 iniciais); página p: 80 posições a partir de
-    104 + (p-1) x 80. Uma página nunca lê a janela da outra. */
+/** Início da janela de cada página na busca oficial: 1ª lê 0-24 e depois
+    24-104; a página p lê 80 posições a partir de 24 + 80 x p. Uma página
+    nunca lê a janela da outra ("+20" sem repetir). */
+export const inicioDaPagina = (pagina: number) =>
+  pagina <= 0 ? 0 : LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES * pagina;
+
+/** Posições lidas de 20 em 20 depois da leitura inicial da página. */
 export function janelaDaPagina(pagina: number): number[] {
-  const inicio =
-    pagina <= 0 ? LIDOS_NA_PRIMEIRA : LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES * pagina;
-  const fimJanela = pagina <= 0 ? LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES : inicio + JANELA_DAS_SEGUINTES;
+  const inicio = pagina <= 0 ? LIDOS_NA_PRIMEIRA : inicioDaPagina(pagina) + 20;
+  const fim = pagina <= 0 ? LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES : inicioDaPagina(pagina) + JANELA_DAS_SEGUINTES;
   const saida: number[] = [];
-  for (let o = pagina <= 0 ? inicio : inicio - JANELA_DAS_SEGUINTES + JANELA_DAS_SEGUINTES; o < fimJanela; o += 20)
-    saida.push(o);
+  for (let o = inicio; o < fim; o += 20) saida.push(o);
   return saida;
 }
 
@@ -501,7 +504,7 @@ export async function buscaGuiada(
       ? {
           limite: 20,
           porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 1,
-          offset: offsetDaPagina(pagina, LIDOS_NA_PRIMEIRA, 20),
+          offset: inicioDaPagina(pagina),
         }
       : {
           limite: LIDOS_NA_PRIMEIRA,
@@ -682,7 +685,7 @@ async function maisVendidosDaCategoria(
     }
     /* Paralelo (02/11): ficha e oferta de cada um, 6 por vez; até 12
        produtos por categoria (8 sem categoria conhecida), na ordem oficial. */
-    const ids = [...new Set(listas.flatMap((l) => l.slice(0, lidas ? 12 : 8)))];
+    const ids = [...new Set(listas.flatMap((l) => l.slice(0, lidas ? 20 : 20)))];
     const posicao = posicoesMaisVendidos(listas);
     const achados = await emParalelo(ids, 6, async (id) => {
       const p = await mlGet<ProdutoDoCatalogo>(`/products/${id}`).catch(() => null);
