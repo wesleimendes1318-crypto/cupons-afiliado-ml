@@ -1256,6 +1256,12 @@ details.abertura-nativa[open] > summary .seta-abertura {
   :root[data-compra] {
     --folga-abas: 0px;
   }
+  /* Sem pílula flutuante no celular (02/11: cobria textos e o "Comprar com
+     segurança" dos cartões). As abas já têm Início, e tocar na aba ativa
+     volta ao topo. */
+  :root:has([data-abas-inferiores]) [data-navegacao-rapida] {
+    display: none;
+  }
   body:has([data-abas-inferiores]) {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
