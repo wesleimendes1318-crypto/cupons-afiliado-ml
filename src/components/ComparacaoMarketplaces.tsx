@@ -1039,12 +1039,7 @@ export function ComparacaoMarketplaces({
                 key={c.jogador}
                 role="group"
                 aria-label={NOME_DO_JOGADOR[c.jogador]}
-                className={
-                  "relative row-span-7 grid grid-rows-subgrid " +
-                  (ehVencedor(c)
-                    ? "z-10 rounded-xl shadow-lg shadow-success/15 ring-2 ring-success/60"
-                    : "")
-                }
+                className="relative row-span-7 grid grid-rows-subgrid"
               >
                 <span
                   className={
@@ -1070,17 +1065,29 @@ export function ComparacaoMarketplaces({
                   <span
                     key={r}
                     className={
-                      "flex items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
-                      (r === "Total" ? FUNDO_TOTAL : "bg-card") +
+                      "flex min-w-0 items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
+                      (r === "Total"
+                        ? FUNDO_TOTAL
+                        : ehVencedor(c)
+                          ? "bg-success/[0.04]"
+                          : "bg-card") +
                       (i === ROTULOS.length - 1 ? " border-b" : "") +
-                      (i === ROTULOS.length - 1 && idx === colunas.length - 1
-                        ? " rounded-br-xl"
+                      (i === ROTULOS.length - 1 && (idx === colunas.length - 1 || ehVencedor(c))
+                        ? " rounded-b-xl"
                         : "")
                     }
                   >
                     {celula(c, r)}
                   </span>
                 ))}
+                {/* Moldura do vencedor desenhada POR DENTRO da coluna: nada
+                    sai da tabela nem passa por cima das colunas vizinhas. */}
+                {ehVencedor(c) && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-inset ring-success/55"
+                  />
+                )}
               </div>
             ))}
           </div>
