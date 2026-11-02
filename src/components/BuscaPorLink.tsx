@@ -1551,10 +1551,14 @@ export default function BuscaPorLink({
           Cole o link ou busque o produto
         </h2>
       </div>
-      <p className="mb-2 text-xs text-secondary-ink">
-        Com o link, procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Pelo
-        nome, mostro os produtos certos para comparar.
-      </p>
+      {/* Com resultado na tela, a explicação sai: o resultado já mostra
+          como funciona (02/11: menos texto acima da comparação). */}
+      {!((fase === "pronto" && pedido) || resultadoOutraLoja) && (
+        <p className="mb-2 text-xs text-secondary-ink">
+          Com o link, procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Pelo
+          nome, mostro os produtos certos para comparar.
+        </p>
+      )}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <div ref={sugestoes.caixa} className="relative flex min-w-0 flex-1">
@@ -4239,7 +4243,8 @@ function MelhorAlternativa({
                 Vendido por <strong className="text-foreground">{p.vendedor}</strong>
               </span>
               {oficial && <SeloLojaOficial className="inline-flex" />}
-              <SeloLider nivel={p.mercadoLider} className="inline-flex" />
+              {/* Um selo de confiança por loja (02/11: menos poluição). */}
+              {!oficial && <SeloLider nivel={p.mercadoLider} className="inline-flex" />}
               <Avaliacoes
                 a={p.avaliacoes}
                 de={p}
@@ -5057,7 +5062,9 @@ function Parecidos({
                       {(p.lojaOficial === true || p.daBuscaOficial === true) && (
                         <SeloLojaOficial className="inline-flex" />
                       )}
-                      <SeloLider nivel={p.mercadoLider} className="inline-flex" />
+                      {!(p.lojaOficial === true || p.daBuscaOficial === true) && (
+                        <SeloLider nivel={p.mercadoLider} className="inline-flex" />
+                      )}
                       <Avaliacoes
                         a={p.avaliacoes}
                         de={p}
@@ -5461,7 +5468,9 @@ function LinhaDaLoja({
           {(l.lojaOficial === true || (!l.colado && l.mercadoLider) || l.avaliacoes) && (
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               {l.lojaOficial === true && <SeloLojaOficial className="inline-flex" />}
-              {!l.colado && <SeloLider nivel={l.mercadoLider} className="inline-flex" />}
+              {!l.colado && l.lojaOficial !== true && (
+                <SeloLider nivel={l.mercadoLider} className="inline-flex" />
+              )}
               <Avaliacoes
                 a={l.avaliacoes}
                 de={{ item: l.item }}
