@@ -92,6 +92,11 @@ export function termoCurto(termo) {
   return String(termo || '').split(' ').filter(Boolean).slice(0, 5).join(' ');
 }
 
+/* QUALIDADE PRIMEIRO (02/11): nota abaixo de 4 com 20+ avaliacoes fica fora;
+   4,5+ bem avaliada e Prime sobem um pouco no empate de titulo. Igual ao servidor. */
+export const notaRuim = a => !!(a && a.nota < 4 && a.total >= 20);
+export const bonusQualidade = o => (o.avaliacoes && o.avaliacoes.nota >= 4.5 && o.avaliacoes.total >= 20 ? 0.1 : 0) + (o.prime ? 0.05 : 0);
+
 const RE_CONDICAO_RUIM = /\b(usad[oa]s?|recondicionad[oa]s?|seminov[oa]s?|renovad[oa]s?|vitrine|open ?box|mostru[aá]rio)\b/i;
 
 /** Candidatos de um marketplace para a conferencia pela foto: na faixa de
@@ -99,14 +104,15 @@ const RE_CONDICAO_RUIM = /\b(usad[oa]s?|recondicionad[oa]s?|seminov[oa]s?|renova
     pelo titulo e, entre os bem parecidos (>= 0,5), o mais barato que ainda
     nao entrou. Igual ao servidor (escolherCandidatos em
     src/lib/coletor-multiloja.ts). */
-export function escolherCandidatos(lista, original, n = 4) {
+export function escolherCandidatos(lista, original, n = 6) {
   const notas = (lista || [])
     .filter(o => o && o.titulo && o.preco != null && o.preco > 0)
     .filter(o => !RE_CONDICAO_RUIM.test(o.titulo))
     .filter(o => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
     .filter(o => !o.faixa && !voltagemConflita(original.titulo, o.titulo))
+    .filter(o => !notaRuim(o.avaliacoes))
     .filter(o => original.preco == null || (o.preco >= original.preco * 0.4 && o.preco <= original.preco * 3))
-    .map(o => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
+    .map(o => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) + bonusQualidade(o) }))
     .filter(x => x.nota >= 0.25)
     .sort((a, b) => b.nota - a.nota || a.o.preco - b.o.preco);
   const escolhidos = notas.slice(0, Math.max(0, n - 1));
@@ -179,6 +185,13 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
       const vistos = new Set(amazon.ofertas.map(o => o.asin));
       amazon = { ...amazon, ofertas: [...amazon.ofertas, ...(r2.ofertas || []).filter(o => !vistos.has(o.asin))] };
       diag.termoCurto = curto;
+    }
+    /* Menos de 20 lidos: a 2a pagina da Amazon (mais opcoes para conferir). */
+    if (vale.amazon && amazon.ofertas.length > 0 && amazon.ofertas.length < 20 && !/pausada/.test(amazon.motivo || '')) {
+      const r3 = await comPrazo(buscarCandidatosAmazon(diag.termoCurto || termo, 6000, 2), 7000, { ofertas: [] }).catch(() => ({ ofertas: [] }));
+      const vistos = new Set(amazon.ofertas.map(o => o.asin));
+      amazon = { ...amazon, ofertas: [...amazon.ofertas, ...(r3.ofertas || []).filter(o => !vistos.has(o.asin))] };
+      diag.pagina2 = (r3.ofertas || []).length;
     }
     const shopee = sh.status === 'fulfilled' ? sh.value : { ofertas: [], motivo: String(sh.reason).slice(0, 80) };
     diag.amazon = { lidas: amazon.ofertas.length, motivo: amazon.motivo || null };

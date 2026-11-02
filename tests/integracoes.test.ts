@@ -338,7 +338,7 @@ test("multiloja: usado e falso nunca chegam à tela; resumo só com números", a
   assert.equal(r.incompleto, true);
 });
 
-test("servidor: mesma escolha de candidatos da extensão (até 4, sem usado)", async () => {
+test("servidor: mesma escolha de candidatos da extensão (até 6, sem usado)", async () => {
   const { escolherCandidatos } = await import("../src/lib/coletor-multiloja");
   const original = { titulo: "Fone de Ouvido JBL Tune 520BT Bluetooth Preto", preco: 299.9 };
   const e = escolherCandidatos(
@@ -352,7 +352,7 @@ test("servidor: mesma escolha de candidatos da extensão (até 4, sem usado)", a
     ],
     original,
   );
-  assert.equal(e.length, 4);
+  assert.equal(e.length, 5);
   assert.ok(e.some((o) => o.preco === 199.9));
   assert.ok(!e.some((o) => /usado/i.test(o.titulo)));
 });
@@ -619,4 +619,18 @@ test("candidatos: 127 V x 220 V e faixa de preço ficam fora", async () => {
     original,
   );
   assert.deepEqual(e.map((o) => o.preco), [2950]);
+});
+
+test("candidatos: nota ruim fica fora e bem avaliado sobe", async () => {
+  const { escolherCandidatos } = await import("../src/lib/coletor-multiloja");
+  const original = { titulo: "Fone JBL Tune 520BT Preto", preco: 300 };
+  const e = escolherCandidatos(
+    [
+      { titulo: "Fone JBL Tune 520BT Preto", preco: 250, avaliacoes: { nota: 3.2, total: 80 } },
+      { titulo: "Fone JBL Tune 520BT Preto", preco: 280, avaliacoes: { nota: 4.8, total: 500 } },
+      { titulo: "Fone JBL Tune 520BT Preto", preco: 270 },
+    ],
+    original,
+  );
+  assert.deepEqual(e.map((o) => o.preco), [280, 270]);
 });

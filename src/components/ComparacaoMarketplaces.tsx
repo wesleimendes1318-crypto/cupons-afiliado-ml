@@ -64,6 +64,7 @@ import { limparResultado, type RespostaMultiloja } from "@/lib/multiloja-resulta
 import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { Avaliacoes } from "@/components/Avaliacoes";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -759,6 +760,7 @@ function CartaoAlternativa({
         </div>
         <div className="min-w-0 [grid-area:info]">
           <p className="line-clamp-2 text-[14px] font-bold leading-snug">{l.titulo}</p>
+          <Avaliacoes a={l.avaliacoes} className="mt-1 flex" />
           <ul className="mt-1.5 space-y-1 text-[12px] leading-snug text-secondary-ink">
             <li className="flex gap-1.5">
               <Tag className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />

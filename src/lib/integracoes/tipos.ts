@@ -17,6 +17,8 @@ export type OfertaExterna = {
   notaFrete: string | null;
   /* "Prime", "Loja oficial"... só com o dado da própria API. */
   selos: string[];
+  /* Nota e total lidos no cartão do marketplace (sem o dado, null). */
+  avaliacoes?: { nota: number; total: number } | null;
 };
 
 export const NOME_DO_MARKETPLACE: Record<MarketplaceExterno, string> = {
