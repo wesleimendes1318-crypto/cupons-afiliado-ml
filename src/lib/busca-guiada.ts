@@ -23,7 +23,7 @@ import {
   regraDoAparelho,
 } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
-import { marcasDosResultados } from "@/lib/busca-resultados";
+import { marcaDoTitulo, marcasDosResultados } from "@/lib/busca-resultados";
 
 export { foraDaIntencao };
 import { pareceFalso } from "@/lib/falsificado";
