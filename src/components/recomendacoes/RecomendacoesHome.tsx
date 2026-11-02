@@ -126,21 +126,19 @@ function Fileira({
   notaDe: ReturnType<typeof useNotas>;
   selo?: (i: ItemRec) => ReactNode;
 }) {
-  return (
-    <>
-      {itens.map((i) => (
-        <CartaoEmAlta
-          key={i.produto}
-          i={i}
-          resumo={notaDe(i)}
-          grade={false}
-          trilho
-          onComparar={comparar}
-          selo={selo?.(i)}
-        />
-      ))}
-    </>
-  );
+  /* Devolve a lista em si (não um fragmento): o TrilhoRecomendacao conta
+     os cartões para montar 12 de cada vez. */
+  return itens.map((i) => (
+    <CartaoEmAlta
+      key={i.produto}
+      i={i}
+      resumo={notaDe(i)}
+      grade={false}
+      trilho
+      onComparar={comparar}
+      selo={selo?.(i)}
+    />
+  ));
 }
 
 const ICONE = "size-5";
