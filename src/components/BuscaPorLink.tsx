@@ -1637,7 +1637,7 @@ export default function BuscaPorLink({
           {/* Selo da loja no lugar do "Colar": aparece na hora em que o link
               é colado, sem empurrar nada na tela. */}
           {lojaDoLink && (
-            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 max-w-[120px] -translate-y-1/2 items-center truncate rounded-full bg-[#0071e3]/10 px-2.5 text-[11px] font-semibold text-[#0071e3] dark:text-[#4da3ff]">
+            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 max-w-[120px] -translate-y-1/2 items-center truncate rounded-full bg-[#e5effb] px-2.5 text-[11px] font-semibold text-[#0071e3] shadow-[-14px_0_10px_-4px_#f5f5f7] dark:bg-[#12263d] dark:text-[#4da3ff] dark:shadow-none">
               {lojaDoLink}
             </span>
           )}
