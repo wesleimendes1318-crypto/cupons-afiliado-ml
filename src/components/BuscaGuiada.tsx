@@ -519,10 +519,10 @@ export function ResultadosDaBusca({
       const achados = r.resposta?.resultados ?? [];
       p += 1;
       if (r.resposta && "proximo" in r.resposta) cursor.current = r.resposta.proximo ?? null;
-      const inéditos = achados.filter((a) => !idsDoEndereco(a.url).some((id) => vistos.has(id)));
-      inéditos.forEach((a) => idsDoEndereco(a.url).forEach((id) => vistos.add(id)));
-      novos.push(...inéditos);
-      total += inéditos.length;
+      const ineditos = achados.filter((a) => !idsDoEndereco(a.url).some((id) => vistos.has(id)));
+      ineditos.forEach((a) => idsDoEndereco(a.url).forEach((id) => vistos.add(id)));
+      novos.push(...ineditos);
+      total += ineditos.length;
       if (r.erro || (!achados.length && cursor.current == null) || cursor.current === null) {
         setFim(true);
         break;

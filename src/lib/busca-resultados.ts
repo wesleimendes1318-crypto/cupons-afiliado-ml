@@ -41,9 +41,10 @@ export function faixaDaNota(r: ResumoAvaliacoes | undefined): 0 | 1 | 2 {
    sobre o que já veio, e nada inventado: sem o dado, o cartão vai para o
    fim da ordem e não entra no filtro. */
 export type OrdemBusca =
-  "relevancia" | "menor-preco" | "maior-preco" | "economia" | "mais-vendidos" | "melhor-avaliados";
+  "recomendados" | "relevancia" | "menor-preco" | "maior-preco" | "economia" | "mais-vendidos" | "melhor-avaliados";
 
 export const ORDENS_BUSCA: Array<{ id: OrdemBusca; rotulo: string }> = [
+  { id: "recomendados", rotulo: "Recomendados" },
   { id: "relevancia", rotulo: "Mais relevantes" },
   { id: "menor-preco", rotulo: "Menor preço" },
   { id: "maior-preco", rotulo: "Maior preço" },
@@ -55,6 +56,8 @@ export const ORDENS_BUSCA: Array<{ id: OrdemBusca; rotulo: string }> = [
 type Ordenavel = {
   nome: string;
   preco: number | null;
+  freteGratis?: boolean | null;
+  lojaOficial?: boolean;
   economia?: number | null;
   maisVendido?: number | null;
   avaliacao: string | null;
@@ -71,6 +74,7 @@ export function ordenarResultados<T extends Ordenavel>(
   notas: Map<string, ResumoAvaliacoes> = new Map(),
 ): T[] {
   if (ordem === "relevancia") return itens;
+  if (ordem === "recomendados") return ordenarRecomendados(itens, notas);
   const nota = (i: T) => (i.avaliacao ? notas.get(i.avaliacao)?.avaliacoes : null) ?? null;
   const chave = (i: T): number[] => {
     const a = nota(i);
@@ -105,7 +109,76 @@ export const ordemInicial = (q: string): OrdemBusca =>
     q.normalize("NFD").replace(/[̀-ͯ]/g, ""),
   )
     ? "menor-preco"
-    : "relevancia";
+    : "recomendados";
+
+/* RECOMENDADOS (Weslei, 02/11: "priorizando os mais baratos e qualidade e
+   popularidade, mais caros no final"). Só com o que foi lido, nada
+   inventado: a posição de preço (0 = o mais barato da lista, 1 = o mais
+   caro) menos os bônus de nota (4,5 ou mais com 5+ avaliações), de quantas
+   pessoas avaliaram, da lista oficial de mais vendidos, de loja oficial e
+   de frete grátis confirmado. Nota abaixo de 4,5 (5+ avaliações) e sem
+   preço vão para o fim. A ordem vale dentro de cada lote de 20: o que já
+   está na tela não pula de lugar quando chega o "Carregar mais". */
+export function pontuacaoRecomendada(
+  posicaoPreco: number,
+  dados: {
+    nota?: number | null;
+    avaliacoes?: number | null;
+    maisVendido?: number | null;
+    lojaOficial?: boolean;
+    freteGratis?: boolean | null;
+  },
+): number {
+  let bonus = 0;
+  const total = dados.avaliacoes ?? 0;
+  if (dados.nota != null && total >= 5) {
+    bonus += Math.min(0.2, Math.max(0, (dados.nota - 4.5) * 0.4));
+    bonus += Math.min(0.2, Math.log10(total) / 20);
+  }
+  if (dados.maisVendido != null) bonus += dados.maisVendido <= 10 ? 0.15 : dados.maisVendido <= 20 ? 0.08 : 0.03;
+  if (dados.lojaOficial) bonus += 0.05;
+  if (dados.freteGratis === true) bonus += 0.05;
+  return posicaoPreco - bonus;
+}
+
+export function ordenarRecomendados<T extends Ordenavel>(
+  itens: T[],
+  notas: Map<string, ResumoAvaliacoes> = new Map(),
+  lote = 20,
+): T[] {
+  const saida: T[] = [];
+  for (let i = 0; i < itens.length; i += lote) {
+    const parte = itens.slice(i, i + lote);
+    const precos = parte.flatMap((x) => (x.preco != null ? [x.preco] : [])).sort((a, b) => a - b);
+    const posicao = (p: number) => {
+      if (precos.length <= 1) return 0;
+      const k = precos.findIndex((x) => x >= p);
+      return (k < 0 ? precos.length - 1 : k) / (precos.length - 1);
+    };
+    saida.push(
+      ...parte
+        .map((x, k) => {
+          const a = x.avaliacao ? notas.get(x.avaliacao)?.avaliacoes : null;
+          const ruim = a != null && a.total >= 5 && a.nota < 4.5;
+          const grupo = x.preco == null ? 3 : ruim ? 2 : 0;
+          const valor =
+            x.preco == null
+              ? 0
+              : pontuacaoRecomendada(posicao(x.preco), {
+                  nota: a?.nota,
+                  avaliacoes: a?.total,
+                  maisVendido: x.maisVendido,
+                  lojaOficial: x.lojaOficial,
+                  freteGratis: x.freteGratis,
+                });
+          return { x, k, grupo, valor };
+        })
+        .sort((p, q) => p.grupo - q.grupo || p.valor - q.valor || p.k - q.k)
+        .map((y) => y.x),
+    );
+  }
+  return saida;
+}
 
 /* Marcas conhecidas pelo título (a 1ª que aparecer). */
 const MARCAS = [
