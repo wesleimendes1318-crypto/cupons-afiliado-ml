@@ -59,6 +59,7 @@ import {
   aplicarEnvio,
   custoIncompleto,
   custoTotalDaOferta,
+  ordenarPorCustoTotal,
   rotuloInternacional,
   tributosValidos,
 } from "@/lib/internacional";
@@ -89,6 +90,13 @@ import { ResultadosDaBusca } from "@/components/BuscaGuiada";
 import { buscarProdutos, type Resposta as RespostaBusca } from "@/lib/busca-guiada-cliente";
 import { Avaliacoes } from "@/components/Avaliacoes";
 import { BarraDeSecoes, type Secao } from "@/components/BarraDeSecoes";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Abertura, BotaoAbertura, RegiaoAbertura, useAbertura } from "@/components/Abertura";
 import { avaliacoesValidas, type Avaliacoes as DadosAvaliacoes } from "@/lib/avaliacoes";
 import {
@@ -2992,15 +3000,15 @@ function Resultado({
     !leituraFalhou && recomendada && coladoIncompleto
       ? { o: recomendada.o, economia: null, comFrete: false }
       : !leituraFalhou && recomendada && recomendada.o.ganho != null && recomendada.o.ganho >= 0.5
-      ? {
-          o: recomendada.o,
-          economia: recomendada.o.ganho,
-          comFrete:
-            precoColado != null &&
-            recomendada.o.final != null &&
-            Math.abs(recomendada.o.ganho - (precoColado - recomendada.o.final)) >= 0.01,
-        }
-      : null;
+        ? {
+            o: recomendada.o,
+            economia: recomendada.o.ganho,
+            comFrete:
+              precoColado != null &&
+              recomendada.o.final != null &&
+              Math.abs(recomendada.o.ganho - (precoColado - recomendada.o.final)) >= 0.01,
+          }
+        : null;
 
   /* UM CARTÃO DE DECISÃO (Weslei, 02/11): com o veredito do topo já
      trazendo o botão de compra, o cartão "Minha recomendação" de baixo não
@@ -3088,7 +3096,7 @@ function Resultado({
           className={
             "lg:col-span-2 lg:row-start-1" +
             (veredito
-              ? " lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-4"
+              ? " lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-stretch lg:gap-4"
               : "")
           }
         >
@@ -3146,10 +3154,7 @@ function Resultado({
                     {textoDoPagamento(a?.preco, a?.precos)}
                   </p>
                 )}
-                <SeloInternacional
-                  o={{ ...(a ?? {}), final: a?.preco ?? null }}
-                  className="mt-1"
-                />
+                <SeloInternacional o={{ ...(a ?? {}), final: a?.preco ?? null }} className="mt-1" />
                 {(a?.vendedor || a?.lojaOficial === true || a?.avaliacoes) && (
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary-ink">
                     {a?.vendedor && (
@@ -3193,7 +3198,7 @@ function Resultado({
                 qual produto ele envia antes de comprar.
               </Alerta>
             ) : null}
-            <DetalhesDoProduto detalhes={a?.detalhes} />
+            <FichaEmGaveta detalhes={a?.detalhes} titulo={semEntidades(a?.titulo) ?? null} />
           </section>
           {veredito && (
             <VereditoEconomia
@@ -3606,7 +3611,7 @@ function VereditoEconomia({
   return (
     <section
       aria-label="Minha recomendação"
-      className="mt-3 self-start rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
+      className="mt-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
     >
       <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
         <BadgeCheck className="size-3.5" aria-hidden="true" /> Minha recomendação
@@ -3643,7 +3648,13 @@ function VereditoEconomia({
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
             {oferta.lojaOficial === true && <SeloLojaOficial className="inline-flex" />}
-            <Avaliacoes a={oferta.avaliacoes} de={oferta} link={oferta.link} compacto className="inline-flex" />
+            <Avaliacoes
+              a={oferta.avaliacoes}
+              de={oferta}
+              link={oferta.link}
+              compacto
+              className="inline-flex"
+            />
           </div>
         </div>
         <div className="col-span-2 flex items-baseline justify-between gap-2 tabular-nums sm:col-span-1 sm:block sm:text-right">
@@ -4173,6 +4184,44 @@ function DetalhesDoProduto({
   );
 }
 
+/* FICHA EM GAVETA (Weslei, 02/11): a ficha do anúncio colado abre numa
+   gaveta lateral, sem esticar o cartão e sem quebrar a grade do topo. */
+function FichaEmGaveta({
+  detalhes,
+  titulo,
+}: {
+  detalhes: Detalhes | null | undefined;
+  titulo: string | null;
+}) {
+  const [aberta, setAberta] = useState(false);
+  if (!temDetalhes(detalhes)) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAberta(true)}
+        className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-full text-xs font-semibold text-[#0066cc] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+      >
+        Ver ficha técnica e descrição ↗
+      </button>
+      <Sheet open={aberta} onOpenChange={setAberta}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto overscroll-contain bg-[#f5f5f7] p-4 dark:bg-background sm:max-w-lg sm:p-6"
+        >
+          <SheetHeader className="pr-8 text-left">
+            <SheetTitle className="text-base leading-snug">Ficha técnica</SheetTitle>
+            <SheetDescription className="line-clamp-2 text-xs">
+              {titulo ?? "Anúncio colado"}
+            </SheetDescription>
+          </SheetHeader>
+          <PainelDetalhes detalhes={detalhes} nota="Informações copiadas do anúncio colado." />
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
 /* Ficha do anúncio (23/10, "detalhes... profissional e bem completo"):
    destaques com ✓, características em lista de duas colunas quando há
    espaço (as que diferem do seu em amarelo, com a legenda), as 8 primeiras
@@ -4443,7 +4492,9 @@ function MelhorAlternativa({
         const desvantagens = [
           ...desvantagensDoParecido(p, doColado),
           ...(p.internacional === true
-            ? [`Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`]
+            ? [
+                `Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`,
+              ]
             : []),
         ];
         return (
@@ -5295,11 +5346,13 @@ function Parecidos({
                 const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
                 const qualidade = qualidadeDoParecido(p, doColado);
                 const desvantagens = [
-          ...desvantagensDoParecido(p, doColado),
-          ...(p.internacional === true
-            ? [`Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`]
-            : []),
-        ];
+                  ...desvantagensDoParecido(p, doColado),
+                  ...(p.internacional === true
+                    ? [
+                        `Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`,
+                      ]
+                    : []),
+                ];
                 const extras: LinhaMuda[] = [
                   ...(porMedida && m && mColado && m.qtd !== mColado.qtd && precoColado != null
                     ? [
@@ -5447,7 +5500,7 @@ function TodasAsLojas({
      abrem em "Ver outras N lojas". A recomendada e o colado sempre à vista. */
   const [todas, setTodas] = useState(false);
   if (linhas.length < 2) return null;
-  const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
+  const ordem = ordenarPorCustoTotal(linhas);
   /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
      seguro); vermelho = quanto se paga A MAIS em cada outra loja (perda);
      o anúncio colado, quando não é o mais barato, fica em âmbar (atenção). */
@@ -5542,9 +5595,7 @@ function TodasAsLojas({
       >
         {(todas || exibidas.length <= 4
           ? exibidas
-          : exibidas.filter(
-              (l, i) => i < 3 || l.chave === chaveDaMelhor || l.colado === true,
-            )
+          : exibidas.filter((l, i) => i < 3 || l.chave === chaveDaMelhor || l.colado === true)
         ).map((l) => (
           <LinhaDaLoja
             key={l.chave}
@@ -5642,7 +5693,8 @@ function LinhaDaLoja({
       rel="noopener noreferrer"
       className={
         melhor
-          ? "animate-botao-destaque inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full bg-success px-3.5 text-xs font-bold text-white hover:brightness-95"
+          ? /* Um só botão verde cheio na tela (02/11): o do veredito. Aqui, contorno. */
+            "inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border border-success/70 bg-white px-3.5 text-xs font-bold text-success transition-colors hover:bg-success/5 dark:bg-transparent"
           : "inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border border-ml-blue/60 px-3.5 text-xs font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
       }
     >
@@ -5993,8 +6045,8 @@ function OutraLojaComCupom({
                 {brl(oferta.final)}
               </p>
               <p className="text-xs text-secondary-ink">
-                Sem imposto de importação no pagamento. O anúncio que você colou vem do
-                exterior e o custo final dele só aparece no pagamento.
+                Sem imposto de importação no pagamento. O anúncio que você colou vem do exterior e o
+                custo final dele só aparece no pagamento.
               </p>
               {oferta.vendedor && oferta.lojaOficial !== true && (
                 <p className="mt-1 text-xs text-secondary-ink [overflow-wrap:anywhere]">

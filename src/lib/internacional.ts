@@ -110,6 +110,19 @@ export function custoTotalDaOferta(o: OfertaComCusto): number | null {
   return Math.round(total * 100) / 100;
 }
 
+/** Ordem da lista de lojas (02/11): pelo custo total real. Oferta com custo
+    desconhecido (internacional sem tributos lidos, frete sem valor) vai
+    depois de todas as de custo confirmado: nunca passa na frente de uma
+    nacional mais barata só pelo preço aparente. */
+export function ordenarPorCustoTotal<T extends OfertaComCusto>(lista: readonly T[]): T[] {
+  return [...lista].sort((a, b) => {
+    const ca = custoTotalDaOferta(a);
+    const cb = custoTotalDaOferta(b);
+    if ((ca == null) !== (cb == null)) return ca == null ? 1 : -1;
+    return (ca ?? a.final ?? 1e12) - (cb ?? b.final ?? 1e12);
+  });
+}
+
 /** Custo da oferta é incompleto por ser internacional sem tributos lidos. */
 export function custoIncompleto(o: OfertaComCusto): boolean {
   return o.internacional === true && tributosValidos(o.tributosEstimados) == null;
