@@ -23,7 +23,7 @@ import {
   regraDoAparelho,
 } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
-import { marcasDosResultados } from "@/lib/busca-resultados";
+import { marcaDoTitulo, marcasDosResultados } from "@/lib/busca-resultados";
 
 export { foraDaIntencao };
 import { pareceFalso } from "@/lib/falsificado";
@@ -573,14 +573,37 @@ export async function buscaGuiada(
   intencaoAnterior: Interpretacao | null = null,
   anterior: { variantes?: string[]; excluir?: string[]; cursor?: number | undefined } = {},
 ) {
-  const lida = intencaoAnterior ?? (await interpretar(q, contexto));
+  const lidaBruta = intencaoAnterior ?? (await interpretar(q, contexto));
+  /* MARCA DIGITADA MANDA (Weslei, 02/11: "Lava e Seca Brastemp" voltou só
+     Midea, LG e Samsung). A marca citada vira trava (foraDoModelo exige no
+     título) e a frase do cliente é a 1ª busca. */
+  const marcaPedida = lidaBruta.marca || marcaDoTitulo(q);
+  const frase = normalizar(q).replace(/\s+/g, " ").trim().slice(0, 60);
+  const lida = marcaPedida
+    ? {
+        ...lidaBruta,
+        marca: marcaPedida,
+        buscas: [...new Set([frase, ...lidaBruta.buscas])].slice(0, 3),
+      }
+    : lidaBruta;
   /* APARELHO (Weslei, 02/11: "voltou 1 máquina e muito cara"): a busca do
      catálogo por "lava e seca" devolve nicho, placa, mop e lava-louças; o
      aparelho real vem pela marca, só da categoria oficial, e os mais
      vendidos dela completam. */
   const regra = regraDoAparelho(q);
+  /* Com marca, as buscas da regra viram buscas DA MARCA (nunca concorrente). */
+  const marcaN = marcaPedida ? normalizar(marcaPedida) : "";
+  const daRegra = (regra?.buscas ?? [])
+    .map((b) => normalizar(b))
+    .filter((b) => !marcaN || b.includes(marcaN) || !marcaDoTitulo(b))
+    .map((b) => (marcaN && !b.includes(marcaN) ? `${b} ${marcaN}` : b));
   const intencao = regra
-    ? { ...lida, buscas: [...new Set([...regra.buscas, ...lida.buscas])].slice(0, 8) }
+    ? {
+        ...lida,
+        buscas: [
+          ...new Set(marcaPedida ? [...lida.buscas, ...daRegra] : [...daRegra, ...lida.buscas]),
+        ].slice(0, 8),
+      }
     : lida;
   /* Camada C: só os domínios que a API oficial prevê para cada busca (mais
      os do modelo); sem previsão, o tipo da busca tem de estar no nome. */
@@ -697,6 +720,24 @@ export async function buscaGuiada(
   const listas = regra ? await lerMaisVendidos(regra.categorias) : undefined;
   if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
     juntar(await maisVendidosDaCategoria(q, opcoes, listas));
+  }
+  /* SEMPRE O ANÚNCIO (Weslei, 02/11: "pesquisei um modelo que tem no
+     Mercado Livre e não retornou"). Produto do catálogo sem oferta destacada
+     (a maioria das Brastemp lava e seca) entra no fim, sem preço, só com
+     "Comparar preço": a comparação acha a loja e gera o link de afiliado. */
+  if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
+    juntar(
+      await buscarNoCatalogo(intencao.buscas, {
+        ...opcoes,
+        dominiosPorBusca,
+        limite: LIDOS_NA_PRIMEIRA,
+        aceitarSemOferta: true,
+        pisoPreco: null,
+        porBusca: 20,
+        max: MAXIMO_PAGINA,
+        teto: 60,
+      }).catch(() => []),
+    );
   }
   if (listas) {
     const posicao = posicoesMaisVendidos(listas);
