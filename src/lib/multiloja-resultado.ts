@@ -2,6 +2,7 @@
    para o resultado das APIs e para o gravado pela extensão. Mesmas regras
    do Mercado Livre: só link de afiliado do próprio marketplace, nada usado
    nem falso, foto dos hosts conhecidos e o resumo do que foi lido. */
+import { avaliacoesValidas } from "@/lib/avaliacoes";
 import { ehLinkDeCompra } from "@/lib/afiliado";
 import type { LojaExterna, ResumoMarketplace } from "@/lib/coletor-multiloja";
 import { pareceFalso } from "@/lib/falsificado";
@@ -83,6 +84,7 @@ export function limparResultado(r: unknown, tituloColado?: string | null): Respo
           : null,
       notaFrete: texto(l.notaFrete, 80),
       selos: Array.isArray(l.selos) ? l.selos.filter((x) => x === "Prime") : [],
+      avaliacoes: avaliacoesValidas(l.avaliacoes),
       /* Item cortado no meio ("Campo: X ->" sem o outro valor) sai. */
       muda: texto(
         (typeof l.muda === "string" ? l.muda : "")

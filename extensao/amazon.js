@@ -96,9 +96,20 @@ export function ofertasAmazonDoHtml(html) {
     const prime = /a-icon-prime/.test(bloco);
     const mencionaFreteGratis = /frete\s+gr[aá]tis/i.test(texto(bloco).slice(0, 4000));
     vistos.add(asin);
-    lista.push({ asin, titulo, preco, imagem, prime, mencionaFreteGratis, posicao: lista.length + 1 });
+    lista.push({ asin, titulo, preco, imagem, prime, mencionaFreteGratis, avaliacoes: avaliacaoAmazonDoBloco(bloco), posicao: lista.length + 1 });
   });
   return lista;
+}
+
+/* Nota e total do cartao ("4,6 de 5 estrelas" + "(1.234)"). Sem os dois, null. */
+export function avaliacaoAmazonDoBloco(bloco) {
+  const b = String(bloco || '');
+  const n = b.match(/(\d)[,.](\d) de 5 estrelas/);
+  if (!n) return null;
+  const nota = Number(n[1] + '.' + n[2]);
+  const t = b.match(/aria-label="([\d.]+) (?:avalia|classifica)/) || b.match(/<span class="a-size-base s-underline-text">\(?([\d.]+)\)?<\/span>/);
+  const total = t ? Number(t[1].replace(/\./g, '')) : 0;
+  return nota > 0 && nota <= 5 && total >= 1 ? { nota, total } : null;
 }
 
 async function freioAmazon() {
@@ -108,13 +119,13 @@ async function freioAmazon() {
 
 /** Busca na Amazon com a sessao do navegador (prazo curto). Nunca lanca
     erro para cima: devolve { ofertas, motivo }. */
-export async function buscarCandidatosAmazon(termo, prazoMs = 8000) {
+export async function buscarCandidatosAmazon(termo, prazoMs = 8000, pagina = 1) {
   if (!termo) return { ofertas: [], motivo: 'sem termo' };
   if (await freioAmazon()) return { ofertas: [], motivo: 'pausada (verificacao da Amazon nas ultimas 6 h)' };
   const ctrl = new AbortController();
   const corta = setTimeout(() => ctrl.abort(), prazoMs);
   try {
-    const r = await fetch(BUSCA_AMAZON + encodeURIComponent(termo), {
+    const r = await fetch(BUSCA_AMAZON + encodeURIComponent(termo) + (pagina > 1 ? '&page=' + pagina : ''), {
       signal: ctrl.signal,
       credentials: 'include',
       cache: 'no-store',
@@ -151,7 +162,8 @@ export function ofertaAmazonParaSite(o) {
     freteGratis: null,
     custoFrete: null,
     notaFrete: o.prime ? 'Frete grátis para assinantes Prime' : 'Frete: confira no anúncio',
-    selos: o.prime ? ['Prime'] : []
+    selos: o.prime ? ['Prime'] : [],
+    avaliacoes: o.avaliacoes || null
   };
 }
 

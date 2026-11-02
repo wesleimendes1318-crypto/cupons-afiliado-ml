@@ -49,22 +49,29 @@ export type ResumoMarketplace = {
     de preço, sem peça no lugar do aparelho nem usado, os 3 mais parecidos
     pelo título e, entre os bem parecidos (>= 0,5), o mais barato que ainda
     não entrou. Igual à extensão (extensao/multiloja.js). */
+type Qualidade = { avaliacoes?: { nota: number; total: number } | null; prime?: boolean; selos?: string[] };
+export const notaRuim = (a: Qualidade["avaliacoes"]) => !!(a && a.nota < 4 && a.total >= 20);
+export const bonusQualidade = (o: Qualidade) =>
+  (o.avaliacoes && o.avaliacoes.nota >= 4.5 && o.avaliacoes.total >= 20 ? 0.1 : 0) +
+  (o.prime || o.selos?.includes("Prime") ? 0.05 : 0);
+
 export function escolherCandidatos<T extends { titulo: string; preco: number }>(
   lista: T[],
   original: { titulo: string; preco: number | null },
-  n = 4,
+  n = 6,
 ): T[] {
   const notas = lista
     .filter((o) => o && o.titulo && Number.isFinite(o.preco) && o.preco > 0)
     .filter((o) => !RE_CONDICAO_RUIM.test(o.titulo))
     .filter((o) => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
     .filter((o) => !(o as { faixa?: boolean }).faixa && !voltagemConflita(original.titulo, o.titulo))
+    .filter((o) => !notaRuim((o as Qualidade).avaliacoes))
     .filter(
       (o) =>
         original.preco == null ||
         (o.preco >= original.preco * 0.4 && o.preco <= original.preco * 3),
     )
-    .map((o) => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
+    .map((o) => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) + bonusQualidade(o as Qualidade) }))
     .filter((x) => x.nota >= 0.25)
     .sort((a, b) => b.nota - a.nota || a.o.preco - b.o.preco);
   const escolhidos = notas.slice(0, Math.max(0, n - 1));
