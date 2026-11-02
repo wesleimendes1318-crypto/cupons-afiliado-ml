@@ -721,6 +721,21 @@ export async function buscaGuiada(
   if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
     juntar(await maisVendidosDaCategoria(q, opcoes, listas));
   }
+  /* SEMPRE O ANÚNCIO (Weslei, 02/11: "pesquisei um modelo que tem no
+     Mercado Livre e não retornou"). Produto do catálogo sem oferta destacada
+     (a maioria das Brastemp lava e seca) entra no fim, sem preço, só com
+     "Comparar preço": a comparação acha a loja e gera o link de afiliado. */
+  if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
+    juntar(
+      await buscarNoCatalogo(intencao.buscas, {
+        ...opcoes,
+        dominiosPorBusca,
+        limite: LIDOS_NA_PRIMEIRA,
+        aceitarSemOferta: true,
+        pisoPreco: null,
+      }).catch(() => []),
+    );
+  }
   if (listas) {
     const posicao = posicoesMaisVendidos(listas);
     achados = achados.map((r) => ({
