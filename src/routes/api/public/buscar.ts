@@ -240,7 +240,7 @@ export const Route = createFileRoute("/api/public/buscar")({
           modelo: modelo ?? null,
           anuncios,
           variantes: achado.variantes ?? [],
-          proximo: achado.proximo ?? null,
+          proximo: achado.proximo,
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)
