@@ -455,9 +455,9 @@ type Passo = { buscas: string[]; offset: number };
     continua do passo em que a anterior parou (cursor). */
 export function passosDasSeguintes(buscas: string[], variantes: string[]): Passo[] {
   const passos: Passo[] = [];
-  for (let o = 84; o < FIM_DO_CATALOGO; o += 20) passos.push({ buscas, offset: o });
+  passos.push({ buscas, offset: 84 }, { buscas, offset: FIM_DO_CATALOGO - 20 });
   for (const v of variantes)
-    for (let o = 0; o < FIM_DO_CATALOGO; o += 20) passos.push({ buscas: [v], offset: o });
+    for (let o = 0; o + 20 <= FIM_DO_CATALOGO; o += 20) passos.push({ buscas: [v], offset: o });
   return passos;
 }
 
