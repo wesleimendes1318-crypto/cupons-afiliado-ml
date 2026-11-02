@@ -27,6 +27,12 @@ export const ADSENSE_CLIENTE =
 /** Só o formato oficial do Google liga os anúncios. */
 export const ADSENSE_ATIVO = /^ca-pub-\d{10,20}$/.test(ADSENSE_CLIENTE);
 
+/* Blocos manuais dos guias (02/11); as variáveis de ambiente ainda podem trocar. */
+export const ADSENSE_SLOT_GUIA_MEIO =
+  (import.meta.env.VITE_ADSENSE_SLOT_GUIA_MEIO ?? "").trim() || "2786465840";
+export const ADSENSE_SLOT_GUIA_FIM =
+  (import.meta.env.VITE_ADSENSE_SLOT_GUIA_FIM ?? "").trim() || "7847220834";
+
 function Unidade({ slot }: { slot: string }) {
   const ref = useRef<HTMLModElement>(null);
   const enviado = useRef(false);

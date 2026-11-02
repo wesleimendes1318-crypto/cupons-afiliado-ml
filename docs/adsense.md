@@ -11,7 +11,9 @@ linha oficial. Assim o verificador do Google acha o snippet, a meta tag e o ads.
    - `VITE_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX` (Publisher ID do painel);
    - `VITE_ADSENSE_SLOT_GUIA_MEIO` e `VITE_ADSENSE_SLOT_GUIA_FIM`: ids das duas
      unidades de anúncio **manuais** (criadas em Anúncios > Por bloco de anúncios).
-     Sem slot, o espaço correspondente não aparece.
+     Padrões em `Anuncio.tsx` (02/11), usados quando a variável está vazia:
+     - `2786465840` — bloco "Guia - meio do artigo" (`VITE_ADSENSE_SLOT_GUIA_MEIO`);
+     - `7847220834` — bloco "Guia - fim do artigo" (`VITE_ADSENSE_SLOT_GUIA_FIM`).
 2. Em `public/ads.txt`, troque a linha comentada pela linha oficial que o painel
    mostra (`google.com, pub-..., DIRECT, f08c47fec0942fa0`). O arquivo é servido
    em `/ads.txt` como `text/plain`.
