@@ -20,6 +20,7 @@ import {
   GoogleConsentimento,
   SCRIPT_CONSENTIMENTO_PADRAO,
 } from "../components/GoogleConsentimento";
+import { ADSENSE_ATIVO, ADSENSE_CLIENTE } from "../components/Anuncio";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ehLinkDeCompra } from "../lib/afiliado";
 import { ouvirComprasDoVisitante } from "../lib/perfil-visitante";
@@ -88,6 +89,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      /* Verificação de propriedade do AdSense: meta sem cookie nem script,
+         no HTML do servidor (o verificador do Google não consente). */
+      ...(ADSENSE_ATIVO ? [{ name: "google-adsense-account", content: ADSENSE_CLIENTE }] : []),
       { title: "Melhor Escolha — compare preços de produtos do Mercado Livre" },
       {
         name: "description",

@@ -13,6 +13,11 @@ nenhum espaço de anúncio aparece ou ocupa altura.
    mostra (`google.com, pub-..., DIRECT, f08c47fec0942fa0`). O arquivo é servido
    em `/ads.txt` como `text/plain`.
 3. Publique o site.
+4. No painel do AdSense, verifique a propriedade do site pelo método da
+   **meta tag** (`google-adsense-account`, já no `<head>` de todas as páginas,
+   vinda do mesmo `VITE_ADSENSE_CLIENT`) ou pelo **ads.txt**. O método do
+   snippet não serve: o script só carrega com consentimento, e o verificador
+   do Google não consente, então nunca o veria.
 
 O script só carrega para quem marcou **Publicidade** no aviso de cookies
 (desmarcada por padrão). Quem revogar deixa de ver anúncios na hora.
