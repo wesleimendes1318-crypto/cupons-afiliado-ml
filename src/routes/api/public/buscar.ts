@@ -9,6 +9,7 @@ import {
 } from "@/lib/busca-guiada";
 import { NOS, subarvore } from "@/content/taxonomia";
 import { classificar, departamentoDe } from "@/lib/classificar";
+import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* Busca guiada do site (05/10). A mesma pergunta (normalizada) volta do
@@ -74,7 +75,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
         /* "v3" (28/10): respostas guardadas antes do filtro de marca/modelo não voltam. */
-        const chave1 = `v3|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        const chave1 = `v4|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina ? `${chave1}|p${pagina}` : chave1;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
@@ -201,8 +202,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           resumo:
             exato && !achado.resultados.length && !pagina
               ? anuncios
-                ? `O ${exato} não está no catálogo oficial. Estou procurando nos anúncios das lojas do Mercado Livre, só o modelo exato.`
-                : `Não encontrei o ${exato} com anúncio ativo agora. Para não te mostrar outro produto, deixei de fora modelos diferentes.`
+                ? "Conferindo opções disponíveis compatíveis com o seu pedido…"
+                : MENSAGEM_SEM_OPCOES
               : achado.intencao.resumo,
           buscas: achado.intencao.buscas,
           resultados: achado.resultados,

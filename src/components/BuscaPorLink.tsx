@@ -107,6 +107,7 @@ import {
   useAvaliacoesPorItens,
 } from "@/lib/avaliacoes-detalhe";
 import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
+import { useAvisarOcupado } from "@/components/EsperaAtiva";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
@@ -1558,6 +1559,9 @@ export default function BuscaPorLink({
   useEffect(() => {
     aoMudarEstado?.(parada);
   }, [parada, aoMudarEstado]);
+  useAvisarOcupado(
+    fase === "enviando" || fase === "na-fila" || fase === "outras-lojas" || fase === "lendo",
+  );
 
   return (
     <section
@@ -6488,7 +6492,7 @@ function OutraLojaComCupom({
         <p className="mt-1.5 text-[11px] text-secondary-ink">
           {oferta.achadoNaBusca
             ? "Confira a descrição antes de comprar."
-            : "Mesmo produto, na mesma página de catálogo."}
+            : "Mesmo produto, vendido na mesma página do anúncio."}
         </p>
       )}
       <AcoesDaOferta abrir={() => setGaveta(true)} className="mt-3" />

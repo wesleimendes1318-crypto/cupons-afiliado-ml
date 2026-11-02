@@ -173,9 +173,20 @@ export async function envioParaCep(item: string, cep: string) {
 }
 
 /** GET na API oficial. Um 401 renova o token e tenta uma vez mais. */
+/* Uma renovação por vez (02/11, buscas em paralelo): o refresh token vale uma
+   vez só; dois 401 ao mesmo tempo esperam a mesma renovação. */
+let renovando: Promise<string | null> | null = null;
+function tokenUnico(forcarNovo: boolean): Promise<string | null> {
+  if (!forcarNovo && tokenMem && Date.now() < tokenMem.ate) return Promise.resolve(tokenMem.valor);
+  renovando ??= tokenDeAcesso(forcarNovo).finally(() => {
+    renovando = null;
+  });
+  return renovando;
+}
+
 export async function mlGet<T>(caminho: string): Promise<T> {
   for (let tentativa = 0; tentativa < 2; tentativa += 1) {
-    const token = await tokenDeAcesso(tentativa > 0);
+    const token = await tokenUnico(tentativa > 0);
     const r = await fetch(`${API}${caminho}`, {
       headers: {
         Accept: "application/json",
