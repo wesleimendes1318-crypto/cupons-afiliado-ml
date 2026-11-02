@@ -56,7 +56,7 @@ export function CepTopo() {
         </span>
       </button>
       {aberto && (
-        <div className="absolute right-0 top-12 z-50 w-[min(92vw,340px)] rounded-2xl border border-border bg-card p-4 shadow-lg">
+        <div className="fixed inset-x-3 top-16 z-50 rounded-2xl border border-border bg-card p-4 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[340px]">
           <p className="text-sm font-semibold text-foreground">Onde você vai receber?</p>
           <p className="mt-0.5 text-xs text-secondary-ink">
             Frete e prazo de entrega de cada loja são calculados para este CEP.
