@@ -34,4 +34,7 @@ clique do afiliado (que vale mais) e página sem conteúdo editorial próprio
 viola a política de posicionamento do AdSense.
 
 ## Como desligar
-Esvazie `VITE_ADSENSE_CLIENT` e publique. Nada mais é carregado.
+O ID ca-pub-5848712376900651 está como padrão em `src/components/Anuncio.tsx`
+(`PUBLISHER_PADRAO`), porque o arquivo `.env` é gerado pela plataforma. Para
+desligar, esvazie `PUBLISHER_PADRAO` (e `VITE_ADSENSE_CLIENT`, se definida) e
+publique. Nada mais é carregado.
