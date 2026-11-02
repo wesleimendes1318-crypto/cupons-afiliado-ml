@@ -37,7 +37,21 @@ export type ResultadoBusca = {
   /** Frete grátis do anúncio de referência (null: não informado). */
   freteGratis?: boolean | null;
   lojaOficial?: boolean;
+  /** Quanto o anúncio custa a menos que a mediana das outras ofertas novas
+      do mesmo produto (R$, inteiro); null sem outra oferta para comparar. */
+  economia?: number | null;
+  /** Posição na lista oficial de mais vendidos da categoria (1 = 1º). */
+  maisVendido?: number | null;
 };
+
+/** Economia medida: mediana das outras ofertas novas menos o preço. */
+export function economiaEntreOfertas(preco: number | null, outras: number[]): number | null {
+  const v = outras.filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
+  if (preco == null || !v.length) return null;
+  const meio = v.length / 2;
+  const mediana = v.length % 2 ? v[Math.floor(meio)]! : (v[meio - 1]! + v[meio]!) / 2;
+  return Math.max(0, Math.floor(mediana - preco));
+}
 
 export type RespostaBusca = {
   resumo: string;
@@ -277,10 +291,12 @@ async function comOferta(
         official_store_id?: number | null;
       }>;
     }>(`/products/${id}/items?limit=5`);
-    const oferta = o.results?.find((x) => x.condition === "new");
+    const novas = (o.results ?? []).filter((x) => x.condition === "new");
+    const oferta = novas[0];
     const item = oferta?.item_id;
     if (!item || !/^MLB\d+$/.test(item)) return null;
     const preco = num(oferta?.price);
+    const outras = novas.slice(1).flatMap((x) => num(x.price) ?? []);
     if (opcoes.precoMax && preco && preco > opcoes.precoMax * 1.05) return null;
     if (opcoes.precoMin && preco && preco < opcoes.precoMin * 0.95) return null;
     if (opcoes.pisoPreco && preco && preco < opcoes.pisoPreco) return null;
@@ -294,6 +310,7 @@ async function comOferta(
       freteGratis:
         typeof oferta?.shipping?.free_shipping === "boolean" ? oferta.shipping.free_shipping : null,
       lojaOficial: oferta?.official_store_id != null,
+      economia: economiaEntreOfertas(preco, outras),
     };
   } catch (e) {
     /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,
@@ -490,10 +507,20 @@ export async function buscaGuiada(
       rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
     });
   }
+  /* Aparelho: a posição na lista oficial de mais vendidos marca cada um
+     (ordem "Mais vendidos" na tela) e, com menos de 12, a lista completa. */
+  const listas = regra ? await lerMaisVendidos(regra.categorias) : undefined;
   if (pagina === 0 && (regra ? achados.length < 12 : !achados.length)) {
     const vistos = new Set(achados.map((r) => r.produto));
-    const mais = await maisVendidosDaCategoria(q, opcoes, regra?.categorias);
+    const mais = await maisVendidosDaCategoria(q, opcoes, listas);
     achados = [...achados, ...mais.filter((r) => !vistos.has(r.produto))].slice(0, 24);
+  }
+  if (listas) {
+    const posicao = posicoesMaisVendidos(listas);
+    achados = achados.map((r) => ({
+      ...r,
+      maisVendido: r.maisVendido ?? posicao.get(r.produto) ?? null,
+    }));
   }
   /* Busca universal (27/10): o mais fiel ao que foi digitado vem primeiro
      (modelo exato) e peça/acessório só se a busca é pela peça. */
@@ -540,6 +567,36 @@ export function palavrasDoPedido(textos: string[]) {
   ];
 }
 
+/** Listas oficiais de mais vendidos (/highlights) das categorias: os ids
+    de produto de catálogo de cada uma, na ordem oficial. */
+async function lerMaisVendidos(categorias: string[]): Promise<string[][]> {
+  return Promise.all(
+    categorias
+      .filter((c) => /^MLB\d+$/.test(c))
+      .map((cat) =>
+        mlGet<{ content?: Array<{ id?: string; type?: string }> }>(
+          `/highlights/MLB/category/${cat}`,
+        )
+          .then((h) =>
+            (h.content ?? [])
+              .filter((x) => x.type === "PRODUCT" && /^MLB\d+$/.test(String(x.id ?? "")))
+              .map((x) => String(x.id)),
+          )
+          .catch(() => [] as string[]),
+      ),
+  );
+}
+
+/** Melhor posição de cada produto nas listas (1 = mais vendido). */
+export function posicoesMaisVendidos(listas: string[][]): Map<string, number> {
+  const posicao = new Map<string, number>();
+  for (const l of listas)
+    l.forEach((id, k) => {
+      if (!posicao.has(id) || posicao.get(id)! > k + 1) posicao.set(id, k + 1);
+    });
+  return posicao;
+}
+
 /** Mais vendidos da categoria que a API oficial prevê para o pedido (lista
     oficial /highlights), só os produtos de catálogo com oferta ativa. */
 async function maisVendidosDaCategoria(
@@ -550,44 +607,27 @@ async function maisVendidosDaCategoria(
     pisoPreco?: number | null;
     rejeitar?: (nome: string) => boolean;
   },
-  /** Categorias já conhecidas (aparelho): sem prever pela frase. */
-  categorias?: string[],
+  /** Listas já lidas (aparelho de categoria conhecida): sem prever pela frase. */
+  lidas?: string[][],
 ) {
   const resultados: ResultadoBusca[] = [];
   try {
-    let cats = (categorias ?? []).filter((c) => /^MLB\d+$/.test(c));
-    if (!cats.length) {
+    let listas = lidas;
+    if (!listas) {
       const d = await mlGet<Array<{ category_id?: string }>>(
         `/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(termoDoProduto(q, 12))}`,
       );
-      cats = [String((Array.isArray(d) ? d[0]?.category_id : "") ?? "")].filter((c) =>
-        /^MLB\d+$/.test(c),
-      );
+      listas = await lerMaisVendidos([String((Array.isArray(d) ? d[0]?.category_id : "") ?? "")]);
     }
-    if (!cats.length) return resultados;
-    const listas = await Promise.all(
-      cats.map((cat) =>
-        mlGet<{ content?: Array<{ id?: string; type?: string }> }>(
-          `/highlights/MLB/category/${cat}`,
-        ).catch(() => ({ content: [] })),
-      ),
-    );
     /* Paralelo (02/11): ficha e oferta de cada um, 6 por vez; até 12
-       produtos por categoria, na ordem da lista oficial. */
-    const ids = [
-      ...new Set(
-        listas.flatMap((h) =>
-          (h.content ?? [])
-            .filter((x) => x.type === "PRODUCT" && /^MLB\d+$/.test(String(x.id ?? "")))
-            .slice(0, categorias?.length ? 12 : 8)
-            .map((x) => String(x.id)),
-        ),
-      ),
-    ];
+       produtos por categoria (8 sem categoria conhecida), na ordem oficial. */
+    const ids = [...new Set(listas.flatMap((l) => l.slice(0, lidas ? 12 : 8)))];
+    const posicao = posicoesMaisVendidos(listas);
     const achados = await emParalelo(ids, 6, async (id) => {
       const p = await mlGet<ProdutoDoCatalogo>(`/products/${id}`).catch(() => null);
       if (!p?.name || pareceFalso(p.name) || opcoes.rejeitar?.(p.name)) return null;
-      return comOferta({ ...p, id }, opcoes);
+      const r = await comOferta({ ...p, id }, opcoes);
+      return r && { ...r, maisVendido: posicao.get(id) ?? null };
     });
     for (const r of achados) if (r) resultados.push(r);
   } catch (e) {

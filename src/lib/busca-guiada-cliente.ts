@@ -15,6 +15,10 @@ export type Resultado = {
   url: string;
   freteGratis?: boolean | null;
   lojaOficial?: boolean;
+  /* Economia medida contra as outras ofertas do mesmo produto (R$). */
+  economia?: number | null;
+  /* Posição na lista oficial de mais vendidos da categoria. */
+  maisVendido?: number | null;
 };
 
 export type Resposta = {

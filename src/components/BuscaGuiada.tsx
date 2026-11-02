@@ -3,7 +3,16 @@ import { Link } from "@tanstack/react-router";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
 import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
-import { ArrowRight, Check, Flame, Loader2, Search, Sparkles, Star } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Flame,
+  Loader2,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+} from "lucide-react";
 import { propsFotoCartao } from "@/lib/foto";
 import {
   buscarProdutos,
@@ -27,8 +36,23 @@ import {
   useAvaliacoesPorItens,
   type ResumoAvaliacoes,
 } from "@/lib/avaliacoes-detalhe";
-import { faixaDaNota, idsDoEndereco, mesclarSemRepetir } from "@/lib/busca-resultados";
-import { diversificarPorPreco } from "@/lib/catalogo-no";
+import {
+  ESCOLHA_BUSCA_VAZIA,
+  faixaDaNota,
+  filtrarResultados,
+  filtrosDaBusca,
+  idsDoEndereco,
+  marcasDosResultados,
+  mesclarSemRepetir,
+  ORDENS_BUSCA,
+  ordemInicial,
+  ordenarResultados,
+  temEscolha,
+  type EscolhaBusca,
+  type OrdemBusca,
+} from "@/lib/busca-resultados";
+import { chip, Grupo } from "@/components/FiltrosChips";
+import { diversificarPorPreco, faixasDePreco } from "@/lib/catalogo-no";
 import { useTicketMedio } from "@/hooks/use-ticket-medio";
 import { obterSugestoes, produtosDaBusca, type ProdutoConhecido } from "@/lib/busca-sugestoes";
 import { atributoProduto, registrarAcaoVisitante } from "@/lib/perfil-visitante";
@@ -276,6 +300,10 @@ type CartaoDaBusca = {
   lojaOficial: boolean;
   /* Remoto: hora da leitura ("agora", "às 14:05"); local: data. */
   quando: string | null;
+  /* Economia medida contra as outras ofertas do mesmo produto (R$). */
+  economia: number | null;
+  /* Posição na lista oficial de mais vendidos da categoria. */
+  maisVendido: number | null;
 };
 
 const dataCurta = (iso: string | null | undefined) => {
@@ -303,6 +331,8 @@ function doCatalogo(r: Resultado, lidoEm: string | undefined): CartaoDaBusca {
     freteGratis: r.freteGratis ?? null,
     lojaOficial: r.lojaOficial === true,
     quando: quandoFoiLido(lidoEm),
+    economia: r.economia ?? null,
+    maisVendido: r.maisVendido ?? null,
   };
 }
 
@@ -322,6 +352,8 @@ function doSite(p: ProdutoConhecido): CartaoDaBusca {
     freteGratis: p.freteGratis ?? null,
     lojaOficial: false,
     quando: dataCurta(p.vistoEm) ? `de ${dataCurta(p.vistoEm)}` : null,
+    economia: null,
+    maisVendido: null,
   };
 }
 
@@ -446,6 +478,26 @@ export function ResultadosDaBusca({
     ];
   }, [cartoes, ticket]);
 
+  /* Ordem e filtros escolhidos (02/11). Com a ordem padrão e nada
+     marcado, a tela continua igual (preços variados no topo). */
+  const [ordem, setOrdem] = useState<OrdemBusca>(() => ordemInicial(q));
+  const [escolha, setEscolha] = useState<EscolhaBusca>(ESCOLHA_BUSCA_VAZIA);
+  const marcar = (m: Partial<EscolhaBusca>) => setEscolha((e) => ({ ...e, ...m }));
+  useEffect(() => {
+    setOrdem(ordemInicial(q));
+    setEscolha(ESCOLHA_BUSCA_VAZIA);
+  }, [q]);
+  const ordenados = useMemo(
+    () =>
+      ordem === "relevancia" && !temEscolha(escolha)
+        ? cartoesVariados
+        : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas),
+    [ordem, escolha, cartoes, cartoesVariados, notas],
+  );
+  const faixas = useMemo(() => faixasDePreco(cartoes.flatMap((c) => c.preco ?? [])), [cartoes]);
+  const marcas = useMemo(() => marcasDosResultados(cartoes), [cartoes]);
+  const filtrosCategoria = useMemo(() => filtrosDaBusca(cartoes), [cartoes]);
+
   async function lerPaginas(desde: number, alvo: number, base: number) {
     if (!consulta) return;
     const minha = geracao.current;
@@ -502,8 +554,8 @@ export function ResultadosDaBusca({
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [cartoes.length, visiveis]);
 
-  const mostrados = cartoesVariados.slice(0, visiveis);
-  const temMais = cartoes.length > visiveis || (!fim && !!consulta);
+  const mostrados = ordenados.slice(0, visiveis);
+  const temMais = ordenados.length > visiveis || (!fim && !!consulta);
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
   const arte = q && !soCatalogo ? arteDaBusca(q) : null;
   const procurando = carregando && cartoes.length === 0;
@@ -549,9 +601,41 @@ export function ResultadosDaBusca({
             )
           ) : (
             <>
+              {cartoes.length > 1 && (
+                <BarraOrdemFiltros
+                  ordem={ordem}
+                  setOrdem={setOrdem}
+                  escolha={escolha}
+                  marcar={marcar}
+                  limpar={() => setEscolha(ESCOLHA_BUSCA_VAZIA)}
+                  ordens={ORDENS_BUSCA.filter(
+                    (o) =>
+                      (o.id !== "economia" || cartoes.some((c) => (c.economia ?? 0) > 0)) &&
+                      (o.id !== "mais-vendidos" || cartoes.some((c) => c.maisVendido != null)) &&
+                      (o.id !== "melhor-avaliados" ||
+                        cartoes.some((c) => c.avaliacao && notas.get(c.avaliacao)?.avaliacoes)),
+                  )}
+                  faixas={faixas}
+                  marcas={marcas}
+                  filtrosCategoria={filtrosCategoria}
+                  total={ordenados.length}
+                />
+              )}
               <p className="sr-only" aria-live="polite">
                 {`${mostrados.length} produtos na tela.`}
               </p>
+              {ordenados.length === 0 && (
+                <p className="mt-3 rounded-2xl bg-[#f5f5f7] px-4 py-3 text-sm">
+                  Nenhum produto com esses filtros.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setEscolha(ESCOLHA_BUSCA_VAZIA)}
+                    className="font-semibold text-[#0058b0] underline-offset-2 hover:underline"
+                  >
+                    Limpar filtros
+                  </button>
+                </p>
+              )}
               <ul
                 ref={lista}
                 className="animate-cartao mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
@@ -603,6 +687,127 @@ export function ResultadosDaBusca({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* Ordenar e filtrar (02/11): ordem num seletor, frete e loja oficial à
+   mão, o resto (preço, marca, voltagem, polegadas...) numa gaveta. Só
+   aparece filtro com o que filtrar. */
+function BarraOrdemFiltros({
+  ordem,
+  setOrdem,
+  escolha,
+  marcar,
+  limpar,
+  ordens,
+  faixas,
+  marcas,
+  filtrosCategoria,
+  total,
+}: {
+  ordem: OrdemBusca;
+  setOrdem: (o: OrdemBusca) => void;
+  escolha: EscolhaBusca;
+  marcar: (m: Partial<EscolhaBusca>) => void;
+  limpar: () => void;
+  ordens: Array<{ id: OrdemBusca; rotulo: string }>;
+  faixas: Array<{ id: string; rotulo: string }>;
+  marcas: Array<{ marca: string; total: number }>;
+  filtrosCategoria: ReturnType<typeof filtrosDaBusca>;
+  total: number;
+}) {
+  const marcados =
+    (escolha.faixa ? 1 : 0) + (escolha.marca ? 1 : 0) + Object.keys(escolha.filtros).length;
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <label className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold">
+          <span className="sr-only sm:not-sr-only">Ordenar</span>
+          <select
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value as OrdemBusca)}
+            aria-label="Ordenar resultados"
+            className="min-h-9 rounded-full border border-border bg-card px-3 text-xs font-semibold"
+          >
+            {ordens.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.rotulo}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          aria-pressed={escolha.freteGratis}
+          onClick={() => marcar({ freteGratis: !escolha.freteGratis })}
+          className={chip(escolha.freteGratis)}
+        >
+          Frete grátis
+        </button>
+        <button
+          type="button"
+          aria-pressed={escolha.lojaOficial}
+          onClick={() => marcar({ lojaOficial: !escolha.lojaOficial })}
+          className={chip(escolha.lojaOficial)}
+        >
+          Loja oficial
+        </button>
+        {temEscolha(escolha) && (
+          <button
+            type="button"
+            onClick={limpar}
+            className="shrink-0 text-xs font-semibold text-[#0058b0] underline-offset-2 hover:underline"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+      <details className="rounded-2xl bg-card p-3 shadow-[var(--shadow-card)]">
+        <summary className="flex min-h-9 cursor-pointer items-center gap-2 text-sm font-bold">
+          <SlidersHorizontal className="size-4" aria-hidden="true" />
+          Filtrar por preço{marcas.length ? ", marca" : ""}
+          {filtrosCategoria.length
+            ? ` e ${filtrosCategoria.map((f) => f.nome.toLowerCase()).join(", ")}`
+            : ""}
+          {marcados > 0 && (
+            <span className="ml-auto rounded-full bg-[#0071e3] px-2 py-0.5 text-[11px] text-white">
+              {marcados}
+            </span>
+          )}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <Grupo
+            nome="Preço"
+            opcoes={faixas}
+            atual={escolha.faixa}
+            onEscolher={(id) => marcar({ faixa: id })}
+          />
+          {marcas.length > 0 && (
+            <Grupo
+              nome="Marca"
+              opcoes={marcas.map((m) => ({ id: m.marca, rotulo: `${m.marca} (${m.total})` }))}
+              atual={escolha.marca}
+              onEscolher={(id) => marcar({ marca: id })}
+            />
+          )}
+          {filtrosCategoria.map((f) => (
+            <Grupo
+              key={f.id}
+              nome={f.nome}
+              opcoes={f.opcoes.map((o) => ({ id: o.id, rotulo: `${o.rotulo} (${o.total})` }))}
+              atual={escolha.filtros[f.id] ?? null}
+              onEscolher={(id) => {
+                const filtros = { ...escolha.filtros };
+                if (id) filtros[f.id] = id;
+                else delete filtros[f.id];
+                marcar({ filtros });
+              }}
+            />
+          ))}
+        </div>
+      </details>
+      <p className="sr-only" aria-live="polite">{`${total} produtos com esta ordem e filtros.`}</p>
     </div>
   );
 }
@@ -910,6 +1115,16 @@ function CartaoBusca({
         ) : (
           <p className="mt-1 text-[11px] text-secondary-ink">
             Vendido por várias lojas: compare para ver os preços.
+          </p>
+        )}
+        {(c.economia ?? 0) >= 10 && (
+          <p className="text-[11px] font-semibold text-success">
+            {brl(c.economia!)} abaixo de outras ofertas
+          </p>
+        )}
+        {c.maisVendido != null && c.maisVendido <= 20 && (
+          <p className="text-[11px] font-semibold text-[#b25000]">
+            {c.maisVendido}º mais vendido da categoria
           </p>
         )}
         <p
