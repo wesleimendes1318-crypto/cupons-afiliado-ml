@@ -968,9 +968,9 @@ export function ComparacaoMarketplaces({
                     key={mk}
                     type="button"
                     onClick={() => void pedir(mk)}
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0071e3] px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none"
+                    className="inline-flex min-w-0 flex-1 basis-40 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#0071e3] px-3.5 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none @xl:basis-auto"
                   >
-                    <Search className="size-4" aria-hidden="true" />
+                    <Search className="size-4 shrink-0" aria-hidden="true" />
                     Comparar na {NOME_DO_JOGADOR[mk]}
                   </button>
                 ))}

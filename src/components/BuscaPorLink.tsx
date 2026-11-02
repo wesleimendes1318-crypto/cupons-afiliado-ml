@@ -1593,6 +1593,9 @@ export default function BuscaPorLink({
           <textarea
             id="campo-link-produto"
             rows={1}
+            /* Link longo fica numa linha só (rola dentro do campo): antes
+               quebrava e a 2ª linha saía cortada pela metade. */
+            wrap="off"
             value={url}
             {...sugestoes.propsCampo}
             onChange={(e) => {
@@ -5171,7 +5174,11 @@ function Parecidos({
           return (
             <li
               key={i}
-              className="w-[86%] shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
+              className={
+                /* Um só parecido ocupa a largura toda (não sobra um vão ao lado). */
+                (visiveis.length === 1 ? "w-full" : "w-[86%]") +
+                " shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
+              }
             >
               {/* Foto em destaque no celular: quadro branco do tamanho do
                   cartão, sem moldura cinza em volta (18/10: o fundo branco da
@@ -5663,9 +5670,9 @@ function LinhaDaLoja({
       className={
         "relative " +
         (melhor
-          ? "bg-success/[0.08] before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-success"
+          ? "bg-success/[0.08] before:absolute before:inset-y-2.5 before:left-0 before:w-1 before:rounded-r-full before:bg-success"
           : l.colado
-            ? "bg-amber-50/80 before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-amber-500 dark:bg-amber-950/25"
+            ? "bg-amber-50/80 before:absolute before:inset-y-2.5 before:left-0 before:w-1 before:rounded-r-full before:bg-amber-500 dark:bg-amber-950/25"
             : "")
       }
     >
