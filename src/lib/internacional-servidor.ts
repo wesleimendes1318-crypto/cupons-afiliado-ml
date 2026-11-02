@@ -45,7 +45,7 @@ export function fichasDoTexto(texto: string): string[] {
     /* como veio */
   }
   const out = new Set<string>();
-  for (const m of s.matchAll(/\/p\/(MLB\d{6,})/gi)) out.add(m[1].toUpperCase());
+  for (const m of s.matchAll(/\/p\/(MLB\d{6,})/gi)) if (m[1]) out.add(m[1].toUpperCase());
   return [...out].slice(0, 4);
 }
 
