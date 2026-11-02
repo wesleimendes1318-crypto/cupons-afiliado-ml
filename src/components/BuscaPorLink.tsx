@@ -3614,7 +3614,7 @@ function VereditoEconomia({
           {contraImportado ? "O mesmo produto, enviado do Brasil" : "O mesmo produto em outra loja"}
         </p>
       )}
-      <div className="mt-3 flex items-center gap-3 rounded-xl bg-card p-2.5 shadow-[0_1px_3px_rgba(15,23,41,0.06)]">
+      <div className="mt-3 grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 rounded-xl bg-card p-2.5 shadow-[0_1px_3px_rgba(15,23,41,0.06)] sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
         <Foto
           src={oferta.imagem}
           className="size-12 shrink-0 rounded-lg border border-border/60 bg-white object-contain p-0.5"
@@ -3628,7 +3628,7 @@ function VereditoEconomia({
           }}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] leading-snug text-secondary-ink [overflow-wrap:anywhere]">
+          <p className="text-[13px] leading-snug text-secondary-ink break-words">
             Vendido por{" "}
             <strong className="font-semibold text-foreground">
               {oferta.vendedor ?? "outra loja"}
@@ -3639,7 +3639,7 @@ function VereditoEconomia({
             <Avaliacoes a={oferta.avaliacoes} de={oferta} link={oferta.link} compacto className="inline-flex" />
           </div>
         </div>
-        <div className="shrink-0 text-right tabular-nums">
+        <div className="col-span-2 flex items-baseline justify-between gap-2 tabular-nums sm:col-span-1 sm:block sm:text-right">
           <p className="text-base font-bold leading-tight text-foreground sm:text-lg">
             {brl(preco)}
           </p>
