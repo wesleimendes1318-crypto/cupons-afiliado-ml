@@ -23,6 +23,7 @@ import {
   type Resultado,
 } from "@/lib/busca-guiada-cliente";
 import { ComprarComSeguranca } from "@/components/BotoesCartao";
+import { AssistenteBusca } from "@/components/AssistenteBusca";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { FaixaArte, FaixaFotos } from "@/components/FaixaArte";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
@@ -487,17 +488,26 @@ export function ResultadosDaBusca({
     setOrdem(ordemInicial(q));
     setEscolha(ESCOLHA_BUSCA_VAZIA);
   }, [q]);
-  const ordenados = useMemo(
-    () =>
-      ordem === "relevancia" && !temEscolha(escolha)
-        ? cartoesVariados
-        : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas),
-    [ordem, escolha, cartoes, cartoesVariados, notas],
-  );
+  /* Escolha do assistente de compra: só esses, na ordem dele. */
+  const [doAssistente, setDoAssistente] = useState<string[] | null>(null);
+  useEffect(() => setDoAssistente(null), [q]);
+  const ordenados = useMemo(() => {
+    if (doAssistente) {
+      const porChave = new Map(cartoes.map((c) => [c.chave, c]));
+      return doAssistente.flatMap((k) => porChave.get(k) ?? []);
+    }
+    return ordem === "relevancia" && !temEscolha(escolha)
+      ? cartoesVariados
+      : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas);
+  }, [doAssistente, ordem, escolha, cartoes, cartoesVariados, notas]);
   const faixas = useMemo(() => faixasDePreco(cartoes.flatMap((c) => c.preco ?? [])), [cartoes]);
   const marcas = useMemo(() => marcasDosResultados(cartoes), [cartoes]);
   const filtrosCategoria = useMemo(() => filtrosDaBusca(cartoes), [cartoes]);
 
+  /* "Carregar mais" (02/11: sempre +20): continua de onde a página anterior
+     parou (cursor) e manda o que já está na tela, para o servidor não gastar
+     leitura com produto repetido; conta só os novos de verdade. */
+  const cursor = useRef<number | null | undefined>(undefined);
   async function lerPaginas(desde: number, alvo: number, base: number) {
     if (!consulta) return;
     const minha = geracao.current;
@@ -505,18 +515,24 @@ export function ResultadosDaBusca({
     let p = desde;
     let total = base;
     const novos: Resultado[] = [];
-    /* No máximo 2 páginas por toque (cada uma traz até 8 do catálogo). */
-    for (let n = 0; n < 2 && total < alvo; n++) {
-      const r = await buscarProdutos(consulta.q, consulta.contexto, consulta.modo, p, consulta.no);
+    const vistos = new Set(cartoes.flatMap((c) => idsDoEndereco(c.url)));
+    for (let n = 0; n < 3 && total < alvo; n++) {
+      const r = await buscarProdutos(consulta.q, consulta.contexto, consulta.modo, p, consulta.no, {
+        cursor: cursor.current,
+        vistos: [...vistos].filter((id) => /^MLB\d{4,14}$/.test(id)),
+      });
       if (minha !== geracao.current) return;
       const achados = r.resposta?.resultados ?? [];
       p += 1;
-      if (r.erro || !achados.length) {
+      if (r.resposta && "proximo" in r.resposta) cursor.current = r.resposta.proximo ?? null;
+      const ineditos = achados.filter((a) => !idsDoEndereco(a.url).some((id) => vistos.has(id)));
+      ineditos.forEach((a) => idsDoEndereco(a.url).forEach((id) => vistos.add(id)));
+      novos.push(...ineditos);
+      total += ineditos.length;
+      if (r.erro || (!achados.length && cursor.current == null) || cursor.current === null) {
         setFim(true);
         break;
       }
-      novos.push(...achados);
-      total += achados.length;
     }
     setExtras((e) => [...e, ...novos]);
     setPagina(p);
@@ -527,10 +543,11 @@ export function ResultadosDaBusca({
      (02/11: buscar sozinho gastava o limite de buscas por minuto). */
   useEffect(() => {
     geracao.current += 1;
+    cursor.current = resposta?.proximo;
     setExtras([]);
     setPagina(1);
     /* Sem a 1ª página do catálogo (erro ou nada achado), não há "mais". */
-    setFim(!consulta || !resposta?.resultados.length);
+    setFim(!consulta || !resposta?.resultados.length || resposta?.proximo === null);
     setCarregandoMais(false);
     setVisiveis(LOTE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -555,7 +572,7 @@ export function ResultadosDaBusca({
   }, [cartoes.length, visiveis]);
 
   const mostrados = ordenados.slice(0, visiveis);
-  const temMais = ordenados.length > visiveis || (!fim && !!consulta);
+  const temMais = ordenados.length > visiveis || (!fim && !!consulta && !doAssistente);
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
   const arte = q && !soCatalogo ? arteDaBusca(q) : null;
   /* Sem arte do produto buscado: as fotos dos primeiros achados. */
@@ -629,6 +646,19 @@ export function ResultadosDaBusca({
                   marcas={marcas}
                   filtrosCategoria={filtrosCategoria}
                   total={ordenados.length}
+                />
+              )}
+              {consulta?.modo === "guiada" && cartoes.length > 1 && (
+                <AssistenteBusca
+                  consulta={q}
+                  cartoes={cartoes}
+                  notas={notas}
+                  escolhidos={doAssistente ? ordenados.length : null}
+                  aoEscolher={(ids) => {
+                    setDoAssistente(ids);
+                    setVisiveis(LOTE);
+                  }}
+                  buscarTermo={buscarTermo}
                 />
               )}
               <p className="sr-only" aria-live="polite">

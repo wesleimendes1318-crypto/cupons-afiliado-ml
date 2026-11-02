@@ -100,7 +100,7 @@ describe("ordenar o resultado", () => {
   test("busca por 'barata' já abre no menor preço", () => {
     expect(ordemInicial("maquina lava e seca barata")).toBe("menor-preco");
     expect(ordemInicial("geladeira em conta")).toBe("menor-preco");
-    expect(ordemInicial("lava e seca")).toBe("relevancia");
+    expect(ordemInicial("lava e seca")).toBe("recomendados");
   });
 });
 

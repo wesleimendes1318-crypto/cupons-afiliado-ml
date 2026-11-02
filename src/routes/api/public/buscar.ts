@@ -39,6 +39,10 @@ const entradaSchema = z.object({
     .min(0)
     .max(PAGINAS - 1)
     .optional(),
+  /* "Carregar mais" (02/11): de onde a página anterior parou e o que já está
+     na tela (não gasta leitura com produto repetido). */
+  cursor: z.number().int().min(0).max(400).optional(),
+  vistos: z.array(z.string().regex(/^MLB\d{4,14}$/)).max(400).optional(),
 });
 
 const CONTEXTOS = {
@@ -75,8 +79,10 @@ export const Route = createFileRoute("/api/public/buscar")({
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
         /* "v3" (28/10): respostas guardadas antes do filtro de marca/modelo não voltam. */
-        const chave1 = `v10|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
-        const chave = pagina ? `${chave1}|p${pagina}` : chave1;
+        const chave1 = `v11|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        const chave = pagina
+          ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
+          : chave1;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +101,12 @@ export const Route = createFileRoute("/api/public/buscar")({
         const guardada = await lerGuardada(chave);
         if (guardada) return json(request, guardada);
 
-        let achado: Awaited<ReturnType<typeof buscaGuiada>>;
+        let achado: {
+          intencao: Awaited<ReturnType<typeof buscaGuiada>>["intencao"];
+          resultados: Awaited<ReturnType<typeof buscaGuiada>>["resultados"];
+          variantes?: string[];
+          proximo?: number | null;
+        };
         try {
           if (modoProduto) {
             const r = await buscarMesmoProduto(entrada.q, pagina);
@@ -124,6 +135,16 @@ export const Route = createFileRoute("/api/public/buscar")({
                     modelo: primeira.modelo ?? null,
                   }
                 : null,
+              primeira
+                ? {
+                    variantes: primeira.variantes ?? [],
+                    excluir: [
+                      ...primeira.resultados.map((r) => r.produto),
+                      ...(entrada.vistos ?? []),
+                    ],
+                    cursor: entrada.cursor,
+                  }
+                : { excluir: entrada.vistos ?? [], cursor: entrada.cursor },
             );
           }
         } catch {
@@ -218,6 +239,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           marca: marca ?? null,
           modelo: modelo ?? null,
           anuncios,
+          variantes: achado.variantes ?? [],
+          ...(achado.proximo !== undefined ? { proximo: achado.proximo } : {}),
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)

@@ -33,6 +33,7 @@ import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
+import { Route as ApiPublicAssistenteBuscaRouteImport } from './routes/api/public/assistente-busca'
 import { Route as ApiPublicBuscarRouteImport } from './routes/api/public/buscar'
 import { Route as ApiPublicBuscarFotoRouteImport } from './routes/api/public/buscar-foto'
 import { Route as ApiPublicClassificarRouteImport } from './routes/api/public/classificar'
@@ -179,6 +180,12 @@ const ApiPublicAjudarEscolherRoute = ApiPublicAjudarEscolherRouteImport.update({
   path: '/api/public/ajudar-escolher',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAssistenteBuscaRoute =
+  ApiPublicAssistenteBuscaRouteImport.update({
+    id: '/api/public/assistente-busca',
+    path: '/api/public/assistente-busca',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicBuscarRoute = ApiPublicBuscarRouteImport.update({
   id: '/api/public/buscar',
   path: '/api/public/buscar',
@@ -329,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
+  '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
@@ -379,6 +387,7 @@ export interface FileRoutesByTo {
   '/guias': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
+  '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
@@ -430,6 +439,7 @@ export interface FileRoutesById {
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
+  '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
   '/api/public/classificar': typeof ApiPublicClassificarRoute
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/guias/'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
+    | '/api/public/assistente-busca'
     | '/api/public/buscar'
     | '/api/public/buscar-foto'
     | '/api/public/classificar'
@@ -532,6 +543,7 @@ export interface FileRouteTypes {
     | '/guias'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
+    | '/api/public/assistente-busca'
     | '/api/public/buscar'
     | '/api/public/buscar-foto'
     | '/api/public/classificar'
@@ -582,6 +594,7 @@ export interface FileRouteTypes {
     | '/guias/'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
+    | '/api/public/assistente-busca'
     | '/api/public/buscar'
     | '/api/public/buscar-foto'
     | '/api/public/classificar'
@@ -633,6 +646,7 @@ export interface RootRouteChildren {
   GuiasIndexRoute: typeof GuiasIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicAjudarEscolherRoute: typeof ApiPublicAjudarEscolherRoute
+  ApiPublicAssistenteBuscaRoute: typeof ApiPublicAssistenteBuscaRoute
   ApiPublicBuscarRoute: typeof ApiPublicBuscarRoute
   ApiPublicBuscarFotoRoute: typeof ApiPublicBuscarFotoRoute
   ApiPublicClassificarRoute: typeof ApiPublicClassificarRoute
@@ -827,6 +841,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/ajudar-escolher'
       fullPath: '/api/public/ajudar-escolher'
       preLoaderRoute: typeof ApiPublicAjudarEscolherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/assistente-busca': {
+      id: '/api/public/assistente-busca'
+      path: '/api/public/assistente-busca'
+      fullPath: '/api/public/assistente-busca'
+      preLoaderRoute: typeof ApiPublicAssistenteBuscaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/buscar': {
@@ -1026,6 +1047,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuiasIndexRoute: GuiasIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicAjudarEscolherRoute: ApiPublicAjudarEscolherRoute,
+  ApiPublicAssistenteBuscaRoute: ApiPublicAssistenteBuscaRoute,
   ApiPublicBuscarRoute: ApiPublicBuscarRoute,
   ApiPublicBuscarFotoRoute: ApiPublicBuscarFotoRoute,
   ApiPublicClassificarRoute: ApiPublicClassificarRoute,

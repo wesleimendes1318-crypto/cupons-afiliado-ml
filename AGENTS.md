@@ -18,3 +18,8 @@ garantia no topo do CLAUDE.md.
 ## Custo real das ofertas
 
 Toda conta de custo de oferta (tela, bot, garimpo) passa por `custoTotalDaOferta` em `src/lib/internacional.ts`: frete pago sem valor ou envio internacional sem tributos lidos = custo desconhecido. Assim um preço que não se entrega nunca vence.
+
+## Busca por texto
+
+- The post-search shopping assistant (`src/lib/assistente-busca.ts`, `/api/public/assistente-busca`) only picks and orders products already on screen and drops any model answer quoting a price not in the chosen items; this keeps it from inventing products or prices.
+- "Load more" in text search continues from a server cursor (`proximo`) over the catalog (capped at position 120) and then brand variants; pages never re-read each other's window, so "+20" does not repeat cards.
