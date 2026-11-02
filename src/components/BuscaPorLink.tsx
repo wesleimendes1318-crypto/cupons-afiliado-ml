@@ -3209,7 +3209,7 @@ function Resultado({
           <section
             id="secao-resumo"
             aria-label="O produto que você colou"
-            className="scroll-mt-36 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 sm:p-4"
+            className="animate-cartao scroll-mt-36 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 sm:p-4"
           >
             <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
               <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
@@ -3218,7 +3218,7 @@ function Resultado({
               <Foto
                 src={a?.imagem}
                 nitida
-                className="size-16 shrink-0 rounded-2xl border border-border/70 bg-white p-1 sm:size-20"
+                className="size-20 shrink-0 rounded-2xl border border-border/70 bg-white p-1 transition-transform duration-300 hover:scale-105 motion-reduce:transition-none sm:size-28"
                 ver={{
                   titulo: a?.titulo,
                   url: urlColada,
@@ -3750,14 +3750,15 @@ function VereditoEconomia({
   return (
     <section
       aria-label="Minha recomendação"
-      className="mt-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
+      className="animate-cartao mt-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--success)_45%,transparent)] dark:border-emerald-900/50 dark:from-emerald-950/30 dark:to-transparent sm:p-5 lg:mt-0"
     >
-      <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
+      <p className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-success">
+        <span className="animate-fogo" aria-hidden="true">🔥</span>
         <BadgeCheck className="size-3.5" aria-hidden="true" /> Minha recomendação
       </p>
       {economia != null ? (
-        <p className="mt-1 text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
-          <span className="whitespace-nowrap text-success tabular-nums">{brl(economia)}</span> a
+        <p className="mt-2 text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl">
+          <span className="animate-economia inline-block whitespace-nowrap text-success tabular-nums">{brl(economia)}</span> a
           menos {comFrete ? "no custo final, já com o frete" : "no mesmo produto"}
         </p>
       ) : (
@@ -3765,10 +3766,11 @@ function VereditoEconomia({
           {contraImportado ? "O mesmo produto, enviado do Brasil" : "O mesmo produto em outra loja"}
         </p>
       )}
-      <div className="mt-3 grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 rounded-xl bg-card p-2.5 shadow-[0_1px_3px_rgba(15,23,41,0.06)] sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
+      <div className="group mt-3 grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 rounded-xl bg-card p-2.5 shadow-[0_1px_3px_rgba(15,23,41,0.06)] transition duration-300 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none sm:grid-cols-[6rem_minmax(0,1fr)_auto]">
         <Foto
           src={oferta.imagem}
-          className="size-12 shrink-0 rounded-lg border border-border/60 bg-white object-contain p-0.5"
+          nitida
+          className="size-20 shrink-0 rounded-xl border border-border/60 bg-white object-contain p-1 transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none sm:size-24"
           ver={{
             titulo,
             item: itemDaOferta(oferta),
@@ -3829,7 +3831,7 @@ function VereditoEconomia({
               href={oferta.link as string}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3 text-center text-sm font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3.5 animate-botao-destaque text-center text-base font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
             >
               <ShieldCheck className="size-4" aria-hidden="true" />
               {textoDoBotao(dispositivo, "Comprar com segurança").replace(" pelo app", " no app")}
