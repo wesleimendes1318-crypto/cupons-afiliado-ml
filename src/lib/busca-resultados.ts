@@ -3,7 +3,7 @@
 import type { ResumoAvaliacoes } from "@/lib/avaliacoes-detalhe";
 import { FILTROS, type FiltroId } from "@/content/taxonomia";
 import { filtrosDisponiveis, naFaixa } from "@/lib/catalogo-no";
-import { textoComVoltagem, type Voltagem } from "@/lib/voltagem";
+import { funcionaEm, textoComVoltagem, type Voltagem } from "@/lib/voltagem";
 import { classificar, semAcento } from "@/lib/classificar";
 
 /** Todos os MLB do endereço: o mesmo anúncio ou produto é um cartão só. */
@@ -42,7 +42,13 @@ export function faixaDaNota(r: ResumoAvaliacoes | undefined): 0 | 1 | 2 {
    sobre o que já veio, e nada inventado: sem o dado, o cartão vai para o
    fim da ordem e não entra no filtro. */
 export type OrdemBusca =
-  "recomendados" | "relevancia" | "menor-preco" | "maior-preco" | "economia" | "mais-vendidos" | "melhor-avaliados";
+  | "recomendados"
+  | "relevancia"
+  | "menor-preco"
+  | "maior-preco"
+  | "economia"
+  | "mais-vendidos"
+  | "melhor-avaliados";
 
 export const ORDENS_BUSCA: Array<{ id: OrdemBusca; rotulo: string }> = [
   { id: "recomendados", rotulo: "Recomendados" },
@@ -62,7 +68,19 @@ type Ordenavel = {
   economia?: number | null;
   maisVendido?: number | null;
   avaliacao: string | null;
+  voltagem?: Voltagem | null;
 };
+
+/** Opções da ordem: a tensão da região do visitante e o tamanho do 1º lote
+    (tudo o que chegou na 1ª resposta é ordenado junto). */
+export type OpcoesOrdem = { rede?: "127" | "220" | null; lote?: number };
+
+/* Weslei, 02/11 (lava e seca 220 V da loja oficial, frete grátis e R$ 320
+   abaixo das outras ofertas, perdida atrás de modelos 127 V em Mogi):
+   produto que não funciona na tomada da região vai para o fim em toda
+   ordem, menos "Mais relevantes". */
+const naoServe = (i: Ordenavel, rede: OpcoesOrdem["rede"]) =>
+  rede != null && i.voltagem != null && !funcionaEm(i.voltagem, rede);
 
 const fim = Number.POSITIVE_INFINITY;
 
@@ -73,9 +91,10 @@ export function ordenarResultados<T extends Ordenavel>(
   itens: T[],
   ordem: OrdemBusca,
   notas: Map<string, ResumoAvaliacoes> = new Map(),
+  opcoes: OpcoesOrdem = {},
 ): T[] {
   if (ordem === "relevancia") return itens;
-  if (ordem === "recomendados") return ordenarRecomendados(itens, notas);
+  if (ordem === "recomendados") return ordenarRecomendados(itens, notas, opcoes);
   const nota = (i: T) => (i.avaliacao ? notas.get(i.avaliacao)?.avaliacoes : null) ?? null;
   const chave = (i: T): number[] => {
     const a = nota(i);
@@ -93,7 +112,7 @@ export function ordenarResultados<T extends Ordenavel>(
     }
   };
   return itens
-    .map((i, k) => ({ i, k, c: chave(i) }))
+    .map((i, k) => ({ i, k, c: [naoServe(i, opcoes.rede) ? 1 : 0, ...chave(i)] }))
     .sort((x, y) => {
       for (let n = 0; n < x.c.length; n++) {
         const d = x.c[n]! - y.c[n]!;
@@ -128,6 +147,8 @@ export function pontuacaoRecomendada(
     maisVendido?: number | null | undefined;
     lojaOficial?: boolean | undefined;
     freteGratis?: boolean | null | undefined;
+    economia?: number | null | undefined;
+    preco?: number | null | undefined;
   },
 ): number {
   let bonus = 0;
@@ -136,21 +157,28 @@ export function pontuacaoRecomendada(
     bonus += Math.min(0.2, Math.max(0, (dados.nota - 4.5) * 0.4));
     bonus += Math.min(0.2, Math.log10(total) / 20);
   }
-  if (dados.maisVendido != null) bonus += dados.maisVendido <= 10 ? 0.15 : dados.maisVendido <= 20 ? 0.08 : 0.03;
+  if (dados.maisVendido != null)
+    bonus += dados.maisVendido <= 10 ? 0.15 : dados.maisVendido <= 20 ? 0.08 : 0.03;
   if (dados.lojaOficial) bonus += 0.05;
-  if (dados.freteGratis === true) bonus += 0.05;
+  /* Frete grátis confirmado pesa mais: o custo final é produto + frete, e o
+     frete pago de valor desconhecido nunca passa na frente. */
+  if (dados.freteGratis === true) bonus += 0.1;
+  /* Economia real contra as outras ofertas do mesmo produto (até 15%). */
+  if (dados.economia && dados.preco) bonus += Math.min(0.15, dados.economia / dados.preco);
   return posicaoPreco - bonus;
 }
 
 export function ordenarRecomendados<T extends Ordenavel>(
   itens: T[],
   notas: Map<string, ResumoAvaliacoes> = new Map(),
-  lote = 20,
+  { rede, lote = 20 }: OpcoesOrdem = {},
 ): T[] {
   const saida: T[] = [];
   for (let i = 0; i < itens.length; i += lote) {
     const parte = itens.slice(i, i + lote);
-    const precos = parte.flatMap((x) => (x.preco != null ? [x.preco] : [])).sort((a, b) => a - b);
+    const precos = parte
+      .flatMap((x) => (x.preco != null && !naoServe(x, rede) ? [x.preco] : []))
+      .sort((a, b) => a - b);
     const posicao = (p: number) => {
       if (precos.length <= 1) return 0;
       const k = precos.findIndex((x) => x >= p);
@@ -161,7 +189,7 @@ export function ordenarRecomendados<T extends Ordenavel>(
         .map((x, k) => {
           const a = x.avaliacao ? notas.get(x.avaliacao)?.avaliacoes : null;
           const ruim = a != null && a.total >= 5 && a.nota < 4.5;
-          const grupo = x.preco == null ? 3 : ruim ? 2 : 0;
+          const grupo = x.preco == null ? 3 : ruim ? 2 : naoServe(x, rede) ? 1 : 0;
           const valor =
             x.preco == null
               ? 0
@@ -171,6 +199,8 @@ export function ordenarRecomendados<T extends Ordenavel>(
                   maisVendido: x.maisVendido,
                   lojaOficial: x.lojaOficial,
                   freteGratis: x.freteGratis,
+                  economia: x.economia,
+                  preco: x.preco,
                 });
           return { x, k, grupo, valor };
         })
