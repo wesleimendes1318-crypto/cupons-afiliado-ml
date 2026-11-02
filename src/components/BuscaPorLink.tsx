@@ -5453,6 +5453,40 @@ function TodasAsLojas({
   );
 }
 
+/* Envio internacional (01/11, Switch 2): selo com o país e, em linha
+   própria, os tributos lidos com o total, ou o aviso de que podem ser
+   cobrados no pagamento (nunca um valor inventado). */
+function SeloInternacional({
+  o,
+  className = "",
+}: {
+  o: {
+    internacional?: boolean | null;
+    paisOrigem?: string | null;
+    tributosEstimados?: number | null;
+    final?: number | null;
+    freteGratis?: boolean | null;
+    custoFrete?: number | null;
+  };
+  className?: string;
+}) {
+  if (o.internacional !== true) return null;
+  const t = tributosValidos(o.tributosEstimados);
+  const total = custoTotalDaOferta(o);
+  return (
+    <div className={"text-amber-800 dark:text-amber-200 " + className}>
+      <p className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold dark:bg-amber-900/40">
+        <span aria-hidden="true">✈</span> {rotuloInternacional(o.paisOrigem)}
+      </p>
+      <p className="mt-0.5 text-[11px] leading-snug">
+        {t != null
+          ? `+ ${brl(t)} de tributos estimados (Remessa Conforme)${total != null ? ` · total estimado ${brl(total)}` : ""}`
+          : "Pode ter imposto de importação e ICMS cobrados no pagamento."}
+      </p>
+    </div>
+  );
+}
+
 /* Uma loja da lista (23/10): à esquerda quem vende, selos, avaliação e
    frete; à direita o preço e quanto muda; o botão no fim da linha (no
    celular, embaixo do preço). "Ver detalhes" abre a ficha logo abaixo. */
@@ -5563,6 +5597,7 @@ function LinhaDaLoja({
                 : "Sem frete grátis"}
             </p>
           )}
+          <SeloInternacional o={l} className="mt-1" />
           {l.mesmaPagina && !l.colado && (
             <p className="mt-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
               Na página, escolha esta loja em "Outras opções de compra"
