@@ -23,6 +23,7 @@ import {
   type Resultado,
 } from "@/lib/busca-guiada-cliente";
 import { ComprarComSeguranca } from "@/components/BotoesCartao";
+import { AssistenteBusca } from "@/components/AssistenteBusca";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { FaixaArte, FaixaFotos } from "@/components/FaixaArte";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
@@ -487,13 +488,18 @@ export function ResultadosDaBusca({
     setOrdem(ordemInicial(q));
     setEscolha(ESCOLHA_BUSCA_VAZIA);
   }, [q]);
-  const ordenados = useMemo(
-    () =>
-      ordem === "relevancia" && !temEscolha(escolha)
-        ? cartoesVariados
-        : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas),
-    [ordem, escolha, cartoes, cartoesVariados, notas],
-  );
+  /* Escolha do assistente de compra: só esses, na ordem dele. */
+  const [doAssistente, setDoAssistente] = useState<string[] | null>(null);
+  useEffect(() => setDoAssistente(null), [q]);
+  const ordenados = useMemo(() => {
+    if (doAssistente) {
+      const porChave = new Map(cartoes.map((c) => [c.chave, c]));
+      return doAssistente.flatMap((k) => porChave.get(k) ?? []);
+    }
+    return ordem === "relevancia" && !temEscolha(escolha)
+      ? cartoesVariados
+      : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas);
+  }, [doAssistente, ordem, escolha, cartoes, cartoesVariados, notas]);
   const faixas = useMemo(() => faixasDePreco(cartoes.flatMap((c) => c.preco ?? [])), [cartoes]);
   const marcas = useMemo(() => marcasDosResultados(cartoes), [cartoes]);
   const filtrosCategoria = useMemo(() => filtrosDaBusca(cartoes), [cartoes]);
@@ -566,7 +572,7 @@ export function ResultadosDaBusca({
   }, [cartoes.length, visiveis]);
 
   const mostrados = ordenados.slice(0, visiveis);
-  const temMais = ordenados.length > visiveis || (!fim && !!consulta);
+  const temMais = ordenados.length > visiveis || (!fim && !!consulta && !doAssistente);
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
   const arte = q && !soCatalogo ? arteDaBusca(q) : null;
   /* Sem arte do produto buscado: as fotos dos primeiros achados. */
@@ -640,6 +646,19 @@ export function ResultadosDaBusca({
                   marcas={marcas}
                   filtrosCategoria={filtrosCategoria}
                   total={ordenados.length}
+                />
+              )}
+              {guiada && cartoes.length > 1 && (
+                <AssistenteBusca
+                  consulta={q}
+                  cartoes={cartoes}
+                  notas={notas}
+                  escolhidos={doAssistente ? ordenados.length : null}
+                  aoEscolher={(ids) => {
+                    setDoAssistente(ids);
+                    setVisiveis(LOTE);
+                  }}
+                  buscarTermo={buscarTermo}
                 />
               )}
               <p className="sr-only" aria-live="polite">
