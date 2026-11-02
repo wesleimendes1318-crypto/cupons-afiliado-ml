@@ -125,6 +125,7 @@ import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { LinkPronto } from "@/components/LinkPronto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -1134,7 +1135,18 @@ export default function BuscaPorLink({
             window.dispatchEvent(new CustomEvent("comparar-link", { detail: j.urlLimpa }));
             return;
           }
-          setOutraLoja({ analise: j, identificando: false });
+          /* O código do produto lido do endereço fica (a extensão gera o
+             link de afiliado da origem por ele). */
+          setOutraLoja({
+            analise: {
+              ...j,
+              ...(!j.identificador && analise.identificador
+                ? { identificador: analise.identificador }
+                : {}),
+              urlLimpa: j.urlLimpa || analise.urlLimpa,
+            },
+            identificando: false,
+          });
         } catch {
           if (identificacao.current === vez) setOutraLoja({ analise, identificando: false });
         }
@@ -3281,6 +3293,7 @@ function Resultado({
                 )}
               </div>
             </div>
+            <LinkPronto link={semLink ? null : link} />
             {a?.internacional === true && (
               <Alerta titulo="Atenção ao custo final: este anúncio tem envio internacional.">
                 {coladoIncompleto
