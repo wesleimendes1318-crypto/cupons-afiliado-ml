@@ -591,9 +591,12 @@ export async function buscaGuiada(
      aparelho real vem pela marca, só da categoria oficial, e os mais
      vendidos dela completam. */
   const regra = regraDoAparelho(q);
-  const daRegra = (regra?.buscas ?? []).filter(
-    (b) => !marcaPedida || normalizar(b).includes(normalizar(marcaPedida)),
-  );
+  /* Com marca, as buscas da regra viram buscas DA MARCA (nunca concorrente). */
+  const marcaN = marcaPedida ? normalizar(marcaPedida) : "";
+  const daRegra = (regra?.buscas ?? [])
+    .map((b) => normalizar(b))
+    .filter((b) => !marcaN || b.includes(marcaN) || !marcaDoTitulo(b))
+    .map((b) => (marcaN && !b.includes(marcaN) ? `${b} ${marcaN}` : b));
   const intencao = regra
     ? {
         ...lida,
