@@ -20,7 +20,10 @@ declare global {
   }
 }
 
-export const ADSENSE_CLIENTE = (import.meta.env.VITE_ADSENSE_CLIENT ?? "").trim();
+/* Publisher ID do Weslei (público, não é senha). VITE_ADSENSE_CLIENT, se
+   definida, manda; para desligar tudo, esvazie as duas (ver docs/adsense.md). */
+const PUBLISHER_PADRAO = "ca-pub-5848712376900651";
+export const ADSENSE_CLIENTE = (import.meta.env.VITE_ADSENSE_CLIENT || PUBLISHER_PADRAO).trim();
 
 /** Só o formato oficial do Google liga os anúncios. */
 export const ADSENSE_ATIVO = /^ca-pub-\d{10,20}$/.test(ADSENSE_CLIENTE);
