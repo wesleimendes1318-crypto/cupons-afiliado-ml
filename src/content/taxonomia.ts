@@ -1704,9 +1704,14 @@ export const FILTROS: Record<FiltroId, Filtro> = {
     id: "voltagem",
     nome: "Voltagem",
     opcoes: [
-      { id: "110", rotulo: "110/127 V", re: /\b(?:110|127) ?v\b/ },
-      { id: "220", rotulo: "220 V", re: /\b220 ?v\b/ },
-      { id: "bivolt", rotulo: "Bivolt", re: /\bbivolt\b/ },
+      /* Bivolt funciona nas duas tomadas (02/11): entra em 127 e em 220. */
+      {
+        id: "110",
+        rotulo: "127 V ou bivolt",
+        re: /\b(?:110|115|120|127) ?v(?:olts?)?\b|\bbi-?volt\b/,
+      },
+      { id: "220", rotulo: "220 V ou bivolt", re: /\b(?:220|230|240) ?v(?:olts?)?\b|\bbi-?volt\b/ },
+      { id: "bivolt", rotulo: "Só bivolt", re: /\bbi-?volt\b|\b(?:110|127) ?v ?\/ ?220 ?v\b/ },
     ],
   },
   tecnologia_refrigeracao: {

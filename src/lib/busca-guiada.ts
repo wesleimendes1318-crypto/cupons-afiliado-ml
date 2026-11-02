@@ -27,6 +27,7 @@ import { marcasDosResultados } from "@/lib/busca-resultados";
 
 export { foraDaIntencao };
 import { pareceFalso } from "@/lib/falsificado";
+import { voltagemDosAtributos, voltagemDoTexto, type Voltagem } from "@/lib/voltagem";
 
 export type ResultadoBusca = {
   produto: string;
@@ -43,6 +44,8 @@ export type ResultadoBusca = {
   economia?: number | null;
   /** Posição na lista oficial de mais vendidos da categoria (1 = 1º). */
   maisVendido?: number | null;
+  /** Voltagem da ficha oficial (atributo VOLTAGE) ou do título. */
+  voltagem?: Voltagem | null;
 };
 
 /** Economia medida: mediana das outras ofertas novas menos o preço. */
@@ -266,6 +269,7 @@ type ProdutoDoCatalogo = {
   name?: string;
   domain_id?: string;
   pictures?: Array<{ url?: string }>;
+  attributes?: Array<{ id?: string; value_name?: string | null }>;
 };
 
 /** O produto com o anúncio de referência (1ª oferta NOVA da lista oficial),
@@ -316,6 +320,7 @@ async function comOferta(
         typeof oferta?.shipping?.free_shipping === "boolean" ? oferta.shipping.free_shipping : null,
       lojaOficial: oferta?.official_store_id != null,
       economia: economiaEntreOfertas(preco, outras),
+      voltagem: voltagemDosAtributos(p.attributes) ?? voltagemDoTexto(nome),
     };
   } catch (e) {
     /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,

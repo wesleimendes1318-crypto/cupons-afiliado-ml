@@ -144,6 +144,22 @@ async function permissaoDada(): Promise<boolean> {
   }
 }
 
+/** Só a região já guardada no navegador (CEP informado, localização ou
+    IP), sem consultar nada; acompanha as trocas. Padrão não conta. */
+export function useRegiaoGuardada(): Regiao | null {
+  const [regiao, setRegiao] = useState<Regiao | null>(null);
+  useEffect(() => {
+    setRegiao(ler());
+    const aoTrocar = (e: Event) => {
+      const r = (e as CustomEvent<Regiao>).detail;
+      if (r?.cep && !r.padrao) setRegiao(r);
+    };
+    window.addEventListener("cep-trocado", aoTrocar);
+    return () => window.removeEventListener("cep-trocado", aoTrocar);
+  }, []);
+  return regiao;
+}
+
 /** Região do cliente: do navegador; senão, a aproximada pelo IP. */
 export function useCepDestino(ativo: boolean) {
   const [regiao, setRegiao] = useState<Regiao | null>(null);
@@ -191,6 +207,8 @@ export function useCepDestino(ativo: boolean) {
         };
         gravar(r);
         setRegiao(r);
+        /* Avisa quem só lê a região guardada (voltagem da busca, 02/11). */
+        window.dispatchEvent(new CustomEvent("cep-trocado", { detail: r }));
       })
       .catch(() => {
         if (vivo) setRegiao(PADRAO);

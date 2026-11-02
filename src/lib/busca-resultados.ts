@@ -3,6 +3,7 @@
 import type { ResumoAvaliacoes } from "@/lib/avaliacoes-detalhe";
 import { FILTROS, type FiltroId } from "@/content/taxonomia";
 import { filtrosDisponiveis, naFaixa } from "@/lib/catalogo-no";
+import { textoComVoltagem, type Voltagem } from "@/lib/voltagem";
 import { classificar, semAcento } from "@/lib/classificar";
 
 /** Todos os MLB do endereço: o mesmo anúncio ou produto é um cartão só. */
@@ -293,14 +294,19 @@ export const temEscolha = (e: EscolhaBusca) =>
 
 /** Filtros da categoria da busca (voltagem, polegadas, litros...): a
     categoria mais comum entre os resultados; só os que têm 2+ opções. */
-export function filtrosDaBusca(itens: Array<{ nome: string }>) {
+export function filtrosDaBusca(itens: Array<{ nome: string; voltagem?: Voltagem | null }>) {
   const conta = new Map<string, number>();
   for (const i of itens) {
     const no = classificar({ nome: i.nome }).no;
     if (no !== "fora") conta.set(no, (conta.get(no) ?? 0) + 1);
   }
   const no = [...conta].sort((a, b) => b[1] - a[1])[0]?.[0];
-  return no ? filtrosDisponiveis(no, itens) : [];
+  return no
+    ? filtrosDisponiveis(
+        no,
+        itens.map((i) => ({ nome: textoComVoltagem(i.nome, i.voltagem) })),
+      )
+    : [];
 }
 
 export function filtrarResultados<
@@ -309,6 +315,7 @@ export function filtrarResultados<
     preco: number | null;
     freteGratis: boolean | null;
     lojaOficial: boolean;
+    voltagem?: Voltagem | null;
   },
 >(itens: T[], e: EscolhaBusca): T[] {
   const marcados = Object.entries(e.filtros).flatMap(([id, opcao]) => {
@@ -320,7 +327,7 @@ export function filtrarResultados<
     if (e.lojaOficial && !i.lojaOficial) return false;
     if (e.faixa && (i.preco == null || !naFaixa(i.preco, e.faixa))) return false;
     if (e.marca && marcaDoTitulo(i.nome) !== e.marca) return false;
-    const n = semAcento(i.nome);
+    const n = semAcento(textoComVoltagem(i.nome, i.voltagem));
     return marcados.every((re) => re.test(n));
   });
 }
