@@ -380,15 +380,15 @@ function TrilhosDeProdutos({
       }
       subtitulo={`Parecidos com "${ref.titulo.slice(0, 60)}${ref.titulo.length > 60 ? "…" : ""}", pelo mesmo preço ou menos.`}
     >
-      <Fileira
-        itens={lSem}
-        notaDe={notaSem}
-        selo={(i) => (
+      {Fileira({
+        itens: lSem,
+        notaDe: notaSem,
+        selo: (i) => (
           <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold leading-tight text-success">
             {chipDoSemelhante(ref, i, notaSem(i))}
           </span>
-        )}
-      />
+        ),
+      })}
     </TrilhoRecomendacao>
   );
 
