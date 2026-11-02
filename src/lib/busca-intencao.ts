@@ -2,7 +2,7 @@
    antena nem tomada de móvel). Puro, sem rede: vale no servidor (antes de
    ler a oferta) e no navegador (produtos já conhecidos do site e respostas
    guardadas antes do filtro). */
-import { normalizar } from "@/lib/busca-sugestoes";
+import { buscaDeAparelho, itemSecundarioFora, normalizar } from "@/lib/busca-sugestoes";
 import { diferencaDeModelo } from "@/lib/modelo-titulo";
 import { tipoDoProduto } from "@/lib/termo-busca";
 
@@ -53,6 +53,62 @@ const NEGATIVOS_POR_TIPO: Record<string, string[]> = {
   tomadas: NEGATIVOS_ELETRICA,
   interruptor: NEGATIVOS_ELETRICA,
 };
+/* APARELHO DA LINHA BRANCA E TV (Weslei, 02/11: "maquina lava e seca
+   barata" trouxe lava-louças, nicho e placa). Pelo pedido: outros produtos
+   com nome parecido saem, as buscas certas entram na heurística e, sem
+   preço pedido, um piso tira o que custa menos que qualquer aparelho real. */
+const NEGATIVOS_LAVADORA = [
+  "lava louca",
+  "lava loucas",
+  "lavalouca",
+  "lava pisos",
+  "mop",
+  "esfregao",
+  "nicho",
+  "suporte",
+  "placa",
+  "amortecedor",
+];
+type RegraAparelho = { re: RegExp; negativos: string[]; buscas?: string[]; piso?: number };
+const APARELHOS: RegraAparelho[] = [
+  {
+    re: /\b(lava e seca|lava seca|lavadora e secadora)\b/,
+    negativos: NEGATIVOS_LAVADORA,
+    buscas: ["lava e seca", "lavadora lava e seca"],
+    piso: 1200,
+  },
+  {
+    re: /\b(lavadoras?( de roupas?)?|maquinas? de lavar( roupas?)?|lava roupas?)\b/,
+    negativos: NEGATIVOS_LAVADORA,
+  },
+  { re: /\b(geladeiras?|refrigerador(es)?)\b/, negativos: [], piso: 1000 },
+  {
+    re: /\bar condicionado\b/,
+    negativos: ["climatizador", "mini ar", "usb", "tubulacao"],
+    buscas: ["ar condicionado split"],
+    piso: 800,
+  },
+];
+
+const regrasDoPedido = (consulta: string) =>
+  buscaDeAparelho(consulta) ? APARELHOS.filter((r) => r.re.test(normalizar(consulta))) : [];
+
+/** Preço mínimo de um aparelho de verdade (lava e seca, geladeira, ar,
+    TV de 43" ou mais), só quando a pessoa não pediu preço nem a peça. */
+export function pisoDoAparelho(consulta: string): number | null {
+  const q = normalizar(consulta);
+  if (buscaDeAparelho(q)) {
+    const piso = regrasDoPedido(q).find((r) => r.piso)?.piso;
+    if (piso) return piso;
+    const tv = /\b(tv|tvs|smart tv|televis(ao|or))\b/.test(q);
+    const pol = Number(
+      /\b(\d{2,3}) ?(polegadas|pol)\b/.exec(q)?.[1] ?? /\btv (\d{2,3})\b/.exec(q)?.[1],
+    );
+    if (tv && pol >= 43 && pol <= 100) return 900;
+  }
+  return null;
+}
+
 const NEGATIVOS_UNIVERSAIS = ["miniatura", "chaveiro", "maquete", "de brinquedo"];
 const BUSCA_INFANTIL =
   /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|colecao|colecionavel)\b/;
@@ -66,12 +122,14 @@ export function foraDaIntencao(
   consulta: string,
 ): boolean {
   if (foraDoModelo(nome, intencao.marca, intencao.modelo)) return true;
+  if (itemSecundarioFora(consulta, nome)) return true;
   const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
   const tipo = intencao.tipoProduto ?? tipoDoProduto(consulta) ?? "";
   const t = ` ${normalizar(nome)} `;
   const termos = [
     ...(intencao.termosNegativos ?? []),
     ...(NEGATIVOS_POR_TIPO[tipo] ?? []),
+    ...regrasDoPedido(consulta).flatMap((r) => r.negativos),
     ...(BUSCA_INFANTIL.test(pedido) ? [] : NEGATIVOS_UNIVERSAIS),
   ];
   return termos.some((n) => {
@@ -173,6 +231,10 @@ export function faixaDePreco(q: string): { min: number | null; max: number | nul
   return { min: null, max: a, resto };
 }
 
+/* Palavras de venda não identificam o produto ("lava e seca barata"). */
+const RE_VENDA =
+  /\b(barat[oa]s?|bo[mn]s?|boas?|melhor(es)?|promocao|promocoes|ofertas?|custo beneficio|em conta)\b/g;
+
 /** Intenção sem rede, na hora (Weslei, 02/11: busca por texto rápida): vale
     quando a interpretação remota não responde em 3,5 s. Acessório vira o
     produto, com o sinônimo como segunda busca; faixa de preço pela frase. */
@@ -186,9 +248,11 @@ export function extrairIntencaoRapida(q: string): {
   termosNegativos: string[];
 } {
   const { min, max, resto } = faixaDePreco(q);
-  const frase = (resto || normalizar(q)).slice(0, 60);
+  const frase = (
+    (resto || normalizar(q)).replace(RE_VENDA, " ").replace(/\s+/g, " ").trim() || normalizar(q)
+  ).slice(0, 60);
   const acessorio = acessorioDoPedido(frase);
-  let buscas = [frase];
+  let buscas = [...new Set([...regrasDoPedido(frase).flatMap((r) => r.buscas ?? []), frase])];
   if (acessorio) {
     const sem = frase
       .replace(new RegExp(`\\b${acessorio}(e?s)?\\b`), " ")

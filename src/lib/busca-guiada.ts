@@ -15,7 +15,12 @@
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
-import { comAcessorio, extrairIntencaoRapida, foraDaIntencao } from "@/lib/busca-intencao";
+import {
+  comAcessorio,
+  extrairIntencaoRapida,
+  foraDaIntencao,
+  pisoDoAparelho,
+} from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
 
 export { foraDaIntencao };
@@ -247,7 +252,13 @@ type ProdutoDoCatalogo = {
     ou null sem oferta ativa ou fora da faixa de preço. */
 async function comOferta(
   p: ProdutoDoCatalogo,
-  opcoes: { precoMin?: number | null; precoMax?: number | null; aceitarSemOferta?: boolean },
+  opcoes: {
+    precoMin?: number | null;
+    precoMax?: number | null;
+    /** Piso do aparelho (sem preço pedido): abaixo dele é peça ou insumo. */
+    pisoPreco?: number | null;
+    aceitarSemOferta?: boolean;
+  },
 ): Promise<ResultadoBusca | null> {
   const id = String(p.id ?? "").toUpperCase();
   const foto = p.pictures?.[0]?.url ?? null;
@@ -271,6 +282,7 @@ async function comOferta(
     const preco = num(oferta?.price);
     if (opcoes.precoMax && preco && preco > opcoes.precoMax * 1.05) return null;
     if (opcoes.precoMin && preco && preco < opcoes.precoMin * 0.95) return null;
+    if (opcoes.pisoPreco && preco && preco < opcoes.pisoPreco) return null;
     return {
       produto: id,
       item,
@@ -320,6 +332,7 @@ export async function buscarNoCatalogo(
   opcoes: {
     precoMin?: number | null;
     precoMax?: number | null;
+    pisoPreco?: number | null;
     max?: number;
     porBusca?: number;
     /** Produtos lidos por busca (padrão 6). */
@@ -398,8 +411,10 @@ export async function buscarNoCatalogo(
   return resultados;
 }
 
+const LIDOS_NA_PRIMEIRA = 16;
+
 /** Posição na busca oficial de cada página de "Ver mais opções": a 1ª lê
-    6 por busca; as seguintes, 8 por busca a partir daí. */
+    16 por busca; as seguintes, 8 por busca a partir daí. */
 export const offsetDaPagina = (pagina: number, primeira: number, demais: number) =>
   pagina <= 0 ? 0 : primeira + (pagina - 1) * demais;
 
@@ -422,28 +437,35 @@ export async function buscaGuiada(
       return s ? new Set([...s, ...doModelo]) : null;
     }),
   );
+  /* Sem preço pedido, o aparelho grande tem piso (02/11: nicho de R$ 371 e
+     placa de R$ 479 na busca de lava e seca). */
+  const piso = intencao.precoMin || intencao.precoMax ? null : pisoDoAparelho(q);
   const opcoes = {
     precoMin: intencao.precoMin,
     precoMax: intencao.precoMax,
+    pisoPreco: piso,
     tipoDaBusca: true,
     rejeitar: (nome: string) => foraDaIntencao(nome, intencao, q),
+    /* 16 por busca (02/11): os primeiros do catálogo podem ser peças. */
     ...(pagina > 0
       ? {
           limite: 8,
           porBusca: Math.ceil(8 / Math.max(1, intencao.buscas.length)) + 1,
-          offset: offsetDaPagina(pagina, 6, 8),
+          offset: offsetDaPagina(pagina, LIDOS_NA_PRIMEIRA, 8),
         }
-      : {}),
+      : { limite: LIDOS_NA_PRIMEIRA }),
   };
   let achados = await buscarNoCatalogo(intencao.buscas, { ...opcoes, dominiosPorBusca });
-  /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo. */
-  if (!achados.length && dominiosPorBusca.some(Boolean))
+  /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo.
+     Aparelho grande (com piso) não: sem a categoria, "máquina" traz nicho e
+     placa; vai direto aos mais vendidos da categoria oficial. */
+  if (!achados.length && dominiosPorBusca.some(Boolean) && !piso)
     achados = await buscarNoCatalogo(intencao.buscas, opcoes);
   /* Pedido amplo ou sazonal (28/10, "decoração de natal" voltava vazio): o
      título raramente traz o tipo ("decoração"), e os 1ºs do catálogo podem
      não ter oferta. Sem domínio nem tipo, lendo mais fundo, e o nome tem de
      trazer uma palavra do pedido; por fim, os mais vendidos da categoria. */
-  if (!achados.length) {
+  if (!achados.length && !piso) {
     const palavras = palavrasDoPedido([q, ...intencao.buscas]);
     achados = await buscarNoCatalogo([...new Set([...intencao.buscas, q.slice(0, 60)])], {
       ...opcoes,
@@ -492,6 +514,7 @@ async function maisVendidosDaCategoria(
   opcoes: {
     precoMin?: number | null;
     precoMax?: number | null;
+    pisoPreco?: number | null;
     rejeitar?: (nome: string) => boolean;
   },
 ) {

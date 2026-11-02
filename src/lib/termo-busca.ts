@@ -107,12 +107,16 @@ const PALAVRAS_VAZIAS = new Set([
   "unidade",
 ]);
 
+/* Siglas de 2 letras que são o produto (02/11: "tv 50 polegadas" virava
+   "polegadas"). */
+const SIGLAS = new Set(["tv", "ar", "pc"]);
+
 /** Tipo do produto: a primeira palavra com letras que não é preposição
     ("Bebedouro Fonte Para Gatos" -> "bebedouro"). Reserva do filtro de
     categoria quando a API não prevê o domínio. */
 export function tipoDoProduto(titulo: string | null | undefined): string | null {
   for (const p of semAcento(termoDoProduto(titulo, 12)).split(/[^a-z0-9]+/)) {
-    if (p.length >= 3 && /[a-z]/.test(p) && !PALAVRAS_VAZIAS.has(p)) return p;
+    if ((p.length >= 3 || SIGLAS.has(p)) && /[a-z]/.test(p) && !PALAVRAS_VAZIAS.has(p)) return p;
   }
   return null;
 }
