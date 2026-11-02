@@ -43,13 +43,28 @@ describe("resultados da busca por texto", () => {
   });
 
   test("arte pelo tema da busca, neutra no genérico", () => {
-    expect(arteDaBusca("capinha iphone 17 pro max").id).toBe("celular-acessorios");
-    expect(arteDaBusca("fone bluetooth").id).toBe("celular-acessorios");
-    expect(arteDaBusca("panela de pressão").id).toBe(arteDaCategoria("casa")!.id);
+    expect(arteDaBusca("capinha iphone 17 pro max")?.id).toBe("celular-acessorios");
+    expect(arteDaBusca("fone bluetooth")?.id).toBe("celular-acessorios");
+    expect(arteDaBusca("panela de pressão")?.id).toBe(arteDaCategoria("casa")!.id);
     expect(arteDaBusca("presente para mãe")).toBe(ARTE_NEUTRA);
     /* 28/10: decoração de Natal mostrava panelas. */
-    expect(arteDaBusca("decoração de natal").src).toBe("/campanhas/estudio-natal.webp");
+    expect(arteDaBusca("decoração de natal")?.src).toBe("/campanhas/estudio-natal.webp");
     expect(arteDaBusca("cortina blackout")).toBe(ARTE_NEUTRA);
+  });
+
+  test("arte só quando mostra o produto; senão, fotos dos achados (02/11)", () => {
+    /* "lava e seca" mostrava a bancada com air fryer. */
+    for (const q of [
+      "maquina lava e seca barata",
+      "geladeira frost free",
+      "ar condicionado barato",
+      "fogao 4 bocas",
+      "tv 50 polegadas barata",
+    ])
+      expect(arteDaBusca(q)).toBeNull();
+    expect(arteDaBusca("air fryer barata")?.id).toBe("eletrodomesticos");
+    expect(arteDaBusca("ps5")?.id).toBe("tecnologia-games");
+    expect(arteDaBusca("notebook gamer")?.id).toBe("home-office");
   });
 
   test("resposta imediata: só o que casa, sem réplica e sem peça", () => {

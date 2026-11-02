@@ -224,6 +224,6 @@ describe("filtro em todas as fontes (print do Weslei, 27/10 16:52)", () => {
 
   test("arte da busca de tomada não é a de ferramentas", async () => {
     const { arteDaBusca, ARTE_NEUTRA } = await import("@/lib/artes");
-    expect(arteDaBusca("tomada para banheiro").id).toBe(ARTE_NEUTRA.id);
+    expect(arteDaBusca("tomada para banheiro")?.id).toBe(ARTE_NEUTRA.id);
   });
 });
