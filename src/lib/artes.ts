@@ -178,8 +178,13 @@ export const ARTE_NATAL: Arte = {
 
 /* Arte do topo dos resultados de uma busca por texto (27/10): o motor de
    categorias lê o termo; acessório de celular e fone vão para a arte de
-   celulares; termo genérico fica com a neutra. */
-export function arteDaBusca(q: string): Arte {
+   celulares; termo genérico fica com a neutra.
+   02/11 (Weslei: "ajuste a arte para que seja adequada para o que foi
+   buscado"): "lava e seca" mostrava a bancada com air fryer. A arte de
+   eletrodomésticos só mostra portáteis de cozinha e a de tecnologia, games;
+   fora disso (lavadora, geladeira, ar, fogão, TV, som...) volta null e a
+   tela usa as fotos dos produtos achados. */
+export function arteDaBusca(q: string): Arte | null {
   if (/\b(capinhas?|capas?|carregador(es)?|fones?|pel[ií]culas?|cabos?)\b/i.test(q))
     return ARTES["celular-acessorios"];
   const c = classificar({ nome: q });
@@ -191,5 +196,8 @@ export function arteDaBusca(q: string): Arte {
      temporada; em Casa, a da cozinha só vale para cozinha e mesa. */
   if (caminho.includes("natal")) return ARTE_NATAL;
   if (caminho[0] === "casa" && caminho[1] !== "cozinha-e-mesa") return ARTE_NEUTRA;
+  if (c.legado === "eletrodomesticos" && !caminho.includes("pequenos-eletrodomesticos"))
+    return null;
+  if (c.legado === "eletronicos" && !caminho.includes("games")) return null;
   return arteDaCategoria(c.legado) ?? ARTE_NEUTRA;
 }

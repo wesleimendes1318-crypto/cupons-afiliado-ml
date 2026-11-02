@@ -54,3 +54,36 @@ export function FaixaArte({
     </div>
   );
 }
+
+/* Sem arte que mostre o produto buscado (02/11, "lava e seca" com a arte
+   da air fryer): a faixa usa as fotos dos produtos achados, no mesmo
+   formato da arte. Decorativa (as fotos estão nos cartões logo abaixo). */
+export function FaixaFotos({ fotos, className = "" }: { fotos: string[]; className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={
+        CLASSE +
+        "flex items-center justify-center gap-3 bg-gradient-to-r from-[#f5f5f7] via-white to-[#f5f5f7] px-4 sm:gap-6 " +
+        className
+      }
+    >
+      {fotos.slice(0, 5).map((src, k) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          width={120}
+          height={120}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className={
+            "h-[82%] w-auto max-w-[30%] object-contain mix-blend-multiply sm:max-w-[18%] " +
+            (k >= 3 ? "hidden sm:block" : "")
+          }
+        />
+      ))}
+    </div>
+  );
+}

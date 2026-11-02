@@ -24,7 +24,7 @@ import {
 } from "@/lib/busca-guiada-cliente";
 import { ComprarComSeguranca } from "@/components/BotoesCartao";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
-import { FaixaArte } from "@/components/FaixaArte";
+import { FaixaArte, FaixaFotos } from "@/components/FaixaArte";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import { SeloMarketplace } from "@/components/SeloMarketplace";
 import { carregarProdutos, SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
@@ -558,6 +558,11 @@ export function ResultadosDaBusca({
   const temMais = ordenados.length > visiveis || (!fim && !!consulta);
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
   const arte = q && !soCatalogo ? arteDaBusca(q) : null;
+  /* Sem arte do produto buscado: as fotos dos primeiros achados. */
+  const fotosDaFaixa =
+    q && !soCatalogo && !arte
+      ? [...new Set(cartoes.flatMap((c) => (c.imagem ? [c.imagem] : [])))].slice(0, 5)
+      : [];
   const procurando = carregando && cartoes.length === 0;
   const esperando = carregando || anuncios?.estado === "buscando";
   useAvisarOcupado(esperando);
@@ -567,6 +572,11 @@ export function ResultadosDaBusca({
       {arte && (carregando || resposta || cartoes.length > 0) && (
         <div className={compacto ? "" : "px-5 sm:px-7"}>
           <FaixaArte arte={arte} className="mb-1" />
+        </div>
+      )}
+      {!arte && fotosDaFaixa.length >= 2 && (
+        <div className={compacto ? "" : "px-5 sm:px-7"}>
+          <FaixaFotos fotos={fotosDaFaixa} className="mb-1" />
         </div>
       )}
 
