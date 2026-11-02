@@ -498,6 +498,10 @@ export function ResultadosDaBusca({
   const marcas = useMemo(() => marcasDosResultados(cartoes), [cartoes]);
   const filtrosCategoria = useMemo(() => filtrosDaBusca(cartoes), [cartoes]);
 
+  /* "Carregar mais" (02/11: sempre +20): continua de onde a página anterior
+     parou (cursor) e manda o que já está na tela, para o servidor não gastar
+     leitura com produto repetido; conta só os novos de verdade. */
+  const cursor = useRef<number | null | undefined>(undefined);
   async function lerPaginas(desde: number, alvo: number, base: number) {
     if (!consulta) return;
     const minha = geracao.current;
@@ -505,18 +509,24 @@ export function ResultadosDaBusca({
     let p = desde;
     let total = base;
     const novos: Resultado[] = [];
-    /* No máximo 2 páginas por toque (cada uma traz até 8 do catálogo). */
-    for (let n = 0; n < 2 && total < alvo; n++) {
-      const r = await buscarProdutos(consulta.q, consulta.contexto, consulta.modo, p, consulta.no);
+    const vistos = new Set(cartoes.flatMap((c) => idsDoEndereco(c.url)));
+    for (let n = 0; n < 3 && total < alvo; n++) {
+      const r = await buscarProdutos(consulta.q, consulta.contexto, consulta.modo, p, consulta.no, {
+        cursor: cursor.current,
+        vistos: [...vistos].filter((id) => /^MLB\d{4,14}$/.test(id)),
+      });
       if (minha !== geracao.current) return;
       const achados = r.resposta?.resultados ?? [];
       p += 1;
-      if (r.erro || !achados.length) {
+      if (r.resposta && "proximo" in r.resposta) cursor.current = r.resposta.proximo ?? null;
+      const inéditos = achados.filter((a) => !idsDoEndereco(a.url).some((id) => vistos.has(id)));
+      inéditos.forEach((a) => idsDoEndereco(a.url).forEach((id) => vistos.add(id)));
+      novos.push(...inéditos);
+      total += inéditos.length;
+      if (r.erro || (!achados.length && cursor.current == null) || cursor.current === null) {
         setFim(true);
         break;
       }
-      novos.push(...achados);
-      total += achados.length;
     }
     setExtras((e) => [...e, ...novos]);
     setPagina(p);
@@ -527,10 +537,11 @@ export function ResultadosDaBusca({
      (02/11: buscar sozinho gastava o limite de buscas por minuto). */
   useEffect(() => {
     geracao.current += 1;
+    cursor.current = resposta?.proximo;
     setExtras([]);
     setPagina(1);
     /* Sem a 1ª página do catálogo (erro ou nada achado), não há "mais". */
-    setFim(!consulta || !resposta?.resultados.length);
+    setFim(!consulta || !resposta?.resultados.length || resposta?.proximo === null);
     setCarregandoMais(false);
     setVisiveis(LOTE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
