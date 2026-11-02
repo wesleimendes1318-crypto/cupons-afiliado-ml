@@ -199,9 +199,21 @@ export function useCepDestino(ativo: boolean) {
       vivo = false;
     };
   }, [ativo]);
+  /* CEP ÚNICO NO SITE (02/11): trocar no topo, no resultado ou em qualquer
+     página avisa os outros seletores da mesma aba. */
+  useEffect(() => {
+    if (!ativo) return;
+    const aoTrocar = (e: Event) => {
+      const r = (e as CustomEvent<Regiao>).detail;
+      if (r?.cep) setRegiao(r);
+    };
+    window.addEventListener("cep-trocado", aoTrocar);
+    return () => window.removeEventListener("cep-trocado", aoTrocar);
+  }, [ativo]);
   const trocar = (r: Regiao) => {
     gravar(r);
     setRegiao(r);
+    window.dispatchEvent(new CustomEvent("cep-trocado", { detail: r }));
   };
   /** Pede a localização exata uma única vez por navegador. */
   const pedirLocalizacao = () => {
