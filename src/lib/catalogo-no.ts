@@ -37,7 +37,7 @@ export const FAIXAS = [
 ] as const;
 
 /* Faixa pelo id: "de-ate" ou "de+" (as fixas e as calculadas pela mediana). */
-const naFaixa = (preco: number, id: string) => {
+export const naFaixa = (preco: number, id: string) => {
   const m = /^(\d+)(?:-(\d+)|\+)$/.exec(id.replace("ate-", "0-"));
   if (!m) return true;
   return preco >= Number(m[1]) && (m[2] == null || preco < Number(m[2]));
