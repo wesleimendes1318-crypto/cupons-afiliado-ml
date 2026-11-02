@@ -79,10 +79,10 @@ const SECUNDARIO_NO_INICIO = new RegExp(
     "|placas?|amortecedor(es)?|motor(es)?|bombas?|valvulas?|mangueiras?|correias?|termostatos?|sensor(es)?" +
     "|resistencias?|puxador(es)?|portas?|agitador(es)?|carcacas?|tampas?|gaxetas?|guarnicao|guarnicoes" +
     "|fusive(l|is)|barramentos?|barras? de led|capacitor(es)?|rolamentos?|filtros?|cabos?|conversor(es)?" +
-    "|controles?|antenas?|tubulacao|tubulacoes|pes?|capas?|bolas?)\\b",
+    "|controles?|antenas?|tubulacao|tubulacoes|pes?|capas?|bolas?|modulos?|circuitos?|torneiras?|eixos?|pressostatos?|cestos?|tripes?|rodizios?)\\b",
 );
 const SECUNDARIO_EM_QUALQUER_LUGAR =
-  /\b(antivibracao|pes? niveladore?s?|bolas? (para|de) lavar|capas? (protetoras?|para lavadora|para maquina)|detergentes?|secantes?|sabao|saboes|pastilhas?|tabletes?|amaciantes?|desincrustantes?|refil|refis|sacos? para aspirador|capsulas?)\b/;
+  /\b((para|pra|p|compativel com|compativel) (maquinas?|lava e seca|lavadoras?|secadoras?|geladeiras?|refrigerador(es)?|freezers?|fogao|fogoes|tvs?|smart tvs?|televis(ao|oes|or|ores)|ar condicionado|split|lava loucas?|micro ?ondas)|antivibracao|pes? niveladore?s?|bolas? (para|de) lavar|capas? (protetoras?|para lavadora|para maquina)|detergentes?|secantes?|sabao|saboes|pastilhas?|tabletes?|amaciantes?|desincrustantes?|refil|refis|sacos? para aspirador|capsulas?)\b/;
 
 /** Peça interna, móvel de apoio, acessório menor ou insumo (detergente,
     secante, refil) pelo título. Puro: quem chama decide se vale (só quando
