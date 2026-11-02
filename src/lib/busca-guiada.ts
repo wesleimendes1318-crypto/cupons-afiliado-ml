@@ -72,6 +72,8 @@ export type RespostaBusca = {
   marca?: string | null;
   modelo?: string | null;
   anuncios?: { id: number; chave: string } | null;
+  /** Buscas com as marcas achadas na 1ª página ("Carregar mais"). */
+  variantes?: string[];
 };
 
 /** Intenção universal (27/10, "tomada para banheiro" não traz HDMI, antena

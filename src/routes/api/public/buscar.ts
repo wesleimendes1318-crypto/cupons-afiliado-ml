@@ -95,7 +95,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         const guardada = await lerGuardada(chave);
         if (guardada) return json(request, guardada);
 
-        let achado: Awaited<ReturnType<typeof buscaGuiada>>;
+        let achado: { intencao: Awaited<ReturnType<typeof buscaGuiada>>["intencao"]; resultados: Awaited<ReturnType<typeof buscaGuiada>>["resultados"]; variantes?: string[] };
         try {
           if (modoProduto) {
             const r = await buscarMesmoProduto(entrada.q, pagina);
@@ -124,6 +124,12 @@ export const Route = createFileRoute("/api/public/buscar")({
                     modelo: primeira.modelo ?? null,
                   }
                 : null,
+              primeira
+                ? {
+                    variantes: primeira.variantes ?? [],
+                    excluir: primeira.resultados.map((r) => r.produto),
+                  }
+                : {},
             );
           }
         } catch {
@@ -218,6 +224,7 @@ export const Route = createFileRoute("/api/public/buscar")({
           marca: marca ?? null,
           modelo: modelo ?? null,
           anuncios,
+          variantes: achado.variantes ?? [],
         };
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)
