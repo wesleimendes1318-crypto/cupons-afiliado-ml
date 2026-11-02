@@ -59,7 +59,6 @@ import {
   aplicarEnvio,
   custoIncompleto,
   custoTotalDaOferta,
-  mudaProcedencia,
   rotuloInternacional,
   tributosValidos,
 } from "@/lib/internacional";
@@ -4321,6 +4320,7 @@ function MelhorAlternativa({
           <p className="line-clamp-2 text-sm font-semibold leading-snug">
             {semEntidades(p.titulo)}
           </p>
+          <SeloInternacional o={{ ...p, final: p.preco }} className="mt-1" />
           {p.vendedor && (
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-secondary-ink">
               <span>
@@ -4367,7 +4367,12 @@ function MelhorAlternativa({
       {(() => {
         const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
         const qualidade = qualidadeDoParecido(p, doColado);
-        const desvantagens = desvantagensDoParecido(p, doColado);
+        const desvantagens = [
+          ...desvantagensDoParecido(p, doColado),
+          ...(p.internacional === true
+            ? [`Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`]
+            : []),
+        ];
         return (
           <>
             <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
@@ -5138,6 +5143,7 @@ function Parecidos({
                   <p className="line-clamp-2 text-sm font-semibold leading-snug">
                     {semEntidades(p.titulo)}
                   </p>
+                  <SeloInternacional o={{ ...p, final: p.preco }} className="mt-1" />
                   {p.vendedor && (
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-secondary-ink">
                       <span>
@@ -5211,7 +5217,12 @@ function Parecidos({
               {(() => {
                 const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
                 const qualidade = qualidadeDoParecido(p, doColado);
-                const desvantagens = desvantagensDoParecido(p, doColado);
+                const desvantagens = [
+          ...desvantagensDoParecido(p, doColado),
+          ...(p.internacional === true
+            ? [`Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`]
+            : []),
+        ];
                 const extras: LinhaMuda[] = [
                   ...(porMedida && m && mColado && m.qtd !== mColado.qtd && precoColado != null
                     ? [
