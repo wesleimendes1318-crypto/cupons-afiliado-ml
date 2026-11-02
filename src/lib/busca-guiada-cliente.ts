@@ -36,6 +36,8 @@ export type Resposta = {
   modelo?: string | null;
   /* Modelo fora do catálogo oficial: busca nos anúncios pela extensão. */
   anuncios?: { id: number; chave: string } | null;
+  /* "Carregar mais": de onde continuar (null = o catálogo acabou). */
+  proximo?: number | null;
 };
 
 /** "agora" ou "às 14:05" (horário de Brasília): a busca fica guardada até
@@ -141,6 +143,8 @@ export async function buscarProdutos(
   pagina = 0,
   /** Slug do nó da árvore: busca dentro daquela categoria (27/10). */
   no?: string,
+  /** "Carregar mais": de onde continuar e o que já está na tela. */
+  mais?: { cursor?: number | null; vistos?: string[] },
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
   try {
     const r = await fetch("/api/public/buscar", {
@@ -152,6 +156,8 @@ export async function buscarProdutos(
         modo,
         ...(pagina ? { pagina } : {}),
         ...(no ? { no } : {}),
+        ...(mais?.cursor != null ? { cursor: mais.cursor } : {}),
+        ...(mais?.vistos?.length ? { vistos: mais.vistos.slice(-400) } : {}),
       }),
     });
     const j = (await r.json()) as Resposta & { erro?: string };
