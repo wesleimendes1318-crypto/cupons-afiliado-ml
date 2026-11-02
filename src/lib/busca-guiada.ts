@@ -74,6 +74,8 @@ export type RespostaBusca = {
   anuncios?: { id: number; chave: string } | null;
   /** Buscas com as marcas achadas na 1ª página ("Carregar mais"). */
   variantes?: string[];
+  /** Próxima leitura do "Carregar mais" (null = o catálogo acabou). */
+  proximo?: number | null;
 };
 
 /** Intenção universal (27/10, "tomada para banheiro" não traz HDMI, antena
@@ -375,6 +377,8 @@ export async function buscarNoCatalogo(
     rejeitar?: (nome: string) => boolean;
     /** Ofertas lidas no máximo (padrão 18). */
     teto?: number;
+    /** Produtos que já estão na tela: nem gastam a leitura da oferta. */
+    ignorar?: Set<string>;
   } = {},
 ) {
   const max = opcoes.max ?? 8;
@@ -398,7 +402,7 @@ export async function buscarNoCatalogo(
       }
     }),
   );
-  const vistos = new Set<string>();
+  const vistos = new Set<string>(opcoes.ignorar ?? []);
   /* Até 2 de folga por busca: oferta sem estoque não deixa a busca curta. */
   const candidatos: Array<{ b: number; p: ProdutoDoCatalogo }> = [];
   let vagas = TETO - listas.length;
@@ -440,14 +444,15 @@ const MAXIMO_PAGINA = 30;
 /* A busca oficial do catálogo só vai até a posição 120 (offset 120 = 400,
    medido em 02/11). Mais fundo, só com outra busca (a marca junto). */
 const FIM_DO_CATALOGO = 120;
-const PASSOS_POR_PAGINA = 4;
+/* Tempo máximo de cada "Carregar mais" lendo o catálogo. */
+const PRAZO_DA_PAGINA_MS = 16_000;
 
 type Passo = { buscas: string[]; offset: number };
 
 /** Leituras de cada "Carregar mais" (página >= 1), sempre na mesma ordem:
     o resto das buscas da 1ª página (84-120) e, depois, cada variante (a
     busca com uma marca que apareceu) da posição 0 até 100. A página p
-    lê os passos [(p-1) x 4, p x 4): uma página nunca relê a da outra. */
+    continua do passo em que a anterior parou (cursor). */
 export function passosDasSeguintes(buscas: string[], variantes: string[]): Passo[] {
   const passos: Passo[] = [];
   for (let o = 84; o < FIM_DO_CATALOGO; o += 20) passos.push({ buscas, offset: o });
@@ -474,7 +479,7 @@ export async function buscaGuiada(
   contexto: string | null,
   pagina = 0,
   intencaoAnterior: Interpretacao | null = null,
-  anterior: { variantes?: string[]; excluir?: string[] } = {},
+  anterior: { variantes?: string[]; excluir?: string[]; cursor?: number } = {},
 ) {
   const lida = intencaoAnterior ?? (await interpretar(q, contexto));
   /* APARELHO (Weslei, 02/11: "voltou 1 máquina e muito cara"): a busca do
@@ -523,6 +528,7 @@ export async function buscaGuiada(
       limite: 20,
       offset: passo.offset,
       porBusca: 24,
+      ignorar: new Set([...excluir, ...achados.map((r) => r.produto)]),
       dominiosPorBusca: passo.buscas.map((b) => {
         const k = intencao.buscas.indexOf(b);
         return k >= 0 ? (dominiosPorBusca[k] ?? null) : dominioDaVariante;
@@ -530,15 +536,23 @@ export async function buscaGuiada(
     });
 
   let variantes = anterior.variantes ?? [];
+  let proximo: number | null = null;
   if (pagina > 0) {
-    const passos = passosDasSeguintes(intencao.buscas, variantes).slice(
-      (pagina - 1) * PASSOS_POR_PAGINA,
-      pagina * PASSOS_POR_PAGINA,
-    );
-    for (const passo of passos) {
-      if (achados.length >= MAXIMO_PAGINA) break;
-      juntar(await ler(passo));
+    /* "Carregar mais": do cursor em diante, 2 leituras por vez, até juntar
+       20 novos ou o prazo acabar; devolve onde parou. */
+    const passos = passosDasSeguintes(intencao.buscas, variantes);
+    const inicio = Date.now();
+    let k = Math.max(0, anterior.cursor ?? (pagina - 1) * 4);
+    while (
+      k < passos.length &&
+      achados.length < MINIMO_RESULTADOS &&
+      Date.now() - inicio < PRAZO_DA_PAGINA_MS
+    ) {
+      const lote = passos.slice(k, k + 2);
+      k += lote.length;
+      for (const r of await Promise.all(lote.map(ler))) juntar(r);
     }
+    proximo = k < passos.length ? k : null;
   } else {
     juntar(
       await buscarNoCatalogo(intencao.buscas, {
@@ -574,6 +588,7 @@ export async function buscaGuiada(
     /* As marcas que apareceram viram variantes ("geladeira frost free
        brastemp"): completam a 1ª página e alimentam o "Carregar mais". */
     variantes = variantesPorMarca(intencao.buscas[0] ?? q.slice(0, 60), achados);
+    proximo = 0;
     if (achados.length && achados.length < MINIMO_RESULTADOS && variantes.length) {
       juntar(await ler({ buscas: variantes.slice(0, 4), offset: 0 }));
     }
@@ -597,7 +612,7 @@ export async function buscaGuiada(
     q,
     ordenarPelaIntencao(q, achados, (r) => r.nome),
   );
-  return { intencao, resultados, variantes };
+  return { intencao, resultados, variantes, proximo };
 }
 
 /** Posição na busca oficial de cada página da busca do mesmo produto. */
