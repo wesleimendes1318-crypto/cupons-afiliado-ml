@@ -378,7 +378,7 @@ export async function buscarNoCatalogo(
   const porBusca = opcoes.porBusca ?? 4;
   const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 20);
   const offset = Math.min(Math.max(Math.floor(opcoes.offset ?? 0), 0), 900);
-  const TETO = Math.min(opcoes.teto ?? 18, 36);
+  const TETO = Math.min(opcoes.teto ?? 18, 48);
   /* PARALELO (Weslei, 02/11: busca por texto rápida). 1) as buscas ao mesmo
      tempo; 2) os candidatos de todas, na ordem de antes, com as ofertas lidas
      6 por vez; 3) a escolha final na mesma ordem e com os mesmos limites. */
@@ -479,7 +479,7 @@ export async function buscaGuiada(
     tipoDaBusca: true,
     rejeitar: (nome: string) => foraDaIntencao(nome, intencao, q),
     max: maximo,
-    teto: regra ? 40 : 30,
+    teto: 44,
     /* 16 por busca (02/11): os primeiros do catálogo podem ser peças. */
     ...(pagina > 0
       ? {
@@ -487,7 +487,10 @@ export async function buscaGuiada(
           porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 1,
           offset: offsetDaPagina(pagina, LIDOS_NA_PRIMEIRA, 20),
         }
-      : { limite: LIDOS_NA_PRIMEIRA }),
+      : {
+          limite: LIDOS_NA_PRIMEIRA,
+          porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 4,
+        }),
   };
   let achados = await buscarNoCatalogo(intencao.buscas, { ...opcoes, dominiosPorBusca });
   /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo.
@@ -668,9 +671,9 @@ export async function buscarMesmoProduto(titulo: string, pagina = 0) {
   const dominios = await dominiosPrevistos(titulo);
   const resultados = buscas.length
     ? await buscarNoCatalogo(buscas, {
-        max: 8,
-        porBusca: 6,
-        limite: 10,
+        max: 24,
+        porBusca: 12,
+        limite: 20,
         offset: offsetDaPagina(pagina, 10, 10),
         dominios,
         tipo: tipoDoProduto(titulo),
