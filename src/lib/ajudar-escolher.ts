@@ -4,6 +4,7 @@
    afiliado do Weslei, e o botão da resposta leva a esse link. Sem modelo
    (cota, fora do ar), a escolha é calculada: nunca fica sem resposta. */
 
+import { custoTotalDaOferta } from "@/lib/internacional";
 import {
   custoBeneficio,
   notaDeAlternativa,
@@ -35,6 +36,9 @@ export type Opcao = {
   freteGratis: boolean | null;
   /* Frete para o CEP do cliente, quando simulado (02/10). */
   custoFrete?: number | null;
+  /* Envio internacional e tributos lidos (01/11): sem tributos, sem custo. */
+  internacional?: boolean | null;
+  tributosEstimados?: number | null;
   lojaOficial: boolean;
   link: string;
   muda: string | null;
@@ -86,6 +90,8 @@ function opcaoDoColado(
     preco,
     freteGratis: (a["freteGratis"] as boolean | null) ?? null,
     custoFrete: num(a["custoFrete"]),
+    internacional: (a["internacional"] as boolean | null) ?? null,
+    tributosEstimados: num(a["tributosEstimados"]),
     lojaOficial: a["lojaOficial"] === true,
     avaliacoes: avaliacoesValidas(a["avaliacoes"]),
     link,
@@ -145,6 +151,8 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       preco: p,
       freteGratis: (o["freteGratis"] as boolean | null) ?? null,
       custoFrete: num(o["custoFrete"]),
+      internacional: (o["internacional"] as boolean | null) ?? null,
+      tributosEstimados: num(o["tributosEstimados"]),
       lojaOficial: o["lojaOficial"] === true,
       avaliacoes: avaliacoesValidas(o["avaliacoes"]),
       link,
@@ -180,6 +188,8 @@ export function opcoesDaAnalise(a: Bruto, linkColado: string | null): Opcao[] {
       preco: num(p["preco"]) as number,
       freteGratis: (p["freteGratis"] as boolean | null) ?? null,
       custoFrete: num(p["custoFrete"]),
+      internacional: (p["internacional"] as boolean | null) ?? null,
+      tributosEstimados: num(p["tributosEstimados"]),
       lojaOficial: p["lojaOficial"] === true || p["daBuscaOficial"] === true,
       avaliacoes: avaliacoesValidas(p["avaliacoes"]),
       link,
@@ -209,10 +219,13 @@ const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
 /** Total que o cliente paga: produto + frete para o CEP (quando simulado);
  *  frete pago sem valor conhecido: null. Mesma conta da tela. */
 export function totalDaOpcao(o: Opcao): number | null {
-  if (o.freteGratis !== false) return o.preco;
-  return o.custoFrete != null && o.custoFrete > 0
-    ? Math.round((o.preco + o.custoFrete) * 100) / 100
-    : null;
+  return custoTotalDaOferta({
+    final: o.preco,
+    freteGratis: o.freteGratis === false ? false : true,
+    custoFrete: o.custoFrete ?? null,
+    internacional: o.internacional ?? null,
+    tributosEstimados: o.tributosEstimados ?? null,
+  });
 }
 
 export function decisaoDaTela(

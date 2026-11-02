@@ -55,6 +55,14 @@ import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo"
 import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 import { seguraParaRecomendar } from "@/lib/recomendacao-segura";
 import { aplicarPrazo } from "@/lib/prazo-entrega";
+import {
+  aplicarEnvio,
+  custoIncompleto,
+  custoTotalDaOferta,
+  rotuloInternacional,
+  tributosValidos,
+} from "@/lib/internacional";
+import { useEnvioInternacional } from "@/lib/internacional-cliente";
 import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
@@ -358,6 +366,11 @@ type Precos = {
 };
 
 type OutraLoja = {
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   /* Detalhes lidos na página do anúncio desta loja (28/09). */
   detalhes?: Detalhes | null;
   precos?: Precos | null;
@@ -410,6 +423,11 @@ type OutraLoja = {
 
 type Analise = {
   titulo: string | null;
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   /* Avaliação das pessoas do anúncio colado (10/10). */
   avaliacoes?: DadosAvaliacoes | null;
   preco: number | null;
@@ -446,6 +464,11 @@ type Analise = {
      compatibilidade), com o que muda. Sempre separadas e com aviso. */
   parecidos?: Array<{
     titulo: string | null;
+    /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+    internacional?: boolean | null;
+    paisOrigem?: string | null;
+    /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+    tributosEstimados?: number | null;
     imagem?: string | null;
     preco: number;
     diferenca?: number | null;
@@ -533,6 +556,11 @@ type Analise = {
 
 type Referencia = {
   vendedor: string | null;
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   preco: number | null;
   final: number | null;
   /* final lá menos final aqui: positivo = lá sai mais caro. */
@@ -2408,10 +2436,21 @@ function Resultado({
      vira semAfiliado: sai da tabela e da recomendação. */
   const recusados = useAnunciosRecusados(pedido.analise);
   const analiseBase = filtroPrazo?.algumAtende ? filtroPrazo.analise : pedido.analise;
-  const a = useMemo(
-    () => (analiseBase ? semRecusados(analiseBase, recusados) : analiseBase),
-    [analiseBase, recusados],
-  );
+  /* ENVIO INTERNACIONAL (01/11, Switch 2): quais ofertas vêm do exterior,
+     pela lista oficial da ficha. A versão muda quando chegam lojas novas. */
+  const versaoEnvio = pedido.analise
+    ? [
+        pedido.analise.outrasLojas?.length ?? 0,
+        pedido.analise.referencias?.length ?? 0,
+        pedido.analise.parecidos?.length ?? 0,
+      ].join("-")
+    : null;
+  const envio = useEnvioInternacional(pedidoId, versaoEnvio);
+  const a = useMemo(() => {
+    if (!analiseBase) return analiseBase;
+    const comEnvio = aplicarEnvio(analiseBase, envio);
+    return semRecusados(comEnvio, recusados);
+  }, [analiseBase, recusados, envio]);
   const link = pedido.link ?? "";
   const dispositivo = useDispositivo();
 
@@ -2455,24 +2494,30 @@ function Resultado({
   };
   /* Total que o cliente paga: produto + frete para o CEP (quando simulado).
      Frete pago sem valor: null (não dá para afirmar o total). */
+  /* Internacional sem os tributos lidos: custo desconhecido (null), nunca
+     "mais barata" (01/11, Switch 2: R$ 2.906 + R$ 2.498 de impostos). */
   const totalDaLoja = (o: {
     final?: number | null;
     freteGratis?: boolean | null;
     custoFrete?: number | null;
-  }) =>
-    o.final == null
-      ? null
-      : o.freteGratis === false
-        ? o.custoFrete != null && o.custoFrete > 0
-          ? Math.round((o.final + o.custoFrete) * 100) / 100
-          : null
-        : o.final;
+    internacional?: boolean | null;
+    tributosEstimados?: number | null;
+  }) => custoTotalDaOferta(o);
+  /* Colado internacional sem tributos lidos: o custo final dele não é
+     conhecido, então não há economia a afirmar contra ele; a recomendação
+     é a melhor loja NACIONAL de custo confirmado. */
+  const coladoIncompleto = custoIncompleto({
+    internacional: a?.internacional ?? null,
+    tributosEstimados: a?.tributosEstimados ?? null,
+  });
   const totalColado =
-    precoColado == null
+    precoColado == null || coladoIncompleto
       ? null
       : a?.freteGratis === false && a?.custoFrete != null && a.custoFrete > 0
-        ? Math.round((precoColado + a.custoFrete) * 100) / 100
-        : precoColado;
+        ? Math.round(
+            (precoColado + a.custoFrete + (tributosValidos(a?.tributosEstimados) ?? 0)) * 100,
+          ) / 100
+        : Math.round((precoColado + (tributosValidos(a?.tributosEstimados) ?? 0)) * 100) / 100;
   /* Custo de cada linha da tabela (as mesmas de linhasLojas) para o cliente:
      produto + frete conhecido. Base do aviso "preço muito abaixo" e da régua
      de recomendação segura (18/10). */
@@ -2515,6 +2560,9 @@ function Resultado({
         lojaOficial: r.lojaOficial ?? null,
         mercadoLider: r.mercadoLider ?? null,
         avaliacoes: r.avaliacoes ?? null,
+        internacional: r.internacional ?? null,
+        paisOrigem: r.paisOrigem ?? null,
+        tributosEstimados: r.tributosEstimados ?? null,
         /* Pela lista oficial da ficha (modo servidor, 19/10) é o mesmo produto
            da mesma página de catálogo, sem conferência pela foto. */
         verificadoIA: !a?.modoServidor,
@@ -2529,6 +2577,7 @@ function Resultado({
        frete grátis). Frete pago SEM valor conhecido continua fora. */
     .map((c) => {
       const t = totalDaLoja(c.o);
+      if (coladoIncompleto) return { ...c, o: { ...c.o, ganho: null } };
       return t != null && totalColado != null
         ? { ...c, o: { ...c.o, ganho: Math.round((totalColado - t) * 100) / 100 } }
         : c;
@@ -2539,9 +2588,11 @@ function Resultado({
         totalDaLoja(c.o) != null &&
         !c.o.mesmaPagina &&
         Boolean(c.o.link || c.o.url) &&
-        (totalColado == null
-          ? (c.o.ganho ?? 0) > 0
-          : (totalDaLoja(c.o) as number) <= totalColado - 0.5) &&
+        (coladoIncompleto
+          ? c.o.internacional !== true
+          : totalColado == null
+            ? (c.o.ganho ?? 0) > 0
+            : (totalDaLoja(c.o) as number) <= totalColado - 0.5) &&
         /* SEGURANÇA DE QUEM COMPRA (Weslei, 18/10): nota baixa nunca; preço
            muito abaixo das outras lojas só com o link de afiliado já gerado
            e boa avaliação. Continua na tabela, com o aviso. */
@@ -2609,6 +2660,8 @@ function Resultado({
           .filter(
             (p) =>
               p.freteGratis !== false &&
+              /* Importado sem os tributos lidos não tem custo conhecido. */
+              !custoIncompleto(p) &&
               /* Recomendação só com link de afiliado pronto ou gerado no clique. */
               (ehLinkDeAfiliado(p.link) || Boolean(p.url)) &&
               ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true) &&
@@ -2703,6 +2756,9 @@ function Resultado({
             item: itemDoEndereco(urlColada),
             detalhes: a?.detalhes ?? null,
             precos: a?.precos ?? null,
+            internacional: a?.internacional ?? null,
+            paisOrigem: a?.paisOrigem ?? null,
+            tributosEstimados: a?.tributosEstimados ?? null,
           },
         ]
       : []),
@@ -2725,6 +2781,9 @@ function Resultado({
       detalhes: o.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !o.detalhes,
       precos: o.precos ?? null,
+      internacional: o.internacional ?? null,
+      paisOrigem: o.paisOrigem ?? null,
+      tributosEstimados: o.tributosEstimados ?? null,
       ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
@@ -2744,6 +2803,9 @@ function Resultado({
       detalhes: r.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !r.detalhes,
       precos: r.precos ?? null,
+      internacional: r.internacional ?? null,
+      paisOrigem: r.paisOrigem ?? null,
+      tributosEstimados: r.tributosEstimados ?? null,
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
@@ -2920,7 +2982,9 @@ function Resultado({
   /* Veredito da economia no topo (24/10): só com economia medida da
      recomendação contra o colado (nunca estimada). */
   const veredito =
-    !leituraFalhou && recomendada && recomendada.o.ganho != null && recomendada.o.ganho >= 0.5
+    !leituraFalhou && recomendada && coladoIncompleto
+      ? { o: recomendada.o, economia: null, comFrete: false }
+      : !leituraFalhou && recomendada && recomendada.o.ganho != null && recomendada.o.ganho >= 0.5
       ? {
           o: recomendada.o,
           economia: recomendada.o.ganho,
@@ -2930,6 +2994,17 @@ function Resultado({
             Math.abs(recomendada.o.ganho - (precoColado - recomendada.o.final)) >= 0.01,
         }
       : null;
+
+  /* UM CARTÃO DE DECISÃO (Weslei, 02/11): com o veredito do topo já
+     trazendo o botão de compra, o cartão "Minha recomendação" de baixo não
+     se repete. Sem nada mais na coluna da decisão, as lojas usam a largura. */
+  const vereditoDireto =
+    veredito != null &&
+    ehLinkDeAfiliado(veredito.o.link) &&
+    veredito.o.cupomId == null &&
+    !veredito.o.cupomTitulo &&
+    !veredito.o.mesmaPagina;
+  const colunas = temColuna && !(vereditoDireto && !(alternativa && !leituraFalhou));
 
   /* Navegação soft (design de 10/10): seções deste resultado, na ordem da
      página. */
@@ -3006,7 +3081,7 @@ function Resultado({
           className={
             "lg:col-span-2 lg:row-start-1" +
             (veredito
-              ? " lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-stretch lg:gap-4"
+              ? " lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-4"
               : "")
           }
         >
@@ -3064,6 +3139,10 @@ function Resultado({
                     {textoDoPagamento(a?.preco, a?.precos)}
                   </p>
                 )}
+                <SeloInternacional
+                  o={{ ...(a ?? {}), final: a?.preco ?? null }}
+                  className="mt-1"
+                />
                 {(a?.vendedor || a?.lojaOficial === true || a?.avaliacoes) && (
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary-ink">
                     {a?.vendedor && (
@@ -3084,6 +3163,14 @@ function Resultado({
                 )}
               </div>
             </div>
+            {a?.internacional === true && (
+              <Alerta titulo="Atenção ao custo final: este anúncio tem envio internacional.">
+                {coladoIncompleto
+                  ? "O preço mostrado não inclui o imposto de importação e o ICMS, cobrados no pagamento. Por isso a recomendação é uma loja que envia do Brasil, com o custo final confirmado."
+                  : "Os tributos estimados já entram na conta do custo final desta comparação."}{" "}
+                A entrega costuma demorar mais e o padrão de tomada pode ser do exterior.
+              </Alerta>
+            )}
             {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
               <Alerta titulo="Neste anúncio a foto e o texto não batem.">
                 {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
@@ -3109,6 +3196,8 @@ function Resultado({
               total={totalDaLoja(veredito.o)}
               dispositivo={dispositivo}
               precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(veredito.o), precosDaTabela)}
+              contraImportado={coladoIncompleto}
+              titulo={a?.titulo ?? null}
             />
           )}
         </div>
@@ -3138,15 +3227,17 @@ function Resultado({
             marketplaces abaixo. */}
         <div
           className={
-            temColuna
+            colunas
               ? "lg:col-span-2 lg:row-start-3 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-x-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,13fr)] xl:gap-x-8"
-              : ""
+              : temColuna
+                ? "lg:col-span-2 lg:row-start-3"
+                : ""
           }
         >
           {/* DECISÃO: filtro de prazo, a recomendação e o botão. */}
           <div
             className={
-              temColuna
+              colunas
                 ? "lg:col-start-1 lg:row-start-1 lg:self-start painel-fixo:sticky painel-fixo:top-[8.25rem] painel-fixo:-mx-2 painel-fixo:max-h-[calc(100dvh-9rem)] painel-fixo:overflow-y-auto painel-fixo:overscroll-contain painel-fixo:px-2 painel-fixo:pb-3 painel-fixo:[scrollbar-width:thin]"
                 : ""
             }
@@ -3154,7 +3245,7 @@ function Resultado({
             {/* Só a melhor em destaque; todas as outras lojas estão na tabela.
               A recomendação vem primeiro na coluna (24/10). */}
             <div id="secao-recomendacao" className="scroll-mt-36">
-              {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
+              {(recomendada && !vereditoDireto ? [recomendada.o] : []).map((oferta, i) => (
                 <OutraLojaComCupom
                   key={`${oferta.vendedor ?? "loja"}-${i}`}
                   oferta={oferta}
@@ -3169,6 +3260,7 @@ function Resultado({
                   semAnimacao={false}
                   compacto={i > 0}
                   lojaAquiTemCupom={a?.temCupom === true}
+                  contraImportado={coladoIncompleto}
                   precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
                 />
               ))}
@@ -3252,11 +3344,17 @@ function Resultado({
 
             {/* Data de entrega: refinador recolhido abaixo das recomendações. No
               celular ele vem depois das lojas (cópia abaixo da coluna). */}
-            {filtro && <div className={temColuna ? "hidden lg:block" : ""}>{filtro}</div>}
+            {filtro && <div className={colunas ? "hidden lg:block" : ""}>{filtro}</div>}
           </div>
 
           {temColuna && (
-            <div className="lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5">
+            <div
+              className={
+                colunas
+                  ? "lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5"
+                  : "mt-4 lg:flex lg:flex-col lg:gap-5"
+              }
+            >
               {mostraTabela && (
                 <div id="secao-lojas" className="scroll-mt-36 empty:hidden">
                   <TodasAsLojas
@@ -3281,7 +3379,7 @@ function Resultado({
               </div>
             </div>
           )}
-          {temColuna && filtro && <div className="lg:hidden">{filtro}</div>}
+          {colunas && filtro && <div className="lg:hidden">{filtro}</div>}
         </div>
 
         {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
@@ -3467,14 +3565,20 @@ function VereditoEconomia({
   total,
   dispositivo,
   precoBemAbaixo = false,
+  contraImportado = false,
+  titulo = null,
 }: {
   oferta: OutraLoja;
-  economia: number;
+  /* Economia medida contra o colado; null quando não dá para afirmar
+     (colado internacional sem os tributos lidos, 01/11). */
+  economia: number | null;
   comFrete: boolean;
   total: number | null;
   dispositivo: Dispositivo;
   /* O mesmo aviso da recomendação (24/10): o topo nunca manda comprar sem ele. */
   precoBemAbaixo?: boolean;
+  contraImportado?: boolean;
+  titulo?: string | null;
 }) {
   const direto =
     ehLinkDeAfiliado(oferta.link) &&
@@ -3488,65 +3592,103 @@ function VereditoEconomia({
       .getElementById("secao-recomendacao")
       ?.scrollIntoView({ behavior: reduzir ? "auto" : "smooth", block: "start" });
   };
+  /* VEREDITO EXECUTIVO (Weslei, 02/11): ao lado do "seu", a recomendação
+     com quem vende, o preço, o frete em linha própria e o único botão de
+     compra em destaque. Altura natural (nunca estica junto com os detalhes
+     do colado: 02/11, quadro verde vazio na tela inteira). */
   return (
     <section
-      aria-label="Veredito da economia"
-      className="mt-3 flex flex-col justify-between gap-3 rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
+      aria-label="Minha recomendação"
+      className="mt-3 self-start rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
     >
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-success">
-          <Fogo /> Melhor oportunidade encontrada
+      <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
+        <BadgeCheck className="size-3.5" aria-hidden="true" /> Minha recomendação
+      </p>
+      {economia != null ? (
+        <p className="mt-1 text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
+          <span className="whitespace-nowrap text-success tabular-nums">{brl(economia)}</span> a
+          menos {comFrete ? "no custo final, já com o frete" : "no mesmo produto"}
         </p>
-        <p className="mt-1 text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-          Economia de até{" "}
-          <span className="whitespace-nowrap text-success tabular-nums">{brl(economia)}</span>{" "}
-          {comFrete ? "no custo final" : "no mesmo produto"}
+      ) : (
+        <p className="mt-1 text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
+          {contraImportado ? "O mesmo produto, enviado do Brasil" : "O mesmo produto em outra loja"}
         </p>
-        <p className="mt-1 text-sm text-slate-600 dark:text-white/70 [overflow-wrap:anywhere]">
-          Encontrado por <strong className="tabular-nums text-foreground">{brl(preco)}</strong>
-          {oferta.vendedor ? (
-            <>
-              {" "}
-              na loja <strong className="text-foreground">{oferta.vendedor}</strong>
-            </>
-          ) : null}
-          {oferta.freteGratis === true
-            ? ", com frete grátis para o seu CEP."
-            : comFrete
-              ? ", já com o frete para o seu CEP."
-              : "."}
-        </p>
-        {precoBemAbaixo && (
-          <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-            Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
+      )}
+      <div className="mt-3 grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 rounded-xl bg-card p-2.5 shadow-[0_1px_3px_rgba(15,23,41,0.06)] sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
+        <Foto
+          src={oferta.imagem}
+          className="size-12 shrink-0 rounded-lg border border-border/60 bg-white object-contain p-0.5"
+          ver={{
+            titulo,
+            item: itemDaOferta(oferta),
+            url: oferta.url,
+            preco: oferta.final,
+            link: oferta.link,
+            detalhes: oferta.detalhes,
+          }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] leading-snug text-secondary-ink break-words">
+            Vendido por{" "}
+            <strong className="font-semibold text-foreground">
+              {oferta.vendedor ?? "outra loja"}
+            </strong>
           </p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {oferta.lojaOficial === true && <SeloLojaOficial className="inline-flex" />}
+            <Avaliacoes a={oferta.avaliacoes} de={oferta} link={oferta.link} compacto className="inline-flex" />
+          </div>
+        </div>
+        <div className="col-span-2 flex items-baseline justify-between gap-2 tabular-nums sm:col-span-1 sm:block sm:text-right">
+          <p className="text-base font-bold leading-tight text-foreground sm:text-lg">
+            {brl(preco)}
+          </p>
+          <p className="text-[11px] text-secondary-ink">
+            {oferta.freteGratis === true
+              ? "frete grátis"
+              : comFrete
+                ? "já com o frete"
+                : oferta.freteGratis === false
+                  ? "frete à parte"
+                  : ""}
+          </p>
+        </div>
+      </div>
+      {contraImportado && (
+        <p className="mt-2 text-xs leading-snug text-secondary-ink">
+          Sem imposto de importação no pagamento: o anúncio que você colou vem do exterior.
+        </p>
+      )}
+      <SeloInternacional o={oferta} className="mt-2" />
+      {precoBemAbaixo && (
+        <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
+        </p>
+      )}
+      <div className="mt-3">
+        {direto ? (
+          <>
+            <a
+              href={oferta.link as string}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3 text-center text-sm font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
+            >
+              <ShieldCheck className="size-4" aria-hidden="true" />
+              {textoDoBotao(dispositivo, "Comprar com segurança").replace(" pelo app", " no app")}
+            </a>
+            <AvisoDoBotao d={dispositivo} />
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={irParaRecomendacao}
+            className="w-full rounded-full border border-success/60 bg-white py-3 text-sm font-bold text-success transition-colors hover:bg-success/5 dark:bg-transparent"
+          >
+            Ver minha recomendação
+          </button>
         )}
       </div>
-      {direto ? (
-        <div>
-          <a
-            href={oferta.link as string}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3 text-center text-sm font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
-          >
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(
-              " pelo app",
-              " no app",
-            )}
-          </a>
-          <AvisoDoBotao d={dispositivo} />
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={irParaRecomendacao}
-          className="w-full rounded-full border border-success/60 bg-white py-3 text-sm font-bold text-success transition-colors hover:bg-success/5 dark:bg-transparent"
-        >
-          Ver minha recomendação
-        </button>
-      )}
     </section>
   );
 }
@@ -3939,6 +4081,11 @@ export function VerNaLoja({
    lojas que já têm link pronto abrem direto; as outras geram o link no clique. */
 type LinhaLoja = {
   chave: string;
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   nome: string;
   /* Título do produto (é o mesmo em toda linha): nome da galeria de fotos. */
   titulo?: string | null;
@@ -4239,6 +4386,7 @@ function MelhorAlternativa({
           <p className="line-clamp-2 text-sm font-semibold leading-snug">
             {semEntidades(p.titulo)}
           </p>
+          <SeloInternacional o={{ ...p, final: p.preco }} className="mt-1" />
           {p.vendedor && (
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-secondary-ink">
               <span>
@@ -4285,7 +4433,12 @@ function MelhorAlternativa({
       {(() => {
         const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
         const qualidade = qualidadeDoParecido(p, doColado);
-        const desvantagens = desvantagensDoParecido(p, doColado);
+        const desvantagens = [
+          ...desvantagensDoParecido(p, doColado),
+          ...(p.internacional === true
+            ? [`Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`]
+            : []),
+        ];
         return (
           <>
             <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
@@ -5056,6 +5209,7 @@ function Parecidos({
                   <p className="line-clamp-2 text-sm font-semibold leading-snug">
                     {semEntidades(p.titulo)}
                   </p>
+                  <SeloInternacional o={{ ...p, final: p.preco }} className="mt-1" />
                   {p.vendedor && (
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-secondary-ink">
                       <span>
@@ -5129,7 +5283,12 @@ function Parecidos({
               {(() => {
                 const doColado = { titulo: textoDoColado, detalhes: detalhesColado };
                 const qualidade = qualidadeDoParecido(p, doColado);
-                const desvantagens = desvantagensDoParecido(p, doColado);
+                const desvantagens = [
+          ...desvantagensDoParecido(p, doColado),
+          ...(p.internacional === true
+            ? [`Procedência: ${rotuloInternacional(p.paisOrigem).toLowerCase()}, com prazo maior e imposto de importação no pagamento`]
+            : []),
+        ];
                 const extras: LinhaMuda[] = [
                   ...(porMedida && m && mColado && m.qtd !== mColado.qtd && precoColado != null
                     ? [
@@ -5273,6 +5432,9 @@ function TodasAsLojas({
   /* Ordem da lista (23/10): menor preço (padrão) ou mais bem avaliadas. O
      selo e a recomendação não mudam com a ordem. */
   const [ordenar, setOrdenar] = useState<"preco" | "avaliacao">("preco");
+  /* 3 lojas à vista (Weslei, 02/11: menos informação de cara); as outras
+     abrem em "Ver outras N lojas". A recomendada e o colado sempre à vista. */
+  const [todas, setTodas] = useState(false);
   if (linhas.length < 2) return null;
   const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
   /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
@@ -5288,7 +5450,9 @@ function TodasAsLojas({
       ? idxRecomendada
       : Math.max(
           0,
-          ordem.findIndex((l) => l.freteGratis !== false && (l.colado || !l.mesmaPagina)),
+          ordem.findIndex(
+            (l) => l.freteGratis !== false && !custoIncompleto(l) && (l.colado || !l.mesmaPagina),
+          ),
         );
   const menor = ordem[melhorIdx]?.final ?? null;
   const chaveDaMelhor = menor != null ? (ordem[melhorIdx]?.chave ?? null) : null;
@@ -5302,9 +5466,10 @@ function TodasAsLojas({
      R$ 3.400, sem frete grátis): olhar de especialista avisa antes da compra. */
   /* Pelo custo para o cliente (18/10): produto + frete de valor conhecido. */
   const custo = (l: LinhaLoja) =>
-    l.final != null && l.freteGratis === false && l.custoFrete != null && l.custoFrete > 0
+    custoTotalDaOferta(l) ??
+    (l.final != null && l.freteGratis === false && l.custoFrete != null && l.custoFrete > 0
       ? Math.round((l.final + l.custoFrete) * 100) / 100
-      : l.final;
+      : l.final);
   const finais = ordem.map(custo).filter((v): v is number => v != null);
   const nota = (l: LinhaLoja) => avaliacoesValidas(l.avaliacoes);
   const comNota = ordem.filter((l) => nota(l)).length;
@@ -5364,7 +5529,12 @@ function TodasAsLojas({
         aria-label="Lojas com o mesmo produto"
         className="mt-2 divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card"
       >
-        {exibidas.map((l) => (
+        {(todas || exibidas.length <= 4
+          ? exibidas
+          : exibidas.filter(
+              (l, i) => i < 3 || l.chave === chaveDaMelhor || l.colado === true,
+            )
+        ).map((l) => (
           <LinhaDaLoja
             key={l.chave}
             l={l}
@@ -5375,8 +5545,62 @@ function TodasAsLojas({
           />
         ))}
       </ul>
+      {exibidas.length > 4 && (
+        <button
+          type="button"
+          aria-expanded={todas}
+          onClick={() => setTodas((v) => !v)}
+          className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-full px-3 text-[13px] font-semibold text-ml-blue transition-colors hover:bg-ml-blue/5"
+        >
+          {todas
+            ? "Mostrar menos lojas"
+            : `Ver outras ${
+                exibidas.length -
+                exibidas.filter((l, i) => i < 3 || l.chave === chaveDaMelhor || l.colado === true)
+                  .length
+              } lojas`}
+          <ChevronDown
+            className={"size-4 transition-transform duration-200 " + (todas ? "rotate-180" : "")}
+            aria-hidden="true"
+          />
+        </button>
+      )}
       <p className="mt-1.5 text-[11px] text-secondary-ink">
         Preço de quando comparei. Todos os botões abrem com compra protegida.
+      </p>
+    </div>
+  );
+}
+
+/* Envio internacional (01/11, Switch 2): selo com o país e, em linha
+   própria, os tributos lidos com o total, ou o aviso de que podem ser
+   cobrados no pagamento (nunca um valor inventado). */
+function SeloInternacional({
+  o,
+  className = "",
+}: {
+  o: {
+    internacional?: boolean | null;
+    paisOrigem?: string | null;
+    tributosEstimados?: number | null;
+    final?: number | null;
+    freteGratis?: boolean | null;
+    custoFrete?: number | null;
+  };
+  className?: string;
+}) {
+  if (o.internacional !== true) return null;
+  const t = tributosValidos(o.tributosEstimados);
+  const total = custoTotalDaOferta(o);
+  return (
+    <div className={"text-amber-800 dark:text-amber-200 " + className}>
+      <p className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold dark:bg-amber-900/40">
+        <span aria-hidden="true">✈</span> {rotuloInternacional(o.paisOrigem)}
+      </p>
+      <p className="mt-0.5 text-[11px] leading-snug">
+        {t != null
+          ? `+ ${brl(t)} de tributos estimados (Remessa Conforme)${total != null ? ` · total estimado ${brl(total)}` : ""}`
+          : "Pode ter imposto de importação e ICMS cobrados no pagamento."}
       </p>
     </div>
   );
@@ -5492,6 +5716,7 @@ function LinhaDaLoja({
                 : "Sem frete grátis"}
             </p>
           )}
+          <SeloInternacional o={l} className="mt-1" />
           {l.mesmaPagina && !l.colado && (
             <p className="mt-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
               Na página, escolha esta loja em "Outras opções de compra"
@@ -5615,7 +5840,11 @@ function OutraLojaComCupom({
   compacto,
   lojaAquiTemCupom,
   precoBemAbaixo = false,
+  contraImportado = false,
 }: {
+  /* O colado vem do exterior sem os tributos lidos (01/11): não há economia
+     a afirmar; a recomendação é a loja nacional de custo confirmado. */
+  contraImportado?: boolean;
   semAnimacao?: boolean;
   /* Passou na régua de segurança (link de afiliado + boa avaliação), mas o
      preço segue bem abaixo das outras lojas: o aviso aparece aqui também. */
@@ -5744,6 +5973,25 @@ function OutraLojaComCupom({
                 </p>
               )}
             </>
+          ) : contraImportado ? (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-success">
+                Mesmo produto, envio do Brasil
+              </p>
+              <p className="text-[22px] font-bold leading-tight tracking-tight tabular-nums sm:text-2xl">
+                {brl(oferta.final)}
+              </p>
+              <p className="text-xs text-secondary-ink">
+                Sem imposto de importação no pagamento. O anúncio que você colou vem do
+                exterior e o custo final dele só aparece no pagamento.
+              </p>
+              {oferta.vendedor && oferta.lojaOficial !== true && (
+                <p className="mt-1 text-xs text-secondary-ink [overflow-wrap:anywhere]">
+                  Vendido por{" "}
+                  <strong className="font-semibold text-foreground">{oferta.vendedor}</strong>
+                </p>
+              )}
+            </>
           ) : (
             <p className="text-sm font-bold text-success [overflow-wrap:anywhere]">
               {temCupomLa && !lojaAquiTemCupom
@@ -5758,6 +6006,7 @@ function OutraLojaComCupom({
               {`Produto ${brl(oferta.final)} · frete para seu CEP ${brl(oferta.custoFrete as number)} · total ${brl(oferta.final + (oferta.custoFrete as number))}`}
             </p>
           )}
+          <SeloInternacional o={oferta} className="mt-1" />
           {oferta.lojaOficial === true && (
             <p className="mt-1 text-xs font-semibold text-ml-blue [overflow-wrap:anywhere]">
               <BadgeCheck className="inline size-3.5 align-[-3px]" aria-hidden="true" /> Vendido

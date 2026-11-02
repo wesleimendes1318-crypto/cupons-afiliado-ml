@@ -1,3 +1,5 @@
+import { aplicarEnvio } from "@/lib/internacional";
+import { envioDaAnalise } from "@/lib/internacional-servidor";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { decisaoDaTela, opcoesDaAnalise, type Opcao } from "@/lib/ajudar-escolher";
@@ -91,7 +93,11 @@ function achadoDoPedido(p: {
     custosDoMesmoProduto(a),
   );
   if (!colado) return null;
+  /* Importado nunca vai ao canal (01/11, Switch 2: imposto de importação
+     no pagamento deixava a "economia" falsa). */
+  if (a["internacional"] === true) return null;
   const escolha = alternativa ?? (melhorMesmo?.tipo === "mesmo" ? melhorMesmo : null);
+  if (escolha?.internacional === true) return null;
   if (!escolha) {
     /* JÁ É O MENOR PREÇO (05/10): sem loja mais barata nem alternativa, o
        próprio anúncio vira o achado quando é o mais barato do mesmo produto
@@ -347,7 +353,14 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
   for (const p of pedidos ?? []) {
     if (!p.url_alvo || !permitidos.has(p.url_alvo) || vistosAqui.has(p.url_alvo)) continue;
     vistosAqui.add(p.url_alvo);
-    const x = achadoDoPedido(p);
+    /* Envio internacional pela lista oficial da ficha (01/11). */
+    const env = p.analise
+      ? await envioDaAnalise(p.analise as Record<string, unknown>, p.url_alvo).catch(() => ({}))
+      : {};
+    const x = achadoDoPedido({
+      ...p,
+      analise: p.analise ? aplicarEnvio(p.analise as never, env) : p.analise,
+    });
     if (x)
       achados.push({
         ...x,

@@ -950,6 +950,56 @@ export function precosDoItem(html, item) {
   return null;
 }
 
+/* ENVIO INTERNACIONAL E TRIBUTOS (Weslei, 01/11, Switch 2 MLB4487458199: a
+   oferta de R$ 2.906,32 vinha dos EUA e o pagamento somava R$ 1.579,89 de
+   imposto de importacao + R$ 918,71 de ICMS = R$ 5.404,92, mais cara que a
+   nacional). Fontes: o evento do PROPRIO anuncio ("cbt_item",
+   "cbt_fulfillment_us", "is_cbt") e o texto da pagina ("Compra
+   internacional", "Envio de EUA", bloco "Tributacoes estimadas"). Sem sinal:
+   null (nao sei). Tributos so quando a pagina mostra o valor. */
+const PAISES_CBT = { us: 'EUA', usa: 'EUA', cn: 'China', hk: 'Hong Kong', mx: 'Mexico', co: 'Colombia', cl: 'Chile', ar: 'Argentina' };
+function numeroBr(x) {
+  if (!x) return null;
+  const v = Number(String(x).replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(v) && v > 0 && v < 1e7 ? Math.round(v * 100) / 100 : null;
+}
+export function tributosDoTexto(texto) {
+  if (!texto) return null;
+  const t = String(texto).replace(/<[^>]+>/g, ' ').replace(/&nbsp;|\u00a0/g, ' ').replace(/\s+/g, ' ');
+  const bloco = /Tributa[çc][õo]es\s+estimadas([\s\S]{0,600})/i.exec(t);
+  if (!bloco) return null;
+  const ii = /Imposto\s+de\s+importa[çc][ãa]o\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(bloco[1]);
+  const icms = /ICMS\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(bloco[1]);
+  const vII = numeroBr(ii && ii[1]);
+  const vICMS = numeroBr(icms && icms[1]);
+  if (vII == null && vICMS == null) return null;
+  return { impostoImportacao: vII, icms: vICMS, total: Math.round(((vII || 0) + (vICMS || 0)) * 100) / 100 };
+}
+export function envioInternacionalDoHtml(html, item) {
+  if (!html) return null;
+  const segs = item ? eventosDoItem(html, item) : [];
+  const ev = segs.join(' ');
+  let internacional = null;
+  let pais = null;
+  if (/"cbt_item"|"is_cbt"\s*:\s*true|"cbt"\s*:\s*true|"international_delivery"\s*:\s*true|"cbt_fulfillment_[a-z]{2,3}"/i.test(ev)) internacional = true;
+  const m = /cbt_(?:fulfillment|item|shipping)_([a-z]{2,3})"/i.exec(ev);
+  if (m && PAISES_CBT[m[1].toLowerCase()]) pais = PAISES_CBT[m[1].toLowerCase()];
+  const texto = String(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  if (internacional == null && /\b(?:Compra|Envio)\s+internacional\b/i.test(texto)) internacional = true;
+  if (internacional && !pais) {
+    const o = /Envio\s+(?:de|dos|da)\s+(EUA|Estados Unidos|China|Hong Kong|M[ée]xico)\b/i.exec(texto);
+    if (o) pais = /estados/i.test(o[1]) ? 'EUA' : o[1];
+  }
+  if (!internacional) return segs.length ? { internacional: false, paisOrigem: null, tributosEstimados: null, tributosDetalhados: null } : null;
+  const tr = tributosDoTexto(html);
+  return {
+    internacional: true,
+    paisOrigem: pais,
+    tributosEstimados: tr ? tr.total : null,
+    tributosDetalhados: tr ? { impostoImportacao: tr.impostoImportacao, icms: tr.icms } : null
+  };
+}
+
 /* Anuncio principal da pagina (quando o endereco nao traz o item_id): o do
    botao "Comprar agora" ("/vip/buy_action" ou "/pdp/buy_action"). */
 export function itemDaCompra(html) {

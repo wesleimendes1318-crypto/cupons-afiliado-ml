@@ -14,3 +14,7 @@
 SEMPRE devolver o link de afiliado do Weslei em todo botão, mensagem e post
 ("essa é a minha fonte de renda por ser afiliado"). Detalhes e ordem de
 garantia no topo do CLAUDE.md.
+
+## Custo real das ofertas
+
+Toda conta de custo de oferta (tela, bot, garimpo) passa por `custoTotalDaOferta` em `src/lib/internacional.ts`: frete pago sem valor ou envio internacional sem tributos lidos = custo desconhecido. Assim um preço que não se entrega nunca vence.

@@ -11,7 +11,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
          buscasAnunciosPendentes, gravarBuscaAnuncios } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
-         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
+         condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
@@ -370,8 +370,16 @@ function amostraDasAvaliacoes(html, item, det) {
    objeto: o lote de links muda estas mesmas linhas depois. */
 function comDetalhes(lista) {
   for (const x of lista || []) {
-    if (!x || (x.detalhes && x.precos && x.avaliacoes != null)) continue;
+    if (!x) continue;
     const it = x.item || (x.url ? itemDoUrl(x.url) : null) || (x.link && /mercadoli[vb]re/.test(x.link) ? itemDoUrl(x.link) : null);
+    /* Envio internacional e tributos lidos na pagina (01/11). */
+    const env = it ? envioPorItem.get(it) : null;
+    if (env && x.internacional == null) {
+      x.internacional = env.internacional;
+      x.paisOrigem = env.paisOrigem;
+      x.tributosEstimados = env.tributosEstimados;
+    }
+    if (x.detalhes && x.precos && x.avaliacoes != null) continue;
     if (it && detalhesPorItem.has(it)) x.detalhes = detalhesPorItem.get(it);
     if (it && !x.precos && precosPorItem.has(it)) x.precos = precosPorItem.get(it);
     if (it && x.avaliacoes == null && avaliacaoPorItem.get(it)) x.avaliacoes = avaliacaoPorItem.get(it);
@@ -383,6 +391,8 @@ function comDetalhes(lista) {
    Gemini confere as fotos, e quem pedir o mesmo anuncio depois espera a
    mesma leitura em vez de abrir outra aba. */
 const lendoVendedor = new Map();
+/* Envio internacional de cada anuncio lido (01/11). */
+const envioPorItem = new Map();
 function resolverVendedor(id, url) {
   if (lendoVendedor.has(id)) return lendoVendedor.get(id);
   const p = resolverVendedorAgora(id, url).finally(() => lendoVendedor.delete(id));
@@ -474,6 +484,7 @@ async function resolverVendedorAgora(id, url) {
     const aoTerminar = full => {
       const pr = precosDoItem(full, id);
       if (pr) precosPorItem.set(id, pr);
+      try { const env = envioInternacionalDoHtml(full, id); if (env) envioPorItem.set(id, env); } catch (e) { /* so envio */ }
       const d = detalhesResumidos(detalhesDoAnuncio(full));
       if (d) detalhesPorItem.set(id, d);
       /* Avaliacoes completas, quando a parte lida da pagina traz o bloco. */
@@ -1480,6 +1491,8 @@ function extrairAnuncio(t, finalUrl, status) {
            detalhes, condicao: condicaoDoHtml(t, itemAqui), dominio: dominioDoHtml(t, itemAqui),
            /* Cheio, Pix e parcelado do proprio anuncio (28/09). */
            precos: precosDoItem(t, itemAqui),
+           /* Envio internacional e tributos do proprio anuncio (01/11). */
+           envio: (() => { try { return envioInternacionalDoHtml(t, itemAqui); } catch (e) { return null; } })(),
            relacionados, relacionadosDiag: relacionados.diag || null,
            titulo: titulo, preco: preco, canonica: canonica, item: itemAqui, ...ident,
            imagem: imagem, categorias: categorias.slice(0, 5),
@@ -4833,6 +4846,11 @@ async function atenderPedidos() {
             detalhes: a.detalhes || null,
             /* { cheio, pix, parcelas }: o site mostra "no Pix" e o parcelado. */
             precos: a.precos || null,
+            /* Envio internacional (01/11): o site soma os tributos lidos e
+               nunca deixa o importado sem custo final vencer o nacional. */
+            internacional: a.envio ? a.envio.internacional : null,
+            paisOrigem: a.envio ? a.envio.paisOrigem : null,
+            tributosEstimados: a.envio ? a.envio.tributosEstimados : null,
             condicao: a.condicao || null,
             recusados111: recusados111.length ? recusados111 : null,
             diagnostico: a.ok ? null : (a.falha || 'nao consegui ler o anuncio')
