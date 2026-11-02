@@ -63,8 +63,55 @@ export function buscaDeAcessorio(consulta: string): boolean {
     RE_PECA_PARTE.test(consulta) ||
     /\b(capas?|capinhas?|cases?|peliculas?|carcacas?|telas?|display|refil|refis|pecas?|suportes?|cabos?|carregador(es)?|controles?|tampas?)\b/.test(
       n,
-    )
+    ) ||
+    RE_PEDIDO_SECUNDARIO.test(n)
   );
+}
+
+/* PEÇA, MÓVEL E INSUMO NO LUGAR DO APARELHO (Weslei, 02/11: "maquina lava e
+   seca barata" trouxe nicho de madeira, secante e detergente de lava-louças,
+   placa eletrônica e pés antivibração). Fica fora de RE_PECA_PARTE de
+   propósito: aquela regra também tira produto do "em alta" e da curadoria,
+   onde detergente, placa de vídeo e bomba d'água são o próprio produto. */
+const SECUNDARIO_NO_INICIO = new RegExp(
+  "^(?:\\d+ (?:un\\w* |pcs |pecas )?|kit (?:\\d+ )?(?:de |com )?|par (?:de )?|jogo (?:de )?|conjunto (?:de )?)?" +
+    "(nichos?|prateleiras?|balcao|balcoes|armarios?|estantes?|racks?|bancadas?|gabinetes?|suportes?|bases?" +
+    "|placas?|amortecedor(es)?|motor(es)?|bombas?|valvulas?|mangueiras?|correias?|termostatos?|sensor(es)?" +
+    "|resistencias?|puxador(es)?|portas?|agitador(es)?|carcacas?|tampas?|gaxetas?|guarnicao|guarnicoes" +
+    "|fusive(l|is)|barramentos?|barras? de led|capacitor(es)?|rolamentos?|filtros?|cabos?|conversor(es)?" +
+    "|controles?|antenas?|tubulacao|tubulacoes|pes?|capas?|bolas?)\\b",
+);
+const SECUNDARIO_EM_QUALQUER_LUGAR =
+  /\b(antivibracao|pes? niveladore?s?|bolas? (para|de) lavar|capas? (protetoras?|para lavadora|para maquina)|detergentes?|secantes?|sabao|saboes|pastilhas?|tabletes?|amaciantes?|desincrustantes?|refil|refis|sacos? para aspirador|capsulas?)\b/;
+
+/** Peça interna, móvel de apoio, acessório menor ou insumo (detergente,
+    secante, refil) pelo título. Puro: quem chama decide se vale (só quando
+    a busca é pelo aparelho, ver itemSecundarioFora). */
+export function ehItemSecundarioOuInsumo(titulo: string): boolean {
+  // "Lavadora ... Dispenser de sabão" é a lavadora: o dispenser não conta.
+  const t = normalizar(titulo).replace(/\bdispenser( [a-z0-9]+){0,3}/g, " ");
+  return SECUNDARIO_NO_INICIO.test(t) || SECUNDARIO_EM_QUALQUER_LUGAR.test(t);
+}
+
+/* Palavras que, no pedido, mostram que a pessoa quer a peça ou o insumo
+   ("secante lava loucas", "placa lavadora", "suporte de tv"); "geladeira 2
+   portas" e "tv led" continuam sendo o aparelho. */
+const RE_PEDIDO_SECUNDARIO =
+  /\b(nichos?|prateleiras?|balcao|armarios?|estantes?|racks?|bancadas?|gabinetes?|bases?|placas?|amortecedor(es)?|motor(es)?|bombas?|valvulas?|mangueiras?|correias?|termostatos?|sensor(es)?|resistencias?|puxador(es)?|portas? (frontal|de vidro|da|de geladeira)|agitador(es)?|gaxetas?|borrachas?|guarnic(ao|oes)|fusive(l|is)|barramentos?|barras? de led|capacitor(es)?|rolamentos?|filtros?|conversor(es)?|antenas?|tubulac(ao|oes)|pes|antivibracao|nivelador(es)?|bolas?|detergentes?|secantes?|sabao|pastilhas?|tabletes?|amaciantes?|desincrustantes?|sacos?|capsulas?)\b/;
+
+/* Aparelho e eletrônico: só neles a regra vale ("motor de portão" e "bomba
+   de piscina" são o produto que a pessoa quer). */
+const RE_PEDIDO_APARELHO =
+  /\b(lava e seca|lava seca|lavadoras?|secadoras?|maquinas? de lavar|lava loucas?|lava roupas?|geladeiras?|refrigerador(es)?|freezers?|frigobar(es)?|fogao|fogoes|cooktops?|fornos?|micro ?ondas|microondas|ar condicionado|climatizador(es)?|tv|tvs|smart ?tv|televis(ao|oes|or|ores)|monitor(es)?|notebooks?|computador(es)?|pc|celular(es)?|smartphones?|iphone|galaxy|tablets?|ipad|aspirador(es)?|air ?fryer|fritadeiras?|cafeteiras?|liquidificador(es)?|batedeiras?|ventilador(es)?|purificador(es)?|bebedouros?|coifas?|depurador(es)?|videogames?|playstation|xbox|consoles?)\b/;
+
+/** A busca é pelo aparelho (não pela peça, acessório ou insumo dele). */
+export function buscaDeAparelho(consulta: string): boolean {
+  return RE_PEDIDO_APARELHO.test(normalizar(consulta)) && !buscaDeAcessorio(consulta);
+}
+
+/** A busca é pelo aparelho e o título é peça, móvel ou insumo dele. */
+export function itemSecundarioFora(consulta: string, titulo: string): boolean {
+  return buscaDeAparelho(consulta) && ehItemSecundarioOuInsumo(titulo);
 }
 
 /** Peça, carcaça, tela avulsa, refil ou acessório no lugar do aparelho. */
@@ -101,6 +148,7 @@ export function ordenarPelaIntencao<T>(consulta: string, itens: T[], nome: (i: T
   const q = palavras(consulta);
   return itens
     .filter((i) => acessorio || !ehPecaOuAcessorio(nome(i)))
+    .filter((i) => !itemSecundarioFora(consulta, nome(i)))
     .map((i, k) => {
       const t = new Set(palavras(nome(i)));
       /* Todas as palavras com número (modelo) presentes valem mais que o resto. */
@@ -135,6 +183,7 @@ export function produtosDaBusca(
     const chave = normalizar(p.titulo ?? "");
     if (!chave || !p.url || vistos.has(chave) || pareceFalso(p.titulo)) return false;
     if (!acessorio && ehPecaOuAcessorio(p.titulo)) return false;
+    if (itemSecundarioFora(consulta, p.titulo)) return false;
     vistos.add(chave);
     return true;
   });
@@ -151,7 +200,8 @@ export function obterSugestoes(
   if (normalizar(consulta).length < MIN_CARACTERES) return [];
   if (analisarLink(consulta).origem !== "invalido") return [];
   const acessorio = buscaDeAcessorio(consulta);
-  const aceito = (titulo: string) => acessorio || !ehPecaOuAcessorio(titulo);
+  const aceito = (titulo: string) =>
+    (acessorio || !ehPecaOuAcessorio(titulo)) && !itemSecundarioFora(consulta, titulo);
 
   const recentes = melhores(
     consulta,
