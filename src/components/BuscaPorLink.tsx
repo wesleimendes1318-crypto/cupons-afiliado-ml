@@ -1637,8 +1637,12 @@ export default function BuscaPorLink({
           {/* Selo da loja no lugar do "Colar": aparece na hora em que o link
               é colado, sem empurrar nada na tela. */}
           {lojaDoLink && (
-            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 max-w-[120px] -translate-y-1/2 items-center truncate rounded-full bg-[#e5effb] px-2.5 text-[11px] font-semibold text-[#0071e3] shadow-[-14px_0_10px_-4px_#f5f5f7] dark:bg-[#12263d] dark:text-[#4da3ff] dark:shadow-none">
-              {lojaDoLink}
+            /* Faixa sólida na ponta do campo: o link que rola por baixo some
+               em degradê, sem aparecer pedaço de texto ao lado do selo. */
+            <span className="pointer-events-none absolute inset-y-px right-px flex w-32 items-center justify-end rounded-r-xl bg-gradient-to-r from-transparent via-[#f5f5f7] via-25% to-[#f5f5f7] pr-2 dark:via-[#1c1c1e] dark:to-[#1c1c1e]">
+              <span className="inline-flex h-7 max-w-[110px] items-center truncate rounded-full bg-[#0071e3]/10 px-2.5 text-[11px] font-semibold text-[#0071e3] dark:text-[#4da3ff]">
+                {lojaDoLink}
+              </span>
             </span>
           )}
           <SugestoesBusca estado={sugestoes} />
