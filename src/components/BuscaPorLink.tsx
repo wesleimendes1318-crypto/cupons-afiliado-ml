@@ -5356,7 +5356,9 @@ function TodasAsLojas({
       ? idxRecomendada
       : Math.max(
           0,
-          ordem.findIndex((l) => l.freteGratis !== false && (l.colado || !l.mesmaPagina)),
+          ordem.findIndex(
+            (l) => l.freteGratis !== false && !custoIncompleto(l) && (l.colado || !l.mesmaPagina),
+          ),
         );
   const menor = ordem[melhorIdx]?.final ?? null;
   const chaveDaMelhor = menor != null ? (ordem[melhorIdx]?.chave ?? null) : null;
