@@ -83,3 +83,13 @@ test('pedido escolhido: o que leva o valor e deu certo', () => {
   assert.equal(idDaResposta('{"id":"L77","name":"Casa organizada"}', 'Casa organizada'), 'L77');
   assert.equal(idDaResposta('nao e json', 'x'), null);
 });
+
+test('listas pelo texto da tela (cartoes sem link)', async () => {
+  const { listasDoTexto, juntarListas } = await import('../listas.js');
+  const t = 'Listas\nCriar lista\nMinhas recomendações\n300 produtos\nPública\nprodutos de beleza\nPrivada\n5 produtos';
+  const l = listasDoTexto(t);
+  assert.deepEqual(l.map(x => [x.nome, x.qtd, x.publica]), [['Minhas recomendações', 300, true], ['produtos de beleza', 5, false]]);
+  const j = juntarListas([{ id: 'R1', nome: 'Minhas recomendações', qtd: 300, publica: true }], l);
+  assert.equal(j.length, 2);
+  assert.equal(j[0].id, 'R1');
+});
