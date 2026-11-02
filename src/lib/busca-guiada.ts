@@ -573,14 +573,34 @@ export async function buscaGuiada(
   intencaoAnterior: Interpretacao | null = null,
   anterior: { variantes?: string[]; excluir?: string[]; cursor?: number | undefined } = {},
 ) {
-  const lida = intencaoAnterior ?? (await interpretar(q, contexto));
+  const lidaBruta = intencaoAnterior ?? (await interpretar(q, contexto));
+  /* MARCA DIGITADA MANDA (Weslei, 02/11: "Lava e Seca Brastemp" voltou só
+     Midea, LG e Samsung). A marca citada vira trava (foraDoModelo exige no
+     título) e a frase do cliente é a 1ª busca. */
+  const marcaPedida = lidaBruta.marca || marcaDoTitulo(q);
+  const frase = normalizar(q).replace(/\s+/g, " ").trim().slice(0, 60);
+  const lida = marcaPedida
+    ? {
+        ...lidaBruta,
+        marca: marcaPedida,
+        buscas: [...new Set([frase, ...lidaBruta.buscas])].slice(0, 3),
+      }
+    : lidaBruta;
   /* APARELHO (Weslei, 02/11: "voltou 1 máquina e muito cara"): a busca do
      catálogo por "lava e seca" devolve nicho, placa, mop e lava-louças; o
      aparelho real vem pela marca, só da categoria oficial, e os mais
      vendidos dela completam. */
   const regra = regraDoAparelho(q);
+  const daRegra = (regra?.buscas ?? []).filter(
+    (b) => !marcaPedida || normalizar(b).includes(normalizar(marcaPedida)),
+  );
   const intencao = regra
-    ? { ...lida, buscas: [...new Set([...regra.buscas, ...lida.buscas])].slice(0, 8) }
+    ? {
+        ...lida,
+        buscas: [
+          ...new Set(marcaPedida ? [...lida.buscas, ...daRegra] : [...daRegra, ...lida.buscas]),
+        ].slice(0, 8),
+      }
     : lida;
   /* Camada C: só os domínios que a API oficial prevê para cada busca (mais
      os do modelo); sem previsão, o tipo da busca tem de estar no nome. */
