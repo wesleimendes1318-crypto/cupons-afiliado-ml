@@ -93,3 +93,10 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 ## P3 — futuro
 - [ ] Monitoramento de preço — TESTE no ar em 28/09 (Acompanhar preço, /meus-precos, extensão 1.133.0); validar: leituras/dia, captcha, cliques de afiliado vindos de /meus-precos
 - [ ] Expansão (outras lojas/categorias)
+
+## Resultado da comparação (01/11)
+- [ ] Quadro do veredito não pode esticar junto com os detalhes do colado (tamanhos proporcionais)
+- [ ] Veredito executivo: o seu x a recomendação, um CTA verde só
+- [ ] Lojas: as 3 melhores à vista e "Ver outras N lojas"
+- [ ] Envio internacional: selo, tributos estimados no custo e nunca vencer o nacional sem custo completo
+- [ ] Testes de tributos/custo internacional
