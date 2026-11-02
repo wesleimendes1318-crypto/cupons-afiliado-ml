@@ -5605,7 +5605,7 @@ function SeloInternacional({
   const total = custoTotalDaOferta(o);
   return (
     <div className={"text-amber-800 dark:text-amber-200 " + className}>
-      <p className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold dark:bg-amber-900/40">
+      <p className="inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold dark:bg-amber-900/40">
         <span aria-hidden="true">✈</span> {rotuloInternacional(o.paisOrigem)}
       </p>
       <p className="mt-0.5 text-[11px] leading-snug">
