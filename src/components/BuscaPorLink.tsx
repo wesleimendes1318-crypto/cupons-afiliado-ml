@@ -2995,6 +2995,17 @@ function Resultado({
         }
       : null;
 
+  /* UM CARTÃO DE DECISÃO (Weslei, 02/11): com o veredito do topo já
+     trazendo o botão de compra, o cartão "Minha recomendação" de baixo não
+     se repete. Sem nada mais na coluna da decisão, as lojas usam a largura. */
+  const vereditoDireto =
+    veredito != null &&
+    ehLinkDeAfiliado(veredito.o.link) &&
+    veredito.o.cupomId == null &&
+    !veredito.o.cupomTitulo &&
+    !veredito.o.mesmaPagina;
+  const colunas = temColuna && !(vereditoDireto && !(alternativa && !leituraFalhou));
+
   /* Navegação soft (design de 10/10): seções deste resultado, na ordem da
      página. */
   const temAlternativas =
@@ -3216,7 +3227,7 @@ function Resultado({
             marketplaces abaixo. */}
         <div
           className={
-            temColuna
+            colunas
               ? "lg:col-span-2 lg:row-start-3 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-x-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,13fr)] xl:gap-x-8"
               : ""
           }
@@ -3224,7 +3235,7 @@ function Resultado({
           {/* DECISÃO: filtro de prazo, a recomendação e o botão. */}
           <div
             className={
-              temColuna
+              colunas
                 ? "lg:col-start-1 lg:row-start-1 lg:self-start painel-fixo:sticky painel-fixo:top-[8.25rem] painel-fixo:-mx-2 painel-fixo:max-h-[calc(100dvh-9rem)] painel-fixo:overflow-y-auto painel-fixo:overscroll-contain painel-fixo:px-2 painel-fixo:pb-3 painel-fixo:[scrollbar-width:thin]"
                 : ""
             }
@@ -3232,7 +3243,7 @@ function Resultado({
             {/* Só a melhor em destaque; todas as outras lojas estão na tabela.
               A recomendação vem primeiro na coluna (24/10). */}
             <div id="secao-recomendacao" className="scroll-mt-36">
-              {(recomendada ? [recomendada.o] : []).map((oferta, i) => (
+              {(recomendada && !vereditoDireto ? [recomendada.o] : []).map((oferta, i) => (
                 <OutraLojaComCupom
                   key={`${oferta.vendedor ?? "loja"}-${i}`}
                   oferta={oferta}
@@ -3331,11 +3342,17 @@ function Resultado({
 
             {/* Data de entrega: refinador recolhido abaixo das recomendações. No
               celular ele vem depois das lojas (cópia abaixo da coluna). */}
-            {filtro && <div className={temColuna ? "hidden lg:block" : ""}>{filtro}</div>}
+            {filtro && <div className={colunas ? "hidden lg:block" : ""}>{filtro}</div>}
           </div>
 
           {temColuna && (
-            <div className="lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5">
+            <div
+              className={
+                colunas
+                  ? "lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5"
+                  : "lg:col-span-2 lg:row-start-3 lg:flex lg:flex-col lg:gap-5"
+              }
+            >
               {mostraTabela && (
                 <div id="secao-lojas" className="scroll-mt-36 empty:hidden">
                   <TodasAsLojas
@@ -3360,7 +3377,7 @@ function Resultado({
               </div>
             </div>
           )}
-          {temColuna && filtro && <div className="lg:hidden">{filtro}</div>}
+          {colunas && filtro && <div className="lg:hidden">{filtro}</div>}
         </div>
 
         {/* Por fim, os 3 marketplaces lado a lado (Weslei, 09/10 e 10/10): em
