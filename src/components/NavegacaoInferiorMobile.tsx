@@ -51,11 +51,21 @@ export function NavegacaoInferiorMobile() {
         <Link2 className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Colar link
       </button>
-      <Link to="/categorias" onClick={() => topoSeAtiva("/categorias")} activeProps={ATIVA} className={ABA}>
+      <Link
+        to="/categorias"
+        onClick={() => topoSeAtiva("/categorias")}
+        activeProps={ATIVA}
+        className={ABA}
+      >
         <LayoutGrid className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Categorias
       </Link>
-      <Link to="/meus-precos" onClick={() => topoSeAtiva("/meus-precos")} activeProps={ATIVA} className={ABA}>
+      <Link
+        to="/meus-precos"
+        onClick={() => topoSeAtiva("/meus-precos")}
+        activeProps={ATIVA}
+        className={ABA}
+      >
         <Tag className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Meus preços
       </Link>
