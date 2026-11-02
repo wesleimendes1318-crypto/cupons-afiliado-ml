@@ -1,4 +1,4 @@
-import { VitrinesHomeAbas } from "@/components/VitrinesHomeAbas";
+import { VitrinesHome } from "@/components/VitrinesHome";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -41,12 +41,8 @@ import {
 
 import { GradeDepartamentos } from "@/components/GradeDepartamentos";
 import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
-import { EmAltaCatalogo } from "@/components/EmAltaCatalogo";
 import BuscaPorLink from "@/components/BuscaPorLink";
-import { Vitrine } from "@/components/Vitrine";
-import { MaisDesejadosHome, RecomendacoesHome } from "@/components/recomendacoes/RecomendacoesHome";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
-import { VitrineSazonal } from "@/components/VitrineSazonal";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { InstalarApp } from "@/components/InstalarApp";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
@@ -1998,22 +1994,9 @@ function Index() {
             </section>
           )}
 
-          {/* HIERARQUIA COMERCIAL (Weslei, 27/10: "página infinita e
-            desordenada"): cada bloco é uma fileira compacta, na ordem
-            2) mais desejados, 3) economia real, 4) para você, 5) temporada
-            ativa, 6) mais vendidos por categoria (até 12 por aba). Brinquedos
-            por idade saiu da home: fica em /brinquedos e na temporada. */}
-          {buscaParada && (
-          <VitrinesHomeAbas
-            abas={[
-              { id: "economia", rotulo: "Economia conferida", conteudo: () => <Vitrine /> },
-              { id: "para-voce", rotulo: "Para você", conteudo: () => <RecomendacoesHome /> },
-              { id: "desejados", rotulo: "Mais desejados", conteudo: () => <MaisDesejadosHome /> },
-              { id: "vendidos", rotulo: "Mais vendidos", conteudo: () => <EmAltaCatalogo naHome limite={12} /> },
-              { id: "temporada", rotulo: "Temporada", conteudo: () => <VitrineSazonal soAtiva /> },
-            ]}
-          />
-          )}
+          {/* Vitrines (02/11): trilhos visíveis, "Para você" primeiro para quem
+            já tem histórico; ordem em components/VitrinesHome. */}
+          {buscaParada && <VitrinesHome />}
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
           {/* Convite do Telegram na home só com a caixa parada (com resultado,

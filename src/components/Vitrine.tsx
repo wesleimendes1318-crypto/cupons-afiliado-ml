@@ -259,7 +259,7 @@ export function Vitrine({
           <TrilhoRecomendacao
             id="economia-real"
             icone={<TrendingDown className="size-5 text-success" />}
-            titulo="Oportunidades com economia real"
+            titulo="Oportunidades com economia conferida"
             subtitulo="O mesmo produto mais barato em outra loja, com frete grátis confirmado. Preço de quando foi comparado: atualize antes de comprar."
           >
             {oportunidades.map((i) => (
