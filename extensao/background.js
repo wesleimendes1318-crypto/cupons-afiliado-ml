@@ -9,7 +9,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
-         buscasAnunciosPendentes, gravarBuscaAnuncios } from './sincronia.js';
+         buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -19,6 +19,7 @@ import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, a
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
 import { garimparNoPlayer } from './garimpo.js';
+import { sincronizarListas } from './listas.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -5435,6 +5436,19 @@ async function lerHubDeAfiliados() {
   }
 }
 
+/* LISTAS DE AFILIADO (02/11): uma rodada por hora, so parada (ver listas.js). */
+async function rodarListas() {
+  if (atendendo || lendoHub) return;
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return;
+  await sincronizarListas({
+    token: sincToken, versao: chrome.runtime.getManifest().version,
+    sleep, esperarCarregar, ehCaptcha, freioLigado,
+    listasTarefas, gravarListas, gravarDiagnostico,
+    ocupado: () => atendendo
+  });
+}
+
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
     chrome.alarms.create(nome, { periodInMinutes });
@@ -5473,6 +5487,7 @@ chrome.alarms.onAlarm.addListener(async a => {
     sinalDeVida().catch(() => {});
     monitorarPrecos().catch(() => {});
     lerHubDeAfiliados().catch(() => {});
+    rodarListas().catch(e => console.warn('[listas]', e.message));
     atualizarAvaliacoes().catch(() => {});
     vigiarFila().catch(() => {});
     completarVitrine().catch(() => {});
