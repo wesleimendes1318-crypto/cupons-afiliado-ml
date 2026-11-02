@@ -19,6 +19,8 @@ export type Resultado = {
   economia?: number | null;
   /* Posição na lista oficial de mais vendidos da categoria. */
   maisVendido?: number | null;
+  /* Voltagem da ficha oficial (ou do título). */
+  voltagem?: "127" | "220" | "bivolt" | null;
 };
 
 export type Resposta = {

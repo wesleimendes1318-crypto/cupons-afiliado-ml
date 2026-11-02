@@ -53,6 +53,15 @@ import {
   type OrdemBusca,
 } from "@/lib/busca-resultados";
 import { chip, Grupo } from "@/components/FiltrosChips";
+import { useRegiaoGuardada } from "@/components/CepDestino";
+import {
+  funcionaEm,
+  rotuloVoltagem,
+  voltagemDaRegiao,
+  voltagemDoTexto,
+  type Voltagem,
+  type VoltagemDaRegiao,
+} from "@/lib/voltagem";
 import { diversificarPorPreco, faixasDePreco } from "@/lib/catalogo-no";
 import { useTicketMedio } from "@/hooks/use-ticket-medio";
 import { obterSugestoes, produtosDaBusca, type ProdutoConhecido } from "@/lib/busca-sugestoes";
@@ -305,6 +314,8 @@ type CartaoDaBusca = {
   economia: number | null;
   /* Posição na lista oficial de mais vendidos da categoria. */
   maisVendido: number | null;
+  /* Voltagem oficial (ficha) ou do título; null sem o dado. */
+  voltagem: Voltagem | null;
 };
 
 const dataCurta = (iso: string | null | undefined) => {
@@ -334,6 +345,7 @@ function doCatalogo(r: Resultado, lidoEm: string | undefined): CartaoDaBusca {
     quando: quandoFoiLido(lidoEm),
     economia: r.economia ?? null,
     maisVendido: r.maisVendido ?? null,
+    voltagem: r.voltagem ?? voltagemDoTexto(r.nome),
   };
 }
 
@@ -355,6 +367,7 @@ function doSite(p: ProdutoConhecido): CartaoDaBusca {
     quando: dataCurta(p.vistoEm) ? `de ${dataCurta(p.vistoEm)}` : null,
     economia: null,
     maisVendido: null,
+    voltagem: voltagemDoTexto(p.titulo),
   };
 }
 
