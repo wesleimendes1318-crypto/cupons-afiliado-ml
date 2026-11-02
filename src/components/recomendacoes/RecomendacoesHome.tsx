@@ -126,21 +126,19 @@ function Fileira({
   notaDe: ReturnType<typeof useNotas>;
   selo?: (i: ItemRec) => ReactNode;
 }) {
-  return (
-    <>
-      {itens.map((i) => (
-        <CartaoEmAlta
-          key={i.produto}
-          i={i}
-          resumo={notaDe(i)}
-          grade={false}
-          trilho
-          onComparar={comparar}
-          selo={selo?.(i)}
-        />
-      ))}
-    </>
-  );
+  /* Devolve a lista em si (não um fragmento): o TrilhoRecomendacao conta
+     os cartões para montar 12 de cada vez. */
+  return itens.map((i) => (
+    <CartaoEmAlta
+      key={i.produto}
+      i={i}
+      resumo={notaDe(i)}
+      grade={false}
+      trilho
+      onComparar={comparar}
+      selo={selo?.(i)}
+    />
+  ));
 }
 
 const ICONE = "size-5";
@@ -167,7 +165,7 @@ export function MaisDesejadosHome() {
         </a>
       }
     >
-      <Fileira itens={lista} notaDe={notaDe} />
+      {Fileira({ itens: lista, notaDe: notaDe })}
     </TrilhoRecomendacao>
   );
 }
@@ -382,15 +380,15 @@ function TrilhosDeProdutos({
       }
       subtitulo={`Parecidos com "${ref.titulo.slice(0, 60)}${ref.titulo.length > 60 ? "…" : ""}", pelo mesmo preço ou menos.`}
     >
-      <Fileira
-        itens={lSem}
-        notaDe={notaSem}
-        selo={(i) => (
+      {Fileira({
+        itens: lSem,
+        notaDe: notaSem,
+        selo: (i) => (
           <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold leading-tight text-success">
             {chipDoSemelhante(ref, i, notaSem(i))}
           </span>
-        )}
-      />
+        ),
+      })}
     </TrilhoRecomendacao>
   );
 
@@ -429,7 +427,7 @@ function TrilhosDeProdutos({
                 titulo="Combina com o que você procura"
                 subtitulo="Complementos do que você pesquisou, com frete grátis primeiro."
               >
-                <Fileira itens={lComp} notaDe={notaComp} />
+                {Fileira({ itens: lComp, notaDe: notaComp })}
               </TrilhoRecomendacao>
             )}
             {nicho && lPens.length > 0 && (
@@ -443,7 +441,7 @@ function TrilhosDeProdutos({
                   rotulo: `Ver todos em ${NOS[nicho]!.nome}`,
                 }}
               >
-                <Fileira itens={lPens} notaDe={notaPens} />
+                {Fileira({ itens: lPens, notaDe: notaPens })}
               </TrilhoRecomendacao>
             )}
             {temporada && lSaz.length > 0 && (
@@ -453,7 +451,7 @@ function TrilhosDeProdutos({
                 titulo={`Mais vendidos para você em ${temporada.nome}`}
                 subtitulo={`${temporada.emoji} Ideias de ${temporada.nome} com frete grátis, na faixa de preço que você costuma ver.`}
               >
-                <Fileira itens={lSaz} notaDe={notaSaz} />
+                {Fileira({ itens: lSaz, notaDe: notaSaz })}
               </TrilhoRecomendacao>
             )}
           </div>
@@ -466,7 +464,7 @@ function TrilhosDeProdutos({
           titulo="Itens que as pessoas costumam comprar de novo"
           subtitulo="Produtos de reposição entre os mais vendidos ou muito bem avaliados por quem comprou."
         >
-          <Fileira itens={lRec} notaDe={notaRec} />
+          {Fileira({ itens: lRec, notaDe: notaRec })}
         </TrilhoRecomendacao>
       )}
     </>

@@ -468,7 +468,8 @@ export function ResultadosDaBusca({
     setCarregandoMais(false);
   }
 
-  /* Nova resposta: recomeça e completa o 1º lote de 16 sozinho. */
+  /* Nova resposta: recomeça. As páginas seguintes só vêm no "Ver mais"
+     (02/11: buscar sozinho gastava o limite de buscas por minuto). */
   useEffect(() => {
     geracao.current += 1;
     setExtras([]);
@@ -477,8 +478,6 @@ export function ResultadosDaBusca({
     setFim(!consulta || !resposta?.resultados.length);
     setCarregandoMais(false);
     setVisiveis(LOTE);
-    if (consulta && resposta?.resultados.length)
-      void lerPaginas(1, LOTE, locais.length + resposta.resultados.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resposta]);
 
