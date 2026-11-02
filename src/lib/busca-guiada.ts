@@ -511,6 +511,23 @@ export async function buscaGuiada(
       rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
     });
   }
+  /* PELO MENOS 20 (Weslei, 02/11): lê mais fundo nas mesmas buscas. */
+  if (pagina === 0 && achados.length && achados.length < 20) {
+    for (const offset of [20, 40, 60]) {
+      if (achados.length >= 20) break;
+      const vistos = new Set(achados.map((r) => r.produto));
+      const mais = await buscarNoCatalogo(intencao.buscas, {
+        ...opcoes,
+        dominiosPorBusca,
+        limite: 20,
+        offset,
+        porBusca: 24,
+      });
+      const novos = mais.filter((r) => !vistos.has(r.produto));
+      if (!mais.length) break;
+      achados = [...achados, ...novos].slice(0, 24);
+    }
+  }
   /* Aparelho: a posição na lista oficial de mais vendidos marca cada um
      (ordem "Mais vendidos" na tela) e, com menos de 12, a lista completa. */
   const listas = regra ? await lerMaisVendidos(regra.categorias) : undefined;
