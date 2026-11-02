@@ -1630,7 +1630,7 @@ export default function BuscaPorLink({
             enterKeyHint="search"
             aria-label="Link do anúncio ou nome do produto"
             className={
-              "min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5" +
+              "h-11 min-w-0 flex-1 resize-none overflow-x-auto overflow-y-hidden whitespace-pre rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm leading-6 outline-none [scrollbar-width:none] focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5 [&::-webkit-scrollbar]:hidden" +
               (lojaDoLink ? " pr-32" : podeColar && !url ? " pr-24" : "")
             }
           />
