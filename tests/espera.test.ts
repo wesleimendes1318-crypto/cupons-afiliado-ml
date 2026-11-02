@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { etapaDaEspera, progressoDaEspera } from "@/lib/espera";
+import {
+  dicasDaEspera,
+  etapaDaEspera,
+  formatarSegundos,
+  microEstadosDoLink,
+  progressoDaEspera,
+  relogioDaEspera,
+} from "@/lib/espera";
 
 describe("espera ativa", () => {
   test("barra rápida no começo, nunca passa de 90%", () => {
@@ -19,5 +26,34 @@ describe("espera ativa", () => {
     expect(etapaDaEspera(1600)).toBe(1);
     expect(etapaDaEspera(3500)).toBe(2);
     expect(etapaDaEspera(40_000)).toBe(3);
+  });
+});
+
+describe("espera do link colado", () => {
+  test("frete só aparece com o CEP da pessoa", () => {
+    expect(microEstadosDoLink("outras-lojas", null).join(" ")).not.toMatch(/frete/i);
+    expect(microEstadosDoLink("outras-lojas", "08700-000")).toContain(
+      "Simulando o frete para o CEP 08700-000",
+    );
+    expect(dicasDaEspera(null).some((d) => d.tipo === "frete")).toBe(false);
+    expect(dicasDaEspera("08700-000").some((d) => d.tipo === "frete")).toBe(true);
+  });
+  test("toda fase real tem ao menos uma frase, e nenhuma promete o que não faz", () => {
+    for (const f of ["enviando", "na-fila", "outras-lojas", "lendo", "outra"]) {
+      const m = microEstadosDoLink(f, "01001-000");
+      expect(m.length).toBeGreaterThan(0);
+      expect(m.join(" ")).not.toMatch(/centenas|milhares|golpe/i);
+    }
+  });
+  test("relógio ancorado na medição real", () => {
+    expect(formatarSegundos(5)).toBe("5s");
+    expect(formatarSegundos(65)).toBe("1min 05s");
+    expect(relogioDaEspera(3, null)).toEqual({ titulo: "Comparando há 3s", nota: null, pct: null });
+    const dentro = relogioDaEspera(10, { segundos: 30, amostras: 40 });
+    expect(dentro.titulo).toBe("Pronto em cerca de 20s");
+    expect(dentro.pct).toBe(33);
+    const passou = relogioDaEspera(45, { segundos: 30, amostras: 40 });
+    expect(passou.pct).toBeNull();
+    expect(passou.titulo).toMatch(/Finalizando/);
   });
 });

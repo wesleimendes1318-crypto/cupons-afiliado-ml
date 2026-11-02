@@ -31,15 +31,20 @@ import {
   ClipboardPaste,
   ChevronDown,
   Copy,
+  CreditCard,
   History,
+  Lightbulb,
   Link2,
   LoaderCircle,
   Package,
+  Pause,
+  Play,
   RefreshCw,
   Send,
   Share2,
   ShieldCheck,
   TriangleAlert,
+  Truck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -106,7 +111,14 @@ import {
   itemDoEndereco,
   useAvaliacoesPorItens,
 } from "@/lib/avaliacoes-detalhe";
-import { analisarLink, type AnaliseLink } from "@/lib/analisar-link";
+import { analisarLink, nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
+import {
+  TROCA_DICA_MS,
+  TROCA_MICRO_MS,
+  dicasDaEspera,
+  microEstadosDoLink,
+  relogioDaEspera,
+} from "@/lib/espera";
 import { useAvisarOcupado } from "@/components/EsperaAtiva";
 import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afiliado";
 import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
@@ -1749,7 +1761,14 @@ export default function BuscaPorLink({
       {parada && <ComoFunciona />}
 
       {carregando && (
-        <Espera fase={fase} demorando={demorando} inicio={inicio} estimativa={estimativa} />
+        <Espera
+          fase={fase}
+          demorando={demorando}
+          inicio={inicio}
+          estimativa={estimativa}
+          link={urlDoPedido.current ?? url}
+          cep={regiao && !regiao.padrao ? regiao.cep : null}
+        />
       )}
 
       {fase === "pronto" && pedido && (
@@ -1817,16 +1836,20 @@ export default function BuscaPorLink({
 
 /* ------------------------------------------------------------------- espera
 
-   Tres coisas trabalham juntas para a espera parecer curta:
+   Redesenho de 02/11 (Weslei: "a espera tem que provar o esforço do site").
+   Quatro peças, de cima para baixo:
 
-   1. As etapas sao o estado REAL do pedido no banco. Quando a extensao pega o
-      pedido, o status vira 'processando' e a terceira etapa acende sozinha.
-      Nao existe barra andando ate 90% por conta propria — isso engana uma vez
-      e depois a pessoa aprende que o site mente.
-   2. O esqueleto tem a forma exata do resultado. O olho ja sabe onde o preco e
-      o botao vao aparecer, entao a troca do esqueleto pela resposta parece
-      instantanea.
-   3. O brilho atravessando o esqueleto mostra atividade sem prometer prazo.
+   1. Cartão do link reconhecido: na hora, sem rede (analisarLink), mostra a
+      loja e o nome do produto lido do endereço. A pessoa sabe que o link
+      chegou e que o site entendeu o produto.
+   2. Etapas REAIS do pedido no banco. Dentro da etapa acesa, frases curtas do
+      que ela faz de fato trocam a cada 4 s (src/lib/espera.ts). Nunca uma
+      barra que anda sozinha: a barra é o tempo real contra o percentil 75
+      medido (tempo_estimado); passou dele, vira pulso sem número.
+   3. Esqueleto com a silhueta do veredito: foto, título, preço e a faixa
+      verde onde o botão de compra vai pousar.
+   4. Dicas que descrevem regras que o código aplica, trocando a cada 6 s,
+      com pausa. Com "reduzir movimento", nada anda ou gira; o texto só troca.
 */
 
 /* Tempo REAL das últimas consultas (percentil 75, calculado no banco pela
@@ -1841,132 +1864,210 @@ function Relogio({ inicio, estimativa }: { inicio: number; estimativa: Estimativ
     return () => window.clearInterval(t);
   }, []);
   const passou = Math.max(0, Math.round((agora - inicio) / 1000));
-  const fmt = (n: number) =>
-    n >= 60 ? `${Math.floor(n / 60)}min ${String(n % 60).padStart(2, "0")}s` : `${n}s`;
-  if (!estimativa) {
-    return (
-      <p className="mb-2 text-center text-xs tabular-nums text-secondary-ink">
-        Comparando há {fmt(passou)}
-      </p>
-    );
-  }
-  const falta = estimativa.segundos - passou;
-  const pct = Math.min(100, Math.round((passou / estimativa.segundos) * 100));
+  const r = relogioDaEspera(passou, estimativa);
   return (
-    <div className="mb-3">
-      <p className="text-center text-sm font-semibold tabular-nums">
-        {falta > 0 ? <>Pronto em até {fmt(falta)}</> : <>Quase lá… já são {fmt(passou)}</>}
-      </p>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-ml-blue transition-all duration-1000"
-          style={{ width: `${pct}%` }}
-        />
+    <div>
+      <p className="text-sm font-semibold tabular-nums text-foreground">{r.titulo}</p>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#0071e3]/10">
+        {r.pct != null ? (
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#0071e3] to-[#4f9cf9] transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
+            style={{ width: `${Math.min(100, r.pct)}%` }}
+          />
+        ) : (
+          <div className="animate-barra-busca h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#0071e3] to-transparent" />
+        )}
       </div>
-      <p className="mt-1 text-center text-[11px] text-secondary-ink">
-        {falta > 0
-          ? `Previsão pelo tempo real das últimas ${estimativa.amostras} consultas.`
-          : `Passou do tempo usual (${fmt(estimativa.segundos)}). Continuo comparando.`}
-      </p>
+      {r.nota && <p className="mt-1.5 text-[11px] text-secondary-ink">{r.nota}</p>}
     </div>
   );
 }
+
+/* Índice que avança a cada `ms` enquanto `ativo`; volta a 0 quando `chave`
+   muda (nova etapa). Um único intervalo, limpo ao sair. */
+function useRodizio(total: number, ms: number, ativo: boolean, chave: string) {
+  const [i, setI] = useState(0);
+  useEffect(() => setI(0), [chave]);
+  useEffect(() => {
+    if (!ativo || total < 2) return;
+    const t = window.setInterval(() => setI((v) => (v + 1) % total), ms);
+    return () => window.clearInterval(t);
+  }, [total, ms, ativo, chave]);
+  return i % Math.max(1, total);
+}
+
+const ICONE_DICA = {
+  preco: Lightbulb,
+  nota: ShieldCheck,
+  frete: Truck,
+  aviso: TriangleAlert,
+  pix: CreditCard,
+} as const;
 
 function Espera({
   fase,
   demorando,
   inicio,
   estimativa,
+  link,
+  cep,
 }: {
   fase: Fase;
   demorando: boolean;
   inicio: number;
   estimativa: Estimativa;
+  link: string;
+  cep: string | null;
 }) {
   const atual = ETAPAS.findIndex((e) => e.id === fase);
+  const micros = useMemo(() => microEstadosDoLink(fase, cep), [fase, cep]);
+  const micro = useRodizio(micros.length, TROCA_MICRO_MS, true, fase);
+  const dicas = useMemo(() => dicasDaEspera(cep), [cep]);
+  const [pausada, setPausada] = useState(false);
+  const dica = useRodizio(dicas.length, TROCA_DICA_MS, !pausada, "dicas");
+  const IconeDica = ICONE_DICA[dicas[dica]!.tipo];
+  const nome = useMemo(() => {
+    const termo = analisarLink(link).termoIdentificado;
+    return termo ? nomeParaTela(termo) : null;
+  }, [link]);
 
   return (
-    <div className="mt-4" aria-busy="true">
+    <div className="mt-4 space-y-3 rounded-3xl bg-[#f5f5f7] p-3 sm:p-4" aria-busy="true">
+      {/* Só a etapa real é anunciada; as frases que giram não tagarelam. */}
       <p className="sr-only" aria-live="polite">
         {atual >= 0 ? ETAPAS[atual]?.rotulo : "Conferindo"}
       </p>
 
-      <div className="mb-3 flex items-center gap-2 rounded-md bg-ml-blue/5 px-3 py-2 text-sm font-semibold text-ml-blue">
-        <LoaderCircle className="animate-giro-calmo size-4 shrink-0" aria-hidden="true" />
-        <span>{atual >= 0 ? ETAPAS[atual]?.rotulo : "Conferindo seu produto"}</span>
+      {/* 1. Link reconhecido */}
+      <div className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <span
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#0071e3]/10 text-[#0071e3]"
+          aria-hidden="true"
+        >
+          <Link2 className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1 text-[11px] font-semibold text-success">
+            <Check className="size-3.5 shrink-0" aria-hidden="true" />
+            Link do Mercado Livre reconhecido
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-sm font-medium text-foreground">
+            {nome ?? "Link do produto recebido com sucesso"}
+          </p>
+        </div>
       </div>
 
-      <Relogio inicio={inicio} estimativa={estimativa} />
-
-      <ol className="mb-3 space-y-2">
-        {ETAPAS.map((etapa, i) => {
-          const feita = atual > i;
-          const andando = atual === i;
-          return (
-            <li key={etapa.id} className="flex items-center gap-2.5 text-sm">
-              <span
-                className={
-                  "flex size-5 shrink-0 items-center justify-center rounded-full border-2 " +
-                  (feita
-                    ? "etapa-feita border-success bg-success text-white"
-                    : andando
-                      ? "etapa-andando border-ml-blue"
-                      : "border-border")
-                }
-              >
-                {feita ? (
-                  <svg viewBox="0 0 20 20" fill="none" className="size-3" aria-hidden="true">
-                    <path
-                      d="M4 10.5 8 14.5 16 6"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+      {/* 2. Relógio e etapas reais */}
+      <div className="rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <Relogio inicio={inicio} estimativa={estimativa} />
+        <ol className="mt-3 space-y-2">
+          {ETAPAS.map((etapa, i) => {
+            const feita = atual > i;
+            const andando = atual === i;
+            return (
+              <li key={etapa.id} className="flex items-start gap-2.5 text-sm">
+                <span
+                  className={
+                    "mt-px flex size-5 shrink-0 items-center justify-center rounded-full border-2 " +
+                    (feita
+                      ? "etapa-feita border-success bg-success text-white"
+                      : andando
+                        ? "border-[#0071e3]"
+                        : "border-border")
+                  }
+                >
+                  {feita ? (
+                    <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+                  ) : (
+                    <span
+                      className={
+                        "size-1.5 rounded-full " +
+                        (andando ? "etapa-andando bg-[#0071e3]" : "bg-border")
+                      }
                     />
-                  </svg>
-                ) : (
+                  )}
+                </span>
+                <div className="min-w-0">
                   <span
-                    className={"size-1.5 rounded-full " + (andando ? "bg-ml-blue" : "bg-border")}
-                  />
-                )}
-              </span>
-              <span
-                className={
-                  feita
-                    ? "text-secondary-ink"
-                    : andando
-                      ? "font-semibold text-foreground"
-                      : "text-secondary-ink/60"
-                }
-              >
-                {etapa.rotulo}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
-      {/* Esqueleto com a forma do resultado: titulo, preco, vendedor, caixa do
-          cupom e botao de comprar. */}
-      <div className="rounded-lg border border-border p-4">
-        <div className="esqueleto h-4 w-4/5 rounded" />
-        <div className="esqueleto mt-2 h-4 w-2/5 rounded" />
-        <div className="esqueleto mt-3 h-7 w-1/3 rounded" />
-        <div className="esqueleto mt-2 h-3 w-1/2 rounded" />
-        <div className="esqueleto mt-4 h-20 w-full rounded-md" />
-        <div className="esqueleto mt-4 h-11 w-full rounded-md" />
+                    className={
+                      feita
+                        ? "text-secondary-ink"
+                        : andando
+                          ? "font-semibold text-foreground"
+                          : "text-secondary-ink/60"
+                    }
+                  >
+                    {etapa.rotulo}
+                  </span>
+                  {andando && micros[micro] !== etapa.rotulo && (
+                    <p
+                      key={`${fase}-${micro}`}
+                      className="animate-sugestao mt-0.5 text-xs text-[#0071e3]"
+                      aria-hidden="true"
+                    >
+                      {micros[micro]}…
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
-      {demorando && !estimativa ? (
-        <p className="mt-2 text-center text-xs leading-relaxed text-secondary-ink">
-          Está demorando mais que o normal, mas eu continuo tentando. Deixe a página aberta: o
-          resultado aparece aqui sozinho.
+      {/* 3. Silhueta do veredito: foto, título, preço, faixa verde do botão
+          e duas linhas da tabela de lojas. */}
+      <div
+        className="rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgb(0_0_0/0.06)]"
+        aria-hidden="true"
+      >
+        <div className="rounded-2xl bg-success/5 p-3 ring-1 ring-success/15">
+          <div className="esqueleto h-4 w-24 rounded-full bg-success/15" />
+          <div className="mt-3 flex gap-3">
+            <div className="esqueleto size-16 shrink-0 rounded-xl" />
+            <div className="min-w-0 flex-1">
+              <div className="esqueleto h-6 w-3/5 rounded-full" />
+              <div className="esqueleto mt-2 h-3 w-4/5 rounded-full" />
+              <div className="esqueleto mt-2 h-3 w-2/5 rounded-full" />
+            </div>
+          </div>
+          <div className="esqueleto mt-4 h-12 w-full rounded-2xl bg-success/20" />
+        </div>
+        {[0, 1].map((k) => (
+          <div key={k} className="mt-3 flex items-center justify-between gap-3 px-1">
+            <div className="min-w-0 flex-1">
+              <div className="esqueleto h-3.5 w-1/2 rounded-full" />
+              <div className="esqueleto mt-1.5 h-3 w-1/3 rounded-full" />
+            </div>
+            <div className="esqueleto h-5 w-20 shrink-0 rounded-full" />
+          </div>
+        ))}
+      </div>
+
+      {/* 4. Dica que gira, com pausa (WCAG 2.2.2) */}
+      <div className="flex items-start gap-2.5 rounded-2xl bg-card px-3 py-2.5 shadow-[0_1px_3px_rgb(0_0_0/0.06)]">
+        <IconeDica className="mt-0.5 size-4 shrink-0 text-[#0071e3]" aria-hidden="true" />
+        <p
+          key={dica}
+          className="animate-sugestao min-h-10 min-w-0 flex-1 text-xs leading-relaxed text-secondary-ink"
+        >
+          {dicas[dica]!.texto}
         </p>
-      ) : (
-        <p className="mt-2 text-center text-xs text-secondary-ink">
-          Pode deixar esta página aberta. O resultado aparece aqui mesmo.
-        </p>
-      )}
+        <button
+          type="button"
+          onClick={() => setPausada((p) => !p)}
+          className="-m-1 flex size-8 shrink-0 items-center justify-center rounded-full text-secondary-ink hover:bg-muted"
+          aria-label={pausada ? "Continuar as dicas" : "Pausar as dicas"}
+        >
+          {pausada ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+        </button>
+      </div>
+
+      <p className="text-center text-xs leading-relaxed text-secondary-ink">
+        {demorando && !estimativa
+          ? "Conferindo cada detalhe para você comprar pelo menor preço com segurança. Pode deixar a página aberta: o resultado aparece aqui sozinho."
+          : "Pode deixar esta página aberta. O resultado aparece aqui mesmo."}
+      </p>
     </div>
   );
 }
