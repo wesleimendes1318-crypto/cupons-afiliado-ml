@@ -127,9 +127,10 @@ function Privacidade() {
 
       <h2>Publicidade</h2>
       <p>
-        O site usa o Google AdSense (Google LLC) para exibir anúncios nos artigos dos Guias. Eles só serão
-        carregados para quem autorizou cookies de publicidade e virão identificados com a
-        etiqueta "Publicidade". Terceiros, incluindo o Google, podem usar cookies para exibir
+        O site usa o Google AdSense (Google LLC) para exibir anúncios nos artigos dos Guias. O código do
+        AdSense é carregado em todas as páginas, mas usamos o Modo de Consentimento do Google:
+        sem a sua autorização para cookies de publicidade, o Google não grava cookies de
+        anúncio nem personaliza anúncios com base no seu histórico. Terceiros, incluindo o Google, podem usar cookies para exibir
         anúncios com base em visitas anteriores a este e a outros sites; são cookies de terceiros,
         listados na categoria "Publicidade" da Política de Cookies. Você pode gerenciar os
         anúncios personalizados em google.com/settings/ads, nas{" "}

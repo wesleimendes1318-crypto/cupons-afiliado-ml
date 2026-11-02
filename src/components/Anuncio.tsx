@@ -20,7 +20,9 @@ declare global {
   }
 }
 
-export const ADSENSE_CLIENTE = (import.meta.env.VITE_ADSENSE_CLIENT ?? "").trim();
+/* Publisher ID público (02/11, conta aprovada); VITE_ADSENSE_CLIENT ainda pode trocar. */
+export const ADSENSE_CLIENTE =
+  (import.meta.env.VITE_ADSENSE_CLIENT ?? "").trim() || "ca-pub-5848712376900651";
 
 /** Só o formato oficial do Google liga os anúncios. */
 export const ADSENSE_ATIVO = /^ca-pub-\d{10,20}$/.test(ADSENSE_CLIENTE);

@@ -1,7 +1,10 @@
 # Google AdSense
 
-Tudo vem **desligado**. Sem Publisher ID, nenhum script do Google é baixado e
-nenhum espaço de anúncio aparece ou ocupa altura.
+**Ligado desde 02/11/2026** com o Publisher ID `ca-pub-5848712376900651`
+(padrão em `src/components/Anuncio.tsx`; `VITE_ADSENSE_CLIENT` ainda pode trocar).
+O código `adsbygoogle.js` vai no `<head>` de todas as páginas, no HTML do
+servidor, logo depois do consentimento negado por padrão, e `/ads.txt` já tem a
+linha oficial. Assim o verificador do Google acha o snippet, a meta tag e o ads.txt.
 
 ## Como ativar
 1. Variáveis de ambiente públicas (build):
@@ -19,8 +22,9 @@ nenhum espaço de anúncio aparece ou ocupa altura.
    snippet não serve: o script só carrega com consentimento, e o verificador
    do Google não consente, então nunca o veria.
 
-O script só carrega para quem marcou **Publicidade** no aviso de cookies
-(desmarcada por padrão). Quem revogar deixa de ver anúncios na hora.
+Sem **Publicidade** marcada no aviso de cookies (desmarcada por padrão), o Modo
+de Consentimento fica negado e o Google não grava cookies de anúncio. As
+unidades manuais só aparecem para quem autorizou; quem revogar deixa de vê-las na hora.
 **Não ligue os Anúncios Automáticos** no painel: o posicionamento é só manual.
 
 ## Onde aparecem
@@ -34,4 +38,4 @@ clique do afiliado (que vale mais) e página sem conteúdo editorial próprio
 viola a política de posicionamento do AdSense.
 
 ## Como desligar
-Esvazie `VITE_ADSENSE_CLIENT` e publique. Nada mais é carregado.
+Troque o padrão em `Anuncio.tsx` por `""`, deixe `VITE_ADSENSE_CLIENT` vazio e publique.

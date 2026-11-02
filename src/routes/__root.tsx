@@ -141,8 +141,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
       { rel: "manifest", href: "/manifest.json" },
     ],
-    /* Consent Mode v2: tudo negado antes de qualquer script do Google. */
-    scripts: [{ children: SCRIPT_CONSENTIMENTO_PADRAO }],
+    scripts: [
+      /* Consent Mode v2: tudo negado antes de qualquer script do Google. */
+      { children: SCRIPT_CONSENTIMENTO_PADRAO },
+      /* Código do AdSense no <head> de todas as páginas (02/11), depois do
+         consentimento negado: sem autorização, o Google não grava cookies de
+         anúncio. defer (e não async): o React subiria um async para antes do
+         consentimento. id "adsense" impede o GoogleConsentimento de baixar de novo. */
+      ...(ADSENSE_ATIVO
+        ? [
+            {
+              id: "adsense",
+              defer: true,
+              src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENTE}`,
+              crossOrigin: "anonymous" as const,
+            },
+          ]
+        : []),
+    ],
   }),
 
   shellComponent: RootShell,
