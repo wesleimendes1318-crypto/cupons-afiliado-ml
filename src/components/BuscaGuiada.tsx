@@ -518,8 +518,12 @@ export function ResultadosDaBusca({
     }
     return ordem === "relevancia" && !temEscolha(escolha)
       ? cartoesVariados
-      : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas);
-  }, [doAssistente, ordem, escolha, cartoes, cartoesVariados, notas]);
+      : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas, {
+          rede: rede?.volts ?? null,
+          /* A 1ª resposta inteira é um lote só; o "Carregar mais" vem depois. */
+          lote: Math.max(LOTE, cartoes.length - extras.length),
+        });
+  }, [doAssistente, ordem, escolha, cartoes, cartoesVariados, notas, rede, extras.length]);
   const faixas = useMemo(() => faixasDePreco(cartoes.flatMap((c) => c.preco ?? [])), [cartoes]);
   const marcas = useMemo(() => marcasDosResultados(cartoes), [cartoes]);
   const filtrosCategoria = useMemo(() => filtrosDaBusca(cartoes), [cartoes]);
@@ -857,8 +861,9 @@ function BarraOrdemFiltros({
             <span className="font-semibold text-foreground">
               {rede.cidade}/{rede.uf}
             </span>{" "}
-            a tomada costuma ser <span className="font-semibold text-foreground">{rede.volts} V</span>.
-            Bivolt funciona nas duas. Confira na tomada ou na conta de luz antes de comprar.
+            a tomada costuma ser{" "}
+            <span className="font-semibold text-foreground">{rede.volts} V</span>. Bivolt funciona
+            nas duas. Confira na tomada ou na conta de luz antes de comprar.
           </span>
         </p>
       )}
