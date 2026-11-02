@@ -88,7 +88,7 @@ test('termo de busca e escolha dos candidatos', () => {
   assert.deepEqual(e.map(o => o.preco), [249.9, 239.9]);
 });
 
-test('mesma analise em cada marketplace: ate 4, sem usado, com o mais barato bem parecido', () => {
+test('mesma analise em cada marketplace: ate 6, sem usado, com o mais barato bem parecido', () => {
   const original = { titulo: 'Fone de Ouvido JBL Tune 520BT Bluetooth Preto', preco: 299.9 };
   const lista = [
     { titulo: 'Fone de Ouvido JBL Tune 520BT Bluetooth Preto', preco: 289.9 },
@@ -99,7 +99,7 @@ test('mesma analise em cada marketplace: ate 4, sem usado, com o mais barato bem
     { titulo: 'JBL Tune 520BT', preco: 199.9 }
   ];
   const e = escolherCandidatos(lista, original);
-  assert.equal(e.length, 4);
+  assert.equal(e.length, 5);
   assert.ok(!e.some(o => /usado/i.test(o.titulo)));
   /* o mais barato bem parecido entra mesmo fora dos 3 de maior nota */
   assert.ok(e.some(o => o.preco === 199.9));
