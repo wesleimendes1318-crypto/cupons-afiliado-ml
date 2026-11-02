@@ -67,8 +67,9 @@ function Cookies() {
       <h3>3. Publicidade — só com a sua autorização</h3>
       <p>
         Usados por redes de anúncios de terceiros, como o <strong>Google AdSense</strong>, para
-        exibir e medir anúncios. O script de anúncios só é carregado depois que você autoriza
-        esta categoria, que vem desmarcada por padrão. O Google e seus parceiros usam cookies
+        exibir e medir anúncios. O código do AdSense é carregado em todas as páginas, mas esta
+        categoria vem desmarcada por padrão e, sem a sua autorização, o Modo de Consentimento
+        do Google impede a gravação de cookies de anúncio. O Google e seus parceiros usam cookies
         de terceiros para exibir anúncios, inclusive com base em visitas anteriores a este e a
         outros sites. Cookies desta categoria: os do Google AdSense e da rede de anúncios do
         Google (por exemplo, <code>__gads</code>, <code>__gpi</code>, <code>IDE</code> e{" "}
@@ -82,7 +83,7 @@ function Cookies() {
         >
           google.com/settings/ads
         </a>
-        . Enquanto o site não exibir anúncios, nenhum cookie desta categoria é gravado.
+        .
       </p>
 
       <h2>Modo de consentimento do Google</h2>
