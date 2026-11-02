@@ -73,6 +73,25 @@ export function parecencaDoTitulo(a, b) {
   return comum / Math.min(x.size, y.size);
 }
 
+/* VOLTAGEM QUE CONTRADIZ (02/11): 127 V x 220 V explicitos nos dois titulos
+   nunca sao o mesmo produto (bivolt atende os dois). Igual ao servidor. */
+export function voltagemDoTitulo(t) {
+  const x = String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/\bbi-?volt\b/.test(x)) return 'bivolt';
+  const a = /\b(?:110|115|120|127) ?v(?:olts?)?\b/.test(x);
+  const b = /\b(?:220|230|240) ?v(?:olts?)?\b/.test(x);
+  return a && b ? 'bivolt' : a ? '127' : b ? '220' : null;
+}
+export function voltagemConflita(a, b) {
+  const x = voltagemDoTitulo(a), y = voltagemDoTitulo(b);
+  return !!(x && y && x !== 'bivolt' && y !== 'bivolt' && x !== y);
+}
+/* Termo curto (02/11): titulo longo do Mercado Livre deixava a busca da
+   Amazon vazia. Reserva com as 5 primeiras palavras do termo limpo. */
+export function termoCurto(termo) {
+  return String(termo || '').split(' ').filter(Boolean).slice(0, 5).join(' ');
+}
+
 const RE_CONDICAO_RUIM = /\b(usad[oa]s?|recondicionad[oa]s?|seminov[oa]s?|renovad[oa]s?|vitrine|open ?box|mostru[aá]rio)\b/i;
 
 /** Candidatos de um marketplace para a conferencia pela foto: na faixa de
@@ -85,7 +104,8 @@ export function escolherCandidatos(lista, original, n = 4) {
     .filter(o => o && o.titulo && o.preco != null && o.preco > 0)
     .filter(o => !RE_CONDICAO_RUIM.test(o.titulo))
     .filter(o => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
-    .filter(o => original.preco == null || (o.preco >= original.preco * 0.3 && o.preco <= original.preco * 3))
+    .filter(o => !o.faixa && !voltagemConflita(original.titulo, o.titulo))
+    .filter(o => original.preco == null || (o.preco >= original.preco * 0.4 && o.preco <= original.preco * 3))
     .map(o => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
     .filter(x => x.nota >= 0.25)
     .sort((a, b) => b.nota - a.nota || a.o.preco - b.o.preco);
@@ -151,7 +171,15 @@ export async function compararOutrosMarketplaces(token, pedido, original) {
       vale.shopee ? comPrazo(buscarCandidatosShopee(termo, 10000), 12000, { ofertas: [], motivo: 'tempo esgotado' })
                   : Promise.resolve({ ofertas: [], motivo: 'desligada' })
     ]);
-    const amazon = am.status === 'fulfilled' ? am.value : { ofertas: [], motivo: String(am.reason).slice(0, 80) };
+    let amazon = am.status === 'fulfilled' ? am.value : { ofertas: [], motivo: String(am.reason).slice(0, 80) };
+    /* Poucos resultados com o termo longo: uma 2a busca com o termo curto. */
+    const curto = termoCurto(termo);
+    if (vale.amazon && amazon.ofertas.length < 5 && curto && curto !== termo && !/pausada/.test(amazon.motivo || '')) {
+      const r2 = await comPrazo(buscarCandidatosAmazon(curto, 6000), 7000, { ofertas: [], motivo: 'tempo esgotado' }).catch(() => ({ ofertas: [] }));
+      const vistos = new Set(amazon.ofertas.map(o => o.asin));
+      amazon = { ...amazon, ofertas: [...amazon.ofertas, ...(r2.ofertas || []).filter(o => !vistos.has(o.asin))] };
+      diag.termoCurto = curto;
+    }
     const shopee = sh.status === 'fulfilled' ? sh.value : { ofertas: [], motivo: String(sh.reason).slice(0, 80) };
     diag.amazon = { lidas: amazon.ofertas.length, motivo: amazon.motivo || null };
     diag.shopee = { lidas: shopee.ofertas.length, motivo: shopee.motivo || null };

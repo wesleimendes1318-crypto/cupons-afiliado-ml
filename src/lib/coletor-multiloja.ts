@@ -14,6 +14,14 @@ import { amazonConfigurada, buscarNaAmazon } from "@/lib/integracoes/amazon";
 import { buscarNaShopee, shopeeConfigurada } from "@/lib/integracoes/shopee";
 import type { MarketplaceExterno, OfertaExterna } from "@/lib/integracoes/tipos";
 import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
+import { voltagemDoTexto } from "@/lib/voltagem";
+
+/** 127 V x 220 V explícitos nos dois títulos (bivolt atende os dois). */
+export function voltagemConflita(a: string, b: string) {
+  const x = voltagemDoTexto(a);
+  const y = voltagemDoTexto(b);
+  return !!(x && y && x !== "bivolt" && y !== "bivolt" && x !== y);
+}
 
 export { termoDeBuscaExterna };
 
@@ -50,10 +58,11 @@ export function escolherCandidatos<T extends { titulo: string; preco: number }>(
     .filter((o) => o && o.titulo && Number.isFinite(o.preco) && o.preco > 0)
     .filter((o) => !RE_CONDICAO_RUIM.test(o.titulo))
     .filter((o) => !pecaNoLugarDoAparelho(original.titulo, o.titulo))
+    .filter((o) => !(o as { faixa?: boolean }).faixa && !voltagemConflita(original.titulo, o.titulo))
     .filter(
       (o) =>
         original.preco == null ||
-        (o.preco >= original.preco * 0.3 && o.preco <= original.preco * 3),
+        (o.preco >= original.preco * 0.4 && o.preco <= original.preco * 3),
     )
     .map((o) => ({ o, nota: parecencaDoTitulo(original.titulo, o.titulo) }))
     .filter((x) => x.nota >= 0.25)
