@@ -473,7 +473,8 @@ export async function sincronizarListas(d) {
     for (const t of tarefas.entrar || []) {
       if (parar || d.ocupado()) break;
       const l = porSlug.get(t.lista);
-      if (!l || !l.ml) { acoes.push({ lista: t.lista, item: t.item, acao: 'entrar', ok: false, erro: 'lista ainda nao existe no Mercado Livre' }); continue; }
+      /* Lista ainda nao criada: espera a proxima rodada sem gastar tentativa. */
+      if (!l || !l.ml) continue;
       if ((lidos[l.slug] || []).includes(t.item)) { acoes.push({ lista: t.lista, item: t.item, acao: 'entrar', ok: true }); continue; }
       let ok = false, erro = null;
       if (modeloServe('adicionar', api.adicionar)) {

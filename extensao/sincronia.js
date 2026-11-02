@@ -659,3 +659,15 @@ export async function gravarBuscaAnuncios(token, id, resultado, erro = null) {
     return true;
   } catch (e) { return false; }
 }
+
+/* LISTAS DE AFILIADO (02/11): o banco diz o que fazer nas listas do
+   Mercado Livre e recebe o que foi lido e feito. */
+export async function listasTarefas(token) {
+  if (!token) return null;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/listas_tarefas', { p_token: token, p_max_entrar: 12, p_max_sair: 8 });
+}
+
+export async function gravarListas(token, dados) {
+  if (!token) return null;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_listas', { p_token: token, p_dados: dados });
+}
