@@ -3127,6 +3127,10 @@ function Resultado({
                     {textoDoPagamento(a?.preco, a?.precos)}
                   </p>
                 )}
+                <SeloInternacional
+                  o={{ ...(a ?? {}), final: a?.preco ?? null }}
+                  className="mt-1"
+                />
                 {(a?.vendedor || a?.lojaOficial === true || a?.avaliacoes) && (
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary-ink">
                     {a?.vendedor && (
@@ -3147,6 +3151,14 @@ function Resultado({
                 )}
               </div>
             </div>
+            {a?.internacional === true && (
+              <Alerta titulo="Atenção ao custo final: este anúncio tem envio internacional.">
+                {coladoIncompleto
+                  ? "O preço mostrado não inclui o imposto de importação e o ICMS, cobrados no pagamento. Por isso a recomendação é uma loja que envia do Brasil, com o custo final confirmado."
+                  : "Os tributos estimados já entram na conta do custo final desta comparação."}{" "}
+                A entrega costuma demorar mais e o padrão de tomada pode ser do exterior.
+              </Alerta>
+            )}
             {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
               <Alerta titulo="Neste anúncio a foto e o texto não batem.">
                 {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
@@ -3232,6 +3244,7 @@ function Resultado({
                   semAnimacao={false}
                   compacto={i > 0}
                   lojaAquiTemCupom={a?.temCupom === true}
+                  contraImportado={coladoIncompleto}
                   precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
                 />
               ))}
@@ -5721,7 +5734,11 @@ function OutraLojaComCupom({
   compacto,
   lojaAquiTemCupom,
   precoBemAbaixo = false,
+  contraImportado = false,
 }: {
+  /* O colado vem do exterior sem os tributos lidos (01/11): não há economia
+     a afirmar; a recomendação é a loja nacional de custo confirmado. */
+  contraImportado?: boolean;
   semAnimacao?: boolean;
   /* Passou na régua de segurança (link de afiliado + boa avaliação), mas o
      preço segue bem abaixo das outras lojas: o aviso aparece aqui também. */
@@ -5842,6 +5859,25 @@ function OutraLojaComCupom({
                 Math.abs(diferenca - (precoAqui - oferta.final)) >= 0.01
                   ? "no custo final, já com o frete, comparado ao anúncio que você colou"
                   : "no produto, comparado ao anúncio que você colou"}
+              </p>
+              {oferta.vendedor && oferta.lojaOficial !== true && (
+                <p className="mt-1 text-xs text-secondary-ink [overflow-wrap:anywhere]">
+                  Vendido por{" "}
+                  <strong className="font-semibold text-foreground">{oferta.vendedor}</strong>
+                </p>
+              )}
+            </>
+          ) : contraImportado ? (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-success">
+                Mesmo produto, envio do Brasil
+              </p>
+              <p className="text-[22px] font-bold leading-tight tracking-tight tabular-nums sm:text-2xl">
+                {brl(oferta.final)}
+              </p>
+              <p className="text-xs text-secondary-ink">
+                Sem imposto de importação no pagamento. O anúncio que você colou vem do
+                exterior e o custo final dele só aparece no pagamento.
               </p>
               {oferta.vendedor && oferta.lojaOficial !== true && (
                 <p className="mt-1 text-xs text-secondary-ink [overflow-wrap:anywhere]">
