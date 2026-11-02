@@ -2982,7 +2982,9 @@ function Resultado({
   /* Veredito da economia no topo (24/10): só com economia medida da
      recomendação contra o colado (nunca estimada). */
   const veredito =
-    !leituraFalhou && recomendada && recomendada.o.ganho != null && recomendada.o.ganho >= 0.5
+    !leituraFalhou && recomendada && coladoIncompleto
+      ? { o: recomendada.o, economia: null, comFrete: false }
+      : !leituraFalhou && recomendada && recomendada.o.ganho != null && recomendada.o.ganho >= 0.5
       ? {
           o: recomendada.o,
           economia: recomendada.o.ganho,
@@ -3068,7 +3070,7 @@ function Resultado({
           className={
             "lg:col-span-2 lg:row-start-1" +
             (veredito
-              ? " lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-stretch lg:gap-4"
+              ? " lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-4"
               : "")
           }
         >
@@ -3183,6 +3185,8 @@ function Resultado({
               total={totalDaLoja(veredito.o)}
               dispositivo={dispositivo}
               precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(veredito.o), precosDaTabela)}
+              contraImportado={coladoIncompleto}
+              titulo={a?.titulo ?? null}
             />
           )}
         </div>
@@ -3542,14 +3546,20 @@ function VereditoEconomia({
   total,
   dispositivo,
   precoBemAbaixo = false,
+  contraImportado = false,
+  titulo = null,
 }: {
   oferta: OutraLoja;
-  economia: number;
+  /* Economia medida contra o colado; null quando não dá para afirmar
+     (colado internacional sem os tributos lidos, 01/11). */
+  economia: number | null;
   comFrete: boolean;
   total: number | null;
   dispositivo: Dispositivo;
   /* O mesmo aviso da recomendação (24/10): o topo nunca manda comprar sem ele. */
   precoBemAbaixo?: boolean;
+  contraImportado?: boolean;
+  titulo?: string | null;
 }) {
   const direto =
     ehLinkDeAfiliado(oferta.link) &&
@@ -3563,66 +3573,103 @@ function VereditoEconomia({
       .getElementById("secao-recomendacao")
       ?.scrollIntoView({ behavior: reduzir ? "auto" : "smooth", block: "start" });
   };
+  /* VEREDITO EXECUTIVO (Weslei, 02/11): ao lado do "seu", a recomendação
+     com quem vende, o preço, o frete em linha própria e o único botão de
+     compra em destaque. Altura natural (nunca estica junto com os detalhes
+     do colado: 02/11, quadro verde vazio na tela inteira). */
   return (
     <section
-      aria-label="Veredito da economia"
-      className="mt-3 flex flex-col justify-between gap-3 rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
+      aria-label="Minha recomendação"
+      className="mt-3 self-start rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:p-5 lg:mt-0"
     >
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-success">
-          <Fogo /> Melhor oportunidade encontrada
+      <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
+        <BadgeCheck className="size-3.5" aria-hidden="true" /> Minha recomendação
+      </p>
+      {economia != null ? (
+        <p className="mt-1 text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
+          <span className="whitespace-nowrap text-success tabular-nums">{brl(economia)}</span> a
+          menos {comFrete ? "no custo final, já com o frete" : "no mesmo produto"}
         </p>
-        <p className="mt-1 text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-          Economia de até{" "}
-          <span className="whitespace-nowrap text-success tabular-nums">{brl(economia)}</span>{" "}
-          {comFrete ? "no custo final" : "no mesmo produto"}
+      ) : (
+        <p className="mt-1 text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
+          {contraImportado ? "O mesmo produto, enviado do Brasil" : "O mesmo produto em outra loja"}
         </p>
-        <p className="mt-1 text-sm text-slate-600 dark:text-white/70 [overflow-wrap:anywhere]">
-          Encontrado por <strong className="tabular-nums text-foreground">{brl(preco)}</strong>
-          {oferta.vendedor ? (
-            <>
-              {" "}
-              na loja <strong className="text-foreground">{oferta.vendedor}</strong>
-            </>
-          ) : null}
-          {oferta.freteGratis === true
-            ? ", com frete grátis para o seu CEP."
-            : comFrete
-              ? ", já com o frete para o seu CEP."
-              : "."}
-        </p>
-        <SeloInternacional o={oferta} className="mt-2" />
-        {precoBemAbaixo && (
-          <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-            Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
+      )}
+      <div className="mt-3 flex items-center gap-3 rounded-xl bg-card p-2.5 shadow-[0_1px_3px_rgba(15,23,41,0.06)]">
+        <Foto
+          src={oferta.imagem}
+          className="size-12 shrink-0 rounded-lg border border-border/60 bg-white object-contain p-0.5"
+          ver={{
+            titulo,
+            item: itemDaOferta(oferta),
+            url: oferta.url,
+            preco: oferta.final,
+            link: oferta.link,
+            detalhes: oferta.detalhes,
+          }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] leading-snug text-secondary-ink [overflow-wrap:anywhere]">
+            Vendido por{" "}
+            <strong className="font-semibold text-foreground">
+              {oferta.vendedor ?? "outra loja"}
+            </strong>
           </p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {oferta.lojaOficial === true && <SeloLojaOficial className="inline-flex" />}
+            <Avaliacoes a={oferta.avaliacoes} de={oferta} link={oferta.link} compacto className="inline-flex" />
+          </div>
+        </div>
+        <div className="shrink-0 text-right tabular-nums">
+          <p className="text-base font-bold leading-tight text-foreground sm:text-lg">
+            {brl(preco)}
+          </p>
+          <p className="text-[11px] text-secondary-ink">
+            {oferta.freteGratis === true
+              ? "frete grátis"
+              : comFrete
+                ? "já com o frete"
+                : oferta.freteGratis === false
+                  ? "frete à parte"
+                  : ""}
+          </p>
+        </div>
+      </div>
+      {contraImportado && (
+        <p className="mt-2 text-xs leading-snug text-secondary-ink">
+          Sem imposto de importação no pagamento: o anúncio que você colou vem do exterior.
+        </p>
+      )}
+      <SeloInternacional o={oferta} className="mt-2" />
+      {precoBemAbaixo && (
+        <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          Preço bem abaixo das outras lojas: confira o vendedor antes de comprar.
+        </p>
+      )}
+      <div className="mt-3">
+        {direto ? (
+          <>
+            <a
+              href={oferta.link as string}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3 text-center text-sm font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
+            >
+              <ShieldCheck className="size-4" aria-hidden="true" />
+              {textoDoBotao(dispositivo, "Comprar com segurança").replace(" pelo app", " no app")}
+            </a>
+            <AvisoDoBotao d={dispositivo} />
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={irParaRecomendacao}
+            className="w-full rounded-full border border-success/60 bg-white py-3 text-sm font-bold text-success transition-colors hover:bg-success/5 dark:bg-transparent"
+          >
+            Ver minha recomendação
+          </button>
         )}
       </div>
-      {direto ? (
-        <div>
-          <a
-            href={oferta.link as string}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3 text-center text-sm font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
-          >
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            {textoDoBotao(dispositivo, `Comprar com segurança por ${brl(oferta.final)}`).replace(
-              " pelo app",
-              " no app",
-            )}
-          </a>
-          <AvisoDoBotao d={dispositivo} />
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={irParaRecomendacao}
-          className="w-full rounded-full border border-success/60 bg-white py-3 text-sm font-bold text-success transition-colors hover:bg-success/5 dark:bg-transparent"
-        >
-          Ver minha recomendação
-        </button>
-      )}
     </section>
   );
 }
