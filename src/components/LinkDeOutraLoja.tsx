@@ -118,9 +118,19 @@ export function LinkDeOutraLoja({
           preco: analise.precoOrigem ?? null,
         })
       : null);
-  const termoGarimpo = nomeTermo ?? (origem === "amazon" ? (analise.identificador ?? null) : null);
+  /* Sem nome no endereço, a Amazon e a Shopee vão pelo código do produto:
+     a extensão gera o link de afiliado da origem pelo código (02/11: "sempre
+     devolver o meu link"). */
+  const termoGarimpo =
+    nomeTermo ??
+    (origem === "amazon" || origem === "shopee" ? (analise.identificador ?? null) : null);
+  /* Título lido no player (o código do produto não é título). */
+  const tituloLido =
+    lidoNaOrigem?.titulo && lidoNaOrigem.titulo !== analise.identificador
+      ? lidoNaOrigem.titulo
+      : null;
   /* Busca no Mercado Livre: o nome do link ou, sem ele, o lido no player. */
-  const termoMl = nomeTermo ?? lidoNaOrigem?.titulo ?? null;
+  const termoMl = nomeTermo ?? tituloLido;
 
   /* Onde a busca começa: o próprio player (Amazon/Shopee) ou o campeão. */
   const inicial: PlayerAfiliado | null =
@@ -245,7 +255,7 @@ export function LinkDeOutraLoja({
      player (extensão). Sem ele, nada de economia calculada. */
   const referencia =
     origem === "outro_player" ? (analise.precoOrigem ?? null) : (lidoNaOrigem?.preco ?? null);
-  const tituloAncora = lidoNaOrigem?.titulo ?? nome;
+  const tituloAncora = tituloLido ?? nome;
   const imagemAncora =
     origem === "outro_player" ? (analise.imagemOrigem ?? null) : (lidoNaOrigem?.imagem ?? null);
   const linkAncora =
