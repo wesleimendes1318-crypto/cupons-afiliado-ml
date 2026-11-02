@@ -3749,3 +3749,31 @@ function Aviso({
     </div>
   );
 }
+
+/* Fim do MODO DECISÃO (Weslei, 02/11): a página termina no resultado, com um
+   convite discreto para comparar outro produto (volta ao campo do link). */
+function CompararOutro() {
+  const irAoCampo = () => {
+    const campo = document.getElementById("campo-link-produto") as HTMLInputElement | null;
+    window.scrollTo({ top: 0 });
+    window.setTimeout(() => {
+      campo?.focus({ preventScroll: true });
+      campo?.select();
+    }, 250);
+  };
+  return (
+    <section
+      aria-label="Comparar outro produto"
+      className="mt-10 flex flex-col items-center gap-3 rounded-3xl border border-border/60 bg-card px-5 py-7 text-center shadow-sm"
+    >
+      <p className="text-lg font-extrabold tracking-tight">Quer comparar outro produto?</p>
+      <p className="max-w-[46ch] text-sm text-secondary-ink">
+        Cole o link de outro anúncio e eu mostro o mesmo produto nas outras lojas.
+      </p>
+      <Button type="button" variant="outline" onClick={irAoCampo} className="min-h-11 rounded-full px-5 font-bold">
+        <Link2 className="size-4" aria-hidden="true" />
+        Colar outro link
+      </Button>
+    </section>
+  );
+}
