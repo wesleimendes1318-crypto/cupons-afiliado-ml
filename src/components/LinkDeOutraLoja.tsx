@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { ArrowUpRight, ChevronDown, Loader2, Search, ShieldCheck, Store } from "lucide-react";
+import { LinkPronto } from "@/components/LinkPronto";
 
 import { ResultadosDaBusca, type ConsultaBusca } from "@/components/BuscaGuiada";
 import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";

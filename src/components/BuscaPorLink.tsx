@@ -125,6 +125,7 @@ import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { LinkPronto } from "@/components/LinkPronto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
