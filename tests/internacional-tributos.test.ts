@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   aplicarEnvio,
   custoIncompleto,
+  ordenarPorCustoTotal,
   custoTotalDaOferta,
   envioDasTags,
   tributosDoTexto,
@@ -71,5 +72,34 @@ describe("envio internacional e tributos", () => {
     expect(a.internacional).toBe(true);
     expect(a.referencias?.[0]?.internacional).toBe(true);
     expect(a.referencias?.[1]?.internacional).toBe(false);
+  });
+});
+
+describe("ordenarPorCustoTotal", () => {
+  test("importado sem tributos lidos nunca passa na frente da nacional mais barata", () => {
+    const lista = [
+      {
+        id: "eua",
+        final: 2906.32,
+        freteGratis: true,
+        internacional: true,
+        tributosEstimados: null,
+      },
+      { id: "nac", final: 3999, freteGratis: true },
+      {
+        id: "eua-lido",
+        final: 2906.32,
+        freteGratis: true,
+        internacional: true,
+        tributosEstimados: 2498.6,
+      },
+      { id: "frete", final: 3800, freteGratis: false, custoFrete: 50 },
+    ];
+    expect(ordenarPorCustoTotal(lista).map((o) => o.id)).toEqual([
+      "frete",
+      "nac",
+      "eua-lido",
+      "eua",
+    ]);
   });
 });
