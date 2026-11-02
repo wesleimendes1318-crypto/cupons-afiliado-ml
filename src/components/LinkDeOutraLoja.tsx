@@ -349,6 +349,7 @@ export function LinkDeOutraLoja({
             prime={lidoNaOrigem?.selos.includes("Prime") ?? false}
             frase={origem === "outro_player" && nome && campeao ? campeao.frase : null}
           />
+          <LinkPronto link={linkAncora} className="mt-0" />
           {mostrarPlacar && <BannerVeredito veredito={veredito} />}
         </div>
       )}

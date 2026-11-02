@@ -3281,6 +3281,7 @@ function Resultado({
                 )}
               </div>
             </div>
+            <LinkPronto link={semLink ? null : link} />
             {a?.internacional === true && (
               <Alerta titulo="Atenção ao custo final: este anúncio tem envio internacional.">
                 {coladoIncompleto
