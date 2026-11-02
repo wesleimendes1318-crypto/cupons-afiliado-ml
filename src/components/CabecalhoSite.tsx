@@ -9,8 +9,10 @@
    uma barra de app limpa (marca + Telegram): as páginas ficam nas abas de
    baixo (NavegacaoInferiorMobile). */
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { ClientOnly, Link, useRouterState } from "@tanstack/react-router";
 import { Link2, Send } from "lucide-react";
+
+import { CepTopo } from "@/components/CepTopo";
 
 import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { LINK_CANAL } from "@/lib/telegram-publico";
@@ -176,6 +178,9 @@ export function CabecalhoSite() {
               {l.rotulo}
             </Link>
           ))}
+          <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
+            <CepTopo />
+          </ClientOnly>
           <a
             href={LINK_CANAL}
             target="_blank"

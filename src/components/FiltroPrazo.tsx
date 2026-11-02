@@ -46,12 +46,12 @@ export function FiltroPrazo({
     <Abertura
       className="mt-3 rounded-2xl border border-border/70 bg-[#f5f5f7] px-3 py-1 dark:bg-white/5"
       estilo="linha"
-      padrao={limite != null}
+      padrao
       icone={<Gift className="size-4 shrink-0 text-[#0071e3]" aria-hidden />}
       rotulo={
         limite
           ? `Entregas até ${formatarDataCompleta(limite)}`
-          : "Precisa receber até uma data específica? Selecione aqui"
+          : "Quando você precisa receber?"
       }
       classeConteudo="pb-2"
     >
