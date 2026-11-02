@@ -27,7 +27,10 @@ linha oficial. Assim o verificador do Google acha o snippet, a meta tag e o ads.
 Sem **Publicidade** marcada no aviso de cookies (desmarcada por padrão), o Modo
 de Consentimento fica negado e o Google não grava cookies de anúncio. As
 unidades manuais só aparecem para quem autorizou; quem revogar deixa de vê-las na hora.
-**Não ligue os Anúncios Automáticos** no painel: o posicionamento é só manual.
+**Anúncios Automáticos e Otimização Automática LIGADOS no painel** para
+melhorescolha.io desde 02/11/2026, por decisão do dono. Com eles ligados, o
+Google pode inserir anúncios fora dos guias (home, comparação e o caminho até o
+link de afiliado), além dos dois blocos manuais dos guias.
 
 ## Onde aparecem
 Só no artigo individual dos Guias (`/guias/<slug>`): um depois do 2º bloco do
