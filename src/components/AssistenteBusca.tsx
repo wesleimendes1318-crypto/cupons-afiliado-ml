@@ -63,7 +63,11 @@ export function AssistenteBusca({
       const a = c.avaliacao ? notas.get(c.avaliacao)?.avaliacoes : null;
       return {
         id: c.chave,
-        nome: c.nome.slice(0, 160),
+        /* Voltagem oficial junto do nome: o assistente lê "127V/220V/bivolt". */
+        nome: (c.voltagem
+          ? `${c.nome} · ${c.voltagem === "bivolt" ? "Bivolt" : `${c.voltagem}V`}`
+          : c.nome
+        ).slice(0, 160),
         preco: c.preco,
         freteGratis: c.freteGratis,
         lojaOficial: c.lojaOficial,

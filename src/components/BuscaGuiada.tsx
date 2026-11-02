@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Star,
+  Zap,
 } from "lucide-react";
 import { propsFotoCartao } from "@/lib/foto";
 import {
@@ -398,6 +399,12 @@ export function ResultadosDaBusca({
   soCatalogo?: boolean;
 }) {
   const recuo = compacto ? "pt-3" : "px-5 pb-6 sm:px-7";
+  /* Tensão usual da cidade do CEP guardado (02/11, Mogi = 220 V). */
+  const regiaoGuardada = useRegiaoGuardada();
+  const rede = useMemo(
+    () => voltagemDaRegiao(regiaoGuardada?.cidade, regiaoGuardada?.uf),
+    [regiaoGuardada],
+  );
   const q = consulta?.q ?? "";
   const guiada = consulta?.modo === "guiada" && !soCatalogo;
 
@@ -658,6 +665,7 @@ export function ResultadosDaBusca({
                   faixas={faixas}
                   marcas={marcas}
                   filtrosCategoria={filtrosCategoria}
+                  rede={rede}
                   total={ordenados.length}
                 />
               )}
@@ -757,6 +765,7 @@ function BarraOrdemFiltros({
   faixas,
   marcas,
   filtrosCategoria,
+  rede,
   total,
 }: {
   ordem: OrdemBusca;
@@ -768,8 +777,20 @@ function BarraOrdemFiltros({
   faixas: Array<{ id: string; rotulo: string }>;
   marcas: Array<{ marca: string; total: number }>;
   filtrosCategoria: ReturnType<typeof filtrosDaBusca>;
+  rede: VoltagemDaRegiao | null;
   total: number;
 }) {
+  /* Voltagem da região à mão (02/11): o chip marca "220 V ou bivolt" (ou
+     127) e o aviso diz de onde veio a tensão. */
+  const filtroVolt = filtrosCategoria.find((f) => f.id === "voltagem");
+  const opcaoDaRede = rede ? (rede.volts === "220" ? "220" : "110") : null;
+  const redeMarcada = opcaoDaRede != null && escolha.filtros.voltagem === opcaoDaRede;
+  const marcarVoltagem = (id: string | null) => {
+    const filtros = { ...escolha.filtros };
+    if (id) filtros.voltagem = id;
+    else delete filtros.voltagem;
+    marcar({ filtros });
+  };
   const marcados =
     (escolha.faixa ? 1 : 0) + (escolha.marca ? 1 : 0) + Object.keys(escolha.filtros).length;
   return (
@@ -806,6 +827,18 @@ function BarraOrdemFiltros({
         >
           Loja oficial
         </button>
+        {filtroVolt && rede && opcaoDaRede && (
+          <button
+            type="button"
+            aria-pressed={redeMarcada}
+            onClick={() => marcarVoltagem(redeMarcada ? null : opcaoDaRede)}
+            className={chip(redeMarcada)}
+            title={`Mostra só o que funciona em ${rede.volts} V (inclui bivolt)`}
+          >
+            <Zap className="size-3.5" aria-hidden="true" />
+            {rede.volts} V · sua região
+          </button>
+        )}
         {temEscolha(escolha) && (
           <button
             type="button"
@@ -816,6 +849,19 @@ function BarraOrdemFiltros({
           </button>
         )}
       </div>
+      {filtroVolt && rede && (
+        <p className="flex items-start gap-1.5 rounded-2xl bg-[#f5f5f7] px-3 py-2 text-xs text-secondary-ink">
+          <Zap className="mt-0.5 size-3.5 shrink-0 text-[#b25000]" aria-hidden="true" />
+          <span>
+            Em{" "}
+            <span className="font-semibold text-foreground">
+              {rede.cidade}/{rede.uf}
+            </span>{" "}
+            a tomada costuma ser <span className="font-semibold text-foreground">{rede.volts} V</span>.
+            Bivolt funciona nas duas. Confira na tomada ou na conta de luz antes de comprar.
+          </span>
+        </p>
+      )}
       <details className="rounded-2xl bg-card p-3 shadow-[var(--shadow-card)]">
         <summary className="flex min-h-9 cursor-pointer items-center gap-2 text-sm font-bold">
           <SlidersHorizontal className="size-4" aria-hidden="true" />
@@ -848,7 +894,10 @@ function BarraOrdemFiltros({
             <Grupo
               key={f.id}
               nome={f.nome}
-              opcoes={f.opcoes.map((o) => ({ id: o.id, rotulo: `${o.rotulo} (${o.total})` }))}
+              opcoes={f.opcoes.map((o) => ({
+                id: o.id,
+                rotulo: `${o.rotulo} (${o.total})${f.id === "voltagem" && o.id === opcaoDaRede ? " · sua região" : ""}`,
+              }))}
               atual={escolha.filtros[f.id] ?? null}
               onEscolher={(id) => {
                 const filtros = { ...escolha.filtros };
@@ -1104,6 +1153,9 @@ function CartaoBusca({
   comparar: (url: string) => void;
 }) {
   const detalhe = c.item || idsDoEndereco(c.url)[0] || "";
+  const regiao = useRegiaoGuardada();
+  const rede = c.voltagem ? voltagemDaRegiao(regiao?.cidade, regiao?.uf) : null;
+  const naoServe = c.voltagem != null && rede != null && !funcionaEm(c.voltagem, rede.volts);
   const foto = (
     <span className="relative block aspect-[4/3] overflow-hidden bg-white sm:aspect-auto sm:h-40">
       {c.imagem ? (
@@ -1195,6 +1247,18 @@ function CartaoBusca({
             "Frete a calcular para seu CEP"
           )}
         </p>
+        {c.voltagem && (
+          <p
+            className={
+              "mt-0.5 flex items-center gap-1 text-[11px] " +
+              (naoServe ? "font-semibold text-[#b25000]" : "text-secondary-ink")
+            }
+          >
+            <Zap className="size-3.5 shrink-0" aria-hidden="true" />
+            {rotuloVoltagem(c.voltagem)}
+            {naoServe && rede ? ` · sua região é ${rede.volts} V` : ""}
+          </p>
+        )}
         <LinhaAvaliacoes resumo={resumo} titulo={c.nome} link={c.link} className="mt-0.5" />
         <SeloBemAvaliado resumo={resumo} className="mt-1 self-start" />
         <div className="mt-auto flex flex-col gap-1.5 pt-2.5">
