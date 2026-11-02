@@ -476,6 +476,93 @@ export function variantesPorMarca(base: string, itens: Array<{ nome: string }>, 
     .map((m) => `${base} ${m}`);
 }
 
+type LinhaEstoque = {
+  produto: string;
+  item: string | null;
+  nome: string;
+  imagem: string | null;
+  preco: number | string | null;
+  url: string | null;
+  frete_gratis: boolean | null;
+  loja_oficial: boolean | null;
+  dominio_ml: string | null;
+};
+
+/** Filtro do estoque próprio (em_alta_catalogo) com as MESMAS regras do
+    catálogo: falsificado, fora da intenção, domínio/tipo, faixa e piso. */
+export function filtrarEstoque(
+  linhas: LinhaEstoque[],
+  buscas: string[],
+  opcoes: {
+    precoMin?: number | null;
+    precoMax?: number | null;
+    pisoPreco?: number | null;
+    rejeitar?: (nome: string) => boolean;
+    dominios?: Set<string> | null;
+  },
+): ResultadoBusca[] {
+  const tipos = [...new Set(buscas.map((b) => tipoDoProduto(b)).filter(Boolean))] as string[];
+  const saida: ResultadoBusca[] = [];
+  for (const l of linhas) {
+    const preco = num(l.preco);
+    if (!l.item || !/^MLB\d+$/.test(l.item) || !/^MLB\d+$/.test(l.produto) || preco == null)
+      continue;
+    if (pareceFalso(l.nome) || opcoes.rejeitar?.(l.nome)) continue;
+    if (
+      opcoes.dominios
+        ? !opcoes.dominios.has(String(l.dominio_ml ?? ""))
+        : !tipos.some((t) => nomeTemOTipo(l.nome, t))
+    )
+      continue;
+    if (opcoes.precoMax && preco > opcoes.precoMax * 1.05) continue;
+    if (opcoes.precoMin && preco < opcoes.precoMin * 0.95) continue;
+    if (opcoes.pisoPreco && preco < opcoes.pisoPreco) continue;
+    saida.push({
+      produto: l.produto,
+      item: l.item,
+      nome: l.nome.slice(0, 120),
+      imagem: l.imagem,
+      preco,
+      url:
+        l.url ?? `https://www.mercadolivre.com.br/p/${l.produto}?pdp_filters=item_id%3A${l.item}`,
+      freteGratis: l.frete_gratis,
+      lojaOficial: l.loja_oficial === true,
+      voltagem: voltagemDoTexto(l.nome),
+    });
+  }
+  return saida;
+}
+
+/** ESTOQUE PRÓPRIO (02/11, "busca híbrida"): os ~14 mil mais vendidos que o
+    robô em alta já guardou, com preço lido nos últimos 3 dias. Uma consulta
+    ao banco, sem gastar leitura da API; completa a 1ª página até 20. */
+async function doEstoque(
+  buscas: string[],
+  opcoes: Parameters<typeof filtrarEstoque>[2],
+): Promise<ResultadoBusca[]> {
+  const tipos = [...new Set(buscas.map((b) => tipoDoProduto(b)).filter(Boolean))] as string[];
+  if (!tipos.length && !opcoes.dominios) return [];
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let consulta = supabaseAdmin
+      .from("em_alta_catalogo")
+      .select("produto,item,nome,imagem,preco,url,frete_gratis,loja_oficial,dominio_ml")
+      .gte("atualizado_em", new Date(Date.now() - 3 * 24 * 3600_000).toISOString())
+      .not("preco", "is", null);
+    consulta = opcoes.dominios
+      ? consulta.in("dominio_ml", [...opcoes.dominios])
+      : consulta.or(
+          tipos
+            .map((t) => `nome.ilike.%${t.replace(/[^a-z0-9]/g, "").replace(/(es|s)$/, "")}%`)
+            .join(","),
+        );
+    const { data } = await consulta.order("posicao", { ascending: true }).limit(120);
+    return filtrarEstoque((data ?? []) as unknown as LinhaEstoque[], buscas, opcoes);
+  } catch {
+    return [];
+  }
+}
+
 /** Interpreta, busca no catálogo e devolve pelo menos 20 produtos com
     anúncio ativo (quando o catálogo tem). Página > 0 ("Carregar mais"): as
     mesmas buscas e variantes da 1ª página, nas posições seguintes. */
@@ -559,6 +646,13 @@ export async function buscaGuiada(
     }
     proximo = k < passos.length ? k : null;
   } else {
+    /* O estoque próprio é lido junto com a 1ª leitura do catálogo. */
+    const dominiosDoEstoque = regra
+      ? new Set(regra.dominios)
+      : dominiosPorBusca.every(Boolean)
+        ? new Set(dominiosPorBusca.flatMap((d) => [...d!]))
+        : null;
+    const estoque = doEstoque(intencao.buscas, { ...opcoes, dominios: dominiosDoEstoque });
     juntar(
       await buscarNoCatalogo(intencao.buscas, {
         ...opcoes,
@@ -580,11 +674,11 @@ export async function buscaGuiada(
           ...opcoes,
           tipoDaBusca: false,
           limite: 20,
-          rejeitar: (nome) =>
-            opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
+          rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
         }),
       );
     }
+    if (achados.length < MINIMO_RESULTADOS) juntar(await estoque);
     /* Mais fundo nas mesmas buscas (24-84), de 20 em 20. */
     for (const offset of [24, 44, 64]) {
       if (achados.length >= MINIMO_RESULTADOS) break;
