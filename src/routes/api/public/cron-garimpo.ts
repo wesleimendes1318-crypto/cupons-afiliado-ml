@@ -359,7 +359,7 @@ async function garimparAgora(db: Db, simular: boolean): Promise<Record<string, u
       : {};
     const x = achadoDoPedido({
       ...p,
-      analise: p.analise ? aplicarEnvio(p.analise as Record<string, unknown>, env) : p.analise,
+      analise: p.analise ? aplicarEnvio(p.analise as never, env) : p.analise,
     });
     if (x)
       achados.push({
