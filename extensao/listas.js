@@ -119,7 +119,7 @@ export function listasDoTexto(texto) {
 export function juntarListas(...grupos) {
   const out = new Map();
   const porNome = new Map();
-  for (const g of grupos) for (const l of g || []) {
+  for (const g of grupos) for (let l of g || []) {
     const n = normalizarNome(l.nome);
     if (String(l.id).startsWith('nome:') && porNome.has(n)) l = { ...l, id: porNome.get(n) };
     if (!String(l.id).startsWith('nome:')) porNome.set(n, l.id);
