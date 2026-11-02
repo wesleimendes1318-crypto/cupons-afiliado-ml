@@ -4,13 +4,18 @@ import type { EnvioInternacional } from "@/lib/internacional";
 
 /** Envio internacional de cada oferta da comparação (lista oficial da
     ficha, lida no servidor). Sem resposta: mapa vazio (a tela não afirma). */
-export function useEnvioInternacional(pedidoId: number | null | undefined, pronto: boolean) {
+export function useEnvioInternacional(
+  pedidoId: number | null | undefined,
+  /* Muda quando a lista de ofertas muda (segunda volta): busca de novo. */
+  versao: string | null,
+) {
   const [dados, setDados] = useState<{
-    pedido: number;
+    chave: string;
     envio: Record<string, EnvioInternacional>;
   } | null>(null);
+  const chave = pedidoId != null && versao != null ? `${pedidoId}|${versao}` : null;
   useEffect(() => {
-    if (pedidoId == null || !pronto || dados?.pedido === pedidoId) return;
+    if (chave == null || dados?.chave === chave) return;
     let vivo = true;
     fetch("/api/public/envio-internacional", {
       method: "POST",
@@ -19,13 +24,13 @@ export function useEnvioInternacional(pedidoId: number | null | undefined, pront
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { envio?: Record<string, EnvioInternacional> } | null) => {
-        if (vivo) setDados({ pedido: pedidoId, envio: j?.envio ?? {} });
+        if (vivo) setDados({ chave, envio: j?.envio ?? {} });
       })
-      .catch(() => vivo && setDados({ pedido: pedidoId, envio: {} }));
+      .catch(() => vivo && setDados({ chave, envio: {} }));
     return () => {
       vivo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pedidoId, pronto]);
-  return dados?.pedido === pedidoId ? dados.envio : null;
+  }, [chave]);
+  return dados?.envio ?? null;
 }
