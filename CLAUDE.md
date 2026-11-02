@@ -2061,3 +2061,13 @@ Leia também AGENTS.md (nunca force-push nem reescrever histórico publicado).
   soAfiliado(link, colado) nunca devolve como link de compra o meli.la que
   o cliente colou; o botão gera o DELE no clique. Complementa a extensão
   1.170.0 (resolverEncurtado antes de gerar, PR #51).
+
+## Listas de afiliado do Mercado Livre (02/11)
+- Weslei, 02/11: agente das listas em myaccount.mercadolivre.com.br/
+  bookmarks/list ("administrar, atualizar, criar categorias, incluir
+  produtos ... qualidade e dados que garantam conversão"). 9 listas
+  temáticas Públicas, 60 a 100 produtos cada, nota 4,5+ com 20+ avaliações;
+  comissão só desempata; só sai o que o agente incluiu. Detalhes, como
+  aplicar e controles em docs/listas-afiliado.md. SQL em
+  supabase/manutencao/20261102_listas_afiliado.sql (aplicar no Supabase
+  próprio). Extensão 1.174.0 (extensao/listas.js).
