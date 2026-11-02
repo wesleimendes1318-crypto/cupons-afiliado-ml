@@ -649,3 +649,16 @@ test('anuncios do modelo: so a marca, o modelo e a versao pedidos', async () => 
   assert.deepEqual(anunciosDoModelo(iphones, 'Apple', 'iPhone 15').map(c => c.item), ['MLB7']);
   assert.deepEqual(anunciosDoModelo(lista, null, null), []);
 });
+
+test('envio internacional: tags do evento e tributos da pagina (Switch 2, 01/11)', async () => {
+  const { envioInternacionalDoHtml } = await import('../comparador.js');
+  const html = '<script>{"melidata_event":{"item_id":"MLB4487458199","tags":["kvs_primary","cbt_fulfillment_us","cbt_item"]}}</script>'
+    + '<div>Compra internacional</div><div>Tributações estimadas</div><span>Imposto de importação</span><span>R$ 1.579,89</span><span>ICMS</span><span>R$ 918,71</span>';
+  const e = envioInternacionalDoHtml(html, 'MLB4487458199');
+  assert.equal(e.internacional, true);
+  assert.equal(e.paisOrigem, 'EUA');
+  assert.equal(e.tributosEstimados, 2498.6);
+  assert.deepEqual(e.tributosDetalhados, { impostoImportacao: 1579.89, icms: 918.71 });
+  const nac = envioInternacionalDoHtml('<script>{"melidata_event":{"item_id":"MLB1234567","tags":["kvs_primary"]}}</script>', 'MLB1234567');
+  assert.equal(nac.internacional, false);
+});
