@@ -1968,7 +1968,9 @@ function Index() {
         <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
           {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
             caixa; acima de "Explore por categoria" (Weslei, 27/10). */}
-          <BuscaGuiada contexto="home" naHome className="mt-8" />
+          {/* MODO DECISÃO (Weslei, 02/11): com uma comparação na tela, nada de
+            vitrines, busca guiada nem atalhos abaixo do resultado. */}
+          {buscaParada && <BuscaGuiada contexto="home" naHome className="mt-8" />}
 
           {buscaParada && (
             /* Explore por categoria (home-v2), com as artes (09/10). */
@@ -1998,6 +2000,7 @@ function Index() {
             2) mais desejados, 3) economia real, 4) para você, 5) temporada
             ativa, 6) mais vendidos por categoria (até 12 por aba). Brinquedos
             por idade saiu da home: fica em /brinquedos e na temporada. */}
+          {buscaParada && (
           <VitrinesHomeAbas
             abas={[
               { id: "economia", rotulo: "Economia conferida", conteudo: () => <Vitrine /> },
@@ -2007,6 +2010,7 @@ function Index() {
               { id: "temporada", rotulo: "Temporada", conteudo: () => <VitrineSazonal soAtiva /> },
             ]}
           />
+          )}
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
@@ -2022,6 +2026,8 @@ function Index() {
 
           {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
             da caixa do link. */}
+          {!buscaParada && <CompararOutro />}
+          {buscaParada && (
           <nav aria-label="Acesso rápido" className="mt-8 grid gap-3 sm:grid-cols-3">
             {[
               {
@@ -2056,6 +2062,7 @@ function Index() {
               </Link>
             ))}
           </nav>
+          )}
 
           {MOSTRAR_CUPONS && (
             <>
@@ -2826,6 +2833,7 @@ function Index() {
         </div>
       </main>
 
+      {buscaParada && (
       <section aria-label="Perguntas frequentes" className="border-t border-border bg-background">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
           <h2 className="text-xl font-extrabold sm:text-2xl">
@@ -2848,6 +2856,9 @@ function Index() {
         </div>
       </section>
 
+      )}
+
+      {buscaParada && (
       <section aria-label="Guias de compra" className="border-y border-border bg-card">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -2897,6 +2908,7 @@ function Index() {
           </div>
         </div>
       </section>
+      )}
 
       {cupomSelecionados.length > 0 && (
         <div className="fixed inset-x-0 bottom-[var(--folga-abas,0px)] z-40 border-t border-border vidro-barra p-3 shadow-modal">
@@ -2957,8 +2969,13 @@ function Index() {
         erro={erroComparacao}
       />
 
-      <footer className="mt-10 border-t border-border py-8">
-        <div className="mx-auto grid max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3">
+      <footer className={(buscaParada ? "mt-10 " : "mt-4 ") + "border-t border-border py-8"}>
+        <div
+          className={
+            "mx-auto max-w-[1400px] gap-4 px-4 sm:px-6 lg:px-8 md:grid-cols-3 " +
+            (buscaParada ? "grid" : "hidden")
+          }
+        >
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-bold">Mesmo produto: foto, descrição e características</p>
             <p className="mt-1 text-xs text-secondary-ink">
