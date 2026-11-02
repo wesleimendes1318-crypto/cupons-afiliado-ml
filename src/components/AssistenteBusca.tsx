@@ -17,6 +17,7 @@ type CartaoAssistente = {
   lojaOficial: boolean;
   maisVendido: number | null;
   avaliacao: string | null;
+  voltagem?: "127" | "220" | "bivolt" | null;
 };
 
 const SUGESTOES = [
