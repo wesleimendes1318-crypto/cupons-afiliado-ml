@@ -435,42 +435,50 @@ export async function buscarNoCatalogo(
 const LIDOS_NA_PRIMEIRA = 24;
 export const MINIMO_RESULTADOS = 20;
 const MAXIMO_PAGINA = 30;
-const JANELA_DAS_SEGUINTES = 80;
+/* A busca oficial do catálogo só vai até a posição 120 (offset 120 = 400,
+   medido em 02/11). Mais fundo, só com outra busca (a marca junto). */
+const FIM_DO_CATALOGO = 120;
+const PASSOS_POR_PAGINA = 4;
 
-/** Início da janela de cada página na busca oficial: 1ª lê 0-24 e depois
-    24-104; a página p lê 80 posições a partir de 24 + 80 x p. Uma página
-    nunca lê a janela da outra ("+20" sem repetir). */
-export const inicioDaPagina = (pagina: number) =>
-  pagina <= 0 ? 0 : LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES * pagina;
+type Passo = { buscas: string[]; offset: number };
 
-/** Posições lidas de 20 em 20 depois da leitura inicial da página. */
-export function janelaDaPagina(pagina: number): number[] {
-  const inicio = pagina <= 0 ? LIDOS_NA_PRIMEIRA : inicioDaPagina(pagina) + 20;
-  const fim = pagina <= 0 ? LIDOS_NA_PRIMEIRA + JANELA_DAS_SEGUINTES : inicioDaPagina(pagina) + JANELA_DAS_SEGUINTES;
-  const saida: number[] = [];
-  for (let o = inicio; o < fim; o += 20) saida.push(o);
-  return saida;
+/** Leituras de cada "Carregar mais" (página >= 1), sempre na mesma ordem:
+    o resto das buscas da 1ª página (84-120) e, depois, cada variante (a
+    busca com uma marca que apareceu) da posição 0 até 100. A página p
+    lê os passos [(p-1) x 4, p x 4): uma página nunca relê a da outra. */
+export function passosDasSeguintes(buscas: string[], variantes: string[]): Passo[] {
+  const passos: Passo[] = [];
+  for (let o = 84; o < FIM_DO_CATALOGO; o += 20) passos.push({ buscas, offset: o });
+  for (const v of variantes)
+    for (let o = 0; o < FIM_DO_CATALOGO; o += 20) passos.push({ buscas: [v], offset: o });
+  return passos;
 }
 
-/** Posição na busca oficial de cada página de "Ver mais opções": a 1ª lê
-    16 por busca; as seguintes, 8 por busca a partir daí. */
-export const offsetDaPagina = (pagina: number, primeira: number, demais: number) =>
-  pagina <= 0 ? 0 : primeira + (pagina - 1) * demais;
+/** Variantes pela marca: "geladeira frost free" + Brastemp, Electrolux... */
+export function variantesPorMarca(base: string, itens: Array<{ nome: string }>, max = 6) {
+  const b = normalizar(base);
+  return marcasDosResultados(itens)
+    .map((m) => m.marca)
+    .filter((m) => !b.includes(normalizar(m)))
+    .slice(0, max)
+    .map((m) => `${base} ${m}`);
+}
 
-/** Interpreta, busca no catálogo e devolve até 8 produtos com anúncio ativo.
-    Página > 0 ("Ver mais opções", 27/10): as mesmas buscas da 1ª página
-    (sem interpretar de novo, quando vierem), mais adiante no catálogo. */
+/** Interpreta, busca no catálogo e devolve pelo menos 20 produtos com
+    anúncio ativo (quando o catálogo tem). Página > 0 ("Carregar mais"): as
+    mesmas buscas e variantes da 1ª página, nas posições seguintes. */
 export async function buscaGuiada(
   q: string,
   contexto: string | null,
   pagina = 0,
   intencaoAnterior: Interpretacao | null = null,
+  anterior: { variantes?: string[]; excluir?: string[] } = {},
 ) {
   const lida = intencaoAnterior ?? (await interpretar(q, contexto));
   /* APARELHO (Weslei, 02/11: "voltou 1 máquina e muito cara"): a busca do
      catálogo por "lava e seca" devolve nicho, placa, mop e lava-louças; o
      aparelho real vem pela marca, só da categoria oficial, e os mais
-     vendidos dela completam. Até 16 opções por página. */
+     vendidos dela completam. */
   const regra = regraDoAparelho(q);
   const intencao = regra
     ? { ...lida, buscas: [...new Set([...regra.buscas, ...lida.buscas])].slice(0, 8) }
@@ -486,10 +494,10 @@ export async function buscaGuiada(
           return s ? new Set([...s, ...doModelo]) : null;
         }),
       );
+  const dominioDaVariante = regra ? new Set(regra.dominios) : (dominiosPorBusca[0] ?? null);
   /* Sem preço pedido, o aparelho grande tem piso (02/11: nicho de R$ 371 e
      placa de R$ 479 na busca de lava e seca). */
   const piso = intencao.precoMin || intencao.precoMax ? null : pisoDoAparelho(q);
-  /* Pelo menos 20 resultados por busca (Weslei, 02/11). */
   const maximo = 24;
   const opcoes = {
     precoMin: intencao.precoMin,
@@ -499,78 +507,73 @@ export async function buscaGuiada(
     rejeitar: (nome: string) => foraDaIntencao(nome, intencao, q),
     max: maximo,
     teto: 44,
-    /* 16 por busca (02/11): os primeiros do catálogo podem ser peças. */
-    ...(pagina > 0
-      ? {
-          limite: 20,
-          porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 1,
-          offset: inicioDaPagina(pagina),
-        }
-      : {
-          limite: LIDOS_NA_PRIMEIRA,
-          porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 4,
-        }),
   };
-  let achados = await buscarNoCatalogo(intencao.buscas, { ...opcoes, dominiosPorBusca });
-  /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo.
-     Aparelho conhecido (categoria fixa) não: sem a categoria, "máquina"
-     traz nicho e placa. */
-  if (!achados.length && dominiosPorBusca.some(Boolean) && !regra && !piso)
-    achados = await buscarNoCatalogo(intencao.buscas, opcoes);
-  /* Pedido amplo ou sazonal (28/10, "decoração de natal" voltava vazio): o
-     título raramente traz o tipo ("decoração"), e os 1ºs do catálogo podem
-     não ter oferta. Sem domínio nem tipo, lendo mais fundo, e o nome tem de
-     trazer uma palavra do pedido; por fim, os mais vendidos da categoria. */
-  if (!achados.length && !regra && !piso) {
-    const palavras = palavrasDoPedido([q, ...intencao.buscas]);
-    achados = await buscarNoCatalogo([...new Set([...intencao.buscas, q.slice(0, 60)])], {
-      ...opcoes,
-      tipoDaBusca: false,
-      limite: 20,
-      rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
-    });
-  }
-  /* PELO MENOS 20 SEMPRE (Weslei, 02/11): cada página tem a sua janela da
-     busca oficial (a 1ª: posições 0-104; cada "Carregar mais": 80 posições
-     seguintes), lida de 20 em 20 até juntar 20 produtos válidos. Sem
-     sobreposição entre páginas: o "+20" nunca repete o que já está na tela. */
+  const excluir = new Set(anterior.excluir ?? []);
+  let achados: ResultadoBusca[] = [];
+  /* PELO MENOS 20 SEMPRE (Weslei, 02/11). */
   const juntar = (novos: ResultadoBusca[]) => {
-    const vistos = new Set(achados.map((r) => r.produto));
+    const vistos = new Set([...excluir, ...achados.map((r) => r.produto)]);
     achados = [...achados, ...novos.filter((r) => !vistos.has(r.produto))].slice(0, MAXIMO_PAGINA);
   };
-  if (achados.length < MINIMO_RESULTADOS) {
-    for (const offset of janelaDaPagina(pagina)) {
-      if (achados.length >= MINIMO_RESULTADOS) break;
+  const ler = (passo: Passo) =>
+    buscarNoCatalogo(passo.buscas, {
+      ...opcoes,
+      limite: 20,
+      offset: passo.offset,
+      porBusca: 24,
+      dominiosPorBusca: passo.buscas.map((b) => {
+        const k = intencao.buscas.indexOf(b);
+        return k >= 0 ? (dominiosPorBusca[k] ?? null) : dominioDaVariante;
+      }),
+    });
+
+  let variantes = anterior.variantes ?? [];
+  if (pagina > 0) {
+    const passos = passosDasSeguintes(intencao.buscas, variantes).slice(
+      (pagina - 1) * PASSOS_POR_PAGINA,
+      pagina * PASSOS_POR_PAGINA,
+    );
+    for (const passo of passos) {
+      if (achados.length >= MAXIMO_PAGINA) break;
+      juntar(await ler(passo));
+    }
+  } else {
+    juntar(
+      await buscarNoCatalogo(intencao.buscas, {
+        ...opcoes,
+        dominiosPorBusca,
+        limite: LIDOS_NA_PRIMEIRA,
+        porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 4,
+      }),
+    );
+    /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo.
+       Aparelho conhecido (categoria fixa) não: sem a categoria, "máquina"
+       traz nicho e placa. */
+    if (!achados.length && dominiosPorBusca.some(Boolean) && !regra && !piso)
+      juntar(await buscarNoCatalogo(intencao.buscas, opcoes));
+    /* Pedido amplo ou sazonal (28/10, "decoração de natal" voltava vazio). */
+    if (!achados.length && !regra && !piso) {
+      const palavras = palavrasDoPedido([q, ...intencao.buscas]);
       juntar(
-        await buscarNoCatalogo(intencao.buscas, {
+        await buscarNoCatalogo([...new Set([...intencao.buscas, q.slice(0, 60)])], {
           ...opcoes,
-          dominiosPorBusca,
+          tipoDaBusca: false,
           limite: 20,
-          offset,
-          porBusca: 24,
+          rejeitar: (nome) =>
+            opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
         }),
       );
     }
-  }
-  /* Ainda curto na 1ª página: a mesma busca com as marcas que apareceram
-     (ex.: "geladeira frost free brastemp"), sempre no mesmo filtro. */
-  if (pagina === 0 && achados.length && achados.length < MINIMO_RESULTADOS && !regra) {
-    const base = intencao.buscas[0] ?? q.slice(0, 60);
-    const marcas = marcasDosResultados(achados)
-      .map((m) => m.marca)
-      .filter((m) => !normalizar(base).includes(normalizar(m)))
-      .slice(0, 4);
-    if (marcas.length) {
-      const variantes = marcas.map((m) => `${base} ${m}`);
-      const dominio = dominiosPorBusca[0] ?? null;
-      juntar(
-        await buscarNoCatalogo(variantes, {
-          ...opcoes,
-          dominiosPorBusca: variantes.map(() => dominio),
-          limite: 20,
-          porBusca: 12,
-        }),
-      );
+    /* Mais fundo nas mesmas buscas (24-84), de 20 em 20. */
+    for (const offset of [24, 44, 64]) {
+      if (achados.length >= MINIMO_RESULTADOS) break;
+      juntar(await ler({ buscas: intencao.buscas, offset }));
+    }
+    /* As marcas que apareceram viram variantes ("geladeira frost free
+       brastemp"): completam a 1ª página e alimentam o "Carregar mais". */
+    variantes = variantesPorMarca(intencao.buscas[0] ?? q.slice(0, 60), achados);
+    if (achados.length && achados.length < MINIMO_RESULTADOS && variantes.length) {
+      juntar(await ler({ buscas: variantes.slice(0, 4), offset: 0 }));
     }
   }
   /* Aparelho: a posição na lista oficial de mais vendidos marca cada um
@@ -592,8 +595,12 @@ export async function buscaGuiada(
     q,
     ordenarPelaIntencao(q, achados, (r) => r.nome),
   );
-  return { intencao, resultados };
+  return { intencao, resultados, variantes };
 }
+
+/** Posição na busca oficial de cada página da busca do mesmo produto. */
+export const offsetDaPagina = (pagina: number, primeira: number, demais: number) =>
+  pagina <= 0 ? 0 : primeira + (pagina - 1) * demais;
 
 /** "barata", "em conta", "mais barato": do menor para o maior preço (sem
     preço no fim), mantendo a ordem de quem empata. */
