@@ -269,7 +269,7 @@ export function BuscaGuiada({
       vitrine: foto 4:3 limpa que abre fotos e detalhes, selo da loja, nota
       real, preço de referência com a hora, frete em linha própria, "Comprar
       com segurança" (afiliado) e "Comparar preço";
-   3. 16 de cara e "Carregar mais resultados (+16 opções)" enquanto o
+   3. 16 de cara e "Carregar mais resultados (+20 opções)" enquanto o
       catálogo tiver mais, com uma faixa de curadoria a cada 12;
    4. nota acima de 4,5 (quando lida) na frente; nota mais baixa no fim. */
 
@@ -281,7 +281,7 @@ export type ConsultaBusca = {
   no?: string;
 };
 
-const LOTE = 16;
+const LOTE = 20;
 const CURADORIA_A_CADA = 12;
 
 type CartaoDaBusca = {
@@ -676,7 +676,7 @@ export function ResultadosDaBusca({
                     ) : null}
                     {carregandoMais
                       ? "Carregando mais opções…"
-                      : "Carregar mais resultados (+16 opções)"}
+                      : "Carregar mais resultados (+20 opções)"}
                   </button>
                 </div>
               )}

@@ -378,7 +378,7 @@ export async function buscarNoCatalogo(
   const porBusca = opcoes.porBusca ?? 4;
   const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 20);
   const offset = Math.min(Math.max(Math.floor(opcoes.offset ?? 0), 0), 900);
-  const TETO = Math.min(opcoes.teto ?? 18, 36);
+  const TETO = Math.min(opcoes.teto ?? 18, 48);
   /* PARALELO (Weslei, 02/11: busca por texto rápida). 1) as buscas ao mesmo
      tempo; 2) os candidatos de todas, na ordem de antes, com as ofertas lidas
      6 por vez; 3) a escolha final na mesma ordem e com os mesmos limites. */
@@ -431,7 +431,7 @@ export async function buscarNoCatalogo(
   return resultados;
 }
 
-const LIDOS_NA_PRIMEIRA = 16;
+const LIDOS_NA_PRIMEIRA = 24;
 
 /** Posição na busca oficial de cada página de "Ver mais opções": a 1ª lê
     16 por busca; as seguintes, 8 por busca a partir daí. */
@@ -470,7 +470,8 @@ export async function buscaGuiada(
   /* Sem preço pedido, o aparelho grande tem piso (02/11: nicho de R$ 371 e
      placa de R$ 479 na busca de lava e seca). */
   const piso = intencao.precoMin || intencao.precoMax ? null : pisoDoAparelho(q);
-  const maximo = regra ? 16 : 8;
+  /* Pelo menos 20 resultados por busca (Weslei, 02/11). */
+  const maximo = 24;
   const opcoes = {
     precoMin: intencao.precoMin,
     precoMax: intencao.precoMax,
@@ -478,15 +479,18 @@ export async function buscaGuiada(
     tipoDaBusca: true,
     rejeitar: (nome: string) => foraDaIntencao(nome, intencao, q),
     max: maximo,
-    teto: regra ? 36 : 18,
+    teto: 44,
     /* 16 por busca (02/11): os primeiros do catálogo podem ser peças. */
     ...(pagina > 0
       ? {
-          limite: 8,
+          limite: 20,
           porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 1,
-          offset: offsetDaPagina(pagina, LIDOS_NA_PRIMEIRA, 8),
+          offset: offsetDaPagina(pagina, LIDOS_NA_PRIMEIRA, 20),
         }
-      : { limite: LIDOS_NA_PRIMEIRA }),
+      : {
+          limite: LIDOS_NA_PRIMEIRA,
+          porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 4,
+        }),
   };
   let achados = await buscarNoCatalogo(intencao.buscas, { ...opcoes, dominiosPorBusca });
   /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo.
@@ -507,10 +511,27 @@ export async function buscaGuiada(
       rejeitar: (nome) => opcoes.rejeitar(nome) || !palavras.some((p) => nomeTemOTipo(nome, p)),
     });
   }
+  /* PELO MENOS 20 (Weslei, 02/11): lê mais fundo nas mesmas buscas. */
+  if (pagina === 0 && achados.length && achados.length < 20) {
+    for (const offset of [20, 40, 60]) {
+      if (achados.length >= 20) break;
+      const vistos = new Set(achados.map((r) => r.produto));
+      const mais = await buscarNoCatalogo(intencao.buscas, {
+        ...opcoes,
+        dominiosPorBusca,
+        limite: 20,
+        offset,
+        porBusca: 24,
+      });
+      const novos = mais.filter((r) => !vistos.has(r.produto));
+      if (!mais.length) break;
+      achados = [...achados, ...novos].slice(0, 24);
+    }
+  }
   /* Aparelho: a posição na lista oficial de mais vendidos marca cada um
      (ordem "Mais vendidos" na tela) e, com menos de 12, a lista completa. */
   const listas = regra ? await lerMaisVendidos(regra.categorias) : undefined;
-  if (pagina === 0 && (regra ? achados.length < 12 : !achados.length)) {
+  if (pagina === 0 && achados.length < 20) {
     const vistos = new Set(achados.map((r) => r.produto));
     const mais = await maisVendidosDaCategoria(q, opcoes, listas);
     achados = [...achados, ...mais.filter((r) => !vistos.has(r.produto))].slice(0, 24);
@@ -667,9 +688,9 @@ export async function buscarMesmoProduto(titulo: string, pagina = 0) {
   const dominios = await dominiosPrevistos(titulo);
   const resultados = buscas.length
     ? await buscarNoCatalogo(buscas, {
-        max: 8,
-        porBusca: 6,
-        limite: 10,
+        max: 24,
+        porBusca: 12,
+        limite: 20,
         offset: offsetDaPagina(pagina, 10, 10),
         dominios,
         tipo: tipoDoProduto(titulo),

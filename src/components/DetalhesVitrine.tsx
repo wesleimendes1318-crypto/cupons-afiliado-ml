@@ -32,6 +32,7 @@ type Resposta = {
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const cache = new Map<string, Resposta | null>();
 const fotosCache = new Map<string, string[]>();
+const fichaCache = new Map<string, Carac[]>();
 /* Endereço padrão do mlstatic (-O): chave da galeria e miniaturas; a foto
    aberta usa a original (propsFotoGrande). */
 const fotoGrande = (u: string) =>
@@ -222,6 +223,9 @@ function Painel({
   const [doCatalogo, setDoCatalogo] = useState<string[] | null>(
     produto ? (fotosCache.get(produto) ?? null) : [],
   );
+  const [ficha, setFicha] = useState<Carac[] | null>(
+    produto ? (fichaCache.get(produto) ?? null) : [],
+  );
   const [atual, setAtual] = useState(0);
   const trilho = useRef<HTMLUListElement>(null);
   useEffect(() => {
@@ -229,19 +233,31 @@ function Painel({
     let vivo = true;
     fetch(`/api/public/fotos?produto=${produto}`)
       .then((r) => r.json())
-      .then((j: { fotos?: string[] }) => {
+      .then((j: { fotos?: string[]; ficha?: Carac[] }) => {
         const f = Array.isArray(j.fotos) ? j.fotos : [];
+        const fi = Array.isArray(j.ficha) ? j.ficha : [];
         fotosCache.set(produto, f);
-        if (vivo) setDoCatalogo(f);
+        fichaCache.set(produto, fi);
+        if (vivo) {
+          setDoCatalogo(f);
+          setFicha(fi);
+        }
       })
-      .catch(() => vivo && setDoCatalogo([]));
+      .catch(() => {
+        if (vivo) {
+          setDoCatalogo([]);
+          setFicha([]);
+        }
+      });
     return () => {
       vivo = false;
     };
   }, [produto]);
 
-  const det = dados?.detalhes ?? null;
-  const carac = (det?.caracteristicas ?? []).filter((c) => c && c.nome && c.valor);
+  const lidas = (dados?.detalhes?.caracteristicas ?? []).filter((c) => c && c.nome && c.valor);
+  /* Sem características lidas na comparação, a ficha técnica oficial. */
+  const carac = lidas.length ? lidas : (ficha ?? []);
+  const det = dados?.detalhes ?? (carac.length ? { caracteristicas: carac } : null);
   const dest = (det?.destaques ?? []).filter(Boolean);
   const descricao = (det?.descricao ?? "").trim();
   const longa = descricao.length > 420;
@@ -389,7 +405,7 @@ function Painel({
               )}
             </section>
           )}
-          {!mlb && !inicial ? null : dados === undefined ? (
+          {!mlb && !inicial ? null : dados === undefined || (!lidas.length && ficha === null) ? (
             <p className="flex items-center gap-2 text-[#6e6e73]">
               <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
               Carregando os detalhes do anúncio…

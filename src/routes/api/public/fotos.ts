@@ -10,7 +10,8 @@ import { excedeuLimite } from "@/lib/public-ai-api";
    (mlstatic, https) sai daqui. Cache por instância (6 h) e no navegador/CDN
    (1 dia) para não repetir chamada à API. */
 
-const cache = new Map<string, { fotos: string[]; em: number }>();
+type Ficha = { nome: string; valor: string };
+const cache = new Map<string, { fotos: string[]; ficha: Ficha[]; em: number }>();
 const VALIDADE = 6 * 3600_000;
 
 const resposta = (corpo: unknown, status = 200, cacheavel = true) =>
@@ -30,13 +31,16 @@ export const Route = createFileRoute("/api/public/fotos")({
         if (!/^MLB\d{5,12}$/.test(produto)) return resposta({ fotos: [] }, 400, false);
         const guardado = cache.get(produto);
         if (guardado && Date.now() - guardado.em < VALIDADE)
-          return resposta({ fotos: guardado.fotos });
+          return resposta({ fotos: guardado.fotos, ficha: guardado.ficha });
         if (excedeuLimite(request)) return resposta({ fotos: [] }, 429, false);
         try {
-          type ComFotos = { pictures?: Array<{ url?: string; secure_url?: string }> };
+          type ComFotos = {
+            pictures?: Array<{ url?: string; secure_url?: string }>;
+            attributes?: Array<{ name?: string; value_name?: string | null }>;
+          };
           /* Sem ficha de catálogo com esse id, é um anúncio: as fotos dele (27/10). */
           const p = await mlGet<ComFotos>(`/products/${produto}`).catch(() =>
-            mlGet<ComFotos>(`/items/${produto}?attributes=pictures`),
+            mlGet<ComFotos>(`/items/${produto}?attributes=pictures,attributes`),
           );
           const fotos = [
             ...new Set(
@@ -45,11 +49,16 @@ export const Route = createFileRoute("/api/public/fotos")({
                 .filter((u) => /^https:\/\/[a-z0-9.-]*mlstatic\.com\//i.test(u)),
             ),
           ].slice(0, 12);
-          cache.set(produto, { fotos, em: Date.now() });
+          /* FICHA TÉCNICA OFICIAL (02/11): "Ver detalhes" nunca fica vazio. */
+          const ficha = (p.attributes ?? [])
+            .map((a) => ({ nome: (a.name ?? "").trim(), valor: (a.value_name ?? "").trim() }))
+            .filter((a) => a.nome && a.valor && a.valor.length <= 200)
+            .slice(0, 60);
+          cache.set(produto, { fotos, ficha, em: Date.now() });
           if (cache.size > 500) cache.clear();
-          return resposta({ fotos });
+          return resposta({ fotos, ficha });
         } catch {
-          return resposta({ fotos: [] }, 200, false);
+          return resposta({ fotos: [], ficha: [] }, 200, false);
         }
       },
     },

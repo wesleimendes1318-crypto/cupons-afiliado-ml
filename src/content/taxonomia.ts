@@ -44,7 +44,8 @@ export type FiltroId =
   | "polegadas"
   | "memoria_ram"
   | "genero"
-  | "portas_rede";
+  | "portas_rede"
+  | "capacidade_kg";
 
 type Def = {
   slug: string;
@@ -638,6 +639,7 @@ export const ARVORE: Def[] = [
         "Lavanderia",
         {
           ml: /eletrodomesticos > lavadores > (?:maquinas de|pecas)|mlb-sewing_machines|mlb-irons/,
+          filtros: ["capacidade_kg"],
         },
         [
           n("lava-e-seca", "Lava e seca", {
@@ -1669,6 +1671,15 @@ export type Filtro = {
 };
 
 export const FILTROS: Record<FiltroId, Filtro> = {
+  capacidade_kg: {
+    id: "capacidade_kg",
+    nome: "Capacidade (kg)",
+    opcoes: [
+      { id: "ate-10", rotulo: "Até 10 kg", re: /\b(?:[1-9]|10)(?:[.,]\d)? ?kg\b/ },
+      { id: "11-13", rotulo: "11 a 13 kg", re: /\b1[1-3](?:[.,]\d)? ?kg\b/ },
+      { id: "14-mais", rotulo: "14 kg ou mais", re: /\b(?:1[4-9]|[2-9]\d)(?:[.,]\d)? ?kg\b/ },
+    ],
+  },
   armazenamento: {
     id: "armazenamento",
     nome: "Capacidade",
