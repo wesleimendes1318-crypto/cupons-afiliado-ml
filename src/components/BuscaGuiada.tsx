@@ -648,7 +648,7 @@ export function ResultadosDaBusca({
                   total={ordenados.length}
                 />
               )}
-              {guiada && cartoes.length > 1 && (
+              {consulta?.modo === "guiada" && cartoes.length > 1 && (
                 <AssistenteBusca
                   consulta={q}
                   cartoes={cartoes}
