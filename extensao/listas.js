@@ -96,9 +96,33 @@ export function listasDoDom(links) {
   return [...out.values()];
 }
 
+/* Listas pelo TEXTO da tela (cartoes sem link): linha do nome seguida de
+   "N produtos" e, perto, "Publica"/"Privada". Sem id real: casa so pelo nome. */
+export function listasDoTexto(texto) {
+  const linhas = String(texto || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const out = new Map();
+  linhas.forEach((l, k) => {
+    const q = /^(\d{1,4})\s*(produtos?|itens?|an[uú]ncios?)\b/i.exec(l);
+    if (!q || k === 0) return;
+    let j = k - 1;
+    while (j >= 0 && /^(p[uú]blica|privada|\d+.*produtos?)$/i.test(linhas[j])) j--;
+    const nome = linhas[j];
+    if (!nome || nome.length > 80 || /^(listas?|favoritos|criar|nova lista)$/i.test(nome)) return;
+    const perto = linhas.slice(Math.max(0, k - 2), k + 3).join(' ');
+    const publica = /\bp[uú]blica\b/i.test(perto) ? true : /\bprivada\b/i.test(perto) ? false : null;
+    const id = 'nome:' + normalizarNome(nome);
+    if (!out.has(id)) out.set(id, { id, nome, qtd: Number(q[1]), publica, url: null });
+  });
+  return [...out.values()];
+}
+
 export function juntarListas(...grupos) {
   const out = new Map();
+  const porNome = new Map();
   for (const g of grupos) for (const l of g || []) {
+    const n = normalizarNome(l.nome);
+    if (String(l.id).startsWith('nome:') && porNome.has(n)) l = { ...l, id: porNome.get(n) };
+    if (!String(l.id).startsWith('nome:')) porNome.set(n, l.id);
     const atual = out.get(l.id) || {};
     out.set(l.id, {
       id: l.id, nome: atual.nome || l.nome,
@@ -267,7 +291,11 @@ function paginaLer() {
   return {
     url: location.href, titulo: document.title,
     links, estados: estados.slice(0, 12), capturas,
-    texto: (document.body && document.body.innerText || '').slice(0, 3000)
+    texto: (document.body && document.body.innerText || '').slice(0, 12000),
+    botoes: [...document.querySelectorAll('button, [role="button"], a[href]')]
+      .filter(b => b.getClientRects().length)
+      .map(b => ((b.innerText || '') + ' ' + (b.getAttribute('aria-label') || '')).replace(/\s+/g, ' ').trim())
+      .filter(t => t && t.length < 60).slice(0, 60)
   };
 }
 
@@ -391,6 +419,11 @@ export async function sincronizarListas(d) {
     if (d.ehCaptcha('', fim)) { parar = 'verificacao do Mercado Livre'; return false; }
     if (/\/jms\/|\/login|lgz/i.test(fim)) { parar = 'deslogado do Mercado Livre'; return false; }
     await rodar(paginaEscutar);
+    for (let k = 0; k < 12; k++) {
+      const pronto = await rodar(() => (document.body && document.body.innerText || '').length > 400);
+      if (pronto) break;
+      await d.sleep(1000);
+    }
     return true;
   };
   const conferirStatus = s => { if ([401, 403, 429].includes(s)) parar = 'Mercado Livre respondeu ' + s; };
@@ -401,10 +434,12 @@ export async function sincronizarListas(d) {
     for (const s of [...(r.estados || []), ...(r.capturas || []).map(c => c.resposta)]) {
       try { dosJson.push(...listasDoJson(JSON.parse(s))); } catch (e) { /* nao e JSON */ }
     }
-    return juntarListas(dosJson, listasDoDom(r.links));
+    ultimaLeitura = r;
+    return juntarListas(dosJson, listasDoDom(r.links), listasDoTexto(r.texto));
   };
+  let ultimaLeitura = null;
   const valoresDe = (lista, item) => ({
-    NOME: lista && lista.nome, LISTA: lista && lista.ml && lista.ml.id,
+    NOME: lista && lista.nome, LISTA: lista && lista.ml && !String(lista.ml.id).startsWith('nome:') ? lista.ml.id : null,
     ITEM: item, ITEM_NUM: item ? String(item).replace(/^MLB/i, '') : null
   });
 
@@ -413,7 +448,14 @@ export async function sincronizarListas(d) {
     if (!(await ir(URL_LISTAS))) throw new Error(parar);
     listasMl = await lerListas();
     let casadas = casarListas(tarefas.listas, listasMl);
-    diag.listasNoMl = listasMl.slice(0, 30).map(l => ({ nome: l.nome, qtd: l.qtd, publica: l.publica }));
+    diag.listasNoMl = listasMl.slice(0, 30).map(l => ({ nome: l.nome, qtd: l.qtd, publica: l.publica, comId: !String(l.id).startsWith('nome:') }));
+    if (ultimaLeitura) diag.pagina = {
+      url: String(ultimaLeitura.url || '').split('?')[0], titulo: ultimaLeitura.titulo,
+      botoes: ultimaLeitura.botoes, texto: String(ultimaLeitura.texto || '').slice(0, 1500),
+      linksListas: (ultimaLeitura.links || []).map(x => x.href).filter(h => /bookmark|lista/i.test(h)).slice(0, 15),
+      pedidos: (ultimaLeitura.capturas || []).map(c => c.metodo + ' ' + String(c.url).split('?')[0]).slice(0, 20),
+      estados: (ultimaLeitura.estados || []).length
+    };
 
     /* 2) criar as que faltam (Publicas) */
     if (tarefas.modo !== 'ler') {
@@ -428,7 +470,7 @@ export async function sincronizarListas(d) {
         }
         if (!id && !parar) {
           await rodar(paginaCapturas);
-          const abriu = await rodar(paginaClicar, ['^\\+?\\s*(criar|nova)( nova)? lista$|criar (uma )?lista', 'i', false]);
+          const abriu = await rodar(paginaClicar, ['^\\+?\\s*(criar|nova)( nova| uma)?( lista)?$|criar (uma |nova )?lista|nova lista|adicionar lista', 'i', false]);
           await d.sleep(1500);
           const preencheu = abriu && await rodar(paginaPreencher, [l.nome]);
           if (preencheu) {
@@ -562,6 +604,11 @@ export async function sincronizarListas(d) {
   } catch (e) {
     diag.erros.push(String((e && e.message) || e).slice(0, 160));
   } finally {
+    if (!parar && !listasMl.length) {
+      /* Nada lido: tenta de novo em 10 min (no maximo 3 vezes seguidas). */
+      const { listasRepeticoes = 0 } = await chrome.storage.local.get('listasRepeticoes');
+      if (listasRepeticoes < 3) await chrome.storage.local.set({ listasUltima: Date.now() - RODADA_MS + 10 * 60e3, listasRepeticoes: listasRepeticoes + 1 });
+    } else await chrome.storage.local.set({ listasRepeticoes: 0 });
     if (parar) {
       diag.parou = parar;
       await chrome.storage.local.set({ listasPausaAte: Date.now() + PAUSA_MS });
