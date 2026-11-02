@@ -3,7 +3,8 @@
    esquerdo (o botão "Colar link" fica à direita), só depois de rolar a tela:
    "Início" abre a tela inicial limpa e a seta volta ao topo. Some com um
    diálogo aberto; o movimento respeita prefers-reduced-motion. No celular
-   só os ícones (18/10: a pílula cobria o texto dos cartões). */
+   só os ícones (18/10: a pílula cobria o texto dos cartões). Desde 02/11 o
+   celular com abas não mostra a pílula (styles.css). */
 import { useEffect, useState } from "react";
 import { ArrowUp, House } from "lucide-react";
 

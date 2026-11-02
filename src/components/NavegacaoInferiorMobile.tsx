@@ -23,6 +23,14 @@ export function NavegacaoInferiorMobile() {
     else void navegar({ to: "/", hash: "colar-link" }).then(irAoCampo);
   };
 
+  /* Tocar na aba já aberta volta ao topo, como num app nativo (substitui a
+     pílula flutuante no celular, 02/11). */
+  const topoSeAtiva = (destino: string) => {
+    if (caminho !== destino) return;
+    const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduzir ? "auto" : "smooth" });
+  };
+
   return (
     <nav
       data-abas-inferiores
@@ -31,6 +39,7 @@ export function NavegacaoInferiorMobile() {
     >
       <Link
         to="/"
+        onClick={() => topoSeAtiva("/")}
         activeOptions={{ exact: true, includeHash: false }}
         activeProps={ATIVA}
         className={ABA}
@@ -42,11 +51,11 @@ export function NavegacaoInferiorMobile() {
         <Link2 className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Colar link
       </button>
-      <Link to="/categorias" activeProps={ATIVA} className={ABA}>
+      <Link to="/categorias" onClick={() => topoSeAtiva("/categorias")} activeProps={ATIVA} className={ABA}>
         <LayoutGrid className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Categorias
       </Link>
-      <Link to="/meus-precos" activeProps={ATIVA} className={ABA}>
+      <Link to="/meus-precos" onClick={() => topoSeAtiva("/meus-precos")} activeProps={ATIVA} className={ABA}>
         <Tag className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Meus preços
       </Link>

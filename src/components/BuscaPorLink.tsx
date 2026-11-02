@@ -4869,7 +4869,7 @@ function BarraFixa({
   useEffect(() => {
     const raiz = document.documentElement;
     const celular = window.matchMedia?.("(max-width: 639px)").matches;
-    raiz.style.setProperty("--folga-compra", visivel && celular ? "84px" : "0px");
+    raiz.style.setProperty("--folga-compra", visivel && celular ? "140px" : "0px");
     /* As abas do celular descem enquanto a compra está na tela. */
     raiz.toggleAttribute("data-compra", Boolean(visivel && celular));
     return () => {
@@ -4897,57 +4897,66 @@ function BarraFixa({
         }
         aria-hidden={!visivel}
       >
-        <div className="flex items-center gap-3 rounded-[18px] border border-[#ececf0] vidro-barra px-3.5 py-3 shadow-[0_6px_24px_rgba(15,23,41,0.10)] dark:border-white/10">
-          <Foto
-            src={imagem}
-            className="size-10 shrink-0 rounded-xl bg-muted object-contain"
-            ver={{ titulo, url: urlGerar, preco, link }}
-          />
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="text-[11px] font-semibold text-[#15803d]">Melhor opção</p>
-            {preco != null ? (
-              /* O preço nunca fica por baixo do botão (18/10: "R$ 1.199,0"). */
-              <p className="whitespace-nowrap text-base font-bold tabular-nums text-foreground">
-                {brl(preco)}
+        {/* Duas linhas (Weslei, 02/11 15h: "Comparar" encavalava no preço em
+            360-440 px): em cima produto, preço e frete com a largura toda;
+            embaixo Comparar e Comprar lado a lado, nunca por cima do preço. */}
+        <div className="flex flex-col gap-2.5 rounded-[18px] border border-[#ececf0] vidro-barra px-3.5 py-3 shadow-[0_6px_24px_rgba(15,23,41,0.10)] dark:border-white/10">
+          <div className="flex min-w-0 items-center gap-3">
+            <Foto
+              src={imagem}
+              className="size-10 shrink-0 rounded-xl bg-muted object-contain"
+              ver={{ titulo, url: urlGerar, preco, link }}
+            />
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="text-[11px] font-semibold text-[#15803d]">Melhor opção</p>
+              {preco != null ? (
+                <p className="whitespace-nowrap text-base font-bold tabular-nums text-foreground">
+                  {brl(preco)}
+                </p>
+              ) : (
+                <p className="truncate text-[13px] font-semibold">{titulo ?? "Produto"}</p>
+              )}
+            </div>
+            {frete && (
+              <p className="shrink-0 text-right text-[11px] font-medium text-secondary-ink">
+                {frete}
               </p>
-            ) : (
-              <p className="truncate text-[13px] font-semibold">{titulo ?? "Produto"}</p>
             )}
-            {frete && <p className="text-[11px] text-secondary-ink">{frete}</p>}
           </div>
-          {/* Comparar sempre ao lado de comprar (Weslei, 02/11): leva à tabela
-              "Compare com clareza" (sites e vendedores). */}
-          <button
-            type="button"
-            tabIndex={visivel ? 0 : -1}
-            onClick={() =>
-              (
-                document.getElementById("secao-marketplaces") ??
-                document.getElementById("secao-lojas")
-              )?.scrollIntoView({ block: "start" })
-            }
-            className="vidro-botao inline-flex h-11 shrink-0 items-center rounded-full border border-[#0071e3]/40 px-3 text-[13px] font-semibold text-[#0058b0] active:scale-[0.98]"
-          >
-            Comparar
-          </button>
-          {link ? (
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
+          <div className="flex gap-2">
+            {/* Leva à tabela "Compare com clareza" (sites e vendedores). */}
+            <button
+              type="button"
               tabIndex={visivel ? 0 : -1}
-              className="inline-flex h-11 max-w-[50%] shrink-0 items-center gap-1.5 rounded-full bg-[#15803d] px-3.5 text-center text-[13px] font-bold leading-tight text-white active:scale-[0.98]"
+              onClick={() =>
+                (
+                  document.getElementById("secao-marketplaces") ??
+                  document.getElementById("secao-lojas")
+                )?.scrollIntoView({ block: "start" })
+              }
+              className="vidro-botao inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-[#0071e3]/40 px-5 text-[13px] font-semibold text-[#0058b0] active:scale-[0.98]"
             >
-              <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-              {/* 320 px: "Comprar" (o texto longo empurrava o preço para baixo do botão). */}
-              <span className="min-[430px]:hidden">Comprar</span>
-              <span className="hidden min-[430px]:inline">Comprar com segurança</span>
-            </a>
-          ) : urlGerar ? (
-            <span className="max-w-[50%] shrink-0">
-              <VerNaLoja url={urlGerar} pilula tabIndex={visivel ? 0 : -1} />
-            </span>
-          ) : null}
+              Comparar
+            </button>
+            {link ? (
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                tabIndex={visivel ? 0 : -1}
+                className="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#15803d] px-3.5 text-[13px] font-bold text-white active:scale-[0.98]"
+              >
+                <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
+                {/* Abaixo de 380 px o texto longo quebraria em duas linhas. */}
+                <span className="min-[380px]:hidden">Comprar</span>
+                <span className="hidden min-[380px]:inline">Comprar com segurança</span>
+              </a>
+            ) : urlGerar ? (
+              <span className="flex min-w-0 flex-1 [&_a]:w-full [&_a]:justify-center">
+                <VerNaLoja url={urlGerar} pilula tabIndex={visivel ? 0 : -1} />
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
     </>
