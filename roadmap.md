@@ -100,3 +100,4 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 - [x] Lojas: as 3 melhores à vista e "Ver outras N lojas"
 - [x] Envio internacional: selo, tributos estimados no custo e nunca vencer o nacional sem custo completo
 - [x] Testes de tributos/custo internacional
+- [x] Acabamento: nada saindo dos quadros (moldura da Melhor escolha nos 3 marketplaces, faixa das lojas, campo do link cortado, parecido único, botões que quebravam)

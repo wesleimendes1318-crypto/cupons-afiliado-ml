@@ -365,7 +365,8 @@ function BotaoComprar({
       rel="noopener noreferrer sponsored"
       data-origem={origem}
       className={
-        "flex w-full items-center justify-center rounded-xl bg-success py-2.5 font-bold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px " +
+        /* Contorno: o único botão verde cheio da tela é o da recomendação. */
+        "flex w-full min-w-0 items-center justify-center rounded-xl border border-success/50 bg-card py-2.5 font-semibold text-success transition-colors duration-200 ease-out hover:bg-success/10 " +
         (compacto ? "gap-1 px-2 text-[12px]" : "gap-1.5 px-2.5 text-[13px]")
       }
     >
@@ -529,7 +530,11 @@ function Total({
       ) : (
         <span className="font-semibold text-secondary-ink">A confirmar</span>
       )}
-      {dif && <span className="text-[11px] font-normal text-secondary-ink">{dif}</span>}
+      {dif && (
+        <span className="max-w-[15rem] text-balance text-[11px] font-normal text-secondary-ink">
+          {dif}
+        </span>
+      )}
     </span>
   );
 }
@@ -963,9 +968,9 @@ export function ComparacaoMarketplaces({
                     key={mk}
                     type="button"
                     onClick={() => void pedir(mk)}
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#0071e3] px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none"
+                    className="inline-flex min-w-0 flex-1 basis-40 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#0071e3] px-3.5 py-2.5 text-center text-[13px] font-semibold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px @xl:flex-none @xl:basis-auto"
                   >
-                    <Search className="size-4" aria-hidden="true" />
+                    <Search className="size-4 shrink-0" aria-hidden="true" />
                     Comparar na {NOME_DO_JOGADOR[mk]}
                   </button>
                 ))}
@@ -1039,12 +1044,7 @@ export function ComparacaoMarketplaces({
                 key={c.jogador}
                 role="group"
                 aria-label={NOME_DO_JOGADOR[c.jogador]}
-                className={
-                  "relative row-span-7 grid grid-rows-subgrid " +
-                  (ehVencedor(c)
-                    ? "z-10 rounded-xl shadow-lg shadow-success/15 ring-2 ring-success/60"
-                    : "")
-                }
+                className="relative row-span-7 grid grid-rows-subgrid"
               >
                 <span
                   className={
@@ -1070,17 +1070,29 @@ export function ComparacaoMarketplaces({
                   <span
                     key={r}
                     className={
-                      "flex items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
-                      (r === "Total" ? FUNDO_TOTAL : "bg-card") +
+                      "flex min-w-0 items-center justify-center border-r border-t border-border px-3 py-3 text-center " +
+                      (r === "Total"
+                        ? FUNDO_TOTAL
+                        : ehVencedor(c)
+                          ? "bg-success/[0.04]"
+                          : "bg-card") +
                       (i === ROTULOS.length - 1 ? " border-b" : "") +
-                      (i === ROTULOS.length - 1 && idx === colunas.length - 1
-                        ? " rounded-br-xl"
+                      (i === ROTULOS.length - 1 && (idx === colunas.length - 1 || ehVencedor(c))
+                        ? " rounded-b-xl"
                         : "")
                     }
                   >
                     {celula(c, r)}
                   </span>
                 ))}
+                {/* Moldura do vencedor desenhada POR DENTRO da coluna: nada
+                    sai da tabela nem passa por cima das colunas vizinhas. */}
+                {ehVencedor(c) && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-inset ring-success/55"
+                  />
+                )}
               </div>
             ))}
           </div>

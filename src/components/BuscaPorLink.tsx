@@ -1593,6 +1593,9 @@ export default function BuscaPorLink({
           <textarea
             id="campo-link-produto"
             rows={1}
+            /* Link longo fica numa linha só (rola dentro do campo): antes
+               quebrava e a 2ª linha saía cortada pela metade. */
+            wrap="off"
             value={url}
             {...sugestoes.propsCampo}
             onChange={(e) => {
@@ -1627,15 +1630,19 @@ export default function BuscaPorLink({
             enterKeyHint="search"
             aria-label="Link do anúncio ou nome do produto"
             className={
-              "min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-2.5 text-sm outline-none focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5" +
+              "h-11 min-w-0 flex-1 resize-none overflow-x-auto overflow-y-hidden whitespace-pre rounded-xl border border-border bg-[#f5f5f7] px-3.5 py-[9px] text-sm leading-6 outline-none [scrollbar-width:none] focus:border-[#7547E8] focus:bg-background focus:ring-2 focus:ring-[#7547E8]/30 dark:bg-white/5 [&::-webkit-scrollbar]:hidden" +
               (lojaDoLink ? " pr-32" : podeColar && !url ? " pr-24" : "")
             }
           />
           {/* Selo da loja no lugar do "Colar": aparece na hora em que o link
               é colado, sem empurrar nada na tela. */}
           {lojaDoLink && (
-            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 max-w-[120px] -translate-y-1/2 items-center truncate rounded-full bg-[#0071e3]/10 px-2.5 text-[11px] font-semibold text-[#0071e3] dark:text-[#4da3ff]">
-              {lojaDoLink}
+            /* Faixa sólida na ponta do campo: o link que rola por baixo some
+               em degradê, sem aparecer pedaço de texto ao lado do selo. */
+            <span className="pointer-events-none absolute inset-y-px right-px flex w-32 items-center justify-end rounded-r-xl bg-gradient-to-r from-transparent via-[#f5f5f7] via-25% to-[#f5f5f7] pr-2 dark:via-[#1c1c1e] dark:to-[#1c1c1e]">
+              <span className="inline-flex h-7 max-w-[110px] items-center truncate rounded-full bg-[#0071e3]/10 px-2.5 text-[11px] font-semibold text-[#0071e3] dark:text-[#4da3ff]">
+                {lojaDoLink}
+              </span>
             </span>
           )}
           <SugestoesBusca estado={sugestoes} />
@@ -5171,7 +5178,11 @@ function Parecidos({
           return (
             <li
               key={i}
-              className="w-[86%] shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
+              className={
+                /* Um só parecido ocupa a largura toda (não sobra um vão ao lado). */
+                (visiveis.length === 1 ? "w-full" : "w-[86%]") +
+                " shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
+              }
             >
               {/* Foto em destaque no celular: quadro branco do tamanho do
                   cartão, sem moldura cinza em volta (18/10: o fundo branco da
@@ -5663,9 +5674,9 @@ function LinhaDaLoja({
       className={
         "relative " +
         (melhor
-          ? "bg-success/[0.08] before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-success"
+          ? "bg-success/[0.08] before:absolute before:inset-y-2.5 before:left-0 before:w-1 before:rounded-r-full before:bg-success"
           : l.colado
-            ? "bg-amber-50/80 before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-amber-500 dark:bg-amber-950/25"
+            ? "bg-amber-50/80 before:absolute before:inset-y-2.5 before:left-0 before:w-1 before:rounded-r-full before:bg-amber-500 dark:bg-amber-950/25"
             : "")
       }
     >
