@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowRight, Calculator, Lightbulb } from "lucide-react";
 
-import { AdInArticle } from "@/components/anuncios/Anuncio";
+import { Anuncio } from "@/components/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { buscarGuia, GUIAS, type Bloco } from "@/content/guias";
 
@@ -136,7 +136,8 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
 function PaginaGuia() {
   const { guia } = Route.useLoaderData();
   const outros = GUIAS.filter((item) => item.slug !== guia.slug).slice(0, 3);
-  const meio = Math.ceil(guia.blocos.length / 2);
+  /* Anúncio depois do 2º bloco do texto (ou do 1º, em guia curto). */
+  const meio = Math.min(2, Math.max(1, guia.blocos.length - 1));
 
   return (
     <LayoutConteudo
@@ -157,8 +158,8 @@ function PaginaGuia() {
         <RenderBloco key={indice} bloco={bloco} />
       ))}
 
-      {/* Espaço de publicidade: fica entre parágrafos, longe de qualquer botão. */}
-      <AdInArticle />
+      {/* Publicidade: só nos artigos dos Guias, entre parágrafos (docs/adsense.md). */}
+      <Anuncio key={`meio-${guia.slug}`} slot={import.meta.env.VITE_ADSENSE_SLOT_GUIA_MEIO} />
 
       {guia.blocos.slice(meio).map((bloco, indice) => (
         <RenderBloco key={meio + indice} bloco={bloco} />
@@ -176,6 +177,8 @@ function PaginaGuia() {
           </div>
         ))}
       </div>
+
+      <Anuncio key={`fim-${guia.slug}`} slot={import.meta.env.VITE_ADSENSE_SLOT_GUIA_FIM} />
 
       {outros.length > 0 && (
         <>
