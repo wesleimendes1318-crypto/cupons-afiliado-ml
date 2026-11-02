@@ -365,7 +365,8 @@ function BotaoComprar({
       rel="noopener noreferrer sponsored"
       data-origem={origem}
       className={
-        "flex w-full items-center justify-center rounded-xl bg-success py-2.5 font-bold text-white transition-all duration-200 ease-out hover:brightness-95 motion-safe:hover:-translate-y-px " +
+        /* Contorno: o único botão verde cheio da tela é o da recomendação. */
+        "flex w-full min-w-0 items-center justify-center rounded-xl border border-success/50 bg-card py-2.5 font-semibold text-success transition-colors duration-200 ease-out hover:bg-success/10 " +
         (compacto ? "gap-1 px-2 text-[12px]" : "gap-1.5 px-2.5 text-[13px]")
       }
     >
@@ -529,7 +530,11 @@ function Total({
       ) : (
         <span className="font-semibold text-secondary-ink">A confirmar</span>
       )}
-      {dif && <span className="text-[11px] font-normal text-secondary-ink">{dif}</span>}
+      {dif && (
+        <span className="max-w-[15rem] text-balance text-[11px] font-normal text-secondary-ink">
+          {dif}
+        </span>
+      )}
     </span>
   );
 }
