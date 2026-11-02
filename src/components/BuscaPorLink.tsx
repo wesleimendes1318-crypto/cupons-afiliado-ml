@@ -55,6 +55,15 @@ import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo"
 import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 import { seguraParaRecomendar } from "@/lib/recomendacao-segura";
 import { aplicarPrazo } from "@/lib/prazo-entrega";
+import {
+  aplicarEnvio,
+  custoIncompleto,
+  custoTotalDaOferta,
+  mudaProcedencia,
+  rotuloInternacional,
+  tributosValidos,
+} from "@/lib/internacional";
+import { useEnvioInternacional } from "@/lib/internacional-cliente";
 import { textoDoPagamento } from "@/lib/pagamento";
 import { diferencasParaCliente, resumoParaCliente } from "@/lib/diferencas";
 import { compararFichas, linhasLadoALado, mudaCompleta } from "@/lib/ficha";
@@ -358,6 +367,11 @@ type Precos = {
 };
 
 type OutraLoja = {
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   /* Detalhes lidos na página do anúncio desta loja (28/09). */
   detalhes?: Detalhes | null;
   precos?: Precos | null;
@@ -410,6 +424,11 @@ type OutraLoja = {
 
 type Analise = {
   titulo: string | null;
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   /* Avaliação das pessoas do anúncio colado (10/10). */
   avaliacoes?: DadosAvaliacoes | null;
   preco: number | null;
@@ -446,6 +465,11 @@ type Analise = {
      compatibilidade), com o que muda. Sempre separadas e com aviso. */
   parecidos?: Array<{
     titulo: string | null;
+    /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+    internacional?: boolean | null;
+    paisOrigem?: string | null;
+    /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+    tributosEstimados?: number | null;
     imagem?: string | null;
     preco: number;
     diferenca?: number | null;
@@ -533,6 +557,11 @@ type Analise = {
 
 type Referencia = {
   vendedor: string | null;
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   preco: number | null;
   final: number | null;
   /* final lá menos final aqui: positivo = lá sai mais caro. */
@@ -2408,10 +2437,21 @@ function Resultado({
      vira semAfiliado: sai da tabela e da recomendação. */
   const recusados = useAnunciosRecusados(pedido.analise);
   const analiseBase = filtroPrazo?.algumAtende ? filtroPrazo.analise : pedido.analise;
-  const a = useMemo(
-    () => (analiseBase ? semRecusados(analiseBase, recusados) : analiseBase),
-    [analiseBase, recusados],
-  );
+  /* ENVIO INTERNACIONAL (01/11, Switch 2): quais ofertas vêm do exterior,
+     pela lista oficial da ficha. A versão muda quando chegam lojas novas. */
+  const versaoEnvio = pedido.analise
+    ? [
+        pedido.analise.outrasLojas?.length ?? 0,
+        pedido.analise.referencias?.length ?? 0,
+        pedido.analise.parecidos?.length ?? 0,
+      ].join("-")
+    : null;
+  const envio = useEnvioInternacional(pedidoId, versaoEnvio);
+  const a = useMemo(() => {
+    if (!analiseBase) return analiseBase;
+    const comEnvio = aplicarEnvio(analiseBase, envio);
+    return semRecusados(comEnvio, recusados);
+  }, [analiseBase, recusados, envio]);
   const link = pedido.link ?? "";
   const dispositivo = useDispositivo();
 
@@ -2455,24 +2495,30 @@ function Resultado({
   };
   /* Total que o cliente paga: produto + frete para o CEP (quando simulado).
      Frete pago sem valor: null (não dá para afirmar o total). */
+  /* Internacional sem os tributos lidos: custo desconhecido (null), nunca
+     "mais barata" (01/11, Switch 2: R$ 2.906 + R$ 2.498 de impostos). */
   const totalDaLoja = (o: {
     final?: number | null;
     freteGratis?: boolean | null;
     custoFrete?: number | null;
-  }) =>
-    o.final == null
-      ? null
-      : o.freteGratis === false
-        ? o.custoFrete != null && o.custoFrete > 0
-          ? Math.round((o.final + o.custoFrete) * 100) / 100
-          : null
-        : o.final;
+    internacional?: boolean | null;
+    tributosEstimados?: number | null;
+  }) => custoTotalDaOferta(o);
+  /* Colado internacional sem tributos lidos: o custo final dele não é
+     conhecido, então não há economia a afirmar contra ele; a recomendação
+     é a melhor loja NACIONAL de custo confirmado. */
+  const coladoIncompleto = custoIncompleto({
+    internacional: a?.internacional ?? null,
+    tributosEstimados: a?.tributosEstimados ?? null,
+  });
   const totalColado =
-    precoColado == null
+    precoColado == null || coladoIncompleto
       ? null
       : a?.freteGratis === false && a?.custoFrete != null && a.custoFrete > 0
-        ? Math.round((precoColado + a.custoFrete) * 100) / 100
-        : precoColado;
+        ? Math.round(
+            (precoColado + a.custoFrete + (tributosValidos(a?.tributosEstimados) ?? 0)) * 100,
+          ) / 100
+        : Math.round((precoColado + (tributosValidos(a?.tributosEstimados) ?? 0)) * 100) / 100;
   /* Custo de cada linha da tabela (as mesmas de linhasLojas) para o cliente:
      produto + frete conhecido. Base do aviso "preço muito abaixo" e da régua
      de recomendação segura (18/10). */
@@ -2515,6 +2561,9 @@ function Resultado({
         lojaOficial: r.lojaOficial ?? null,
         mercadoLider: r.mercadoLider ?? null,
         avaliacoes: r.avaliacoes ?? null,
+        internacional: r.internacional ?? null,
+        paisOrigem: r.paisOrigem ?? null,
+        tributosEstimados: r.tributosEstimados ?? null,
         /* Pela lista oficial da ficha (modo servidor, 19/10) é o mesmo produto
            da mesma página de catálogo, sem conferência pela foto. */
         verificadoIA: !a?.modoServidor,
@@ -2529,6 +2578,7 @@ function Resultado({
        frete grátis). Frete pago SEM valor conhecido continua fora. */
     .map((c) => {
       const t = totalDaLoja(c.o);
+      if (coladoIncompleto) return { ...c, o: { ...c.o, ganho: null } };
       return t != null && totalColado != null
         ? { ...c, o: { ...c.o, ganho: Math.round((totalColado - t) * 100) / 100 } }
         : c;
@@ -2539,9 +2589,11 @@ function Resultado({
         totalDaLoja(c.o) != null &&
         !c.o.mesmaPagina &&
         Boolean(c.o.link || c.o.url) &&
-        (totalColado == null
-          ? (c.o.ganho ?? 0) > 0
-          : (totalDaLoja(c.o) as number) <= totalColado - 0.5) &&
+        (coladoIncompleto
+          ? c.o.internacional !== true
+          : totalColado == null
+            ? (c.o.ganho ?? 0) > 0
+            : (totalDaLoja(c.o) as number) <= totalColado - 0.5) &&
         /* SEGURANÇA DE QUEM COMPRA (Weslei, 18/10): nota baixa nunca; preço
            muito abaixo das outras lojas só com o link de afiliado já gerado
            e boa avaliação. Continua na tabela, com o aviso. */
@@ -2609,6 +2661,8 @@ function Resultado({
           .filter(
             (p) =>
               p.freteGratis !== false &&
+              /* Importado sem os tributos lidos não tem custo conhecido. */
+              !custoIncompleto(p) &&
               /* Recomendação só com link de afiliado pronto ou gerado no clique. */
               (ehLinkDeAfiliado(p.link) || Boolean(p.url)) &&
               ((p.semelhanca ?? 0) >= 85 || p.mesmaFoto === true) &&
@@ -2703,6 +2757,9 @@ function Resultado({
             item: itemDoEndereco(urlColada),
             detalhes: a?.detalhes ?? null,
             precos: a?.precos ?? null,
+            internacional: a?.internacional ?? null,
+            paisOrigem: a?.paisOrigem ?? null,
+            tributosEstimados: a?.tributosEstimados ?? null,
           },
         ]
       : []),
@@ -2725,6 +2782,9 @@ function Resultado({
       detalhes: o.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !o.detalhes,
       precos: o.precos ?? null,
+      internacional: o.internacional ?? null,
+      paisOrigem: o.paisOrigem ?? null,
+      tributosEstimados: o.tributosEstimados ?? null,
       ...destinoDaLoja(o.link, o.semAfiliado || o.mesmaPagina),
       url: null,
     })),
@@ -2744,6 +2804,9 @@ function Resultado({
       detalhes: r.detalhes ?? a?.detalhes ?? null,
       detalhesDoColado: !r.detalhes,
       precos: r.precos ?? null,
+      internacional: r.internacional ?? null,
+      paisOrigem: r.paisOrigem ?? null,
+      tributosEstimados: r.tributosEstimados ?? null,
       ...destinoDaLoja(r.link, r.semAfiliado),
       url: r.url ?? null,
     })),
@@ -3939,6 +4002,11 @@ export function VerNaLoja({
    lojas que já têm link pronto abrem direto; as outras geram o link no clique. */
 type LinhaLoja = {
   chave: string;
+  /* Envio internacional (01/11): lista oficial da ficha ou página do anúncio. */
+  internacional?: boolean | null;
+  paisOrigem?: string | null;
+  /* Imposto de importação + ICMS lidos na página (Remessa Conforme). */
+  tributosEstimados?: number | null;
   nome: string;
   /* Título do produto (é o mesmo em toda linha): nome da galeria de fotos. */
   titulo?: string | null;
@@ -5302,9 +5370,10 @@ function TodasAsLojas({
      R$ 3.400, sem frete grátis): olhar de especialista avisa antes da compra. */
   /* Pelo custo para o cliente (18/10): produto + frete de valor conhecido. */
   const custo = (l: LinhaLoja) =>
-    l.final != null && l.freteGratis === false && l.custoFrete != null && l.custoFrete > 0
+    custoTotalDaOferta(l) ??
+    (l.final != null && l.freteGratis === false && l.custoFrete != null && l.custoFrete > 0
       ? Math.round((l.final + l.custoFrete) * 100) / 100
-      : l.final;
+      : l.final);
   const finais = ordem.map(custo).filter((v): v is number => v != null);
   const nota = (l: LinhaLoja) => avaliacoesValidas(l.avaliacoes);
   const comNota = ordem.filter((l) => nota(l)).length;
