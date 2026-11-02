@@ -5413,6 +5413,9 @@ function TodasAsLojas({
   /* Ordem da lista (23/10): menor preço (padrão) ou mais bem avaliadas. O
      selo e a recomendação não mudam com a ordem. */
   const [ordenar, setOrdenar] = useState<"preco" | "avaliacao">("preco");
+  /* 3 lojas à vista (Weslei, 02/11: menos informação de cara); as outras
+     abrem em "Ver outras N lojas". A recomendada e o colado sempre à vista. */
+  const [todas, setTodas] = useState(false);
   if (linhas.length < 2) return null;
   const ordem = [...linhas].sort((a, b) => (a.final ?? 1e12) - (b.final ?? 1e12));
   /* Psicologia das cores (Weslei, 25/09): verde = a mais barata (ganho,
@@ -5507,7 +5510,12 @@ function TodasAsLojas({
         aria-label="Lojas com o mesmo produto"
         className="mt-2 divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card"
       >
-        {exibidas.map((l) => (
+        {(todas || exibidas.length <= 4
+          ? exibidas
+          : exibidas.filter(
+              (l, i) => i < 3 || l.chave === chaveDaMelhor || l.colado === true,
+            )
+        ).map((l) => (
           <LinhaDaLoja
             key={l.chave}
             l={l}
@@ -5518,6 +5526,26 @@ function TodasAsLojas({
           />
         ))}
       </ul>
+      {exibidas.length > 4 && (
+        <button
+          type="button"
+          aria-expanded={todas}
+          onClick={() => setTodas((v) => !v)}
+          className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-full px-3 text-[13px] font-semibold text-ml-blue transition-colors hover:bg-ml-blue/5"
+        >
+          {todas
+            ? "Mostrar menos lojas"
+            : `Ver outras ${
+                exibidas.length -
+                exibidas.filter((l, i) => i < 3 || l.chave === chaveDaMelhor || l.colado === true)
+                  .length
+              } lojas`}
+          <ChevronDown
+            className={"size-4 transition-transform duration-200 " + (todas ? "rotate-180" : "")}
+            aria-hidden="true"
+          />
+        </button>
+      )}
       <p className="mt-1.5 text-[11px] text-secondary-ink">
         Preço de quando comparei. Todos os botões abrem com compra protegida.
       </p>
