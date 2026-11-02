@@ -3209,7 +3209,7 @@ function Resultado({
           <section
             id="secao-resumo"
             aria-label="O produto que você colou"
-            className="scroll-mt-36 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 sm:p-4"
+            className="animate-cartao scroll-mt-36 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 sm:p-4"
           >
             <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
               <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
@@ -3218,7 +3218,7 @@ function Resultado({
               <Foto
                 src={a?.imagem}
                 nitida
-                className="size-16 shrink-0 rounded-2xl border border-border/70 bg-white p-1 sm:size-20"
+                className="size-20 shrink-0 rounded-2xl border border-border/70 bg-white p-1 transition-transform duration-300 hover:scale-105 motion-reduce:transition-none sm:size-28"
                 ver={{
                   titulo: a?.titulo,
                   url: urlColada,
@@ -3831,7 +3831,7 @@ function VereditoEconomia({
               href={oferta.link as string}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3 text-center text-sm font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-success py-3.5 animate-botao-destaque text-center text-base font-bold text-white shadow-sm transition duration-200 hover:brightness-95 active:scale-[0.99] motion-reduce:transition-none"
             >
               <ShieldCheck className="size-4" aria-hidden="true" />
               {textoDoBotao(dispositivo, "Comprar com segurança").replace(" pelo app", " no app")}

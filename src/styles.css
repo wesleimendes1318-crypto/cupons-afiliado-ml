@@ -1335,3 +1335,14 @@ details.abertura-nativa[open] > summary .seta-abertura {
     animation-delay: 1s;
   }
 }
+
+/* Destaque da economia (02/11): entra uma vez com leve crescimento. */
+@keyframes economia-entra {
+  0% { opacity: 0; transform: scale(0.85); }
+  60% { opacity: 1; transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@utility animate-economia {
+  animation: economia-entra 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
