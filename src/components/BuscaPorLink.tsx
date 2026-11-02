@@ -53,6 +53,7 @@ import {
 import { SeloCep, useCepDestino } from "@/components/CepDestino";
 import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo";
 import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
+import { vantagensDaOferta, type OfertaComVantagens } from "@/lib/vantagens-oferta";
 import { seguraParaRecomendar } from "@/lib/recomendacao-segura";
 import { aplicarPrazo } from "@/lib/prazo-entrega";
 import {
@@ -3210,6 +3211,7 @@ function Resultado({
               precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(veredito.o), precosDaTabela)}
               contraImportado={coladoIncompleto}
               titulo={a?.titulo ?? null}
+              colado={coladoResumo}
             />
           )}
         </div>
@@ -3274,6 +3276,7 @@ function Resultado({
                   lojaAquiTemCupom={a?.temCupom === true}
                   contraImportado={coladoIncompleto}
                   precoBemAbaixo={precoMuitoAbaixo(totalDaLoja(oferta), precosDaTabela)}
+                  colado={coladoResumo}
                 />
               ))}
             </div>
@@ -3373,6 +3376,7 @@ function Resultado({
                     linhas={linhasLojas}
                     melhorChave={recomendada?.chave ?? (a?.preco != null ? "colado" : null)}
                     cep={a?.cepDestino ?? null}
+                    colado={coladoResumo}
                   />
                 </div>
               )}
@@ -3579,7 +3583,9 @@ function VereditoEconomia({
   precoBemAbaixo = false,
   contraImportado = false,
   titulo = null,
+  colado,
 }: {
+  colado: ColadoResumo;
   oferta: OutraLoja;
   /* Economia medida contra o colado; null quando não dá para afirmar
      (colado internacional sem os tributos lidos, 01/11). */
@@ -3598,6 +3604,19 @@ function VereditoEconomia({
     !oferta.cupomTitulo &&
     !oferta.mesmaPagina;
   const preco = total ?? oferta.final;
+  const [gaveta, setGaveta] = useState(false);
+  const naGaveta: OfertaNaGaveta = {
+    vendedor: oferta.vendedor ?? null,
+    preco: oferta.final ?? null,
+    freteGratis: oferta.freteGratis,
+    custoFrete: oferta.custoFrete,
+    detalhes: oferta.detalhes,
+    lojaOficial: oferta.lojaOficial,
+    mercadoLider: oferta.mercadoLider ?? null,
+    avaliacoes: oferta.avaliacoes,
+    internacional: oferta.internacional,
+    link: oferta.link,
+  };
   const irParaRecomendacao = () => {
     const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     document
@@ -3707,6 +3726,18 @@ function VereditoEconomia({
           </button>
         )}
       </div>
+      <AcoesDaOferta abrir={() => setGaveta(true)} className="mt-3 justify-center" />
+      <GavetaDaOferta
+        aberta={gaveta}
+        aoMudar={setGaveta}
+        oferta={naGaveta}
+        colado={colado}
+        vantagens={vantagensDaOferta(
+          naGaveta,
+          { preco: colado.preco, internacional: contraImportado || undefined },
+          economia,
+        )}
+      />
     </section>
   );
 }
@@ -4219,6 +4250,120 @@ function FichaEmGaveta({
         </SheetContent>
       </Sheet>
     </>
+  );
+}
+
+/* GAVETA DA OFERTA (Weslei, 02/11: "a recomendação não abre detalhes...
+   sem mostrar as vantagens, possibilidade de ver a ficha"; "é obrigatório
+   ter a opção de comparar, não só de comprar"). Vantagens só com o que foi
+   lido, o lado a lado com o seu e a ficha, sem esticar a página. */
+type OfertaNaGaveta = OfertaComVantagens & {
+  vendedor: string | null;
+  custoFrete?: number | null | undefined;
+  detalhes?: Detalhes | null | undefined;
+  link?: string | null | undefined;
+};
+
+function GavetaDaOferta({
+  aberta,
+  aoMudar,
+  oferta,
+  colado,
+  vantagens,
+}: {
+  aberta: boolean;
+  aoMudar: (v: boolean) => void;
+  oferta: OfertaNaGaveta;
+  colado: ColadoResumo;
+  vantagens: string[];
+}) {
+  const ficha = temDetalhes(oferta.detalhes) ? oferta.detalhes : colado.detalhes;
+  return (
+    <Sheet open={aberta} onOpenChange={aoMudar}>
+      <SheetContent
+        side="right"
+        className="w-full overflow-y-auto overscroll-contain bg-[#f5f5f7] p-4 dark:bg-background sm:max-w-lg sm:p-6"
+      >
+        <SheetHeader className="pr-8 text-left">
+          <SheetTitle className="text-base leading-snug">
+            Vendido por {oferta.vendedor ?? "outra loja"}
+          </SheetTitle>
+          <SheetDescription className="text-xs tabular-nums">
+            {brl(oferta.preco) ?? ""} · {textoFrete(oferta.freteGratis, oferta.custoFrete)}
+          </SheetDescription>
+        </SheetHeader>
+        {vantagens.length > 0 && (
+          <div className="mt-4 rounded-2xl bg-card p-3.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
+              Vantagens
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm">
+              {vantagens.map((t) => (
+                <li key={t} className="flex gap-2 leading-snug">
+                  <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="mt-3 rounded-2xl bg-card p-3.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
+            Comparar com o seu
+          </p>
+          <CompararComOSeu
+            colado={colado}
+            outro={
+              {
+                preco: oferta.preco ?? 0,
+                vendedor: oferta.vendedor,
+                freteGratis: oferta.freteGratis ?? null,
+                custoFrete: oferta.custoFrete ?? null,
+                detalhes: ficha,
+                muda: null,
+              } as NonNullable<Analise["parecidos"]>[number]
+            }
+            abertoInicial
+          />
+        </div>
+        {temDetalhes(ficha) && (
+          <PainelDetalhes
+            detalhes={ficha}
+            nota={
+              ficha === oferta.detalhes
+                ? "Informações copiadas do anúncio desta loja."
+                : "Mesmo produto: ficha copiada do anúncio que você colou."
+            }
+          />
+        )}
+        {oferta.link && ehLinkDeAfiliado(oferta.link) && (
+          <a
+            href={oferta.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-success/70 bg-card text-sm font-bold text-success hover:bg-success/5"
+          >
+            <ShieldCheck className="size-4" aria-hidden="true" /> Comprar com segurança
+          </a>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* Dois botões secundários (Ver detalhes / Comparar) que abrem a gaveta. */
+function AcoesDaOferta({ abrir, className = "" }: { abrir: () => void; className?: string }) {
+  const pilula =
+    "inline-flex min-h-9 items-center justify-center gap-1 rounded-full border border-border bg-card px-3.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]";
+  return (
+    <div className={"flex flex-wrap gap-2 " + className}>
+      <button type="button" onClick={abrir} className={pilula}>
+        Ver detalhes e vantagens
+      </button>
+      <button type="button" onClick={abrir} className={pilula}>
+        Comparar com o seu
+      </button>
+    </div>
   );
 }
 
@@ -5487,7 +5632,9 @@ function TodasAsLojas({
   linhas,
   melhorChave,
   cep,
+  colado,
 }: {
+  colado: ColadoResumo;
   linhas: LinhaLoja[];
   melhorChave?: string | null;
   /* CEP para o qual o frete foi simulado (02/10). */
@@ -5604,6 +5751,7 @@ function TodasAsLojas({
             rotuloMelhor={haMaisBarata ? "Melhor opção" : "Mais barato"}
             menor={menor}
             muitoAbaixo={!l.colado && precoMuitoAbaixo(custo(l), finais)}
+            colado={colado}
           />
         ))}
       </ul>
@@ -5677,7 +5825,9 @@ function LinhaDaLoja({
   rotuloMelhor,
   menor,
   muitoAbaixo,
+  colado,
 }: {
+  colado: ColadoResumo;
   l: LinhaLoja;
   melhor: boolean;
   rotuloMelhor: string;
@@ -5686,6 +5836,19 @@ function LinhaDaLoja({
 }) {
   const ab = useAbertura();
   const det = temDetalhes(l.detalhes);
+  const [gaveta, setGaveta] = useState(false);
+  const naGaveta: OfertaNaGaveta = {
+    vendedor: l.nome,
+    preco: l.final,
+    freteGratis: l.freteGratis,
+    custoFrete: l.custoFrete,
+    detalhes: l.detalhesDoColado ? null : l.detalhes,
+    lojaOficial: l.lojaOficial,
+    mercadoLider: l.mercadoLider ?? null,
+    avaliacoes: l.avaliacoes,
+    internacional: l.internacional,
+    link: l.link,
+  };
   const botao = l.link ? (
     <a
       href={l.link}
@@ -5803,6 +5966,26 @@ function LinhaDaLoja({
               className="!min-h-7 whitespace-nowrap text-[11px]"
             />
           )}
+          {!l.colado && (
+            <>
+              <button
+                type="button"
+                onClick={() => setGaveta(true)}
+                className="mt-1 inline-flex min-h-8 items-center rounded-full border border-border bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                Comparar com o seu
+              </button>
+              <GavetaDaOferta
+                aberta={gaveta}
+                aoMudar={setGaveta}
+                oferta={naGaveta}
+                colado={colado}
+                vantagens={vantagensDaOferta(naGaveta, {
+                  preco: colado.preco,
+                })}
+              />
+            </>
+          )}
         </div>
         <div className="max-w-[7.5rem] text-right tabular-nums sm:max-w-none">
           <span
@@ -5904,7 +6087,9 @@ function OutraLojaComCupom({
   lojaAquiTemCupom,
   precoBemAbaixo = false,
   contraImportado = false,
+  colado,
 }: {
+  colado: ColadoResumo;
   /* O colado vem do exterior sem os tributos lidos (01/11): não há economia
      a afirmar; a recomendação é a loja nacional de custo confirmado. */
   contraImportado?: boolean;
@@ -5922,6 +6107,19 @@ function OutraLojaComCupom({
   compacto?: boolean;
   lojaAquiTemCupom?: boolean;
 }) {
+  const [gaveta, setGaveta] = useState(false);
+  const naGaveta: OfertaNaGaveta = {
+    vendedor: oferta.vendedor ?? null,
+    preco: oferta.final ?? null,
+    freteGratis: oferta.freteGratis,
+    custoFrete: oferta.custoFrete,
+    detalhes: oferta.detalhes,
+    lojaOficial: oferta.lojaOficial,
+    mercadoLider: oferta.mercadoLider ?? null,
+    avaliacoes: oferta.avaliacoes,
+    internacional: oferta.internacional,
+    link: oferta.link,
+  };
   /* A extensao ja comparou preco final contra preco final e mandou o ganho.
      O calculo local fica so como reserva para pedidos antigos. */
   const diferenca =
@@ -6259,6 +6457,17 @@ function OutraLojaComCupom({
             : "Mesmo produto, na mesma página de catálogo."}
         </p>
       )}
+      <AcoesDaOferta abrir={() => setGaveta(true)} className="mt-3" />
+      <GavetaDaOferta
+        aberta={gaveta}
+        aoMudar={setGaveta}
+        oferta={naGaveta}
+        colado={colado}
+        vantagens={vantagensDaOferta(naGaveta, {
+          preco: colado.preco,
+          internacional: contraImportado || undefined,
+        })}
+      />
     </div>
   );
 }

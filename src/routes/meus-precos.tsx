@@ -2,6 +2,7 @@
    acompanha, com o preço de agora, quanto caiu ou subiu desde que começou a
    acompanhar, o menor preço visto e o histórico. Cada botão de compra leva o
    link de afiliado. Atualiza sozinha a cada minuto. */
+import { CompararPreco } from "@/components/BotoesCartao";
 import { AvisoTelegram } from "@/components/AvisoTelegram";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BellRing, LoaderCircle, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
@@ -249,6 +250,10 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
             Comprar com segurança
           </a>
         )}
+        {/* Comparar sempre ao lado do comprar (Weslei, 02/11). */}
+        <div className="flex-1">
+          <CompararPreco url={i.url} />
+        </div>
         <AvisoTelegram monitorId={i.id} />
         <button
           type="button"
