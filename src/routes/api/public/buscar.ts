@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
         /* "v3" (28/10): respostas guardadas antes do filtro de marca/modelo não voltam. */
-        const chave1 = `v8|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        const chave1 = `v9|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina ? `${chave1}|p${pagina}` : chave1;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Tabela nova (fora dos tipos gerados): acesso sem tipo.
