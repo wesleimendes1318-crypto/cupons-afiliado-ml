@@ -1,3 +1,4 @@
+import { VitrinesHomeAbas } from "@/components/VitrinesHomeAbas";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -1997,11 +1998,15 @@ function Index() {
             2) mais desejados, 3) economia real, 4) para você, 5) temporada
             ativa, 6) mais vendidos por categoria (até 12 por aba). Brinquedos
             por idade saiu da home: fica em /brinquedos e na temporada. */}
-          <MaisDesejadosHome />
-          <Vitrine />
-          <RecomendacoesHome />
-          <VitrineSazonal soAtiva />
-          <EmAltaCatalogo naHome limite={12} />
+          <VitrinesHomeAbas
+            abas={[
+              { id: "economia", rotulo: "Economia conferida", conteudo: () => <Vitrine /> },
+              { id: "para-voce", rotulo: "Para você", conteudo: () => <RecomendacoesHome /> },
+              { id: "desejados", rotulo: "Mais desejados", conteudo: () => <MaisDesejadosHome /> },
+              { id: "vendidos", rotulo: "Mais vendidos", conteudo: () => <EmAltaCatalogo naHome limite={12} /> },
+              { id: "temporada", rotulo: "Temporada", conteudo: () => <VitrineSazonal soAtiva /> },
+            ]}
+          />
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
