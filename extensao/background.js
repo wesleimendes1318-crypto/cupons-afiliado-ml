@@ -7,7 +7,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, gravarCuponsV2, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
          buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
@@ -5436,6 +5436,85 @@ async function lerHubDeAfiliados() {
   }
 }
 
+/* CUPONS DE AFILIADO (02/11): o atalho "Cupons" so aparece no app, mas a
+   pagina existe na web logada (/afiliados/coupons/v2). Uma leitura a cada
+   12 h, so com a extensao parada e sem freio: le de cada cartao a loja, o
+   desconto, a compra minima e a validade e soma aos cupons do banco
+   (sincronizar_cupons com p_completo=false, nunca apaga os outros). Amostra
+   do texto vai no diagnostico 'cupons-v2' para ajustar a leitura. */
+const URL_CUPONS_V2 = 'https://www.mercadolivre.com.br/afiliados/coupons/v2#hub';
+let lendoCupons = false;
+async function lerCuponsDeAfiliados() {
+  if (lendoCupons || lendoHub || atendendo) return;
+  const { sincToken, cuponsV2Ultimo } = await chrome.storage.local.get(['sincToken', 'cuponsV2Ultimo']);
+  if (!sincToken || (cuponsV2Ultimo && Date.now() - cuponsV2Ultimo < 12 * 3600e3)) return;
+  if (await freioLigado('leitura')) return;
+  lendoCupons = true;
+  await chrome.storage.local.set({ cuponsV2Ultimo: Date.now() });
+  let aba = null;
+  try {
+    aba = await chrome.tabs.create({ url: URL_CUPONS_V2, active: false });
+    await esperarCarregar(aba.id, 25000);
+    await sleep(5000);
+    const fim = (await chrome.tabs.get(aba.id)).url || '';
+    if (ehCaptcha('', fim) || !/mercadolivre\.com\.br\/afiliados/i.test(fim)) {
+      await gravarDiagnostico(sincToken, 'cupons-v2', { ok: false, motivo: 'pagina inesperada', fim: fim.slice(0, 120) });
+      return;
+    }
+    const [saida] = await chrome.scripting.executeScript({
+      target: { tabId: aba.id },
+      func: async () => {
+        const espera = ms => new Promise(r => setTimeout(r, ms));
+        for (let k = 0; k < 12; k++) { window.scrollBy(0, window.innerHeight * 1.5); await espera(800); }
+        const reais = t => { const m = /R\$\s*([\d.]+)(?:,(\d{2}))?/.exec(t || ''); return m ? Number(m[1].replace(/\./g, '') + '.' + (m[2] || '00')) : null; };
+        const vistos = new Set(); const cupons = []; const amostra = [];
+        /* Cartao = menor bloco com "% OFF" (ou "R$ x OFF") e o botao "Ver produtos". */
+        const blocos = [...document.querySelectorAll('div, li, article, section')]
+          .filter(el => /OFF/i.test(el.innerText || '') && /ver produtos/i.test(el.innerText || ''))
+          .filter(el => ![...el.children].some(c => /OFF/i.test(c.innerText || '') && /ver produtos/i.test(c.innerText || '')));
+        for (const el of blocos) {
+          const linhas = (el.innerText || '').split('\n').map(l => l.trim()).filter(Boolean);
+          const corrido = linhas.join(' ').replace(/\s*,\s*(\d{2})\b/g, ',$1');
+          const off = /(\d{1,2})\s*%\s*OFF/i.exec(corrido) || /R\$\s*[\d.,]+\s*OFF/i.exec(corrido);
+          if (!off) continue;
+          const vendedor = linhas.find(l => !/OFF|R\$|compra|m[ií]nim|ver produtos|v[aá]lid|at[eé]\s|cupom|%/i.test(l) && l.length >= 2 && l.length <= 60) || null;
+          if (!vendedor) continue;
+          const chave = (vendedor + '|' + off[0]).toLowerCase();
+          if (vistos.has(chave)) continue; vistos.add(chave);
+          const min = /m[ií]nim[ao][^R]*(R\$\s*[\d.]+(?:,\d{2})?)/i.exec(corrido);
+          const teto = /(?:at[eé]|limite|m[aá]ximo)[^R]{0,20}(R\$\s*[\d.]+(?:,\d{2})?)/i.exec(corrido);
+          const vence = /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/.exec(corrido);
+          const link = el.querySelector('a[href]');
+          cupons.push({ vendedor, desconto: off[0].replace(/\s+/g, ' '), compra_min: min ? reais(min[1]) : null,
+            teto: teto ? reais(teto[1]) : null, vence: vence ? vence.slice(1).join('/') : null,
+            link: link ? link.href.slice(0, 300) : null });
+          if (amostra.length < 4) amostra.push(corrido.slice(0, 240));
+          if (cupons.length >= 200) break;
+        }
+        return { cupons, amostra, blocos: blocos.length };
+      }
+    });
+    const r = (saida && saida.result) || { cupons: [], amostra: [] };
+    const ano = new Date().getFullYear();
+    const hash = t => { let h = 7; for (const c of t) h = (h * 31 + c.charCodeAt(0)) % 900000000000; return 9000000000000 + h; };
+    const lista = r.cupons.map(c => {
+      let vence = null;
+      if (c.vence) { const [d, m, a] = c.vence.split('/'); vence = `${a ? (a.length === 2 ? '20' + a : a) : ano}-${m}-${d}`; }
+      return { id: String(hash('v2|' + c.vendedor.toLowerCase() + '|' + c.desconto)), vendedor: c.vendedor, desconto: c.desconto, orcamento: '', vence: vence || '' };
+    });
+    let banco = null;
+    if (lista.length) {
+      banco = await gravarCuponsV2(sincToken, lista).catch(e => ({ erro: String(e.message).slice(0, 160) }));
+    }
+    await gravarDiagnostico(sincToken, 'cupons-v2', { ok: true, blocos: r.blocos, lidos: r.cupons.length, banco, cupons: r.cupons.slice(0, 30), amostra: r.amostra });
+  } catch (e) {
+    try { await gravarDiagnostico(sincToken, 'cupons-v2', { ok: false, erro: String(e.message).slice(0, 200) }); } catch (x) {}
+  } finally {
+    if (aba) { try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ } }
+    lendoCupons = false;
+  }
+}
+
 /* LISTAS DE AFILIADO (02/11): uma rodada por hora, so parada (ver listas.js). */
 async function rodarListas() {
   if (atendendo || lendoHub) return;
@@ -5487,6 +5566,7 @@ chrome.alarms.onAlarm.addListener(async a => {
     sinalDeVida().catch(() => {});
     monitorarPrecos().catch(() => {});
     lerHubDeAfiliados().catch(() => {});
+    lerCuponsDeAfiliados().catch(() => {});
     rodarListas().catch(e => console.warn('[listas]', e.message));
     atualizarAvaliacoes().catch(() => {});
     vigiarFila().catch(() => {});
