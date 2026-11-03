@@ -671,3 +671,10 @@ export async function gravarListas(token, dados) {
   if (!token) return null;
   return chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_listas', { p_token: token, p_dados: dados });
 }
+
+/* CUPONS DE AFILIADO DA PAGINA /afiliados/coupons/v2 (02/11): soma ao banco,
+   nunca apaga os outros (p_completo = false). */
+export async function gravarCuponsV2(token, cupons) {
+  if (!token || !Array.isArray(cupons) || !cupons.length) return null;
+  return chamarRpc(RPC, { p_token: token, p_cupons: cupons.slice(0, 200), p_completo: false });
+}

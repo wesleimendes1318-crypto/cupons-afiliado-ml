@@ -7,7 +7,7 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          lojasParaResolver, salvarPaginaLoja, marcarLojaSemPagina,
          anotarEstadoRobo, salvarOrigemCupom, lojasPedidas,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
-         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, multilojaPendentes,
+         vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, gravarCuponsV2, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
          buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas } from './sincronia.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
@@ -5504,11 +5504,7 @@ async function lerCuponsDeAfiliados() {
     });
     let banco = null;
     if (lista.length) {
-      const resp = await fetch(SUPABASE + '/rest/v1/rpc/sincronizar_cupons', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CHAVE_PUBLICA, Authorization: 'Bearer ' + CHAVE_PUBLICA },
-        body: JSON.stringify({ p_token: sincToken, p_cupons: lista, p_completo: false })
-      });
-      banco = resp.ok ? await resp.json().catch(() => null) : { erro: resp.status };
+      banco = await gravarCuponsV2(sincToken, lista).catch(e => ({ erro: String(e.message).slice(0, 160) }));
     }
     await gravarDiagnostico(sincToken, 'cupons-v2', { ok: true, blocos: r.blocos, lidos: r.cupons.length, banco, cupons: r.cupons.slice(0, 30), amostra: r.amostra });
   } catch (e) {
