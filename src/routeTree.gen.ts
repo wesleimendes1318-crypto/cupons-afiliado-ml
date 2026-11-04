@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BrinquedosRouteImport } from './routes/brinquedos'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as DiaDasCriancasRouteImport } from './routes/dia-das-criancas'
@@ -64,6 +65,11 @@ import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/publi
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrinquedosRoute = BrinquedosRouteImport.update({
@@ -325,6 +331,7 @@ const ApiPublicTelegramWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
@@ -432,6 +440,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
@@ -540,6 +550,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
@@ -593,6 +604,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
@@ -647,6 +659,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   BrinquedosRoute: typeof BrinquedosRoute
   ContatoRoute: typeof ContatoRoute
   DiaDasCriancasRoute: typeof DiaDasCriancasRoute
@@ -706,6 +719,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brinquedos': {
@@ -1063,6 +1083,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   BrinquedosRoute: BrinquedosRoute,
   ContatoRoute: ContatoRoute,
   DiaDasCriancasRoute: DiaDasCriancasRoute,
