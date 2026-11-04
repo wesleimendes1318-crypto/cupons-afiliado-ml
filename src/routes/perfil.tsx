@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { abrirLogin, useConta } from "@/lib/auth-otp";
+import { useUltimaSincronia } from "@/lib/sincronia-conta";
 import {
   apagarPerfilConta,
   INTERESSES,
@@ -66,16 +67,27 @@ function Perfil() {
   const [avisosEmail, setAvisosEmail] = useState(false);
   const [estado, setEstado] = useState<"" | "salvando" | "salvo">("");
   const [erro, setErro] = useState<string | null>(null);
+  const [carregado, setCarregado] = useState(false);
+  const sincronizadoEm = useUltimaSincronia();
 
   useEffect(() => {
-    if (!usuario) return;
+    if (!usuario || carregado) return;
     const p = limparPerfilConta(usuario.user_metadata?.["perfil"]);
     setNome(p.nome);
     setInteresses(p.interesses);
     setVoltagem(p.voltagem);
     setFreteGratis(p.freteGratis);
     setAvisosEmail(p.avisosEmail);
-  }, [usuario]);
+    setCarregado(true);
+  }, [usuario, carregado]);
+
+  /* Salva sozinho 1 s depois de cada mudança (sem precisar do botão). */
+  useEffect(() => {
+    if (!carregado) return;
+    const t = setTimeout(() => void salvar(), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carregado, nome, interesses, voltagem, freteGratis, avisosEmail]);
 
   const alternar = (s: string) =>
     setInteresses((l) => (l.includes(s) ? l.filter((x) => x !== s) : [...l, s]));
@@ -96,6 +108,16 @@ function Perfil() {
   return (
     <LayoutConteudo titulo={nome ? `Olá, ${nome}` : "Meu perfil"} resumo="Diga do que você gosta e eu mostro primeiro o que combina com você.">
       <div className="mx-auto max-w-2xl space-y-5 py-6">
+        {usuario && (
+          <p className="flex items-center gap-2 text-xs text-secondary-ink" aria-live="polite">
+            <span className={`size-2 rounded-full ${estado === "salvando" ? "animate-pulse bg-[#0071e3]" : "bg-[#34c759]"}`} />
+            {estado === "salvando"
+              ? "Salvando na sua conta…"
+              : sincronizadoEm || estado === "salvo"
+                ? "Tudo salvo na sua conta e igual em todos os seus aparelhos"
+                : "Sua conta guarda suas buscas e preferências sozinha"}
+          </p>
+        )}
 
         {!usuario && (
           <div className="rounded-3xl bg-card p-5 shadow-sm">
