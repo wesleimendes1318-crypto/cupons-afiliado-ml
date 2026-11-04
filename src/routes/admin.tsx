@@ -136,7 +136,7 @@ function Admin() {
     return (
       <Tela>
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
-          <LoginEmailOtp embutido emailSugerido="wes_lei18@hotmail.com" />
+          <LoginEmailOtp embutido emailSugerido="weslei.mendes1318@gmail.com" />
         </div>
       </Tela>
     );
