@@ -89,7 +89,7 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         }
         if (!envio.ok) {
           console.error(`Resend recusou [${envio.status}]: ${await envio.text()}`);
-          return resposta({ erro: "envio", status: envio.status }, 502);
+          return resposta({ erro: "envio", status: envio.status }, 200);
         }
         return resposta({ ok: true });
       },

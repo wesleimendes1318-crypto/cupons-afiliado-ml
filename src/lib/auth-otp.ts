@@ -31,8 +31,12 @@ export async function solicitarCodigo(email: string) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: email.trim().toLowerCase() }),
     });
-    if (r.ok) return null;
-    const corpo = (await r.json().catch(() => ({}))) as { erro?: string; status?: number };
+    const corpo = (await r.json().catch(() => ({}))) as {
+      ok?: boolean;
+      erro?: string;
+      status?: number;
+    };
+    if (r.ok && corpo.ok) return null;
     if (corpo.erro === "invalido") return "Confira o e-mail digitado.";
     if (corpo.erro === "envio" && corpo.status === 403)
       return "Ainda não consigo enviar para este e-mail. Tente outro em instantes.";
