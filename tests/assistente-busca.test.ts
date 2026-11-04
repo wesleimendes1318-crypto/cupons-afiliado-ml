@@ -9,9 +9,31 @@ import { ordenarRecomendados, ordemInicial } from "@/lib/busca-resultados";
 import { passosDasSeguintes } from "@/lib/busca-guiada";
 
 const itens: ItemAssistente[] = [
-  { id: "a", nome: "Lava e Seca Midea 11kg 127V", preco: 3199, freteGratis: true, nota: 4.8, avaliacoes: 900 },
-  { id: "b", nome: "Lava e Seca LG 12kg 220V", preco: 5999, freteGratis: true, lojaOficial: true, nota: 4.8, avaliacoes: 155 },
-  { id: "c", nome: "Lava e Seca Electrolux 12kg Bivolt", preco: 3799, freteGratis: false, nota: 4.2, avaliacoes: 40 },
+  {
+    id: "a",
+    nome: "Lava e Seca Midea 11kg 127V",
+    preco: 3199,
+    freteGratis: true,
+    nota: 4.8,
+    avaliacoes: 900,
+  },
+  {
+    id: "b",
+    nome: "Lava e Seca LG 12kg 220V",
+    preco: 5999,
+    freteGratis: true,
+    lojaOficial: true,
+    nota: 4.8,
+    avaliacoes: 155,
+  },
+  {
+    id: "c",
+    nome: "Lava e Seca Electrolux 12kg Bivolt",
+    preco: 3799,
+    freteGratis: false,
+    nota: 4.2,
+    avaliacoes: 40,
+  },
 ];
 
 describe("assistente de compra depois da busca", () => {
@@ -33,11 +55,16 @@ describe("assistente de compra depois da busca", () => {
   });
 
   test("resposta do modelo com preço inventado é descartada", () => {
-    expect(limparRespostaDoModelo({ resposta: "A melhor sai por R$ 2.000,00.", ids: ["a"] }, itens)).toBeNull();
+    expect(
+      limparRespostaDoModelo({ resposta: "A melhor sai por R$ 2.000,00.", ids: ["a"] }, itens),
+    ).toBeNull();
   });
 
   test("resposta do modelo só mantém produtos recebidos", () => {
-    const r = limparRespostaDoModelo({ resposta: "A Midea sai por R$ 3.199,00.", ids: ["a", "zzz"] }, itens);
+    const r = limparRespostaDoModelo(
+      { resposta: "A Midea sai por R$ 3.199,00.", ids: ["a", "zzz"] },
+      itens,
+    );
     expect(r?.ids).toEqual(["a"]);
   });
 });
@@ -76,5 +103,34 @@ describe("carregar mais da busca", () => {
     expect(p[0]).toEqual({ buscas: ["geladeira"], offset: 84 });
     expect(p.every((x) => x.offset + 20 <= 120)).toBe(true);
     expect(p.filter((x) => x.buscas[0] === "geladeira Consul").length).toBe(6);
+  });
+});
+
+import { tresEscolhas } from "@/lib/assistente-busca";
+describe("três escolhas da tela", () => {
+  const itens = [
+    { id: "a", nome: "A", preco: 900, freteGratis: null, nota: 4.9, avaliacoes: 300 },
+    { id: "b", nome: "B", preco: 1000, freteGratis: true, nota: 4.0, avaliacoes: 10 },
+    {
+      id: "c",
+      nome: "C",
+      preco: 1100,
+      freteGratis: true,
+      lojaOficial: true,
+      nota: 4.7,
+      avaliacoes: 50,
+    },
+    { id: "d", nome: "D", preco: 2500, freteGratis: false, nota: 4.8, avaliacoes: 80 },
+    { id: "e", nome: "E", preco: 3000, nota: 4.2, avaliacoes: 500 },
+  ];
+  test("frete desconhecido não conta como custo total menor", () => {
+    const r = tresEscolhas(itens);
+    expect(r.menorCusto?.id).toBe("b");
+    expect(r.custoBeneficio?.id).toBe("c");
+    expect(r.premium?.id).toBe("d");
+  });
+  test("sem dados, sem escolha inventada", () => {
+    const r = tresEscolhas([{ id: "x", nome: "X", preco: null }]);
+    expect([r.menorCusto, r.custoBeneficio, r.premium]).toEqual([null, null, null]);
   });
 });

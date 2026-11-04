@@ -702,7 +702,7 @@ export function ResultadosDaBusca({
               )}
               <ul
                 ref={lista}
-                className="animate-cartao mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+                className="animate-cartao mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
               >
                 {mostrados.map((c, k) => (
                   <FragmentoComCuradoria
@@ -1161,7 +1161,7 @@ function CartaoBusca({
   const rede = c.voltagem ? voltagemDaRegiao(regiao?.cidade, regiao?.uf) : null;
   const naoServe = c.voltagem != null && rede != null && !funcionaEm(c.voltagem, rede.volts);
   const foto = (
-    <span className="relative block aspect-square overflow-hidden rounded-2xl bg-white sm:aspect-auto sm:h-44 md:h-48">
+    <span className="relative block aspect-square overflow-hidden rounded-2xl bg-white sm:aspect-auto sm:h-48 lg:h-52">
       {c.imagem ? (
         <img
           {...propsFotoCartao(c.imagem)}
@@ -1170,7 +1170,7 @@ function CartaoBusca({
           height={200}
           loading="lazy"
           referrerPolicy="no-referrer"
-          className="absolute inset-0 h-full w-full object-contain p-2 duration-300 ease-out motion-safe:transition-transform motion-safe:group-hover:scale-105"
+          className="absolute inset-0 h-full w-full object-contain p-2.5 duration-300 ease-out motion-safe:transition-transform motion-safe:group-hover:scale-105"
         />
       ) : (
         <span className="absolute inset-0 grid place-items-center">
@@ -1192,7 +1192,7 @@ function CartaoBusca({
       })}
       data-indice={indice}
       tabIndex={-1}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-foreground outline-none transition-all duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#0071e3]"
     >
       <VerDetalhesVitrine
         chave={detalhe}
@@ -1213,10 +1213,14 @@ function CartaoBusca({
             </span>
           )}
         </p>
-        <p className="mt-1 line-clamp-2 min-h-[2lh] text-xs font-medium leading-snug">{c.nome}</p>
+        <p className="mt-1 line-clamp-2 min-h-[2lh] text-[13px] font-semibold leading-snug sm:text-sm">
+          {c.nome}
+        </p>
         {c.preco != null ? (
           <>
-            <p className="mt-1 text-base font-extrabold tabular-nums">{brl(c.preco)}</p>
+            <p className="mt-1 text-lg font-extrabold leading-tight tabular-nums sm:text-xl">
+              {brl(c.preco)}
+            </p>
             <p className="text-[10px] text-secondary-ink/80">
               Preço de referência{c.quando ? ` ${c.quando}` : ""}
             </p>
@@ -1227,8 +1231,8 @@ function CartaoBusca({
           </p>
         )}
         {(c.economia ?? 0) >= 10 && (
-          <p className="text-[11px] font-semibold text-success">
-            {brl(c.economia!)} abaixo de outras ofertas
+          <p className="mt-1 self-start rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-bold text-[#248a3d] dark:text-success">
+            🔥 {brl(c.economia!)} a menos que outras lojas
           </p>
         )}
         {c.maisVendido != null && c.maisVendido <= 20 && (
