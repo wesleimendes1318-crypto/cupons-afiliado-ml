@@ -55,7 +55,8 @@ const COMPLEMENTOS: Record<string, string[]> = {
   pet: ["comedouro", "cama pet", "arranhador"],
 };
 
-const buscar = (t: string) => `/?link=${encodeURIComponent(t)}`;
+/* Busca por texto na home sem recarregar (BuscaPorLink lê ?link= de texto puro). */
+const buscar = (t: string) => ({ link: t }) as never;
 
 function Perfil() {
   const usuario = useConta();
@@ -254,13 +255,14 @@ function Perfil() {
           {termos.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {termos.map((t) => (
-                <a
+                <Link
                   key={t}
-                  href={buscar(t)}
+                  to="/"
+                  search={buscar(t)}
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-muted px-3 text-sm hover:bg-border"
                 >
                   <Search className="size-3.5" aria-hidden /> {t}
-                </a>
+                </Link>
               ))}
             </div>
           ) : (
@@ -275,13 +277,14 @@ function Perfil() {
             <h2 className="font-semibold">Pode completar o que você busca</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {complementos.map((t) => (
-                <a
+                <Link
                   key={t}
-                  href={buscar(t)}
+                  to="/"
+                  search={buscar(t)}
                   className="min-h-9 rounded-full border border-border px-3 py-1.5 text-sm hover:bg-muted"
                 >
                   {t}
-                </a>
+                </Link>
               ))}
             </div>
           </section>

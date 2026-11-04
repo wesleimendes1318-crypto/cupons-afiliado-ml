@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { lovable } from "@/integrations/lovable";
-import { Button } from "@/components/ui/button";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { LoginEmailOtp } from "@/components/LoginEmailOtp";
+import { supabase } from "@/integrations/supabase/client";
 
 function destinoSeguro(next: unknown): string {
   return typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
@@ -13,9 +13,9 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Entrar | Cupom Afiliado" },
-      { name: "description", content: "Entre para conectar um assistente aos cupons do site." },
+      { name: "description", content: "Entre com seu e-mail, sem senha." },
       { property: "og:title", content: "Entrar | Cupom Afiliado" },
-      { property: "og:description", content: "Entre para conectar um assistente aos cupons do site." },
+      { property: "og:description", content: "Entre com seu e-mail, sem senha." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -24,30 +24,24 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
+/* Login por e-mail sem senha (04/11): o Google saiu. Com a sessão aberta
+   (já estava ou acabou de entrar), segue para ?next= (ex.: /admin). */
 function Login() {
   const { next } = Route.useSearch();
-  const [erro, setErro] = useState<string | null>(null);
-  const [ocupado, setOcupado] = useState(false);
+  const router = useRouter();
 
-  async function entrar() {
-    setOcupado(true);
-    const r = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}${next}`,
+  useEffect(() => {
+    const seguir = () => router.history.replace(next);
+    void supabase.auth.getSession().then(({ data }) => data.session && seguir());
+    const { data } = supabase.auth.onAuthStateChange((evento) => {
+      if (evento === "SIGNED_IN") setTimeout(seguir, 900);
     });
-    if (r.error) {
-      setOcupado(false);
-      setErro(r.error.message);
-      return;
-    }
-    if (!("redirected" in r && r.redirected)) window.location.href = next;
-  }
+    return () => data.subscription.unsubscribe();
+  }, [next, router]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-6">
-      <h1 className="text-2xl font-bold text-foreground">Entrar</h1>
-      <p className="text-muted-foreground">Use sua conta Google para continuar.</p>
-      {erro && <p role="alert" className="text-destructive">{erro}</p>}
-      <Button disabled={ocupado} onClick={entrar}>Entrar com Google</Button>
+    <main className="flex min-h-screen items-center justify-center bg-[#f5f5f7] px-4 py-10">
+      <LoginEmailOtp embutido />
     </main>
   );
 }

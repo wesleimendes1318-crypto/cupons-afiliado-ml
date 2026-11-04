@@ -1412,10 +1412,16 @@ export default function BuscaPorLink({
           .trim();
         if (/https?:\/\//i.test(todos)) alvo = todos.slice(0, 2000);
       }
+      /* Texto puro (04/11: chips "Suas últimas buscas" do /perfil mandam
+         ?link=Lava e seca Midea): vira a busca por texto, como se digitado. */
+      if (!alvo) {
+        const termo = ["link", "q", "busca", "termo"].map((k) => q.get(k)?.trim()).find(Boolean);
+        if (termo) alvo = termo.slice(0, 200);
+      }
     } catch {
       alvo = null;
     }
-    if (!alvo || !/^https?:\/\/|\shttps?:\/\//i.test(alvo)) return;
+    if (!alvo) return;
     setUrl(alvo);
     substituirEndereco.current = true;
     document.getElementById("colar-link")?.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -82,11 +82,19 @@ export type ComandoSinc = {
   concluido_em: string | null;
 };
 
-/** null = não é o fundador (ou sem sessão). */
-export async function carregarPainel(dias = 30): Promise<Painel | null> {
-  const { data, error } = await supabase.rpc("painel_fundador" as never, { p_dias: dias } as never);
-  if (error || !data) return null;
-  return data as unknown as Painel;
+/** "negado": a conta não é a do fundador (acesso_negado, 42501). "falha": rede ou banco. */
+export async function carregarPainel(dias = 30): Promise<Painel | "negado" | "falha"> {
+  try {
+    const { data, error } = await supabase.rpc(
+      "painel_fundador" as never,
+      { p_dias: dias } as never,
+    );
+    if (error)
+      return error.code === "42501" || /acesso_negado/.test(error.message) ? "negado" : "falha";
+    return data ? (data as unknown as Painel) : "falha";
+  } catch {
+    return "falha";
+  }
 }
 
 const soma = (l: Dia[], f: (d: Dia) => number) => l.reduce((t, d) => t + f(d), 0);
