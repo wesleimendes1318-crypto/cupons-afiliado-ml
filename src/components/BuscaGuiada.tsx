@@ -4,7 +4,6 @@ import { VerNaLoja } from "@/components/BuscaPorLink";
 import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
 import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
 import {
-  ArrowRight,
   Check,
   Flame,
   Loader2,

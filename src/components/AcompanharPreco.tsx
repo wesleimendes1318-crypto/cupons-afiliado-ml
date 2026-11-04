@@ -62,7 +62,7 @@ export function AcompanharPreco({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlProduto, pedidoId]);
 
-  async function salvar() {
+  async function salvar(tentativa = 0) {
     const navegador = idDoNavegador();
     if (!navegador) {
       setErro(
@@ -82,6 +82,11 @@ export function AcompanharPreco({
       } as never,
     );
     if (error) {
+      /* Automático com a comparação ainda terminando: tenta de novo. */
+      if (automatico.current && tentativa < 8 && /comparacao nao encontrada/.test(error.message)) {
+        setTimeout(() => void salvar(tentativa + 1), 8000);
+        return;
+      }
       setErro(
         /limite de 20/.test(error.message)
           ? "Você já acompanha 20 produtos. Pare de acompanhar algum em Meus preços."
