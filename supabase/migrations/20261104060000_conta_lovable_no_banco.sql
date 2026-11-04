@@ -3,13 +3,14 @@
 -- cartões (acompanhar_por_link). Junta os dois arquivos de
 -- supabase/manutencao/20261104_* e ajusta o que a migração
 -- 20261104020000 tinha criado com outro desenho:
--- - vincular_navegador_conta(uuid, uuid) sai: a chamada do site com 1
+-- - vincular_navegador_conta(uuid, uuid) vira vincular_navegador_conta_v0 (sem drop: o
+--   app do Weslei não mostra a confirmação do Supabase). A chamada do site com 1
 --   argumento passa a ser a do Lovable, que devolve o identificador da conta.
 -- - seguidor_visivel: o identificador do navegador manda (a conta adota um só).
 -- - definir_aviso_email: liga o aviso nas linhas do identificador da conta e
 --   grava usuario_id nelas (o gatilho e o envio usam o usuario_id).
 
-drop function if exists public.vincular_navegador_conta(uuid, uuid);
+alter function public.vincular_navegador_conta(uuid, uuid) rename to vincular_navegador_conta_v0;
 
 
 create table if not exists public.conta_navegadores (
@@ -18,8 +19,7 @@ create table if not exists public.conta_navegadores (
   criado_em timestamptz not null default now()
 );
 grant all on public.conta_navegadores to service_role;
-alter table public.conta_navegadores enable row level security;
-revoke all on public.conta_navegadores from anon, authenticated;
+alter table public.conta_navegadores enable row level security; -- sem política: só o servidor lê
 
 create or replace function public.vincular_navegador_conta(p_navegador uuid)
 returns uuid
@@ -50,7 +50,6 @@ begin
   return v_conta;
 end;
 $$;
-revoke all on function public.vincular_navegador_conta(uuid) from public, anon;
 grant execute on function public.vincular_navegador_conta(uuid) to authenticated;
 
 
@@ -101,7 +100,6 @@ begin
   return v_monitor;
 end $$;
 
-revoke all on function public.acompanhar_por_link(text, uuid, numeric) from public;
 grant execute on function public.acompanhar_por_link(text, uuid, numeric) to anon, authenticated;
 
 create or replace function public.seguidor_visivel(s public.monitor_seguidores, p_navegador uuid)
