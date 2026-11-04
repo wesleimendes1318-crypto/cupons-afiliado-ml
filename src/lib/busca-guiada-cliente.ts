@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { foraDoModelo } from "@/lib/busca-intencao";
+import { lerConsentimento } from "@/lib/consentimento";
 import { pareceFalso } from "@/lib/falsificado";
+import { enviarEvento } from "@/lib/medicao";
 /* Busca guiada no navegador (05/10; separada em 10/10 para o
    reconhecimento de links de outras lojas usar a mesma busca). */
 
@@ -148,6 +150,19 @@ export async function buscarProdutos(
   /** "Carregar mais": de onde continuar e o que já está na tela. */
   mais?: { cursor?: number | null | undefined; vistos?: string[] },
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
+  /* Painel do fundador: conta a busca nova (não a paginação), com consentimento. */
+  if (
+    modo === "guiada" &&
+    !pagina &&
+    mais?.cursor == null &&
+    typeof window !== "undefined" &&
+    lerConsentimento()?.analise === true
+  )
+    enviarEvento({
+      p_tipo: "busca_texto",
+      p_origem: contexto,
+      p_pagina: window.location.pathname.slice(0, 120),
+    });
   try {
     const r = await fetch("/api/public/buscar", {
       method: "POST",

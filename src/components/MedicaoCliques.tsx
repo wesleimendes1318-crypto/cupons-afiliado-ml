@@ -7,16 +7,27 @@
 
 import { useEffect } from "react";
 
+import { marketplaceDoLink } from "@/lib/afiliado";
 import { lerConsentimento } from "@/lib/consentimento";
 import { enviarEvento } from "@/lib/medicao";
 
 export function MedicaoCliques() {
   useEffect(() => {
+    /* Uma visita por aba aberta (painel do fundador), com o mesmo consentimento. */
+    try {
+      if (lerConsentimento()?.analise === true && !sessionStorage.getItem("me-visita")) {
+        sessionStorage.setItem("me-visita", "1");
+        enviarEvento({ p_tipo: "visita", p_pagina: window.location.pathname.slice(0, 120) });
+      }
+    } catch {
+      /* armazenamento bloqueado: não conta */
+    }
     const aoClicar = (ev: MouseEvent) => {
       const alvo = (ev.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
       if (!alvo) return;
       const href = alvo.href;
-      const afiliado = /^https:\/\/meli\.la\//i.test(href);
+      const mercado = marketplaceDoLink(href);
+      const afiliado = mercado !== null;
       const telegram = /^https:\/\/t\.me\//i.test(href);
       if (!afiliado && !telegram) return;
       if (lerConsentimento()?.analise !== true) return;
@@ -24,7 +35,8 @@ export function MedicaoCliques() {
       const pedidoAttr = (alvo.closest("[data-pedido]") as HTMLElement | null)?.dataset["pedido"];
       const pedido = pedidoAttr && /^\d+$/.test(pedidoAttr) ? Number(pedidoAttr) : null;
       let origem = origemAttr ?? null;
-      let destino = "loja";
+      /* "loja" = Mercado Livre (nome histórico das contagens). */
+      let destino = mercado === "amazon" || mercado === "shopee" ? mercado : "loja";
       if (telegram) {
         const u = new URL(href);
         destino = u.searchParams.has("start") ? "bot" : "canal";
