@@ -12,6 +12,7 @@ import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
+import { abrirLogin, useConta } from "@/lib/auth-otp";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
@@ -29,6 +30,32 @@ export const Route = createFileRoute("/meus-precos")({
     ],
   }),
 });
+
+/* Conta por e-mail (04/11): convite para levar os preços a outros aparelhos. */
+function AvisoConta() {
+  const usuario = useConta();
+  if (usuario)
+    return (
+      <p className="mb-6 rounded-2xl bg-card px-4 py-3 text-sm text-secondary-ink">
+        Salvo na sua conta: <strong className="text-foreground">{usuario.email}</strong>
+      </p>
+    );
+  return (
+    <div className="mb-6 flex flex-col gap-3 rounded-3xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-secondary-ink">
+        <strong className="text-foreground">Veja seus preços em qualquer aparelho.</strong> Entre com
+        seu e-mail, sem senha.
+      </p>
+      <button
+        type="button"
+        onClick={abrirLogin}
+        className="shrink-0 rounded-full bg-[#0071e3] px-4 py-2 text-sm font-semibold text-white"
+      >
+        Entrar com e-mail
+      </button>
+    </div>
+  );
+}
 
 type Ponto = { p: number; em: string };
 type Item = {
@@ -292,7 +319,12 @@ function MeusPrecos() {
   useEffect(() => {
     void carregar();
     const t = setInterval(() => void carregar(), 60000);
-    return () => clearInterval(t);
+    const aoVincular = () => void carregar();
+    window.addEventListener("conta-vinculada", aoVincular);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("conta-vinculada", aoVincular);
+    };
   }, [carregar]);
 
   async function parar(id: number) {
@@ -312,6 +344,7 @@ function MeusPrecos() {
       resumo="Os produtos que você acompanha. Eu confiro o preço de tempos em tempos e mostro aqui quando cai. Esta página atualiza sozinha."
     >
       <AnimacaoAcompanhar compacto className="mb-6" />
+      <AvisoConta />
       {itens == null ? (
         <p className="flex items-center gap-2">
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> Carregando…

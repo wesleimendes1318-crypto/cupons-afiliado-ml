@@ -13,6 +13,7 @@ import { ClientOnly, Link, useRouterState } from "@tanstack/react-router";
 import { Link2, Send } from "lucide-react";
 
 import { CepTopo } from "@/components/CepTopo";
+import { BotaoConta } from "@/components/BotaoConta";
 
 import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { LINK_CANAL } from "@/lib/telegram-publico";
@@ -180,6 +181,9 @@ export function CabecalhoSite() {
           ))}
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
             <CepTopo />
+          </ClientOnly>
+          <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
+            <BotaoConta />
           </ClientOnly>
           <a
             href={LINK_CANAL}
