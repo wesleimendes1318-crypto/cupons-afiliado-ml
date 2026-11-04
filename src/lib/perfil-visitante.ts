@@ -481,3 +481,69 @@ export function sugestoesDoPerfil(
     }));
   return [...termos, ...recomendados];
 }
+
+/* SINCRONIA COM A CONTA (Weslei, 04/11: "o login precisa guardar e atualizar
+   os dados em tempo real"). Versão enxuta do gosto medido, para caber nos
+   dados da conta: categorias, últimas buscas, produtos vistos (8), ticket
+   médio e frete grátis. Nada pessoal. */
+export type GostoConta = {
+  categorias: Record<string, number>;
+  termos: { termo: string; em: number }[];
+  produtos: ProdutoInteragido[];
+  ticketMedio: number;
+  precosNaMedia: number;
+  freteGratis: boolean;
+  em: number;
+};
+
+export function gostoParaConta(p: PerfilVisitante): GostoConta {
+  return {
+    categorias: p.categorias,
+    termos: p.termosRecentes.slice(0, MAX_TERMOS),
+    produtos: p.produtosInteragidos.slice(0, 8).map((x) => ({
+      ...x,
+      titulo: x.titulo.slice(0, 90),
+    })),
+    ticketMedio: Math.round(p.ticketMedio * 100) / 100,
+    precosNaMedia: p.precosNaMedia,
+    freteGratis: p.sensivelAFreteGratis,
+    em: p.atualizadoEm,
+  };
+}
+
+/** Junta o gosto guardado na conta com o deste aparelho (o maior de cada
+    categoria, buscas e produtos pelo mais recente, sem repetir). */
+export function mesclarGosto(remoto: unknown, agora = Date.now()): void {
+  if (typeof window === "undefined" || !remoto || typeof remoto !== "object") return;
+  const r = remoto as Partial<GostoConta>;
+  const p = obterPerfil(agora) ?? vazio(agora);
+  const base = validar({
+    ...p,
+    categorias: r.categorias ?? {},
+    termosRecentes: r.termos ?? [],
+    produtosInteragidos: r.produtos ?? [],
+  } as Partial<PerfilVisitante>);
+  const cats = { ...p.categorias };
+  for (const [k, v] of Object.entries(base.categorias)) cats[k] = Math.max(cats[k] ?? 0, v);
+  const termos = [...p.termosRecentes, ...base.termosRecentes]
+    .sort((a, b) => b.em - a.em)
+    .filter((t, i, a) => a.findIndex((u) => u.termo.toLowerCase() === t.termo.toLowerCase()) === i)
+    .slice(0, MAX_TERMOS);
+  const produtos = [...p.produtosInteragidos, ...base.produtosInteragidos]
+    .sort((a, b) => b.em - a.em)
+    .filter((x, i, a) => a.findIndex((y) => y.chave === x.chave) === i)
+    .slice(0, MAX_PRODUTOS);
+  const precosR = num(r.precosNaMedia);
+  const ticket =
+    precosR > p.precosNaMedia && num(r.ticketMedio) > 0 ? num(r.ticketMedio) : p.ticketMedio;
+  const novo: PerfilVisitante = {
+    ...p,
+    categorias: cats,
+    termosRecentes: termos,
+    produtosInteragidos: produtos,
+    ticketMedio: ticket,
+    precosNaMedia: Math.max(p.precosNaMedia, precosR),
+    sensivelAFreteGratis: p.sensivelAFreteGratis || r.freteGratis === true,
+  };
+  if (JSON.stringify(novo) !== JSON.stringify(p)) gravar(novo);
+}
