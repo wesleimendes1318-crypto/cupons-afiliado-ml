@@ -24,6 +24,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 import { AcompanharPreco } from "@/components/AcompanharPreco";
+import { SinoAcompanhar } from "@/components/BotoesCartao";
 import { ComoFunciona } from "@/components/ComoFunciona";
 import {
   BadgeCheck,
@@ -3562,7 +3563,11 @@ function Resultado({
         >
           <div className="lg:col-start-1 lg:row-start-1">
             {!leituraFalhou && pedidoId != null && !semLink && (
-              <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} urlProduto={urlColada} />
+              <AcompanharPreco
+                pedidoId={pedidoId}
+                preco={a?.preco ?? null}
+                urlProduto={urlColada}
+              />
             )}
 
             {a?.temCupom === true && <CondicoesDoCupom analise={a} />}
@@ -3766,13 +3771,17 @@ function VereditoEconomia({
       className="animate-cartao mt-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--success)_45%,transparent)] dark:border-emerald-900/50 dark:from-emerald-950/30 dark:to-transparent sm:p-5 lg:mt-0"
     >
       <p className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-success">
-        <span className="animate-fogo" aria-hidden="true">🔥</span>
+        <span className="animate-fogo" aria-hidden="true">
+          🔥
+        </span>
         <BadgeCheck className="size-3.5" aria-hidden="true" /> Minha recomendação
       </p>
       {economia != null ? (
         <p className="mt-2 text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl">
-          <span className="animate-economia inline-block whitespace-nowrap text-success tabular-nums">{brl(economia)}</span> a
-          menos {comFrete ? "no custo final, já com o frete" : "no mesmo produto"}
+          <span className="animate-economia inline-block whitespace-nowrap text-success tabular-nums">
+            {brl(economia)}
+          </span>{" "}
+          a menos {comFrete ? "no custo final, já com o frete" : "no mesmo produto"}
         </p>
       ) : (
         <p className="mt-1 text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
@@ -3861,6 +3870,15 @@ function VereditoEconomia({
           </button>
         )}
       </div>
+      {oferta.url && (
+        <div className="mt-2.5">
+          <SinoAcompanhar url={oferta.url}>
+            <span className="text-xs font-medium text-secondary-ink">
+              Avise quando o preço cair
+            </span>
+          </SinoAcompanhar>
+        </div>
+      )}
       <AcoesDaOferta abrir={() => setGaveta(true)} className="mt-3 justify-center" />
       <GavetaDaOferta
         aberta={gaveta}
@@ -4806,6 +4824,15 @@ function MelhorAlternativa({
                 <VerNaLoja url={p.url} grande />
               </div>
             ) : null}
+            {p.url && (
+              <div className="mt-2">
+                <SinoAcompanhar url={p.url} titulo={p.titulo ?? undefined}>
+                  <span className="text-xs font-medium text-secondary-ink">
+                    Avise quando o preço cair
+                  </span>
+                </SinoAcompanhar>
+              </div>
+            )}
 
             <AnaliseCompleta>
               {(p.muda || p.qualidade) && (
@@ -5707,6 +5734,9 @@ function Parecidos({
                 ) : p.url ? (
                   <VerNaLoja url={p.url} rotulo="Comprar com segurança" />
                 ) : null;
+                const sino = p.url ? (
+                  <SinoAcompanhar url={p.url} titulo={p.titulo ?? undefined} />
+                ) : null;
                 return (
                   <>
                     <PrincipaisDiferencas
@@ -5714,7 +5744,18 @@ function Parecidos({
                       qualidade={qualidade}
                       desvantagens={desvantagens}
                     />
-                    <AnaliseCompleta acao={comprar}>
+                    <AnaliseCompleta
+                      acao={
+                        sino ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            {comprar}
+                            {sino}
+                          </span>
+                        ) : (
+                          comprar
+                        )
+                      }
+                    >
                       <OQueMuda
                         muda={p.muda}
                         tituloColado={textoDoColado}
@@ -6030,6 +6071,7 @@ function LinhaDaLoja({
   ) : l.url ? (
     <VerNaLoja url={l.url} />
   ) : null;
+  const sino = l.url ? <SinoAcompanhar url={l.url} titulo={l.titulo ?? undefined} /> : null;
   const extra = menor != null && l.final != null ? l.final - menor : null;
   /* FRETE SEMPRE EM LINHA PRÓPRIA (02/10, pedido 563: "R$ 2.706,58 a menos
      + frete" parecia frete de R$ 2 mil; o frete era R$ 1,00). Nunca juntar
@@ -6197,9 +6239,15 @@ function LinhaDaLoja({
               {voceColou}
             </span>
           )}
-          <div className="mt-1.5 sm:hidden">{botao}</div>
+          <div className="mt-1.5 flex items-start gap-1.5 sm:hidden">
+            {botao}
+            {sino}
+          </div>
         </div>
-        <div className="hidden text-right sm:block">{botao}</div>
+        <div className="hidden items-start justify-end gap-1.5 text-right sm:flex">
+          {botao}
+          {sino}
+        </div>
         {/* Celular: Pix x parcelado numa linha inteira (na coluna do preço
             ele espremia o nome da loja). */}
         <FormaDePagamento

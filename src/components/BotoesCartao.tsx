@@ -62,12 +62,46 @@ export function LinhaComparar({
   onComparar,
 }: {
   url: string;
-  titulo?: string;
-  onComparar?: (url: string) => void;
+  titulo?: string | undefined;
+  onComparar?: ((url: string) => void) | undefined;
+}) {
+  const comparar = onComparar ?? abrirComparacao;
+  return (
+    <SinoAcompanhar url={url} titulo={titulo} onComparar={comparar}>
+      <CompararPreco url={url} onComparar={comparar} />
+    </SinoAcompanhar>
+  );
+}
+
+export const EVENTO_ACOMPANHOU = "preco-acompanhado";
+
+/* Destaca "Meus preços" no cabeçalho e no menu por alguns segundos
+   (styles.css: html[data-acompanhou] a[href="/meus-precos"]). */
+function destacarMeusPrecos() {
+  const html = document.documentElement;
+  html.dataset["acompanhou"] = "1";
+  window.dispatchEvent(new Event(EVENTO_ACOMPANHOU));
+  window.setTimeout(() => delete html.dataset["acompanhou"], 6000);
+}
+
+/* SINO EM TODOS OS ANÚNCIOS (Weslei, 04/11: "todos sem exceção"). Só
+   anúncios do Mercado Livre: o preço é relido na página dele. O sino balança
+   ao aparecer e no mouse; ao acompanhar, fica verde com uma onda e mostra
+   onde consultar ("Ver em Meus preços"). */
+export function SinoAcompanhar({
+  url,
+  titulo,
+  onComparar,
+  children,
+}: {
+  url: string;
+  titulo?: string | undefined;
+  onComparar?: ((url: string) => void) | undefined;
+  children?: React.ReactNode;
 }) {
   const [estado, setEstado] = useState<"parado" | "salvando" | "ok" | "erro">("parado");
   const [texto, setTexto] = useState<string | null>(null);
-  const comparar = onComparar ?? abrirComparacao;
+  if (!url || !/mercadoli[vb]re\.com|meli\.la/i.test(url)) return <>{children}</>;
 
   async function seguir() {
     if (estado === "salvando" || estado === "ok") return;
@@ -76,12 +110,13 @@ export function LinhaComparar({
     if (r.ok) {
       setEstado("ok");
       setTexto(null);
+      destacarMeusPrecos();
       return;
     }
     if (r.motivo === "comparar") {
       marcarParaDepois(url);
       setEstado("parado");
-      comparar(url);
+      (onComparar ?? abrirComparacao)(url);
       return;
     }
     setEstado("erro");
@@ -89,39 +124,46 @@ export function LinhaComparar({
   }
 
   const rotulo =
-    estado === "ok"
-      ? "Acompanhando o preço"
-      : `Acompanhar preço${titulo ? `: ${titulo}` : ""}`;
+    estado === "ok" ? "Acompanhando o preço" : `Acompanhar preço${titulo ? `: ${titulo}` : ""}`;
 
   return (
     <div>
-      <div className="flex items-center gap-1.5">
-        <CompararPreco url={url} onComparar={comparar} />
+      <div className="flex items-center justify-center gap-1.5">
+        {children}
         <button
           type="button"
           onClick={() => void seguir()}
           aria-label={rotulo}
-          title={estado === "ok" ? "Acompanhando: veja em Meus preços" : "Acompanhar preço"}
+          title={
+            estado === "ok"
+              ? "Acompanhando: veja em Meus preços"
+              : "Acompanhar preço: aviso quando cair"
+          }
           aria-pressed={estado === "ok"}
           className={
-            "relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] " +
+            "sino-botao relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] " +
             (estado === "ok"
               ? "border-[#34c759] bg-[#34c759] text-white"
-              : "border-[#0071e3]/40 text-[#0058b0] hover:bg-[#f5f5f7]")
+              : "border-[#0071e3]/35 bg-[#0071e3]/[0.08] text-[#0058b0] hover:bg-[#0071e3]/15")
           }
         >
+          {estado === "ok" && <span className="sino-onda" aria-hidden="true" />}
           {estado === "salvando" ? (
-            <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
           ) : estado === "ok" ? (
             <Check className="size-4 sino-ok" aria-hidden="true" />
           ) : (
-            <BellRing className="size-3.5" aria-hidden="true" />
+            <BellRing className="sino-icone size-4" aria-hidden="true" />
           )}
         </button>
       </div>
       <p aria-live="polite" className="min-h-0 text-center text-[11px] leading-tight">
         {estado === "ok" ? (
-          <Link to="/meus-precos" className="mt-1 inline-block font-semibold text-[#0058b0] hover:underline">
+          <Link
+            to="/meus-precos"
+            className="sino-aviso mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#34c759]/12 px-2.5 py-1 font-semibold text-[#1f7a3a] hover:underline"
+          >
+            <Check className="size-3" aria-hidden="true" />
             Acompanhando · ver em Meus preços
           </Link>
         ) : estado === "erro" && texto ? (

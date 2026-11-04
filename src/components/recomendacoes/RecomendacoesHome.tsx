@@ -12,6 +12,7 @@ import { ArrowRight, Flame, Gift, History, Repeat, Shuffle, Sparkles, Target } f
 
 import { CartaoEmAlta } from "@/components/EmAltaCatalogo";
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { SinoAcompanhar } from "@/components/BotoesCartao";
 import { TrilhoRecomendacao } from "@/components/recomendacoes/TrilhoRecomendacao";
 import { NOS, subarvore } from "@/content/taxonomia";
 import { supabase } from "@/integrations/supabase/client";
@@ -298,14 +299,16 @@ function CartaoHistorico({ h }: { h: ItemHistorico }) {
         </p>
         <div className="mt-auto space-y-1.5 pt-3">
           {ehDoMercadoLivre(h.url) && <VerNaLoja url={h.url} grande />}
-          <button
-            type="button"
-            onClick={() => comparar(h.url)}
-            className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-          >
-            Atualizar preço
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </button>
+          <SinoAcompanhar url={h.url} titulo={h.titulo} onComparar={comparar}>
+            <button
+              type="button"
+              onClick={() => comparar(h.url)}
+              className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+            >
+              Atualizar preço
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </button>
+          </SinoAcompanhar>
         </div>
       </div>
     </li>
