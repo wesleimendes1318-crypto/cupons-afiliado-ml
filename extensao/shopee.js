@@ -212,9 +212,21 @@ export async function gerarLinkShopeeNaPagina(urlProduto) {
     campo.dispatchEvent(new Event('change', { bubbles: true }));
     await espera(400);
     const botoes = [...document.querySelectorAll('button')];
-    /* Do mais especifico para o mais geral ("Obter link" e o do painel). */
+    /* Opcoes fechadas, do mais especifico para o mais geral ("Obter link" e o
+       do painel); so botao visivel, ligado e sem nada por cima. */
+    const clicavel = b => {
+      if (!b.getClientRects().length || b.disabled || b.getAttribute('aria-disabled') === 'true') return false;
+      const cs = getComputedStyle(b);
+      if (cs.visibility === 'hidden' || cs.display === 'none') return false;
+      const r = b.getBoundingClientRect();
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return true;
+      const p = document.elementFromPoint(x, y);
+      return !p || p === b || b.contains(p) || p.contains(b);
+    };
     const botao = [/obter link/i, /gerar link/i, /get link/i, /converter/i, /^\s*gerar\s*$/i]
-      .map(re => botoes.find(b => re.test(b.innerText || ''))).find(Boolean);
+      .map(re => botoes.find(b => re.test(b.innerText || '') && clicavel(b))).find(Boolean);
+    if (botao) { try { botao.scrollIntoView({ block: 'center' }); } catch (e) { /* sem rolagem */ } }
     if (!botao) return { erro: 'botao de gerar nao encontrado', botoes: botoes.map(b => String(b.innerText || '').trim().slice(0, 30)).filter(Boolean).slice(0, 12) };
     botao.click();
     for (let i = 0; i < 28; i++) {
