@@ -1,8 +1,9 @@
 /* PAINEL DO FUNDADOR (Weslei, 04/11). Fora de menus, rodapé e sitemap.
    A página não guarda nada de sigiloso: os números só saem de
    painel_fundador(), que confere no banco se é a conta mestre confirmada.
-   Quem não é volta para a raiz com um aviso neutro. */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+   Nunca expulsa (04/11): sem sessão mostra o login por código; outra conta
+   ou falha de rede ficam na página com a saída certa. */
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
@@ -38,7 +39,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
-import { abrirLogin } from "@/lib/auth-otp";
+import { sair } from "@/lib/auth-otp";
 import { perguntarAoCopiloto, type MensagemCopiloto } from "@/lib/copiloto-admin";
 import {
   baixarDossie,
@@ -88,8 +89,10 @@ const ha = (iso: string | null | undefined) => {
 };
 
 function Admin() {
-  const navigate = useNavigate();
-  const [estado, setEstado] = useState<"conferindo" | "entrar" | "negado" | "pronto">("conferindo");
+  const [estado, setEstado] = useState<"conferindo" | "entrar" | "negado" | "erro" | "pronto">(
+    "conferindo",
+  );
+  const [email, setEmail] = useState<string | null>(null);
   const [dias, setDias] = useState(30);
   const [painel, setPainel] = useState<Painel | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -98,7 +101,7 @@ function Admin() {
     setCarregando(true);
     const p = await carregarPainel(n);
     setCarregando(false);
-    if (!p) return setEstado("negado");
+    if (p === "negado" || p === "falha") return setEstado(p === "negado" ? "negado" : "erro");
     setPainel(p);
     setEstado("pronto");
   }, []);
@@ -106,11 +109,8 @@ function Admin() {
   useEffect(() => {
     const conferir = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        setEstado("entrar");
-        abrirLogin();
-        return;
-      }
+      if (!data.session) return setEstado("entrar");
+      setEmail(data.session.user.email ?? null);
       void carregar(dias);
     };
     void conferir();
@@ -121,12 +121,6 @@ function Admin() {
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (estado !== "negado") return;
-    const t = setTimeout(() => void navigate({ to: "/" }), 1600);
-    return () => clearTimeout(t);
-  }, [estado, navigate]);
 
   if (estado === "conferindo" || (estado === "pronto" && !painel))
     return (
@@ -141,29 +135,31 @@ function Admin() {
   if (estado === "entrar")
     return (
       <Tela>
-        <div className="mx-auto mt-32 max-w-sm rounded-3xl bg-white p-6 text-center shadow-sm animate-cartao">
-          <p className="text-sm text-[#6e6e73]">Entre com sua conta para continuar.</p>
-          <button
-            type="button"
-            onClick={abrirLogin}
-            className="mt-4 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]"
-          >
-            Entrar
-          </button>
+        <div className="flex min-h-screen items-center justify-center px-4 py-10">
+          <LoginEmailOtp embutido emailSugerido="wes_lei18@hotmail.com" />
         </div>
-        <LoginEmailOtp />
       </Tela>
     );
 
   if (estado === "negado")
     return (
       <Tela>
-        <p
-          role="status"
-          className="mx-auto mt-32 max-w-sm rounded-3xl bg-white p-6 text-center text-sm text-[#6e6e73] shadow-sm animate-cartao"
-        >
-          Esta página não está disponível. Voltando para o início…
-        </p>
+        <Aviso
+          texto={`Conectado como ${email ?? "outra conta"}. Esta conta não possui privilégios de fundador.`}
+          botao="Sair e entrar com outra conta"
+          acao={() => void sair().then(() => setEstado("entrar"))}
+        />
+      </Tela>
+    );
+
+  if (estado === "erro")
+    return (
+      <Tela>
+        <Aviso
+          texto="Não consegui falar com o banco agora. Confira a internet e tente de novo."
+          botao={carregando ? "Tentando…" : "Tentar novamente"}
+          acao={() => void carregar(dias)}
+        />
       </Tela>
     );
 
@@ -814,6 +810,24 @@ function CopilotoAdmin() {
         </SheetContent>
       </Sheet>
     </>
+  );
+}
+
+function Aviso({ texto, botao, acao }: { texto: string; botao: string; acao: () => void }) {
+  return (
+    <div
+      role="status"
+      className="mx-4 mt-32 rounded-3xl bg-white p-6 text-center shadow-sm animate-cartao sm:mx-auto sm:max-w-sm"
+    >
+      <p className="break-words text-sm text-[#6e6e73]">{texto}</p>
+      <button
+        type="button"
+        onClick={acao}
+        className="mt-4 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]"
+      >
+        {botao}
+      </button>
+    </div>
   );
 }
 

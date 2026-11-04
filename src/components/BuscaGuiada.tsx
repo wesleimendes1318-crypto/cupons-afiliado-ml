@@ -1161,7 +1161,7 @@ function CartaoBusca({
   const rede = c.voltagem ? voltagemDaRegiao(regiao?.cidade, regiao?.uf) : null;
   const naoServe = c.voltagem != null && rede != null && !funcionaEm(c.voltagem, rede.volts);
   const foto = (
-    <span className="relative block aspect-[4/3] overflow-hidden bg-white sm:aspect-auto sm:h-40">
+    <span className="relative block aspect-square overflow-hidden rounded-2xl bg-white sm:aspect-auto sm:h-44 md:h-48">
       {c.imagem ? (
         <img
           {...propsFotoCartao(c.imagem)}
@@ -1170,7 +1170,7 @@ function CartaoBusca({
           height={200}
           loading="lazy"
           referrerPolicy="no-referrer"
-          className="absolute inset-0 h-full w-full object-contain p-2.5 transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
+          className="absolute inset-0 h-full w-full object-contain p-2 duration-300 ease-out motion-safe:transition-transform motion-safe:group-hover:scale-105"
         />
       ) : (
         <span className="absolute inset-0 grid place-items-center">
