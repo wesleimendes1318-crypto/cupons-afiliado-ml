@@ -15,7 +15,8 @@ export function chaveDoProduto(url: string): string {
     pegar(/\/p\/(MLB[0-9]+)/i) ??
     pegar(/\/up\/(MLBU[0-9]+)/i) ??
     url.match(/MLB-[0-9]{6,}/i)?.[0].replace("-", "") ??
-    url.split("?")[0];
+    url.split("?")[0] ??
+    url;
   return achado.toUpperCase();
 }
 
