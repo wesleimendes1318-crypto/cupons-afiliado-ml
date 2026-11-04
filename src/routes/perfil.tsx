@@ -69,7 +69,7 @@ function Perfil() {
 
   useEffect(() => {
     if (!usuario) return;
-    const p = limparPerfilConta(usuario.user_metadata?.perfil);
+    const p = limparPerfilConta(usuario.user_metadata?.["perfil"]);
     setNome(p.nome);
     setInteresses(p.interesses);
     setVoltagem(p.voltagem);

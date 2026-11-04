@@ -35,7 +35,7 @@ export type PerfilConta = {
 const SLUGS = new Set<string>(INTERESSES.map((i) => i.slug));
 
 export function limparPerfilConta(bruto: unknown): PerfilConta {
-  const m = (bruto && typeof bruto === "object" ? bruto : {}) as Record<string, unknown>;
+  const m = (bruto && typeof bruto === "object" ? bruto : {}) as { nome?: unknown; interesses?: unknown; voltagem?: unknown; freteGratis?: unknown; avisosEmail?: unknown; termos?: unknown };
   const lista = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
   return {
     nome: typeof m.nome === "string" ? m.nome.trim().slice(0, 40) : "",
