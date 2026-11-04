@@ -18,7 +18,7 @@ import { atributoProduto } from "@/lib/perfil-visitante";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { itemDoEndereco, type ResumoAvaliacoes } from "@/lib/avaliacoes-detalhe";
 import { VerNaLoja } from "@/components/BuscaPorLink";
-import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
 import { propsFotoCartao } from "@/lib/foto";
 import { TrilhoRecomendacao } from "@/components/recomendacoes/TrilhoRecomendacao";
 import { ordenarPorPontuacao } from "@/lib/vitrines-ranking";
@@ -478,7 +478,9 @@ function Cartao({ i, trilho = false }: { i: ItemVitrine; trilho?: boolean }) {
               <VerNaLoja url={i.url_produto} grande />
             )
           )}
-          {(i.url_produto || destino) && <CompararPreco url={i.url_produto ?? destino ?? ""} />}
+          {(i.url_produto || destino) && (
+            <LinhaComparar url={i.url_produto ?? destino ?? ""} titulo={i.titulo} />
+          )}
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <VerDetalhesVitrine
               chave={i.chave}

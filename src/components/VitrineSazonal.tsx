@@ -16,7 +16,7 @@ import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
-import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 
@@ -365,7 +365,9 @@ export function CartaoOferta({
               <VerNaLoja url={o.urlProduto} grande />
             )
           )}
-          {(o.urlProduto || o.link) && <CompararPreco url={(o.urlProduto ?? o.link)!} />}
+          {(o.urlProduto || o.link) && (
+            <LinhaComparar url={(o.urlProduto ?? o.link)!} titulo={o.titulo} />
+          )}
           <VerDetalhesVitrine
             chave={o.chave}
             titulo={o.titulo}
