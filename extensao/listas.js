@@ -410,11 +410,45 @@ export async function sincronizarListas(d) {
     const [s] = await chrome.scripting.executeScript({ target: { tabId: aba.id }, world, func, args });
     return s ? s.result : null;
   };
+  /* Clique com o motor de escolha (escolha-pagina.js): lista de elementos,
+     opcoes fechadas em ordem, so clica com certeza e espera a pagina mudar.
+     Motor indisponivel = clique antigo por texto. Ambiguo ou coberto = nao
+     clica (melhor nao fazer do que clicar errado na conta). */
+  const decisoes = [];
+  const escolher = async (padroes, soDialogo = false) => {
+    let r = null;
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: aba.id }, files: ['escolha-pagina.js'] });
+      r = await rodar(alvo => (globalThis.__meEscolha ? globalThis.__meEscolha.clicar(alvo) : null), [{ padroes, soDialogo }], 'ISOLATED');
+    } catch (e) { r = null; }
+    if (r) {
+      if (decisoes.length < 24) decisoes.push({ alvo: String(padroes[0]).slice(0, 40), clicou: r.clicou, motivo: r.motivo, confianca: r.confianca, ms: r.ms, elementos: r.total });
+      if (!r.clicou) return null;
+      const m = await rodar(ms => (globalThis.__meEscolha ? globalThis.__meEscolha.esperarMudanca(ms) : null), [1800], 'ISOLATED').catch(() => null);
+      if (!m) await d.sleep(1200);
+      return r.texto || true;
+    }
+    const t = await rodar(paginaClicar, [padroes.join('|'), 'i', soDialogo]);
+    if (t) await d.sleep(1200);
+    return t;
+  };
+  /* Espera a resposta do servidor ao clique (ate ms), sem tempo fixo. */
+  const esperarCaptura = async (chave, ms = 4000) => {
+    const juntas = [];
+    const ate = Date.now() + ms;
+    while (Date.now() < ate) {
+      juntas.push(...((await rodar(paginaCapturas)) || []));
+      const req = escolherCapturada(juntas, chave);
+      if (req) return req;
+      await d.sleep(300);
+    }
+    return escolherCapturada(juntas, chave);
+  };
   const ir = async url => {
     await chrome.tabs.update(aba.id, { url });
     await d.sleep(800);
     await d.esperarCarregar(aba.id, 30000);
-    await d.sleep(2500);
+    await d.sleep(1200);
     const fim = (await chrome.tabs.get(aba.id)).url || '';
     if (d.ehCaptcha('', fim)) { parar = 'verificacao do Mercado Livre'; return false; }
     if (/\/jms\/|\/login|lgz/i.test(fim)) { parar = 'deslogado do Mercado Livre'; return false; }
@@ -470,17 +504,13 @@ export async function sincronizarListas(d) {
         }
         if (!id && !parar) {
           await rodar(paginaCapturas);
-          const abriu = await rodar(paginaClicar, ['^\\+?\\s*(criar|nova)( nova| uma)?( lista)?$|criar (uma |nova )?lista|nova lista|adicionar lista', 'i', false]);
-          await d.sleep(1500);
+          const abriu = await escolher(['^\\+?\\s*(criar|nova)( nova| uma)?( lista)?$', 'criar (uma |nova )?lista', 'nova lista', 'adicionar lista']);
           const preencheu = abriu && await rodar(paginaPreencher, [l.nome]);
           if (preencheu) {
-            await d.sleep(600);
-            await rodar(paginaClicar, ['^p[uú]blica', 'i', true]);
-            await d.sleep(500);
-            await rodar(paginaClicar, ['^(criar|criar lista|salvar|confirmar|pronto)$', 'i', true]);
-            await d.sleep(3000);
-            const caps = await rodar(paginaCapturas);
-            const req = escolherCapturada(caps, l.nome);
+            await d.sleep(400);
+            await escolher(['^p[uú]blica'], true);
+            await escolher(['^(criar|criar lista)$', '^(salvar|confirmar|pronto)$'], true);
+            const req = await esperarCaptura(l.nome);
             if (req) {
               conferirStatus(req.status);
               const m = modeloDaRequisicao(req, valoresDe(l));
@@ -532,19 +562,16 @@ export async function sincronizarListas(d) {
         if (!(await ir(url))) break;
         await rodar(paginaCapturas);
         const fav = await rodar(paginaFavoritar);
-        await d.sleep(2000);
-        let escolheu = await rodar(paginaClicar, ['^' + l.nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i', false]);
+        await d.sleep(1200);
+        const nomeExato = '^' + l.nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+        let escolheu = await escolher([nomeExato]);
         if (!escolheu) {
-          await rodar(paginaClicar, ['(adicionar|salvar|mover) (a|em|para) (uma )?lista|escolher lista|ver listas', 'i', false]);
-          await d.sleep(1500);
-          escolheu = await rodar(paginaClicar, ['^' + l.nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i', false]);
+          await escolher(['(adicionar|salvar|mover) (a|em|para) (uma )?lista', 'escolher lista', 'ver listas']);
+          escolheu = await escolher([nomeExato]);
         }
         if (escolheu) {
-          await d.sleep(800);
-          await rodar(paginaClicar, ['^(salvar|confirmar|pronto|concluir|adicionar)$', 'i', true]);
-          await d.sleep(2500);
-          const caps = await rodar(paginaCapturas);
-          const req = escolherCapturada(caps, t.item.replace(/^MLB/i, ''));
+          await escolher(['^(salvar|adicionar)$', '^(confirmar|pronto|concluir)$'], true);
+          const req = await esperarCaptura(t.item.replace(/^MLB/i, ''));
           if (req) {
             conferirStatus(req.status);
             ok = req.status >= 200 && req.status < 300;
@@ -575,10 +602,9 @@ export async function sincronizarListas(d) {
         await rodar(paginaCapturas);
         const c = await rodar(paginaRemoverDaLista, [t.item.replace(/^MLB/i, '')]);
         if (c && c.clicou) {
-          await d.sleep(1200);
-          await rodar(paginaClicar, ['^(remover|excluir|sim|confirmar|eliminar)', 'i', true]);
-          await d.sleep(2500);
-          const req = escolherCapturada(await rodar(paginaCapturas), t.item.replace(/^MLB/i, ''));
+          await d.sleep(600);
+          await escolher(['^(remover|excluir|eliminar)', '^(sim|confirmar)'], true);
+          const req = await esperarCaptura(t.item.replace(/^MLB/i, ''));
           if (req) {
             conferirStatus(req.status);
             ok = req.status >= 200 && req.status < 300;
@@ -601,6 +627,7 @@ export async function sincronizarListas(d) {
     diag.tirados = acoes.filter(a => a.acao === 'sair' && a.ok).length;
     diag.falhas = acoes.filter(a => !a.ok).slice(0, 6).map(a => a.acao + ' ' + a.item + ': ' + a.erro);
     diag.privadas = listas.filter(l => l.publica === false).map(l => l.slug);
+    diag.decisoes = decisoes;
   } catch (e) {
     diag.erros.push(String((e && e.message) || e).slice(0, 160));
   } finally {
