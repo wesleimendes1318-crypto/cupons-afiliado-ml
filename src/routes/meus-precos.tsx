@@ -319,6 +319,8 @@ function MeusPrecos() {
   useEffect(() => {
     void carregar();
     const t = setInterval(() => void carregar(), 60000);
+    const aoVincular = () => void carregar();
+    window.addEventListener("conta-vinculada", aoVincular);
     return () => clearInterval(t);
   }, [carregar]);
 
