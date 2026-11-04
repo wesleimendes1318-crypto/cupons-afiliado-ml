@@ -57,7 +57,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
     const valor = Number(alvo.replace(/\./g, "").replace(",", "."));
     setEstado("salvando");
     const { data: monitor, error } = await supabase.rpc(
-      "acompanhar_preco" as never,
+      "acompanhar_preco_v2" as never,
       {
         p_pedido: pedidoId,
         p_navegador: navegador,

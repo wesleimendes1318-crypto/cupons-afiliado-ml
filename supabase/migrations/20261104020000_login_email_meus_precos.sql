@@ -1,6 +1,7 @@
 -- LOGIN SEM SENHA E "MEUS PREÇOS" NA CONTA (Weslei, 04/11). Só aditivo:
--- colunas novas (nulas ou com padrão), funções reescritas com os mesmos
--- nomes e a tabela nova perfil_conta. Nada é apagado.
+-- colunas novas (nulas ou com padrão), acompanhar_preco_v2/meus_precos_v2
+-- (as antigas ficam), funções reescritas e a tabela nova perfil_conta.
+-- Nada é apagado.
 -- - Quem entra com o e-mail (código OTP do Supabase Auth) leva junto o que o
 --   navegador já acompanhava (vincular_navegador_conta preenche usuario_id).
 -- - Logado: vê tudo da conta, de qualquer aparelho. Deslogado: só o que este
@@ -49,8 +50,7 @@ begin
   return n;
 end $$;
 
-drop function if exists public.acompanhar_preco(bigint, uuid, numeric);
-create or replace function public.acompanhar_preco(
+create or replace function public.acompanhar_preco_v2(
   p_pedido bigint, p_navegador uuid, p_alvo numeric default null, p_avisar_email boolean default null)
 returns bigint
 language plpgsql
@@ -113,8 +113,7 @@ begin
   return v_id;
 end $$;
 
-drop function if exists public.meus_precos(uuid);
-create or replace function public.meus_precos(p_navegador uuid)
+create or replace function public.meus_precos_v2(p_navegador uuid)
 returns table(id bigint, titulo text, imagem text, loja text, link text, url text, preco_atual numeric,
               preco_pix numeric, preco_cheio numeric, parcelas jsonb, preco_ao_seguir numeric,
               preco_alvo numeric, menor_preco numeric, menor_em timestamptz, maior_preco numeric,
@@ -257,26 +256,19 @@ create table if not exists public.perfil_conta (
   atualizado_em timestamptz not null default now()
 );
 alter table public.perfil_conta enable row level security;
-revoke all on public.perfil_conta from anon;
 grant select, insert, update on public.perfil_conta to authenticated;
-drop policy if exists "perfil_conta propria" on public.perfil_conta;
 create policy "perfil_conta propria" on public.perfil_conta for all to authenticated
   using (usuario_id = auth.uid()) with check (usuario_id = auth.uid());
 
 -- Leitura direta dos próprios registros (as telas usam as funções acima).
 grant select on public.monitor_seguidores, public.monitor_precos to authenticated;
-drop policy if exists "seguidores da propria conta" on public.monitor_seguidores;
 create policy "seguidores da propria conta" on public.monitor_seguidores for select to authenticated
   using (usuario_id = auth.uid());
-drop policy if exists "precos que a conta acompanha" on public.monitor_precos;
 create policy "precos que a conta acompanha" on public.monitor_precos for select to authenticated
   using (exists (select 1 from public.monitor_seguidores s where s.monitor_id = monitor_precos.id and s.usuario_id = auth.uid()));
 
-revoke all on function public.seguidor_visivel(public.monitor_seguidores, uuid) from public, anon;
 grant execute on function public.seguidor_visivel(public.monitor_seguidores, uuid) to authenticated;
-revoke all on function public.vincular_navegador_conta(uuid, uuid) from public, anon;
 grant execute on function public.vincular_navegador_conta(uuid, uuid) to authenticated;
-revoke all on function public.definir_aviso_email(bigint, boolean) from public, anon;
 grant execute on function public.definir_aviso_email(bigint, boolean) to authenticated;
-grant execute on function public.acompanhar_preco(bigint, uuid, numeric, boolean) to anon, authenticated;
-grant execute on function public.meus_precos(uuid) to anon, authenticated;
+grant execute on function public.acompanhar_preco_v2(bigint, uuid, numeric, boolean) to anon, authenticated;
+grant execute on function public.meus_precos_v2(uuid) to anon, authenticated;

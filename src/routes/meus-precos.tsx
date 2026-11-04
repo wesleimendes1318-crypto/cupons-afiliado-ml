@@ -315,7 +315,7 @@ function MeusPrecos() {
       return;
     }
     const { data, error } = await supabase.rpc(
-      "meus_precos" as never,
+      "meus_precos_v2" as never,
       { p_navegador: navegador } as never,
     );
     if (error) {
