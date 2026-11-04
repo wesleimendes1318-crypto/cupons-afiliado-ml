@@ -3,6 +3,7 @@
    cantos amplos, azul #0071e3, campo de 16 px (sem zoom no iPhone). */
 import { ClipboardPaste, LoaderCircle, Mail, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { CenaLogin } from "@/components/CenaLogin";
 
 import {
   EVENTO_ABRIR_LOGIN,
