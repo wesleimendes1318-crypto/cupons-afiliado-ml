@@ -8,7 +8,6 @@ import { createClient } from "@supabase/supabase-js";
 import { chaveDeServico, SUPABASE_URL_SITE } from "@/integrations/supabase/projeto";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/resend";
-const ESPERA_MS = 45_000;
 
 function resposta(corpo: object, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -63,12 +62,6 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
           return resposta({ erro: "indisponivel" }, 503);
         }
 
-        /* Freio por e-mail: o pedido anterior (recovery_sent_at é marcado pelo
-           generateLink) precisa ter mais de 45 s. */
-        const anterior = (gerado.data.user as { recovery_sent_at?: string } | null)
-          ?.recovery_sent_at;
-        void anterior;
-
         const codigo = gerado.data.properties.email_otp;
         const remetente = process.env.RESEND_FROM || "Melhor Escolha <onboarding@resend.dev>";
         const envio = await fetch(`${GATEWAY}/emails`, {
@@ -95,5 +88,3 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
     },
   },
 });
-
-export const ESPERA_ENTRE_CODIGOS_MS = ESPERA_MS;

@@ -24,11 +24,21 @@ export function codigoValido(codigo: string): boolean {
 }
 
 export async function solicitarCodigo(email: string) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.trim().toLowerCase(),
-    options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/meus-precos` },
-  });
-  return error ? traduzir(error.message) : null;
+  try {
+    const r = await fetch("/api/public/enviar-codigo", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    if (r.ok) return null;
+    const corpo = (await r.json().catch(() => ({}))) as { erro?: string; status?: number };
+    if (corpo.erro === "invalido") return "Confira o e-mail digitado.";
+    if (corpo.erro === "envio" && corpo.status === 403)
+      return "Ainda não consigo enviar para este e-mail. Tente outro em instantes.";
+  } catch {
+    /* rede */
+  }
+  return "Não deu agora. Tente de novo em instantes.";
 }
 
 export async function validarCodigo(email: string, codigo: string) {
