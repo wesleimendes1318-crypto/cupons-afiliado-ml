@@ -25,7 +25,17 @@ function resposta(corpo: object, status = 200) {
 /* Padrão dos e-mails (04/11): #f5f5f7, cartão branco com borda #e5e5ea e
    cantos de 24 px, código em caixa mono azul, gráfico do Acompanhar preço,
    aviso de segurança e rodapé de transparência. */
-function html(codigo: string) {
+function html(codigo: string, email: string) {
+  /* "Copiar código" (04/11): o e-mail não roda script, então o botão abre o
+     site com o código, que preenche as caixas e copia (LoginEmailOtp tira o
+     código da barra de endereços). Entrar continua exigindo o toque. */
+  const abrir = `https://melhorescolha.io/?codigo=${encodeURIComponent(codigo)}&email=${encodeURIComponent(email)}`;
+  const caixas = [...codigo]
+    .map(
+      (d) =>
+        `<span style="display:inline-block;background:#ffffff;border-radius:8px;padding:8px 6px;font-size:20px;line-height:24px;font-weight:700;color:#1d1d1f;border:1px solid #d2d2d7;margin:0 2px;min-width:14px;text-align:center;font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace">${d}</span>`,
+    )
+    .join("");
   return `<!doctype html><html lang="pt-BR"><body style="margin:0;padding:32px 16px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Helvetica,Arial,sans-serif;color:#1d1d1f">
 <table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto">
 <tr><td align="center" style="padding-bottom:20px"><img src="https://melhorescolha.io/logo.png" alt="Melhor Escolha" width="44" height="44" style="display:block;border-radius:12px"></td></tr>
@@ -34,9 +44,10 @@ function html(codigo: string) {
 <h1 style="margin:0 0 10px;font-size:24px;line-height:30px;letter-spacing:-0.3px">Seu código para entrar</h1>
 <p style="margin:0 0 18px;font-size:15px;line-height:22px;color:#424245">Digite este código no site para entrar na sua conta. Ele vale por uma hora.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#f5f5f7;border:1px solid #e5e5ea;border-radius:16px;padding:18px 8px">
-<span style="font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:32px;line-height:38px;font-weight:700;letter-spacing:6px;color:#0071e3;user-select:all;-webkit-user-select:all">${codigo}</span>
+<span style="user-select:all;-webkit-user-select:all;white-space:nowrap">${caixas}</span>
 </td></tr></table>
-<p style="margin:12px 0 0;text-align:center;font-size:13px;line-height:19px;color:#6e6e73">Para copiar: toque e segure no código e escolha Copiar.<br>No site, toque em "Colar código copiado".</p>
+<a href="${abrir}" style="display:block;margin:16px 0 0;text-align:center;background:#0071e3;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:9999px">Copiar código</a>
+<p style="margin:10px 0 0;text-align:center;font-size:12px;line-height:17px;color:#6e6e73">Ao tocar em Copiar código, o site abre com o código já preenchido e copiado para você. Se preferir, toque e segure nos números e escolha Copiar.</p>
 <img src="https://melhorescolha.io/email/acompanhar-preco.png" alt="Linha do preço descendo até o seu preço desejado" width="472" style="display:block;width:100%;max-width:472px;height:auto;margin:24px 0 10px;border-radius:16px">
 <p style="margin:0;font-size:13px;line-height:19px;color:#424245">Com a conta, seus preços acompanhados aparecem em qualquer aparelho e você pode receber o aviso por e-mail quando o preço cair.</p>
 <p style="margin:18px 0 0;padding-top:16px;border-top:1px solid #e5e5ea;font-size:12px;line-height:17px;color:#86868b">Segurança: não compartilhe este código com ninguém. Ninguém da Melhor Escolha pede este código. Se você não pediu para entrar, ignore este e-mail: nada muda na sua conta.</p>
@@ -87,7 +98,7 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         const envio = await enviarEmail({
           para: email,
           assunto: `${codigo} é o seu código — Melhor Escolha`,
-          html: html(codigo),
+          html: html(codigo, email),
           texto: `Seu código para entrar na Melhor Escolha: ${codigo}. Vale por uma hora.`,
         });
         if (!envio.ok) return resposta({ erro: "envio", status: envio.status }, 200);

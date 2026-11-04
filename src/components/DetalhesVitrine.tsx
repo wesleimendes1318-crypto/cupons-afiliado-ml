@@ -9,7 +9,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Images, LoaderCircle, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import {
+  abrirComparacao,
+  CompararPreco,
+  ComprarComSeguranca,
+  SinoAcompanhar,
+} from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { acoesDoProduto } from "@/lib/afiliado";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
@@ -521,9 +526,18 @@ function Painel({
             ) : null}
             {acoes.comparar && (
               /* Na tela inicial a comparação abre por baixo: o painel fecha. */
-              <div onClickCapture={() => ref.current?.close()}>
-                <CompararPreco url={acoes.comparar} />
-              </div>
+              <SinoAcompanhar
+                url={acoes.comparar}
+                titulo={titulo}
+                onComparar={(u) => {
+                  ref.current?.close();
+                  abrirComparacao(u);
+                }}
+              >
+                <div className="flex min-w-0 flex-1" onClickCapture={() => ref.current?.close()}>
+                  <CompararPreco url={acoes.comparar} />
+                </div>
+              </SinoAcompanhar>
             )}
             <p className="text-center text-[11px] text-muted-foreground">
               ✓ Você compra direto na loja oficial · Sem taxa extra

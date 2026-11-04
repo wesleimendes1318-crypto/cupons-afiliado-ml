@@ -1,7 +1,7 @@
 /* Entrar com o e-mail, sem senha (Weslei, 04/11). Abre em qualquer página
    pelo evento "abrir-login" (abrirLogin). Visual do site: cartão branco,
    cantos amplos, azul #0071e3, campo de 16 px (sem zoom no iPhone). */
-import { ClipboardPaste, LoaderCircle, Mail, ShieldCheck, X } from "lucide-react";
+import { Check, ClipboardPaste, LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CenaLogin } from "@/components/CenaLogin";
 
@@ -15,6 +15,25 @@ import {
 } from "@/lib/auth-otp";
 
 const ESPERA_REENVIO = 50;
+const CAIXAS = 8;
+
+/* Link "Copiar código" do e-mail (04/11): /?codigo=…&email=… abre o login já
+   na etapa do código. Tira os dois da barra de endereços na hora; o código
+   só vale com o toque em "Entrar" (verifyOtp) e vence em 1 hora. */
+function lerCodigoDaUrl(): { codigo: string; email: string } | null {
+  try {
+    const url = new URL(window.location.href);
+    const codigo = limparCodigo(url.searchParams.get("codigo") ?? "");
+    const email = (url.searchParams.get("email") ?? "").trim().toLowerCase();
+    if (!url.searchParams.has("codigo")) return null;
+    url.searchParams.delete("codigo");
+    url.searchParams.delete("email");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    return codigoValido(codigo) && emailValido(email) ? { codigo, email } : null;
+  } catch {
+    return null;
+  }
+}
 
 export function LoginEmailOtp() {
   const ref = useRef<HTMLDialogElement>(null);
@@ -25,6 +44,35 @@ export function LoginEmailOtp() {
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [falta, setFalta] = useState(0);
+  const [colado, setColado] = useState(false);
+  const [doEmail, setDoEmail] = useState(false);
+  const [focado, setFocado] = useState(false);
+  const cascata = useRef<number[]>([]);
+
+  /* Preenche as caixas uma a uma (40 ms por dígito). */
+  function preencherEmCascata(texto: string) {
+    cascata.current.forEach((t) => clearTimeout(t));
+    setCodigo("");
+    cascata.current = [...texto].map((_, i) =>
+      window.setTimeout(() => setCodigo(texto.slice(0, i + 1)), (i + 1) * 40),
+    );
+  }
+
+  // Lido uma vez só: a leitura limpa a URL e o efeito pode rodar 2x (StrictMode).
+  const daUrl = useRef<{ codigo: string; email: string } | null | undefined>(undefined);
+  useEffect(() => {
+    if (daUrl.current === undefined) daUrl.current = lerCodigoDaUrl();
+    const vindo = daUrl.current;
+    if (!vindo) return;
+    navigator.clipboard?.writeText(vindo.codigo).catch(() => {});
+    setEmail(vindo.email);
+    setEtapa("codigo");
+    setDoEmail(true);
+    setErro(null);
+    if (!ref.current?.open) ref.current?.showModal();
+    preencherEmCascata(vindo.codigo);
+    return () => cascata.current.forEach((t) => clearTimeout(t));
+  }, []);
 
   useEffect(() => {
     const abrir = () => {
@@ -98,7 +146,11 @@ export function LoginEmailOtp() {
           {["Seu e-mail", "Código", "Pronto"].map((nome, i) => {
             const atual = etapa === "email" ? 0 : etapa === "codigo" ? 1 : 2;
             return (
-              <li key={nome} className="flex flex-1 items-center gap-1.5" aria-current={i === atual ? "step" : undefined}>
+              <li
+                key={nome}
+                className="flex flex-1 items-center gap-1.5"
+                aria-current={i === atual ? "step" : undefined}
+              >
                 <span
                   className={`inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors duration-300 ${
                     i <= atual ? "bg-[#0071e3] text-white" : "bg-muted text-secondary-ink"
@@ -165,41 +217,97 @@ export function LoginEmailOtp() {
               Digite o código
             </h2>
             <p className="mt-1.5 text-sm text-secondary-ink">
-              Mandamos um código para <strong className="break-all text-foreground">{email}</strong>.
-              Vale por uma hora.
+              Mandamos um código para <strong className="break-all text-foreground">{email}</strong>
+              . Vale por uma hora.
             </p>
+            {doEmail && (
+              <p
+                role="status"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#34c759]/12 px-3 py-1 text-xs font-semibold text-[#1f7a3a]"
+              >
+                <Check className="size-3.5" aria-hidden /> Código copiado e preenchido do seu
+                e-mail!
+              </p>
+            )}
             <label htmlFor="login-codigo" className="sr-only">
-              Código
+              Código de {CAIXAS} dígitos
             </label>
-            <input
-              ref={campoCodigo}
-              id="login-codigo"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              enterKeyHint="go"
-              value={codigo}
-              onChange={(e) => setCodigo(limparCodigo(e.target.value))}
-              placeholder="••••••••"
-              className="mt-5 h-14 w-full rounded-2xl border border-border bg-background px-4 text-center font-mono text-2xl font-bold tracking-[0.4em] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/30"
-            />
+            {/* 8 caixas no visual do e-mail; por baixo, um campo só (teclado,
+                Backspace, colar e o preenchimento automático do celular). */}
+            <div className="relative mt-5">
+              <input
+                ref={campoCodigo}
+                id="login-codigo"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                enterKeyHint="go"
+                maxLength={CAIXAS}
+                value={codigo}
+                onFocus={() => setFocado(true)}
+                onBlur={() => setFocado(false)}
+                onChange={(e) => {
+                  setDoEmail(false);
+                  setCodigo(limparCodigo(e.target.value));
+                }}
+                className="absolute inset-0 z-10 h-full w-full cursor-text bg-transparent text-base text-transparent caret-transparent opacity-0 outline-none"
+              />
+              <div className="grid grid-cols-8 gap-1.5 sm:gap-2" aria-hidden="true">
+                {Array.from({ length: CAIXAS }, (_, i) => {
+                  const d = codigo[i];
+                  const atual =
+                    focado &&
+                    (i === codigo.length || (i === CAIXAS - 1 && codigo.length === CAIXAS));
+                  return (
+                    <span
+                      key={`${i}-${d ?? ""}`}
+                      className={
+                        "grid h-12 place-items-center rounded-xl border bg-white font-mono text-xl font-bold text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-colors duration-150 dark:bg-white/5 dark:text-white sm:h-14 sm:text-2xl " +
+                        (d
+                          ? "login-digito border-[#0071e3] bg-[#0071e3]/[0.06] "
+                          : "border-[#e3e3e8] dark:border-white/15 ") +
+                        (atual ? "ring-2 ring-[#0071e3]/35" : "")
+                      }
+                    >
+                      {d ?? ""}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
             <button
               type="button"
               onClick={async () => {
                 try {
                   const texto = limparCodigo(await navigator.clipboard.readText());
-                  if (!texto) return setErro("Copie o código do e-mail e toque de novo.");
-                  setCodigo(texto);
+                  if (!codigoValido(texto))
+                    return setErro("Copie o código do e-mail e toque de novo.");
                   setErro(null);
+                  setDoEmail(false);
+                  preencherEmCascata(texto);
+                  setColado(true);
+                  window.setTimeout(() => setColado(false), 1500);
                 } catch {
                   campoCodigo.current?.focus();
-                  setErro("Toque e segure no campo acima e escolha Colar.");
+                  setErro("Toque e segure nas caixas acima e escolha Colar.");
                 }
               }}
-              className="vidro-botao mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold text-[#0071e3]"
+              className={
+                "mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border text-sm font-semibold transition-colors duration-200 " +
+                (colado
+                  ? "border-[#34c759] bg-[#34c759] text-white"
+                  : "vidro-botao border-border text-[#0071e3]")
+              }
             >
-              <ClipboardPaste className="size-4" aria-hidden />
-              Colar código copiado
+              {colado ? (
+                <>
+                  <Check className="size-4 sino-ok" aria-hidden /> Código colado!
+                </>
+              ) : (
+                <>
+                  <ClipboardPaste className="size-4" aria-hidden /> Colar código copiado
+                </>
+              )}
             </button>
             {erro && (
               <p role="alert" className="mt-2 text-sm text-destructive">

@@ -1354,14 +1354,36 @@ details.abertura-nativa[open] > summary .seta-abertura {
 @media (prefers-reduced-motion: reduce) { .animate-envelope-envia, .animate-envelope-chega { animation: none; } }
 
 /* Cena do login (04/11), mesmo estilo do Acompanhar preço. */
-@keyframes login-linha { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes login-linha-envia { 0% { stroke-dashoffset: 1; } 70%, 100% { stroke-dashoffset: 0.35; } }
+/* Cena do login (04/11, CenaLogin.tsx): pulsos azuis no envio, 8 blocos que
+   descem até a fileira do código, escudo verde com ✓ ao entrar, e as 8 caixas
+   do código que acendem ao receber cada dígito. */
+@keyframes login-pulso { 0% { transform: translateX(0); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translateX(160px); opacity: 0; } }
+@keyframes login-bloco { from { transform: translate(var(--dx), var(--dy)) scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes login-converge { from { transform: none; opacity: 1; } to { transform: translate(var(--cx), var(--cy)) scale(0.2); opacity: 0; } }
+@keyframes login-feixe { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes login-escudo { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes login-check { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes login-envelope { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-3px); } }
+@keyframes login-sino { 0%, 100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.45); } 60% { box-shadow: 0 0 0 7px rgba(52, 199, 89, 0); } }
 @keyframes login-aviso { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.login-linha { stroke-dasharray: 1; animation: login-linha 0.9s ease-out both; }
-.login-linha-envia { stroke-dasharray: 1; animation: login-linha-envia 1.4s ease-in-out infinite; }
-.login-aviso { animation: login-aviso 0.4s ease-out 0.6s both; }
+@keyframes login-digito { 0% { transform: scale(1); } 45% { transform: scale(1.05); } 100% { transform: scale(1); } }
+.login-pulso { opacity: 0; animation: login-pulso 1.8s linear infinite; }
+.login-rapido .login-pulso { animation-duration: 0.7s; }
+.login-bloco { transform-box: fill-box; animation: login-bloco 0.55s cubic-bezier(.2,.8,.2,1) both; }
+.login-converge { transform-box: fill-box; animation: login-converge 0.5s ease-in both; }
+.login-feixe { animation: login-feixe 0.9s ease-out both; }
+.login-escudo { transform-box: fill-box; transform-origin: center; animation: login-escudo 0.45s cubic-bezier(.2,.8,.2,1) 0.35s both; }
+.login-check { stroke-dasharray: 1; animation: login-check 0.45s ease-out 0.75s both; }
+.login-envelope { animation: login-envelope 0.6s ease-in-out 2; }
+.login-sino { animation: login-sino 1.6s ease-out 3; }
+.login-aviso { animation: login-aviso 0.4s ease-out 0.5s both; }
+.login-digito { animation: login-digito 150ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
-  .login-linha, .login-linha-envia, .login-aviso { animation: none; stroke-dashoffset: 0; opacity: 1; transform: none; }
+  .login-pulso, .login-feixe { display: none; }
+  .login-bloco, .login-converge, .login-escudo, .login-check, .login-envelope, .login-sino, .login-aviso, .login-digito {
+    animation: none; opacity: 1; transform: none; stroke-dashoffset: 0;
+  }
+  .login-converge { opacity: 0; }
 }
 
 /* Sino do cartão (04/11): o ✓ entra com um leve "pop" ao acompanhar. */
@@ -1372,3 +1394,38 @@ details.abertura-nativa[open] > summary .seta-abertura {
 }
 .sino-ok { animation: sino-ok 320ms cubic-bezier(.2,.8,.2,1); }
 @media (prefers-reduced-motion: reduce) { .sino-ok { animation: none; } }
+
+/* Sino em todos os anúncios (Weslei, 04/11: "melhore a animação do sininho e
+   destaque com animação e cores onde ele pode consultar"). O sino balança
+   duas vezes ao aparecer e de novo no mouse; ao acompanhar, uma onda verde
+   sai do botão e "Meus preços" acende no cabeçalho por alguns segundos. */
+@keyframes sino-balanca {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(16deg); }
+  30% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(2deg); }
+}
+@keyframes sino-onda {
+  from { transform: scale(1); opacity: 0.55; }
+  to { transform: scale(2.1); opacity: 0; }
+}
+@keyframes sino-aviso {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes destaque-meus-precos {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); background-color: transparent; }
+  40% { box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.28); background-color: rgba(52, 199, 89, 0.14); color: #1f7a3a; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sino-icone { transform-origin: 50% 8%; animation: sino-balanca 1s ease-in-out 0.8s 2; }
+  .sino-botao:hover .sino-icone { animation: sino-balanca 0.9s ease-in-out; }
+  .sino-onda { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid #34c759; animation: sino-onda 0.9s ease-out 2; pointer-events: none; }
+  .sino-aviso { animation: sino-aviso 0.35s cubic-bezier(.2,.8,.2,1) both; }
+  html[data-acompanhou] a[href="/meus-precos"] { animation: destaque-meus-precos 1.4s ease-in-out 3; border-radius: 9999px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-acompanhou] a[href="/meus-precos"] { background-color: rgba(52, 199, 89, 0.14); color: #1f7a3a; border-radius: 9999px; }
+}
