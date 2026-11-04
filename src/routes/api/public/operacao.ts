@@ -12,6 +12,7 @@ import { TEMAS_VISUAIS, type TemaVisualId } from "@/lib/campanha-visual";
 import { curarBrinquedos } from "@/lib/curadoria-brinquedos";
 import { atualizarEmAlta } from "@/lib/em-alta-catalogo";
 import { classificarCatalogo } from "@/lib/classificar-catalogo";
+import { enviarAlertasEmail } from "@/lib/alertas-email";
 import { enviarAlertas } from "@/lib/alertas-telegram";
 import { gerarArteCampanha, gerarArteDepartamento } from "@/lib/gerar-arte-campanha";
 import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/segredo-cron";
@@ -37,7 +38,7 @@ import { chamadaAutorizada, operacaoPausada, registrarExecucao } from "@/lib/seg
    - ?tarefa=campanhas sincroniza as campanhas (calendário, mais vendidos),
                       escolhe os produtos com a curadoria e expira o que
                       passou do prazo (src/lib/agente-campanhas.ts);
-   - ?tarefa=alertas  manda no Telegram os avisos de preço marcados pelo
+   - ?tarefa=alertas  manda no Telegram e por e-mail os avisos de preço marcados pelo
                       gatilho do banco (src/lib/alertas-telegram.ts);
    - ?tarefa=remover&publicacao=<id> apaga do canal um post registrado em
                       canal_publicacoes (só sob pedido; não é agendado).
@@ -114,7 +115,10 @@ async function executar(request: Request) {
     return Response.json(resumo);
   }
   if (tarefa === "alertas") {
-    const resumo = await registrarExecucao(db, "alertas", () => enviarAlertas(db));
+    const resumo = await registrarExecucao(db, "alertas", async () => ({
+      telegram: await enviarAlertas(db),
+      email: await enviarAlertasEmail(db),
+    }));
     return Response.json(resumo);
   }
   if (tarefa === "remover") {

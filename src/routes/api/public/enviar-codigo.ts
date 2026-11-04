@@ -6,8 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
 import { chaveDeServico, SUPABASE_URL_SITE } from "@/integrations/supabase/projeto";
-
-const GATEWAY = "https://connector-gateway.lovable.dev/resend";
+import { emailConfigurado, enviarEmail } from "@/lib/enviar-email";
 
 function resposta(corpo: object, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -16,19 +15,27 @@ function resposta(corpo: object, status = 200) {
   });
 }
 
+/* Padrão dos e-mails (04/11): #f5f5f7, cartão branco com borda #e5e5ea e
+   cantos de 24 px, código em caixa mono azul, gráfico do Acompanhar preço,
+   aviso de segurança e rodapé de transparência. */
 function html(codigo: string) {
-  return `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d1d1f">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;padding:32px 16px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:24px;padding:32px">
-<tr><td><img src="https://melhorescolha.io/logo.png" width="48" height="48" alt="Melhor Escolha" style="border-radius:12px;display:block"></td></tr>
-<tr><td style="padding-top:20px;font-size:22px;font-weight:600">Seu código para entrar</td></tr>
-<tr><td style="padding-top:8px;font-size:15px;line-height:1.5;color:#6e6e73">Digite este código no site para entrar na sua conta. Ele vale por uma hora.</td></tr>
-<tr><td align="center" style="padding:24px 0 8px"><div style="display:inline-block;background:#f5f5f7;border-radius:16px;padding:16px 24px;font-size:32px;font-weight:700;letter-spacing:6px;color:#0071e3;user-select:all;-webkit-user-select:all">${codigo}</div></td></tr>
-<tr><td align="center" style="padding-bottom:20px;font-size:13px;color:#6e6e73">Para copiar: toque e segure no código e escolha Copiar.<br>No site, toque em "Colar código copiado".</td></tr>
-<tr><td style="font-size:13px;line-height:1.5;color:#6e6e73">Se você não pediu este código, ignore este e-mail. Ninguém da Melhor Escolha pede este código.</td></tr>
-</table>
-<p style="font-size:12px;color:#86868b;margin-top:16px">Melhor Escolha · melhorescolha.io</p>
-</td></tr></table></body></html>`;
+  return `<!doctype html><html lang="pt-BR"><body style="margin:0;padding:32px 16px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Helvetica,Arial,sans-serif;color:#1d1d1f">
+<table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto">
+<tr><td align="center" style="padding-bottom:20px"><img src="https://melhorescolha.io/logo.png" alt="Melhor Escolha" width="44" height="44" style="display:block;border-radius:12px"></td></tr>
+<tr><td style="background:#ffffff;border:1px solid #e5e5ea;border-radius:24px;padding:28px 24px">
+<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#0071e3">Entrar sem senha</p>
+<h1 style="margin:0 0 10px;font-size:24px;line-height:30px;letter-spacing:-0.3px">Seu código para entrar</h1>
+<p style="margin:0 0 18px;font-size:15px;line-height:22px;color:#424245">Digite este código no site para entrar na sua conta. Ele vale por uma hora.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#f5f5f7;border:1px solid #e5e5ea;border-radius:16px;padding:18px 8px">
+<span style="font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:32px;line-height:38px;font-weight:700;letter-spacing:6px;color:#0071e3;user-select:all;-webkit-user-select:all">${codigo}</span>
+</td></tr></table>
+<p style="margin:12px 0 0;text-align:center;font-size:13px;line-height:19px;color:#6e6e73">Para copiar: toque e segure no código e escolha Copiar.<br>No site, toque em "Colar código copiado".</p>
+<img src="https://melhorescolha.io/email/acompanhar-preco.png" alt="Linha do preço descendo até o seu preço desejado" width="472" style="display:block;width:100%;max-width:472px;height:auto;margin:24px 0 10px;border-radius:16px">
+<p style="margin:0;font-size:13px;line-height:19px;color:#424245">Com a conta, seus preços acompanhados aparecem em qualquer aparelho e você pode receber o aviso por e-mail quando o preço cair.</p>
+<p style="margin:18px 0 0;padding-top:16px;border-top:1px solid #e5e5ea;font-size:12px;line-height:17px;color:#86868b">Segurança: não compartilhe este código com ninguém. Ninguém da Melhor Escolha pede este código. Se você não pediu para entrar, ignore este e-mail: nada muda na sua conta.</p>
+</td></tr>
+<tr><td align="center" style="padding:20px 8px 0;font-size:11px;line-height:16px;color:#86868b">Melhor Escolha · melhorescolha.io<br>Site independente que compara preços de produtos vendidos no Mercado Livre, sem vínculo com ele. Os links de compra são de afiliado: o preço é o mesmo para você.</td></tr>
+</table></body></html>`;
 }
 
 export const Route = createFileRoute("/api/public/enviar-codigo")({
@@ -38,7 +45,9 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         let email = "";
         try {
           const corpo = (await request.json()) as { email?: unknown };
-          email = String(corpo.email ?? "").trim().toLowerCase();
+          email = String(corpo.email ?? "")
+            .trim()
+            .toLowerCase();
         } catch {
           return resposta({ erro: "invalido" }, 400);
         }
@@ -46,9 +55,7 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
           return resposta({ erro: "invalido" }, 400);
 
         const { chave } = chaveDeServico();
-        const lovable = process.env['LOVABLE_API_KEY'];
-        const resend = process.env['RESEND_API_KEY'];
-        if (!chave || !lovable || !resend) return resposta({ erro: "indisponivel" }, 503);
+        if (!chave || !emailConfigurado()) return resposta({ erro: "indisponivel" }, 503);
 
         const admin = createClient(SUPABASE_URL_SITE, chave, { auth: { persistSession: false } });
 
@@ -64,33 +71,13 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         }
 
         const codigo = gerado.data.properties.email_otp;
-        const oficial = process.env['RESEND_FROM'] || "Melhor Escolha <login@melhorescolha.io>";
-        const enviar = (from: string) =>
-          fetch(`${GATEWAY}/emails`, {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              authorization: `Bearer ${lovable}`,
-              "x-connection-api-key": resend,
-            },
-            body: JSON.stringify({
-              from,
-              to: [email],
-              subject: `${codigo} é o seu código — Melhor Escolha`,
-              html: html(codigo),
-              text: `Seu código para entrar na Melhor Escolha: ${codigo}. Vale por uma hora.`,
-            }),
-          });
-        let envio = await enviar(oficial);
-        /* Domínio ainda não verificado no Resend: cai no remetente de teste. */
-        if (envio.status === 403 || envio.status === 422) {
-          console.error(`Remetente oficial recusado [${envio.status}]: ${await envio.text()}`);
-          envio = await enviar("Melhor Escolha <onboarding@resend.dev>");
-        }
-        if (!envio.ok) {
-          console.error(`Resend recusou [${envio.status}]: ${await envio.text()}`);
-          return resposta({ erro: "envio", status: envio.status }, 200);
-        }
+        const envio = await enviarEmail({
+          para: email,
+          assunto: `${codigo} é o seu código — Melhor Escolha`,
+          html: html(codigo),
+          texto: `Seu código para entrar na Melhor Escolha: ${codigo}. Vale por uma hora.`,
+        });
+        if (!envio.ok) return resposta({ erro: "envio", status: envio.status }, 200);
         return resposta({ ok: true });
       },
     },
