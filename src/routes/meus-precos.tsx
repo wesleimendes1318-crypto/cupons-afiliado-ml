@@ -8,7 +8,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { BellRing, LoaderCircle, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { ConviteConta } from "@/components/ConviteConta";
+import { EVENTO_CONTA_VINCULADA } from "@/components/ContaTopo";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
+import { useSessao } from "@/lib/auth-otp";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
@@ -50,6 +53,7 @@ type Item = {
   ultima_leitura: string | null;
   proxima_leitura: string | null;
   historico: Ponto[];
+  avisar_email?: boolean | null;
 };
 
 const brl = (n: number | null | undefined) =>
@@ -144,7 +148,37 @@ function Historico({ pontos }: { pontos: Ponto[] }) {
   );
 }
 
-function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
+/* Aviso por e-mail deste produto (só com conta: é o e-mail dela que recebe). */
+function AvisoEmail({ i }: { i: Item }) {
+  const [ligado, setLigado] = useState(Boolean(i.avisar_email));
+  const [erro, setErro] = useState(false);
+  return (
+    <label className="mt-2 flex items-center gap-2 text-xs text-foreground">
+      <input
+        type="checkbox"
+        checked={ligado}
+        onChange={async (e) => {
+          const v = e.target.checked;
+          setLigado(v);
+          setErro(false);
+          const { data, error } = await supabase.rpc(
+            "definir_aviso_email" as never,
+            { p_monitor: i.id, p_ligado: v } as never,
+          );
+          if (error || data !== true) {
+            setLigado(!v);
+            setErro(true);
+          }
+        }}
+        className="size-4 accent-[#0071e3]"
+      />
+      Avisar também por e-mail quando o preço cair
+      {erro && <span className="text-red-700">(não salvou, tente de novo)</span>}
+    </label>
+  );
+}
+
+function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; logado: boolean }) {
   const base = i.preco_ao_seguir;
   const dif =
     base != null && i.preco_atual != null ? Math.round((i.preco_atual - base) * 100) / 100 : null;
@@ -233,6 +267,7 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
         </div>
       </div>
       <Historico pontos={i.historico ?? []} />
+      {logado && <AvisoEmail i={i} />}
       <p className="mt-1 text-[10px] text-secondary-ink">
         Conferido {haQuanto(i.ultima_leitura) ?? "—"}
         {i.proxima_leitura ? ` · próxima conferência ${daquiA(i.proxima_leitura)}` : ""}
@@ -270,6 +305,8 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
 function MeusPrecos() {
   const [itens, setItens] = useState<Item[] | null>(null);
   const [erro, setErro] = useState(false);
+  const sessao = useSessao();
+  const userId = sessao?.user.id;
 
   const carregar = useCallback(async () => {
     const navegador = idDoNavegador();
@@ -292,8 +329,13 @@ function MeusPrecos() {
   useEffect(() => {
     void carregar();
     const t = setInterval(() => void carregar(), 60000);
-    return () => clearInterval(t);
-  }, [carregar]);
+    const aoVincular = () => void carregar();
+    window.addEventListener(EVENTO_CONTA_VINCULADA, aoVincular);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener(EVENTO_CONTA_VINCULADA, aoVincular);
+    };
+  }, [carregar, userId]);
 
   async function parar(id: number) {
     const navegador = idDoNavegador();
@@ -312,6 +354,9 @@ function MeusPrecos() {
       resumo="Os produtos que você acompanha. Eu confiro o preço de tempos em tempos e mostro aqui quando cai. Esta página atualiza sozinha."
     >
       <AnimacaoAcompanhar compacto className="mb-6" />
+      <p className="mb-4 rounded-2xl bg-[#f5f5f7] px-4 py-3 dark:bg-white/5">
+        <ConviteConta />
+      </p>
       {itens == null ? (
         <p className="flex items-center gap-2">
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> Carregando…
@@ -330,7 +375,7 @@ function MeusPrecos() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {itens.map((i) => (
-            <Cartao key={i.id} i={i} parar={parar} />
+            <Cartao key={i.id} i={i} parar={parar} logado={Boolean(sessao)} />
           ))}
         </div>
       )}
@@ -343,9 +388,9 @@ function MeusPrecos() {
       )}
       <p className="text-[11px]">
         Os preços são conferidos no anúncio de tempos em tempos (de 3 a 12 horas, conforme o preço
-        mexe); o preço na hora da compra pode ser outro. Os acompanhamentos ficam guardados neste
-        navegador, sem cadastro. Comprando pelos botões daqui o preço é o mesmo, e eu recebo uma
-        comissão do programa de afiliados.
+        mexe); o preço na hora da compra pode ser outro. Sem entrar, os acompanhamentos ficam
+        guardados neste navegador; entrando com o e-mail (sem senha), ficam na sua conta. Comprando
+        pelos botões daqui o preço é o mesmo, e eu recebo uma comissão do programa de afiliados.
       </p>
     </LayoutConteudo>
   );

@@ -6,7 +6,9 @@ import { Link } from "@tanstack/react-router";
 import { BellRing, Check, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 
+import { ConviteConta } from "@/components/ConviteConta";
 import { supabase } from "@/integrations/supabase/client";
+import { useSessao } from "@/lib/auth-otp";
 import { idDoNavegador } from "@/lib/navegador";
 import { diasAte, TEMPORADAS, temporadasAtivas } from "@/lib/sazonal";
 
@@ -40,6 +42,8 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
   const [alvo, setAlvo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [chamada] = useState(chamadaDaTemporada);
+  const sessao = useSessao();
+  const [porEmail, setPorEmail] = useState(true);
 
   async function salvar() {
     const navegador = idDoNavegador();
@@ -58,6 +62,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
         p_pedido: pedidoId,
         p_navegador: navegador,
         p_alvo: alvo.trim() && valor > 0 ? valor : null,
+        p_avisar_email: sessao ? porEmail : null,
       } as never,
     );
     if (error) {
@@ -86,6 +91,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
           Ver meus preços
         </Link>
         <AvisoTelegram monitorId={monitorId} />
+        <ConviteConta className="w-full" />
       </p>
     );
 
@@ -145,6 +151,17 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
             )}
             Acompanhar
           </button>
+          {sessao && (
+            <label className="flex w-full items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={porEmail}
+                onChange={(e) => setPorEmail(e.target.checked)}
+                className="size-4 accent-[#0071e3]"
+              />
+              Avisar também por e-mail quando o preço cair
+            </label>
+          )}
         </form>
       )}
     </div>
