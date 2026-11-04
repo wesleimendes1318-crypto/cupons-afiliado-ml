@@ -7,6 +7,13 @@ import { createClient } from "@supabase/supabase-js";
 
 import { chaveDeServico, SUPABASE_URL_SITE } from "@/integrations/supabase/projeto";
 import { emailConfigurado, enviarEmail } from "@/lib/enviar-email";
+import { criarFreio } from "@/lib/freio";
+
+/* Freio do envio (04/11): sem ele, qualquer um usava o site para disparar
+   e-mails a qualquer endereço. 5 códigos a cada 10 min por endereço de rede
+   e 3 a cada 10 min por e-mail. */
+const freioPorIp = criarFreio(5, 10 * 60_000);
+const freioPorEmail = criarFreio(3, 10 * 60_000);
 
 function resposta(corpo: object, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -53,6 +60,12 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 200)
           return resposta({ erro: "invalido" }, 400);
+
+        const ip =
+          request.headers.get("cf-connecting-ip") ??
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          "desconhecido";
+        if (freioPorIp(ip) || freioPorEmail(email)) return resposta({ erro: "limite" }, 429);
 
         const { chave } = chaveDeServico();
         if (!chave || !emailConfigurado()) return resposta({ erro: "indisponivel" }, 503);
