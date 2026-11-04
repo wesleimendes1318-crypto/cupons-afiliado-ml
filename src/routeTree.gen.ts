@@ -18,6 +18,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MeusPrecosRouteImport } from './routes/meus-precos'
 import { Route as NatalRouteImport } from './routes/natal'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
 import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
@@ -103,6 +104,11 @@ const MeusPrecosRoute = MeusPrecosRouteImport.update({
 const NatalRoute = NatalRouteImport.update({
   id: '/natal',
   path: '/natal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
@@ -327,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
   '/natal': typeof NatalRoute
+  '/perfil': typeof PerfilRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -379,6 +386,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
   '/natal': typeof NatalRoute
+  '/perfil': typeof PerfilRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
   '/natal': typeof NatalRoute
+  '/perfil': typeof PerfilRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/meus-precos'
     | '/natal'
+    | '/perfil'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -538,6 +548,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/meus-precos'
     | '/natal'
+    | '/perfil'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -590,6 +601,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/meus-precos'
     | '/natal'
+    | '/perfil'
     | '/politica-de-cookies'
     | '/politica-de-privacidade'
     | '/privacidade'
@@ -643,6 +655,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MeusPrecosRoute: typeof MeusPrecosRoute
   NatalRoute: typeof NatalRoute
+  PerfilRoute: typeof PerfilRoute
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
@@ -749,6 +762,13 @@ declare module '@tanstack/react-router' {
       path: '/natal'
       fullPath: '/natal'
       preLoaderRoute: typeof NatalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-cookies': {
@@ -1051,6 +1071,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MeusPrecosRoute: MeusPrecosRoute,
   NatalRoute: NatalRoute,
+  PerfilRoute: PerfilRoute,
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,

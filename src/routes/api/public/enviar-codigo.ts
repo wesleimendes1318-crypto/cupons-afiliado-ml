@@ -64,22 +64,29 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         }
 
         const codigo = gerado.data.properties.email_otp;
-        const remetente = process.env['RESEND_FROM'] || "Melhor Escolha <onboarding@resend.dev>";
-        const envio = await fetch(`${GATEWAY}/emails`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${lovable}`,
-            "x-connection-api-key": resend,
-          },
-          body: JSON.stringify({
-            from: remetente,
-            to: [email],
-            subject: `${codigo} é o seu código — Melhor Escolha`,
-            html: html(codigo),
-            text: `Seu código para entrar na Melhor Escolha: ${codigo}. Vale por uma hora.`,
-          }),
-        });
+        const oficial = process.env['RESEND_FROM'] || "Melhor Escolha <login@melhorescolha.io>";
+        const enviar = (from: string) =>
+          fetch(`${GATEWAY}/emails`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${lovable}`,
+              "x-connection-api-key": resend,
+            },
+            body: JSON.stringify({
+              from,
+              to: [email],
+              subject: `${codigo} é o seu código — Melhor Escolha`,
+              html: html(codigo),
+              text: `Seu código para entrar na Melhor Escolha: ${codigo}. Vale por uma hora.`,
+            }),
+          });
+        let envio = await enviar(oficial);
+        /* Domínio ainda não verificado no Resend: cai no remetente de teste. */
+        if (envio.status === 403 || envio.status === 422) {
+          console.error(`Remetente oficial recusado [${envio.status}]: ${await envio.text()}`);
+          envio = await enviar("Melhor Escolha <onboarding@resend.dev>");
+        }
         if (!envio.ok) {
           console.error(`Resend recusou [${envio.status}]: ${await envio.text()}`);
           return resposta({ erro: "envio", status: envio.status }, 502);

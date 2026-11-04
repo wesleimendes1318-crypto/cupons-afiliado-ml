@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
+import { aplicarPerfilDaConta } from "@/lib/perfil-conta";
 
 const CHAVE_NAVEGADOR = "melhorescolha-navegador";
 export const EVENTO_ABRIR_LOGIN = "abrir-login";
@@ -91,7 +92,10 @@ export function useConta(): User | null {
     const { data } = supabase.auth.onAuthStateChange((evento, sessao) => {
       if (evento === "SIGNED_IN" || evento === "SIGNED_OUT" || evento === "USER_UPDATED")
         setUsuario(sessao?.user ?? null);
-      if (evento === "SIGNED_IN") void vincularAparelho();
+      if (evento === "SIGNED_IN") {
+        void vincularAparelho();
+        aplicarPerfilDaConta(sessao?.user?.user_metadata);
+      }
     });
     return () => {
       vivo = false;

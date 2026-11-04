@@ -26,7 +26,10 @@ export function BotaoConta() {
           {menu && (
             <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-card p-3 text-sm shadow-modal">
               <p className="truncate px-2 text-secondary-ink">{email}</p>
-              <a href="/meus-precos" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
+              <a href="/perfil" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
+                Meu perfil e preferências
+              </a>
+              <a href="/meus-precos" className="block rounded-xl px-2 py-2 hover:bg-muted">
                 Meus preços
               </a>
               <button

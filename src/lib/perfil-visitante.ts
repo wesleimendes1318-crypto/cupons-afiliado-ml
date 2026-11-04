@@ -278,6 +278,23 @@ export function registrarAcaoVisitante(acao: AcaoVisitante, agora = Date.now()):
   }
 }
 
+/** Interesses marcados no perfil da conta: cada um fica com afinidade mínima
+    de 60 (o gosto medido continua somando por cima). Termos da conta entram
+    quando o aparelho ainda não tem nenhum. */
+export function aplicarInteresses(
+  slugs: string[],
+  termos: string[] = [],
+  agora = Date.now(),
+): void {
+  if (typeof window === "undefined") return;
+  const p = obterPerfil(agora) ?? vazio(agora);
+  for (const s of slugs) p.categorias[s] = Math.max(p.categorias[s] ?? 0, 60);
+  if (!p.termosRecentes.length)
+    p.termosRecentes = termos.slice(0, MAX_TERMOS).map((termo, i) => ({ termo, em: agora - i }));
+  p.atualizadoEm = agora;
+  gravar(p);
+}
+
 export function limparPerfil(): void {
   if (typeof window === "undefined") return;
   memoria = null;
