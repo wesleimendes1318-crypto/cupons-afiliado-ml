@@ -3562,7 +3562,7 @@ function Resultado({
         >
           <div className="lg:col-start-1 lg:row-start-1">
             {!leituraFalhou && pedidoId != null && !semLink && (
-              <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} />
+              <AcompanharPreco pedidoId={pedidoId} preco={a?.preco ?? null} urlProduto={urlColada} />
             )}
 
             {a?.temCupom === true && <CondicoesDoCupom analise={a} />}

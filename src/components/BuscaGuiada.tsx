@@ -23,7 +23,7 @@ import {
   type Resposta,
   type Resultado,
 } from "@/lib/busca-guiada-cliente";
-import { ComprarComSeguranca } from "@/components/BotoesCartao";
+import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
 import { AssistenteBusca } from "@/components/AssistenteBusca";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { FaixaArte, FaixaFotos } from "@/components/FaixaArte";
@@ -1273,14 +1273,7 @@ function CartaoBusca({
           ) : c.item ? (
             <VerNaLoja url={c.url} grande />
           ) : null}
-          <button
-            type="button"
-            onClick={() => comparar(c.url)}
-            className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-          >
-            Comparar preço
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </button>
+          <LinhaComparar url={c.url} titulo={c.nome} onComparar={comparar} />
           {detalhe && (
             <div className="flex justify-center">
               <VerDetalhesVitrine

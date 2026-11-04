@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { Truck } from "lucide-react";
-import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
 
 import { supabase } from "@/integrations/supabase/client";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
@@ -214,7 +214,7 @@ function CartaoBrinquedo({
                clique (regra nº 1: sempre o link do Weslei). */
             <VerNaLoja url={i.url} grande />
           ) : null}
-          <CompararPreco url={i.url} />
+          <LinhaComparar url={i.url} titulo={i.nome} />
           <VerDetalhesVitrine
             chave={chaveDoBrinquedo(i.url)}
             titulo={i.nome}

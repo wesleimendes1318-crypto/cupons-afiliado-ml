@@ -4,7 +4,9 @@
 import { AvisoTelegram } from "@/components/AvisoTelegram";
 import { Link } from "@tanstack/react-router";
 import { BellRing, Check, LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { consumirMarca } from "@/lib/acompanhar-cartao";
 
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
@@ -34,12 +36,31 @@ function chamadaDaTemporada(): string | null {
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: number | null }) {
+export function AcompanharPreco({
+  pedidoId,
+  preco,
+  urlProduto = null,
+}: {
+  pedidoId: number;
+  preco: number | null;
+  /* Endereço comparado: se o sino de um cartão pediu, salva sozinho. */
+  urlProduto?: string | null;
+}) {
   const [estado, setEstado] = useState<"parado" | "alvo" | "salvando" | "ok" | "erro">("parado");
   const [monitorId, setMonitorId] = useState<number | null>(null);
   const [alvo, setAlvo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [chamada] = useState(chamadaDaTemporada);
+
+  /* Toque no sino do cartão sem comparação pronta (04/11): salva sozinho
+     quando a comparação do mesmo produto fica pronta. */
+  const automatico = useRef(false);
+  useEffect(() => {
+    if (automatico.current || !consumirMarca(urlProduto)) return;
+    automatico.current = true;
+    void salvar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlProduto, pedidoId]);
 
   async function salvar() {
     const navegador = idDoNavegador();

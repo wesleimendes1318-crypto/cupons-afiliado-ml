@@ -1363,3 +1363,12 @@ details.abertura-nativa[open] > summary .seta-abertura {
 @media (prefers-reduced-motion: reduce) {
   .login-linha, .login-linha-envia, .login-aviso { animation: none; stroke-dashoffset: 0; opacity: 1; transform: none; }
 }
+
+/* Sino do cartão (04/11): o ✓ entra com um leve "pop" ao acompanhar. */
+@keyframes sino-ok {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.sino-ok { animation: sino-ok 320ms cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: reduce) { .sino-ok { animation: none; } }

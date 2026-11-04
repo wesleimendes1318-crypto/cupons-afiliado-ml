@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Flame } from "lucide-react";
 
+import { LinhaComparar } from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
@@ -347,14 +348,7 @@ export function CartaoEmAlta({
         <SeloBemAvaliado resumo={resumo} className="mt-1 self-start" />
         <div className="mt-auto space-y-1.5 pt-3">
           <VerNaLoja url={i.url} grande />
-          <button
-            type="button"
-            onClick={() => onComparar(i.url)}
-            className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#0071e3]/40 px-2 py-1.5 text-xs font-semibold text-[#0058b0] hover:bg-[#f5f5f7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-          >
-            Comparar preço
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </button>
+          <LinhaComparar url={i.url} titulo={i.nome} onComparar={onComparar} />
         </div>
       </div>
     </li>
