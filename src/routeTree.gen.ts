@@ -41,6 +41,7 @@ import { Route as ApiPublicCompararRouteImport } from './routes/api/public/compa
 import { Route as ApiPublicCompararAgoraRouteImport } from './routes/api/public/comparar-agora'
 import { Route as ApiPublicConferirProdutoRouteImport } from './routes/api/public/conferir-produto'
 import { Route as ApiPublicCronGarimpoRouteImport } from './routes/api/public/cron-garimpo'
+import { Route as ApiPublicEnviarCodigoRouteImport } from './routes/api/public/enviar-codigo'
 import { Route as ApiPublicEnvioInternacionalRouteImport } from './routes/api/public/envio-internacional'
 import { Route as ApiPublicFotosRouteImport } from './routes/api/public/fotos'
 import { Route as ApiPublicFreteCepRouteImport } from './routes/api/public/frete-cep'
@@ -222,6 +223,11 @@ const ApiPublicCronGarimpoRoute = ApiPublicCronGarimpoRouteImport.update({
   path: '/api/public/cron-garimpo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEnviarCodigoRoute = ApiPublicEnviarCodigoRouteImport.update({
+  id: '/api/public/enviar-codigo',
+  path: '/api/public/enviar-codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicEnvioInternacionalRoute =
   ApiPublicEnvioInternacionalRouteImport.update({
     id: '/api/public/envio-internacional',
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/api/public/comparar-agora': typeof ApiPublicCompararAgoraRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
+  '/api/public/enviar-codigo': typeof ApiPublicEnviarCodigoRoute
   '/api/public/envio-internacional': typeof ApiPublicEnvioInternacionalRoute
   '/api/public/fotos': typeof ApiPublicFotosRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
@@ -395,6 +402,7 @@ export interface FileRoutesByTo {
   '/api/public/comparar-agora': typeof ApiPublicCompararAgoraRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
+  '/api/public/enviar-codigo': typeof ApiPublicEnviarCodigoRoute
   '/api/public/envio-internacional': typeof ApiPublicEnvioInternacionalRoute
   '/api/public/fotos': typeof ApiPublicFotosRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/api/public/comparar-agora': typeof ApiPublicCompararAgoraRoute
   '/api/public/conferir-produto': typeof ApiPublicConferirProdutoRoute
   '/api/public/cron-garimpo': typeof ApiPublicCronGarimpoRoute
+  '/api/public/enviar-codigo': typeof ApiPublicEnviarCodigoRoute
   '/api/public/envio-internacional': typeof ApiPublicEnvioInternacionalRoute
   '/api/public/fotos': typeof ApiPublicFotosRoute
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
@@ -500,6 +509,7 @@ export interface FileRouteTypes {
     | '/api/public/comparar-agora'
     | '/api/public/conferir-produto'
     | '/api/public/cron-garimpo'
+    | '/api/public/enviar-codigo'
     | '/api/public/envio-internacional'
     | '/api/public/fotos'
     | '/api/public/frete-cep'
@@ -551,6 +561,7 @@ export interface FileRouteTypes {
     | '/api/public/comparar-agora'
     | '/api/public/conferir-produto'
     | '/api/public/cron-garimpo'
+    | '/api/public/enviar-codigo'
     | '/api/public/envio-internacional'
     | '/api/public/fotos'
     | '/api/public/frete-cep'
@@ -602,6 +613,7 @@ export interface FileRouteTypes {
     | '/api/public/comparar-agora'
     | '/api/public/conferir-produto'
     | '/api/public/cron-garimpo'
+    | '/api/public/enviar-codigo'
     | '/api/public/envio-internacional'
     | '/api/public/fotos'
     | '/api/public/frete-cep'
@@ -654,6 +666,7 @@ export interface RootRouteChildren {
   ApiPublicCompararAgoraRoute: typeof ApiPublicCompararAgoraRoute
   ApiPublicConferirProdutoRoute: typeof ApiPublicConferirProdutoRoute
   ApiPublicCronGarimpoRoute: typeof ApiPublicCronGarimpoRoute
+  ApiPublicEnviarCodigoRoute: typeof ApiPublicEnviarCodigoRoute
   ApiPublicEnvioInternacionalRoute: typeof ApiPublicEnvioInternacionalRoute
   ApiPublicFotosRoute: typeof ApiPublicFotosRoute
   ApiPublicFreteCepRoute: typeof ApiPublicFreteCepRoute
@@ -899,6 +912,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronGarimpoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/enviar-codigo': {
+      id: '/api/public/enviar-codigo'
+      path: '/api/public/enviar-codigo'
+      fullPath: '/api/public/enviar-codigo'
+      preLoaderRoute: typeof ApiPublicEnviarCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/envio-internacional': {
       id: '/api/public/envio-internacional'
       path: '/api/public/envio-internacional'
@@ -1055,6 +1075,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCompararAgoraRoute: ApiPublicCompararAgoraRoute,
   ApiPublicConferirProdutoRoute: ApiPublicConferirProdutoRoute,
   ApiPublicCronGarimpoRoute: ApiPublicCronGarimpoRoute,
+  ApiPublicEnviarCodigoRoute: ApiPublicEnviarCodigoRoute,
   ApiPublicEnvioInternacionalRoute: ApiPublicEnvioInternacionalRoute,
   ApiPublicFotosRoute: ApiPublicFotosRoute,
   ApiPublicFreteCepRoute: ApiPublicFreteCepRoute,
