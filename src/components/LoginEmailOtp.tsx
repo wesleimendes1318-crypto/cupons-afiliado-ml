@@ -89,18 +89,9 @@ export function LoginEmailOtp() {
           <X className="size-4" aria-hidden />
         </button>
 
-        <span
-          key={etapa}
-          className={`inline-flex size-11 items-center justify-center rounded-full bg-[#0071e3]/10 ${
-            etapa === "email" && ocupado ? "animate-envelope-envia" : "animate-envelope-chega"
-          }`}
-        >
-          {etapa === "ok" ? (
-            <ShieldCheck className="size-5 text-success" aria-hidden />
-          ) : (
-            <Mail className="size-5 text-[#0071e3]" aria-hidden />
-          )}
-        </span>
+        <div className="mr-10">
+          <CenaLogin etapa={etapa} enviando={etapa === "email" && ocupado} />
+        </div>
 
         <ol className="mt-4 flex items-center gap-2 text-xs text-secondary-ink" aria-label="Etapas">
           {["Seu e-mail", "Código", "Pronto"].map((nome, i) => {
