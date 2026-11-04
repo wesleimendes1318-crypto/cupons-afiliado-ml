@@ -10,6 +10,8 @@ import {
   LoaderCircle,
   MousePointerClick,
   RefreshCw,
+  Send,
+  Sparkles,
   Target,
   Wallet,
 } from "lucide-react";
@@ -28,8 +30,16 @@ import {
 } from "recharts";
 
 import { LoginEmailOtp } from "@/components/LoginEmailOtp";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { abrirLogin } from "@/lib/auth-otp";
+import { perguntarAoCopiloto, type MensagemCopiloto } from "@/lib/copiloto-admin";
 import {
   baixarDossie,
   buscasDoDia,
@@ -232,6 +242,7 @@ function Admin() {
             >
               <Download className="size-4" /> Baixar Dossiê Estratégico (.md)
             </button>
+            <CopilotoAdmin />
           </div>
         </header>
 
@@ -562,6 +573,139 @@ function Admin() {
         </section>
       </div>
     </Tela>
+  );
+}
+
+const SUGESTOES = [
+  "Teve alguma anomalia de buscas ou cliques nesta semana?",
+  "Quais produtos entram na próxima rodada do canal do Telegram?",
+  "Escreva 3 posts para o Telegram com os produtos em alta.",
+  "Que estratégia usar para a Black Friday e o Natal com estes dados?",
+];
+
+/* Copiloto: conversa só nesta aba (nada guardado); o servidor confere a conta mestre. */
+function CopilotoAdmin() {
+  const [aberto, setAberto] = useState(false);
+  const [conversa, setConversa] = useState<MensagemCopiloto[]>([]);
+  const [texto, setTexto] = useState("");
+  const [pensando, setPensando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function enviar(pergunta: string) {
+    const t = pergunta.trim();
+    if (!t || pensando) return;
+    const historico = [...conversa, { papel: "voce" as const, texto: t.slice(0, 4000) }].slice(-12);
+    setConversa(historico);
+    setTexto("");
+    setErro(null);
+    setPensando(true);
+    try {
+      const r = await perguntarAoCopiloto({ data: { historico } });
+      if ("resposta" in r && r.resposta)
+        setConversa([...historico, { papel: "copiloto", texto: r.resposta }]);
+      else
+        setErro(
+          r.erro === "indisponivel"
+            ? "Sessão expirada. Recarregue a página."
+            : "O modelo não respondeu agora. Tente de novo.",
+        );
+    } catch {
+      setErro("Sem conexão agora. Tente de novo.");
+    }
+    setPensando(false);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-[#1d1d1f] shadow-sm transition active:scale-[0.98]"
+      >
+        <Sparkles className="size-4 text-[#0071e3]" /> Copiloto
+      </button>
+      <Sheet open={aberto} onOpenChange={setAberto}>
+        <SheetContent className="flex w-full flex-col gap-0 bg-[#f5f5f7] p-0 sm:max-w-md">
+          <SheetHeader className="border-b border-[#e5e5ea] bg-white px-5 py-4 text-left">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="size-4 text-[#0071e3]" /> Copiloto
+            </SheetTitle>
+            <SheetDescription className="text-xs">
+              Responde com os números dos últimos 7 dias. Nada desta conversa é guardado.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
+            {!conversa.length && (
+              <div className="space-y-2">
+                {SUGESTOES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => void enviar(s)}
+                    className="block w-full rounded-2xl bg-white px-4 py-3 text-left text-sm text-[#1d1d1f] shadow-sm transition hover:bg-white/80 active:scale-[0.99]"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            {conversa.map((m, i) => (
+              <div
+                key={i}
+                className={`animate-cartao max-w-[90%] whitespace-pre-wrap rounded-3xl px-4 py-3 text-sm ${
+                  m.papel === "voce"
+                    ? "ml-auto bg-[#0071e3] text-white"
+                    : "bg-white text-[#1d1d1f] shadow-sm"
+                }`}
+              >
+                {m.texto}
+              </div>
+            ))}
+            {pensando && (
+              <p className="flex items-center gap-2 text-xs text-[#6e6e73]">
+                <LoaderCircle className="size-3.5 animate-spin text-[#0071e3]" /> Lendo os números…
+              </p>
+            )}
+            {erro && (
+              <p role="alert" className="text-xs text-[#ff3b30]">
+                {erro}
+              </p>
+            )}
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void enviar(texto);
+            }}
+            className="flex items-end gap-2 border-t border-[#e5e5ea] bg-white p-3"
+          >
+            <textarea
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void enviar(texto);
+                }
+              }}
+              rows={1}
+              maxLength={4000}
+              placeholder="Pergunte sobre o seu site…"
+              aria-label="Pergunta ao copiloto"
+              className="max-h-32 min-h-10 flex-1 resize-none rounded-2xl bg-[#f5f5f7] px-4 py-2.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3] sm:text-sm"
+            />
+            <button
+              type="submit"
+              disabled={pensando || !texto.trim()}
+              aria-label="Enviar"
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-[#0071e3] text-white transition active:scale-95 disabled:opacity-40"
+            >
+              <Send className="size-4" />
+            </button>
+          </form>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
