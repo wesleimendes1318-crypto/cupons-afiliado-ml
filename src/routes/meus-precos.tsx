@@ -16,6 +16,8 @@ import { abrirLogin, useConta } from "@/lib/auth-otp";
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { GraficoHistoricoPreco } from "@/components/GraficoHistoricoPreco";
+import { atalhosDoAlvo, lerReais, vereditoDoPreco } from "@/lib/veredito-preco";
 
 export const Route = createFileRoute("/meus-precos")({
   component: MeusPrecos,
@@ -99,84 +101,22 @@ function daquiA(iso: string | null) {
   return `em ${Math.round(min / 60)} h`;
 }
 
-/* Linha do histórico: uma série, 2 px, ponto de agora marcado; cada ponto
-   mostra preço e data ao passar o mouse. */
-function Historico({ pontos }: { pontos: Ponto[] }) {
-  const lista = pontos.filter((x) => x.p > 0);
-  if (lista.length < 2)
-    return (
-      <p className="text-[11px] text-secondary-ink">
-        O histórico aparece a partir da 2ª conferência.
-      </p>
-    );
-  const L = 280,
-    A = 56,
-    m = 6;
-  const t0 = new Date(lista[0]!.em).getTime();
-  const t1 = new Date(lista[lista.length - 1]!.em).getTime();
-  const pMin = Math.min(...lista.map((x) => x.p));
-  const pMax = Math.max(...lista.map((x) => x.p));
-  const x = (em: string) =>
-    m + ((new Date(em).getTime() - t0) / Math.max(1, t1 - t0)) * (L - 2 * m);
-  const y = (p: number) => m + (1 - (p - pMin) / Math.max(0.01, pMax - pMin)) * (A - 2 * m);
-  const d = lista.map((q) => `${x(q.em).toFixed(1)},${y(q.p).toFixed(1)}`).join(" ");
-  const ult = lista[lista.length - 1]!;
-  return (
-    <figure className="mt-2">
-      <svg
-        viewBox={`0 0 ${L} ${A}`}
-        className="h-14 w-full"
-        role="img"
-        aria-label={`Histórico de preço: de ${brl(lista[0]!.p)} a ${brl(ult.p)}, menor ${brl(pMin)}`}
-      >
-        <line
-          x1={m}
-          x2={L - m}
-          y1={y(pMin)}
-          y2={y(pMin)}
-          className="stroke-border"
-          strokeDasharray="3 3"
-          strokeWidth={1}
-        />
-        <polyline
-          points={d}
-          fill="none"
-          className="stroke-ml-blue"
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        <circle
-          cx={x(ult.em)}
-          cy={y(ult.p)}
-          r={4}
-          className="fill-ml-blue stroke-card"
-          strokeWidth={2}
-        />
-        {lista.map((q, i) => (
-          <circle key={i} cx={x(q.em)} cy={y(q.p)} r={8} fill="transparent">
-            <title>{`${brl(q.p)} · ${new Date(q.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}</title>
-          </circle>
-        ))}
-      </svg>
-      <figcaption className="flex justify-between text-[10px] text-secondary-ink">
-        <span>
-          {new Date(lista[0]!.em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-        </span>
-        <span>
-          menor: {brl(pMin)} · maior: {brl(pMax)}
-        </span>
-        <span>agora</span>
-      </figcaption>
-    </figure>
-  );
-}
-
-function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; logado: boolean }) {
+function Cartao({
+  i,
+  parar,
+  logado,
+  mudarAlvo,
+}: {
+  i: Item;
+  parar: (id: number) => void;
+  logado: boolean;
+  mudarAlvo: (id: number, alvo: number | null) => void;
+}) {
   const base = i.preco_ao_seguir;
   const dif =
     base != null && i.preco_atual != null ? Math.round((i.preco_atual - base) * 100) / 100 : null;
   const noAlvo = i.preco_alvo != null && i.preco_atual != null && i.preco_atual <= i.preco_alvo;
+  const veredito = vereditoDoPreco(i.historico ?? [], i.preco_atual);
   const pagamento =
     i.preco_pix != null && i.preco_atual != null && Math.abs(i.preco_pix - i.preco_atual) < 0.5
       ? `no Pix${i.parcelas ? ` · ou ${brl(i.parcelas.total ?? i.preco_cheio)} em ${i.parcelas.vezes}x${i.parcelas.semJuros ? " sem juros" : ""}` : ""}`
@@ -184,7 +124,7 @@ function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; lo
   return (
     <article
       className={
-        "rounded-xl border bg-card p-3 " +
+        "rounded-3xl border bg-card p-4 " +
         (noAlvo ? "border-success ring-2 ring-success/30" : "border-border")
       }
     >
@@ -245,13 +185,9 @@ function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; lo
             </p>
           )}
           {noAlvo && (
-            <p className="mt-1 inline-flex items-center gap-1 rounded bg-success px-2 py-0.5 text-xs font-bold text-white">
-              <BellRing className="size-3.5" aria-hidden="true" /> Chegou no seu preço (
-              {brl(i.preco_alvo)})
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-success px-2.5 py-0.5 text-xs font-bold text-white">
+              🎉 Chegou no seu preço desejado! ({brl(i.preco_alvo)})
             </p>
-          )}
-          {!noAlvo && i.preco_alvo != null && (
-            <p className="text-[11px] text-secondary-ink">Seu preço: {brl(i.preco_alvo)}</p>
           )}
           {i.disponivel === false && (
             <p className="text-xs font-semibold text-amber-700">
@@ -260,7 +196,22 @@ function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; lo
           )}
         </div>
       </div>
-      <Historico pontos={i.historico ?? []} />
+      {veredito && (
+        <p
+          className={
+            "mt-3 rounded-2xl px-3 py-2 text-xs leading-snug " +
+            (veredito.tipo === "menor"
+              ? "bg-success/10 font-semibold text-[#248a3d] dark:text-success"
+              : veredito.tipo === "media"
+                ? "bg-[#f5f5f7] text-foreground dark:bg-white/10"
+                : "bg-amber-500/10 text-amber-800 dark:text-amber-300")
+          }
+        >
+          <span className="font-bold">Vale a pena comprar agora? </span>
+          {veredito.texto}
+        </p>
+      )}
+      <GraficoHistoricoPreco pontos={i.historico ?? []} alvo={i.preco_alvo} />
       <p className="mt-1 text-[10px] text-secondary-ink">
         Conferido {haQuanto(i.ultima_leitura) ?? "—"}
         {i.proxima_leitura ? ` · próxima conferência ${daquiA(i.proxima_leitura)}` : ""}
@@ -291,8 +242,142 @@ function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; lo
           Parar de acompanhar
         </button>
       </div>
+      <PrecoAlvo i={i} mudarAlvo={mudarAlvo} />
       {logado && <AvisoEmail i={i} />}
     </article>
+  );
+}
+
+/* Preço-alvo (04/11): atalhos de um toque sobre o preço de agora ou valor
+   livre. O aviso sai pelos canais ligados (site, Telegram, e-mail). */
+function PrecoAlvo({
+  i,
+  mudarAlvo,
+}: {
+  i: Item;
+  mudarAlvo: (id: number, alvo: number | null) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [estado, setEstado] = useState<"parado" | "salvando" | "erro">("parado");
+  async function salvar(valor: number | null) {
+    const navegador = idDoNavegador();
+    if (!navegador) return;
+    setEstado("salvando");
+    const { data, error } = await supabase.rpc(
+      "definir_preco_alvo" as never,
+      { p_monitor: i.id, p_navegador: navegador, p_alvo: valor } as never,
+    );
+    let ok = !error && data === true;
+    /* Banco ainda sem a função nova: o acompanhar por link grava o alvo (não tira). */
+    if (error && valor != null)
+      ok = !(
+        await supabase.rpc(
+          "acompanhar_por_link" as never,
+          { p_url: i.url, p_navegador: navegador, p_alvo: valor } as never,
+        )
+      ).error;
+    if (!ok) {
+      setEstado("erro");
+      return;
+    }
+    mudarAlvo(i.id, valor);
+    setEstado("parado");
+    setAberto(false);
+    setTexto("");
+  }
+  if (!aberto)
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-secondary-ink">
+          {i.preco_alvo != null ? (
+            <>
+              Seu preço-alvo: <strong className="text-[#248a3d]">{brl(i.preco_alvo)}</strong>
+            </>
+          ) : (
+            "Avise-me quando chegar no meu preço."
+          )}
+        </span>
+        <button
+          type="button"
+          onClick={() => setAberto(true)}
+          className="inline-flex min-h-8 items-center gap-1 rounded-full border border-[#0071e3]/40 px-3 font-semibold text-[#0058b0] hover:bg-[#0071e3]/5"
+        >
+          <BellRing className="size-3.5" aria-hidden="true" />
+          {i.preco_alvo != null ? "Mudar" : "Definir meu preço"}
+        </button>
+      </div>
+    );
+  const valor = lerReais(texto);
+  return (
+    <form
+      className="mt-2 rounded-2xl bg-[#f5f5f7] p-2.5 dark:bg-white/10"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valor != null) void salvar(valor);
+      }}
+    >
+      <p className="text-xs font-semibold text-foreground">Me avise quando chegar a</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {atalhosDoAlvo(i.preco_atual).map((a) => (
+          <button
+            key={a.rotulo}
+            type="button"
+            onClick={() => setTexto(String(a.valor))}
+            aria-label={`${a.rotulo}: ${brl(a.valor)}`}
+            className={
+              "min-h-8 rounded-full px-3 text-xs font-semibold tabular-nums " +
+              (valor === a.valor
+                ? "bg-[#0071e3] text-white"
+                : "bg-white text-[#0058b0] dark:bg-black/30")
+            }
+          >
+            {a.rotulo} · {brl(a.valor)}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">Preço desejado em reais</span>
+          <input
+            inputMode="decimal"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value.replace(/[^\d.,]/g, ""))}
+            placeholder="R$ valor desejado"
+            className="min-h-9 w-full rounded-full border border-border bg-background px-3 text-base sm:text-sm"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={valor == null || estado === "salvando"}
+          className="inline-flex min-h-9 items-center gap-1 rounded-full bg-[#0071e3] px-4 text-xs font-semibold text-white disabled:opacity-60"
+        >
+          {estado === "salvando" && (
+            <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+          )}
+          Salvar
+        </button>
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px]">
+        {i.preco_alvo != null && (
+          <button
+            type="button"
+            onClick={() => void salvar(null)}
+            className="text-secondary-ink underline"
+          >
+            Tirar preço-alvo
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setAberto(false)}
+          className="text-secondary-ink underline"
+        >
+          Cancelar
+        </button>
+        {estado === "erro" && <span className="text-red-700">Não salvou, tente de novo.</span>}
+      </div>
+    </form>
   );
 }
 
@@ -403,7 +488,17 @@ function MeusPrecos() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {itens.map((i) => (
-            <Cartao key={i.id} i={i} parar={parar} logado={!!usuario} />
+            <Cartao
+              key={i.id}
+              i={i}
+              parar={parar}
+              logado={!!usuario}
+              mudarAlvo={(id, alvo) =>
+                setItens((l) =>
+                  (l ?? []).map((x) => (x.id === id ? { ...x, preco_alvo: alvo } : x)),
+                )
+              }
+            />
           ))}
         </div>
       )}

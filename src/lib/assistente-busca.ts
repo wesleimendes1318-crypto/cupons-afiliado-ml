@@ -84,9 +84,12 @@ function voltagemDoNome(nome: string): "127" | "220" | "bivolt" | null {
 /** Medida pedida: "11kg", "12 kg", "400 litros", "55 polegadas". */
 function medidaDoPedido(pedido: string): { valor: number; unidade: "kg" | "l" | "pol" } | null {
   const t = semAcento(pedido);
-  const m = /\b(\d{1,4}(?:[.,]\d)?)\s*(kg|quilos?|l|litros?|pol|polegadas|")(?=\s|$|[^a-z])/.exec(t);
+  const m = /\b(\d{1,4}(?:[.,]\d)?)\s*(kg|quilos?|l|litros?|pol|polegadas|")(?=\s|$|[^a-z])/.exec(
+    t,
+  );
   if (!m) return null;
-  const u = m[2]!.startsWith("k") || m[2]!.startsWith("q") ? "kg" : m[2]!.startsWith("l") ? "l" : "pol";
+  const u =
+    m[2]!.startsWith("k") || m[2]!.startsWith("q") ? "kg" : m[2]!.startsWith("l") ? "l" : "pol";
   return { valor: Number(m[1]!.replace(",", ".")), unidade: u };
 }
 
@@ -112,7 +115,9 @@ export function assistenteLocal(pedido: string, itens: ItemAssistente[]): Respos
   const medida = medidaDoPedido(pedido);
   const frete = /\bfrete gratis\b|\bsem frete\b/.test(t);
   const oficial = /\bloja oficial\b|\boficial\b|\boriginal\b/.test(t);
-  const avaliada = /\b(bem avaliad|melhor avaliad|mais avaliad|qualidade|confiavel|nota)\w*/.test(t);
+  const avaliada = /\b(bem avaliad|melhor avaliad|mais avaliad|qualidade|confiavel|nota)\w*/.test(
+    t,
+  );
   const barato = /\b(barat|economic|em conta|menor preco|mais em conta)\w*/.test(t);
   const vendido = /\b(mais vendid|popular|famos)\w*/.test(t);
 
@@ -155,7 +160,8 @@ export function assistenteLocal(pedido: string, itens: ItemAssistente[]): Respos
     criterios.push("nota 4,5 ou mais");
   }
   const ordenar = (a: ItemAssistente, b: ItemAssistente) => {
-    if (avaliada && !barato) return (b.nota ?? 0) - (a.nota ?? 0) || (b.avaliacoes ?? 0) - (a.avaliacoes ?? 0);
+    if (avaliada && !barato)
+      return (b.nota ?? 0) - (a.nota ?? 0) || (b.avaliacoes ?? 0) - (a.avaliacoes ?? 0);
     if (vendido && !barato) return (a.maisVendido ?? 999) - (b.maisVendido ?? 999);
     return a.preco! - b.preco!;
   };
@@ -175,7 +181,12 @@ export function assistenteLocal(pedido: string, itens: ItemAssistente[]): Respos
       buscar: null,
     };
   const primeiro = lista[0]!;
-  const ordem = avaliada && !barato ? "da mais bem avaliada" : vendido && !barato ? "do mais vendido" : "do mais barato";
+  const ordem =
+    avaliada && !barato
+      ? "da mais bem avaliada"
+      : vendido && !barato
+        ? "do mais vendido"
+        : "do mais barato";
   return {
     resposta: `Separei ${ids.length === 1 ? "1 opção" : `${ids.length} opções`}${criterios.length ? ` com ${criterios.join(", ")}` : ""}, ${ordem} para a menos indicada. A primeira sai por ${reais(primeiro.preco!)}.`,
     ids,
@@ -203,16 +214,26 @@ export function limparRespostaDoModelo(
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 600);
-  if (!resposta || /\b(ia|inteligencia artificial|chatgpt|gpt|gemini|modelo de linguagem)\b/i.test(semAcento(resposta)))
+  if (
+    !resposta ||
+    /\b(ia|inteligencia artificial|chatgpt|gpt|gemini|modelo de linguagem)\b/i.test(
+      semAcento(resposta),
+    )
+  )
     return null;
-  const precos = ids.flatMap((id) => (validos.get(id)?.preco != null ? [validos.get(id)!.preco!] : []));
+  const precos = ids.flatMap((id) =>
+    validos.get(id)?.preco != null ? [validos.get(id)!.preco!] : [],
+  );
   for (const m of resposta.matchAll(/R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/g)) {
     const v = Number(m[1]!.replace(/\./g, "").replace(",", "."));
     if (!precos.some((p) => Math.abs(p - v) < 1)) return null;
   }
   const buscar =
     typeof bruto.buscar === "string" && bruto.buscar.trim().length >= 3
-      ? bruto.buscar.replace(/https?:\/\/\S+/g, "").trim().slice(0, 80)
+      ? bruto.buscar
+          .replace(/https?:\/\/\S+/g, "")
+          .trim()
+          .slice(0, 80)
       : null;
   if (!ids.length && !buscar) resposta = resposta.slice(0, 400);
   return { resposta, ids, buscar };
@@ -280,4 +301,33 @@ export async function responderAssistente(
     if (limpa) return { ...limpa, fonte: "modelo" };
   }
   return { ...assistenteLocal(pedido, itens), fonte: "local" };
+}
+
+/* TRÊS ESCOLHAS DA TELA (Weslei, 04/11): só entre os produtos recebidos.
+   Menor custo total só com frete grátis confirmado (frete desconhecido não
+   vira grátis). Bem avaliado = nota 4,5+ com 20+ opiniões. */
+export type TresEscolhas = {
+  menorCusto: ItemAssistente | null;
+  custoBeneficio: ItemAssistente | null;
+  premium: ItemAssistente | null;
+};
+
+export function tresEscolhas(itens: ItemAssistente[]): TresEscolhas {
+  const comPreco = itens.filter((i) => i.preco != null && i.preco > 0);
+  const porPreco = (a: ItemAssistente, b: ItemAssistente) => a.preco! - b.preco!;
+  const bemAvaliado = (i: ItemAssistente) => (i.nota ?? 0) >= 4.5 && (i.avaliacoes ?? 0) >= 20;
+  const menorCusto = comPreco.filter((i) => i.freteGratis === true).sort(porPreco)[0] ?? null;
+  const custoBeneficio =
+    comPreco
+      .filter((i) => bemAvaliado(i) && i.lojaOficial && i.id !== menorCusto?.id)
+      .sort(porPreco)[0] ?? null;
+  const usados = new Set([menorCusto?.id, custoBeneficio?.id]);
+  const premium =
+    comPreco
+      .filter((i) => bemAvaliado(i) && !usados.has(i.id))
+      .sort(porPreco)
+      .at(-1) ?? null;
+  /* Premium só quando custa mais que as outras escolhas. */
+  const piso = Math.max(menorCusto?.preco ?? 0, custoBeneficio?.preco ?? 0);
+  return { menorCusto, custoBeneficio, premium: premium && premium.preco! > piso ? premium : null };
 }

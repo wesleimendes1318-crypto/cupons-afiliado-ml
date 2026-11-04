@@ -11,6 +11,7 @@ import { consumirMarca } from "@/lib/acompanhar-cartao";
 import { supabase } from "@/integrations/supabase/client";
 import { idDoNavegador } from "@/lib/navegador";
 import { diasAte, TEMPORADAS, temporadasAtivas } from "@/lib/sazonal";
+import { atalhosDoAlvo, lerReais } from "@/lib/veredito-preco";
 
 /* Chamada da temporada (05/10): antes da Black Friday, o histórico mostra
    se o desconto é de verdade; no Natal e no Dia das Crianças, acompanhar o
@@ -71,14 +72,14 @@ export function AcompanharPreco({
       setEstado("erro");
       return;
     }
-    const valor = Number(alvo.replace(/\./g, "").replace(",", "."));
+    const valor = lerReais(alvo);
     setEstado("salvando");
     const { data: monitor, error } = await supabase.rpc(
       "acompanhar_preco" as never,
       {
         p_pedido: pedidoId,
         p_navegador: navegador,
-        p_alvo: alvo.trim() && valor > 0 ? valor : null,
+        p_alvo: valor,
       } as never,
     );
     if (error) {
@@ -147,6 +148,30 @@ export function AcompanharPreco({
             void salvar();
           }}
         >
+          {atalhosDoAlvo(preco).length > 0 && (
+            <div
+              className="flex w-full flex-wrap gap-1.5"
+              role="group"
+              aria-label="Atalhos de preço-alvo"
+            >
+              {atalhosDoAlvo(preco).map((a) => (
+                <button
+                  key={a.rotulo}
+                  type="button"
+                  onClick={() => setAlvo(String(a.valor))}
+                  aria-label={`${a.rotulo}: ${brl(a.valor)}`}
+                  className={
+                    "min-h-8 rounded-full px-3 text-xs font-semibold tabular-nums " +
+                    (lerReais(alvo) === a.valor
+                      ? "bg-[#0071e3] text-white"
+                      : "bg-[#f5f5f7] text-[#0058b0] dark:bg-white/10")
+                  }
+                >
+                  {a.rotulo} · {brl(a.valor)}
+                </button>
+              ))}
+            </div>
+          )}
           <label className="min-w-0 flex-1 text-xs">
             <span className="font-semibold">Me avise quando chegar a (opcional)</span>
             <input
