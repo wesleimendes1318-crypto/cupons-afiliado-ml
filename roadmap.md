@@ -102,5 +102,5 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 - [x] Testes de tributos/custo internacional
 - [x] Acabamento: nada saindo dos quadros (moldura da Melhor escolha nos 3 marketplaces, faixa das lojas, campo do link cortado, parecido único, botões que quebravam)
 
-- [ ] Perfil da conta salvo e atualizado sozinho (buscas, gosto, preferências) entre aparelhos
-- [ ] Botão de entrar mais visível em celular, tablet e computador
+- [x] Perfil da conta salvo e atualizado sozinho (buscas, gosto, preferências) entre aparelhos
+- [x] Botão de entrar mais visível em celular, tablet e computador
