@@ -89,13 +89,44 @@ export function LoginEmailOtp() {
           <X className="size-4" aria-hidden />
         </button>
 
-        <span className="inline-flex size-11 items-center justify-center rounded-full bg-[#0071e3]/10">
+        <span
+          key={etapa}
+          className={`inline-flex size-11 items-center justify-center rounded-full bg-[#0071e3]/10 ${
+            etapa === "email" && ocupado ? "animate-envelope-envia" : "animate-envelope-chega"
+          }`}
+        >
           {etapa === "ok" ? (
             <ShieldCheck className="size-5 text-success" aria-hidden />
           ) : (
             <Mail className="size-5 text-[#0071e3]" aria-hidden />
           )}
         </span>
+
+        <ol className="mt-4 flex items-center gap-2 text-xs text-secondary-ink" aria-label="Etapas">
+          {["Seu e-mail", "Código", "Pronto"].map((nome, i) => {
+            const atual = etapa === "email" ? 0 : etapa === "codigo" ? 1 : 2;
+            return (
+              <li key={nome} className="flex flex-1 items-center gap-1.5" aria-current={i === atual ? "step" : undefined}>
+                <span
+                  className={`inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors duration-300 ${
+                    i <= atual ? "bg-[#0071e3] text-white" : "bg-muted text-secondary-ink"
+                  }`}
+                >
+                  {i < atual ? "✓" : i + 1}
+                </span>
+                <span className={i === atual ? "font-medium text-foreground" : ""}>{nome}</span>
+                {i < 2 && (
+                  <span className="h-0.5 flex-1 overflow-hidden rounded bg-muted">
+                    <span
+                      className="block h-full bg-[#0071e3] transition-all duration-500"
+                      style={{ width: i < atual ? "100%" : i === atual && ocupado ? "60%" : "0%" }}
+                    />
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
 
         {etapa === "email" && (
           <form onSubmit={enviar} className="mt-4">
@@ -131,7 +162,7 @@ export function LoginEmailOtp() {
               className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0071e3] text-base font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
             >
               {ocupado && <LoaderCircle className="size-4 animate-spin" aria-hidden />}
-              Enviar código
+              {ocupado ? "Enviando…" : "Enviar código"}
             </button>
           </form>
         )}
