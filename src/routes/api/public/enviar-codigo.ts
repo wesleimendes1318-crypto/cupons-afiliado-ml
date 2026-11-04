@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
           body: JSON.stringify({
             from: remetente,
             to: [email],
-            subject: "Seu código para entrar — Melhor Escolha",
+            subject: `${codigo} é o seu código — Melhor Escolha`,
             html: html(codigo),
             text: `Seu código para entrar na Melhor Escolha: ${codigo}. Vale por uma hora.`,
           }),
