@@ -64,6 +64,22 @@ export type Painel = {
     cron: { tarefa: string; fim: string; resumo: unknown }[];
     ofertas_24h: number;
   };
+  comando: ComandoSinc | null;
+};
+
+export type LeituraPortal = {
+  marketplace: "mercadolivre" | "amazon" | "shopee";
+  status: "lido" | "sem_numeros" | "sem_login" | "verificacao" | "pagina_inesperada" | "erro";
+  achados?: { rotulo: string; valor: string }[];
+};
+
+export type ComandoSinc = {
+  id: number;
+  status: "pendente" | "executando" | "concluido" | "erro";
+  etapa: string | null;
+  resultado: { marketplaces?: LeituraPortal[]; gravados?: number } | null;
+  criado_em: string;
+  concluido_em: string | null;
 };
 
 /** null = não é o fundador (ou sem sessão). */

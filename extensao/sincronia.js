@@ -678,3 +678,16 @@ export async function gravarCuponsV2(token, cupons) {
   if (!token || !Array.isArray(cupons) || !cupons.length) return null;
   return chamarRpc(RPC, { p_token: token, p_cupons: cupons.slice(0, 200), p_completo: false });
 }
+
+/* ESPELHO DE AFILIADO (04/11, espelho.js): pedido do botao do /admin e
+   gravacao do que foi lido nos portais. So o banco ve os numeros. */
+export async function comandoEspelhoPendente(token) {
+  if (!token) return null;
+  const r = await chamarRpc(SUPABASE + '/rest/v1/rpc/afiliado_comando_pendente', { p_token: token });
+  return r && typeof r === 'object' && r.id ? r : null;
+}
+
+export async function gravarMetricasAfiliado(token, dados) {
+  if (!token) return null;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/gravar_metricas_afiliado', { p_token: token, p_dados: dados });
+}
