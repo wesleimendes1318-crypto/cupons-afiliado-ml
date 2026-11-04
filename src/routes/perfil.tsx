@@ -94,16 +94,8 @@ function Perfil() {
   const complementos = [...new Set(base.flatMap((s) => COMPLEMENTOS[s] ?? []))].slice(0, 8);
 
   return (
-    <LayoutConteudo>
+    <LayoutConteudo titulo={nome ? `Olá, ${nome}` : "Meu perfil"} resumo="Diga do que você gosta e eu mostro primeiro o que combina com você.">
       <div className="mx-auto max-w-2xl space-y-5 py-6">
-        <header>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {nome ? `Olá, ${nome}` : "Meu perfil"}
-          </h1>
-          <p className="mt-1 text-sm text-secondary-ink">
-            Diga do que você gosta e eu mostro primeiro o que combina com você.
-          </p>
-        </header>
 
         {!usuario && (
           <div className="rounded-3xl bg-card p-5 shadow-sm">
