@@ -194,9 +194,9 @@ export function CabecalhoSite() {
             className="hidden min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 vidro-botao rounded-full border border-[#7547E8]/50 min-[360px]:inline-flex px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
           >
             <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
-            <span className="hidden min-[400px]:inline">Ofertas no Telegram</span>
+            <span className="hidden min-[480px]:inline">Ofertas no Telegram</span>
             {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
-            <span className="hidden min-[360px]:inline min-[400px]:hidden">Ofertas</span>
+            
           </a>
         </nav>
       </div>
