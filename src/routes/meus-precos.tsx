@@ -43,8 +43,8 @@ function AvisoConta() {
   return (
     <div className="mb-6 flex flex-col gap-3 rounded-3xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-secondary-ink">
-        <strong className="text-foreground">Veja seus preços em qualquer aparelho.</strong> Entre com
-        seu e-mail, sem senha.
+        <strong className="text-foreground">Veja seus preços em qualquer aparelho.</strong> Entre
+        com seu e-mail, sem senha.
       </p>
       <button
         type="button"
@@ -77,6 +77,7 @@ type Item = {
   ultima_leitura: string | null;
   proxima_leitura: string | null;
   historico: Ponto[];
+  avisar_email?: boolean | null;
 };
 
 const brl = (n: number | null | undefined) =>
@@ -171,7 +172,7 @@ function Historico({ pontos }: { pontos: Ponto[] }) {
   );
 }
 
-function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
+function Cartao({ i, parar, logado }: { i: Item; parar: (id: number) => void; logado: boolean }) {
   const base = i.preco_ao_seguir;
   const dif =
     base != null && i.preco_atual != null ? Math.round((i.preco_atual - base) * 100) / 100 : null;
@@ -290,13 +291,46 @@ function Cartao({ i, parar }: { i: Item; parar: (id: number) => void }) {
           Parar de acompanhar
         </button>
       </div>
+      {logado && <AvisoEmail i={i} />}
     </article>
+  );
+}
+
+/* Aviso de queda por e-mail (04/11): só com a conta; o e-mail sai pelo
+   gatilho do banco + operacao?tarefa=alertas (src/lib/alertas-email.ts). */
+function AvisoEmail({ i }: { i: Item }) {
+  const [ligado, setLigado] = useState(Boolean(i.avisar_email));
+  const [erro, setErro] = useState(false);
+  return (
+    <label className="mt-2 flex items-center gap-2 text-xs text-foreground">
+      <input
+        type="checkbox"
+        checked={ligado}
+        onChange={async (e) => {
+          const v = e.target.checked;
+          setLigado(v);
+          setErro(false);
+          const { data, error } = await supabase.rpc(
+            "definir_aviso_email" as never,
+            { p_monitor: i.id, p_ligado: v } as never,
+          );
+          if (error || data !== true) {
+            setLigado(!v);
+            setErro(true);
+          }
+        }}
+        className="size-4 accent-[#0071e3]"
+      />
+      Avisar também por e-mail quando o preço cair
+      {erro && <span className="text-red-700">(não salvou, tente de novo)</span>}
+    </label>
   );
 }
 
 function MeusPrecos() {
   const [itens, setItens] = useState<Item[] | null>(null);
   const [erro, setErro] = useState(false);
+  const usuario = useConta();
 
   const carregar = useCallback(async () => {
     const navegador = idDoNavegador();
@@ -304,10 +338,16 @@ function MeusPrecos() {
       setItens([]);
       return;
     }
-    const { data, error } = await supabase.rpc(
-      "meus_precos" as never,
+    /* v2 traz avisar_email; sem ela no banco, a de sempre. */
+    let { data, error } = await supabase.rpc(
+      "meus_precos_v2" as never,
       { p_navegador: navegador } as never,
     );
+    if (error)
+      ({ data, error } = await supabase.rpc(
+        "meus_precos" as never,
+        { p_navegador: navegador } as never,
+      ));
     if (error) {
       setErro(true);
       return;
@@ -363,7 +403,7 @@ function MeusPrecos() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {itens.map((i) => (
-            <Cartao key={i.id} i={i} parar={parar} />
+            <Cartao key={i.id} i={i} parar={parar} logado={!!usuario} />
           ))}
         </div>
       )}
