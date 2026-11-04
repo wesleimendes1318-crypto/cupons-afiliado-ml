@@ -10,6 +10,7 @@ import { ArrowRight, Flame } from "lucide-react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { AcompanharRapido } from "@/components/AcompanharRapido";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import { itemDoEndereco, lerAvaliacoesPorItens, type MapaPorItem } from "@/lib/avaliacoes-detalhe";
 import { bemAvaliadosPrimeiro, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
@@ -355,6 +356,14 @@ export function CartaoEmAlta({
             Comparar preço
             <ArrowRight className="size-3.5" aria-hidden="true" />
           </button>
+          <div className="text-center">
+            <AcompanharRapido
+              chave={i.produto}
+              titulo={i.nome}
+              imagem={i.imagem}
+              preco={Number(i.preco)}
+            />
+          </div>
         </div>
       </div>
     </li>

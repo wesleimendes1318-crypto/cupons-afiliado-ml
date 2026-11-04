@@ -34,6 +34,15 @@ function chamadaDaTemporada(): string | null {
   return null;
 }
 
+export const erroDoAcompanhar = (m: string) =>
+  /limite de 20/.test(m)
+    ? "Você já acompanha 20 produtos. Pare de acompanhar algum em Meus preços."
+    : /limite do teste/.test(m)
+      ? "O acompanhamento está no limite de produtos desta fase de teste."
+      : /desligado/.test(m)
+        ? "O acompanhamento de preço está pausado no momento."
+        : "Não deu para salvar agora. Tente em instantes.";
+
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: number | null }) {
@@ -66,15 +75,7 @@ export function AcompanharPreco({ pedidoId, preco }: { pedidoId: number; preco: 
       } as never,
     );
     if (error) {
-      setErro(
-        /limite de 20/.test(error.message)
-          ? "Você já acompanha 20 produtos. Pare de acompanhar algum em Meus preços."
-          : /limite do teste/.test(error.message)
-            ? "O acompanhamento está no limite de produtos desta fase de teste."
-            : /desligado/.test(error.message)
-              ? "O acompanhamento de preço está pausado no momento."
-              : "Não deu para salvar agora. Tente em instantes.",
-      );
+      setErro(erroDoAcompanhar(error.message));
       setEstado("erro");
       return;
     }

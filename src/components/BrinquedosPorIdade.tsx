@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { AcompanharRapido } from "@/components/AcompanharRapido";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { Truck } from "lucide-react";
 import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
@@ -215,17 +216,25 @@ function CartaoBrinquedo({
             <VerNaLoja url={i.url} grande />
           ) : null}
           <CompararPreco url={i.url} />
-          <VerDetalhesVitrine
-            chave={chaveDoBrinquedo(i.url)}
-            titulo={i.nome}
-            imagem={i.imagem}
-            preco={c.preco}
-            link={c.link}
-            vistoEm={i.atendido_em}
-            urlProduto={i.url}
-            rotulo="Detalhes"
-            className="mt-1 min-h-7 w-full"
-          />
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3">
+            <VerDetalhesVitrine
+              chave={chaveDoBrinquedo(i.url)}
+              titulo={i.nome}
+              imagem={i.imagem}
+              preco={c.preco}
+              link={c.link}
+              vistoEm={i.atendido_em}
+              urlProduto={i.url}
+              rotulo="Detalhes"
+              className="min-h-7"
+            />
+            <AcompanharRapido
+              chave={chaveDoBrinquedo(i.url)}
+              titulo={i.nome}
+              imagem={i.imagem}
+              preco={c.preco}
+            />
+          </div>
         </div>
       </div>
     </li>

@@ -45,20 +45,28 @@ export function htmlDoAlerta(m: {
   imagem: string | null;
   botao: { href: string; texto: string };
 }) {
-  const titulo = m.alvo != null && m.agora <= m.alvo ? "Chegou no seu preço!" : "O preço caiu!";
-  return `<!DOCTYPE html><html lang="pt-BR"><body style="margin:0;padding:32px 16px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Helvetica,Arial,sans-serif;color:#111827">
-<table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto">
+  const noAlvo = m.alvo != null && m.agora <= m.alvo;
+  const titulo = noAlvo ? "Chegou no seu preço!" : "O preço caiu!";
+  // Padrão dos e-mails (04/11): #f5f5f7, cartão branco, azul nas ações, verde no sucesso.
+  const cor = noAlvo ? "#248a3d" : "#0071e3";
+  return `<!DOCTYPE html><html lang="pt-BR"><body style="margin:0;padding:32px 16px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Helvetica,Arial,sans-serif;color:#1d1d1f">
+<table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto">
 <tr><td align="center" style="padding-bottom:20px"><img src="${SITE}/logo.png" alt="Melhor Escolha" width="44" height="44" style="display:block;border-radius:12px"></td></tr>
-<tr><td style="background:#fff;border:1px solid #e5e5ea;border-radius:24px;padding:28px 24px">
-<h1 style="margin:0 0 12px;font-size:21px">${titulo}</h1>
-${m.imagem ? `<img src="${html(m.imagem)}" alt="" width="120" style="display:block;margin:0 0 12px;max-width:120px">` : ""}
-<p style="margin:0 0 8px;font-size:15px;line-height:21px">${html(m.titulo ?? "Produto")}</p>
-<p style="margin:0 0 4px;font-size:22px;font-weight:800">${brl(m.agora)}${m.antes != null && m.antes > m.agora ? ` <span style="font-size:14px;font-weight:400;color:#6b7280;text-decoration:line-through">${brl(m.antes)}</span>` : ""}</p>
-${m.alvo != null ? `<p style="margin:0 0 4px;font-size:13px;color:#4b5563">Seu preço-alvo: ${brl(m.alvo)}</p>` : ""}
-<p style="margin:0 0 20px;font-size:13px;color:#4b5563">Frete: confira no anúncio antes de comprar. O preço pode mudar a qualquer momento.</p>
-<a href="${html(m.botao.href)}" style="display:inline-block;background:#0071e3;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 28px;border-radius:9999px">${m.botao.texto}</a>
+<tr><td style="background:#ffffff;border:1px solid #e5e5ea;border-radius:24px;padding:28px 24px">
+<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:${cor}">Acompanhar preço</p>
+<h1 style="margin:0 0 16px;font-size:24px;line-height:30px;letter-spacing:-0.3px">${titulo}</h1>
+<img src="${SITE}/email/acompanhar-preco.png" alt="Linha do preço descendo até o seu preço desejado" width="472" style="display:block;width:100%;max-width:472px;height:auto;margin:0 0 20px;border-radius:16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;border-radius:16px"><tr>
+${m.imagem ? `<td width="88" style="padding:12px"><img src="${html(m.imagem)}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:contain;background:#ffffff;border-radius:12px"></td>` : ""}
+<td style="padding:12px 12px 12px ${m.imagem ? "0" : "12px"}"><p style="margin:0 0 6px;font-size:14px;line-height:20px;font-weight:600">${html(m.titulo ?? "Produto")}</p>
+<p style="margin:0;font-size:22px;font-weight:800;color:${cor}">${brl(m.agora)}${m.antes != null && m.antes > m.agora ? ` <span style="font-size:14px;font-weight:400;color:#86868b;text-decoration:line-through">${brl(m.antes)}</span>` : ""}</p></td>
+</tr></table>
+${m.alvo != null ? `<p style="margin:14px 0 0;font-size:13px;color:#424245">Seu preço desejado: <strong style="color:#248a3d">${brl(m.alvo)}</strong></p>` : ""}
+<p style="margin:8px 0 22px;font-size:13px;line-height:19px;color:#424245">Frete: confira no anúncio antes de comprar. O preço pode mudar a qualquer momento.</p>
+<a href="${html(m.botao.href)}" style="display:block;text-align:center;background:#0071e3;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:9999px">${m.botao.texto}</a>
+<p style="margin:18px 0 0;font-size:12px;line-height:17px;color:#86868b">Segurança: nunca pedimos senha, código ou dados de pagamento por e-mail. Na dúvida, abra o melhorescolha.io direto no navegador.</p>
 </td></tr>
-<tr><td align="center" style="padding:20px 8px 0;font-size:11px;line-height:16px;color:#86868b">Você recebe este aviso porque marcou "Avisar também por e-mail" em Meus preços no melhorescolha.io. Para parar, desmarque lá. Comprando pelo botão o preço é o mesmo, e o site recebe uma comissão do programa de afiliados.</td></tr>
+<tr><td align="center" style="padding:20px 8px 0;font-size:11px;line-height:16px;color:#86868b">Você recebe este aviso porque marcou "Avisar também por e-mail" em Meus preços no melhorescolha.io. Para parar, desmarque lá. Comprando pelo botão o preço é o mesmo, e o site recebe uma comissão do programa de afiliados. Site independente, sem vínculo com o Mercado Livre.</td></tr>
 </table></body></html>`;
 }
 

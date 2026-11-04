@@ -7,6 +7,7 @@
    Google ficam de fora no próprio banco (função vitrine). */
 
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { AcompanharRapido } from "@/components/AcompanharRapido";
 import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BadgeCheck, TrendingDown } from "lucide-react";
 
@@ -491,6 +492,7 @@ function Cartao({ i, trilho = false }: { i: ItemVitrine; trilho?: boolean }) {
               rotulo="Detalhes"
               className="min-h-7"
             />
+            <AcompanharRapido chave={i.chave} titulo={i.titulo} imagem={i.imagem} preco={preco} />
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@
    só com link de afiliado e comparação de menos de 24 h (senão "Ver o
    preço de agora"; preço velho não vira compra, regra de 02/10). */
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { AcompanharRapido } from "@/components/AcompanharRapido";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
@@ -366,17 +367,20 @@ export function CartaoOferta({
             )
           )}
           {(o.urlProduto || o.link) && <CompararPreco url={(o.urlProduto ?? o.link)!} />}
-          <VerDetalhesVitrine
-            chave={o.chave}
-            titulo={o.titulo}
-            imagem={o.imagem}
-            preco={o.preco}
-            link={o.link}
-            vistoEm={o.vistoEm ?? null}
-            urlProduto={o.urlProduto}
-            rotulo="Detalhes"
-            className="mt-1 min-h-7 w-full"
-          />
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3">
+            <VerDetalhesVitrine
+              chave={o.chave}
+              titulo={o.titulo}
+              imagem={o.imagem}
+              preco={o.preco}
+              link={o.link}
+              vistoEm={o.vistoEm ?? null}
+              urlProduto={o.urlProduto}
+              rotulo="Detalhes"
+              className="min-h-7"
+            />
+            <AcompanharRapido chave={o.chave} titulo={o.titulo} imagem={o.imagem} preco={o.preco} />
+          </div>
         </div>
       </div>
     </li>
