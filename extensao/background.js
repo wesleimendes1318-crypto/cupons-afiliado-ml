@@ -9,7 +9,9 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          reservarGeracao, concluirGeracao, compararNoServidor, marcarEtapa, gravarDiagnostico,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, gravarCuponsV2, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
-         buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas } from './sincronia.js';
+         buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas,
+         comandoEspelhoPendente, gravarMetricasAfiliado } from './sincronia.js';
+import { sincronizarEspelho } from './espelho.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
@@ -5030,6 +5032,7 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         atenderMultiloja().catch(e => console.warn('[multiloja]', e.message));
         atenderGarimpos().catch(e => console.warn('[garimpo]', e.message));
         atenderBuscasAnuncios().catch(e => console.warn('[busca-anuncios]', e.message));
+        rodarEspelho().catch(e => console.warn('[espelho]', e.message));
         responder({ ok: true });
       } else if (msg.tipo === 'estadoGeral') {
         const st = await chrome.storage.local.get(['ultimoAtendimento', 'anonimaBloqueadaAte', 'sincToken']);
@@ -5528,6 +5531,18 @@ async function rodarListas() {
   });
 }
 
+/* ESPELHO DE AFILIADO (04/11): botao do /admin ou a cada 12 h, so parada. */
+async function rodarEspelho() {
+  if (lendoHub || lendoCupons) return;
+  const { sincToken } = await chrome.storage.local.get('sincToken');
+  if (!sincToken) return;
+  await sincronizarEspelho({
+    token: sincToken, sleep, esperarCarregar, ehCaptcha, freioLigado,
+    comandoPendente: comandoEspelhoPendente, gravar: gravarMetricasAfiliado,
+    ocupado: () => atendendo
+  });
+}
+
 function armarAlarmes() {
   for (const [nome, periodInMinutes] of Object.entries(ALARMES)) {
     chrome.alarms.create(nome, { periodInMinutes });
@@ -5568,6 +5583,7 @@ chrome.alarms.onAlarm.addListener(async a => {
     lerHubDeAfiliados().catch(() => {});
     lerCuponsDeAfiliados().catch(() => {});
     rodarListas().catch(e => console.warn('[listas]', e.message));
+    rodarEspelho().catch(e => console.warn('[espelho]', e.message));
     atualizarAvaliacoes().catch(() => {});
     vigiarFila().catch(() => {});
     completarVitrine().catch(() => {});

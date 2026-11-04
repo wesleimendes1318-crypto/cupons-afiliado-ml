@@ -47,6 +47,7 @@ import {
   cliquesDoDia,
   reais,
   resumo,
+  type ComandoSinc,
   type Painel,
 } from "@/lib/painel-fundador";
 
@@ -530,6 +531,7 @@ function Admin() {
                 );
               })}
             </div>
+            <SincronizarVendas ultimo={p.comando} aoTerminar={() => void carregar(dias)} />
           </Cartao>
 
           <Cartao titulo="Saúde dos agentes" sub="Extensão, IAs e robôs" atraso={480}>
@@ -584,6 +586,112 @@ const SUGESTOES = [
 ];
 
 /* Copiloto: conversa só nesta aba (nada guardado); o servidor confere a conta mestre. */
+const NOME_PORTAL = { mercadolivre: "Mercado Livre", amazon: "Amazon", shopee: "Shopee" } as const;
+const TEXTO_LEITURA: Record<string, string> = {
+  lido: "Lido",
+  sem_numeros: "Abri o painel, mas não achei os números",
+  sem_login: "Entre no portal pelo Chrome do notebook",
+  verificacao: "O portal pediu verificação",
+  pagina_inesperada: "O portal abriu outra página",
+  erro: "Falhou ao ler",
+};
+
+/* "Sincronizar vendas agora": grava o pedido (RLS: só a conta mestre), avisa
+   a extensão pela ponte e acompanha a etapa até ela terminar. */
+function SincronizarVendas({
+  ultimo,
+  aoTerminar,
+}: {
+  ultimo: ComandoSinc | null;
+  aoTerminar: () => void;
+}) {
+  const [cmd, setCmd] = useState<ComandoSinc | null>(ultimo);
+  const [erro, setErro] = useState<string | null>(null);
+  useEffect(() => setCmd(ultimo), [ultimo]);
+  const ativo = cmd?.status === "pendente" || cmd?.status === "executando";
+
+  useEffect(() => {
+    if (!ativo || !cmd) return;
+    const inicio = Date.now();
+    const t = setInterval(async () => {
+      const { data } = await supabase
+        .from("admin_comandos_sinc" as never)
+        .select("*")
+        .eq("id", cmd.id)
+        .maybeSingle();
+      const novo = data as ComandoSinc | null;
+      if (novo) setCmd(novo);
+      if (novo && (novo.status === "concluido" || novo.status === "erro")) {
+        clearInterval(t);
+        aoTerminar();
+      } else if (Date.now() - inicio > 6 * 60e3) clearInterval(t);
+    }, 3000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ativo, cmd?.id]);
+
+  const pedir = async () => {
+    setErro(null);
+    const { data, error } = await supabase
+      .from("admin_comandos_sinc" as never)
+      .insert({ tipo: "sincronizar_vendas_afiliado" } as never)
+      .select("*")
+      .single();
+    if (error || !data) return setErro("Não consegui pedir a leitura. Tente de novo.");
+    setCmd(data as ComandoSinc);
+    window.postMessage({ de: "cupons-afiliado-ml", tipo: "pedido-novo" }, window.location.origin);
+  };
+
+  const leituras = cmd?.resultado?.marketplaces ?? [];
+  return (
+    <div className="mt-4 border-t border-black/5 pt-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void pedir()}
+          disabled={ativo}
+          className="inline-flex items-center gap-2 rounded-full bg-[#0071e3] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0077ed] active:scale-[0.98] disabled:opacity-60"
+        >
+          <RefreshCw className={`size-4 ${ativo ? "animate-spin" : ""}`} />
+          {ativo ? "Sincronizando..." : "Sincronizar vendas agora"}
+        </button>
+        <p className="text-xs text-[#6e6e73]" aria-live="polite">
+          {erro ??
+            (ativo
+              ? (cmd?.etapa ?? "Esperando a extensão...")
+              : cmd
+                ? `${cmd.etapa ?? ""} · ${quando(cmd.concluido_em ?? cmd.criado_em)}`
+                : "A extensão lê os portais com as suas contas, no Chrome do notebook.")}
+        </p>
+      </div>
+      {!ativo && leituras.length > 0 && (
+        <ul className="mt-3 space-y-1.5 text-xs">
+          {leituras.map((l) => (
+            <li key={l.marketplace}>
+              <span className="font-semibold text-[#1d1d1f]">{NOME_PORTAL[l.marketplace]}:</span>{" "}
+              <span className={l.status === "lido" ? "text-[#34c759]" : "text-[#6e6e73]"}>
+                {TEXTO_LEITURA[l.status] ?? l.status}
+              </span>
+              {!!l.achados?.length && (
+                <details className="abertura-nativa mt-1 text-[#6e6e73]">
+                  <summary className="cursor-pointer">O que li no portal</summary>
+                  <ul className="mt-1 space-y-0.5 pl-3">
+                    {l.achados.map((a, i) => (
+                      <li key={i}>
+                        {a.rotulo} → <span className="tabular-nums">{a.valor}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function CopilotoAdmin() {
   const [aberto, setAberto] = useState(false);
   const [conversa, setConversa] = useState<MensagemCopiloto[]>([]);
