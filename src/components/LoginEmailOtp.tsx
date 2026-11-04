@@ -1,7 +1,7 @@
 /* Entrar com o e-mail, sem senha (Weslei, 04/11). Abre em qualquer página
    pelo evento "abrir-login" (abrirLogin). Visual do site: cartão branco,
    cantos amplos, azul #0071e3, campo de 16 px (sem zoom no iPhone). */
-import { LoaderCircle, Mail, ShieldCheck, X } from "lucide-react";
+import { ClipboardPaste, LoaderCircle, Mail, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {

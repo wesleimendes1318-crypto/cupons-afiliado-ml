@@ -23,7 +23,8 @@ function html(codigo: string) {
 <tr><td><img src="https://melhorescolha.io/logo.png" width="48" height="48" alt="Melhor Escolha" style="border-radius:12px;display:block"></td></tr>
 <tr><td style="padding-top:20px;font-size:22px;font-weight:600">Seu código para entrar</td></tr>
 <tr><td style="padding-top:8px;font-size:15px;line-height:1.5;color:#6e6e73">Digite este código no site para entrar na sua conta. Ele vale por uma hora.</td></tr>
-<tr><td align="center" style="padding:24px 0"><div style="display:inline-block;background:#f5f5f7;border-radius:16px;padding:16px 24px;font-size:32px;font-weight:700;letter-spacing:8px;color:#0071e3">${codigo}</div></td></tr>
+<tr><td align="center" style="padding:24px 0 8px"><div style="display:inline-block;background:#f5f5f7;border-radius:16px;padding:16px 24px;font-size:32px;font-weight:700;letter-spacing:6px;color:#0071e3;user-select:all;-webkit-user-select:all">${codigo}</div></td></tr>
+<tr><td align="center" style="padding-bottom:20px;font-size:13px;color:#6e6e73">Para copiar: toque e segure no código e escolha Copiar.<br>No site, toque em "Colar código copiado".</td></tr>
 <tr><td style="font-size:13px;line-height:1.5;color:#6e6e73">Se você não pediu este código, ignore este e-mail. Ninguém da Melhor Escolha pede este código.</td></tr>
 </table>
 <p style="font-size:12px;color:#86868b;margin-top:16px">Melhor Escolha · melhorescolha.io</p>
