@@ -523,6 +523,7 @@ export function mesclarGosto(remoto: unknown, agora = Date.now()): void {
     termosRecentes: r.termos ?? [],
     produtosInteragidos: r.produtos ?? [],
   } as Partial<PerfilVisitante>);
+  if (!base) return;
   const cats = { ...p.categorias };
   for (const [k, v] of Object.entries(base.categorias)) cats[k] = Math.max(cats[k] ?? 0, v);
   const termos = [...p.termosRecentes, ...base.termosRecentes]
