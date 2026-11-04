@@ -160,6 +160,24 @@ export function LoginEmailOtp() {
               placeholder="••••••••"
               className="mt-5 h-14 w-full rounded-2xl border border-border bg-background px-4 text-center font-mono text-2xl font-bold tracking-[0.4em] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/30"
             />
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const texto = limparCodigo(await navigator.clipboard.readText());
+                  if (!texto) return setErro("Copie o código do e-mail e toque de novo.");
+                  setCodigo(texto);
+                  setErro(null);
+                } catch {
+                  campoCodigo.current?.focus();
+                  setErro("Toque e segure no campo acima e escolha Colar.");
+                }
+              }}
+              className="vidro-botao mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold text-[#0071e3]"
+            >
+              <ClipboardPaste className="size-4" aria-hidden />
+              Colar código copiado
+            </button>
             {erro && (
               <p role="alert" className="mt-2 text-sm text-destructive">
                 {erro}
