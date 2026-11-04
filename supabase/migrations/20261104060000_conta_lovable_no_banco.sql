@@ -40,12 +40,13 @@ begin
 
   select navegador into v_conta from conta_navegadores where usuario_id = v_usuario;
 
+  -- Leva para a conta o que este aparelho acompanhava (o que a conta já
+  -- segue fica como está; a linha repetida do aparelho deixa de ser lida).
   if v_conta <> p_navegador then
-    insert into monitor_seguidores (monitor_id, navegador, preco_alvo, preco_ao_seguir, criado_em)
-    select monitor_id, v_conta, preco_alvo, preco_ao_seguir, criado_em
-      from monitor_seguidores where navegador = p_navegador
-    on conflict (monitor_id, navegador) do nothing;
-    delete from monitor_seguidores where navegador = p_navegador;
+    update monitor_seguidores s set navegador = v_conta
+     where s.navegador = p_navegador
+       and not exists (select 1 from monitor_seguidores c
+                        where c.monitor_id = s.monitor_id and c.navegador = v_conta);
   end if;
   return v_conta;
 end;
@@ -53,9 +54,7 @@ $$;
 grant execute on function public.vincular_navegador_conta(uuid) to authenticated;
 
 
-create index if not exists pedidos_link_chave_pronto
-  on public.pedidos_link (public.chave_do_produto(url_alvo), id desc)
-  where status = 'pronto' and link is not null;
+-- Sem índice novo: pedidos_link tem ~1.700 linhas (04/11).
 
 create or replace function public.acompanhar_por_link(p_url text, p_navegador uuid, p_alvo numeric default null)
 returns bigint
