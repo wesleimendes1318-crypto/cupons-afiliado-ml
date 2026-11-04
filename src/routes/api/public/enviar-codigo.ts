@@ -45,8 +45,8 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
           return resposta({ erro: "invalido" }, 400);
 
         const { chave } = chaveDeServico();
-        const lovable = process.env.LOVABLE_API_KEY;
-        const resend = process.env.RESEND_API_KEY;
+        const lovable = process.env['LOVABLE_API_KEY'];
+        const resend = process.env['RESEND_API_KEY'];
         if (!chave || !lovable || !resend) return resposta({ erro: "indisponivel" }, 503);
 
         const admin = createClient(SUPABASE_URL_SITE, chave, { auth: { persistSession: false } });
@@ -63,7 +63,7 @@ export const Route = createFileRoute("/api/public/enviar-codigo")({
         }
 
         const codigo = gerado.data.properties.email_otp;
-        const remetente = process.env.RESEND_FROM || "Melhor Escolha <onboarding@resend.dev>";
+        const remetente = process.env['RESEND_FROM'] || "Melhor Escolha <onboarding@resend.dev>";
         const envio = await fetch(`${GATEWAY}/emails`, {
           method: "POST",
           headers: {
