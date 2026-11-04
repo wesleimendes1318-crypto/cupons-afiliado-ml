@@ -321,7 +321,10 @@ function MeusPrecos() {
     const t = setInterval(() => void carregar(), 60000);
     const aoVincular = () => void carregar();
     window.addEventListener("conta-vinculada", aoVincular);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("conta-vinculada", aoVincular);
+    };
   }, [carregar]);
 
   async function parar(id: number) {
