@@ -38,6 +38,8 @@ export async function solicitarCodigo(email: string) {
     };
     if (r.ok && corpo.ok) return null;
     if (corpo.erro === "invalido") return "Confira o e-mail digitado.";
+    if (corpo.erro === "limite")
+      return "Muitos códigos pedidos seguidos. Espere alguns minutos e use o último que chegou.";
     if (corpo.erro === "envio" && corpo.status === 403)
       return "Ainda não consigo enviar para este e-mail. Tente outro em instantes.";
   } catch {
@@ -110,7 +112,8 @@ export function useConta(): User | null {
 }
 
 function traduzir(msg: string): string {
-  if (/expired|invalid|token/i.test(msg)) return "Código inválido ou vencido. Confira ou peça outro.";
+  if (/expired|invalid|token/i.test(msg))
+    return "Código inválido ou vencido. Confira ou peça outro.";
   if (/rate|seconds|security purposes/i.test(msg))
     return "Aguarde alguns segundos antes de pedir outro código.";
   if (/signups not allowed|disabled/i.test(msg))
