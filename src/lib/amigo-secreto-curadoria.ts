@@ -42,6 +42,7 @@ const FRANQUIAS: Record<string, { chave: RegExp; titulo: RegExp; termos: string[
     chave: /star ?wars|jedi|darth|yoda|mandalorian|grogu/,
     titulo: /star ?wars|darth|vader|yoda|grogu|mandalorian|jedi|stormtrooper|skywalker|chewbacca|r2-?d2|bb-?8|millennium|sith|boba fett|kylo/,
     termos: [
+      "luminaria led 3d star wars",
       "funko pop star wars",
       "luminaria star wars",
       "caneca star wars",
@@ -56,6 +57,7 @@ const FRANQUIAS: Record<string, { chave: RegExp; titulo: RegExp; termos: string[
     chave: /marvel|vingadores|avengers|homem[- ]aranha|spider|iron man|homem de ferro|thor|deadpool|wolverine|groot/,
     titulo: /marvel|vingadores|avengers|homem[- ]aranha|spider|iron ?man|homem de ferro|capitao america|thor|hulk|loki|deadpool|wolverine|groot|thanos|pantera negra|venom|x-?men|guardioes da galaxia/,
     termos: [
+      "luminaria led 3d marvel",
       "funko pop marvel",
       "luminaria marvel",
       "caneca marvel",

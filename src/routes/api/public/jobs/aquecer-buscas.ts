@@ -4,7 +4,7 @@ import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 
 /* AQUECEDOR (05/11): every 10 min it warms ONE popular search through the
    site's own /api/public/buscar, so the 6 h cache is ready when a customer
-   arrives (36 searches x 10 min = one full turn per 6 h). One request at a
+   arrives (one full turn about every 7 h). One request at a
    time: no bursts on the catalog. */
 const POPULARES = [
   "air fryer", "fone bluetooth", "smartwatch", "celular", "tv 50 polegadas", "caixa de som bluetooth",
@@ -13,6 +13,8 @@ const POPULARES = [
   "colar banhado a ouro", "brinco argola", "pulseira feminina", "relógio masculino", "bolsa feminina", "mochila",
   "legging academia", "conjunto fitness feminino", "biquíni", "garrafa térmica", "copo térmico", "jogo de panelas",
   "aspirador robô", "cafeteira", "liquidificador", "lego", "funko pop", "livro romance",
+  /* Themed gifts (05/11): showcases answer from cache instead of a cold read. */
+  "star wars", "luminária led 3d star wars", "marvel", "luminária led 3d marvel", "harry potter", "kit skincare presente",
 ];
 
 export const Route = createFileRoute("/api/public/jobs/aquecer-buscas")({

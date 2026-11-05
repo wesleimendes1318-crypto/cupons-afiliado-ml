@@ -58,6 +58,16 @@ const MARCAS: Record<Area, RegExp | null> = {
   outro: null,
 };
 
+/* Themed searches (franchise/fandom) without a product type: showpiece items
+   (3D LED lamps, collectibles, wall art) go first, simple pre-school toys go
+   last. Owner, 05/11: the Star Wars 3D lamp "encantador". */
+const TEMA = /\b(star ?wars|marvel|vingadores|homem[- ]aranha|batman|dc comics|harry potter|pokemon|naruto|anime|disney|stitch|mandalorian|darth vader|baby yoda|grogu|senhor dos aneis|friends|stranger things)\b/;
+const TIPO_PEDIDO = /\b(caneca|chaveiro|camiseta|camisa|almofada|lego|funko|boneco|action figure|luminaria|abajur|quadro|livro|meia|bone|mochila|copo|pelucia|fantasia)\b/;
+const DESTAQUE = /\b(luminaria|abajur|led 3d|3d led|16 cores|colecionavel|edicao especial|replica|estatua|busto|quadro|funko|lego|hot toys|sabre de luz)\b/;
+const MIUDEZA = /\b(chaveiro|adesivo|botton|playskool|imaginext|pre ?escolar|bate e volta|giratorio)\b/;
+const pesoTema = (s: string, t: string) =>
+  !TEMA.test(s) || TIPO_PEDIDO.test(s) ? 0 : DESTAQUE.test(t) ? 2 : MIUDEZA.test(t) ? -1 : 0;
+
 /* Season, by São Paulo month (Nov–Feb summer, May–Aug winter). */
 function estacao(agora: Date): "verao" | "inverno" | null {
   const m = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", month: "numeric" }).format(agora));
@@ -87,6 +97,7 @@ export function curarResultados<T>(q: string, itens: T[], nome: (i: T) => string
   const marca = MARCAS[area];
   const est = estacao(agora);
   const temporada = est ? DA_ESTACAO[est] : null;
+  const sq = sem(q);
   const vistos = new Set<string>();
   const ficam: T[] = [];
   for (const i of itens) {
@@ -102,7 +113,8 @@ export function curarResultados<T>(q: string, itens: T[], nome: (i: T) => string
   return ficam
     .map((i, k) => {
       const t = sem(nome(i));
-      const peso = (marca?.test(t) ? 2 : 0) + (area !== "outro" && temporada?.test(t) ? 1 : 0);
+      const peso =
+        (marca?.test(t) ? 2 : 0) + (area !== "outro" && temporada?.test(t) ? 1 : 0) + pesoTema(sq, t);
       return { i, k, peso };
     })
     .sort((a, b) => b.peso - a.peso || a.k - b.k)

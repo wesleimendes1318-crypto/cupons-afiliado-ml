@@ -52,6 +52,25 @@ const CONTEXTOS = {
 } as const;
 
 const CACHE_MS = 6 * 3600_000;
+
+/* Memory cache per worker (05/11, response time): a repeated search answers
+   without touching the database. Small and short-lived; the DB stays the
+   source of truth for 6 h. */
+const MEMORIA = new Map<string, { em: number; r: RespostaBusca }>();
+const MEMORIA_MS = 30 * 60_000;
+function lerMemoria(c: string): RespostaBusca | null {
+  const m = MEMORIA.get(c);
+  if (!m) return null;
+  if (Date.now() - m.em > MEMORIA_MS) {
+    MEMORIA.delete(c);
+    return null;
+  }
+  return m.r;
+}
+function gravarMemoria(c: string, r: RespostaBusca) {
+  if (MEMORIA.size >= 300) MEMORIA.delete(MEMORIA.keys().next().value!);
+  MEMORIA.set(c, { em: Date.now(), r });
+}
 const FILA_POR_BUSCA = 2;
 const FILA_POR_HORA = 8;
 
@@ -88,6 +107,8 @@ export const Route = createFileRoute("/api/public/buscar")({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as any;
         const lerGuardada = async (c: string): Promise<RespostaBusca | null> => {
+          const mem = lerMemoria(c);
+          if (mem) return mem;
           const r: { data: { resposta: RespostaBusca } | null } = await db
             .from("busca_guiada")
             .select("resposta")
@@ -96,6 +117,7 @@ export const Route = createFileRoute("/api/public/buscar")({
             .order("criado_em", { ascending: false })
             .limit(1)
             .maybeSingle();
+          if (r.data?.resposta) gravarMemoria(c, r.data.resposta);
           return r.data?.resposta ?? null;
         };
         const guardada = await lerGuardada(chave);
@@ -245,6 +267,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         /* Busca sem resultado não fica guardada (pode ter sido falha). */
         if (achado.resultados.length || enfileirados)
           await db.from("busca_guiada").insert({ chave, contexto, resposta, enfileirados });
+        gravarMemoria(chave, resposta);
         return json(request, resposta);
       },
     },
