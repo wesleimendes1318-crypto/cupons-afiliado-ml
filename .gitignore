@@ -35,3 +35,6 @@ dist-ssr
 credenciais/
 scripts/automacao_shorts/saida/
 __pycache__/
+
+# Graphify: grafo do código, gerado a cada sessão (.claude/hooks/graphify-sessao.sh)
+graphify-out/
