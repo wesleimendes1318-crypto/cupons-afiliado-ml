@@ -15,6 +15,12 @@ SEMPRE devolver o link de afiliado do Weslei em todo botão, mensagem e post
 ("essa é a minha fonte de renda por ser afiliado"). Detalhes e ordem de
 garantia no topo do CLAUDE.md.
 
+## Code map
+
+Before changing code, read `docs/mapa-do-codigo.md`: what lives where, how
+the areas connect, and the most connected files (widest impact). The extension
+and the site share no code; they talk only through Supabase functions.
+
 ## Custo real das ofertas
 
 Toda conta de custo de oferta (tela, bot, garimpo) passa por `custoTotalDaOferta` em `src/lib/internacional.ts`: frete pago sem valor ou envio internacional sem tributos lidos = custo desconhecido. Assim um preço que não se entrega nunca vence.
