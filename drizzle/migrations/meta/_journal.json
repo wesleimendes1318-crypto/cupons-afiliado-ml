@@ -22,6 +22,20 @@
       "when": 1790118249082,
       "tag": "0002_salvar_link_loja",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793923001101,
+      "tag": "0003_listas_compartilhadas",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793923008508,
+      "tag": "0004_listas_compartilhadas_grants",
+      "breakpoints": true
     }
   ]
 }

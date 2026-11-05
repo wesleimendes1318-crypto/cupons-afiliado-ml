@@ -1,0 +1,1 @@
+grant all on public.listas_compartilhadas to service_role;

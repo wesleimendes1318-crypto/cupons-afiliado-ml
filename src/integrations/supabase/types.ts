@@ -1070,6 +1070,42 @@ export type Database = {
         }
         Relationships: []
       }
+      listas_compartilhadas: {
+        Row: {
+          chave_hash: string
+          created_at: string
+          id: string
+          itens: Json
+          ocasiao: string
+          status_presentes: Json
+          titulo: string
+          updated_at: string
+          usuario_id: string | null
+        }
+        Insert: {
+          chave_hash: string
+          created_at?: string
+          id: string
+          itens?: Json
+          ocasiao?: string
+          status_presentes?: Json
+          titulo?: string
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          chave_hash?: string
+          created_at?: string
+          id?: string
+          itens?: Json
+          ocasiao?: string
+          status_presentes?: Json
+          titulo?: string
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
       mercado_sinais: {
         Row: {
           categoria_id: string | null
@@ -2074,6 +2110,7 @@ export type Database = {
           id: number
         }[]
       }
+      lista_publica: { Args: { p_id: string }; Returns: Json }
       lojas_para_resolver: {
         Args: { p_limite?: number; p_token: string }
         Returns: {
