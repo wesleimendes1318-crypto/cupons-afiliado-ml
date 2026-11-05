@@ -13,6 +13,7 @@
       regras de sempre (mesmo produto, qualidade, desconto real, afiliado).
    O site não mostra link de compra aqui: o botão abre a comparação, que
    gera o link de afiliado. Textos públicos não citam IA. */
+import { curarResultados } from "@/lib/curadoria";
 import { ampliarDominios } from "@/lib/familias-dominio";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
@@ -651,7 +652,8 @@ export async function buscaGuiada(
   /* PELO MENOS 20 SEMPRE (Weslei, 02/11). */
   const juntar = (novos: ResultadoBusca[]) => {
     const vistos = new Set([...excluir, ...achados.map((r) => r.produto)]);
-    achados = [...achados, ...novos.filter((r) => !vistos.has(r.produto))].slice(0, MAXIMO_PAGINA);
+    /* Curador while collecting, so the page still fills to 20 after drops. */
+    achados = curarResultados(q, [...achados, ...novos.filter((r) => !vistos.has(r.produto))], (r) => r.nome).slice(0, MAXIMO_PAGINA);
   };
   const ler = (passo: Passo) =>
     buscarNoCatalogo(passo.buscas, {
@@ -725,9 +727,11 @@ export async function buscaGuiada(
     }
     if (achados.length < MINIMO_RESULTADOS) juntar(await estoque);
     /* Mais fundo nas mesmas buscas (24-84), de 20 em 20. */
-    for (const offset of [24, 44, 64]) {
-      if (achados.length >= MINIMO_RESULTADOS) break;
-      juntar(await ler({ buscas: intencao.buscas, offset }));
+    /* Speed (05/11): the deeper reads go in parallel, not one after another. */
+    if (achados.length < MINIMO_RESULTADOS) {
+      const fundo = await Promise.all([24, 44].map((offset) => ler({ buscas: intencao.buscas, offset }).catch(() => [])));
+      for (const r of fundo) juntar(r);
+      if (achados.length < MINIMO_RESULTADOS) juntar(await ler({ buscas: intencao.buscas, offset: 64 }));
     }
     /* As marcas que apareceram viram variantes ("geladeira frost free
        brastemp"): completam a 1ª página e alimentam o "Carregar mais". */
@@ -771,9 +775,11 @@ export async function buscaGuiada(
   }
   /* Busca universal (27/10): o mais fiel ao que foi digitado vem primeiro
      (modelo exato) e peça/acessório só se a busca é pela peça. */
+  /* Curador: filter, one card per model, best brands/season first; the intent
+     order below still decides first (ties keep this order). */
   const resultados = ordenarPorPrecoSeBarato(
     q,
-    ordenarPelaIntencao(q, achados, (r) => r.nome),
+    ordenarPelaIntencao(q, curarResultados(q, achados, (r) => r.nome), (r) => r.nome),
   );
   return { intencao, resultados, variantes, proximo };
 }

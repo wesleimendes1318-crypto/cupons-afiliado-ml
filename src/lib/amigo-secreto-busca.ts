@@ -36,24 +36,8 @@ export function cabeNaFaixa(
   return true;
 }
 
-const CORES =
-  /\b(preto|preta|pretos|branco|branca|rosa|azul|verde|vermelho|vermelha|bege|cinza|nude|marrom|caramelo|dourado|dourada|prata|off ?white|amarelo|amarela|lilas|roxo|roxa|vinho|laranja|marinho|creme|areia|chumbo|grafite|tamanho|tam|\d{2})\b/g;
-
-/** "sig:" key of a listing's model (title without colors/sizes, first 6 words):
-    "Tênis Feminino Vili Olimp Caminhada Academia Rosa" == "... Verde". */
-export function assinaturaDoModelo(nome: string | null | undefined): string | null {
-  if (!nome) return null;
-  const p = nome
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(CORES, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 6);
-  return p.length >= 3 ? `sig:${p.join(" ")}` : null;
-}
+export { assinaturaDoModelo } from "@/lib/curadoria";
+import { assinaturaDoModelo } from "@/lib/curadoria";
 
 /** Listing ids of a result (item and catalog product). */
 export const idsDoResultado = (r: Pick<Resultado, "item" | "produto">) =>

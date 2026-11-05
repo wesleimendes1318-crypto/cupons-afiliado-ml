@@ -93,3 +93,9 @@ fora; o relatório usa esses números.
 
 Problema novo que a auditoria não pega: o agente acrescenta a regra na função
 (migração aditiva) e anota aqui.
+
+## Curadoria em todas as buscas (05/11/2026)
+Weslei: "Crie agentes que façam essa curadoria maravilhosa em todas as buscas e resultados" e "A régua de qualidade e exigência é para o site completo".
+- **Curador** (tempo real, `src/lib/curadoria.ts`, aplicado em `buscaGuiada`): tira o que não pertence (brinquedo em beleza, lote em joia, calçado masculino em busca feminina), um card por modelo, melhores marcas e peças da estação primeiro. Vale para busca, categorias, vitrines e Amigo Secreto.
+- **Aquecedor** (agendado a cada 10 min, `/api/public/jobs/aquecer-buscas`): aquece uma busca popular por vez no cache de 6 h. Um pedido por vez.
+- **Revisor de vitrines** (rotina diária do Guardião): abre as buscas da lista do Aquecedor, anota cards fora da categoria e põe a palavra no Curador, com teste.

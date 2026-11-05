@@ -67,6 +67,7 @@ import { Route as ApiPublicRegiaoRouteImport } from './routes/api/public/regiao'
 import { Route as ApiPublicSaudeRouteImport } from './routes/api/public/saude'
 import { Route as ApiPublicTelegramSetupRouteImport } from './routes/api/public/telegram-setup'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
+import { Route as ApiPublicJobsAquecerBuscasRouteImport } from './routes/api/public/jobs/aquecer-buscas'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -367,6 +368,12 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsAquecerBuscasRoute =
+  ApiPublicJobsAquecerBuscasRouteImport.update({
+    id: '/api/public/jobs/aquecer-buscas',
+    path: '/api/public/jobs/aquecer-buscas',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -427,6 +434,7 @@ export interface FileRoutesByFullPath {
   '/api/public/saude': typeof ApiPublicSaudeRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/jobs/aquecer-buscas': typeof ApiPublicJobsAquecerBuscasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -487,6 +495,7 @@ export interface FileRoutesByTo {
   '/api/public/saude': typeof ApiPublicSaudeRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/jobs/aquecer-buscas': typeof ApiPublicJobsAquecerBuscasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -548,6 +557,7 @@ export interface FileRoutesById {
   '/api/public/saude': typeof ApiPublicSaudeRoute
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/jobs/aquecer-buscas': typeof ApiPublicJobsAquecerBuscasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -610,6 +620,7 @@ export interface FileRouteTypes {
     | '/api/public/saude'
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
+    | '/api/public/jobs/aquecer-buscas'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -670,6 +681,7 @@ export interface FileRouteTypes {
     | '/api/public/saude'
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
+    | '/api/public/jobs/aquecer-buscas'
   id:
     | '__root__'
     | '/'
@@ -730,6 +742,7 @@ export interface FileRouteTypes {
     | '/api/public/saude'
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
+    | '/api/public/jobs/aquecer-buscas'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -791,6 +804,7 @@ export interface RootRouteChildren {
   ApiPublicSaudeRoute: typeof ApiPublicSaudeRoute
   ApiPublicTelegramSetupRoute: typeof ApiPublicTelegramSetupRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
+  ApiPublicJobsAquecerBuscasRoute: typeof ApiPublicJobsAquecerBuscasRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1201,6 +1215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/aquecer-buscas': {
+      id: '/api/public/jobs/aquecer-buscas'
+      path: '/api/public/jobs/aquecer-buscas'
+      fullPath: '/api/public/jobs/aquecer-buscas'
+      preLoaderRoute: typeof ApiPublicJobsAquecerBuscasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1264,6 +1285,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSaudeRoute: ApiPublicSaudeRoute,
   ApiPublicTelegramSetupRoute: ApiPublicTelegramSetupRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
+  ApiPublicJobsAquecerBuscasRoute: ApiPublicJobsAquecerBuscasRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

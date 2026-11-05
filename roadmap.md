@@ -115,3 +115,5 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 - [x] Amigo Secreto: data da festa (entrega por CEP), ordenação, frete grátis e detalhes
 
 - [x] Amigo Secreto: melhores marcas primeiro (skincare, bijuterias, calçados)
+- [x] Curadoria única em toda busca (curador), mais rápido, aquecedor das buscas populares
+- [x] Amigo Secreto usa tudo o que o site já faz (mesma curadoria e cards)

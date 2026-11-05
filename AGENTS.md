@@ -41,3 +41,6 @@ Toda conta de custo de oferta (tela, bot, garimpo) passa por `custoTotalDaOferta
 
 ## Text search domains
 - Apparel, jewelry, shoes and bags widen the predicted catalog domain to its sibling family (`src/lib/familias-dominio.ts`), while the product type must still be in the title. Why: the official prediction returns one narrow domain and the catalog files the same pieces under siblings, which left those searches with 2-3 cards.
+
+## Curation
+- Every result list goes through `curarResultados` (`src/lib/curadoria.ts`) inside `buscaGuiada`, before the intent order; showcase-specific rules stay in `amigo-secreto-curadoria.ts`. Why: one quality bar for the whole site, word rules only (instant, free).
