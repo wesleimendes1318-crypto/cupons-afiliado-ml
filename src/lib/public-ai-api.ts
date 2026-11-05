@@ -31,14 +31,17 @@ export function json(request: Request, body: object, status = 200) {
   return Response.json(body, { status, headers: cabecalhosCors(origemPermitida(request)) });
 }
 
-export function excedeuLimite(request: Request) {
+/* grupo/limite (05/11, Amigo Secreto): a page that loads several showcases
+   gets its own counter instead of eating the 8/min of the other searches. */
+export function excedeuLimite(request: Request, limite = LIMITE_POR_MINUTO, grupo = "") {
   const identificador =
-    request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "desconhecido";
+    grupo +
+    (request.headers.get("cf-connecting-ip") ??
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "desconhecido");
   const agora = Date.now();
   const recentes = (requisicoes.get(identificador) ?? []).filter((momento) => agora - momento < JANELA_MS);
-  if (recentes.length >= LIMITE_POR_MINUTO) {
+  if (recentes.length >= limite) {
     requisicoes.set(identificador, recentes);
     return true;
   }

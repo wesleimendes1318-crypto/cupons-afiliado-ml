@@ -28,6 +28,7 @@ import { marcaDoTitulo, marcasDosResultados } from "@/lib/busca-resultados";
 export { foraDaIntencao };
 import { pareceFalso } from "@/lib/falsificado";
 import { voltagemDosAtributos, voltagemDoTexto, type Voltagem } from "@/lib/voltagem";
+import { envioDasTags } from "@/lib/internacional";
 
 export type ResultadoBusca = {
   produto: string;
@@ -46,6 +47,8 @@ export type ResultadoBusca = {
   maisVendido?: number | null;
   /** Voltagem da ficha oficial (atributo VOLTAGE) ou do título. */
   voltagem?: Voltagem | null;
+  /** Oferta internacional (tags cbt_* da lista oficial): tributos não lidos. */
+  internacional?: boolean;
 };
 
 /** Economia medida: mediana das outras ofertas novas menos o preço. */
@@ -298,6 +301,7 @@ async function comOferta(
         condition?: string;
         shipping?: { free_shipping?: boolean };
         official_store_id?: number | null;
+        tags?: string[];
       }>;
     }>(`/products/${id}/items?limit=5`);
     const novas = (o.results ?? []).filter((x) => x.condition === "new");
@@ -321,6 +325,7 @@ async function comOferta(
       lojaOficial: oferta?.official_store_id != null,
       economia: economiaEntreOfertas(preco, outras),
       voltagem: voltagemDosAtributos(p.attributes) ?? voltagemDoTexto(nome),
+      ...(envioDasTags(oferta?.tags).internacional ? { internacional: true } : {}),
     };
   } catch (e) {
     /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,

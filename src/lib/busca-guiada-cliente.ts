@@ -23,6 +23,8 @@ export type Resultado = {
   maisVendido?: number | null;
   /* Voltagem da ficha oficial (ou do título). */
   voltagem?: "127" | "220" | "bivolt" | null;
+  /* Oferta internacional (tributos não lidos): nunca entra na faixa do Amigo Secreto. */
+  internacional?: boolean;
 };
 
 export type Resposta = {

@@ -310,3 +310,9 @@ Scope: Showcases, campaigns, art, best sellers, most wanted, guided search/categ
   regressiva. Medição: data-origem campanha_<slug> e impressão uma vez por
   seção visível (registrar_evento 'impressao_campanha', só com
   consentimento; src/lib/medicao.ts). Painel: view campanha_metricas_painel.
+
+## Amigo Secreto (Weslei, 05/11/2026)
+- Page `/amigo-secreto`: each person's wish text becomes 2-6 themed showcases + "Ideias criativas e semelhantes" (`/api/public/amigo-secreto-interpretar`, model with 3 s limit, local reader `src/lib/amigo-secreto-parser-local.ts` as fallback). The model only writes titles and search terms, never products or prices.
+- Each showcase walks its terms round-robin through `/api/public/amigo-secreto-vitrine` (same `buscaGuiada` catalog search, one term per call, own rate counter 40/min) until 50 products, then "+20 opções". One seen-Set per person: no listing repeats across that person's showcases.
+- Budget is strict on real cost (`cabeNaFaixa` -> `custoTotalDaOferta`): only confirmed free shipping, international offers (tags cbt_*) excluded. Never pad the count; the counter shows the real number found.
+- Cards are `CartaoBusca` (rule no. 1 via VerNaLoja on click). Heart favorites per person, saved on the device (`melhorescolha_amigo_secreto_v2`) and, signed in, in table `amigo_secreto_conta` (RLS per user; migration 20261105190000).
