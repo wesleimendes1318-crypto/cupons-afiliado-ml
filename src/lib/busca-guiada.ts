@@ -653,7 +653,7 @@ export async function buscaGuiada(
   const juntar = (novos: ResultadoBusca[]) => {
     const vistos = new Set([...excluir, ...achados.map((r) => r.produto)]);
     /* Curador while collecting, so the page still fills to 20 after drops. */
-    achados = curarResultados(q, [...achados, ...novos.filter((r) => !vistos.has(r.produto))], (r) => r.nome).slice(0, MAXIMO_PAGINA);
+    achados = curarResultados(q, [...achados, ...novos.filter((r) => !vistos.has(r.produto))], (r) => r.nome, undefined, (r) => r.imagem).slice(0, MAXIMO_PAGINA);
   };
   const ler = (passo: Passo) =>
     buscarNoCatalogo(passo.buscas, {
@@ -779,7 +779,7 @@ export async function buscaGuiada(
      order below still decides first (ties keep this order). */
   const resultados = ordenarPorPrecoSeBarato(
     q,
-    ordenarPelaIntencao(q, curarResultados(q, achados, (r) => r.nome), (r) => r.nome),
+    ordenarPelaIntencao(q, curarResultados(q, achados, (r) => r.nome, undefined, (r) => r.imagem), (r) => r.nome),
   );
   return { intencao, resultados, variantes, proximo };
 }
