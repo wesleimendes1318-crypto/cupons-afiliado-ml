@@ -33,6 +33,7 @@ import {
 import { faixaDoTexto, importarListaWhatsapp, interpretarLocal } from "@/lib/amigo-secreto-parser-local";
 import {
   LOTE_EXTRA,
+  META_FUNDO,
   META_POR_VITRINE,
   type Amigo,
   type EstadoAmigoSecreto,
@@ -157,6 +158,7 @@ function PaginaAmigoSecreto() {
   const vistos = useRef(new Map<string, Set<string>>());
   const passos = useRef(new Map<string, PassoTermo[]>());
   const tentadas = useRef(new Set<string>());
+  const completadas = useRef(new Set<string>());
   const geracao = useRef(0);
   const estadoRef = useRef(estado);
   estadoRef.current = estado;
@@ -250,6 +252,14 @@ function PaginaAmigoSecreto() {
     const emCurso = ativo.vitrines.filter((v) => v.carregando).length;
     const fila = ativo.vitrines.filter((v) => !v.carregando && !tentadas.current.has(v.id) && !v.produtos.length);
     fila.slice(0, Math.max(0, 3 - emCurso)).forEach((v) => void carregar(ativo.id, v, META_POR_VITRINE));
+    /* Background fill: once nothing is loading, one showcase at a time grows to META_FUNDO. */
+    if (emCurso || fila.length) return;
+    const proxima = ativo.vitrines.find(
+      (v) => v.temMais && !v.erro && v.produtos.length < META_FUNDO && !completadas.current.has(v.id),
+    );
+    if (!proxima) return;
+    completadas.current.add(proxima.id);
+    void carregar(ativo.id, proxima, META_FUNDO - proxima.produtos.length);
   }, [ativo, carregar]);
 
   /* Budget changed: every showcase starts over inside the new range. */
@@ -258,6 +268,7 @@ function PaginaAmigoSecreto() {
     vistos.current.clear();
     passos.current.clear();
     tentadas.current.clear();
+    completadas.current.clear();
     setEstado((e) => ({
       ...e,
       orcamentoPadraoMin: min ?? 0,

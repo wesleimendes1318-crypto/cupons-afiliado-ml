@@ -78,3 +78,7 @@ export const ORCAMENTO_PADRAO = { min: 0, max: 0 } as const;
    for 24 calls); "+20 opções" continues on demand. */
 export const META_POR_VITRINE = 20;
 export const LOTE_EXTRA = 20;
+/** Weslei, 05/11 ("melhore a quantidade de anúncios"): after every showcase
+    shows its first 20, each one keeps filling in the background, one at a
+    time, up to this many real products inside the budget. */
+export const META_FUNDO = 60;

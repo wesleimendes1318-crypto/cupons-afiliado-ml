@@ -14,7 +14,7 @@ const entradaSchema = z.object({
   termo: z.string().trim().min(2).max(60),
   min: z.number().min(0).max(100_000).nullable().optional(),
   max: z.number().min(1).max(100_000).nullable().optional(),
-  pagina: z.number().int().min(0).max(12),
+  pagina: z.number().int().min(0).max(40),
   freteACalcular: z.boolean().optional(),
   cursor: z.number().int().min(0).max(400).optional(),
   variantes: z.array(z.string().trim().min(2).max(80)).max(8).optional(),
