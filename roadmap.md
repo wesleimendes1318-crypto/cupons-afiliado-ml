@@ -112,4 +112,4 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 - [x] Amigo Secreto: valor em aberto (sem faixa fixa 80-100)
 - [x] Ver mais da busca: não limitar e não mexer a tela
 - [x] Franquias: Homem-Aranha é Marvel, vitrine conjunta mantida; franquia não pedida barrada
-- [ ] Amigo Secreto: experiência completa de compra (aguardando escolha do Weslei)
+- [x] Amigo Secreto: data da festa (entrega por CEP), ordenação, frete grátis e detalhes

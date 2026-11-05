@@ -105,7 +105,7 @@ const VESTUARIO_INFANTIL =
 
 /* Books nobody wants as a party gift (unless the person asked for them). */
 const LIVRO_TECNICO =
-  /\b(imposto|impostos|tributari\w*|tributo|contabil\w*|fiscal|concurso|concursos|vade mecum|direito (penal|civil|tributario|administrativo|constitucional)|codigo (civil|penal|tributario)|apostila|legislacao|oab|enem|vestibular|didatico|gramatica|questoes comentadas|manual pratico|nr-?\d+|cpc|clt)\b/;
+  /\b(imposto|impostos|tributari\w*|tributo|contabil\w*|fiscal|concurso|concursos|vade mecum|direito (penal|civil|tributario|administrativo|constitucional)|codigo (civil|penal|tributario)|resistencia d[eo]s? materiais|volumetria|engenharia|calculo diferencial|fisica (basica|geral)|estatistica aplicada|apostila|legislacao|oab|enem|vestibular|didatico|gramatica|questoes comentadas|manual pratico|nr-?\d+|cpc|clt)\b/;
 const LIVRO_INFANTIL = /\b(livro infantil|infantil|colorir|para criancas|bebe|primeiras palavras|cartonado|livro de banho)\b/;
 
 /* Preschool brands that ruin a grown-up themed showcase. */

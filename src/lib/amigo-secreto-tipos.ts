@@ -60,6 +60,8 @@ export type EstadoAmigoSecreto = {
   amigoAtivoId: string | null;
   /** Also show products with shipping to calculate (off = free shipping only). */
   freteACalcular?: boolean;
+  /** Party date "YYYY-MM-DD" (delivery filter). */
+  dataFesta?: string | null;
 };
 
 /** What the interpretation (server or local) returns for one person. */

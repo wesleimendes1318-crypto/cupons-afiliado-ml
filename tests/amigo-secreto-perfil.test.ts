@@ -51,3 +51,8 @@ test("vitrine Star Wars e Marvel aceita as duas e barra franquia não pedida", (
   expect(aprovadoNaVitrine("Funko Pop Darth Vader Star Wars", c)).toBe(true);
   expect(aprovadoNaVitrine("Funko Pop Pikachu Pokemon", c)).toBe(false);
 });
+
+test("livro técnico de engenharia sai da vitrine de livros", () => {
+  const c = contextoDaVitrine({ titulo: "Livros e leituras em alta", termosBusca: ["livro romance"] }, "livros");
+  expect(aprovadoNaVitrine("Livro Físico - Resistência De Materiais E Volumetria", c)).toBe(false);
+});

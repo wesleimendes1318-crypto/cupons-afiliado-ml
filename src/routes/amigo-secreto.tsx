@@ -398,6 +398,16 @@ function PaginaAmigoSecreto() {
             />
             Incluir produtos com frete a calcular
           </label>
+          <label className="ml-0 mt-1 flex min-h-11 flex-wrap items-center gap-2 text-sm font-semibold sm:ml-4 sm:inline-flex">
+            Data da festa
+            <input
+              type="date"
+              value={estado.dataFesta ?? ""}
+              onChange={(e) => setEstado((x) => ({ ...x, dataFesta: e.target.value || null }))}
+              className="h-11 rounded-xl border border-border bg-card px-3 text-base text-foreground"
+            />
+            <span className="text-xs font-normal text-secondary-ink">mostra só o que chega a tempo</span>
+          </label>
           {pronto &&
             (usuario ? (
               <p className="mt-2 text-xs text-secondary-ink">
@@ -524,6 +534,7 @@ function PaginaAmigoSecreto() {
               favoritos={favoritosAtivo}
               aoFavoritar={favoritar}
               ampliar={ampliar}
+              dataFesta={estado.dataFesta ?? null}
             />
           ))}
 
