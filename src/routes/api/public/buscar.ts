@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
         /* "v3" (28/10): respostas guardadas antes do filtro de marca/modelo não voltam. */
-        const chave1 = `v14|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        const chave1 = `v15|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina
           ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
           : chave1;

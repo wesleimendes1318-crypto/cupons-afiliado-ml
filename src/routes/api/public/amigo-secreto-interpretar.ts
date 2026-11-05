@@ -11,7 +11,7 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
 
 const entradaSchema = z.object({ texto: z.string().trim().min(2).max(600) });
 
-const PRAZO_MS = 3_000;
+const PRAZO_MS = 5_000;
 
 const PROMPT = `Voce e curador de presentes de amigo secreto no Brasil (produtos do Mercado Livre).
 Leia a lista de desejos de UMA pessoa, entenda o perfil completo (idade provavel, estilo, gostos,
@@ -43,10 +43,13 @@ async function comModelo(texto: string): Promise<Interpretacao | null> {
   const prompt = `${PROMPT}: ${JSON.stringify(texto)}`;
   try {
     const { perguntarAoLlm } = await import("@/lib/cheaper-inference");
-    const r = await perguntarAoLlm(prompt, PRAZO_MS);
-    if (!r.ok) return null;
     const { lerJson } = await import("@/lib/conferir-produto");
-    return interpretacaoDoModelo(lerJson<unknown>(r.texto));
+    const r = await perguntarAoLlm(prompt, PRAZO_MS);
+    const a = r.ok ? interpretacaoDoModelo(lerJson<unknown>(r.texto)) : null;
+    if (a) return a;
+    const { chamarIa } = await import("@/lib/public-ai-api");
+    const g = await chamarIa(prompt, { esforco: "low", escopo: "Voce e curador de presentes do site Melhor Escolha, em portugues do Brasil. Responda so com o JSON pedido. Nunca invente produto ou preco." });
+    return g.ok ? interpretacaoDoModelo(lerJson<unknown>(g.texto)) : null;
   } catch {
     return null;
   }

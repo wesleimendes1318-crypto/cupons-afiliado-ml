@@ -186,6 +186,9 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
     return false;
   if (c.tipo === "roupa" && !/\b(short|shorts|top|tops|legging|calca|camiseta|regata|blusa|conjunto|bermuda|macaquinho|macacao|jaqueta|moletom|vestido|saia|cropped|body|pijama|meia|meias|sutia|biquini|maio|bone|viseira|bolsa|garrafa|toalha|squeeze)\b/.test(t))
     return false;
+  /* Gym showcase: the piece has to be gym wear (05/11: a dress and a watch showed up). */
+  if (c.tipo === "roupa" && c.academia && !/\b(fitness|academia|treino|dry ?fit|esportiv[oa]|legging|tops?|shorts?|cropped|ciclista|corrida|yoga|compressao|bermuda|regata|macaquinho|garrafa|squeeze|toalha|bolsa)\b/.test(t))
+    return false;
   if (c.tipo === "livros") {
     if (LIVRO_TECNICO.test(t)) return false;
     if (c.adulto && LIVRO_INFANTIL.test(t)) return false;

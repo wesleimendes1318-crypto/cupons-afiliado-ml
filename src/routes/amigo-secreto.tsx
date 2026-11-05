@@ -9,7 +9,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AbasAmigos } from "@/components/AmigoSecreto/AbasAmigos";
 import { CabecalhoAmigoSecreto, rotuloFaixa } from "@/components/AmigoSecreto/CabecalhoAmigoSecreto";
+import { CompartilharSigilo } from "@/components/AmigoSecreto/CompartilharSigilo";
 import { ImportarLista } from "@/components/AmigoSecreto/ImportarLista";
+import { QuestionarioPerfil } from "@/components/AmigoSecreto/QuestionarioPerfil";
+import { aplicarPerfil, termosDosFavoritos, textoParaLeitura, type PerfilAmigo } from "@/lib/amigo-secreto-perfil";
 import { PainelDesejosAmigo } from "@/components/AmigoSecreto/PainelDesejosAmigo";
 import { VitrineCategoria } from "@/components/AmigoSecreto/VitrineCategoria";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
@@ -47,11 +50,11 @@ const DESCRICAO =
 const FAQ = [
   {
     p: "Como escolher presente de amigo secreto de R$ 80 a R$ 100?",
-    r: "Escreva o que a pessoa gosta (roupa, livros, decoração, acessórios) e escolha a faixa R$ 80 a R$ 100. Cada interesse vira uma vitrine só com produtos que, somando o frete, ficam dentro desse valor.",
+    r: "Escreva o que a pessoa gosta (roupa, livros, decoração, acessórios) e escolha a faixa (ou deixe em qualquer valor). Cada interesse vira uma vitrine só com produtos que, somando o frete, ficam dentro desse valor.",
   },
   {
     p: "O frete entra no valor do presente?",
-    r: "Sim. Aparecem só produtos com frete grátis confirmado, então o preço do cartão é o que você paga. Produtos com frete a calcular ou envio internacional ficam de fora.",
+    r: "Por padrão, sim: aparecem só produtos com frete grátis confirmado, então o preço do cartão é o que você paga. Se quiser mais opções, marque “Incluir produtos com frete a calcular”; aí o frete aparece na página da loja. Envio internacional fica de fora.",
   },
   {
     p: "Posso colar a lista do sorteio do WhatsApp?",
@@ -189,7 +192,11 @@ function PaginaAmigoSecreto() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guardadoJson, pronto, usuario]);
 
-  const faixa = { min: estado.orcamentoPadraoMin || null, max: estado.orcamentoPadraoMax };
+  const faixa = {
+    min: estado.orcamentoPadraoMin || null,
+    max: estado.orcamentoPadraoMax || null,
+    freteACalcular: estado.freteACalcular === true,
+  };
   const textoFaixa = rotuloFaixa(faixa.min, faixa.max);
   const ativo = estado.amigos.find((a) => a.id === estado.amigoAtivoId) ?? estado.amigos[0] ?? null;
 
@@ -211,8 +218,8 @@ function PaginaAmigoSecreto() {
       const seen = vistos.current.get(amigoId) ?? new Set<string>();
       vistos.current.set(amigoId, seen);
       mudarVitrine(amigoId, v.id, (x) => ({ ...x, carregando: true, erro: null }));
-      const texto = estadoRef.current.amigos.find((a) => a.id === amigoId)?.desejosTexto ?? "";
-      const ctx = contextoDaVitrine(v, texto);
+      const amigo = estadoRef.current.amigos.find((a) => a.id === amigoId);
+      const ctx = aplicarPerfil(contextoDaVitrine(v, textoParaLeitura(amigo?.desejosTexto ?? "", amigo?.perfil)), amigo?.perfil);
       const r = await carregarAte({
         passos: passos.current.get(v.id) ?? passosIniciais(ampliarTermos(v.termosBusca, ctx)),
         faixa,
@@ -234,7 +241,7 @@ function PaginaAmigoSecreto() {
       }));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [faixa.min, faixa.max, mudarVitrine],
+    [faixa.min, faixa.max, faixa.freteACalcular, mudarVitrine],
   );
 
   /* The active person's showcases load in order, two at a time. */
@@ -242,11 +249,11 @@ function PaginaAmigoSecreto() {
     if (!ativo) return;
     const emCurso = ativo.vitrines.filter((v) => v.carregando).length;
     const fila = ativo.vitrines.filter((v) => !v.carregando && !tentadas.current.has(v.id) && !v.produtos.length);
-    fila.slice(0, Math.max(0, 2 - emCurso)).forEach((v) => void carregar(ativo.id, v, META_POR_VITRINE));
+    fila.slice(0, Math.max(0, 3 - emCurso)).forEach((v) => void carregar(ativo.id, v, META_POR_VITRINE));
   }, [ativo, carregar]);
 
   /* Budget changed: every showcase starts over inside the new range. */
-  const mudarFaixa = (min: number | null, max: number) => {
+  const mudarFaixa = (min: number | null, max: number | null, freteACalcular = estado.freteACalcular === true) => {
     geracao.current += 1;
     vistos.current.clear();
     passos.current.clear();
@@ -254,7 +261,8 @@ function PaginaAmigoSecreto() {
     setEstado((e) => ({
       ...e,
       orcamentoPadraoMin: min ?? 0,
-      orcamentoPadraoMax: max,
+      orcamentoPadraoMax: max ?? 0,
+      freteACalcular,
       amigos: e.amigos.map((a) => ({
         ...a,
         vitrines: a.vitrines.map((v) => ({ ...novaVitrine({ titulo: v.titulo, icone: v.icone, termos: v.termosBusca }), id: v.id })),
@@ -262,9 +270,10 @@ function PaginaAmigoSecreto() {
     }));
   };
 
-  const processar = async (amigoId: string, texto: string) => {
+  const processar = async (amigoId: string, texto: string, perfil?: PerfilAmigo) => {
     setProcessando((s) => new Set(s).add(amigoId));
-    const lida = await interpretar(texto);
+    const p = perfil ?? estadoRef.current.amigos.find((a) => a.id === amigoId)?.perfil;
+    const lida = await interpretar(textoParaLeitura(texto, p));
     setProcessando((s) => {
       const n = new Set(s);
       n.delete(amigoId);
@@ -320,6 +329,44 @@ function PaginaAmigoSecreto() {
     }));
   };
 
+  /* Weslei, 05/11: favorites -> "Combina com os favoritos" showcase (the
+     model only writes searches; products come from the catalog). */
+  const [sugerindo, setSugerindo] = useState(false);
+  const sugerirPelosFavoritos = async () => {
+    if (!ativo?.favoritos?.length) return;
+    const alvo = ativo;
+    const titulos = alvo.favoritos!.slice(0, 10).map((f) => f.nome);
+    setSugerindo(true);
+    let termos: string[] = [];
+    try {
+      const r = await fetch("/api/public/amigo-secreto-sugerir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto: textoParaLeitura(alvo.desejosTexto, alvo.perfil), favoritos: titulos }),
+        signal: AbortSignal.timeout(9_000),
+      });
+      const j = (await r.json()) as { termos?: string[] };
+      termos = (j.termos ?? []).filter((t) => typeof t === "string");
+    } catch {
+      /* local below */
+    }
+    if (termos.length < 2) termos = termosDosFavoritos(titulos);
+    setSugerindo(false);
+    if (!termos.length) return;
+    const nova = novaVitrine({ titulo: "Combina com os favoritos", icone: "✨", termos: termos.slice(0, 6) });
+    mudarAmigo(alvo.id, (a) => ({
+      ...a,
+      vitrines: [nova, ...a.vitrines.filter((v) => v.titulo !== "Combina com os favoritos")].slice(0, 8),
+    }));
+  };
+  const proximoMax = faixa.max ? Math.ceil((faixa.max * 1.2) / 10) * 10 : null;
+  const ampliar = {
+    freteACalcular: faixa.freteACalcular,
+    proximoMax,
+    aoAceitarFrete: () => mudarFaixa(faixa.min, faixa.max, true),
+    aoSubirValor: () => mudarFaixa(faixa.min, proximoMax),
+  };
+
   return (
     <div className="fundo-conteudo min-h-screen overflow-x-clip">
       <CabecalhoAmigoSecreto
@@ -339,9 +386,18 @@ function PaginaAmigoSecreto() {
             <span className="block text-[#0071e3]">no valor combinado.</span>
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-secondary-ink">
-            Escreva o que cada um gosta e veja vitrines personalizadas {textoFaixa}, só com frete grátis: o preço do
-            cartão já é o que você paga.
+            Escreva o que cada um gosta e veja vitrines personalizadas {textoFaixa}
+            {faixa.freteACalcular ? ", com frete grátis ou a calcular." : ", só com frete grátis: o preço do cartão já é o que você paga."}
           </p>
+          <label className="mt-2 inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              className="size-5 accent-[#0071e3]"
+              checked={faixa.freteACalcular}
+              onChange={(e) => mudarFaixa(faixa.min, faixa.max, e.target.checked)}
+            />
+            Incluir produtos com frete a calcular
+          </label>
           {pronto &&
             (usuario ? (
               <p className="mt-2 text-xs text-secondary-ink">
@@ -411,6 +467,18 @@ function PaginaAmigoSecreto() {
           />
         )}
 
+        {ativo && (
+          <QuestionarioPerfil
+            key={`p-${ativo.id}`}
+            nome={ativo.nome}
+            perfil={ativo.perfil}
+            aoAplicar={(perfil) => {
+              mudarAmigo(ativo.id, (a) => ({ ...a, perfil }));
+              if (ativo.desejosTexto) void processar(ativo.id, ativo.desejosTexto, perfil);
+            }}
+          />
+        )}
+
         {ativo && processando.has(ativo.id) && (
           <p className="animate-conteudo text-sm font-semibold text-secondary-ink" aria-live="polite">
             Separando os pedidos de {ativo.nome} em vitrines…
@@ -432,6 +500,19 @@ function PaginaAmigoSecreto() {
             contadorFixo={`${ativo.favoritos!.length} ${ativo.favoritos!.length === 1 ? "produto salvo" : "produtos salvos"} · preço de quando você favoritou`}
           />
         )}
+        {ativo && (ativo.favoritos?.length ?? 0) > 0 && (
+          <div className="-mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={sugerindo}
+              onClick={() => void sugerirPelosFavoritos()}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#0071e3] px-4 text-[13px] font-semibold text-white disabled:opacity-60"
+            >
+              ✨ {sugerindo ? "Procurando ideias parecidas…" : "Mais ideias parecidas com os favoritos"}
+            </button>
+            <CompartilharSigilo favoritos={ativo.favoritos!} faixa={textoFaixa} />
+          </div>
+        )}
 
         {ativo &&
           ativo.vitrines.map((v) => (
@@ -442,6 +523,7 @@ function PaginaAmigoSecreto() {
               aoCarregarMais={() => void carregar(ativo.id, v, LOTE_EXTRA)}
               favoritos={favoritosAtivo}
               aoFavoritar={favoritar}
+              ampliar={ampliar}
             />
           ))}
 

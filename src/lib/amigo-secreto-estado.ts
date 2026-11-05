@@ -1,3 +1,4 @@
+import { lerPerfil } from "@/lib/amigo-secreto-perfil";
 /* AMIGO SECRETO: saving the list (05/11). Instant save on this device
    (localStorage, melhorescolha_amigo_secreto_v2) and, signed in, in the
    account (table amigo_secreto_conta, RLS per user). Only what the person
@@ -48,6 +49,7 @@ export function paraGuardar(e: EstadoAmigoSecreto) {
     orcamentoPadraoMin: e.orcamentoPadraoMin,
     orcamentoPadraoMax: e.orcamentoPadraoMax,
     amigoAtivoId: e.amigoAtivoId,
+    freteACalcular: e.freteACalcular === true,
     amigos: e.amigos.slice(0, 40).map((a) => ({
       id: a.id,
       nome: a.nome,
@@ -59,6 +61,7 @@ export function paraGuardar(e: EstadoAmigoSecreto) {
       produtoEscolhidoId: a.produtoEscolhidoId ?? null,
       vitrines: a.vitrines.map((v) => ({ id: v.id, titulo: v.titulo, icone: v.icone, termos: v.termosBusca })),
       favoritos: (a.favoritos ?? []).slice(0, MAX_FAVORITOS),
+      perfil: a.perfil ?? {},
     })),
   };
 }
@@ -85,6 +88,7 @@ export function lerGuardado(bruto: unknown): EstadoAmigoSecreto {
         },
         comprado: x["comprado"] === true,
         favoritos: lerFavoritos(x["favoritos"]),
+        perfil: lerPerfil(x["perfil"]),
         produtoEscolhidoId: str(x["produtoEscolhidoId"], 20) || null,
         vitrines: (Array.isArray(x["vitrines"]) ? x["vitrines"] : []).slice(0, 8).flatMap((v: Record<string, unknown>) => {
           const termos = (Array.isArray(v?.["termos"]) ? v["termos"] : [])
@@ -103,9 +107,10 @@ export function lerGuardado(bruto: unknown): EstadoAmigoSecreto {
   const ativo = str(o["amigoAtivoId"], 20);
   return {
     orcamentoPadraoMin: min ?? base.orcamentoPadraoMin,
-    orcamentoPadraoMax: max != null && max > 0 ? max : base.orcamentoPadraoMax,
+    orcamentoPadraoMax: max ?? base.orcamentoPadraoMax,
     amigos,
     amigoAtivoId: amigos.some((a) => a.id === ativo) ? ativo : (amigos[0]?.id ?? null),
+    freteACalcular: o["freteACalcular"] === true,
   };
 }
 

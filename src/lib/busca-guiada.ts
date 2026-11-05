@@ -13,6 +13,7 @@
       regras de sempre (mesmo produto, qualidade, desconto real, afiliado).
    O site não mostra link de compra aqui: o botão abre a comparação, que
    gera o link de afiliado. Textos públicos não citam IA. */
+import { ampliarDominios } from "@/lib/familias-dominio";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
 import {
@@ -617,7 +618,7 @@ export async function buscaGuiada(
     ? intencao.buscas.map(() => new Set(regra.dominios))
     : await Promise.all(
         intencao.buscas.map(async (b) => {
-          const s = await dominiosPrevistos(b);
+          const s = ampliarDominios(await dominiosPrevistos(b));
           return s ? new Set([...s, ...doModelo]) : null;
         }),
       );

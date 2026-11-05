@@ -14,7 +14,14 @@ export function cabeNaFaixa(
   r: Pick<Resultado, "preco" | "freteGratis"> & { internacional?: boolean },
   min: number | null | undefined,
   max: number | null | undefined,
+  /** Weslei, 05/11: optional "frete a calcular" (price checked, shipping shown on the card). */
+  freteACalcular = false,
 ): boolean {
+  if (freteACalcular && r.freteGratis !== true && r.internacional !== true && r.preco != null && Number.isFinite(r.preco)) {
+    if (min != null && r.preco < min) return false;
+    if (max != null && r.preco > max) return false;
+    return r.preco > 0;
+  }
   const custo = custoTotalDaOferta({
     final: r.preco,
     /* Catalog cards have no shipping value: only confirmed free shipping. */
@@ -62,7 +69,7 @@ type RespostaVitrine = {
 
 export async function lerPaginaDoTermo(
   passo: PassoTermo,
-  faixa: { min: number | null; max: number | null },
+  faixa: { min: number | null; max: number | null; freteACalcular?: boolean },
   vistos: string[],
 ): Promise<{ resposta: RespostaVitrine | null; erro: string | null; status: number }> {
   try {
@@ -73,6 +80,7 @@ export async function lerPaginaDoTermo(
         termo: passo.termo,
         min: faixa.min,
         max: faixa.max,
+        ...(faixa.freteACalcular ? { freteACalcular: true } : {}),
         pagina: passo.pagina,
         ...(passo.cursor != null ? { cursor: passo.cursor } : {}),
         ...(passo.variantes.length ? { variantes: passo.variantes } : {}),
@@ -90,7 +98,7 @@ export async function lerPaginaDoTermo(
 /** Reads until `alvo` NEW products came in (or every term ran out). */
 export async function carregarAte(opcoes: {
   passos: PassoTermo[];
-  faixa: { min: number | null; max: number | null };
+  faixa: { min: number | null; max: number | null; freteACalcular?: boolean };
   vistos: Set<string>;
   alvo: number;
   /** Partial results as they arrive (the showcase fills while it loads). */
@@ -121,7 +129,7 @@ export async function carregarAte(opcoes: {
     /* Marked one by one: the same listing twice in one page counts once. */
     const lote = (r.resposta.resultados ?? []).filter((x) => {
       const ids = idsDoResultado(x);
-      if (!cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max) || !ids.length || ids.some((id) => opcoes.vistos.has(id)))
+      if (!cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max, opcoes.faixa.freteACalcular === true) || !ids.length || ids.some((id) => opcoes.vistos.has(id)))
         return false;
       if (opcoes.aprovar && !opcoes.aprovar(x)) return false;
       ids.forEach((id) => opcoes.vistos.add(id));

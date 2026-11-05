@@ -15,6 +15,7 @@ const entradaSchema = z.object({
   min: z.number().min(0).max(100_000).nullable().optional(),
   max: z.number().min(1).max(100_000).nullable().optional(),
   pagina: z.number().int().min(0).max(12),
+  freteACalcular: z.boolean().optional(),
   cursor: z.number().int().min(0).max(400).optional(),
   variantes: z.array(z.string().trim().min(2).max(80)).max(8).optional(),
   vistos: z.array(z.string().regex(/^MLB\d{4,14}$/)).max(400).optional(),
@@ -43,8 +44,8 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
         if (excedeuLimite(request, 90, "amigo-v:"))
           return json(request, { erro: "Muitas buscas seguidas. Aguarde um minuto." }, 429);
 
-        const faixa = `${e.min ?? ""}-${e.max ?? ""}`;
-        const chave1 = `amigo1|${faixa}|${normalizarBusca(e.termo)}`;
+        const faixa = `${e.min ?? ""}-${e.max ?? ""}${e.freteACalcular ? "|f" : ""}`;
+        const chave1 = `amigo2|${faixa}|${normalizarBusca(e.termo)}`;
         const chave = e.pagina
           ? `${chave1}|p${e.pagina}|c${e.cursor ?? ""}|n${(e.vistos ?? []).length}`
           : chave1;
@@ -87,7 +88,7 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
         }
         const resposta: Guardada = {
-          resultados: achado.resultados.filter((r) => cabeNaFaixa(r, e.min, e.max)),
+          resultados: achado.resultados.filter((r) => cabeNaFaixa(r, e.min, e.max, e.freteACalcular === true)),
           proximo: achado.proximo ?? null,
           variantes: achado.variantes ?? [],
         };

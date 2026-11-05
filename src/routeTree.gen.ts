@@ -38,6 +38,7 @@ import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
 import { Route as ApiPublicAmigoSecretoInterpretarRouteImport } from './routes/api/public/amigo-secreto-interpretar'
+import { Route as ApiPublicAmigoSecretoSugerirRouteImport } from './routes/api/public/amigo-secreto-sugerir'
 import { Route as ApiPublicAmigoSecretoVitrineRouteImport } from './routes/api/public/amigo-secreto-vitrine'
 import { Route as ApiPublicAssistenteBuscaRouteImport } from './routes/api/public/assistente-busca'
 import { Route as ApiPublicBuscarRouteImport } from './routes/api/public/buscar'
@@ -212,6 +213,12 @@ const ApiPublicAmigoSecretoInterpretarRoute =
   ApiPublicAmigoSecretoInterpretarRouteImport.update({
     id: '/api/public/amigo-secreto-interpretar',
     path: '/api/public/amigo-secreto-interpretar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAmigoSecretoSugerirRoute =
+  ApiPublicAmigoSecretoSugerirRouteImport.update({
+    id: '/api/public/amigo-secreto-sugerir',
+    path: '/api/public/amigo-secreto-sugerir',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicAmigoSecretoVitrineRoute =
@@ -391,6 +398,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
+  '/api/public/amigo-secreto-sugerir': typeof ApiPublicAmigoSecretoSugerirRoute
   '/api/public/amigo-secreto-vitrine': typeof ApiPublicAmigoSecretoVitrineRoute
   '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
@@ -450,6 +458,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
+  '/api/public/amigo-secreto-sugerir': typeof ApiPublicAmigoSecretoSugerirRoute
   '/api/public/amigo-secreto-vitrine': typeof ApiPublicAmigoSecretoVitrineRoute
   '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
@@ -510,6 +519,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
+  '/api/public/amigo-secreto-sugerir': typeof ApiPublicAmigoSecretoSugerirRoute
   '/api/public/amigo-secreto-vitrine': typeof ApiPublicAmigoSecretoVitrineRoute
   '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
@@ -571,6 +581,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/amigo-secreto-interpretar'
+    | '/api/public/amigo-secreto-sugerir'
     | '/api/public/amigo-secreto-vitrine'
     | '/api/public/assistente-busca'
     | '/api/public/buscar'
@@ -630,6 +641,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/amigo-secreto-interpretar'
+    | '/api/public/amigo-secreto-sugerir'
     | '/api/public/amigo-secreto-vitrine'
     | '/api/public/assistente-busca'
     | '/api/public/buscar'
@@ -689,6 +701,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/amigo-secreto-interpretar'
+    | '/api/public/amigo-secreto-sugerir'
     | '/api/public/amigo-secreto-vitrine'
     | '/api/public/assistente-busca'
     | '/api/public/buscar'
@@ -749,6 +762,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicAjudarEscolherRoute: typeof ApiPublicAjudarEscolherRoute
   ApiPublicAmigoSecretoInterpretarRoute: typeof ApiPublicAmigoSecretoInterpretarRoute
+  ApiPublicAmigoSecretoSugerirRoute: typeof ApiPublicAmigoSecretoSugerirRoute
   ApiPublicAmigoSecretoVitrineRoute: typeof ApiPublicAmigoSecretoVitrineRoute
   ApiPublicAssistenteBuscaRoute: typeof ApiPublicAssistenteBuscaRoute
   ApiPublicBuscarRoute: typeof ApiPublicBuscarRoute
@@ -984,6 +998,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAmigoSecretoInterpretarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/amigo-secreto-sugerir': {
+      id: '/api/public/amigo-secreto-sugerir'
+      path: '/api/public/amigo-secreto-sugerir'
+      fullPath: '/api/public/amigo-secreto-sugerir'
+      preLoaderRoute: typeof ApiPublicAmigoSecretoSugerirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/amigo-secreto-vitrine': {
       id: '/api/public/amigo-secreto-vitrine'
       path: '/api/public/amigo-secreto-vitrine'
@@ -1214,6 +1235,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicAjudarEscolherRoute: ApiPublicAjudarEscolherRoute,
   ApiPublicAmigoSecretoInterpretarRoute: ApiPublicAmigoSecretoInterpretarRoute,
+  ApiPublicAmigoSecretoSugerirRoute: ApiPublicAmigoSecretoSugerirRoute,
   ApiPublicAmigoSecretoVitrineRoute: ApiPublicAmigoSecretoVitrineRoute,
   ApiPublicAssistenteBuscaRoute: ApiPublicAssistenteBuscaRoute,
   ApiPublicBuscarRoute: ApiPublicBuscarRoute,

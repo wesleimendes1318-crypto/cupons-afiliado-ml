@@ -1,6 +1,7 @@
 /* AMIGO SECRETO (Weslei, 05/11): types shared by the page, the parser and the
    two public endpoints. Products are never stored here for the account: only
    what the person typed and the showcase definitions (terms), re-read on open. */
+import type { PerfilAmigo } from "@/lib/amigo-secreto-perfil";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 
 export type VitrineCategoriaAmigo = {
@@ -43,6 +44,8 @@ export type Amigo = {
   produtoEscolhidoId?: string | null;
   /** Hearted products (05/11, saved on the device even without login). */
   favoritos?: Favorito[];
+  /** Optional questionnaire (05/11). */
+  perfil?: PerfilAmigo;
 };
 
 /** Snapshot of a hearted card; the price is labeled with the time it was read. */
@@ -55,6 +58,8 @@ export type EstadoAmigoSecreto = {
   orcamentoPadraoMax: number;
   amigos: Amigo[];
   amigoAtivoId: string | null;
+  /** Also show products with shipping to calculate (off = free shipping only). */
+  freteACalcular?: boolean;
 };
 
 /** What the interpretation (server or local) returns for one person. */
@@ -64,7 +69,8 @@ export type Interpretacao = {
 };
 
 export const CHAVE_LOCAL = "melhorescolha_amigo_secreto_v2";
-export const ORCAMENTO_PADRAO = { min: 80, max: 100 } as const;
+/** Weslei, 05/11: the budget starts open (0 = any value). */
+export const ORCAMENTO_PADRAO = { min: 0, max: 0 } as const;
 /** First load of each showcase; "+20 opções" after it. */
 export const META_POR_VITRINE = 50;
 export const LOTE_EXTRA = 20;

@@ -18,7 +18,10 @@ export function VitrineCategoria({
   favoritos,
   aoFavoritar,
   contadorFixo,
+  ampliar,
 }: {
+  /** Thin showcase: offer shipping-to-calculate or a slightly higher budget. */
+  ampliar?: { freteACalcular: boolean; proximoMax: number | null; aoAceitarFrete: () => void; aoSubirValor: () => void };
   vitrine: VitrineCategoriaAmigo;
   /** "entre R$ 80 e R$ 100" */
   faixa: string;
@@ -40,7 +43,7 @@ export function VitrineCategoria({
         ? `${n} ${n === 1 ? "opção encontrada" : "opções encontradas"} ${faixa}`
         : vitrine.erro
           ? vitrine.erro
-          : `Nenhuma opção com frete grátis ${faixa} agora.`);
+          : `Nenhuma opção ${ampliar?.freteACalcular ? "" : "com frete grátis "}${faixa} agora.`);
   return (
     <section aria-label={vitrine.titulo} className="animate-cartao min-w-0">
       <header className="flex items-end justify-between gap-3">
@@ -101,6 +104,19 @@ export function VitrineCategoria({
       ) : vitrine.temMais ? (
         <BotaoCarregarMaisVitrine carregando={false} aoCarregar={aoCarregarMais} className="mt-3" />
       ) : null}
+      {ampliar && !vitrine.carregando && n < 12 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-2xl bg-[#f5f5f7] p-3 text-xs dark:bg-white/5">
+          <span className="text-secondary-ink">Poucas opções {ampliar.freteACalcular ? "nessa faixa" : "com frete grátis"}. Quer ver mais?</span>
+          {!ampliar.freteACalcular && (
+            <button type="button" onClick={ampliar.aoAceitarFrete} className="min-h-11 rounded-full bg-card px-3 font-semibold ring-1 ring-border">
+              Incluir frete a calcular
+            </button>
+          )}
+          {ampliar.proximoMax != null && <button type="button" onClick={ampliar.aoSubirValor} className="min-h-11 rounded-full bg-card px-3 font-semibold ring-1 ring-border">
+            Ver até R$ {ampliar.proximoMax}
+          </button>}
+        </div>
+      )}
     </section>
   );
 }

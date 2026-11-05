@@ -104,3 +104,9 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 
 - [x] Perfil da conta salvo e atualizado sozinho (buscas, gosto, preferências) entre aparelhos
 - [x] Botão de entrar mais visível em celular, tablet e computador
+
+## Amigo Secreto e buscas (05/11)
+- [x] Amigo Secreto: frete a calcular / subir valor, ideias da época, questionário, WhatsApp sigiloso, sugestões pelos favoritos
+- [x] Melhorar precisão das buscas em todas as categorias do site
+- [x] Brinquedos ficam quando batem com a marca/franquia pedida
+- [x] Amigo Secreto: valor em aberto (sem faixa fixa 80-100)

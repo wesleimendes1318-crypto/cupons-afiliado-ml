@@ -4,13 +4,14 @@ import { ClipboardPaste } from "lucide-react";
 import { useState } from "react";
 
 const FAIXAS = [
+  { rotulo: "Qualquer valor", min: null, max: null },
   { rotulo: "Até R$ 50", min: null, max: 50 },
   { rotulo: "R$ 80 a R$ 100", min: 80, max: 100 },
   { rotulo: "R$ 100 a R$ 200", min: 100, max: 200 },
 ] as const;
 
-export const rotuloFaixa = (min: number | null, max: number) =>
-  min ? `entre R$ ${min} e R$ ${max}` : `até R$ ${max}`;
+export const rotuloFaixa = (min: number | null, max: number | null) =>
+  !max ? (min ? `a partir de R$ ${min}` : "em qualquer valor") : min ? `entre R$ ${min} e R$ ${max}` : `até R$ ${max}`;
 
 export function CabecalhoAmigoSecreto({
   min,
@@ -19,19 +20,20 @@ export function CabecalhoAmigoSecreto({
   aoImportar,
 }: {
   min: number | null;
-  max: number;
-  aoMudarFaixa: (min: number | null, max: number) => void;
+  max: number | null;
+  aoMudarFaixa: (min: number | null, max: number | null) => void;
   aoImportar: () => void;
 }) {
   const fixa = FAIXAS.find((f) => f.min === min && f.max === max);
   const [personalizar, setPersonalizar] = useState(false);
   const [de, setDe] = useState(String(min ?? ""));
-  const [ate, setAte] = useState(String(max));
+  const [ate, setAte] = useState(max ? String(max) : "");
   const aplicar = () => {
     const a = Number(de.replace(",", ".")) || null;
-    const b = Number(ate.replace(",", "."));
-    if (!(b > 0) || (a != null && a >= b)) return;
-    aoMudarFaixa(a, Math.round(b));
+    const b = Number(ate.replace(",", ".")) || null;
+    if (a == null && b == null) return aoMudarFaixa(null, null);
+    if (b != null && a != null && a >= b) return;
+    aoMudarFaixa(a, b != null ? Math.round(b) : null);
   };
   const chip = (ativo: boolean) =>
     "inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold transition active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] " +
@@ -62,7 +64,7 @@ export function CabecalhoAmigoSecreto({
             onClick={() => setPersonalizar((p) => !p)}
             className={chip(personalizar || !fixa)}
           >
-            {!fixa && !personalizar ? `R$ ${min ?? 0} a R$ ${max}` : "Personalizado"}
+            {!fixa && !personalizar ? rotuloFaixa(min, max) : "Personalizado"}
           </button>
           </div>
           <button

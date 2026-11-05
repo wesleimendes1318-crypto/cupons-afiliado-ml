@@ -159,7 +159,8 @@ function esquemaGemini(valor: unknown): unknown {
   return valor;
 }
 
-type Opcoes = { formato?: { nome: string; schema: object }; esforco?: "low" | "medium" | "high" };
+/** `escopo` replaces the coupon system text for other site features (gift curation). */
+type Opcoes = { formato?: { nome: string; schema: object }; esforco?: "low" | "medium" | "high"; escopo?: string };
 
 /** Tenta o Gemini com a chave GEMINI_API_KEY (somente no servidor, nunca no navegador). */
 async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoIa> {
@@ -167,7 +168,7 @@ async function chamarGemini(prompt: string, opcoes?: Opcoes): Promise<ResultadoI
   if (!apiKey) return { ok: false, status: 503, erro: "Serviço de IA sem chave própria." };
 
   const corpo: Record<string, unknown> = {
-    systemInstruction: { role: "system", parts: [{ text: ESCOPO_IA }] },
+    systemInstruction: { role: "system", parts: [{ text: opcoes?.escopo ?? ESCOPO_IA }] },
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.2,
@@ -264,7 +265,7 @@ async function chamarGateway(prompt: string, opcoes?: Opcoes): Promise<Resultado
   const montar = (model: string): Record<string, unknown> => ({
     model,
     messages: [
-      { role: "system", content: ESCOPO_IA },
+      { role: "system", content: opcoes?.escopo ?? ESCOPO_IA },
       { role: "user", content: prompt },
     ],
     ...(opcoes?.formato

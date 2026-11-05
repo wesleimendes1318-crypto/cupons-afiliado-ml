@@ -192,6 +192,10 @@ export function foraDaIntencao(
     ...(NEGATIVOS_POR_TIPO[tipo] ?? []),
     ...regrasDoPedido(consulta).flatMap((r) => r.negativos),
     ...(BUSCA_INFANTIL.test(pedido) ? [] : NEGATIVOS_UNIVERSAIS),
+    /* Weslei, 05/11: adult clothing ("feminino", "masculino") never shows kids' pieces. */
+    ...(!BUSCA_INFANTIL.test(pedido) && /\b(feminin[oa]s?|masculin[oa]s?|adult[oa]s?|mulher|homem)\b/.test(pedido)
+      ? ["menina", "menino", "infantil", "juvenil", "bebe", "kids"]
+      : []),
   ];
   return termos.some((n) => {
     if (` ${pedido} `.includes(` ${n} `)) return false;
