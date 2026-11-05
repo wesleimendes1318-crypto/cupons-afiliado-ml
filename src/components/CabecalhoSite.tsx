@@ -10,7 +10,7 @@
    baixo (NavegacaoInferiorMobile). */
 import { useEffect, useState, type FormEvent } from "react";
 import { ClientOnly, Link, useRouterState } from "@tanstack/react-router";
-import { Link2, Send } from "lucide-react";
+import { Gift, Link2, Send } from "lucide-react";
 
 import { CepTopo } from "@/components/CepTopo";
 import { BotaoConta } from "@/components/BotaoConta";
@@ -24,8 +24,8 @@ import { LINK_CANAL } from "@/lib/telegram-publico";
 const LINKS = [
   { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
   { to: "/meus-precos", rotulo: "Meus preços", pc: "sm:inline-flex" },
-  { to: "/guias", rotulo: "Guias", pc: "sm:inline-flex" },
-  { to: "/sobre", rotulo: "Sobre", pc: "sm:inline-flex" },
+  { to: "/guias", rotulo: "Guias", pc: "lg:inline-flex" },
+  { to: "/sobre", rotulo: "Sobre", pc: "xl:inline-flex" },
 ] as const;
 
 /* O campo do link da tela inicial está escondido atrás do cabeçalho? */
@@ -179,6 +179,18 @@ export function CabecalhoSite() {
               {l.rotulo}
             </Link>
           ))}
+          {/* Amigo Secreto (Weslei, 05/11: "botão fácil de encontrar"): pill
+                in the header from 768 px (label from 1280 px); phones: bottom tab. */}
+          <Link
+            to="/amigo-secreto"
+            aria-label="Amigo Secreto"
+            title="Amigo Secreto: presentes por pessoa no valor combinado"
+            className="hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#0071e3] px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] md:inline-flex"
+            activeProps={{ className: "ring-2 ring-[#0071e3]/30 ring-offset-2" }}
+          >
+            <Gift className="size-5 xl:size-4" aria-hidden="true" />
+            <span className="hidden xl:inline">Amigo Secreto</span>
+          </Link>
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
             <CepTopo />
           </ClientOnly>
@@ -194,7 +206,7 @@ export function CabecalhoSite() {
             className="hidden min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 vidro-botao rounded-full border border-[#7547E8]/50 min-[360px]:inline-flex px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
           >
             <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
-            <span className="hidden min-[480px]:inline">Ofertas no Telegram</span>
+            <span className="hidden min-[480px]:inline sm:hidden md:inline">Ofertas no Telegram</span>
             {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
             
           </a>

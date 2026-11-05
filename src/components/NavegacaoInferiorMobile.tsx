@@ -5,13 +5,13 @@
    embaixo: o botão de compra tem prioridade. A folga do conteúdo e da
    navegação rápida vem de --folga-abas (styles.css). */
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, LayoutGrid, Link2, Send, Tag } from "lucide-react";
+import { Gift, Home, LayoutGrid, Link2, Send, Tag } from "lucide-react";
 
 import { irAoCampo } from "@/components/CabecalhoSite";
 import { LINK_CANAL } from "@/lib/telegram-publico";
 
 const ABA =
-  "flex h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold text-[#6b6b70] transition-transform duration-100 ease-out select-none active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:text-white/60";
+  "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-center text-[10px] font-semibold leading-[1.1] [&>svg]:shrink-0 text-[#6b6b70] transition-transform duration-100 ease-out select-none active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:text-white/60";
 const ATIVA = { className: "font-bold !text-[#7547E8]" };
 
 export function NavegacaoInferiorMobile() {
@@ -59,6 +59,15 @@ export function NavegacaoInferiorMobile() {
       >
         <LayoutGrid className="size-6" strokeWidth={1.8} aria-hidden="true" />
         Categorias
+      </Link>
+      <Link
+        to="/amigo-secreto"
+        onClick={() => topoSeAtiva("/amigo-secreto")}
+        activeProps={ATIVA}
+        className={ABA}
+      >
+        <Gift className="size-6 text-[#0071e3]" strokeWidth={1.8} aria-hidden="true" />
+        Amigo Secreto
       </Link>
       <Link
         to="/meus-precos"
