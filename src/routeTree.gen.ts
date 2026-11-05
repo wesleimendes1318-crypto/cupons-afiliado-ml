@@ -68,6 +68,7 @@ import { Route as ApiPublicSaudeRouteImport } from './routes/api/public/saude'
 import { Route as ApiPublicTelegramSetupRouteImport } from './routes/api/public/telegram-setup'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
 import { Route as ApiPublicJobsAquecerBuscasRouteImport } from './routes/api/public/jobs/aquecer-buscas'
+import { Route as ApiPublicJobsGarimparAcervoRouteImport } from './routes/api/public/jobs/garimpar-acervo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -374,6 +375,12 @@ const ApiPublicJobsAquecerBuscasRoute =
     path: '/api/public/jobs/aquecer-buscas',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsGarimparAcervoRoute =
+  ApiPublicJobsGarimparAcervoRouteImport.update({
+    id: '/api/public/jobs/garimpar-acervo',
+    path: '/api/public/jobs/garimpar-acervo',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -435,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/jobs/aquecer-buscas': typeof ApiPublicJobsAquecerBuscasRoute
+  '/api/public/jobs/garimpar-acervo': typeof ApiPublicJobsGarimparAcervoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -496,6 +504,7 @@ export interface FileRoutesByTo {
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/jobs/aquecer-buscas': typeof ApiPublicJobsAquecerBuscasRoute
+  '/api/public/jobs/garimpar-acervo': typeof ApiPublicJobsGarimparAcervoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -558,6 +567,7 @@ export interface FileRoutesById {
   '/api/public/telegram-setup': typeof ApiPublicTelegramSetupRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/jobs/aquecer-buscas': typeof ApiPublicJobsAquecerBuscasRoute
+  '/api/public/jobs/garimpar-acervo': typeof ApiPublicJobsGarimparAcervoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -621,6 +631,7 @@ export interface FileRouteTypes {
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
     | '/api/public/jobs/aquecer-buscas'
+    | '/api/public/jobs/garimpar-acervo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -682,6 +693,7 @@ export interface FileRouteTypes {
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
     | '/api/public/jobs/aquecer-buscas'
+    | '/api/public/jobs/garimpar-acervo'
   id:
     | '__root__'
     | '/'
@@ -743,6 +755,7 @@ export interface FileRouteTypes {
     | '/api/public/telegram-setup'
     | '/api/public/telegram-webhook'
     | '/api/public/jobs/aquecer-buscas'
+    | '/api/public/jobs/garimpar-acervo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -805,6 +818,7 @@ export interface RootRouteChildren {
   ApiPublicTelegramSetupRoute: typeof ApiPublicTelegramSetupRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   ApiPublicJobsAquecerBuscasRoute: typeof ApiPublicJobsAquecerBuscasRoute
+  ApiPublicJobsGarimparAcervoRoute: typeof ApiPublicJobsGarimparAcervoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1222,6 +1236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsAquecerBuscasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/garimpar-acervo': {
+      id: '/api/public/jobs/garimpar-acervo'
+      path: '/api/public/jobs/garimpar-acervo'
+      fullPath: '/api/public/jobs/garimpar-acervo'
+      preLoaderRoute: typeof ApiPublicJobsGarimparAcervoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1286,6 +1307,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTelegramSetupRoute: ApiPublicTelegramSetupRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   ApiPublicJobsAquecerBuscasRoute: ApiPublicJobsAquecerBuscasRoute,
+  ApiPublicJobsGarimparAcervoRoute: ApiPublicJobsGarimparAcervoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

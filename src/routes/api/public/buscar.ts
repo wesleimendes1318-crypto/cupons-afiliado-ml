@@ -1,3 +1,4 @@
+import { guardarNoAcervo } from "@/lib/acervo";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -183,6 +184,10 @@ export const Route = createFileRoute("/api/public/buscar")({
             .sort((a, b) => Number(daqui.has(b.c)) - Number(daqui.has(a.c)) || a.k - b.k)
             .map((x) => x.r);
         }
+
+        /* Acervo (05/11): what this search read with price and shipping is kept
+           for the showcases (Amigo Secreto reads it before the catalog). */
+        if (!modoProduto) await guardarNoAcervo(db, entrada.q, achado.resultados);
 
         /* Fila da vitrine: só produto com anúncio ativo, ainda não comparado
            na semana, dentro do teto por hora. */

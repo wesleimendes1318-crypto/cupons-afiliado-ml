@@ -2,12 +2,12 @@
    rail of the SAME card as the site search (CartaoBusca: real photo,
    reference price, shipping line, "Comprar com segurança" through the
    affiliate link generated on click, "Comparar preço"), and "+20 opções". */
-import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePrazosDosItens } from "@/lib/prazo-cliente";
 
 import { BotaoCarregarMaisVitrine } from "@/components/AmigoSecreto/BotaoCarregarMaisVitrine";
+import { CartoesDeEspera, PilulaDeEspera } from "@/components/AmigoSecreto/EsperaVitrine";
 import { abrirComparacao } from "@/components/BotoesCartao";
 import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
@@ -18,9 +18,9 @@ import type { VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
    search really does: catalog offers incl. official stores, free shipping
    and the price inside the budget. */
 const FRASES_DE_ESPERA = [
-  "Garimpando as melhores ofertas, inclusive em lojas oficiais…",
-  "Conferindo frete grátis e se o preço cabe no valor…",
-  "Só mais um instante, selecionando as melhores opções para você…",
+  "Conferindo as melhores lojas, inclusive as oficiais…",
+  "Garantindo que todas as opções cabem exatamente no seu valor…",
+  "Separando as opções com frete grátis para você…",
 ];
 
 function useFraseDeEspera(ativa: boolean) {
@@ -87,13 +87,12 @@ export function VitrineCategoria({
   const controles = !contadorFixo && vitrine.produtos.length > 3;
   const n = vitrine.produtos.length;
   const frase = useFraseDeEspera(vitrine.carregando);
-  const poucas = n > 0 && n < 4;
   const contador =
     contadorFixo ??
     (vitrine.carregando
-      ? poucas
-        ? `Separamos essas ${n} primeiras opções enquanto buscamos mais para você…`
-        : frase
+      ? n
+        ? `${n} ${n === 1 ? "opção" : "opções"} ${faixa} até agora`
+        : "Procurando opções no valor"
       : n
         ? `${n} ${n === 1 ? "opção selecionada" : "opções selecionadas"} ${faixa} para você`
         : vitrine.erro
@@ -112,7 +111,7 @@ export function VitrineCategoria({
             aria-live="polite"
           >
             {vitrine.carregando && (
-              <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+              <span className="size-2 shrink-0 animate-pulse rounded-full bg-[#34c759]" aria-hidden="true" />
             )}
             {contador}
           </p>
@@ -168,16 +167,14 @@ export function VitrineCategoria({
                 }
               />
             ))}
-            {vitrine.carregando && (
-              <li
-                aria-hidden="true"
-                className="flex min-h-80 flex-col items-center justify-center gap-3 rounded-2xl bg-[#f5f5f7] p-4 text-center text-xs font-semibold text-secondary-ink dark:bg-white/5"
-              >
-                <span className="size-10 animate-pulse rounded-full bg-[#0071e3]/15" />
-                Buscando mais opções…
-              </li>
-            )}
+            {vitrine.carregando && <CartoesDeEspera quantos={n < 4 ? 2 : 1} />}
           </ul>
+          {vitrine.carregando && (
+            <p className="mb-2 flex items-center gap-2 text-xs text-secondary-ink" aria-live="polite">
+              <span className="size-2 shrink-0 animate-pulse rounded-full bg-[#0071e3]" aria-hidden="true" />
+              Enquanto você olha essas primeiras opções, já estamos garimpando mais para você…
+            </p>
+          )}
           {vitrine.temMais && (
             <BotaoCarregarMaisVitrine
               carregando={vitrine.carregando}
@@ -187,14 +184,12 @@ export function VitrineCategoria({
           )}
         </>
       ) : vitrine.carregando ? (
-        <ul
-          className="-mx-4 mt-3 grid auto-cols-[11.5rem] grid-flow-col gap-3 overflow-hidden px-4 sm:-mx-6 sm:px-6"
-          aria-hidden="true"
-        >
-          {[0, 1, 2, 3, 4].map((k) => (
-            <li key={k} className="h-80 animate-pulse rounded-2xl bg-[#f5f5f7] dark:bg-white/5" />
-          ))}
-        </ul>
+        <div className="relative">
+          <ul className="-mx-4 mt-3 grid auto-cols-[11.5rem] grid-flow-col gap-3 overflow-hidden px-4 pb-3 sm:-mx-6 sm:auto-cols-[13.5rem] sm:px-6">
+            <CartoesDeEspera quantos={5} />
+          </ul>
+          <PilulaDeEspera frase={frase} />
+        </div>
       ) : vitrine.temMais ? (
         <BotaoCarregarMaisVitrine carregando={false} aoCarregar={aoCarregarMais} className="mt-3" />
       ) : null}
