@@ -35,6 +35,7 @@ import { Route as CategoriasIndexRouteImport } from './routes/categorias.index'
 import { Route as CategoriasSlugRouteImport } from './routes/categorias.$slug'
 import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
+import { Route as ListaIdRouteImport } from './routes/lista.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
 import { Route as ApiPublicAmigoSecretoInterpretarRouteImport } from './routes/api/public/amigo-secreto-interpretar'
@@ -54,6 +55,7 @@ import { Route as ApiPublicFotosRouteImport } from './routes/api/public/fotos'
 import { Route as ApiPublicFreteCepRouteImport } from './routes/api/public/frete-cep'
 import { Route as ApiPublicGerarTextoRouteImport } from './routes/api/public/gerar-texto'
 import { Route as ApiPublicIdentificarLinkRouteImport } from './routes/api/public/identificar-link'
+import { Route as ApiPublicListaCompartilhadaRouteImport } from './routes/api/public/lista-compartilhada'
 import { Route as ApiPublicMesmoProdutoRouteImport } from './routes/api/public/mesmo-produto'
 import { Route as ApiPublicMlConectarRouteImport } from './routes/api/public/ml-conectar'
 import { Route as ApiPublicMlRetornoRouteImport } from './routes/api/public/ml-retorno'
@@ -201,6 +203,11 @@ const GuiasSlugRoute = GuiasSlugRouteImport.update({
   path: '/guias/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListaIdRoute = ListaIdRouteImport.update({
+  id: '/lista/$id',
+  path: '/lista/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
@@ -301,6 +308,12 @@ const ApiPublicIdentificarLinkRoute =
   ApiPublicIdentificarLinkRouteImport.update({
     id: '/api/public/identificar-link',
     path: '/api/public/identificar-link',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicListaCompartilhadaRoute =
+  ApiPublicListaCompartilhadaRouteImport.update({
+    id: '/api/public/lista-compartilhada',
+    path: '/api/public/lista-compartilhada',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicMesmoProdutoRoute = ApiPublicMesmoProdutoRouteImport.update({
@@ -407,6 +420,7 @@ export interface FileRoutesByFullPath {
   '/campanhas/previa': typeof CampanhasPreviaRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
+  '/lista/$id': typeof ListaIdRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -428,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/identificar-link': typeof ApiPublicIdentificarLinkRoute
+  '/api/public/lista-compartilhada': typeof ApiPublicListaCompartilhadaRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
@@ -469,6 +484,7 @@ export interface FileRoutesByTo {
   '/campanhas/previa': typeof CampanhasPreviaRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
+  '/lista/$id': typeof ListaIdRoute
   '/categorias': typeof CategoriasIndexRoute
   '/guias': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -490,6 +506,7 @@ export interface FileRoutesByTo {
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/identificar-link': typeof ApiPublicIdentificarLinkRoute
+  '/api/public/lista-compartilhada': typeof ApiPublicListaCompartilhadaRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
@@ -532,6 +549,7 @@ export interface FileRoutesById {
   '/campanhas/previa': typeof CampanhasPreviaRoute
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
+  '/lista/$id': typeof ListaIdRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -553,6 +571,7 @@ export interface FileRoutesById {
   '/api/public/frete-cep': typeof ApiPublicFreteCepRoute
   '/api/public/gerar-texto': typeof ApiPublicGerarTextoRoute
   '/api/public/identificar-link': typeof ApiPublicIdentificarLinkRoute
+  '/api/public/lista-compartilhada': typeof ApiPublicListaCompartilhadaRoute
   '/api/public/mesmo-produto': typeof ApiPublicMesmoProdutoRoute
   '/api/public/ml-conectar': typeof ApiPublicMlConectarRoute
   '/api/public/ml-retorno': typeof ApiPublicMlRetornoRoute
@@ -596,6 +615,7 @@ export interface FileRouteTypes {
     | '/campanhas/previa'
     | '/categorias/$slug'
     | '/guias/$slug'
+    | '/lista/$id'
     | '/categorias/'
     | '/guias/'
     | '/.lovable/oauth/consent'
@@ -617,6 +637,7 @@ export interface FileRouteTypes {
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/identificar-link'
+    | '/api/public/lista-compartilhada'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
@@ -658,6 +679,7 @@ export interface FileRouteTypes {
     | '/campanhas/previa'
     | '/categorias/$slug'
     | '/guias/$slug'
+    | '/lista/$id'
     | '/categorias'
     | '/guias'
     | '/.lovable/oauth/consent'
@@ -679,6 +701,7 @@ export interface FileRouteTypes {
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/identificar-link'
+    | '/api/public/lista-compartilhada'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
@@ -720,6 +743,7 @@ export interface FileRouteTypes {
     | '/campanhas/previa'
     | '/categorias/$slug'
     | '/guias/$slug'
+    | '/lista/$id'
     | '/categorias/'
     | '/guias/'
     | '/.lovable/oauth/consent'
@@ -741,6 +765,7 @@ export interface FileRouteTypes {
     | '/api/public/frete-cep'
     | '/api/public/gerar-texto'
     | '/api/public/identificar-link'
+    | '/api/public/lista-compartilhada'
     | '/api/public/mesmo-produto'
     | '/api/public/ml-conectar'
     | '/api/public/ml-retorno'
@@ -783,6 +808,7 @@ export interface RootRouteChildren {
   CampanhasPreviaRoute: typeof CampanhasPreviaRoute
   CategoriasSlugRoute: typeof CategoriasSlugRoute
   GuiasSlugRoute: typeof GuiasSlugRoute
+  ListaIdRoute: typeof ListaIdRoute
   CategoriasIndexRoute: typeof CategoriasIndexRoute
   GuiasIndexRoute: typeof GuiasIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -804,6 +830,7 @@ export interface RootRouteChildren {
   ApiPublicFreteCepRoute: typeof ApiPublicFreteCepRoute
   ApiPublicGerarTextoRoute: typeof ApiPublicGerarTextoRoute
   ApiPublicIdentificarLinkRoute: typeof ApiPublicIdentificarLinkRoute
+  ApiPublicListaCompartilhadaRoute: typeof ApiPublicListaCompartilhadaRoute
   ApiPublicMesmoProdutoRoute: typeof ApiPublicMesmoProdutoRoute
   ApiPublicMlConectarRoute: typeof ApiPublicMlConectarRoute
   ApiPublicMlRetornoRoute: typeof ApiPublicMlRetornoRoute
@@ -1005,6 +1032,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuiasSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lista/$id': {
+      id: '/lista/$id'
+      path: '/lista/$id'
+      fullPath: '/lista/$id'
+      preLoaderRoute: typeof ListaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
       path: '/.lovable/oauth/consent'
@@ -1136,6 +1170,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/identificar-link'
       fullPath: '/api/public/identificar-link'
       preLoaderRoute: typeof ApiPublicIdentificarLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/lista-compartilhada': {
+      id: '/api/public/lista-compartilhada'
+      path: '/api/public/lista-compartilhada'
+      fullPath: '/api/public/lista-compartilhada'
+      preLoaderRoute: typeof ApiPublicListaCompartilhadaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/mesmo-produto': {
@@ -1272,6 +1313,7 @@ const rootRouteChildren: RootRouteChildren = {
   CampanhasPreviaRoute: CampanhasPreviaRoute,
   CategoriasSlugRoute: CategoriasSlugRoute,
   GuiasSlugRoute: GuiasSlugRoute,
+  ListaIdRoute: ListaIdRoute,
   CategoriasIndexRoute: CategoriasIndexRoute,
   GuiasIndexRoute: GuiasIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
@@ -1293,6 +1335,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicFreteCepRoute: ApiPublicFreteCepRoute,
   ApiPublicGerarTextoRoute: ApiPublicGerarTextoRoute,
   ApiPublicIdentificarLinkRoute: ApiPublicIdentificarLinkRoute,
+  ApiPublicListaCompartilhadaRoute: ApiPublicListaCompartilhadaRoute,
   ApiPublicMesmoProdutoRoute: ApiPublicMesmoProdutoRoute,
   ApiPublicMlConectarRoute: ApiPublicMlConectarRoute,
   ApiPublicMlRetornoRoute: ApiPublicMlRetornoRoute,

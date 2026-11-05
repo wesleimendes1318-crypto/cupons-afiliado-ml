@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { CompartilharListaPublica } from "@/components/CompartilharListaPublica";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { SeloMarketplace } from "@/components/SeloMarketplace";
@@ -230,6 +231,9 @@ function Favoritos() {
                 <Trash2 className="size-4" aria-hidden="true" />
                 <span className="hidden min-[400px]:inline">Remover</span>
               </button>
+            </div>
+            <div className="sm:basis-full">
+              <CompartilharListaPublica itens={selecionados} />
             </div>
             {semLink > 0 && (
               <p className="text-xs text-secondary-ink sm:basis-full">
