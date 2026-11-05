@@ -126,6 +126,7 @@ import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { CoracaoDesejo } from "@/components/CoracaoDesejo";
 import { LinkPronto } from "@/components/LinkPronto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
@@ -3230,9 +3231,24 @@ function Resultado({
             aria-label="O produto que você colou"
             className="animate-cartao scroll-mt-36 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 sm:p-4"
           >
-            <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
-              <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
-            </p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
+                <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
+              </p>
+              {a?.titulo && (
+                <CoracaoDesejo
+                  compacto
+                  produto={{
+                    chave: urlColada ?? "",
+                    titulo: semEntidades(a.titulo) ?? a.titulo,
+                    preco: a.preco,
+                    foto: a.imagem,
+                    url: urlColada,
+                    link: semLink ? null : link,
+                  }}
+                />
+              )}
+            </div>
             <div className="flex items-start gap-3 sm:gap-4">
               <Foto
                 src={a?.imagem}

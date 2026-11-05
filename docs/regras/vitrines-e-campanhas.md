@@ -316,3 +316,8 @@ Scope: Showcases, campaigns, art, best sellers, most wanted, guided search/categ
 - Each showcase walks its terms round-robin through `/api/public/amigo-secreto-vitrine` (same `buscaGuiada` catalog search, one term per call, own rate counter 40/min) until 50 products, then "+20 opções". One seen-Set per person: no listing repeats across that person's showcases.
 - Budget is strict on real cost (`cabeNaFaixa` -> `custoTotalDaOferta`): only confirmed free shipping, international offers (tags cbt_*) excluded. Never pad the count; the counter shows the real number found.
 - Cards are `CartaoBusca` (rule no. 1 via VerNaLoja on click). Heart favorites per person, saved on the device (`melhorescolha_amigo_secreto_v2`) and, signed in, in table `amigo_secreto_conta` (RLS per user; migration 20261105190000).
+
+## Wishlist / Lista de desejos (05/11/2026)
+- Weslei's spec: heart on every product card, page `/favoritos`, selective WhatsApp share. No login needed (localStorage `melhorescolha_desejos_v1`); signed in, syncs with table `lista_desejos_conta` (RLS per user, migration 20261105200000). State: `src/lib/lista-desejos.ts`; heart: `src/components/CoracaoDesejo.tsx` (`VerDetalhesVitrine coracao` puts it on the photo corner; the card `li` must be `relative`).
+- Rule no. 1: the WhatsApp text only carries Weslei's affiliate links (`ehLinkDeCompra`); ML items without one get `link_de_reserva` first and stay out of the text until they have it. Prices in the text say "preço visto em dd/mm" (never sold as live).
+- Amigo Secreto keeps its own per-person hearts (same `BotaoCoracao` look); CartaoBusca shows the wishlist heart only when no `canto` is passed.

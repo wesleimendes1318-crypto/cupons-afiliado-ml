@@ -16,6 +16,7 @@ import {
   SinoAcompanhar,
 } from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { CoracaoDesejo } from "@/components/CoracaoDesejo";
 import { acoesDoProduto } from "@/lib/afiliado";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { propsFotoGrande } from "@/lib/foto";
@@ -66,6 +67,7 @@ export function VerDetalhesVitrine({
   detalhes,
   fotos,
   compra,
+  coracao = false,
 }: {
   chave: string;
   titulo: string;
@@ -90,6 +92,8 @@ export function VerDetalhesVitrine({
   /* Botão de compra do rodapé quando não há link pronto (ex.: VerNaLoja,
      que gera o link de afiliado no clique). */
   compra?: ReactNode;
+  /* Wishlist heart over the photo corner (05/11); the card must be `relative`. */
+  coracao?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
   /* Abrir fotos e detalhes é interesse aprofundado (+4 no perfil local). */
@@ -112,9 +116,25 @@ export function VerDetalhesVitrine({
     ? chave
     : (itemDoEndereco(urlProduto)?.replace(/^MLBP/, "MLB") ?? null);
   const extras = (fotos ?? []).filter((u): u is string => !!u);
-  if (!mlb && !imagem && !extras.length) return gatilho ? <>{gatilho}</> : null;
+  const canto =
+    coracao && gatilho ? (
+      <div className="absolute right-2 top-2 z-10">
+        <CoracaoDesejo
+          compacto
+          produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }}
+        />
+      </div>
+    ) : null;
+  if (!mlb && !imagem && !extras.length)
+    return gatilho ? (
+      <>
+        {gatilho}
+        {canto}
+      </>
+    ) : null;
   return (
     <>
+      {canto}
       {gatilho ? (
         <button
           type="button"

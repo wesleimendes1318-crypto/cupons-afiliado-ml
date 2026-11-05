@@ -4,11 +4,13 @@ import { useState } from "react";
 
 import { LoginEmailOtp } from "@/components/LoginEmailOtp";
 import { abrirLogin, sair, useConta } from "@/lib/auth-otp";
+import { useSincroniaDesejos } from "@/lib/lista-desejos";
 import { useSincroniaConta } from "@/lib/sincronia-conta";
 
 export function BotaoConta() {
   const usuario = useConta();
   useSincroniaConta(Boolean(usuario));
+  useSincroniaDesejos(usuario?.id ?? null);
   const [menu, setMenu] = useState(false);
   const email = usuario?.email ?? "";
 
@@ -29,7 +31,8 @@ export function BotaoConta() {
             <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-card p-3 text-sm shadow-modal">
               <p className="truncate px-2 text-secondary-ink">{email}</p>
               <p className="flex items-center gap-1.5 px-2 pt-1 text-xs text-secondary-ink">
-                <span className="size-2 rounded-full bg-[#34c759]" /> Buscas e preferências salvas na conta
+                <span className="size-2 rounded-full bg-[#34c759]" /> Buscas e preferências salvas
+                na conta
               </p>
               <a href="/perfil" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
                 Meu perfil e preferências
@@ -56,10 +59,10 @@ export function BotaoConta() {
           onClick={abrirLogin}
           aria-label="Entrar com seu e-mail"
           title="Entre sem senha: suas buscas e preços ficam salvos em todos os aparelhos"
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#0071e3] px-3 text-sm font-semibold text-white shadow-[0_6px_18px_-8px_rgba(0,113,227,0.7)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] sm:px-4"
+          className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#0071e3] px-3 text-sm font-semibold text-white shadow-[0_6px_18px_-8px_rgba(0,113,227,0.7)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] sm:px-4"
         >
           <UserRound className="size-4" aria-hidden />
-          <span>Entrar</span>
+          <span className="hidden min-[400px]:inline">Entrar</span>
         </button>
       )}
       <LoginEmailOtp />

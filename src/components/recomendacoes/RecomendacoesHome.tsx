@@ -266,6 +266,7 @@ function CartaoHistorico({ h }: { h: ItemHistorico }) {
             urlProduto={h.url}
             compra={ehDoMercadoLivre(h.url) ? <VerNaLoja url={h.url} grande /> : null}
             className="absolute inset-0"
+            coracao
             gatilho={
               <img
                 {...propsFotoCartao(h.imagem)}
