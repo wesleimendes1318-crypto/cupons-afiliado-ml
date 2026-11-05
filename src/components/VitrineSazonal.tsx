@@ -297,7 +297,7 @@ export function CartaoOferta({
         foto: o.imagem,
         url: o.urlProduto,
       })}
-      className={`campanha-entra campanha-cartao group flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
+      className={`campanha-entra campanha-cartao group relative flex flex-col overflow-hidden rounded-2xl bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.18)] ring-1 ring-black/5 ${className}`}
       style={{ animationDelay: `${Math.min(atraso, 8) * 50}ms` }}
     >
       {/* Foto sempre dentro da área (05/10: fotos grandes estouravam o
@@ -313,6 +313,7 @@ export function CartaoOferta({
         vistoEm={o.vistoEm ?? null}
         urlProduto={o.urlProduto}
         className="w-full"
+        coracao
         gatilho={
           <span className="relative block aspect-[4/3] overflow-hidden bg-white">
             {o.imagem ? (

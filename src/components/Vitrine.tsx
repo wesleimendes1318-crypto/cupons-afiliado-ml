@@ -389,7 +389,7 @@ function Cartao({ i, trilho = false }: { i: ItemVitrine; trilho?: boolean }) {
         freteGratis: i.freteGratis ?? null,
       })}
       className={
-        "group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card" +
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card" +
         (trilho
           ? " w-[58%] shrink-0 snap-start min-[480px]:w-[40%] sm:w-[30%] lg:w-[23%] xl:w-[18.5%]"
           : "")
@@ -405,6 +405,7 @@ function Cartao({ i, trilho = false }: { i: ItemVitrine; trilho?: boolean }) {
         urlProduto={i.url_produto}
         gatilho={foto}
         className="w-full"
+        coracao
       />
       <div className="flex flex-1 flex-col border-t border-border/60 p-2.5">
         {/* Selo do preço numa linha de altura fixa (os títulos alinham); o

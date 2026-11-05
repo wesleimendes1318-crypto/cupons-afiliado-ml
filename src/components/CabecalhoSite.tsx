@@ -14,6 +14,7 @@ import { Gift, Link2, Send } from "lucide-react";
 
 import { CepTopo } from "@/components/CepTopo";
 import { BotaoConta } from "@/components/BotaoConta";
+import { AtalhoFavoritos } from "@/components/CoracaoDesejo";
 
 import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { LINK_CANAL } from "@/lib/telegram-publico";
@@ -91,7 +92,7 @@ export function CabecalhoSite() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-black/[0.06] vidro-barra dark:border-white/10">
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-[60px] sm:gap-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-2 px-4 min-[400px]:gap-3 sm:h-[60px] sm:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
           aria-label="Melhor Escolha, página inicial"
@@ -192,6 +193,9 @@ export function CabecalhoSite() {
             <span className="hidden xl:inline">Amigo Secreto</span>
           </Link>
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
+            <AtalhoFavoritos />
+          </ClientOnly>
+          <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
             <CepTopo />
           </ClientOnly>
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
@@ -206,9 +210,10 @@ export function CabecalhoSite() {
             className="hidden min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 vidro-botao rounded-full border border-[#7547E8]/50 min-[360px]:inline-flex px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
           >
             <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
-            <span className="hidden min-[480px]:inline sm:hidden md:inline">Ofertas no Telegram</span>
+            <span className="hidden min-[480px]:inline sm:hidden md:inline">
+              Ofertas no Telegram
+            </span>
             {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
-            
           </a>
         </nav>
       </div>

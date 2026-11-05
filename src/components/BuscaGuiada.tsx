@@ -1266,6 +1266,7 @@ export function CartaoBusca({
         urlProduto={c.url}
         gatilho={foto}
         className="w-full"
+        coracao={!canto}
       />
       {canto && <div className="absolute right-2 top-2 z-10">{canto}</div>}
       <div className="flex flex-1 flex-col border-t border-border/60 p-2.5">

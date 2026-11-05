@@ -16,6 +16,7 @@ import { Route as BrinquedosRouteImport } from './routes/brinquedos'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as DiaDasCriancasRouteImport } from './routes/dia-das-criancas'
 import { Route as DivulgacaoDeAfiliadosRouteImport } from './routes/divulgacao-de-afiliados'
+import { Route as FavoritosRouteImport } from './routes/favoritos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MeusPrecosRouteImport } from './routes/meus-precos'
@@ -99,6 +100,11 @@ const DiaDasCriancasRoute = DiaDasCriancasRouteImport.update({
 const DivulgacaoDeAfiliadosRoute = DivulgacaoDeAfiliadosRouteImport.update({
   id: '/divulgacao-de-afiliados',
   path: '/divulgacao-de-afiliados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritosRoute = FavoritosRouteImport.update({
+  id: '/favoritos',
+  path: '/favoritos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -363,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/favoritos': typeof FavoritosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
@@ -421,6 +428,7 @@ export interface FileRoutesByTo {
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/favoritos': typeof FavoritosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
@@ -480,6 +488,7 @@ export interface FileRoutesById {
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
   '/divulgacao-de-afiliados': typeof DivulgacaoDeAfiliadosRoute
+  '/favoritos': typeof FavoritosRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/meus-precos': typeof MeusPrecosRoute
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/contato'
     | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
+    | '/favoritos'
     | '/login'
     | '/mcp'
     | '/meus-precos'
@@ -598,6 +608,7 @@ export interface FileRouteTypes {
     | '/contato'
     | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
+    | '/favoritos'
     | '/login'
     | '/mcp'
     | '/meus-precos'
@@ -656,6 +667,7 @@ export interface FileRouteTypes {
     | '/contato'
     | '/dia-das-criancas'
     | '/divulgacao-de-afiliados'
+    | '/favoritos'
     | '/login'
     | '/mcp'
     | '/meus-precos'
@@ -715,6 +727,7 @@ export interface RootRouteChildren {
   ContatoRoute: typeof ContatoRoute
   DiaDasCriancasRoute: typeof DiaDasCriancasRoute
   DivulgacaoDeAfiliadosRoute: typeof DivulgacaoDeAfiliadosRoute
+  FavoritosRoute: typeof FavoritosRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   MeusPrecosRoute: typeof MeusPrecosRoute
@@ -815,6 +828,13 @@ declare module '@tanstack/react-router' {
       path: '/divulgacao-de-afiliados'
       fullPath: '/divulgacao-de-afiliados'
       preLoaderRoute: typeof DivulgacaoDeAfiliadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favoritos': {
+      id: '/favoritos'
+      path: '/favoritos'
+      fullPath: '/favoritos'
+      preLoaderRoute: typeof FavoritosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1171,6 +1191,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContatoRoute: ContatoRoute,
   DiaDasCriancasRoute: DiaDasCriancasRoute,
   DivulgacaoDeAfiliadosRoute: DivulgacaoDeAfiliadosRoute,
+  FavoritosRoute: FavoritosRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   MeusPrecosRoute: MeusPrecosRoute,

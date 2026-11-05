@@ -293,7 +293,7 @@ export function CartaoEmAlta({
         freteGratis: i.frete_gratis,
       })}
       className={
-        "group flex flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] " +
+        "group relative flex flex-col overflow-hidden rounded-3xl bg-card shadow-[var(--shadow-card)] " +
         (grade
           ? "min-w-0"
           : trilho
@@ -314,6 +314,7 @@ export function CartaoEmAlta({
         compra={<VerNaLoja url={i.url} grande />}
         gatilho={<FotoComSegunda imagem={i.imagem} imagem2={i.imagem2 ?? null} />}
         className="relative aspect-[4/3] w-full overflow-hidden bg-white"
+        coracao
       />
       <div className="flex flex-1 flex-col border-t border-border/60 p-3">
         <p className="flex min-h-5 flex-wrap items-center gap-1">

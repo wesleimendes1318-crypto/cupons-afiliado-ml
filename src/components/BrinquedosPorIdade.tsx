@@ -130,7 +130,7 @@ function CartaoBrinquedo({
         url: i.url,
         freteGratis: c.freteGratis,
       })}
-      className="group flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none"
+      className="group relative flex w-[60vw] max-w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-white sm:w-auto sm:max-w-none"
     >
       {/* Foto num quadro limpo, sem selo por cima (Weslei, 18/10: "não
           competindo com a foto"); tocar nela abre fotos e detalhes. */}
@@ -143,6 +143,7 @@ function CartaoBrinquedo({
         vistoEm={i.atendido_em}
         urlProduto={i.url}
         className="w-full"
+        coracao
         gatilho={
           <span className="relative block aspect-[4/3] overflow-hidden bg-white">
             {i.imagem ? (
