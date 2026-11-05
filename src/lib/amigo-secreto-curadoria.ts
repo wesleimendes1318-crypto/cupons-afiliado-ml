@@ -332,12 +332,12 @@ const JOIA_DESEJO = [
   "rommanel colar",
 ];
 const CALCADO_VERAO = [
-  "sandália salto bloco vizzano",
-  "rasteirinha moleca",
-  "papete feminina beira rio",
-  "slide nuvem feminino",
+  "tênis casual feminino vizzano",
+  "sapatilha feminina usaflex",
+  "melissa",
   "havaianas slim",
-  "melissa sandália",
+  "tênis feminino nike",
+  "sandália piccadilly",
 ];
 
 /** Showcase terms + a wider pool so "+20 opções" never runs dry. */

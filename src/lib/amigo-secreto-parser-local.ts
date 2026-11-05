@@ -144,17 +144,19 @@ const CATEGORIAS: Categoria[] = [
     termos: (c) =>
       c.genero === "masculino"
         ? ["tênis masculino", "chinelo masculino", "sapatênis", "sandália masculina"]
-        : /* Summer first, known brands (Weslei, 05/11). */
+        : /* Every kind of shoe, known brands, season mixed in (Weslei, 05/11:
+             "não deve se limitar a sandálias"). */
           [
-            "sandália salto bloco vizzano",
-            "rasteirinha moleca",
-            "papete feminina beira rio",
-            "sandália anabela piccadilly",
-            "slide nuvem feminino",
-            "havaianas slim",
-            "melissa sandália",
-            "sandália usaflex feminina",
             t("tênis", g(c, "feminino", ""), "casual"),
+            "sandália salto bloco vizzano",
+            "sapatilha feminina moleca",
+            "mule feminino",
+            "rasteirinha moleca",
+            "tênis olympikus feminino",
+            "mocassim feminino",
+            "papete feminina beira rio",
+            "slide nuvem feminino",
+            "bota feminina cano curto",
           ],
     extras: ["kit meias", "porta sapatos"],
   },
