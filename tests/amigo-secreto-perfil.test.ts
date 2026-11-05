@@ -44,3 +44,10 @@ test("vitrine de academia não aceita vestido nem relógio", () => {
   expect(aprovadoNaVitrine("Vestido curto feminino Alex Evenings", c)).toBe(false);
   expect(aprovadoNaVitrine("Conjunto Fitness Feminino Top + Short", c)).toBe(true);
 });
+
+test("vitrine Star Wars e Marvel aceita as duas e barra franquia não pedida", () => {
+  const c = contextoDaVitrine({ titulo: "Decoração Star Wars e Marvel", termosBusca: ["funko star wars", "funko marvel"] }, "Star Wars, Marvel");
+  expect(aprovadoNaVitrine("Boneco Homem Aranha Miles Morales", c)).toBe(true);
+  expect(aprovadoNaVitrine("Funko Pop Darth Vader Star Wars", c)).toBe(true);
+  expect(aprovadoNaVitrine("Funko Pop Pikachu Pokemon", c)).toBe(false);
+});

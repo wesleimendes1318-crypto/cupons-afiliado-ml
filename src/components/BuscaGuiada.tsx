@@ -557,7 +557,10 @@ export function ResultadosDaBusca({
       ineditos.forEach((a) => idsDoEndereco(a.url).forEach((id) => vistos.add(id)));
       novos.push(...ineditos);
       total += ineditos.length;
-      if (r.erro || (!achados.length && cursor.current == null) || cursor.current === null) {
+      /* Weslei, 05/11 ("está limitando"): only the end of the catalog closes
+         the button; a failed or empty read keeps "+20" for the next tap. */
+      if (r.erro) break;
+      if (cursor.current === null || (!achados.length && cursor.current == null)) {
         setFim(true);
         break;
       }
@@ -595,8 +598,8 @@ export function ResultadosDaBusca({
     const el = lista.current?.querySelector<HTMLElement>(`[data-indice="${k}"]`);
     if (!el) return;
     focar.current = null;
+    /* No scroll (05/11: "não deve subir"): the page stays where the person is. */
     el.focus({ preventScroll: true });
-    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [cartoes.length, visiveis]);
 
   const mostrados = ordenados.slice(0, visiveis);

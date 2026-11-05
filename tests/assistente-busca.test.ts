@@ -100,7 +100,7 @@ describe("ordem recomendada da busca", () => {
 describe("carregar mais da busca", () => {
   test("continua no catálogo até a posição 120 e depois pelas marcas", () => {
     const p = passosDasSeguintes(["geladeira"], ["geladeira Consul"]);
-    expect(p[0]).toEqual({ buscas: ["geladeira"], offset: 84 });
+    expect(p[0]).toEqual({ buscas: ["geladeira"], offset: 24 });
     expect(p.every((x) => x.offset + 20 <= 120)).toBe(true);
     expect(p.filter((x) => x.buscas[0] === "geladeira Consul").length).toBe(6);
   });

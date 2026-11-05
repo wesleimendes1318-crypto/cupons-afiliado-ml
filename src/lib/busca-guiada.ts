@@ -466,10 +466,20 @@ type Passo = { buscas: string[]; offset: number };
     continua do passo em que a anterior parou (cursor). */
 export function passosDasSeguintes(buscas: string[], variantes: string[]): Passo[] {
   const passos: Passo[] = [];
-  passos.push({ buscas, offset: 84 }, { buscas, offset: FIM_DO_CATALOGO - 20 });
+  /* 05/11 ("está limitando"): the 1st page stops at 20 cards, often after
+     offset 0 only, so "+20" starts at 24 (re-reads are skipped by `ignorar`). */
+  for (const offset of [24, 44, 64, 84, FIM_DO_CATALOGO - 20]) passos.push({ buscas, offset });
   for (const v of variantes)
     for (let o = 0; o + 20 <= FIM_DO_CATALOGO; o += 20) passos.push({ buscas: [v], offset: o });
   return passos;
+}
+
+/** No brand in the results (apparel, decor): color variants keep "+20"
+    going with the same product type (05/11: "está limitando"). */
+export function variantesPorCor(base: string, max = 6) {
+  const b = normalizar(base);
+  if (/\b(preto|preta|branco|branca|azul|rosa|bege|verde|cinza|vermelh|vinho|marrom)\b/.test(b)) return [];
+  return ["preta", "azul", "rosa", "bege", "cinza", "branca", "verde", "vinho"].slice(0, max).map((c) => `${base} ${c}`);
 }
 
 /** Variantes pela marca: "geladeira frost free" + Brastemp, Electrolux... */
@@ -661,6 +671,7 @@ export async function buscaGuiada(
   if (pagina > 0) {
     /* "Carregar mais": do cursor em diante, 2 leituras por vez, até juntar
        20 novos ou o prazo acabar; devolve onde parou. */
+    if (!variantes.length) variantes = variantesPorCor(intencao.buscas[0] ?? q.slice(0, 60));
     const passos = passosDasSeguintes(intencao.buscas, variantes);
     const inicio = Date.now();
     let k = Math.max(0, anterior.cursor ?? (pagina - 1) * 4);
@@ -674,6 +685,11 @@ export async function buscaGuiada(
       for (const r of await Promise.all(lote.map(ler))) juntar(r);
     }
     proximo = k < passos.length ? k : null;
+    /* Catalog ran dry (apparel: most catalog products have no offer): the
+       category best sellers complete the page once, then it ends. */
+    if (achados.length < MINIMO_RESULTADOS && proximo === null && !anterior.excluir?.includes("fim-mv")) {
+      juntar(await maisVendidosDaCategoria(q, opcoes));
+    }
   } else {
     /* O estoque próprio é lido junto com a 1ª leitura do catálogo. */
     const dominiosDoEstoque = regra
@@ -716,6 +732,7 @@ export async function buscaGuiada(
     /* As marcas que apareceram viram variantes ("geladeira frost free
        brastemp"): completam a 1ª página e alimentam o "Carregar mais". */
     variantes = variantesPorMarca(intencao.buscas[0] ?? q.slice(0, 60), achados);
+    if (!variantes.length) variantes = variantesPorCor(intencao.buscas[0] ?? q.slice(0, 60));
     proximo = 0;
     if (achados.length && achados.length < MINIMO_RESULTADOS && variantes.length) {
       juntar(await ler({ buscas: variantes.slice(0, 4), offset: 0 }));

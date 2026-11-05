@@ -196,6 +196,18 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
   if (c.temas.length) {
     if (PRE_ESCOLAR.test(t)) return false;
     if (c.tipo === "tema" && !c.temas.some((k) => FRANQUIAS[k]?.titulo.test(t))) return false;
+    /* Weslei, 05/11: "Homem aranha não é star wars!" — a card of another
+       franchise never enters a franchise showcase. */
+    if (
+      c.tipo === "tema" &&
+      Object.entries(FRANQUIAS).some(([k, f]) => !c.temas.includes(k) && f.titulo.test(t)) &&
+      !c.temas.some((k) => FRANQUIAS[k]?.titulo.test(t))
+    )
+      return false;
+    if (c.tipo === "tema" && c.temas.length === 1) {
+      const outras = Object.entries(FRANQUIAS).filter(([k]) => k !== c.temas[0]);
+      if (outras.some(([, f]) => f.titulo.test(t))) return false;
+    }
   }
   if (c.tipo === "beleza" && MAQUIAGEM_DE_TOM.test(t)) return false;
   /* Gifts for adults in generic showcases: no baby items. */
@@ -314,3 +326,4 @@ export function ampliarTermos(termos: string[], c: ContextoVitrine, agora = new 
   const pool = [...ajustados, ...extra].map((x) => x.trim()).filter((x) => x.length > 2 && x.length <= 60);
   return [...new Set(pool.map((x) => x.toLowerCase()))].slice(0, 16);
 }
+
