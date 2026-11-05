@@ -158,7 +158,7 @@ function PaginaAmigoSecreto() {
   const vistos = useRef(new Map<string, Set<string>>());
   const passos = useRef(new Map<string, PassoTermo[]>());
   const tentadas = useRef(new Set<string>());
-  const completadas = useRef(new Set<string>());
+  const completadas = useRef(new Map<string, number>());
   const geracao = useRef(0);
   const estadoRef = useRef(estado);
   estadoRef.current = estado;
@@ -255,14 +255,15 @@ function PaginaAmigoSecreto() {
     /* Background fill: once nothing is loading, one showcase at a time grows to META_FUNDO. */
     if (fila.length) return;
     const abertas = ativo.vitrines.filter(
-      (v) => v.temMais && !v.erro && v.produtos.length < META_FUNDO && !completadas.current.has(v.id),
+      /* Thin showcases (< 4) get up to 3 background rounds, the rest one. */
+      (v) => v.temMais && !v.erro && v.produtos.length < META_FUNDO && (completadas.current.get(v.id) ?? 0) < (v.produtos.length < 4 ? 3 : 1),
     );
     /* Thin showcases (< 4 on the first batch) are filled first. */
     const fina = abertas.find((v) => v.produtos.length < 4 && !v.carregando);
     /* A thin showcase does not wait for the others; the rest fill one at a time. */
     const proxima = fina && emCurso < 3 ? fina : emCurso ? undefined : abertas.find((v) => !v.carregando);
     if (!proxima) return;
-    completadas.current.add(proxima.id);
+    completadas.current.set(proxima.id, (completadas.current.get(proxima.id) ?? 0) + 1);
     void carregar(ativo.id, proxima, META_FUNDO - proxima.produtos.length);
   }, [ativo, carregar]);
 
