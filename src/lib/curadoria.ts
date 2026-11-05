@@ -19,7 +19,9 @@ const sem = (s: string) =>
 const CORES =
   /\b(preto|preta|pretos|pretas|branco|branca|brancos|rosa|azul|verde|vermelho|vermelha|bege|cinza|nude|marrom|caramelo|dourado|dourada|prata|off ?white|amarelo|amarela|lilas|roxo|roxa|vinho|laranja|marinho|creme|areia|chumbo|grafite|tamanho|tam|\d{2})\b/g;
 
-/** "sig:" key of a listing's model (title without colors/sizes, first 6 words). */
+/** "sig:" key of a listing's model (title without colors/sizes, first 10 words).
+    05/11: 6 words merged different shoes with generic titles ("Tênis Feminino
+    Casual Academia Caminhada ...") and cut showcases from ~35 to ~5. */
 export function assinaturaDoModelo(nome: string | null | undefined): string | null {
   if (!nome) return null;
   const p = sem(nome)
@@ -27,7 +29,7 @@ export function assinaturaDoModelo(nome: string | null | undefined): string | nu
     .replace(CORES, " ")
     .split(/\s+/)
     .filter(Boolean)
-    .slice(0, 6);
+    .slice(0, 10);
   return p.length >= 3 ? `sig:${p.join(" ")}` : null;
 }
 
