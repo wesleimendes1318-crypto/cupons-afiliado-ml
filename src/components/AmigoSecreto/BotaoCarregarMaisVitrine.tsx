@@ -15,7 +15,7 @@ export function BotaoCarregarMaisVitrine({
       onClick={aoCarregar}
       disabled={carregando}
       className={
-        "vidro-botao inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold text-[#0058b0] transition active:scale-[0.97] disabled:opacity-70 dark:text-[#64a8ff] " +
+        "vidro-botao inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-full px-5 py-2 text-left text-sm font-semibold text-[#0058b0] transition active:scale-[0.97] disabled:opacity-70 dark:text-[#64a8ff] " +
         className
       }
     >
@@ -24,7 +24,7 @@ export function BotaoCarregarMaisVitrine({
       ) : (
         <Plus className="size-4" aria-hidden="true" />
       )}
-      {carregando ? "Buscando mais opções…" : "+20 opções"}
+      {carregando ? "Buscando mais opções selecionadas, aguarde só um instante…" : "+20 opções"}
     </button>
   );
 }
