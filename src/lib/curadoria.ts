@@ -19,18 +19,77 @@ const sem = (s: string) =>
 const CORES =
   /\b(preto|preta|pretos|pretas|branco|branca|brancos|rosa|azul|verde|vermelho|vermelha|bege|cinza|nude|marrom|caramelo|dourado|dourada|prata|off ?white|amarelo|amarela|lilas|roxo|roxa|vinho|laranja|marinho|creme|areia|chumbo|grafite|tamanho|tam|\d{2})\b/g;
 
-/** "sig:" key of a listing's model (title without colors/sizes, first 10 words).
+/* Kit/volume multipliers and filler words left out of the model key
+   (Weslei, 05/11: "3x", "kit", "combo", "unidades" made the same product
+   show twice). */
+const MULTIPLICADORES =
+  /\b(\d+ ?x|x ?\d+|\d+ ?(un|und|unid|unidades|pecas|pcs|ml|l|g|kg)|kit|combo|unidades?|unid|und|pecas?|pcs|com|de|da|do|das|dos|e|para|em)\b/g;
+
+/** Title words that identify the product: no accents, colors, sizes,
+    multipliers; common double-letter spellings folded ("multirrestaurador"
+    = "multirestaurador"). */
+export function palavrasDoModelo(nome: string | null | undefined): string[] {
+  if (!nome) return [];
+  return sem(nome)
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(CORES, " ")
+    .replace(MULTIPLICADORES, " ")
+    .replace(/rr/g, "r")
+    .replace(/ss/g, "s")
+    .split(/\s+/)
+    .filter((w) => w.length > 1 || /\d/.test(w));
+}
+
+/** "sig:" key of a listing's model (first 10 identifying words).
     05/11: 6 words merged different shoes with generic titles ("Tênis Feminino
     Casual Academia Caminhada ...") and cut showcases from ~35 to ~5. */
 export function assinaturaDoModelo(nome: string | null | undefined): string | null {
-  if (!nome) return null;
-  const p = sem(nome)
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(CORES, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 10);
+  const p = palavrasDoModelo(nome).slice(0, 10);
   return p.length >= 3 ? `sig:${p.join(" ")}` : null;
+}
+
+/** "foto:" key of the main photo: Mercado Livre serves the same picture under
+    the same id ("D_NQ_NP_2X_<id>-F.webp", "D_<id>-O.jpg"). */
+export function idDaFoto(url: string | null | undefined): string | null {
+  const m = /mlstatic\.com\/(?:D_(?:NQ_NP_)?(?:2X_)?(?:Q_NP_)?)?(\d+-ML[A-Z]\d+_\d+)/.exec(url ?? "");
+  return m ? `foto:${m[1]}` : null;
+}
+
+/** Same product under another title: more than 70% of the identifying words
+    shared (Jaccard), only for titles with at least 4 such words. */
+export function quaseIgual(a: string[], b: string[]): boolean {
+  if (a.length < 4 || b.length < 4) return false;
+  const A = new Set(a);
+  const B = new Set(b);
+  /* Different numbers on each side (volume 1 / volume 2, 128gb / 256gb) are different products. */
+  const numeros = (X: Set<string>, Y: Set<string>) => [...X].some((w) => /\d/.test(w) && !Y.has(w));
+  if (numeros(A, B) && numeros(B, A)) return false;
+  let comuns = 0;
+  for (const w of A) if (B.has(w)) comuns++;
+  return comuns / (A.size + B.size - comuns) > 0.7;
+}
+
+/** One gate for repeated products, shared by the curator and Amigo Secreto:
+    same photo, same model key, or a near-identical title. Adds the keys to
+    `vistos` when the product is new. */
+export function repetido(
+  vistos: Set<string>,
+  titulos: string[][],
+  nome: string | null | undefined,
+  imagem: string | null | undefined,
+  marcar = true,
+): boolean {
+  const foto = idDaFoto(imagem);
+  const sig = assinaturaDoModelo(nome);
+  const palavras = palavrasDoModelo(nome);
+  if ((foto && vistos.has(foto)) || (sig && vistos.has(sig)) || titulos.some((t) => quaseIgual(t, palavras)))
+    return true;
+  if (marcar) {
+    if (foto) vistos.add(foto);
+    if (sig) vistos.add(sig);
+    titulos.push(palavras);
+  }
+  return false;
 }
 
 export type Area = "beleza" | "joia" | "calcado" | "outro";
@@ -94,22 +153,25 @@ export function aprovadoPeloCurador(q: string, titulo: string): boolean {
 }
 
 /** Filter, one card per model, best brands and the season first (stable). */
-export function curarResultados<T>(q: string, itens: T[], nome: (i: T) => string, agora = new Date()): T[] {
+export function curarResultados<T>(
+  q: string,
+  itens: T[],
+  nome: (i: T) => string,
+  agora = new Date(),
+  imagem?: (i: T) => string | null | undefined,
+): T[] {
   const area = areaDaBusca(q);
   const marca = MARCAS[area];
   const est = estacao(agora);
   const temporada = est ? DA_ESTACAO[est] : null;
   const sq = sem(q);
   const vistos = new Set<string>();
+  const titulos: string[][] = [];
   const ficam: T[] = [];
   for (const i of itens) {
     const n = nome(i);
     if (!aprovadoPeloCurador(q, n)) continue;
-    const sig = assinaturaDoModelo(n);
-    if (sig) {
-      if (vistos.has(sig)) continue;
-      vistos.add(sig);
-    }
+    if (repetido(vistos, titulos, n, imagem?.(i))) continue;
     ficam.push(i);
   }
   return ficam

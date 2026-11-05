@@ -25,6 +25,24 @@ const CACHE_MS = 6 * 3600_000;
 
 type Guardada = { resultados: ResultadoBusca[]; proximo: number | null; variantes: string[] };
 
+/* Memory cache per worker, same as /api/public/buscar (30 min, 300 keys): a
+   repeated term + budget answers without the database or the catalog. */
+const MEMORIA = new Map<string, { em: number; r: Guardada }>();
+const MEMORIA_MS = 30 * 60_000;
+function lerMemoria(c: string): Guardada | null {
+  const m = MEMORIA.get(c);
+  if (!m) return null;
+  if (Date.now() - m.em > MEMORIA_MS) {
+    MEMORIA.delete(c);
+    return null;
+  }
+  return m.r;
+}
+function gravarMemoria(c: string, r: Guardada) {
+  if (MEMORIA.size >= 300) MEMORIA.delete(MEMORIA.keys().next().value!);
+  MEMORIA.set(c, { em: Date.now(), r });
+}
+
 export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
   server: {
     handlers: {
@@ -45,10 +63,12 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           return json(request, { erro: "Muitas buscas seguidas. Aguarde um minuto." }, 429);
 
         const faixa = `${e.min ?? ""}-${e.max ?? ""}${e.freteACalcular ? "|f" : ""}`;
-        const chave1 = `amigo4|${faixa}|${normalizarBusca(e.termo)}`;
+        const chave1 = `amigo5|${faixa}|${normalizarBusca(e.termo)}`;
         const chave = e.pagina
           ? `${chave1}|p${e.pagina}|c${e.cursor ?? ""}|n${(e.vistos ?? []).length}`
           : chave1;
+        const naMemoria = lerMemoria(chave);
+        if (naMemoria) return json(request, naMemoria);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as any;
@@ -60,7 +80,10 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           .order("criado_em", { ascending: false })
           .limit(1)
           .maybeSingle()) as { data: { resposta: Guardada } | null };
-        if (cache?.resposta) return json(request, cache.resposta);
+        if (cache?.resposta) {
+          gravarMemoria(chave, cache.resposta);
+          return json(request, cache.resposta);
+        }
 
         let achado: Awaited<ReturnType<typeof buscaGuiada>>;
         try {
@@ -92,6 +115,7 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           proximo: achado.proximo ?? null,
           variantes: achado.variantes ?? [],
         };
+        gravarMemoria(chave, resposta);
         if (resposta.resultados.length)
           await db.from("busca_guiada").insert({ chave, contexto: "amigo", resposta, enfileirados: 0 });
         return json(request, resposta);

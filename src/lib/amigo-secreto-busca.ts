@@ -36,8 +36,11 @@ export function cabeNaFaixa(
   return true;
 }
 
-export { assinaturaDoModelo } from "@/lib/curadoria";
-import { assinaturaDoModelo } from "@/lib/curadoria";
+export { assinaturaDoModelo, idDaFoto } from "@/lib/curadoria";
+import { repetido } from "@/lib/curadoria";
+
+/* Titles already shown per person (near-duplicate check), keyed by that person's `vistos`. */
+const TITULOS = new WeakMap<Set<string>, string[][]>();
 
 /** Listing ids of a result (item and catalog product). */
 export const idsDoResultado = (r: Pick<Resultado, "item" | "produto">) =>
@@ -114,40 +117,58 @@ export async function carregarAte(opcoes: {
 }): Promise<{ novos: Resultado[]; passos: PassoTermo[]; erro: string | null }> {
   const passos = opcoes.passos.map((p) => ({ ...p }));
   const novos: Resultado[] = [];
+  const titulos = TITULOS.get(opcoes.vistos) ?? [];
+  TITULOS.set(opcoes.vistos, titulos);
   let erro: string | null = null;
   let falhas = 0;
-  for (let n = 0; n < (opcoes.maxChamadas ?? 12) && novos.length < opcoes.alvo; n++) {
+  let chamadas = 0;
+  const maximo = opcoes.maxChamadas ?? 12;
+  /* Speed (Weslei, 05/11): up to 3 terms read at the same time. */
+  while (chamadas < maximo && novos.length < opcoes.alvo) {
     if (opcoes.cancelado?.()) break;
-    const k = proximoPasso(passos);
-    if (k < 0) break;
-    const passo = passos[k]!;
-    const r = await lerPaginaDoTermo(passo, opcoes.faixa, [...opcoes.vistos].filter((id) => id.startsWith("MLB")));
-    if (!r.resposta) {
-      erro = r.erro;
-      /* Too many requests: stop and let "+20 opções" try again later. */
-      if (r.status === 429 || ++falhas >= 3) break;
-      passo.fim = true;
-      continue;
+    const lote: number[] = [];
+    for (let i = 0; i < Math.min(3, maximo - chamadas); i++) {
+      const k = proximoPasso(passos.map((p, j) => (lote.includes(j) ? { ...p, fim: true } : p)));
+      if (k < 0) break;
+      lote.push(k);
     }
-    /* Marked one by one: the same listing twice in one page counts once. */
-    const lote = (r.resposta.resultados ?? []).filter((x) => {
-      const ids = idsDoResultado(x);
-      if (!cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max, opcoes.faixa.freteACalcular === true) || !ids.length || ids.some((id) => opcoes.vistos.has(id)))
-        return false;
-      /* Same model in another color/seller shows once ("Comparar preço" opens the rest). */
-      const sig = assinaturaDoModelo(x.nome);
-      if (sig && opcoes.vistos.has(sig)) return false;
-      if (opcoes.aprovar && !opcoes.aprovar(x)) return false;
-      ids.forEach((id) => opcoes.vistos.add(id));
-      if (sig) opcoes.vistos.add(sig);
-      return true;
+    if (!lote.length) break;
+    chamadas += lote.length;
+    const vistosAgora = [...opcoes.vistos].filter((id) => id.startsWith("MLB"));
+    const respostas = await Promise.all(lote.map((k) => lerPaginaDoTermo(passos[k]!, opcoes.faixa, vistosAgora)));
+    if (opcoes.cancelado?.()) break;
+    let parar = false;
+    respostas.forEach((r, i) => {
+      const passo = passos[lote[i]!]!;
+      if (!r.resposta) {
+        erro = r.erro;
+        /* Too many requests: stop and let "+20 opções" try again later. */
+        if (r.status === 429 || ++falhas >= 3) parar = true;
+        passo.fim = true;
+        return;
+      }
+      const naFaixa = (r.resposta.resultados ?? []).filter((x) =>
+        cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max, opcoes.faixa.freteACalcular === true),
+      );
+      /* Checked one by one: same listing, same photo, same model or a
+         near-identical title already in this person's showcases stays out. */
+      const novosDoTermo = naFaixa.filter((x) => {
+        const ids = idsDoResultado(x);
+        if (!ids.length || ids.some((id) => opcoes.vistos.has(id))) return false;
+        if (opcoes.aprovar && !opcoes.aprovar(x)) return false;
+        if (repetido(opcoes.vistos, titulos, x.nome, x.imagem)) return false;
+        ids.forEach((id) => opcoes.vistos.add(id));
+        return true;
+      });
+      novos.push(...novosDoTermo);
+      if (novosDoTermo.length) opcoes.aoChegar?.(novosDoTermo);
+      if (passo.pagina === 0) passo.variantes = r.resposta.variantes ?? [];
+      passo.cursor = r.resposta.proximo ?? null;
+      passo.pagina += 1;
+      /* A page with nothing inside the budget ends that term (no more calls on it). */
+      passo.fim = r.resposta.proximo == null || !naFaixa.length;
     });
-    novos.push(...lote);
-    if (lote.length) opcoes.aoChegar?.(lote);
-    if (passo.pagina === 0) passo.variantes = r.resposta.variantes ?? [];
-    passo.cursor = r.resposta.proximo ?? null;
-    passo.pagina += 1;
-    passo.fim = r.resposta.proximo == null;
+    if (parar) break;
   }
   return { novos, passos, erro: novos.length ? null : erro };
 }
