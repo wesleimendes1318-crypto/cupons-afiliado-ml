@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { cabeNaFaixa } from "@/lib/amigo-secreto-busca";
+import { achadosDoGarimpo, guardarNoAcervo, lerDoAcervo, pedirGarimpo } from "@/lib/acervo";
 import { buscaGuiada, normalizarBusca, type ResultadoBusca } from "@/lib/busca-guiada";
+import { repetido } from "@/lib/curadoria";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
 /* AMIGO SECRETO (05/11): one page of ONE search term of a showcase, from the
@@ -24,6 +26,25 @@ const entradaSchema = z.object({
 const CACHE_MS = 6 * 3600_000;
 
 type Guardada = { resultados: ResultadoBusca[]; proximo: number | null; variantes: string[] };
+
+/* Acervo first (Weslei, 05/11): enough fresh listings already read for this
+   term and budget answer at once; the catalog only completes. */
+const META_DO_ACERVO = { primeira: 20, seguintes: 10 };
+
+/** Lists in priority order, one card per product/photo/model. */
+function juntar(...listas: ResultadoBusca[][]): ResultadoBusca[] {
+  const vistos = new Set<string>();
+  const titulos: string[][] = [];
+  const saida: ResultadoBusca[] = [];
+  for (const r of listas.flat()) {
+    if (vistos.has(r.produto) || vistos.has(r.item)) continue;
+    if (repetido(vistos, titulos, r.nome, r.imagem)) continue;
+    vistos.add(r.produto);
+    vistos.add(r.item);
+    saida.push(r);
+  }
+  return saida;
+}
 
 /* Memory cache per worker, same as /api/public/buscar (30 min, 300 keys): a
    repeated term + budget answers without the database or the catalog. */
@@ -72,6 +93,21 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as any;
+        const faixaPedida = { min: e.min ?? null, max: e.max ?? null, freteACalcular: e.freteACalcular === true };
+        const cabe = (r: ResultadoBusca) => cabeNaFaixa(r, e.min, e.max, e.freteACalcular === true);
+        const vistos = e.vistos ?? [];
+        const [doAcervo, achados] = await Promise.all([
+          lerDoAcervo(db, e.termo, faixaPedida, vistos, e.pagina ? 30 : 40),
+          e.pagina ? Promise.resolve([] as ResultadoBusca[]) : achadosDoGarimpo(db, e.termo, faixaPedida),
+        ]);
+        const prontos = juntar(achados, doAcervo).filter(cabe);
+        if (prontos.length >= (e.pagina ? META_DO_ACERVO.seguintes : META_DO_ACERVO.primeira)) {
+          /* The term continues from the same catalog position next time. */
+          const resposta: Guardada = { resultados: prontos, proximo: e.cursor ?? 0, variantes: e.variantes ?? [] };
+          gravarMemoria(chave, resposta);
+          return json(request, resposta);
+        }
+
         const { data: cache } = (await db
           .from("busca_guiada")
           .select("resposta")
@@ -104,20 +140,28 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
               modelo: null,
             },
             e.pagina
-              ? { variantes: e.variantes ?? [], excluir: e.vistos ?? [], cursor: e.cursor }
+              ? { variantes: e.variantes ?? [], excluir: vistos, cursor: e.cursor }
               : {},
           );
         } catch {
+          if (prontos.length) return json(request, { resultados: prontos, proximo: e.cursor ?? 0, variantes: e.variantes ?? [] });
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
         }
+        const aoVivo = achado.resultados.filter(cabe);
         const resposta: Guardada = {
-          resultados: achado.resultados.filter((r) => cabeNaFaixa(r, e.min, e.max, e.freteACalcular === true)),
+          /* Garimpo finds first, then the fresh read, then the acervo. */
+          resultados: juntar(achados, aoVivo, doAcervo),
           proximo: achado.proximo ?? null,
           variantes: achado.variantes ?? [],
         };
         gravarMemoria(chave, resposta);
-        if (resposta.resultados.length)
-          await db.from("busca_guiada").insert({ chave, contexto: "amigo", resposta, enfileirados: 0 });
+        await Promise.all([
+          guardarNoAcervo(db, e.termo, achado.resultados),
+          pedirGarimpo(db, e.termo, faixaPedida, { cursor: resposta.proximo, variantes: resposta.variantes }),
+          resposta.resultados.length
+            ? db.from("busca_guiada").insert({ chave, contexto: "amigo", resposta, enfileirados: 0 })
+            : null,
+        ]);
         return json(request, resposta);
       },
     },

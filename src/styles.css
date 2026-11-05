@@ -1429,3 +1429,39 @@ details.abertura-nativa[open] > summary .seta-abertura {
 @media (prefers-reduced-motion: reduce) {
   html[data-acompanhou] a[href="/meus-precos"] { background-color: rgba(52, 199, 89, 0.14); color: #1f7a3a; border-radius: 9999px; }
 }
+
+/* Amigo Secreto waiting pill (05/11): blue line draws the circle, green check
+   lands, then it starts again; the message fades in on each change. */
+@keyframes garimpo-traco {
+  0% { stroke-dashoffset: 1; }
+  60%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes garimpo-check {
+  0%, 55% { stroke-dashoffset: 1; opacity: 0; }
+  75%, 90% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes frase-espera {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.garimpo-traco {
+  stroke-dasharray: 1;
+  animation: garimpo-traco 2.6s ease-in-out infinite;
+}
+.garimpo-check {
+  stroke-dasharray: 1;
+  animation: garimpo-check 2.6s ease-out infinite;
+}
+.frase-espera {
+  animation: frase-espera 0.45s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .garimpo-traco,
+  .garimpo-check,
+  .frase-espera {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
