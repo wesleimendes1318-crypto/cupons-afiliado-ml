@@ -13,10 +13,12 @@ import {
   obterAmanhaBrasilia,
   obterFimDeSemanaBrasilia,
   obterHojeBrasilia,
+  obterNatalBrasilia,
   type PrazoDoItem,
   type ResultadoPrazo,
 } from "@/lib/prazo-entrega";
 import { Abertura } from "@/components/Abertura";
+import { abrirCepTopo } from "@/lib/prazo-cliente";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -25,11 +27,14 @@ export function FiltroPrazo({
   mudar,
   cep,
   carregando,
+  abertoDeInicio = true,
 }: {
   limite: string | null;
   mudar: (d: string | null) => void;
   cep: string | null;
   carregando: boolean;
+  /* Na busca (05/11) começa recolhido, para não empurrar os cartões. */
+  abertoDeInicio?: boolean;
 }) {
   const [hoje, setHoje] = useState<string | null>(null);
   useEffect(() => setHoje(obterHojeBrasilia()), []);
@@ -40,25 +45,30 @@ export function FiltroPrazo({
     { rotulo: "Receba amanhã", data: obterAmanhaBrasilia() },
     { rotulo: "Este fim de semana", data: obterFimDeSemanaBrasilia() },
   ];
+  /* Temporada de Natal (05/11): de 01/11 até a véspera. */
+  const natal = obterNatalBrasilia();
+  if (natal) chips.push({ rotulo: "Antes do Natal (24/12)", data: natal });
   /* Refinador recolhido abaixo das recomendações (24/10): a recomendação
      vem primeiro; com uma data escolhida, o rótulo mostra a data. */
   return (
     <Abertura
       className="mt-3 rounded-2xl border border-border/70 bg-[#f5f5f7] px-3 py-1 dark:bg-white/5"
       estilo="linha"
-      padrao
+      padrao={abertoDeInicio}
       icone={<Gift className="size-4 shrink-0 text-[#0071e3]" aria-hidden />}
       rotulo={
-        limite
-          ? `Entregas até ${formatarDataCompleta(limite)}`
-          : "Quando você precisa receber?"
+        limite ? `Entregas até ${formatarDataCompleta(limite)}` : "Quando você precisa receber?"
       }
       classeConteudo="pb-2"
     >
       {!cep ? (
-        <p className="mt-1 text-xs text-secondary-ink">
-          Informe o seu CEP acima para ver o prazo de entrega de cada loja.
-        </p>
+        <button
+          type="button"
+          onClick={abrirCepTopo}
+          className="mt-1 text-left text-xs font-semibold text-[#0058b0] underline-offset-2 hover:underline dark:text-[#4da3ff]"
+        >
+          Informe o seu CEP para ver o prazo de entrega de cada loja.
+        </button>
       ) : limite ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0071e3] px-3 py-1 text-xs font-semibold text-white">
@@ -186,10 +196,10 @@ export function AvisosDoPrazo({
         longe; abaixo estão todas as opções, sem o filtro.
       </p>
     );
-  const economia =
-    maisBaratasFora.length && melhorNoPrazo?.total != null
-      ? Math.min(...maisBaratasFora.map((f) => f.total as number))
-      : null;
+  const maisBarata = maisBaratasFora.length
+    ? maisBaratasFora.reduce((a, b) => ((b.total as number) < (a.total as number) ? b : a))
+    : null;
+  const economia = maisBarata?.total ?? null;
   return (
     <div className="mt-3 space-y-2">
       {!r.coladoAtende && (
@@ -233,10 +243,12 @@ export function AvisosDoPrazo({
       )}
       {economia != null && melhorNoPrazo?.total != null && (
         <p className="rounded-2xl border border-[#0071e3]/30 bg-[#0071e3]/5 p-3 text-xs leading-relaxed">
-          <strong>💡 Economia vs Urgência:</strong> há opção mais barata (custo final{" "}
-          {brl(economia)}), mas ela não chega até {data}. Para receber a tempo, a melhor é{" "}
-          {melhorNoPrazo.nome}: {brl(melhorNoPrazo.total - economia)} a mais no custo final, já com
-          o frete.
+          <strong>💡 Economia vs Urgência:</strong> {maisBarata?.nome ?? "Outra loja"} custa{" "}
+          {brl(melhorNoPrazo.total - economia)} a menos no custo final, mas{" "}
+          {maisBarata?.chega
+            ? `só chega a partir de ${formatarDataAmigavel(maisBarata.chega)}`
+            : "não tem prazo confirmado para o seu CEP"}
+          . Para receber até {data}, a melhor é {melhorNoPrazo.nome}, já com o frete.
         </p>
       )}
       {r.fora.length > 0 && (

@@ -1,3 +1,7 @@
+import { FiltroPrazo } from "@/components/FiltroPrazo";
+import { LinhaEntrega } from "@/components/LinhaEntrega";
+import { usePrazosDosItens } from "@/lib/prazo-cliente";
+import { formatarDataCompleta } from "@/lib/prazo-entrega";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { VerNaLoja } from "@/components/BuscaPorLink";
@@ -5,6 +9,7 @@ import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
 import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
 import {
   Check,
+  ChevronDown,
   Flame,
   Loader2,
   Search,
@@ -595,6 +600,24 @@ export function ResultadosDaBusca({
   }, [cartoes.length, visiveis]);
 
   const mostrados = ordenados.slice(0, visiveis);
+  /* "Receber até" na busca (05/11): o que chega a tempo fica na grade; o
+     que chega depois ou não tem data confirmada vai para um bloco recolhido.
+     Ainda consultando: fica na grade até a resposta. */
+  const [limite, setLimite] = useState<string | null>(null);
+  useEffect(() => setLimite(null), [q]);
+  const { cep: cepPrazo, prazos } = usePrazosDosItens(limite ? mostrados.map((c) => c.item) : []);
+  const prazoDe = (c: CartaoDaBusca) => (c.item ? prazos.get(c.item) : null);
+  const filtrarPrazo = !!limite && !!cepPrazo;
+  const naGrade = filtrarPrazo
+    ? mostrados.filter((c) => {
+        const r = prazoDe(c);
+        return r === undefined || (r != null && r.chega_ate <= limite);
+      })
+    : mostrados;
+  const depois = filtrarPrazo ? mostrados.filter((c) => !naGrade.includes(c)) : [];
+  const consultandoPrazo = filtrarPrazo && mostrados.some((c) => prazoDe(c) === undefined);
+  const menorNaGrade = Math.min(...naGrade.flatMap((c) => (c.preco != null ? [c.preco] : [])));
+  const maisBaratosDepois = depois.filter((c) => c.preco != null && c.preco < menorNaGrade).length;
   const temMais = ordenados.length > visiveis || (!fim && !!consulta && !doAssistente);
   const emAlta = locais.filter((l) => !l.link).slice(0, 8);
   const arte = q && !soCatalogo ? arteDaBusca(q) : null;
@@ -672,6 +695,13 @@ export function ResultadosDaBusca({
                   total={ordenados.length}
                 />
               )}
+              <FiltroPrazo
+                limite={limite}
+                mudar={setLimite}
+                cep={cepPrazo}
+                carregando={consultandoPrazo}
+                abertoDeInicio={false}
+              />
               {consulta?.modo === "guiada" && cartoes.length > 1 && (
                 <AssistenteBusca
                   consulta={q}
@@ -704,12 +734,12 @@ export function ResultadosDaBusca({
                 ref={lista}
                 className="animate-cartao mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
               >
-                {mostrados.map((c, k) => (
+                {naGrade.map((c, k) => (
                   <FragmentoComCuradoria
                     key={c.chave}
                     indice={k}
                     cartao={c}
-                    mostrados={mostrados}
+                    mostrados={naGrade}
                     notas={notas}
                     arte={arte}
                     resumo={c.avaliacao ? notas.get(c.avaliacao) : undefined}
@@ -717,6 +747,36 @@ export function ResultadosDaBusca({
                   />
                 ))}
               </ul>
+              {filtrarPrazo && !consultandoPrazo && naGrade.length === 0 && (
+                <p className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  Nenhuma opção confirmou entrega até {formatarDataCompleta(limite!)} para seu CEP.
+                  Tente uma data um pouco mais longe.
+                </p>
+              )}
+              {depois.length > 0 && (
+                <details
+                  className="abertura-nativa mt-3 rounded-2xl border border-border/70 bg-card p-3"
+                  open={naGrade.length === 0}
+                >
+                  <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm font-semibold">
+                    {maisBaratosDepois > 0
+                      ? `${maisBaratosDepois} ${maisBaratosDepois > 1 ? "opções mais baratas entregam" : "opção mais barata entrega"} após ${formatarDataCompleta(limite!)}${depois.some((c) => !prazoDe(c)) ? " ou sem prazo confirmado" : ""}`
+                      : `${depois.length} ${depois.length > 1 ? "opções entregam" : "opção entrega"} após ${formatarDataCompleta(limite!)} ou sem prazo confirmado`}
+                    <ChevronDown className="seta-abertura size-4 shrink-0" aria-hidden="true" />
+                  </summary>
+                  <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+                    {depois.map((c, k) => (
+                      <CartaoBusca
+                        key={c.chave}
+                        c={c}
+                        indice={naGrade.length + k}
+                        resumo={c.avaliacao ? notas.get(c.avaliacao) : undefined}
+                        comparar={comparar}
+                      />
+                    ))}
+                  </ul>
+                </details>
+              )}
               {temMais && (
                 <div className="mt-4 flex justify-center">
                   <button
@@ -1244,21 +1304,7 @@ export function CartaoBusca({
             {c.maisVendido}º mais vendido da categoria
           </p>
         )}
-        <p
-          className={
-            "mt-0.5 flex items-center gap-1 text-[11px] " +
-            (c.freteGratis === true ? "font-semibold text-success" : "text-secondary-ink")
-          }
-        >
-          {c.freteGratis === true ? (
-            <>
-              <Check className="size-3.5 shrink-0" aria-hidden="true" />
-              Frete grátis
-            </>
-          ) : (
-            "Frete a calcular para seu CEP"
-          )}
-        </p>
+        <LinhaEntrega item={c.item} freteGratis={c.freteGratis} className="mt-1" />
         {c.voltagem && (
           <p
             className={

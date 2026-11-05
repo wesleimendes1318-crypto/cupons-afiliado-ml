@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Flame } from "lucide-react";
 
+import { LinhaEntrega } from "@/components/LinhaEntrega";
 import { LinhaComparar } from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
@@ -340,9 +341,7 @@ export function CartaoEmAlta({
             {brl(Number(i.preco))}
           </span>
         </p>
-        <p className="text-[11px] text-secondary-ink">
-          {i.frete_gratis ? "Frete grátis" : "Frete: confira no anúncio"}
-        </p>
+        <LinhaEntrega item={itemDoEndereco(i.url)} freteGratis={i.frete_gratis} />
         {i.loja_oficial && <p className="text-[11px] font-semibold text-[#0058b0]">Loja oficial</p>}
         <LinhaAvaliacoes resumo={resumo} titulo={i.nome} className="mt-0.5" />
         <SeloBemAvaliado resumo={resumo} className="mt-1 self-start" />

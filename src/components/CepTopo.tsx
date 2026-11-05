@@ -11,6 +11,13 @@ export function CepTopo() {
   const [aberto, setAberto] = useState(false);
   const caixa = useRef<HTMLDivElement>(null);
 
+  /* Atalho "Informe o CEP" dos cartões (05/11): o cabeçalho é fixo. */
+  useEffect(() => {
+    const abrir = () => setAberto(true);
+    window.addEventListener("abrir-cep", abrir);
+    return () => window.removeEventListener("abrir-cep", abrir);
+  }, []);
+
   useEffect(() => {
     if (!aberto) return;
     const fora = (e: MouseEvent) => {
@@ -34,7 +41,7 @@ export function CepTopo() {
     }
   }, [regiao?.cep]);
 
-  const rotulo = !regiao || regiao.padrao ? "Informar CEP" : regiao.cidade ?? regiao.cep;
+  const rotulo = !regiao || regiao.padrao ? "Informar CEP" : (regiao.cidade ?? regiao.cep);
 
   return (
     <div ref={caixa} className="relative">

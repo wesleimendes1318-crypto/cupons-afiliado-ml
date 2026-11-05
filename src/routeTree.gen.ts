@@ -59,6 +59,7 @@ import { Route as ApiPublicMlTesteRouteImport } from './routes/api/public/ml-tes
 import { Route as ApiPublicMultilojaRouteImport } from './routes/api/public/multiloja'
 import { Route as ApiPublicOperacaoRouteImport } from './routes/api/public/operacao'
 import { Route as ApiPublicPrazoEntregaRouteImport } from './routes/api/public/prazo-entrega'
+import { Route as ApiPublicPrazoItensRouteImport } from './routes/api/public/prazo-itens'
 import { Route as ApiPublicRecomendarRouteImport } from './routes/api/public/recomendar'
 import { Route as ApiPublicRegiaoRouteImport } from './routes/api/public/regiao'
 import { Route as ApiPublicSaudeRouteImport } from './routes/api/public/saude'
@@ -322,6 +323,11 @@ const ApiPublicPrazoEntregaRoute = ApiPublicPrazoEntregaRouteImport.update({
   path: '/api/public/prazo-entrega',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPrazoItensRoute = ApiPublicPrazoItensRouteImport.update({
+  id: '/api/public/prazo-itens',
+  path: '/api/public/prazo-itens',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRecomendarRoute = ApiPublicRecomendarRouteImport.update({
   id: '/api/public/recomendar',
   path: '/api/public/recomendar',
@@ -400,6 +406,7 @@ export interface FileRoutesByFullPath {
   '/api/public/multiloja': typeof ApiPublicMultilojaRoute
   '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
+  '/api/public/prazo-itens': typeof ApiPublicPrazoItensRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
   '/api/public/saude': typeof ApiPublicSaudeRoute
@@ -457,6 +464,7 @@ export interface FileRoutesByTo {
   '/api/public/multiloja': typeof ApiPublicMultilojaRoute
   '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
+  '/api/public/prazo-itens': typeof ApiPublicPrazoItensRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
   '/api/public/saude': typeof ApiPublicSaudeRoute
@@ -515,6 +523,7 @@ export interface FileRoutesById {
   '/api/public/multiloja': typeof ApiPublicMultilojaRoute
   '/api/public/operacao': typeof ApiPublicOperacaoRoute
   '/api/public/prazo-entrega': typeof ApiPublicPrazoEntregaRoute
+  '/api/public/prazo-itens': typeof ApiPublicPrazoItensRoute
   '/api/public/recomendar': typeof ApiPublicRecomendarRoute
   '/api/public/regiao': typeof ApiPublicRegiaoRoute
   '/api/public/saude': typeof ApiPublicSaudeRoute
@@ -574,6 +583,7 @@ export interface FileRouteTypes {
     | '/api/public/multiloja'
     | '/api/public/operacao'
     | '/api/public/prazo-entrega'
+    | '/api/public/prazo-itens'
     | '/api/public/recomendar'
     | '/api/public/regiao'
     | '/api/public/saude'
@@ -631,6 +641,7 @@ export interface FileRouteTypes {
     | '/api/public/multiloja'
     | '/api/public/operacao'
     | '/api/public/prazo-entrega'
+    | '/api/public/prazo-itens'
     | '/api/public/recomendar'
     | '/api/public/regiao'
     | '/api/public/saude'
@@ -688,6 +699,7 @@ export interface FileRouteTypes {
     | '/api/public/multiloja'
     | '/api/public/operacao'
     | '/api/public/prazo-entrega'
+    | '/api/public/prazo-itens'
     | '/api/public/recomendar'
     | '/api/public/regiao'
     | '/api/public/saude'
@@ -746,6 +758,7 @@ export interface RootRouteChildren {
   ApiPublicMultilojaRoute: typeof ApiPublicMultilojaRoute
   ApiPublicOperacaoRoute: typeof ApiPublicOperacaoRoute
   ApiPublicPrazoEntregaRoute: typeof ApiPublicPrazoEntregaRoute
+  ApiPublicPrazoItensRoute: typeof ApiPublicPrazoItensRoute
   ApiPublicRecomendarRoute: typeof ApiPublicRecomendarRoute
   ApiPublicRegiaoRoute: typeof ApiPublicRegiaoRoute
   ApiPublicSaudeRoute: typeof ApiPublicSaudeRoute
@@ -1105,6 +1118,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPrazoEntregaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/prazo-itens': {
+      id: '/api/public/prazo-itens'
+      path: '/api/public/prazo-itens'
+      fullPath: '/api/public/prazo-itens'
+      preLoaderRoute: typeof ApiPublicPrazoItensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/recomendar': {
       id: '/api/public/recomendar'
       path: '/api/public/recomendar'
@@ -1195,6 +1215,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMultilojaRoute: ApiPublicMultilojaRoute,
   ApiPublicOperacaoRoute: ApiPublicOperacaoRoute,
   ApiPublicPrazoEntregaRoute: ApiPublicPrazoEntregaRoute,
+  ApiPublicPrazoItensRoute: ApiPublicPrazoItensRoute,
   ApiPublicRecomendarRoute: ApiPublicRecomendarRoute,
   ApiPublicRegiaoRoute: ApiPublicRegiaoRoute,
   ApiPublicSaudeRoute: ApiPublicSaudeRoute,

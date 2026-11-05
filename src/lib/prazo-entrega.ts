@@ -239,3 +239,44 @@ export function aplicarPrazo<
     algumAtende,
   };
 }
+
+/* DATA DE ENTREGA NOS CARTÕES (05/11). Resumo de um anúncio para o CEP: a
+   opção que chega antes; `chega_ate` é a data MAIS TARDIA da faixa dela. */
+export type ResumoEntrega = {
+  chega_ate: string;
+  tipo: string | null;
+  custo: number;
+  frete_gratis: boolean;
+};
+
+export function resumoDoPrazo(p: PrazoDoItem): ResumoEntrega | null {
+  const o = envioMaisRapido(p);
+  return o ? { chega_ate: o.ate, tipo: o.tipo, custo: o.custo, frete_gratis: o.custo === 0 } : null;
+}
+
+/** Texto da pílula: "Receba hoje", "Chega amanhã, 06/11" ou "Chega até
+    ter., 10/11"; com frete grátis, "Frete grátis · " na frente. */
+export function textoDaEntrega(
+  r: ResumoEntrega,
+  agora: Date = new Date(),
+): { texto: string; rapida: boolean } {
+  const hoje = obterHojeBrasilia(agora);
+  const [, m, d] = r.chega_ate.split("-");
+  const base =
+    r.chega_ate <= hoje
+      ? "Receba hoje"
+      : r.chega_ate === somarDias(hoje, 1)
+        ? `Chega amanhã, ${d}/${m}`
+        : `Chega até ${formatarDataAmigavel(r.chega_ate, agora)}`;
+  return {
+    texto: r.frete_gratis ? `Frete grátis · ${base.replace(/^C/, "c").replace(/^R/, "r")}` : base,
+    rapida: r.chega_ate <= somarDias(hoje, 1),
+  };
+}
+
+/** Véspera de Natal deste ano, só de 01/11 até o próprio dia 24/12. */
+export function obterNatalBrasilia(agora: Date = new Date()): string | null {
+  const hoje = obterHojeBrasilia(agora);
+  const natal = `${hoje.slice(0, 4)}-12-24`;
+  return hoje >= `${hoje.slice(0, 4)}-11-01` && hoje <= natal ? natal : null;
+}

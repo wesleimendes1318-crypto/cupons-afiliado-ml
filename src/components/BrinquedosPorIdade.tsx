@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { VerNaLoja } from "@/components/BuscaPorLink";
-import { Truck } from "lucide-react";
+import { LinhaEntrega } from "@/components/LinhaEntrega";
 import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -181,14 +181,13 @@ function CartaoBrinquedo({
         <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug">{i.nome}</p>
         <p className="mt-2 text-[17px] font-extrabold leading-none tabular-nums">{brl(c.preco)}</p>
         {c.detalhe && <p className="mt-1 text-[11px] text-secondary-ink">{c.detalhe}</p>}
-        <p className="mt-1 flex items-center gap-1 text-[11px] text-secondary-ink">
-          <Truck className="size-3.5 shrink-0" aria-hidden="true" />
-          {c.freteGratis === true
-            ? "Frete grátis"
-            : c.freteGratis === false
-              ? "Frete à parte"
-              : "Frete: confira no anúncio"}
-        </p>
+        {/* Data só quando o botão abre o próprio anúncio (no "a menos" o
+            link é de outra loja, sem anúncio conhecido). */}
+        <LinhaEntrega
+          item={c.tipo === "desconto" ? null : itemDoEndereco(i.url)}
+          freteGratis={c.freteGratis}
+          className="mt-1"
+        />
         {c.loja && (
           <p className="mt-0.5 truncate text-[11px] text-secondary-ink">Vendido por {c.loja}</p>
         )}

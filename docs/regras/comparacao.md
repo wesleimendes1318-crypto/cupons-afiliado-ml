@@ -302,6 +302,22 @@ Scope: Comparison engine: same-product rules, photo check, alternatives, safe re
   fora do prazo, "📦 Para receber até" com a loja que chega (só meli.la).
   Nenhuma a tempo: "Nenhuma loja confirmou entrega até esta data para seu
   CEP" e a comparação sem filtro.
+- Cards (05/11, "Data de Entrega Real" spec): LinhaEntrega
+  (src/components/LinhaEntrega.tsx) on CartaoBusca, CartaoEmAlta and
+  CartaoBrinquedo shows the official date for the listing the buy button
+  opens: "Receba hoje" / "Chega amanhã, DD/MM" (green) or "Chega até
+  ter., 10/11" (blue), "Frete grátis · ..." when the fastest option is free.
+  Only with a typed or device CEP (IP-approximate CEP does not promise
+  dates): otherwise "Informe o CEP para ver a data de entrega" opens CepTopo
+  (event "abrir-cep"). No date = "Frete e prazo no anúncio". Batched by
+  src/lib/prazo-cliente.ts into /api/public/prazo-itens ({itens <= 20, cep}
+  -> {prazos: {MLB: {chega_ate, tipo, custo, frete_gratis} | null}}), same
+  cache and brake as prazo-entrega. Toy cards with "R$ X a menos" (other
+  store's link, unknown listing) keep the shipping line only.
+- Guided search: FiltroPrazo (collapsed) above the grid; cards that arrive
+  after the date or have no date go to a collapsed "X opções mais baratas
+  entregam após DD/MM/AAAA" block. Chip "Antes do Natal (24/12)" from 01/11
+  to 24/12 (also on the comparison).
 - Bot: link + "até 10/10" / "receber amanhã" / "fim de semana" + CEP no texto
   (CEP guardado em telegram_chats.cep); mensagemComPrazo com as mesmas
   regras. Extensão 1.154.0 guarda o anúncio (item) de cada loja.
