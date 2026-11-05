@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
@@ -294,7 +294,7 @@ export type ConsultaBusca = {
 const LOTE = 20;
 const CURADORIA_A_CADA = 12;
 
-type CartaoDaBusca = {
+export type CartaoDaBusca = {
   chave: string;
   /* Anúncio (MLB...) do botão de compra; vazio sem oferta destacada. */
   item: string;
@@ -329,7 +329,7 @@ const dataCurta = (iso: string | null | undefined) => {
     : null;
 };
 
-function doCatalogo(r: Resultado, lidoEm: string | undefined): CartaoDaBusca {
+export function doCatalogo(r: Resultado, lidoEm: string | undefined): CartaoDaBusca {
   return {
     chave: r.item || r.produto,
     item: r.item,
@@ -1145,16 +1145,19 @@ function Curadoria({
 }
 
 /* Cartão da busca: o mesmo desenho do cartão da vitrine (Vitrine.tsx). */
-function CartaoBusca({
+export function CartaoBusca({
   c,
   indice,
   resumo,
   comparar,
+  canto,
 }: {
   c: CartaoDaBusca;
   indice: number;
   resumo: ResumoAvaliacoes | undefined;
   comparar: (url: string) => void;
+  /* Optional control over the photo corner (Amigo Secreto heart, 05/11). */
+  canto?: ReactNode;
 }) {
   const detalhe = c.item || idsDoEndereco(c.url)[0] || "";
   const regiao = useRegiaoGuardada();
@@ -1192,7 +1195,7 @@ function CartaoBusca({
       })}
       data-indice={indice}
       tabIndex={-1}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-foreground outline-none transition-all duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#0071e3]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-foreground outline-none transition-all duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#0071e3]"
     >
       <VerDetalhesVitrine
         chave={detalhe}
@@ -1204,6 +1207,7 @@ function CartaoBusca({
         gatilho={foto}
         className="w-full"
       />
+      {canto && <div className="absolute right-2 top-2 z-10">{canto}</div>}
       <div className="flex flex-1 flex-col border-t border-border/60 p-2.5">
         <p className="flex min-h-5 flex-wrap items-center gap-1">
           <SeloMarketplace links={[c.link ?? c.url, c.outroLink]} />

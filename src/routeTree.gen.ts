@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AmigoSecretoRouteImport } from './routes/amigo-secreto'
 import { Route as BrinquedosRouteImport } from './routes/brinquedos'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as DiaDasCriancasRouteImport } from './routes/dia-das-criancas'
@@ -35,6 +36,8 @@ import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
+import { Route as ApiPublicAmigoSecretoInterpretarRouteImport } from './routes/api/public/amigo-secreto-interpretar'
+import { Route as ApiPublicAmigoSecretoVitrineRouteImport } from './routes/api/public/amigo-secreto-vitrine'
 import { Route as ApiPublicAssistenteBuscaRouteImport } from './routes/api/public/assistente-busca'
 import { Route as ApiPublicBuscarRouteImport } from './routes/api/public/buscar'
 import { Route as ApiPublicBuscarFotoRouteImport } from './routes/api/public/buscar-foto'
@@ -70,6 +73,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AmigoSecretoRoute = AmigoSecretoRouteImport.update({
+  id: '/amigo-secreto',
+  path: '/amigo-secreto',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrinquedosRoute = BrinquedosRouteImport.update({
@@ -193,6 +201,18 @@ const ApiPublicAjudarEscolherRoute = ApiPublicAjudarEscolherRouteImport.update({
   path: '/api/public/ajudar-escolher',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAmigoSecretoInterpretarRoute =
+  ApiPublicAmigoSecretoInterpretarRouteImport.update({
+    id: '/api/public/amigo-secreto-interpretar',
+    path: '/api/public/amigo-secreto-interpretar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAmigoSecretoVitrineRoute =
+  ApiPublicAmigoSecretoVitrineRouteImport.update({
+    id: '/api/public/amigo-secreto-vitrine',
+    path: '/api/public/amigo-secreto-vitrine',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAssistenteBuscaRoute =
   ApiPublicAssistenteBuscaRouteImport.update({
     id: '/api/public/assistente-busca',
@@ -332,6 +352,7 @@ const ApiPublicTelegramWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/amigo-secreto': typeof AmigoSecretoRoute
   '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
@@ -356,6 +377,8 @@ export interface FileRoutesByFullPath {
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
+  '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
+  '/api/public/amigo-secreto-vitrine': typeof ApiPublicAmigoSecretoVitrineRoute
   '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
@@ -386,6 +409,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/amigo-secreto': typeof AmigoSecretoRoute
   '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
@@ -410,6 +434,8 @@ export interface FileRoutesByTo {
   '/guias': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
+  '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
+  '/api/public/amigo-secreto-vitrine': typeof ApiPublicAmigoSecretoVitrineRoute
   '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
@@ -441,6 +467,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/amigo-secreto': typeof AmigoSecretoRoute
   '/brinquedos': typeof BrinquedosRoute
   '/contato': typeof ContatoRoute
   '/dia-das-criancas': typeof DiaDasCriancasRoute
@@ -465,6 +492,8 @@ export interface FileRoutesById {
   '/guias/': typeof GuiasIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
+  '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
+  '/api/public/amigo-secreto-vitrine': typeof ApiPublicAmigoSecretoVitrineRoute
   '/api/public/assistente-busca': typeof ApiPublicAssistenteBuscaRoute
   '/api/public/buscar': typeof ApiPublicBuscarRoute
   '/api/public/buscar-foto': typeof ApiPublicBuscarFotoRoute
@@ -497,6 +526,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/amigo-secreto'
     | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
@@ -521,6 +551,8 @@ export interface FileRouteTypes {
     | '/guias/'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
+    | '/api/public/amigo-secreto-interpretar'
+    | '/api/public/amigo-secreto-vitrine'
     | '/api/public/assistente-busca'
     | '/api/public/buscar'
     | '/api/public/buscar-foto'
@@ -551,6 +583,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/amigo-secreto'
     | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
@@ -575,6 +608,8 @@ export interface FileRouteTypes {
     | '/guias'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
+    | '/api/public/amigo-secreto-interpretar'
+    | '/api/public/amigo-secreto-vitrine'
     | '/api/public/assistente-busca'
     | '/api/public/buscar'
     | '/api/public/buscar-foto'
@@ -605,6 +640,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/amigo-secreto'
     | '/brinquedos'
     | '/contato'
     | '/dia-das-criancas'
@@ -629,6 +665,8 @@ export interface FileRouteTypes {
     | '/guias/'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
+    | '/api/public/amigo-secreto-interpretar'
+    | '/api/public/amigo-secreto-vitrine'
     | '/api/public/assistente-busca'
     | '/api/public/buscar'
     | '/api/public/buscar-foto'
@@ -660,6 +698,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AmigoSecretoRoute: typeof AmigoSecretoRoute
   BrinquedosRoute: typeof BrinquedosRoute
   ContatoRoute: typeof ContatoRoute
   DiaDasCriancasRoute: typeof DiaDasCriancasRoute
@@ -684,6 +723,8 @@ export interface RootRouteChildren {
   GuiasIndexRoute: typeof GuiasIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicAjudarEscolherRoute: typeof ApiPublicAjudarEscolherRoute
+  ApiPublicAmigoSecretoInterpretarRoute: typeof ApiPublicAmigoSecretoInterpretarRoute
+  ApiPublicAmigoSecretoVitrineRoute: typeof ApiPublicAmigoSecretoVitrineRoute
   ApiPublicAssistenteBuscaRoute: typeof ApiPublicAssistenteBuscaRoute
   ApiPublicBuscarRoute: typeof ApiPublicBuscarRoute
   ApiPublicBuscarFotoRoute: typeof ApiPublicBuscarFotoRoute
@@ -726,6 +767,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/amigo-secreto': {
+      id: '/amigo-secreto'
+      path: '/amigo-secreto'
+      fullPath: '/amigo-secreto'
+      preLoaderRoute: typeof AmigoSecretoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brinquedos': {
@@ -894,6 +942,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/ajudar-escolher'
       fullPath: '/api/public/ajudar-escolher'
       preLoaderRoute: typeof ApiPublicAjudarEscolherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/amigo-secreto-interpretar': {
+      id: '/api/public/amigo-secreto-interpretar'
+      path: '/api/public/amigo-secreto-interpretar'
+      fullPath: '/api/public/amigo-secreto-interpretar'
+      preLoaderRoute: typeof ApiPublicAmigoSecretoInterpretarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/amigo-secreto-vitrine': {
+      id: '/api/public/amigo-secreto-vitrine'
+      path: '/api/public/amigo-secreto-vitrine'
+      fullPath: '/api/public/amigo-secreto-vitrine'
+      preLoaderRoute: typeof ApiPublicAmigoSecretoVitrineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/assistente-busca': {
@@ -1084,6 +1146,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AmigoSecretoRoute: AmigoSecretoRoute,
   BrinquedosRoute: BrinquedosRoute,
   ContatoRoute: ContatoRoute,
   DiaDasCriancasRoute: DiaDasCriancasRoute,
@@ -1109,6 +1172,8 @@ const rootRouteChildren: RootRouteChildren = {
   GuiasIndexRoute: GuiasIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicAjudarEscolherRoute: ApiPublicAjudarEscolherRoute,
+  ApiPublicAmigoSecretoInterpretarRoute: ApiPublicAmigoSecretoInterpretarRoute,
+  ApiPublicAmigoSecretoVitrineRoute: ApiPublicAmigoSecretoVitrineRoute,
   ApiPublicAssistenteBuscaRoute: ApiPublicAssistenteBuscaRoute,
   ApiPublicBuscarRoute: ApiPublicBuscarRoute,
   ApiPublicBuscarFotoRoute: ApiPublicBuscarFotoRoute,
