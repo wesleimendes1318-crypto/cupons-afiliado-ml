@@ -98,12 +98,14 @@ export async function carregarAte(opcoes: {
   cancelado?: () => boolean;
   /** Safety cap of calls for one load. */
   maxChamadas?: number;
+  /** Editorial curation (amigo-secreto-curadoria): false drops the card. */
+  aprovar?: (r: Resultado) => boolean;
 }): Promise<{ novos: Resultado[]; passos: PassoTermo[]; erro: string | null }> {
   const passos = opcoes.passos.map((p) => ({ ...p }));
   const novos: Resultado[] = [];
   let erro: string | null = null;
   let falhas = 0;
-  for (let n = 0; n < (opcoes.maxChamadas ?? 14) && novos.length < opcoes.alvo; n++) {
+  for (let n = 0; n < (opcoes.maxChamadas ?? 24) && novos.length < opcoes.alvo; n++) {
     if (opcoes.cancelado?.()) break;
     const k = proximoPasso(passos);
     if (k < 0) break;
@@ -121,6 +123,7 @@ export async function carregarAte(opcoes: {
       const ids = idsDoResultado(x);
       if (!cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max) || !ids.length || ids.some((id) => opcoes.vistos.has(id)))
         return false;
+      if (opcoes.aprovar && !opcoes.aprovar(x)) return false;
       ids.forEach((id) => opcoes.vistos.add(id));
       return true;
     });

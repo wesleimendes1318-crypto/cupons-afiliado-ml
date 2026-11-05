@@ -2,6 +2,7 @@
    server when the model is slow (> 3 s) or fails, and in the browser when the
    endpoint does not answer. It only splits what the person wrote into
    showcases and search terms; products always come from the catalog search. */
+import { ideiasDaEpoca } from "@/lib/amigo-secreto-curadoria";
 import type { Interpretacao, TamanhosAmigo } from "@/lib/amigo-secreto-tipos";
 
 const sem = (s: string) =>
@@ -76,7 +77,7 @@ const CATEGORIAS: Categoria[] = [
     chaves: /livro|leitura|\bler\b|romance|kindle/,
     icone: "📚",
     titulo: () => "Livros e leituras em alta",
-    termos: () => ["livro romance", "livro mais vendido", "box livros", "livro fantasia", "livro suspense"],
+    termos: () => ["livro romance best seller", "livro mais vendido ficcao", "box livros ficcao", "livro fantasia", "livro suspense thriller"],
     extras: ["luminária de leitura", "marcador de página", "suporte para livro"],
   },
   {
@@ -312,10 +313,11 @@ export function interpretarLocal(texto: string): Interpretacao {
     vitrines.push({ titulo: cap(a), icone: "🎁", termos: [sem(a).slice(0, 50)] });
   const extras = [...new Set([...usadas.values()].flatMap(({ cat }) => cat.extras))];
   vitrines.splice(6);
+  const epoca = ideiasDaEpoca();
   vitrines.push({
-    titulo: "Ideias criativas e semelhantes",
+    titulo: epoca.titulo,
     icone: "💡",
-    termos: (extras.length >= 3 ? extras : [...extras, ...IDEIAS_PADRAO]).slice(0, 6),
+    termos: [...new Set([...epoca.termos.slice(0, 4), ...extras, ...IDEIAS_PADRAO])].slice(0, 8),
   });
   return { tamanhos, vitrines };
 }
@@ -404,7 +406,7 @@ export function interpretacaoDoModelo(j: unknown): Interpretacao | null {
             .map((x) => textoLimpo(x, 50).toLowerCase())
             .filter((x) => x.length > 2),
         ),
-      ].slice(0, 6),
+      ].slice(0, 10),
     }))
     .filter((v) => v.titulo && v.termos.length)
     .slice(0, 7);

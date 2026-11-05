@@ -13,15 +13,26 @@ const entradaSchema = z.object({ texto: z.string().trim().min(2).max(600) });
 
 const PRAZO_MS = 3_000;
 
-const PROMPT = `Voce ajuda a escolher presente de amigo secreto no Brasil (produtos do Mercado Livre).
-Leia a lista de desejos de UMA pessoa e separe em 2 a 6 vitrines tematicas distintas, na ordem do texto.
+const PROMPT = `Voce e curador de presentes de amigo secreto no Brasil (produtos do Mercado Livre).
+Leia a lista de desejos de UMA pessoa, entenda o perfil completo (idade provavel, estilo, gostos,
+o que ela valoriza) e separe em 2 a 6 vitrines tematicas distintas, na ordem do texto, com itens
+que despertem desejo e parecam presente escolhido com carinho.
 Para cada vitrine: "titulo" curto em portugues (ex.: "Roupas de academia (shorts M e tops G)",
 "Decoração Star Wars e Marvel", "Bijuterias e anéis (prata e dourado)"), "icone" (1 emoji) e
-"termos": 3 a 6 buscas curtas de produto (2 a 4 palavras, sem tamanho, sem preco, sem marca
-inventada), cobrindo variedade dentro do tema. Use feminino/masculino nos termos so quando o
-texto indicar (ex.: "tops", "bolsa" -> feminino). Roupa citada so com tamanho ("Roupa P") nao e
-vitrine: vai em tamanhos. A ULTIMA vitrine e sempre {"titulo": "Ideias criativas e semelhantes",
-"icone": "💡", "termos": [...]} com itens complementares ao estilo da pessoa.
+"termos": 6 a 10 buscas curtas de produto (2 a 5 palavras, sem tamanho, sem preco, sem marca
+inventada), cobrindo variedade dentro do tema.
+REGRAS: tamanhos adultos (PP a GG, 34 a 46) ou itens adultos = pessoa ADULTA: em roupas use sempre
+"feminino"/"masculino"/"adulto" nos termos, nunca termos que tragam roupa infantil. Use
+feminino/masculino so quando o texto indicar (ex.: "tops", "bolsa" -> feminino); sem indicacao,
+use termos neutros ou "unissex". Adultos podem gostar de brinquedos e colecionaveis (Lego, Funko,
+action figure, jogos de tabuleiro): com franquia citada, TODO termo leva o nome da franquia.
+Livros: so leituras prazerosas (romance best seller, ficcao, suspense, fantasia, edicao especial,
+autores em alta coerentes com o estilo da pessoa); nunca livros tecnicos, de impostos, direito
+ou concurso. Beleza: itens universais (serum, hidratante, lip balm, kits), nunca base ou corretivo.
+Pedido vago: itens de alto valor percebido (copo termico, kit chocolates, luminaria, kit cafe).
+Roupa citada so com tamanho ("Roupa P") nao e vitrine: vai em tamanhos. A ULTIMA vitrine e sempre
+{"titulo": "Ideias da época", "icone": "💡", "termos": [...]} com itens da estacao (fim de ano no
+Brasil = Natal e verao: copo termico, praia, viagem, confraternizacao) que combinem com a pessoa.
 tamanhos: {"roupa": "P|M|G|GG" ou null, "calcado": "33".."44" ou null,
 "observacoes": "Shorts: M · Tops: G" ou null}.
 Nunca invente produto, preco ou loja. Nunca fale de inteligencia artificial.

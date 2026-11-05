@@ -14,6 +14,7 @@ import { PainelDesejosAmigo } from "@/components/AmigoSecreto/PainelDesejosAmigo
 import { VitrineCategoria } from "@/components/AmigoSecreto/VitrineCategoria";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { carregarAte, passosIniciais, type PassoTermo } from "@/lib/amigo-secreto-busca";
+import { ampliarTermos, aprovadoNaVitrine, contextoDaVitrine } from "@/lib/amigo-secreto-curadoria";
 import {
   alternarFavorito,
   estadoVazio,
@@ -154,6 +155,8 @@ function PaginaAmigoSecreto() {
   const passos = useRef(new Map<string, PassoTermo[]>());
   const tentadas = useRef(new Set<string>());
   const geracao = useRef(0);
+  const estadoRef = useRef(estado);
+  estadoRef.current = estado;
 
   useEffect(() => {
     setEstado(lerLocal());
@@ -208,11 +211,14 @@ function PaginaAmigoSecreto() {
       const seen = vistos.current.get(amigoId) ?? new Set<string>();
       vistos.current.set(amigoId, seen);
       mudarVitrine(amigoId, v.id, (x) => ({ ...x, carregando: true, erro: null }));
+      const texto = estadoRef.current.amigos.find((a) => a.id === amigoId)?.desejosTexto ?? "";
+      const ctx = contextoDaVitrine(v, texto);
       const r = await carregarAte({
-        passos: passos.current.get(v.id) ?? passosIniciais(v.termosBusca),
+        passos: passos.current.get(v.id) ?? passosIniciais(ampliarTermos(v.termosBusca, ctx)),
         faixa,
         vistos: seen,
         alvo,
+        aprovar: (x) => aprovadoNaVitrine(x.nome, ctx),
         cancelado: () => minha !== geracao.current,
         aoChegar: (novos) =>
           minha === geracao.current &&

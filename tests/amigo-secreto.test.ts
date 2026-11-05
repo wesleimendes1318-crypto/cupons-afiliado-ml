@@ -24,7 +24,7 @@ describe("amigo secreto: leitura dos pedidos", () => {
     expect(t).toMatch(/Livros/);
     expect(t).toMatch(/Star Wars e Marvel/);
     expect(t).toMatch(/Bijuterias.*prata e dourado/);
-    expect(r.vitrines.at(-1)!.titulo).toMatch(/Ideias criativas/);
+    expect(r.vitrines.at(-1)!.titulo).toMatch(/Ideias/);
     expect(selosDeTamanho(r.tamanhos)).toEqual(["Shorts: M", "Camisetas e tops: G"]);
     /* "Senhor dos anéis"-style collisions: the theme showcase never becomes rings. */
     expect(r.vitrines.find((v) => /Star Wars/.test(v.titulo))!.termos.every((x) => !/^anel/.test(x))).toBe(true);
@@ -41,14 +41,14 @@ describe("amigo secreto: leitura dos pedidos", () => {
     expect(t.some((x) => /Bolsas/.test(x))).toBe(true);
     expect(t.some((x) => /Decoração de casa e jardinagem/.test(x))).toBe(true);
     expect(t.some((x) => /pet/i.test(x))).toBe(false);
-    expect(t.at(-1)).toMatch(/Ideias criativas/);
+    expect(t.at(-1)).toMatch(/Ideias/);
     expect(r.vitrines.length).toBeLessThanOrEqual(7);
   });
 
-  test("termos sem preço, sem link e no máximo 6 por vitrine", () => {
+  test("termos sem preço, sem link e no máximo 10 por vitrine", () => {
     for (const v of [...interpretarLocal(ANNA).vitrines, ...interpretarLocal(NATH).vitrines]) {
       expect(v.termos.length).toBeGreaterThan(0);
-      expect(v.termos.length).toBeLessThanOrEqual(6);
+      expect(v.termos.length).toBeLessThanOrEqual(10);
       for (const x of v.termos) expect(x).not.toMatch(/r\$|http|\d{2,}/i);
     }
   });
