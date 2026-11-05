@@ -253,10 +253,14 @@ function PaginaAmigoSecreto() {
     const fila = ativo.vitrines.filter((v) => !v.carregando && !tentadas.current.has(v.id) && !v.produtos.length);
     fila.slice(0, Math.max(0, 3 - emCurso)).forEach((v) => void carregar(ativo.id, v, META_POR_VITRINE));
     /* Background fill: once nothing is loading, one showcase at a time grows to META_FUNDO. */
-    if (emCurso || fila.length) return;
-    const proxima = ativo.vitrines.find(
+    if (fila.length) return;
+    const abertas = ativo.vitrines.filter(
       (v) => v.temMais && !v.erro && v.produtos.length < META_FUNDO && !completadas.current.has(v.id),
     );
+    /* Thin showcases (< 4 on the first batch) are filled first. */
+    const fina = abertas.find((v) => v.produtos.length < 4 && !v.carregando);
+    /* A thin showcase does not wait for the others; the rest fill one at a time. */
+    const proxima = fina && emCurso < 3 ? fina : emCurso ? undefined : abertas.find((v) => !v.carregando);
     if (!proxima) return;
     completadas.current.add(proxima.id);
     void carregar(ativo.id, proxima, META_FUNDO - proxima.produtos.length);

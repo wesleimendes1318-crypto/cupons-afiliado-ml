@@ -3,7 +3,7 @@
    reference price, shipping line, "Comprar com segurança" through the
    affiliate link generated on click, "Comparar preço"), and "+20 opções". */
 import { LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { usePrazosDosItens } from "@/lib/prazo-cliente";
 
@@ -13,6 +13,25 @@ import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 import type { VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
+
+/* Weslei, 05/11: gentle, true waiting copy (no jargon). Only what the
+   search really does: catalog offers incl. official stores, free shipping
+   and the price inside the budget. */
+const FRASES_DE_ESPERA = [
+  "Garimpando as melhores ofertas, inclusive em lojas oficiais…",
+  "Conferindo frete grátis e se o preço cabe no valor…",
+  "Só mais um instante, selecionando as melhores opções para você…",
+];
+
+function useFraseDeEspera(ativa: boolean) {
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    if (!ativa) return;
+    const t = setInterval(() => setK((x) => x + 1), 2600);
+    return () => clearInterval(t);
+  }, [ativa]);
+  return FRASES_DE_ESPERA[k % FRASES_DE_ESPERA.length]!;
+}
 
 export function VitrineCategoria({
   vitrine,
@@ -67,17 +86,19 @@ export function VitrineCategoria({
         );
   const controles = !contadorFixo && vitrine.produtos.length > 3;
   const n = vitrine.produtos.length;
+  const frase = useFraseDeEspera(vitrine.carregando);
+  const poucas = n > 0 && n < 4;
   const contador =
     contadorFixo ??
     (vitrine.carregando
-      ? n
-        ? `${n} opções ${faixa} até agora…`
-        : "Procurando opções no valor…"
+      ? poucas
+        ? `Separamos essas ${n} primeiras opções enquanto buscamos mais para você…`
+        : frase
       : n
-        ? `${n} ${n === 1 ? "opção encontrada" : "opções encontradas"} ${faixa}`
+        ? `${n} ${n === 1 ? "opção selecionada" : "opções selecionadas"} ${faixa} para você`
         : vitrine.erro
           ? vitrine.erro
-          : `Nenhuma opção ${ampliar?.freteACalcular ? "" : "com frete grátis "}${faixa} agora.`);
+          : `Ainda não achamos opções ${ampliar?.freteACalcular ? "" : "com frete grátis "}${faixa}.`);
   return (
     <section aria-label={vitrine.titulo} className="animate-cartao min-w-0">
       <header className="flex items-end justify-between gap-3">
@@ -147,6 +168,15 @@ export function VitrineCategoria({
                 }
               />
             ))}
+            {vitrine.carregando && (
+              <li
+                aria-hidden="true"
+                className="flex min-h-80 flex-col items-center justify-center gap-3 rounded-2xl bg-[#f5f5f7] p-4 text-center text-xs font-semibold text-secondary-ink dark:bg-white/5"
+              >
+                <span className="size-10 animate-pulse rounded-full bg-[#0071e3]/15" />
+                Buscando mais opções…
+              </li>
+            )}
           </ul>
           {vitrine.temMais && (
             <BotaoCarregarMaisVitrine
