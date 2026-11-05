@@ -98,10 +98,20 @@ const CATEGORIAS: Categoria[] = [
     titulo: (c) =>
       c.cores.length ? `Bijuterias e semijoias (${e(c.cores)})` : "Bijuterias e semijoias",
     termos: (c) => {
-      const cores = c.cores.length ? c.cores : [""];
-      return ["anel", "colar", "brinco", "pulseira"].flatMap((peca) =>
-        cores.map((cor) => t(peca, peca === "pulseira" && cor === "dourado" ? "dourada" : cor)),
-      );
+      /* Weslei, 05/11: modern, youthful pieces and the best brands first. */
+      const prata = c.cores.some((x) => /prat/.test(x));
+      const banho = prata ? "prata" : "banhado a ouro";
+      return [
+        `colar ponto de luz ${banho}`,
+        `brinco argola click zirconia ${banho}`,
+        `ear cuff ${prata ? "prata" : "dourado"}`,
+        `pulseira riviera zirconia ${banho}`,
+        `conjunto colar e brinco ${banho}`,
+        "vivara life",
+        "rommanel colar",
+        "semijoia mix de colares",
+        "anel solitario zirconia",
+      ];
     },
     extras: ["porta joias", "caixa organizadora de bijuterias"],
   },
@@ -110,7 +120,19 @@ const CATEGORIAS: Categoria[] = [
     chaves: /skin ?care|autocuidado|beleza|facial|maquiagem|cosmetic|hidratante|cuidados? com a pele/,
     icone: "🌿",
     titulo: () => "Skincare e autocuidado",
-    termos: () => ["kit skincare", "sérum facial", "hidratante facial", "máscara facial", "kit autocuidado"],
+    /* Best brands first (Weslei, 05/11). */
+    termos: () => [
+      "sallve kit",
+      "principia skincare",
+      "cerave hidratante",
+      "la roche posay",
+      "creamy skincare",
+      "vichy serum facial",
+      "bioderma agua micelar",
+      "neutrogena hydro boost",
+      "sérum vitamina c facial",
+      "protetor solar facial toque seco",
+    ],
     extras: ["necessaire", "espelho de maquiagem com luz"],
   },
   {
@@ -122,7 +144,18 @@ const CATEGORIAS: Categoria[] = [
     termos: (c) =>
       c.genero === "masculino"
         ? ["tênis masculino", "chinelo masculino", "sapatênis", "sandália masculina"]
-        : [t("tênis", g(c, "feminino", "")), "sandália feminina", "rasteirinha", "sapatilha feminina", "papete feminina"],
+        : /* Summer first, known brands (Weslei, 05/11). */
+          [
+            "sandália salto bloco vizzano",
+            "rasteirinha moleca",
+            "papete feminina beira rio",
+            "sandália anabela piccadilly",
+            "slide nuvem feminino",
+            "havaianas slim",
+            "melissa sandália",
+            "sandália usaflex feminina",
+            t("tênis", g(c, "feminino", ""), "casual"),
+          ],
     extras: ["kit meias", "porta sapatos"],
   },
   {

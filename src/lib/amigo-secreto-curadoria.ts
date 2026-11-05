@@ -16,7 +16,16 @@ const sem = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-export type TipoVitrine = "roupa" | "calcado" | "livros" | "tema" | "beleza" | "ideias" | "outro";
+export type TipoVitrine = "roupa" | "calcado" | "livros" | "tema" | "beleza" | "joia" | "ideias" | "outro";
+
+/* Toys/novelty kits sneaking into beauty (05/11: a Zona Criativa kit). */
+const NAO_E_SKINCARE =
+  /\b(zona ?criativa|uatt|brinquedo|infantil|kids|crianca|menina|pelucia|slime|massinha|maleta de maquiagem infantil|fantasia|boneca|kit spa infantil|estojo de maquiagem infantil)\b/;
+/* Old-fashioned / loose pieces / resale lots in jewelry. */
+const JOIA_FORA =
+  /\b(pingente avulso|so pingente|saquinho|atacado|revenda|lote|kit \d{2,}|religios\w*|estrela de davi|crucifixo|terco|medalha|infantil|menina|bebe|masculin[oa])\b/;
+/* Men's footwear brands/models in a women's showcase. */
+const CALCADO_MASCULINO = /\b(kenner|pegada|democrata|ferracini|sapatenis|mocassim masculino|rider)\b/;
 
 export type ContextoVitrine = {
   tipo: TipoVitrine;
@@ -159,7 +168,9 @@ export function contextoDaVitrine(
             ? "roupa"
             : /skin ?care|maquiagem|beleza|autocuidado|facial|cosmetic/.test(base)
               ? "beleza"
-              : "outro";
+              : /bijuteri|semijoia|joia|colar|brinco|pulseira|\banel\b/.test(base)
+                ? "joia"
+                : "outro";
   return {
     tipo,
     adulto: ehAdulto(textoDaPessoa),
@@ -209,7 +220,10 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
       if (outras.some(([, f]) => f.titulo.test(t))) return false;
     }
   }
-  if (c.tipo === "beleza" && MAQUIAGEM_DE_TOM.test(t)) return false;
+  if (c.tipo === "beleza" && (MAQUIAGEM_DE_TOM.test(t) || NAO_E_SKINCARE.test(t))) return false;
+  if (c.tipo === "joia" && (JOIA_FORA.test(t) || /^pingente\b/.test(t)))
+    return false;
+  if (c.tipo === "calcado" && c.genero === "feminino" && CALCADO_MASCULINO.test(t) && !/feminin/.test(t)) return false;
   /* Gifts for adults in generic showcases: no baby items. */
   if (c.adulto && c.tipo !== "tema" && /\b(bebe|baby|recem[- ]nascido|chupeta|mamadeira|fralda)\b/.test(t)) return false;
   return true;
@@ -292,7 +306,12 @@ const LIVROS_DESEJO = [
   "luminaria de leitura",
 ];
 const BELEZA_UNIVERSAL = [
-  "kit skincare presente",
+  "sallve kit",
+  "principia skincare",
+  "cerave hidratante",
+  "la roche posay effaclar",
+  "creamy skincare",
+  "bioderma agua micelar",
   "serum acido hialuronico",
   "serum vitamina c facial",
   "hidratante facial",
@@ -302,6 +321,23 @@ const BELEZA_UNIVERSAL = [
   "kit banho presente",
   "espelho de maquiagem com led",
   "necessaire feminina",
+];
+
+const JOIA_DESEJO = [
+  "colar ponto de luz banhado a ouro 18k",
+  "brinco argola click zirconia",
+  "ear cuff dourado",
+  "pulseira riviera zirconia",
+  "vivara life",
+  "rommanel colar",
+];
+const CALCADO_VERAO = [
+  "sandália salto bloco vizzano",
+  "rasteirinha moleca",
+  "papete feminina beira rio",
+  "slide nuvem feminino",
+  "havaianas slim",
+  "melissa sandália",
 ];
 
 /** Showcase terms + a wider pool so "+20 opções" never runs dry. */
@@ -314,6 +350,8 @@ export function ampliarTermos(termos: string[], c: ContextoVitrine, agora = new 
   if (c.tipo === "livros") extra.push(...LIVROS_DESEJO);
   if (c.tipo === "tema") for (const k of c.temas) extra.push(...(FRANQUIAS[k]?.termos ?? []));
   if (c.tipo === "beleza") extra.push(...BELEZA_UNIVERSAL);
+  if (c.tipo === "joia") extra.push(...JOIA_DESEJO);
+  if (c.tipo === "calcado" && c.genero !== "masculino") extra.push(...CALCADO_VERAO);
   if (c.tipo === "ideias") extra.push(...ideiasDaEpoca(agora).termos);
   /* Clothing terms for adults carry the gender word (no kids' pieces). */
   const ajustados = termos.map((x) => {

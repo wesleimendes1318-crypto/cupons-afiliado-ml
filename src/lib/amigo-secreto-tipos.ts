@@ -74,5 +74,7 @@ export const CHAVE_LOCAL = "melhorescolha_amigo_secreto_v2";
 /** Weslei, 05/11: the budget starts open (0 = any value). */
 export const ORCAMENTO_PADRAO = { min: 0, max: 0 } as const;
 /** First load of each showcase; "+20 opções" after it. */
-export const META_POR_VITRINE = 50;
+/* First load fills the visible rail fast (05/11: 50 made thin showcases hang
+   for 24 calls); "+20 opções" continues on demand. */
+export const META_POR_VITRINE = 20;
 export const LOTE_EXTRA = 20;

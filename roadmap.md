@@ -113,3 +113,5 @@ Auditoria do ciclo 0: `docs/auditoria-2026-09-28.md`. Cupons: legado mantido
 - [x] Ver mais da busca: não limitar e não mexer a tela
 - [x] Franquias: Homem-Aranha é Marvel, vitrine conjunta mantida; franquia não pedida barrada
 - [x] Amigo Secreto: data da festa (entrega por CEP), ordenação, frete grátis e detalhes
+
+- [x] Amigo Secreto: melhores marcas primeiro (skincare, bijuterias, calçados)

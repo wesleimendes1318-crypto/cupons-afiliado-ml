@@ -44,3 +44,24 @@ describe("amigo secreto: curadoria", () => {
     expect(ideiasDaEpoca(new Date("2026-11-05T12:00:00Z")).titulo).toContain("Natal");
   });
 });
+
+describe("amigo secreto: skincare, bijuterias e calçados (05/11)", () => {
+  const NATH = "Nath - roupa P, calçado 35, skincare, acessórios dourados, plantas, bolsa";
+  const pele = contextoDaVitrine({ titulo: "Skincare e autocuidado", termosBusca: ["sallve kit"] }, NATH);
+  const joia = contextoDaVitrine({ titulo: "Bijuterias e semijoias (dourado)", termosBusca: ["colar ponto de luz"] }, NATH);
+  const pe = contextoDaVitrine({ titulo: "Calçados femininos tamanho 35", termosBusca: ["sandália feminina"] }, NATH);
+
+  test("brinquedo nunca entra em skincare", () => {
+    expect(aprovadoNaVitrine("Kit Skincare Poderosa Zonacriativa Zona Criativa", pele)).toBe(false);
+    expect(aprovadoNaVitrine("Principia Kit 2 Gel De Limpeza Facial Gl-01", pele)).toBe(true);
+  });
+  test("pingente avulso sai; colar moderno fica", () => {
+    expect(joia.tipo).toBe("joia");
+    expect(aprovadoNaVitrine("Pingente Estrela Banhado a Ouro para Corrente", joia)).toBe(false);
+    expect(aprovadoNaVitrine("Colar Ponto de Luz Zircônia Banhado a Ouro 18k", joia)).toBe(true);
+  });
+  test("chinelo masculino sai da vitrine feminina", () => {
+    expect(aprovadoNaVitrine("Chinelo Kenner Kivah Line Sem Desenho", pe)).toBe(false);
+    expect(aprovadoNaVitrine("Sandália Feminina Salto Baixo Bloco Vizzano", pe)).toBe(true);
+  });
+});

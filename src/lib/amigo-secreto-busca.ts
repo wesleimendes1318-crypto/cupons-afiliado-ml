@@ -36,6 +36,25 @@ export function cabeNaFaixa(
   return true;
 }
 
+const CORES =
+  /\b(preto|preta|pretos|branco|branca|rosa|azul|verde|vermelho|vermelha|bege|cinza|nude|marrom|caramelo|dourado|dourada|prata|off ?white|amarelo|amarela|lilas|roxo|roxa|vinho|laranja|marinho|creme|areia|chumbo|grafite|tamanho|tam|\d{2})\b/g;
+
+/** "sig:" key of a listing's model (title without colors/sizes, first 6 words):
+    "Tênis Feminino Vili Olimp Caminhada Academia Rosa" == "... Verde". */
+export function assinaturaDoModelo(nome: string | null | undefined): string | null {
+  if (!nome) return null;
+  const p = nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(CORES, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 6);
+  return p.length >= 3 ? `sig:${p.join(" ")}` : null;
+}
+
 /** Listing ids of a result (item and catalog product). */
 export const idsDoResultado = (r: Pick<Resultado, "item" | "produto">) =>
   [r.item, r.produto].filter((x) => /^MLB\d+$/.test(x));
@@ -113,12 +132,12 @@ export async function carregarAte(opcoes: {
   const novos: Resultado[] = [];
   let erro: string | null = null;
   let falhas = 0;
-  for (let n = 0; n < (opcoes.maxChamadas ?? 24) && novos.length < opcoes.alvo; n++) {
+  for (let n = 0; n < (opcoes.maxChamadas ?? 12) && novos.length < opcoes.alvo; n++) {
     if (opcoes.cancelado?.()) break;
     const k = proximoPasso(passos);
     if (k < 0) break;
     const passo = passos[k]!;
-    const r = await lerPaginaDoTermo(passo, opcoes.faixa, [...opcoes.vistos]);
+    const r = await lerPaginaDoTermo(passo, opcoes.faixa, [...opcoes.vistos].filter((id) => id.startsWith("MLB")));
     if (!r.resposta) {
       erro = r.erro;
       /* Too many requests: stop and let "+20 opções" try again later. */
@@ -131,8 +150,12 @@ export async function carregarAte(opcoes: {
       const ids = idsDoResultado(x);
       if (!cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max, opcoes.faixa.freteACalcular === true) || !ids.length || ids.some((id) => opcoes.vistos.has(id)))
         return false;
+      /* Same model in another color/seller shows once ("Comparar preço" opens the rest). */
+      const sig = assinaturaDoModelo(x.nome);
+      if (sig && opcoes.vistos.has(sig)) return false;
       if (opcoes.aprovar && !opcoes.aprovar(x)) return false;
       ids.forEach((id) => opcoes.vistos.add(id));
+      if (sig) opcoes.vistos.add(sig);
       return true;
     });
     novos.push(...lote);
