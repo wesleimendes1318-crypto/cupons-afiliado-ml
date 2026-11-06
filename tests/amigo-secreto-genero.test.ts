@@ -56,3 +56,13 @@ test("vitrine de roupas tem termos de reserva", () => {
   expect(ampliarTermos(["camiseta oversized masculina"], c).length).toBe(16);
   expect(termosDeReserva(["camiseta oversized masculina"], c).length).toBeGreaterThan(0);
 });
+
+test("oversized também busca a peça comum em GG ou maior", () => {
+  const r = interpretarLocal("camiseta oversized masculina").vitrines.find((v) => v.titulo === "Roupas masculinas")!;
+  expect(r.termos.slice(0, 4)).toEqual([
+    "camiseta oversized masculina",
+    "camiseta masculina gg",
+    "camiseta masculina xgg",
+    "camiseta masculina plus size",
+  ]);
+});
