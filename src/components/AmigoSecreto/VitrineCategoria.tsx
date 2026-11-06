@@ -77,7 +77,8 @@ export function VitrineCategoria({
   const precoOu = (r: Resultado, v: number) => r.preco ?? v;
   const produtos =
     ordem === "relevancia"
-      ? filtrados
+      ? /* 06/11: top-50 best sellers lead; the rest keep the server's order (stable sort). */
+        [...filtrados].sort((a, b) => Number((b.maisVendido ?? 999) <= 50) - Number((a.maisVendido ?? 999) <= 50))
       : [...filtrados].sort((a, b) =>
           ordem === "menor"
             ? precoOu(a, 1e9) - precoOu(b, 1e9)

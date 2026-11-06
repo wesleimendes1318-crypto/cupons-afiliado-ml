@@ -203,11 +203,12 @@ export type SinaisProcura = {
 export function pontoDeProcura(r: ResultadoBusca, s: SinaisProcura): number {
   let p = 0;
   const pos = s.vendidos.get(r.produto) ?? (r.maisVendido != null ? r.maisVendido : undefined);
-  if (pos != null) p += pos <= 20 ? 4 : pos <= 100 ? 3 : pos <= 1000 ? 2 : 1;
+  /* 06/11: proven best sellers lead the rail. */
+  if (pos != null) p += pos <= 10 ? 6 : pos <= 50 ? 4 : pos <= 100 ? 3 : pos <= 1000 ? 2 : 1;
   if (s.tendencia.has(r.produto)) p += 2;
   p += Math.min(s.vezes.get(r.item) ?? 0, 10) / 2;
   /* "Sofisticados" (06/11): official brand stores rank a bit higher. */
-  if (r.lojaOficial === true) p += 1;
+  if (r.lojaOficial === true) p += 2;
   return p;
 }
 

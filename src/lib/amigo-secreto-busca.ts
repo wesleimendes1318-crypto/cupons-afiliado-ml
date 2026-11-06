@@ -59,6 +59,12 @@ export type PassoTermo = {
 export const passosIniciais = (termos: string[]): PassoTermo[] =>
   termos.map((termo) => ({ termo, pagina: 0, cursor: null, variantes: [], fim: false }));
 
+/** Reserve terms not read yet (keeps "+20 opções" open). */
+export const restamReservas = (passos: PassoTermo[], reserva: string[]) => {
+  const usados = new Set(passos.map((p) => p.termo.toLowerCase()));
+  return reserva.some((t) => !usados.has(t.toLowerCase()));
+};
+
 /** Next term to read: the one with the lowest page that is not finished. */
 export function proximoPasso(passos: PassoTermo[]): number {
   let k = -1;
@@ -116,6 +122,8 @@ export async function carregarAte(opcoes: {
   maxChamadas?: number;
   /** Editorial curation (amigo-secreto-curadoria): false drops the card. */
   aprovar?: (r: Resultado) => boolean;
+  /** Sibling terms added 4 at a time when every term ran out (06/11: "+20" never dies). */
+  termosReserva?: string[];
 }): Promise<{ novos: Resultado[]; passos: PassoTermo[]; erro: string | null }> {
   const passos = opcoes.passos.map((p) => ({ ...p }));
   const novos: Resultado[] = [];
@@ -134,7 +142,13 @@ export async function carregarAte(opcoes: {
       if (k < 0) break;
       lote.push(k);
     }
-    if (!lote.length) break;
+    if (!lote.length) {
+      const usados = new Set(passos.map((p) => p.termo.toLowerCase()));
+      const mais = (opcoes.termosReserva ?? []).filter((t) => !usados.has(t.toLowerCase())).slice(0, 4);
+      if (!mais.length) break;
+      passos.push(...passosIniciais(mais));
+      continue;
+    }
     chamadas += lote.length;
     const vistosAgora = [...opcoes.vistos].filter((id) => id.startsWith("MLB"));
     const respostas = await Promise.all(lote.map((k) => lerPaginaDoTermo(passos[k]!, opcoes.faixa, vistosAgora)));

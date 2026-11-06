@@ -144,7 +144,16 @@ const CATEGORIAS: Categoria[] = [
       const basicos =
         c.genero === "feminino"
           ? ["blusa feminina", "vestido casual feminino", "camiseta básica feminina", "calça jeans feminina"]
-          : ["camiseta básica algodão masculina", "camisa polo masculina", "bermuda masculina", "camiseta oversized masculina"];
+          : [
+              "camiseta oversized masculina streetwear",
+              "camiseta masculina algodão fio 30",
+              "camiseta básica masculina gola redonda",
+              "camisa polo masculina algodão",
+              "bermuda sarja masculina",
+              "camisa linho masculina manga curta",
+              "moletom masculino canguru",
+              "calça jeans masculina slim",
+            ];
       return [...pedidos, ...(c.genero ? basicos : ["camiseta oversized unissex", "moletom unissex"])];
     },
     extras: ["boné", "meia divertida"],

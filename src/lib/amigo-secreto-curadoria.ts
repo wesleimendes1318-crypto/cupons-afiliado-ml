@@ -25,8 +25,9 @@ const NAO_E_SKINCARE =
 const JOIA_FORA =
   /\b(pingente avulso|so pingente|saquinho|atacado|revenda|lote|kit \d{2,}|religios\w*|estrela de davi|crucifixo|terco|medalha|infantil|menina|bebe)\b/;
 /* Women-only pieces in a men's showcase (06/11: Vinicius got a bridal strass set). */
-const SO_FEMININO = /\b(feminin[oa]s?|noivas?|mulher(es)?|madrinhas?|debutante|gestante|strass|ponto de luz|ear cuff|riviera|choker|tornozeleira|calcinha|sutia|lingerie|vestido|saia)\b/;
+const SO_FEMININO = /\b(feminin[oa]s?|noivas?|mulher(es)?|madrinhas?|debutante|gestante|maternidade|cropped|strass|ponto de luz|ear cuff|riviera|choker|berloque|tornozeleira|calcinha|sutia|lingerie|vestido|saia|salto alto|baby ?look|biquini|maio)\b/;
 const SO_MASCULINO = /\b(masculin[oa]s?|homens?|cueca|barba)\b/;
+const SO_MASCULINO_FORTE = /\b(masculin[oa]s?|homens?|cueca|barba|kenner|pegada|democrata|ferracini|sapatenis)\b/;
 /* Men's footwear brands/models in a women's showcase. */
 const CALCADO_MASCULINO = /\b(kenner|pegada|democrata|ferracini|sapatenis|mocassim masculino|rider)\b/;
 
@@ -218,8 +219,11 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
   /* Every showcase (06/11): a man never gets women's pieces, and vice versa. */
   if (!/unissex/.test(t)) {
     if (c.genero === "masculino" && SO_FEMININO.test(t) && !SO_MASCULINO.test(t)) return false;
-    if (c.genero === "feminino" && /\bmasculin[oa]s?\b|\bhomens?\b|\bcueca/.test(t) && !/feminin/.test(t)) return false;
+    if (c.genero === "feminino" && SO_MASCULINO_FORTE.test(t) && !/feminin/.test(t)) return false;
   }
+  /* Men's everyday clothes (06/11): the title has to say it is men's; unisex
+     listings often show a woman in the photo. Gym wear keeps its own rule. */
+  if (c.tipo === "roupa" && c.adulto && !c.academia && c.genero === "masculino" && !SO_MASCULINO.test(t)) return false;
   /* The catalog fills thin searches with best sellers of other kinds
      (figurinhas in "Livros", a teddy in "Star Wars"): each kind needs its word. */
   if (c.tipo === "livros" && /\b(figurinhas?|album|pacotes?|adesivos?|cartas colecionaveis|marcenaria)\b/.test(t))
@@ -377,9 +381,55 @@ const CALCADO_VERAO = [
   "sandália piccadilly",
 ];
 
+const ROUPAS_MASCULINAS = [
+  "camiseta oversized masculina streetwear",
+  "camiseta masculina algodão fio 30",
+  "camiseta básica masculina gola redonda",
+  "camisa polo masculina algodão",
+  "bermuda sarja masculina",
+  "camisa linho masculina manga curta",
+  "moletom masculino canguru",
+  "calça jeans masculina slim",
+  "camiseta algodão pesada masculina",
+  "bermuda moletom masculina",
+  "camisa social masculina slim",
+  "jaqueta corta vento masculina",
+  "calça jogger masculina",
+  "camiseta estampada masculina",
+  "regata masculina algodão",
+];
+const ROUPAS_FEMININAS = [
+  "blusa feminina tricot",
+  "vestido midi feminino",
+  "camiseta oversized feminina",
+  "calça wide leg feminina",
+  "cropped feminino",
+  "saia midi feminina",
+  "camisa linho feminina",
+  "conjunto feminino alfaiataria",
+  "blusa feminina manga bufante",
+  "short jeans feminino",
+  "vestido curto feminino",
+  "body feminino",
+  "calça jeans feminina mom",
+  "moletom feminino",
+  "camiseta básica feminina",
+];
+
 /** Showcase terms + a wider pool so "+20 opções" never runs dry. */
 export function ampliarTermos(termos: string[], c: ContextoVitrine, agora = new Date()): string[] {
+  return poolDeTermos(termos, c, agora).slice(0, 16);
+}
+
+/** Terms after the first 16: read only when every earlier term ran out. */
+export function termosDeReserva(termos: string[], c: ContextoVitrine, agora = new Date()): string[] {
+  return poolDeTermos(termos, c, agora).slice(16);
+}
+
+function poolDeTermos(termos: string[], c: ContextoVitrine, agora: Date): string[] {
   const extra: string[] = [];
+  if (c.tipo === "roupa" && !c.academia)
+    extra.push(...(c.genero === "feminino" ? ROUPAS_FEMININAS : c.genero === "masculino" ? ROUPAS_MASCULINAS : []));
   if (c.tipo === "roupa" && c.academia)
     extra.push(
       ...(c.genero === "feminino" ? ACADEMIA_FEMININA : c.genero === "masculino" ? ACADEMIA_MASCULINA : ACADEMIA_UNISSEX),
@@ -399,6 +449,11 @@ export function ampliarTermos(termos: string[], c: ContextoVitrine, agora = new 
   });
   /* Themed showcase: interleave so every franchise shows from the start. */
   const pool = [...ajustados, ...extra].map((x) => x.trim()).filter((x) => x.length > 2 && x.length <= 60);
-  return [...new Set(pool.map((x) => x.toLowerCase()))].slice(0, 16);
+  /* Reserve tail: each term one word shorter (wider search, same kind). */
+  const amplos = pool.flatMap((x) => {
+    const p = x.split(/\s+/);
+    return p.length >= 3 ? [p.slice(0, -1).join(" ")] : [];
+  });
+  return [...new Set([...pool, ...amplos].map((x) => x.toLowerCase()))];
 }
 
