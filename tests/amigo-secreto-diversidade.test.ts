@@ -43,3 +43,11 @@ test("lote de etiquetas e peças a granel saem das joias", () => {
   expect(aprovadoNaVitrine("250 Un Tag Gravata Brincos Corrente Pulseira", c)).toBe(false);
   expect(aprovadoNaVitrine("Choker Borboleta Prata 925", c)).toBe(true);
 });
+
+test("cozinha ganha louça de cerâmica e caneca política sai", () => {
+  const v = interpretarLocal("coisas de cozinha").vitrines[0]!;
+  const c = contextoDaVitrine({ titulo: v.titulo, termosBusca: v.termos }, "coisas de cozinha");
+  expect(ampliarTermos(v.termos, c).concat()).toBeDefined();
+  expect(aprovadoNaVitrine("Kit 2 Canecas Eleições Lula Vidro 225ml", c)).toBe(false);
+  expect(aprovadoNaVitrine("Conjunto 6 Pratos Fundos Oxford Ryo Maresia 22,5cm", c)).toBe(true);
+});

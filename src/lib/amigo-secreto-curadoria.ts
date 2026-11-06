@@ -260,6 +260,8 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
   if (c.tipo === "joia" && (JOIA_FORA.test(t) || /^pingente\b/.test(t)))
     return false;
   if (c.tipo === "calcado" && c.genero === "feminino" && CALCADO_MASCULINO.test(t) && !/feminin/.test(t)) return false;
+  /* Political or election merchandise is never a gift suggestion (06/11: "Kit 2 Canecas Eleições Lula"). */
+  if (/\b(lula|bolsonaro|eleicoes?|eleitoral|partido)\b/.test(t)) return false;
   /* Gifts for adults in generic showcases: no baby items. */
   if (c.adulto && c.tipo !== "tema" && /\b(bebe|baby|recem[- ]nascido|chupeta|mamadeira|fralda)\b/.test(t)) return false;
   return true;
@@ -419,6 +421,11 @@ const POOLS_POR_TEMA: Array<[RegExp, string[]]> = [
       "tábua de frios petisqueira bambu",
       "taças de vinho cristal",
       "moedor de café manual",
+      /* Weslei, 06/11: stoneware dinnerware sets as gift references. */
+      "aparelho de jantar cerâmica 16 peças",
+      "oxford ryo maresia",
+      "jogo de bowls cerâmica",
+      "jogo de canecas cerâmica",
     ],
   ],
   [
