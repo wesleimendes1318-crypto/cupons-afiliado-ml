@@ -98,7 +98,12 @@ describe("planejadores", () => {
     expect(serveNaVoltagem(r({ voltagem: "220" }), "127", false)).toBe(true);
     const a = r({ item: "a", preco: 50 });
     const b = r({ item: "b", preco: 200, lojaOficial: true });
-    expect(ordenarOfertas([b, a], "economico").map((x) => x.item)).toEqual(["a", "b"]);
+    // Weslei 06/11: official store / best seller always first, even in "econômico".
+    expect(ordenarOfertas([b, a], "economico").map((x) => x.item)).toEqual(["b", "a"]);
+    const c = r({ item: "c", preco: 30 });
+    expect(ordenarOfertas([a, b, c], "economico").map((x) => x.item)).toEqual(["b", "c", "a"]);
+    const top = r({ item: "top", preco: 500, maisVendido: 3 });
+    expect(ordenarOfertas([b, a, top], "equilibrado")[0]!.item).toBe("top");
     expect(ordenarOfertas([a, b], "equilibrado").map((x) => x.item)).toEqual(["b", "a"]);
   });
 

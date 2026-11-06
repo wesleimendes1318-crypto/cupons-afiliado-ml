@@ -298,3 +298,31 @@ export function limitarPorArquetipo<T>(
   }
   return saida;
 }
+
+/* Weslei, 06/11: "sempre priorize produtos em alta, mais vendidos e de alta
+   qualidade primeiro". Tier from the card's own signals: official best-seller
+   rank and official store (the server already put trending/most compared
+   first inside each answer; equal tiers keep that order). */
+export function tierDeQualidade(r: { maisVendido?: number | null; lojaOficial?: boolean }): number {
+  const pos = r.maisVendido ?? null;
+  let t = pos == null ? 0 : pos <= 10 ? 4 : pos <= 50 ? 3 : pos <= 100 ? 2 : 1;
+  if (r.lojaOficial === true) t += 2;
+  return t;
+}
+
+/** Best tier first; inside each tier, kinds interleaved (variety) when asked. */
+export function qualidadePrimeiro<T extends { maisVendido?: number | null; lojaOficial?: boolean }>(
+  itens: T[],
+  arquetipo?: (item: T) => string,
+): T[] {
+  const porTier = new Map<number, T[]>();
+  for (const x of itens) {
+    const t = tierDeQualidade(x);
+    const g = porTier.get(t);
+    if (g) g.push(x);
+    else porTier.set(t, [x]);
+  }
+  return [...porTier.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .flatMap(([, g]) => (arquetipo ? intercalarPorDiversidade(g, arquetipo) : g));
+}
