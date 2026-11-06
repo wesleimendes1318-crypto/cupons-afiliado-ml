@@ -23,7 +23,10 @@ const NAO_E_SKINCARE =
   /\b(zona ?criativa|uatt|brinquedo|infantil|kids|crianca|menina|pelucia|slime|massinha|maleta de maquiagem infantil|fantasia|boneca|kit spa infantil|estojo de maquiagem infantil)\b/;
 /* Old-fashioned / loose pieces / resale lots in jewelry. */
 const JOIA_FORA =
-  /\b(pingente avulso|so pingente|saquinho|atacado|revenda|lote|kit \d{2,}|religios\w*|estrela de davi|crucifixo|terco|medalha|infantil|menina|bebe|masculin[oa])\b/;
+  /\b(pingente avulso|so pingente|saquinho|atacado|revenda|lote|kit \d{2,}|religios\w*|estrela de davi|crucifixo|terco|medalha|infantil|menina|bebe)\b/;
+/* Women-only pieces in a men's showcase (06/11: Vinicius got a bridal strass set). */
+const SO_FEMININO = /\b(feminin[oa]s?|noivas?|mulher(es)?|madrinhas?|debutante|gestante|strass|ponto de luz|ear cuff|riviera|choker|tornozeleira|calcinha|sutia|lingerie|vestido|saia)\b/;
+const SO_MASCULINO = /\b(masculin[oa]s?|homens?|cueca|barba)\b/;
 /* Men's footwear brands/models in a women's showcase. */
 const CALCADO_MASCULINO = /\b(kenner|pegada|democrata|ferracini|sapatenis|mocassim masculino|rider)\b/;
 
@@ -137,11 +140,32 @@ export function ehAdulto(texto: string): boolean {
   return true;
 }
 
-export function generoDaPessoa(texto: string): ContextoVitrine["genero"] {
+/* Common Brazilian first names (06/11): reinforce gender when the text has no
+   explicit word. Ambiguous names (Alex, Andrea, Darci...) stay out. */
+const NOMES_MASCULINOS = new Set(
+  "adriano alan alexandre anderson andre antonio arthur augusto benjamin bernardo breno bruno caio carlos cesar cristiano daniel danilo davi diego diogo douglas eduardo emerson enzo erick everton fabio fabricio felipe fernando flavio francisco gabriel gilberto guilherme gustavo heitor henrique hugo igor isaac ivan jean joao joaquim jonas jonathan jorge jose julio kaique kevin leandro leonardo lorenzo lucas luciano luis luiz marcelo marcio marco marcos mario mateus matheus mauricio miguel murilo nathan nicolas otavio pablo paulo pedro rafael raul renan renato ricardo roberto rodrigo rogerio samuel sergio thiago tiago valter vicente victor vinicius vitor wagner washington weslei wesley william yuri".split(" "),
+);
+const NOMES_FEMININOS = new Set(
+  "adriana alessandra alice aline amanda ana andressa angela antonia beatriz bianca bruna camila carla carolina caroline catarina cecilia clara claudia cristina daiane daniela debora denise eduarda elaine eliane elisa emanuelly emilly fabiana fernanda flavia francisca gabriela gabriele giovana giulia heloisa helena isabel isabela isabella isadora jaqueline jessica joana julia juliana larissa laura leticia livia lorena luana luciana luiza manuela marcela maria mariana marina marta melissa michele monica nathalia natalia nath nicole patricia paula priscila rafaela raquel rebeca renata roberta sabrina sandra sara sarah silvia simone sofia sophia suelen tatiane tais thais vanessa valentina valeria vera vitoria viviane yasmin".split(" "),
+);
+
+export function generoDoNome(nome: string | null | undefined): ContextoVitrine["genero"] {
+  const primeiro = sem(nome ?? "").trim().split(/[^a-z]+/)[0] ?? "";
+  if (NOMES_MASCULINOS.has(primeiro)) return "masculino";
+  if (NOMES_FEMININOS.has(primeiro)) return "feminino";
+  return null;
+}
+
+/** Explicit words > first name > weak cues ("brinco", "barba"). */
+export function generoDaPessoa(texto: string, nome?: string | null): ContextoVitrine["genero"] {
   const s = sem(texto);
-  if (/feminin|\btops?\b|vestido|\bsaia\b|bolsa|salto|sutia|maquiagem|brinco|calcinha|biquini|\bela\b|\bdela\b/.test(s))
-    return "feminino";
-  if (/masculin|barba|cueca|\bele\b|\bdele\b/.test(s)) return "masculino";
+  const fem = /feminin|\bmulher|\bela\b|\bdela\b/.test(s);
+  const masc = /masculin|\bhomem\b|\bele\b|\bdele\b/.test(s);
+  if (fem !== masc) return fem ? "feminino" : "masculino";
+  const doNome = generoDoNome(nome);
+  if (doNome) return doNome;
+  if (/\btops?\b|vestido|\bsaia\b|bolsa|salto|sutia|maquiagem|brinco|calcinha|biquini/.test(s)) return "feminino";
+  if (/barba|cueca/.test(s)) return "masculino";
   return null;
 }
 
@@ -155,6 +179,7 @@ export function temasDoTexto(texto: string): string[] {
 export function contextoDaVitrine(
   v: { titulo: string; termosBusca: string[] },
   textoDaPessoa: string,
+  nome?: string | null,
 ): ContextoVitrine {
   const base = sem(`${v.titulo} ${v.termosBusca.join(" ")}`);
   const temas = temasDoTexto(`${v.titulo} ${v.termosBusca.join(" ")}`);
@@ -176,7 +201,7 @@ export function contextoDaVitrine(
   return {
     tipo,
     adulto: ehAdulto(textoDaPessoa),
-    genero: generoDaPessoa(textoDaPessoa),
+    genero: generoDaPessoa(textoDaPessoa, nome),
     temas,
     academia: /academia|fitness|treino|gym|corrida/.test(base),
   };
@@ -189,15 +214,17 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
   if (c.adulto && (c.tipo === "roupa" || c.tipo === "calcado")) {
     if (VESTUARIO_INFANTIL.test(t)) return false;
     if (NAO_E_ROUPA.test(t)) return false;
-    /* Adult women's clothing: no men's pieces, and vice versa. */
-    if (c.genero === "feminino" && /\bmasculin[oa]s?\b/.test(t) && !/unissex/.test(t)) return false;
-    if (c.genero === "masculino" && /\bfeminin[oa]s?\b/.test(t) && !/unissex/.test(t)) return false;
+  }
+  /* Every showcase (06/11): a man never gets women's pieces, and vice versa. */
+  if (!/unissex/.test(t)) {
+    if (c.genero === "masculino" && SO_FEMININO.test(t) && !SO_MASCULINO.test(t)) return false;
+    if (c.genero === "feminino" && /\bmasculin[oa]s?\b|\bhomens?\b|\bcueca/.test(t) && !/feminin/.test(t)) return false;
   }
   /* The catalog fills thin searches with best sellers of other kinds
      (figurinhas in "Livros", a teddy in "Star Wars"): each kind needs its word. */
   if (c.tipo === "livros" && /\b(figurinhas?|album|pacotes?|adesivos?|cartas colecionaveis|marcenaria)\b/.test(t))
     return false;
-  if (c.tipo === "roupa" && !/\b(short|shorts|top|tops|legging|calca|camiseta|regata|blusa|conjunto|bermuda|macaquinho|macacao|jaqueta|moletom|vestido|saia|cropped|body|pijama|meia|meias|sutia|biquini|maio|bone|viseira|bolsa|garrafa|toalha|squeeze)\b/.test(t))
+  if (c.tipo === "roupa" && !/\b(short|shorts|top|tops|legging|calca|camiseta|camisetas|camisa|polo|regata|blusa|conjunto|bermuda|jeans|macaquinho|macacao|jaqueta|moletom|vestido|saia|cropped|body|pijama|meia|meias|sutia|biquini|maio|bone|viseira|bolsa|garrafa|toalha|squeeze)\b/.test(t))
     return false;
   /* Gym showcase: the piece has to be gym wear (05/11: a dress and a watch showed up). */
   if (c.tipo === "roupa" && c.academia && !/\b(fitness|academia|treino|dry ?fit|esportiv[oa]|legging|tops?|shorts?|cropped|ciclista|corrida|yoga|compressao|bermuda|regata|macaquinho|garrafa|squeeze|toalha|bolsa)\b/.test(t))
@@ -333,6 +360,14 @@ const JOIA_DESEJO = [
   "vivara life",
   "rommanel colar",
 ];
+const JOIA_MASCULINA = [
+  "corrente masculina prata 925",
+  "pulseira masculina prata 925",
+  "corrente grumet masculina banhada a ouro",
+  "anel masculino aço inoxidável",
+  "pulseira masculina couro",
+  "relógio masculino",
+];
 const CALCADO_VERAO = [
   "tênis casual feminino vizzano",
   "sapatilha feminina usaflex",
@@ -352,7 +387,7 @@ export function ampliarTermos(termos: string[], c: ContextoVitrine, agora = new 
   if (c.tipo === "livros") extra.push(...LIVROS_DESEJO);
   if (c.tipo === "tema") for (const k of c.temas) extra.push(...(FRANQUIAS[k]?.termos ?? []));
   if (c.tipo === "beleza") extra.push(...BELEZA_UNIVERSAL);
-  if (c.tipo === "joia") extra.push(...JOIA_DESEJO);
+  if (c.tipo === "joia") extra.push(...(c.genero === "masculino" ? JOIA_MASCULINA : JOIA_DESEJO));
   if (c.tipo === "calcado" && c.genero !== "masculino") extra.push(...CALCADO_VERAO);
   if (c.tipo === "ideias") extra.push(...ideiasDaEpoca(agora).termos);
   /* Clothing terms for adults carry the gender word (no kids' pieces). */
