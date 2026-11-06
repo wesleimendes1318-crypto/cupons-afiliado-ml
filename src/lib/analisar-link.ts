@@ -316,3 +316,36 @@ export function nomeParaTela(termo: string): string {
   const t = termo.trim();
   return t ? t.charAt(0).toLocaleUpperCase("pt-BR") + t.slice(1) : t;
 }
+
+/* SEARCH/LISTING PAGE OF MERCADO LIVRE (06/11, Weslei: a pasted
+   lista.mercadolivre.com.br link produced a meli.la that opened a "Búsqueda"
+   showcase on his profile instead of the product). A search page is never a
+   product: it has no single price, seller or photo, and the affiliate
+   generator turns it into a /social/ search showcase. Positive list only:
+   product (/p/MLB, MLB-123), catalog (/up/MLBU), meli.la, /sec/ and /social/
+   affiliate links are NOT search pages and keep their normal path.
+   Returns null when the URL is not a search page; otherwise the search term
+   read from it (null when the page has none, e.g. a store /_CustId_ page). */
+export function buscaDoMercadoLivre(url: string): { termo: string | null } | null {
+  let u: URL;
+  try {
+    u = new URL(url.trim());
+  } catch {
+    return null;
+  }
+  const host = u.hostname.toLowerCase();
+  if (!RE_ML.test(host) || host === "meli.la") return null;
+  const lista = /^lista\./.test(host);
+  const caminhoDeLista = /^\/(ofertas|c|categorias|jm\/search|search)(\/|$)/i.test(u.pathname);
+  if (!lista && !caminhoDeLista) return null;
+  const q = u.searchParams.get("as_word") ?? u.searchParams.get("q");
+  if (q && q.trim().length >= 2) return { termo: limparSlug(q) };
+  if (!lista) return { termo: null };
+  /* lista.../<category>/<term>_Filtro_Valor: the term is the last segment
+     before ML's "_Filter_" suffixes; store pages (/_CustId_, /pagina/) have none. */
+  const segs = u.pathname.split("/").filter(Boolean);
+  if (segs[0]?.toLowerCase() === "pagina") return { termo: null };
+  const ultimo = (segs[segs.length - 1] ?? "").replace(/_.*$/, "");
+  const termo = limparSlug(ultimo);
+  return { termo: /\p{L}/u.test(termo) && termo.length >= 2 ? termo : null };
+}
