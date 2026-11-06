@@ -17,7 +17,13 @@ export function cabeNaFaixa(
   /** Weslei, 05/11: optional "frete a calcular" (price checked, shipping shown on the card). */
   freteACalcular = false,
 ): boolean {
-  if (freteACalcular && r.freteGratis !== true && r.internacional !== true && r.preco != null && Number.isFinite(r.preco)) {
+  if (
+    freteACalcular &&
+    r.freteGratis !== true &&
+    r.internacional !== true &&
+    r.preco != null &&
+    Number.isFinite(r.preco)
+  ) {
     if (min != null && r.preco < min) return false;
     if (max != null && r.preco > max) return false;
     return r.preco > 0;
@@ -85,6 +91,8 @@ export async function lerPaginaDoTermo(
   passo: PassoTermo,
   faixa: { min: number | null; max: number | null; freteACalcular?: boolean },
   vistos: string[],
+  /** Stored listings only, at once (planners). */
+  rapido = false,
 ): Promise<{ resposta: RespostaVitrine | null; erro: string | null; status: number }> {
   try {
     const r = await fetch("/api/public/amigo-secreto-vitrine", {
@@ -99,10 +107,12 @@ export async function lerPaginaDoTermo(
         ...(passo.cursor != null ? { cursor: passo.cursor } : {}),
         ...(passo.variantes.length ? { variantes: passo.variantes } : {}),
         ...(passo.pagina > 0 && vistos.length ? { vistos: vistos.slice(-400) } : {}),
+        ...(rapido ? { rapido: true } : {}),
       }),
     });
     const j = (await r.json().catch(() => ({}))) as RespostaVitrine;
-    if (!r.ok || j.erro) return { resposta: null, erro: j.erro ?? "A busca não respondeu agora.", status: r.status };
+    if (!r.ok || j.erro)
+      return { resposta: null, erro: j.erro ?? "A busca não respondeu agora.", status: r.status };
     return { resposta: j, erro: null, status: r.status };
   } catch {
     return { resposta: null, erro: "Sem conexão agora. Tente de novo.", status: 0 };
@@ -144,14 +154,18 @@ export async function carregarAte(opcoes: {
     }
     if (!lote.length) {
       const usados = new Set(passos.map((p) => p.termo.toLowerCase()));
-      const mais = (opcoes.termosReserva ?? []).filter((t) => !usados.has(t.toLowerCase())).slice(0, 4);
+      const mais = (opcoes.termosReserva ?? [])
+        .filter((t) => !usados.has(t.toLowerCase()))
+        .slice(0, 4);
       if (!mais.length) break;
       passos.push(...passosIniciais(mais));
       continue;
     }
     chamadas += lote.length;
     const vistosAgora = [...opcoes.vistos].filter((id) => id.startsWith("MLB"));
-    const respostas = await Promise.all(lote.map((k) => lerPaginaDoTermo(passos[k]!, opcoes.faixa, vistosAgora)));
+    const respostas = await Promise.all(
+      lote.map((k) => lerPaginaDoTermo(passos[k]!, opcoes.faixa, vistosAgora)),
+    );
     if (opcoes.cancelado?.()) break;
     let parar = false;
     respostas.forEach((r, i) => {

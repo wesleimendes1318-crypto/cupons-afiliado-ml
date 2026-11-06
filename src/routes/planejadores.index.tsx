@@ -44,10 +44,10 @@ function Hub() {
               <Link
                 to="/planejadores/$slug"
                 params={{ slug: p.slug }}
-                className="flex min-h-24 items-center gap-4 rounded-3xl bg-card p-5 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+                className="group flex min-h-24 items-center gap-4 rounded-3xl bg-card p-5 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
               >
                 <span
-                  className="grid size-14 shrink-0 place-items-center rounded-2xl bg-[#f5f5f7] text-3xl dark:bg-white/5"
+                  className="grid size-14 shrink-0 place-items-center rounded-2xl bg-[#f5f5f7] text-3xl transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 motion-reduce:transform-none dark:bg-white/5"
                   aria-hidden="true"
                 >
                   {p.emoji}

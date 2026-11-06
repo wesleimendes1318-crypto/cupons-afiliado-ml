@@ -9,7 +9,13 @@ import { BotaoCarregarMaisVitrine } from "@/components/AmigoSecreto/BotaoCarrega
 import { CartoesDeEspera } from "@/components/AmigoSecreto/EsperaVitrine";
 import { abrirComparacao } from "@/components/BotoesCartao";
 import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
-import { carregarAte, passosIniciais, type PassoTermo } from "@/lib/amigo-secreto-busca";
+import {
+  carregarAte,
+  idsDoResultado,
+  lerPaginaDoTermo,
+  passosIniciais,
+  type PassoTermo,
+} from "@/lib/amigo-secreto-busca";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 import { ordenarOfertas, serveNaVoltagem, type Estilo, type ItemPlano } from "@/lib/planejadores";
 
@@ -36,9 +42,30 @@ export function OfertasDoItem({
   const vistos = useRef(new Set<string>());
   const vivo = useRef(true);
 
-  const carregar = async () => {
+  /* Stage 1 (Weslei, 06/11: "resultados rápidos enquanto busca novos"):
+     listings the site already stored for these terms show at once. */
+  const doEstoque = async () => {
+    const respostas = await Promise.all(
+      passosIniciais(item.termos).map((p) => lerPaginaDoTermo(p, FAIXA, [], true)),
+    );
+    if (!vivo.current) return;
+    const novos = respostas
+      .flatMap((r) => r.resposta?.resultados ?? [])
+      .filter((x) => {
+        const ids = idsDoResultado(x);
+        if (!ids.length || ids.some((id) => vistos.current.has(id))) return false;
+        if (!serveNaVoltagem(x, volts, item.eletrico)) return false;
+        ids.forEach((id) => vistos.current.add(id));
+        return true;
+      });
+    if (novos.length) setProdutos((p) => [...novos, ...p]);
+  };
+
+  const carregar = async (primeira = false) => {
     setCarregando(true);
     setErro(null);
+    if (primeira) await doEstoque();
+    if (!vivo.current) return;
     const r = await carregarAte({
       passos: passos.current,
       faixa: FAIXA,
@@ -58,7 +85,7 @@ export function OfertasDoItem({
 
   useEffect(() => {
     vivo.current = true;
-    void carregar();
+    void carregar(true);
     return () => {
       vivo.current = false;
     };
