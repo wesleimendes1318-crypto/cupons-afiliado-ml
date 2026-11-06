@@ -13,6 +13,7 @@
       regras de sempre (mesmo produto, qualidade, desconto real, afiliado).
    O site não mostra link de compra aqui: o botão abre a comparação, que
    gera o link de afiliado. Textos públicos não citam IA. */
+import { ACERVO_HORAS, curinga } from "@/lib/acervo";
 import { curarResultados } from "@/lib/curadoria";
 import { ampliarDominios } from "@/lib/familias-dominio";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
@@ -593,8 +594,29 @@ async function doEstoque(
             .map((t) => `nome.ilike.%${t.replace(/[^a-z0-9]/g, "").replace(/(es|s)$/, "")}%`)
             .join(","),
         );
-    const { data } = await consulta.order("posicao", { ascending: true }).limit(120);
-    return filtrarEstoque((data ?? []) as unknown as LinhaEstoque[], buscas, opcoes);
+    /* Weslei, 06/11: "aproveite os produtos já pesquisados para abastecer as
+       buscas relacionadas": listings other searches already read (acervo,
+       fresh < ACERVO_HORAS) join by product type in the title. */
+    const doAcervo = tipos.length
+      ? supabaseAdmin
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .from("acervo_ofertas" as any)
+          .select("produto,item,nome,imagem,preco,url,frete_gratis,loja_oficial")
+          .gte("atualizado_em", new Date(Date.now() - ACERVO_HORAS * 3600_000).toISOString())
+          .or(tipos.map((t) => `nome.ilike.%${curinga(t.replace(/[^a-z0-9]/g, "").replace(/(es|s)$/, ""))}%`).join(","))
+          .order("atualizado_em", { ascending: false })
+          .limit(120)
+      : Promise.resolve({ data: [] });
+    const [{ data }, acervo] = await Promise.all([
+      consulta.order("posicao", { ascending: true }).limit(120),
+      doAcervo,
+    ]);
+    const linhasAcervo = ((acervo.data ?? []) as unknown as LinhaEstoque[]).map((l) => ({ ...l, dominio_ml: null }));
+    return [
+      ...filtrarEstoque((data ?? []) as unknown as LinhaEstoque[], buscas, opcoes),
+      /* No domain column in the acervo: the type in the title decides. */
+      ...filtrarEstoque(linhasAcervo, buscas, { ...opcoes, dominios: null }),
+    ];
   } catch {
     return [];
   }
