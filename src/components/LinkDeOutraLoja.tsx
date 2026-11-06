@@ -158,7 +158,9 @@ export function LinkDeOutraLoja({
     if (q.length < 2 || busca.carregando) return;
     setConsulta({ q, contexto: "home", modo });
     setBusca({ carregando: true, erro: null, resposta: null });
-    const r = await buscarProdutos(q, "home", modo);
+    const r = await buscarProdutos(q, "home", modo, 0, undefined, undefined, (previa) =>
+      setBusca({ carregando: true, erro: null, resposta: previa }),
+    );
     setBusca({ carregando: false, erro: r.erro, resposta: r.resposta });
   }
 

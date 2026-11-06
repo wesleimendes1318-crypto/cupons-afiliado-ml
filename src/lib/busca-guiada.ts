@@ -277,6 +277,32 @@ type ProdutoDoCatalogo = {
   attributes?: Array<{ id?: string; value_name?: string | null }>;
 };
 
+type OfertasDoProduto = {
+  results?: Array<{
+    item_id?: string;
+    price?: number;
+    condition?: string;
+    shipping?: { free_shipping?: boolean };
+    official_store_id?: number | null;
+    tags?: string[];
+  }>;
+};
+
+/* Two-stage search (06/11): the quick preview and the full search of the same
+   request read mostly the same products; a short memo keeps that one API read. */
+const OFERTAS = new Map<string, { em: number; p: Promise<OfertasDoProduto> }>();
+const OFERTAS_MS = 120_000;
+function ofertasDoProduto(id: string): Promise<OfertasDoProduto> {
+  const agora = Date.now();
+  const m = OFERTAS.get(id);
+  if (m && agora - m.em < OFERTAS_MS) return m.p;
+  if (OFERTAS.size >= 3000) OFERTAS.delete(OFERTAS.keys().next().value!);
+  const p = mlGet<OfertasDoProduto>(`/products/${id}/items?limit=5`);
+  OFERTAS.set(id, { em: agora, p });
+  p.catch(() => OFERTAS.delete(id));
+  return p;
+}
+
 /** O produto com o anúncio de referência (1ª oferta NOVA da lista oficial),
     ou null sem oferta ativa ou fora da faixa de preço. */
 async function comOferta(
@@ -296,16 +322,7 @@ async function comOferta(
   try {
     /* Oferta NOVA (10/10): a 1ª da lista pode ser usada, e o preço do
        cartão tem de ser o do anúncio que o botão abre. */
-    const o = await mlGet<{
-      results?: Array<{
-        item_id?: string;
-        price?: number;
-        condition?: string;
-        shipping?: { free_shipping?: boolean };
-        official_store_id?: number | null;
-        tags?: string[];
-      }>;
-    }>(`/products/${id}/items?limit=5`);
+    const o = await ofertasDoProduto(id);
     const novas = (o.results ?? []).filter((x) => x.condition === "new");
     const oferta = novas[0];
     const item = oferta?.item_id;
@@ -479,8 +496,11 @@ export function passosDasSeguintes(buscas: string[], variantes: string[]): Passo
     going with the same product type (05/11: "está limitando"). */
 export function variantesPorCor(base: string, max = 6) {
   const b = normalizar(base);
-  if (/\b(preto|preta|branco|branca|azul|rosa|bege|verde|cinza|vermelh|vinho|marrom)\b/.test(b)) return [];
-  return ["preta", "azul", "rosa", "bege", "cinza", "branca", "verde", "vinho"].slice(0, max).map((c) => `${base} ${c}`);
+  if (/\b(preto|preta|branco|branca|azul|rosa|bege|verde|cinza|vermelh|vinho|marrom)\b/.test(b))
+    return [];
+  return ["preta", "azul", "rosa", "bege", "cinza", "branca", "verde", "vinho"]
+    .slice(0, max)
+    .map((c) => `${base} ${c}`);
 }
 
 /** Variantes pela marca: "geladeira frost free" + Brastemp, Electrolux... */
@@ -588,7 +608,13 @@ export async function buscaGuiada(
   contexto: string | null,
   pagina = 0,
   intencaoAnterior: Interpretacao | null = null,
-  anterior: { variantes?: string[]; excluir?: string[]; cursor?: number | undefined } = {},
+  anterior: {
+    variantes?: string[];
+    excluir?: string[];
+    cursor?: number | undefined;
+    /** Quick preview (06/11): first catalog read + own stock only, no deeper reads. */
+    previa?: boolean;
+  } = {},
 ) {
   const lidaBruta = intencaoAnterior ?? (await interpretar(q, contexto));
   /* MARCA DIGITADA MANDA (Weslei, 02/11: "Lava e Seca Brastemp" voltou só
@@ -653,7 +679,13 @@ export async function buscaGuiada(
   const juntar = (novos: ResultadoBusca[]) => {
     const vistos = new Set([...excluir, ...achados.map((r) => r.produto)]);
     /* Curador while collecting, so the page still fills to 20 after drops. */
-    achados = curarResultados(q, [...achados, ...novos.filter((r) => !vistos.has(r.produto))], (r) => r.nome, undefined, (r) => r.imagem).slice(0, MAXIMO_PAGINA);
+    achados = curarResultados(
+      q,
+      [...achados, ...novos.filter((r) => !vistos.has(r.produto))],
+      (r) => r.nome,
+      undefined,
+      (r) => r.imagem,
+    ).slice(0, MAXIMO_PAGINA);
   };
   const ler = (passo: Passo) =>
     buscarNoCatalogo(passo.buscas, {
@@ -673,8 +705,12 @@ export async function buscaGuiada(
   if (pagina > 0) {
     /* "Carregar mais": do cursor em diante, 2 leituras por vez, até juntar
        20 novos ou o prazo acabar; devolve onde parou. */
-    if (!variantes.length) variantes = variantesPorCor(intencao.buscas[0] ?? q.slice(0, 60));
-    const passos = passosDasSeguintes(intencao.buscas, variantes);
+    const base = intencao.buscas[0] ?? q.slice(0, 60);
+    /* 06/11 ("paginação trava"): after the brand variants, the color ones keep
+       "+20" going (the catalog API itself stops at position 120). */
+    const passos = passosDasSeguintes(intencao.buscas, [
+      ...new Set([...variantes, ...variantesPorCor(base)]),
+    ]);
     const inicio = Date.now();
     let k = Math.max(0, anterior.cursor ?? (pagina - 1) * 4);
     while (
@@ -689,7 +725,11 @@ export async function buscaGuiada(
     proximo = k < passos.length ? k : null;
     /* Catalog ran dry (apparel: most catalog products have no offer): the
        category best sellers complete the page once, then it ends. */
-    if (achados.length < MINIMO_RESULTADOS && proximo === null && !anterior.excluir?.includes("fim-mv")) {
+    if (
+      achados.length < MINIMO_RESULTADOS &&
+      proximo === null &&
+      !anterior.excluir?.includes("fim-mv")
+    ) {
       juntar(await maisVendidosDaCategoria(q, opcoes));
     }
   } else {
@@ -708,6 +748,18 @@ export async function buscaGuiada(
         porBusca: Math.ceil(maximo / Math.max(1, intencao.buscas.length)) + 4,
       }),
     );
+    if (anterior.previa) {
+      if (achados.length < MINIMO_RESULTADOS) juntar(await estoque);
+      return {
+        intencao,
+        resultados: ordenarPorPrecoSeBarato(
+          q,
+          ordenarPelaIntencao(q, achados, (r) => r.nome),
+        ),
+        variantes: [],
+        proximo: null,
+      };
+    }
     /* Previsão de domínio errada não pode zerar a busca: refaz só pelo tipo.
        Aparelho conhecido (categoria fixa) não: sem a categoria, "máquina"
        traz nicho e placa. */
@@ -729,9 +781,12 @@ export async function buscaGuiada(
     /* Mais fundo nas mesmas buscas (24-84), de 20 em 20. */
     /* Speed (05/11): the deeper reads go in parallel, not one after another. */
     if (achados.length < MINIMO_RESULTADOS) {
-      const fundo = await Promise.all([24, 44].map((offset) => ler({ buscas: intencao.buscas, offset }).catch(() => [])));
+      const fundo = await Promise.all(
+        [24, 44].map((offset) => ler({ buscas: intencao.buscas, offset }).catch(() => [])),
+      );
       for (const r of fundo) juntar(r);
-      if (achados.length < MINIMO_RESULTADOS) juntar(await ler({ buscas: intencao.buscas, offset: 64 }));
+      if (achados.length < MINIMO_RESULTADOS)
+        juntar(await ler({ buscas: intencao.buscas, offset: 64 }));
     }
     /* As marcas que apareceram viram variantes ("geladeira frost free
        brastemp"): completam a 1ª página e alimentam o "Carregar mais". */
@@ -779,7 +834,17 @@ export async function buscaGuiada(
      order below still decides first (ties keep this order). */
   const resultados = ordenarPorPrecoSeBarato(
     q,
-    ordenarPelaIntencao(q, curarResultados(q, achados, (r) => r.nome, undefined, (r) => r.imagem), (r) => r.nome),
+    ordenarPelaIntencao(
+      q,
+      curarResultados(
+        q,
+        achados,
+        (r) => r.nome,
+        undefined,
+        (r) => r.imagem,
+      ),
+      (r) => r.nome,
+    ),
   );
   return { intencao, resultados, variantes, proximo };
 }

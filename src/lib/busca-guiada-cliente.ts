@@ -151,7 +151,14 @@ export async function buscarProdutos(
   no?: string,
   /** "Carregar mais": de onde continuar e o que já está na tela. */
   mais?: { cursor?: number | null | undefined; vistos?: string[] },
+  /** Two stages (06/11): the quick catalog read shows while the full search runs. */
+  aoPrevia?: (r: Resposta) => void,
 ): Promise<{ resposta: Resposta | null; erro: string | null }> {
+  const primeira = !pagina && mais?.cursor == null && !mais?.vistos?.length;
+  const chaveCache = primeira ? chaveDaSessao(pergunta, contexto, modo, no) : null;
+  const doCache = chaveCache ? lerDaSessao(chaveCache) : null;
+  if (doCache) return { resposta: doCache, erro: null };
+  const previa = Boolean(aoPrevia) && primeira && modo === "guiada" && !no;
   /* Painel do fundador: conta a busca nova (não a paginação), com consentimento. */
   if (
     modo === "guiada" &&
@@ -177,13 +184,72 @@ export async function buscarProdutos(
         ...(no ? { no } : {}),
         ...(mais?.cursor != null ? { cursor: mais.cursor } : {}),
         ...(mais?.vistos?.length ? { vistos: mais.vistos.slice(-400) } : {}),
+        ...(previa ? { previa: true } : {}),
       }),
     });
-    const j = (await r.json()) as Resposta & { erro?: string };
-    if (!r.ok || j.erro)
-      return { resposta: null, erro: j.erro ?? "A busca não respondeu agora. Tente de novo." };
+    let j: (Resposta & { erro?: string }) | null = null;
+    let vista: Resposta | null = null;
+    if (/ndjson/.test(r.headers.get("content-type") ?? "") && r.body) {
+      /* One JSON per line: the preview first (flag previa), the full answer last. */
+      const leitor = r.body.getReader();
+      const texto = new TextDecoder();
+      let resto = "";
+      for (;;) {
+        const { done, value } = await leitor.read();
+        resto += texto.decode(value ?? new Uint8Array(), { stream: !done });
+        const linhas = resto.split("\n");
+        resto = done ? "" : (linhas.pop() ?? "");
+        for (const l of linhas) {
+          if (!l.trim()) continue;
+          const o = JSON.parse(l) as Resposta & { erro?: string; previa?: boolean };
+          if (o.previa) {
+            vista = o;
+            aoPrevia?.(o);
+          } else j = o;
+        }
+        if (done) break;
+      }
+    } else j = (await r.json()) as Resposta & { erro?: string };
+    if (!r.ok || !j || j.erro) {
+      /* Full search failed after the preview: the preview stays. */
+      if (vista) return { resposta: vista, erro: null };
+      return { resposta: null, erro: j?.erro ?? "A busca não respondeu agora. Tente de novo." };
+    }
+    if (chaveCache && j.resultados?.length) gravarNaSessao(chaveCache, j);
     return { resposta: j, erro: null };
   } catch {
     return { resposta: null, erro: "Sem conexão agora. Tente de novo." };
+  }
+}
+
+/* Per-tab cache of first pages (06/11): going back to a search answers at once.
+   Catalog data only (the same answer the server caches for everyone for 6 h);
+   sessionStorage dies with the tab. */
+const SESSAO_MS = 6 * 3600_000;
+export function chaveDaSessao(q: string, contexto: string, modo: string, no?: string) {
+  const n = q
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  let h = 5381;
+  for (let i = 0; i < n.length; i++) h = ((h * 33) ^ n.charCodeAt(i)) >>> 0;
+  return `bg_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
+}
+function lerDaSessao(chave: string): Resposta | null {
+  try {
+    const bruto = typeof window !== "undefined" ? window.sessionStorage.getItem(chave) : null;
+    const v = bruto ? (JSON.parse(bruto) as { em: number; r: Resposta }) : null;
+    return v && Date.now() - v.em < SESSAO_MS && v.r?.resultados?.length ? v.r : null;
+  } catch {
+    return null;
+  }
+}
+function gravarNaSessao(chave: string, r: Resposta) {
+  try {
+    window.sessionStorage.setItem(chave, JSON.stringify({ em: Date.now(), r }));
+  } catch {
+    /* full or blocked storage: no cache */
   }
 }
