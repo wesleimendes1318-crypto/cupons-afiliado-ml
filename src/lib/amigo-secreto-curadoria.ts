@@ -23,7 +23,9 @@ const NAO_E_SKINCARE =
   /\b(zona ?criativa|uatt|brinquedo|infantil|kids|crianca|menina|pelucia|slime|massinha|maleta de maquiagem infantil|fantasia|boneca|kit spa infantil|estojo de maquiagem infantil)\b/;
 /* Old-fashioned / loose pieces / resale lots in jewelry. */
 const JOIA_FORA =
-  /\b(pingente avulso|so pingente|saquinho|atacado|revenda|lote|kit \d{2,}|religios\w*|estrela de davi|crucifixo|terco|medalha|infantil|menina|bebe)\b/;
+  /\b(pingente avulso|pingente solto|so pingente|saquinho|atacado|revenda|lote|kit \d{2,}|\d{2,} ?(un|und|unid|unidades|pecas|pcs)|tag|religios\w*|estrela de davi|crucifixo|terco|medalha|escapulario|infantil|menina|bebe|noivas?|tiara|coroa|fantasia|bijuteria barata|folheado simples|ouro velho)\b/;
+/* Men's cuts in a women's (or unspecified) jewelry showcase. */
+const JOIA_MASCULINA_CORTE = /\b(grumet|piastrine|masculin[oa]s?|homens?)\b/;
 /* Women-only pieces in a men's showcase (06/11: Vinicius got a bridal strass set). */
 const SO_FEMININO = /\b(feminin[oa]s?|noivas?|mulher(es)?|madrinhas?|debutante|gestante|maternidade|cropped|strass|ponto de luz|ear cuff|riviera|choker|berloque|tornozeleira|calcinha|sutia|lingerie|vestido|saia|salto alto|baby ?look|biquini|maio)\b/;
 const SO_MASCULINO = /\b(masculin[oa]s?|homens?|cueca|barba)\b/;
@@ -254,6 +256,7 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
     }
   }
   if (c.tipo === "beleza" && (MAQUIAGEM_DE_TOM.test(t) || NAO_E_SKINCARE.test(t))) return false;
+  if (c.tipo === "joia" && c.genero !== "masculino" && JOIA_MASCULINA_CORTE.test(t) && !/unissex/.test(t)) return false;
   if (c.tipo === "joia" && (JOIA_FORA.test(t) || /^pingente\b/.test(t)))
     return false;
   if (c.tipo === "calcado" && c.genero === "feminino" && CALCADO_MASCULINO.test(t) && !/feminin/.test(t)) return false;
@@ -356,13 +359,79 @@ const BELEZA_UNIVERSAL = [
   "necessaire feminina",
 ];
 
+/* Weslei, 06/11: modern Prata 925 references, one archetype after another
+   (necklace, earring, bracelet, ring) so no kind takes over the pool. */
 const JOIA_DESEJO = [
-  "colar ponto de luz banhado a ouro 18k",
-  "brinco argola click zirconia",
-  "ear cuff dourado",
-  "pulseira riviera zirconia",
-  "vivara life",
-  "rommanel colar",
+  "choker aro rígido prata 925",
+  "brinco argola gota chunky prata 925",
+  "pulseira riviera zircônia prata 925",
+  "mix anéis finos minimalistas prata 925",
+  "gargantilha fita lâmina prata 925",
+  "brinco argola croissant torcida prata",
+  "pulseira elo cartier clip prata fecho boia",
+  "kit anéis falange prata zircônia",
+  "colar riviera zircônia brilhante prata",
+  "brinco argola click zircônia cravejada prata",
+  "pulseira regulável estrelas prata delicada",
+  "anel solitário zircônia prata 925 delicado",
+  "mix de colares camadas prata ponto de luz",
+  "ear cuff prata 925 moderno",
+  "bracelete aro rígido minimalista prata",
+  "anel regulável onda concha prata 925",
+  "gargantilha mini gotas zircônia prata",
+  "brinco pérola barroca pino prata minimalista",
+  "pulseira berloques estilo life prata 925",
+  "colar borboleta dupla zircônia prata",
+  "brinco geométrico triângulo prata",
+  "gargantilha estrelas penduradas prata delicada",
+];
+/* Balanced pools for showcases the reader types as "outro" (06/11). */
+const POOLS_POR_TEMA: Array<[RegExp, string[]]> = [
+  [
+    /decora/,
+    [
+      "luminária de mesa moderna",
+      "difusor de aromas elétrico ultrassônico",
+      "quadro decorativo sala moderno moldura",
+      "bandeja espelhada decorativa",
+      "manta decorativa sofá franjas",
+      "abajur de quarto decorativo",
+      "vela aromática decorativa vidro",
+      "espelho redondo adnet decorativo",
+      "escultura decorativa nó moderno",
+      "kit capas almofadas decorativas",
+      "fita led neon quarto",
+      "kit aromatizador ambiente varetas",
+      "placa decorativa minimalista",
+      "porta retrato moderno",
+      "cachepô cerâmica moderno",
+      "vaso decorativo centro de mesa",
+    ],
+  ],
+  [
+    /cozinha|cafe|bebida/,
+    [
+      "prensa francesa café",
+      "copo térmico inox",
+      "porta temperos giratório inox",
+      "cafeteira italiana moka",
+      "kit churrasco estojo",
+      "tábua de frios petisqueira bambu",
+      "taças de vinho cristal",
+      "moedor de café manual",
+    ],
+  ],
+  [
+    /escritorio|papelaria|planner|caneta|organizador de mesa/,
+    [
+      "luminária articulada de mesa",
+      "organizador de mesa aramado preto",
+      "planner financeiro permanente capa dura",
+      "kit canetas ponta fina lettering",
+      "mouse pad gigante couro desk mat",
+      "suporte articulado notebook alumínio",
+    ],
+  ],
 ];
 const JOIA_MASCULINA = [
   "corrente masculina prata 925",
@@ -444,6 +513,8 @@ function poolDeTermos(termos: string[], c: ContextoVitrine, agora: Date): string
   if (c.tipo === "tema") for (const k of c.temas) extra.push(...(FRANQUIAS[k]?.termos ?? []));
   if (c.tipo === "beleza") extra.push(...BELEZA_UNIVERSAL);
   if (c.tipo === "joia") extra.push(...(c.genero === "masculino" ? JOIA_MASCULINA : JOIA_DESEJO));
+  if (c.tipo === "outro")
+    for (const [re, lista] of POOLS_POR_TEMA) if (re.test(sem(termos.join(" ")))) extra.push(...lista);
   if (c.tipo === "calcado" && c.genero !== "masculino") extra.push(...CALCADO_VERAO);
   if (c.tipo === "ideias") extra.push(...ideiasDaEpoca(agora).termos);
   /* Clothing terms for adults carry the gender word (no kids' pieces). */

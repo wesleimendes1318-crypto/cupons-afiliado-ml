@@ -117,16 +117,15 @@ const CATEGORIAS: Categoria[] = [
           "pulseira masculina couro",
           "cordão masculino aço",
         ];
+      /* 06/11: modern pieces, necklace / earring / bracelet / ring in turn. */
+      const metal = prata ? "prata 925" : "banhado a ouro 18k";
       return [
-        `colar ponto de luz ${banho}`,
-        `brinco argola click zirconia ${banho}`,
-        `ear cuff ${prata ? "prata" : "dourado"}`,
-        `pulseira riviera zirconia ${banho}`,
-        `conjunto colar e brinco ${banho}`,
-        "vivara life",
-        "rommanel colar",
-        "semijoia mix de colares",
-        "anel solitario zirconia",
+        `choker aro rígido ${metal}`,
+        `brinco argola gota chunky ${metal}`,
+        `pulseira riviera zircônia ${metal}`,
+        `mix anéis finos minimalistas ${metal}`,
+        `gargantilha fita lâmina ${metal}`,
+        `brinco argola croissant torcida ${banho}`,
       ];
     },
     extras: ["porta joias", "caixa organizadora de bijuterias"],
@@ -242,7 +241,15 @@ const CATEGORIAS: Categoria[] = [
     chaves: /decora|enfeite|casa\b|quadro|vela|difusor/,
     icone: "🏠",
     titulo: () => "Decoração de casa",
-    termos: () => ["vaso decorativo", "quadro decorativo", "luminária decorativa", "difusor de aromas", "vela aromática"],
+    /* 06/11: one archetype each, vases no longer open the showcase. */
+    termos: () => [
+      "luminária de mesa moderna",
+      "difusor de aromas elétrico",
+      "quadro decorativo sala moderno",
+      "bandeja espelhada decorativa",
+      "manta decorativa sofá",
+      "vela aromática decorativa",
+    ],
     extras: ["porta retrato", "manta decorativa"],
   },
   {

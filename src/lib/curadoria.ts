@@ -216,3 +216,27 @@ export function curarResultados<T>(
     .sort((a, b) => b.peso - a.peso || a.k - b.k)
     .map((x) => x.i);
 }
+
+/** Gift archetype of a title: its first identifying word, singular
+    ("Vasos Decorativos Cerâmica" -> "vaso"). */
+export function arquetipoDoTitulo(nome: string | null | undefined): string {
+  const w = palavrasDoModelo(nome)[0] ?? "";
+  return w.length > 4 ? w.replace(/(oes|aes)$/, "ao").replace(/s$/, "") : w;
+}
+
+/* Weslei, 06/11: no archetype monopoly ("Decoração" with 60 vases). Round
+   robin over archetypes, each group keeping its own order (best first), so
+   the first cards cover as many kinds as the list has. Drops nothing. */
+export function intercalarPorDiversidade<T>(itens: T[], extrairArquetipo: (item: T) => string): T[] {
+  const grupos = new Map<string, T[]>();
+  for (const x of itens) {
+    const k = extrairArquetipo(x);
+    const g = grupos.get(k);
+    if (g) g.push(x);
+    else grupos.set(k, [x]);
+  }
+  const filas = [...grupos.values()];
+  const saida: T[] = [];
+  for (let i = 0; saida.length < itens.length; i++) for (const f of filas) if (i < f.length) saida.push(f[i]!);
+  return saida;
+}

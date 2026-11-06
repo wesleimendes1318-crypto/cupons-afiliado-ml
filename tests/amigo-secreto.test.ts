@@ -49,7 +49,8 @@ describe("amigo secreto: leitura dos pedidos", () => {
     for (const v of [...interpretarLocal(ANNA).vitrines, ...interpretarLocal(NATH).vitrines]) {
       expect(v.termos.length).toBeGreaterThan(0);
       expect(v.termos.length).toBeLessThanOrEqual(10);
-      for (const x of v.termos) expect(x).not.toMatch(/r\$|http|\d{2,}/i);
+      /* Metal specs (prata 925, ouro 18k) are not prices. */
+      for (const x of v.termos) expect(x.replace(/\b(925|18k)\b/g, "")).not.toMatch(/r\$|http|\d{2,}/i);
     }
   });
 
