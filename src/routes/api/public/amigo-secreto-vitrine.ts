@@ -2,7 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { cabeNaFaixa } from "@/lib/amigo-secreto-busca";
-import { achadosDoGarimpo, guardarNoAcervo, lerDoAcervo, ordenarPorProcura, pedirGarimpo, sinaisDeProcura } from "@/lib/acervo";
+import {
+  achadosDoGarimpo,
+  guardarNoAcervo,
+  lerDoAcervo,
+  ordenarPorProcura,
+  pedirGarimpo,
+  sinaisDeProcura,
+} from "@/lib/acervo";
 import { buscaGuiada, normalizarBusca, type ResultadoBusca } from "@/lib/busca-guiada";
 import { repetido } from "@/lib/curadoria";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
@@ -20,7 +27,13 @@ const entradaSchema = z.object({
   freteACalcular: z.boolean().optional(),
   cursor: z.number().int().min(0).max(400).optional(),
   variantes: z.array(z.string().trim().min(2).max(80)).max(8).optional(),
-  vistos: z.array(z.string().regex(/^MLB\d{4,14}$/)).max(400).optional(),
+  vistos: z
+    .array(z.string().regex(/^MLB\d{4,14}$/))
+    .max(400)
+    .optional(),
+  /* Planners (06/11): page 0 answers with what is already stored, at once,
+     even if few; the next normal call completes with a fresh read. */
+  rapido: z.boolean().optional(),
 });
 
 const CACHE_MS = 6 * 3600_000;
@@ -93,21 +106,37 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as any;
-        const faixaPedida = { min: e.min ?? null, max: e.max ?? null, freteACalcular: e.freteACalcular === true };
+        const faixaPedida = {
+          min: e.min ?? null,
+          max: e.max ?? null,
+          freteACalcular: e.freteACalcular === true,
+        };
         const cabe = (r: ResultadoBusca) => cabeNaFaixa(r, e.min, e.max, e.freteACalcular === true);
         const vistos = e.vistos ?? [];
         const [doAcervo, achados] = await Promise.all([
           lerDoAcervo(db, e.termo, faixaPedida, vistos, e.pagina ? 30 : 40),
-          e.pagina ? Promise.resolve([] as ResultadoBusca[]) : achadosDoGarimpo(db, e.termo, faixaPedida),
+          e.pagina
+            ? Promise.resolve([] as ResultadoBusca[])
+            : achadosDoGarimpo(db, e.termo, faixaPedida),
         ]);
         const juntos = juntar(achados, doAcervo).filter(cabe);
         const prontos = ordenarPorProcura(juntos, await sinaisDeProcura(db, juntos));
-        if (prontos.length >= (e.pagina ? META_DO_ACERVO.seguintes : META_DO_ACERVO.primeira)) {
+        const minimo =
+          e.rapido && !e.pagina ? 1 : e.pagina ? META_DO_ACERVO.seguintes : META_DO_ACERVO.primeira;
+        if (prontos.length >= minimo) {
           /* The term continues from the same catalog position next time. */
-          const resposta: Guardada = { resultados: prontos, proximo: e.cursor ?? 0, variantes: e.variantes ?? [] };
-          gravarMemoria(chave, resposta);
+          const resposta: Guardada = {
+            resultados: prontos,
+            proximo: e.cursor ?? 0,
+            variantes: e.variantes ?? [],
+          };
+          if (!e.rapido) gravarMemoria(chave, resposta);
           /* Keeps the term in the daily feed while people still open this showcase. */
-          if (!e.pagina) await pedirGarimpo(db, e.termo, faixaPedida, { cursor: 0, variantes: e.variantes ?? [] });
+          if (!e.pagina)
+            await pedirGarimpo(db, e.termo, faixaPedida, {
+              cursor: 0,
+              variantes: e.variantes ?? [],
+            });
           return json(request, resposta);
         }
 
@@ -142,12 +171,15 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
               marca: null,
               modelo: null,
             },
-            e.pagina
-              ? { variantes: e.variantes ?? [], excluir: vistos, cursor: e.cursor }
-              : {},
+            e.pagina ? { variantes: e.variantes ?? [], excluir: vistos, cursor: e.cursor } : {},
           );
         } catch {
-          if (prontos.length) return json(request, { resultados: prontos, proximo: e.cursor ?? 0, variantes: e.variantes ?? [] });
+          if (prontos.length)
+            return json(request, {
+              resultados: prontos,
+              proximo: e.cursor ?? 0,
+              variantes: e.variantes ?? [],
+            });
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
         }
         const aoVivo = achado.resultados.filter(cabe);
@@ -162,9 +194,14 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
         gravarMemoria(chave, resposta);
         await Promise.all([
           guardarNoAcervo(db, e.termo, achado.resultados),
-          pedirGarimpo(db, e.termo, faixaPedida, { cursor: resposta.proximo, variantes: resposta.variantes }),
+          pedirGarimpo(db, e.termo, faixaPedida, {
+            cursor: resposta.proximo,
+            variantes: resposta.variantes,
+          }),
           resposta.resultados.length
-            ? db.from("busca_guiada").insert({ chave, contexto: "amigo", resposta, enfileirados: 0 })
+            ? db
+                .from("busca_guiada")
+                .insert({ chave, contexto: "amigo", resposta, enfileirados: 0 })
             : null,
         ]);
         return json(request, resposta);

@@ -169,7 +169,9 @@ function Conteudo({ p }: { p: Planejador }) {
           <p className="text-[15px] font-extrabold tracking-tight">
             {geral.essenciaisSemProduto === 0 && geral.faltaEssencial === 0
               ? "Essencial resolvido"
-              : `Faltam ${reais(geral.faltaEssencial)} do essencial`}
+              : geral.faltaEssencial === 0
+                ? "Escolha os produtos do essencial"
+                : `Faltam ${reais(geral.faltaEssencial)} do essencial`}
           </p>
           <p className="text-xs text-secondary-ink">
             {dias != null &&
@@ -191,9 +193,15 @@ function Conteudo({ p }: { p: Planejador }) {
           aria-label="Itens resolvidos"
         >
           <div
-            className="h-full rounded-full bg-[#34c759] transition-[width] duration-500"
+            className="relative h-full overflow-hidden rounded-full bg-[#34c759] transition-[width] duration-500"
             style={{ width: `${pct}%` }}
-          />
+          >
+            {/* Shines once each time the bar grows (key = value). */}
+            <span
+              key={pct}
+              className="animate-plano-brilho absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"
+            />
+          </div>
         </div>
         <p className="mt-1.5 truncate text-[11px] text-secondary-ink">
           {geral.essenciaisSemProduto > 0 &&
@@ -245,11 +253,12 @@ function Conteudo({ p }: { p: Planejador }) {
         </span>
       </p>
 
-      <ul className="grid items-start gap-3 sm:grid-cols-2">
+      <ul key={String(aba)} className="grid items-start gap-3 sm:grid-cols-2">
         {itens.map((it, k) => (
           <CartaoItemPlanejador
             key={it.id}
             item={it}
+            emoji={p.emoji}
             estado={itemDe(estado, it.id)}
             estilo={estado.estilo}
             volts={estado.volts}

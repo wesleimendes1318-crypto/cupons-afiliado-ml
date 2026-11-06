@@ -1493,3 +1493,55 @@ details.abertura-nativa[open] > summary .seta-abertura {
     animation: none;
   }
 }
+
+/* PLANEJADORES (Weslei, 06/11: "adicione animações"): photos fade in one
+   after another, the check pops once when an item is resolved, the progress
+   bar shines once when it grows. No loops near buy buttons; all off with
+   prefers-reduced-motion. */
+@keyframes plano-foto {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@utility animate-plano-foto {
+  animation: plano-foto 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@keyframes plano-check {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: none;
+  }
+}
+@utility animate-plano-check {
+  animation: plano-check 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@keyframes plano-brilho {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@utility animate-plano-brilho {
+  animation: plano-brilho 0.9s ease-out both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

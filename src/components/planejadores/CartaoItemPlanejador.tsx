@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { OfertasDoItem } from "@/components/planejadores/OfertasDoItem";
+import { useFotosDoTermo } from "@/lib/fotos-do-plano";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 import type { Presente } from "@/lib/lista-publica";
 import {
@@ -29,6 +30,7 @@ const STATUS: { id: Status; rotulo: string }[] = [
 
 export function CartaoItemPlanejador({
   item,
+  emoji,
   estado,
   estilo,
   volts,
@@ -38,6 +40,8 @@ export function CartaoItemPlanejador({
   aoEscolher,
 }: {
   item: ItemPlano;
+  /** Planner emoji: art fallback when the search has no photo. */
+  emoji: string;
   estado: EstadoItem;
   estilo: Estilo;
   volts: "127" | "220" | null;
@@ -55,12 +59,13 @@ export function CartaoItemPlanejador({
   return (
     <li
       className={
-        "animate-cartao min-w-0 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition sm:p-5 " +
+        "animate-cartao group min-w-0 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition duration-300 hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transform-none sm:p-5 " +
         (resolvido ? "opacity-75" : "")
       }
       style={{ animationDelay: `${Math.min(atraso, 8) * 40}ms` }}
     >
-      <div className="flex items-start gap-3">
+      <ArteDoItem termo={item.termos[0]!} escolhida={e?.foto ?? null} emoji={emoji} />
+      <div className="mt-3 flex items-start gap-3">
         <span
           className={
             "mt-0.5 grid size-7 shrink-0 place-items-center rounded-full " +
@@ -68,7 +73,7 @@ export function CartaoItemPlanejador({
           }
           aria-hidden="true"
         >
-          {resolvido && <Check className="size-4" />}
+          {resolvido && <Check className="animate-plano-check size-4" />}
         </span>
         <div className="min-w-0 flex-1">
           <h3
@@ -201,7 +206,10 @@ export function CartaoItemPlanejador({
                 : "text-secondary-ink ring-1 ring-border")
             }
           >
-            <Gift className="size-4" aria-hidden="true" />
+            <Gift
+              className={"size-4" + (estado.presente ? " animate-plano-check" : "")}
+              aria-hidden="true"
+            />
             {estado.presente ? "Na lista de presentes" : "Pedir de presente"}
           </button>
         </div>
@@ -227,5 +235,52 @@ export function CartaoItemPlanejador({
         </div>
       )}
     </li>
+  );
+}
+
+/* Card art: the chosen product's photo, else up to 3 real photos of the item's
+   offers on white (nothing over the photo); never an empty box. */
+function ArteDoItem({
+  termo,
+  escolhida,
+  emoji,
+}: {
+  termo: string;
+  escolhida: string | null;
+  emoji: string;
+}) {
+  const { ref, fotos } = useFotosDoTermo(termo);
+  const lista = escolhida ? [escolhida] : (fotos ?? []);
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className="flex h-28 gap-1.5 overflow-hidden rounded-2xl bg-[#f5f5f7] p-1.5 sm:h-32 dark:bg-white/5"
+    >
+      {lista.length ? (
+        lista.map((src, k) => (
+          <span
+            key={src}
+            className="animate-plano-foto flex min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xl bg-white"
+            style={{ animationDelay: `${k * 90}ms` }}
+          >
+            <img
+              src={src}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(ev) => (ev.currentTarget.style.visibility = "hidden")}
+              className="h-full w-full object-contain p-2 transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none"
+            />
+          </span>
+        ))
+      ) : fotos === null && !escolhida ? (
+        <span className="esqueleto flex-1 rounded-xl" />
+      ) : (
+        <span className="flex flex-1 items-center justify-center rounded-xl bg-white text-5xl">
+          {emoji}
+        </span>
+      )}
+    </div>
   );
 }
