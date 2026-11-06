@@ -25,10 +25,15 @@ export function LinhaEntrega({
   if (valido && !cep)
     return (
       <>
-        {freteGratis === true && (
+        {freteGratis === true ? (
           <p className={`${base} font-semibold text-success`}>
             <Check className="size-3.5 shrink-0" aria-hidden="true" />
             Frete grátis
+          </p>
+        ) : (
+          <p className={`${base} text-secondary-ink`}>
+            <Truck className="size-3.5 shrink-0" aria-hidden="true" />
+            Frete a calcular
           </p>
         )}
         <button

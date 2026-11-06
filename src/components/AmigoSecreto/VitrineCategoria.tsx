@@ -61,6 +61,9 @@ export function VitrineCategoria({
      and "arrives before the party" by the CEP in the header. */
   const [ordem, setOrdem] = useState<"relevancia" | "menor" | "maior" | "vendidos" | "economia">("relevancia");
   const [soGratis, setSoGratis] = useState(false);
+  /* "Ver todos" (Weslei, 05/11): the rail opens into a grid with every
+     listing loaded, and loads the next 20 right away. */
+  const [expandida, setExpandida] = useState(false);
   const { cep, prazos } = usePrazosDosItens(dataFesta ? vitrine.produtos.map((r) => r.item) : []);
   const filtrados = vitrine.produtos.filter((r) => {
     if (soGratis && r.freteGratis !== true) return false;
@@ -116,6 +119,20 @@ export function VitrineCategoria({
             {contador}
           </p>
         </div>
+        {!contadorFixo && n > 0 && (
+          <button
+            type="button"
+            aria-expanded={expandida}
+            onClick={() => {
+              const abrir = !expandida;
+              setExpandida(abrir);
+              if (abrir && vitrine.temMais && !vitrine.carregando) aoCarregarMais();
+            }}
+            className="min-h-11 shrink-0 rounded-full px-3 text-sm font-semibold text-[#0071e3] transition active:scale-[0.97]"
+          >
+            {expandida ? "Recolher" : "Ver todos"}
+          </button>
+        )}
       </header>
       {controles && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
@@ -149,7 +166,13 @@ export function VitrineCategoria({
       )}
       {n > 0 ? (
         <>
-          <ul className="-mx-4 mt-3 grid snap-x scroll-px-4 auto-cols-[11.5rem] grid-flow-col gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:thin] sm:-mx-6 sm:auto-cols-[13.5rem] sm:px-6">
+          <ul
+            className={
+              expandida
+                ? "mt-3 grid grid-cols-1 gap-3 pb-3 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                : "-mx-4 mt-3 grid snap-x scroll-px-4 auto-cols-[11.5rem] grid-flow-col gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:thin] sm:-mx-6 sm:auto-cols-[13.5rem] sm:px-6"
+            }
+          >
             {produtos.map((r, k) => (
               <CartaoBusca
                 key={r.item || r.produto}
