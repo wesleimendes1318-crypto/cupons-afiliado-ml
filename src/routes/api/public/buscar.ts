@@ -10,8 +10,14 @@ import {
 } from "@/lib/busca-guiada";
 import { NOS, subarvore } from "@/content/taxonomia";
 import { classificar, departamentoDe } from "@/lib/classificar";
-import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
-import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
+import { extrairIntencaoRapida, MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
+import {
+  cabecalhosCors,
+  excedeuLimite,
+  json,
+  origemPermitida,
+  respostaOptions,
+} from "@/lib/public-ai-api";
 
 /* Busca guiada do site (05/10). A mesma pergunta (normalizada) volta do
    cache por 6 h. "A cada busca, se fizer sentido, deixar na vitrine": o 1º
@@ -43,7 +49,12 @@ const entradaSchema = z.object({
   /* "Carregar mais" (02/11): de onde a página anterior parou e o que já está
      na tela (não gasta leitura com produto repetido). */
   cursor: z.number().int().min(0).max(400).optional(),
-  vistos: z.array(z.string().regex(/^MLB\d{4,14}$/)).max(400).optional(),
+  vistos: z
+    .array(z.string().regex(/^MLB\d{4,14}$/))
+    .max(400)
+    .optional(),
+  /* Streamed quick preview before the full search (06/11). */
+  previa: z.boolean().optional(),
 });
 
 const CONTEXTOS = {
@@ -124,156 +135,215 @@ export const Route = createFileRoute("/api/public/buscar")({
         const guardada = await lerGuardada(chave);
         if (guardada) return json(request, guardada);
 
-        let achado: {
-          intencao: Awaited<ReturnType<typeof buscaGuiada>>["intencao"];
-          resultados: Awaited<ReturnType<typeof buscaGuiada>>["resultados"];
-          variantes?: string[];
-          proximo?: number | null;
-        };
-        try {
-          if (modoProduto) {
-            const r = await buscarMesmoProduto(entrada.q, pagina);
-            achado = {
-              intencao: { buscas: r.buscas, precoMin: null, precoMax: null, resumo: "" },
-              resultados: r.resultados,
-            };
-          } else {
-            /* Páginas seguintes: as buscas e a faixa de preço da 1ª. */
-            const primeira = pagina ? await lerGuardada(chave1) : null;
-            achado = await buscaGuiada(
-              entrada.q,
-              contextoTexto,
-              pagina,
-              primeira?.buscas?.length
-                ? {
-                    buscas: primeira.buscas,
-                    precoMin: primeira.precoMin ?? null,
-                    precoMax: primeira.precoMax ?? null,
-                    resumo: primeira.resumo,
-                    tipoProduto: primeira.tipoProduto ?? null,
-                    contextoUso: primeira.contextoUso ?? null,
-                    termosNegativos: primeira.termosNegativos ?? [],
-                    dominiosPermitidos: primeira.dominiosPermitidos ?? [],
-                    marca: primeira.marca ?? null,
-                    modelo: primeira.modelo ?? null,
-                  }
-                : null,
-              primeira
-                ? {
-                    variantes: primeira.variantes ?? [],
-                    excluir: [
-                      ...primeira.resultados.map((r) => r.produto),
-                      ...(entrada.vistos ?? []),
-                    ],
-                    cursor: entrada.cursor,
-                  }
-                : { excluir: entrada.vistos ?? [], cursor: entrada.cursor },
-            );
+        const completar = async (): Promise<{ corpo: object; status: number }> => {
+          let achado: {
+            intencao: Awaited<ReturnType<typeof buscaGuiada>>["intencao"];
+            resultados: Awaited<ReturnType<typeof buscaGuiada>>["resultados"];
+            variantes?: string[];
+            proximo?: number | null;
+          };
+          try {
+            if (modoProduto) {
+              const r = await buscarMesmoProduto(entrada.q, pagina);
+              achado = {
+                intencao: { buscas: r.buscas, precoMin: null, precoMax: null, resumo: "" },
+                resultados: r.resultados,
+              };
+            } else {
+              /* Páginas seguintes: as buscas e a faixa de preço da 1ª. */
+              const primeira = pagina ? await lerGuardada(chave1) : null;
+              achado = await buscaGuiada(
+                entrada.q,
+                contextoTexto,
+                pagina,
+                primeira?.buscas?.length
+                  ? {
+                      buscas: primeira.buscas,
+                      precoMin: primeira.precoMin ?? null,
+                      precoMax: primeira.precoMax ?? null,
+                      resumo: primeira.resumo,
+                      tipoProduto: primeira.tipoProduto ?? null,
+                      contextoUso: primeira.contextoUso ?? null,
+                      termosNegativos: primeira.termosNegativos ?? [],
+                      dominiosPermitidos: primeira.dominiosPermitidos ?? [],
+                      marca: primeira.marca ?? null,
+                      modelo: primeira.modelo ?? null,
+                    }
+                  : null,
+                primeira
+                  ? {
+                      variantes: primeira.variantes ?? [],
+                      excluir: [
+                        ...primeira.resultados.map((r) => r.produto),
+                        ...(entrada.vistos ?? []),
+                      ],
+                      cursor: entrada.cursor,
+                    }
+                  : { excluir: entrada.vistos ?? [], cursor: entrada.cursor },
+              );
+            }
+          } catch {
+            return { corpo: { erro: "A busca não respondeu agora. Tente de novo." }, status: 502 };
           }
-        } catch {
-          return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
-        }
 
-        /* Na categoria: só o mesmo departamento, a própria subárvore na frente. */
-        if (no) {
-          const dep = no.caminho[0]!;
-          const daqui = new Set(subarvore(no.slug));
-          achado.resultados = achado.resultados
-            .map((r, k) => ({ r, k, c: classificar({ nome: r.nome, fonte: dep }).no }))
-            .filter((x) => departamentoDe(x.c) === dep)
-            .sort((a, b) => Number(daqui.has(b.c)) - Number(daqui.has(a.c)) || a.k - b.k)
-            .map((x) => x.r);
-        }
+          /* Na categoria: só o mesmo departamento, a própria subárvore na frente. */
+          if (no) {
+            const dep = no.caminho[0]!;
+            const daqui = new Set(subarvore(no.slug));
+            achado.resultados = achado.resultados
+              .map((r, k) => ({ r, k, c: classificar({ nome: r.nome, fonte: dep }).no }))
+              .filter((x) => departamentoDe(x.c) === dep)
+              .sort((a, b) => Number(daqui.has(b.c)) - Number(daqui.has(a.c)) || a.k - b.k)
+              .map((x) => x.r);
+          }
 
-        /* Acervo (05/11): what this search read with price and shipping is kept
+          /* Acervo (05/11): what this search read with price and shipping is kept
            for the showcases (Amigo Secreto reads it before the catalog). */
-        if (!modoProduto) await guardarNoAcervo(db, entrada.q, achado.resultados);
+          if (!modoProduto) await guardarNoAcervo(db, entrada.q, achado.resultados);
 
-        /* Fila da vitrine: só produto com anúncio ativo, ainda não comparado
+          /* Fila da vitrine: só produto com anúncio ativo, ainda não comparado
            na semana, dentro do teto por hora. */
-        let enfileirados = 0;
-        if (achado.resultados.length && !pagina) {
-          const hora = new Date(Date.now() - 3600_000).toISOString();
-          const { data: ultimas } = await db
-            .from("busca_guiada")
-            .select("enfileirados")
-            .gte("criado_em", hora);
-          let livres =
-            FILA_POR_HORA -
-            ((ultimas ?? []) as Array<{ enfileirados: number }>).reduce(
-              (s, r) => s + (r.enfileirados || 0),
-              0,
-            );
-          const semana = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
-          for (const r of achado.resultados) {
-            if (livres <= 0 || enfileirados >= FILA_POR_BUSCA) break;
-            /* Sem anúncio (catálogo sem oferta destacada): não vai para a fila. */
-            if (!r.item) continue;
-            const { count } = await db
-              .from("pedidos_link")
-              .select("id", { count: "exact", head: true })
-              .gte("criado_em", semana)
-              .ilike("url_alvo", `%${r.produto}%`);
-            if ((count ?? 0) > 0) continue;
-            const { data: novo, error } = await db.rpc("pedir_link_agente", {
-              p_url: r.url,
-              p_fonte: "busca",
-            });
-            if (!error && novo != null) {
-              enfileirados += 1;
-              livres -= 1;
+          let enfileirados = 0;
+          if (achado.resultados.length && !pagina) {
+            const hora = new Date(Date.now() - 3600_000).toISOString();
+            const { data: ultimas } = await db
+              .from("busca_guiada")
+              .select("enfileirados")
+              .gte("criado_em", hora);
+            let livres =
+              FILA_POR_HORA -
+              ((ultimas ?? []) as Array<{ enfileirados: number }>).reduce(
+                (s, r) => s + (r.enfileirados || 0),
+                0,
+              );
+            const semana = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+            for (const r of achado.resultados) {
+              if (livres <= 0 || enfileirados >= FILA_POR_BUSCA) break;
+              /* Sem anúncio (catálogo sem oferta destacada): não vai para a fila. */
+              if (!r.item) continue;
+              const { count } = await db
+                .from("pedidos_link")
+                .select("id", { count: "exact", head: true })
+                .gte("criado_em", semana)
+                .ilike("url_alvo", `%${r.produto}%`);
+              if ((count ?? 0) > 0) continue;
+              const { data: novo, error } = await db.rpc("pedir_link_agente", {
+                p_url: r.url,
+                p_fonte: "busca",
+              });
+              if (!error && novo != null) {
+                enfileirados += 1;
+                livres -= 1;
+              }
             }
           }
-        }
 
-        const { marca, modelo } = achado.intencao;
-        const exato = [marca, modelo].filter(Boolean).join(" ");
-        /* Modelo citado fora do catálogo oficial (28/10, Nike TC 7900: só
+          const { marca, modelo } = achado.intencao;
+          const exato = [marca, modelo].filter(Boolean).join(" ");
+          /* Modelo citado fora do catálogo oficial (28/10, Nike TC 7900: só
            anúncios avulsos, que a API não lista): a extensão busca nos
            anúncios como uma pessoa faria. */
-        let anuncios: { id: number; chave: string } | null = null;
-        if (exato && !achado.resultados.length && !pagina && !modoProduto) {
-          const { data } = await db.rpc("pedir_busca_anuncios", {
-            // O que a pessoa digitou: a busca do modelo pode trazer palavra a mais ("feminino").
-            p_termo:
-              entrada.q.trim().split(/\s+/).length <= 8
-                ? entrada.q
-                : [marca, modelo].filter(Boolean).join(" "),
-            p_marca: marca ?? null,
-            p_modelo: modelo ?? null,
-          });
-          const p = data as { ok?: boolean; id?: number; chave?: string } | null;
-          if (p?.ok && p.id && p.chave) anuncios = { id: p.id, chave: p.chave };
-        }
-        const resposta: RespostaBusca = {
-          /* Modelo citado e nada igual: diz isso em vez de mostrar outro. */
-          resumo:
-            exato && !achado.resultados.length && !pagina
-              ? anuncios
-                ? "Conferindo opções disponíveis compatíveis com o seu pedido…"
-                : MENSAGEM_SEM_OPCOES
-              : achado.intencao.resumo,
-          buscas: achado.intencao.buscas,
-          resultados: achado.resultados,
-          enfileirados,
-          lidoEm: new Date().toISOString(),
-          precoMin: achado.intencao.precoMin,
-          precoMax: achado.intencao.precoMax,
-          tipoProduto: achado.intencao.tipoProduto ?? null,
-          contextoUso: achado.intencao.contextoUso ?? null,
-          termosNegativos: achado.intencao.termosNegativos ?? [],
-          dominiosPermitidos: achado.intencao.dominiosPermitidos ?? [],
-          marca: marca ?? null,
-          modelo: modelo ?? null,
-          anuncios,
-          variantes: achado.variantes ?? [],
-          ...(achado.proximo !== undefined ? { proximo: achado.proximo } : {}),
+          let anuncios: { id: number; chave: string } | null = null;
+          if (exato && !achado.resultados.length && !pagina && !modoProduto) {
+            const { data } = await db.rpc("pedir_busca_anuncios", {
+              // O que a pessoa digitou: a busca do modelo pode trazer palavra a mais ("feminino").
+              p_termo:
+                entrada.q.trim().split(/\s+/).length <= 8
+                  ? entrada.q
+                  : [marca, modelo].filter(Boolean).join(" "),
+              p_marca: marca ?? null,
+              p_modelo: modelo ?? null,
+            });
+            const p = data as { ok?: boolean; id?: number; chave?: string } | null;
+            if (p?.ok && p.id && p.chave) anuncios = { id: p.id, chave: p.chave };
+          }
+          const resposta: RespostaBusca = {
+            /* Modelo citado e nada igual: diz isso em vez de mostrar outro. */
+            resumo:
+              exato && !achado.resultados.length && !pagina
+                ? anuncios
+                  ? "Conferindo opções disponíveis compatíveis com o seu pedido…"
+                  : MENSAGEM_SEM_OPCOES
+                : achado.intencao.resumo,
+            buscas: achado.intencao.buscas,
+            resultados: achado.resultados,
+            enfileirados,
+            lidoEm: new Date().toISOString(),
+            precoMin: achado.intencao.precoMin,
+            precoMax: achado.intencao.precoMax,
+            tipoProduto: achado.intencao.tipoProduto ?? null,
+            contextoUso: achado.intencao.contextoUso ?? null,
+            termosNegativos: achado.intencao.termosNegativos ?? [],
+            dominiosPermitidos: achado.intencao.dominiosPermitidos ?? [],
+            marca: marca ?? null,
+            modelo: modelo ?? null,
+            anuncios,
+            variantes: achado.variantes ?? [],
+            ...(achado.proximo !== undefined ? { proximo: achado.proximo } : {}),
+          };
+          /* Busca sem resultado não fica guardada (pode ter sido falha). */
+          if (achado.resultados.length || enfileirados)
+            await db.from("busca_guiada").insert({ chave, contexto, resposta, enfileirados });
+          gravarMemoria(chave, resposta);
+          return { corpo: resposta, status: 200 };
         };
-        /* Busca sem resultado não fica guardada (pode ter sido falha). */
-        if (achado.resultados.length || enfileirados)
-          await db.from("busca_guiada").insert({ chave, contexto, resposta, enfileirados });
-        gravarMemoria(chave, resposta);
-        return json(request, resposta);
+
+        /* TWO STAGES (Weslei, 06/11: "3-6 s esperando"): the interpretation
+           takes up to 3.5 s before any read. With previa, one streamed answer
+           (one JSON per line): first the catalog read with the words as typed,
+           then the full search, which replaces it. Same request, so the memo of
+           offers keeps the reads shared. */
+        const comPrevia =
+          entrada.previa === true && !pagina && !modoProduto && !no && entrada.cursor == null;
+        if (!comPrevia) {
+          const f = await completar();
+          return json(request, f.corpo, f.status);
+        }
+        const codificar = new TextEncoder();
+        let terminou = false;
+        const fluxo = new ReadableStream<Uint8Array>({
+          async start(controle) {
+            const enviar = (o: object) =>
+              controle.enqueue(codificar.encode(`${JSON.stringify(o)}\n`));
+            const previa = buscaGuiada(
+              entrada.q,
+              contextoTexto,
+              0,
+              extrairIntencaoRapida(entrada.q),
+              {
+                previa: true,
+              },
+            )
+              .then((r) => {
+                if (terminou || !r.resultados.length) return;
+                enviar({
+                  previa: true,
+                  resumo: "",
+                  buscas: r.intencao.buscas,
+                  resultados: r.resultados,
+                  enfileirados: 0,
+                  lidoEm: new Date().toISOString(),
+                  proximo: null,
+                });
+              })
+              .catch(() => {});
+            const f = await completar().catch(() => ({
+              corpo: { erro: "A busca não respondeu agora. Tente de novo." },
+              status: 502,
+            }));
+            terminou = true;
+            await previa.catch(() => {});
+            enviar(f.corpo);
+            controle.close();
+          },
+        });
+        return new Response(fluxo, {
+          headers: {
+            ...cabecalhosCors(origemPermitida(request)),
+            "Content-Type": "application/x-ndjson; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        });
       },
     },
   },

@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type React
 import { Link } from "@tanstack/react-router";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
+import { arquetipoDoTitulo, limitarPorArquetipo } from "@/lib/curadoria";
 import { MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
 import {
   Check,
@@ -161,7 +162,15 @@ export function BuscaGuiada({
     setCarregando(true);
     setErro(null);
     setResposta(null);
-    const r = await buscarProdutos(pergunta, contexto);
+    const r = await buscarProdutos(
+      pergunta,
+      contexto,
+      "guiada",
+      0,
+      undefined,
+      undefined,
+      (previa) => setResposta(previa),
+    );
     setErro(r.erro);
     setResposta(r.resposta);
     setCarregando(false);
@@ -520,14 +529,39 @@ export function ResultadosDaBusca({
       const porChave = new Map(cartoes.map((c) => [c.chave, c]));
       return doAssistente.flatMap((k) => porChave.get(k) ?? []);
     }
-    return ordem === "relevancia" && !temEscolha(escolha)
-      ? cartoesVariados
-      : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas, {
-          rede: rede?.volts ?? null,
-          /* A 1ª resposta inteira é um lote só; o "Carregar mais" vem depois. */
-          lote: Math.max(LOTE, cartoes.length - extras.length),
-        });
-  }, [doAssistente, ordem, escolha, cartoes, cartoesVariados, notas, rede, extras.length]);
+    const lista =
+      ordem === "relevancia" && !temEscolha(escolha)
+        ? cartoesVariados
+        : ordenarResultados(filtrarResultados(cartoes, escolha), ordem, notas, {
+            rede: rede?.volts ?? null,
+            /* A 1ª resposta inteira é um lote só; o "Carregar mais" vem depois. */
+            lote: Math.max(LOTE, cartoes.length - extras.length),
+          });
+    /* 06/11: no kind of product takes more than 4 of each 20 cards in the
+       default orders (an explicit sort or a brand/model search stays as is). */
+    const mista =
+      (ordem === "recomendados" || ordem === "relevancia") &&
+      !temEscolha(escolha) &&
+      !resposta?.marca &&
+      !resposta?.modelo;
+    if (!mista) return lista;
+    /* Only the first answer: cards already on screen never jump when "+20" arrives. */
+    const n = Math.max(0, lista.length - extras.length);
+    return [
+      ...limitarPorArquetipo(lista.slice(0, n), (c) => arquetipoDoTitulo(c.nome)),
+      ...lista.slice(n),
+    ];
+  }, [
+    doAssistente,
+    ordem,
+    escolha,
+    cartoes,
+    cartoesVariados,
+    notas,
+    rede,
+    extras.length,
+    resposta,
+  ]);
   const faixas = useMemo(() => faixasDePreco(cartoes.flatMap((c) => c.preco ?? [])), [cartoes]);
   const marcas = useMemo(() => marcasDosResultados(cartoes), [cartoes]);
   const filtrosCategoria = useMemo(() => filtrosDaBusca(cartoes), [cartoes]);

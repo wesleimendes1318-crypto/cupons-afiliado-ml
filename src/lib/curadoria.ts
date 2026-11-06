@@ -57,7 +57,9 @@ export function assinaturaDoModelo(nome: string | null | undefined): string | nu
 /** "foto:" key of the main photo: Mercado Livre serves the same picture under
     the same id ("D_NQ_NP_2X_<id>-F.webp", "D_<id>-O.jpg"). */
 export function idDaFoto(url: string | null | undefined): string | null {
-  const m = /mlstatic\.com\/(?:D_(?:NQ_NP_)?(?:2X_)?(?:Q_NP_)?)?(\d+-ML[A-Z]\d+_\d+)/.exec(url ?? "");
+  const m = /mlstatic\.com\/(?:D_(?:NQ_NP_)?(?:2X_)?(?:Q_NP_)?)?(\d+-ML[A-Z]\d+_\d+)/.exec(
+    url ?? "",
+  );
   return m ? `foto:${m[1]}` : null;
 }
 
@@ -128,16 +130,32 @@ export type Area = "beleza" | "joia" | "calcado" | "outro";
 
 export function areaDaBusca(q: string): Area {
   const s = sem(q);
-  if (/skin ?care|facial|hidratante|serum|protetor solar|sabonete|micelar|cosmetic|maquiagem|perfume|creme|tonico|autocuidado/.test(s)) return "beleza";
-  if (/bijuteri|semijoia|\bjoias?\b|colar|brinco|pulseira|\baneis\b|\banel\b|pingente|ear cuff|argola/.test(s)) return "joia";
-  if (/calcado|sapato|tenis|sandalia|chinelo|rasteir|sapatilha|papete|\bbotas?\b|slide|tamanco|mule\b/.test(s)) return "calcado";
+  if (
+    /skin ?care|facial|hidratante|serum|protetor solar|sabonete|micelar|cosmetic|maquiagem|perfume|creme|tonico|autocuidado/.test(
+      s,
+    )
+  )
+    return "beleza";
+  if (
+    /bijuteri|semijoia|\bjoias?\b|colar|brinco|pulseira|\baneis\b|\banel\b|pingente|ear cuff|argola/.test(
+      s,
+    )
+  )
+    return "joia";
+  if (
+    /calcado|sapato|tenis|sandalia|chinelo|rasteir|sapatilha|papete|\bbotas?\b|slide|tamanco|mule\b/.test(
+      s,
+    )
+  )
+    return "calcado";
   return "outro";
 }
 
 const generoDaBusca = (s: string) =>
   /feminin|mulher|\bdela\b/.test(s) ? "f" : /masculin|homem|\bdele\b/.test(s) ? "m" : null;
 
-const TOY = /\b(zona ?criativa|uatt|brinquedo|infantil|kids|crianca|menina|pelucia|slime|massinha|fantasia|boneca|kit spa infantil)\b/;
+const TOY =
+  /\b(zona ?criativa|uatt|brinquedo|infantil|kids|crianca|menina|pelucia|slime|massinha|fantasia|boneca|kit spa infantil)\b/;
 const JOIA_FORA = /\b(atacado|revenda|lote|kit \d{2,}|saquinho)\b/;
 const CALCADO_MASC = /\b(kenner|pegada|democrata|ferracini|sapatenis|rider)\b/;
 
@@ -154,22 +172,31 @@ const MARCAS: Record<Area, RegExp | null> = {
 /* Themed searches (franchise/fandom) without a product type: showpiece items
    (3D LED lamps, collectibles, wall art) go first, simple pre-school toys go
    last. Owner, 05/11: the Star Wars 3D lamp "encantador". */
-const TEMA = /\b(star ?wars|marvel|vingadores|homem[- ]aranha|batman|dc comics|harry potter|pokemon|naruto|anime|disney|stitch|mandalorian|darth vader|baby yoda|grogu|senhor dos aneis|friends|stranger things)\b/;
-const TIPO_PEDIDO = /\b(caneca|chaveiro|camiseta|camisa|almofada|lego|funko|boneco|action figure|luminaria|abajur|quadro|livro|meia|bone|mochila|copo|pelucia|fantasia)\b/;
-const DESTAQUE = /\b(luminaria|abajur|led 3d|3d led|16 cores|colecionavel|edicao especial|replica|estatua|busto|quadro|funko|lego|hot toys|sabre de luz)\b/;
-const MIUDEZA = /\b(chaveiro|adesivo|botton|playskool|imaginext|pre ?escolar|bate e volta|giratorio)\b/;
+const TEMA =
+  /\b(star ?wars|marvel|vingadores|homem[- ]aranha|batman|dc comics|harry potter|pokemon|naruto|anime|disney|stitch|mandalorian|darth vader|baby yoda|grogu|senhor dos aneis|friends|stranger things)\b/;
+const TIPO_PEDIDO =
+  /\b(caneca|chaveiro|camiseta|camisa|almofada|lego|funko|boneco|action figure|luminaria|abajur|quadro|livro|meia|bone|mochila|copo|pelucia|fantasia)\b/;
+const DESTAQUE =
+  /\b(luminaria|abajur|led 3d|3d led|16 cores|colecionavel|edicao especial|replica|estatua|busto|quadro|funko|lego|hot toys|sabre de luz)\b/;
+const MIUDEZA =
+  /\b(chaveiro|adesivo|botton|playskool|imaginext|pre ?escolar|bate e volta|giratorio)\b/;
 const pesoTema = (s: string, t: string) =>
   !TEMA.test(s) || TIPO_PEDIDO.test(s) ? 0 : DESTAQUE.test(t) ? 2 : MIUDEZA.test(t) ? -1 : 0;
 
 /* Season, by São Paulo month (Nov–Feb summer, May–Aug winter). */
 function estacao(agora: Date): "verao" | "inverno" | null {
-  const m = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", month: "numeric" }).format(agora));
+  const m = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", month: "numeric" }).format(
+      agora,
+    ),
+  );
   if (m >= 11 || m <= 2) return "verao";
   if (m >= 5 && m <= 8) return "inverno";
   return null;
 }
 const DA_ESTACAO = {
-  verao: /\b(sandalia|rasteir|papete|chinelo|slide|tamanco|anabela|praia|protetor solar|biquini|regata|short)\b/,
+  verao:
+    /\b(sandalia|rasteir|papete|chinelo|slide|tamanco|anabela|praia|protetor solar|biquini|regata|short)\b/,
   inverno: /\b(bota|coturno|moletom|jaqueta|casaco|cachecol|meia|pantufa|hidratante labial)\b/,
 };
 
@@ -180,7 +207,8 @@ export function aprovadoPeloCurador(q: string, titulo: string): boolean {
   const area = areaDaBusca(q);
   if (area === "beleza" && !TOY.test(s) && TOY.test(t)) return false;
   if (area === "joia" && !JOIA_FORA.test(s) && JOIA_FORA.test(t)) return false;
-  if (area === "calcado" && generoDaBusca(s) === "f" && CALCADO_MASC.test(t) && !/feminin/.test(t)) return false;
+  if (area === "calcado" && generoDaBusca(s) === "f" && CALCADO_MASC.test(t) && !/feminin/.test(t))
+    return false;
   return true;
 }
 
@@ -210,7 +238,9 @@ export function curarResultados<T>(
     .map((i, k) => {
       const t = sem(nome(i));
       const peso =
-        (marca?.test(t) ? 2 : 0) + (area !== "outro" && temporada?.test(t) ? 1 : 0) + pesoTema(sq, t);
+        (marca?.test(t) ? 2 : 0) +
+        (area !== "outro" && temporada?.test(t) ? 1 : 0) +
+        pesoTema(sq, t);
       return { i, k, peso };
     })
     .sort((a, b) => b.peso - a.peso || a.k - b.k)
@@ -227,7 +257,10 @@ export function arquetipoDoTitulo(nome: string | null | undefined): string {
 /* Weslei, 06/11: no archetype monopoly ("Decoração" with 60 vases). Round
    robin over archetypes, each group keeping its own order (best first), so
    the first cards cover as many kinds as the list has. Drops nothing. */
-export function intercalarPorDiversidade<T>(itens: T[], extrairArquetipo: (item: T) => string): T[] {
+export function intercalarPorDiversidade<T>(
+  itens: T[],
+  extrairArquetipo: (item: T) => string,
+): T[] {
   const grupos = new Map<string, T[]>();
   for (const x of itens) {
     const k = extrairArquetipo(x);
@@ -237,6 +270,31 @@ export function intercalarPorDiversidade<T>(itens: T[], extrairArquetipo: (item:
   }
   const filas = [...grupos.values()];
   const saida: T[] = [];
-  for (let i = 0; saida.length < itens.length; i++) for (const f of filas) if (i < f.length) saida.push(f[i]!);
+  for (let i = 0; saida.length < itens.length; i++)
+    for (const f of filas) if (i < f.length) saida.push(f[i]!);
+  return saida;
+}
+
+/* Weslei, 06/11: in any 20-card window, one archetype fills at most 20%
+   (4 cards). Extras move to the next window; nothing is dropped, and when
+   only that archetype is left the order stays as it was. */
+export function limitarPorArquetipo<T>(
+  itens: T[],
+  arquetipo: (item: T) => string,
+  max = 4,
+  janela = 20,
+): T[] {
+  const fila = [...itens];
+  const saida: T[] = [];
+  while (fila.length) {
+    const inicio = saida.length - (saida.length % janela);
+    const conta = new Map<string, number>();
+    for (let i = inicio; i < saida.length; i++) {
+      const k = arquetipo(saida[i]!);
+      conta.set(k, (conta.get(k) ?? 0) + 1);
+    }
+    const k = fila.findIndex((x) => (conta.get(arquetipo(x)) ?? 0) < max);
+    saida.push(fila.splice(Math.max(0, k), 1)[0]!);
+  }
   return saida;
 }
