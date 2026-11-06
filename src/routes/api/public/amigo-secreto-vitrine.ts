@@ -84,7 +84,7 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           return json(request, { erro: "Muitas buscas seguidas. Aguarde um minuto." }, 429);
 
         const faixa = `${e.min ?? ""}-${e.max ?? ""}${e.freteACalcular ? "|f" : ""}`;
-        const chave1 = `amigo6|${faixa}|${normalizarBusca(e.termo)}`;
+        const chave1 = `amigo7|${faixa}|${normalizarBusca(e.termo)}`;
         const chave = e.pagina
           ? `${chave1}|p${e.pagina}|c${e.cursor ?? ""}|n${(e.vistos ?? []).length}`
           : chave1;
