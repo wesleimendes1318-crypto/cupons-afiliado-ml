@@ -228,7 +228,7 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
      (figurinhas in "Livros", a teddy in "Star Wars"): each kind needs its word. */
   if (c.tipo === "livros" && /\b(figurinhas?|album|pacotes?|adesivos?|cartas colecionaveis|marcenaria)\b/.test(t))
     return false;
-  if (c.tipo === "roupa" && !/\b(short|shorts|top|tops|legging|calca|camiseta|camisetas|camisa|polo|regata|blusa|conjunto|bermuda|jeans|macaquinho|macacao|jaqueta|moletom|vestido|saia|cropped|body|pijama|meia|meias|sutia|biquini|maio|bone|viseira|bolsa|garrafa|toalha|squeeze)\b/.test(t))
+  if (c.tipo === "roupa" && !/\b(short|shorts|top|tops|legging|calca|camiseta|camisetas|camisa|polo|regata|blusa|conjunto|bermuda|jeans|macaquinho|macacao|jaqueta|moletom|vestido|saia|cropped|body|pijama|meia|meias|sutia|biquini|maio|bone|viseira|cinto|carteira|bolsa|garrafa|toalha|squeeze)\b/.test(t))
     return false;
   /* Gym showcase: the piece has to be gym wear (05/11: a dress and a watch showed up). */
   if (c.tipo === "roupa" && c.academia && !/\b(fitness|academia|treino|dry ?fit|esportiv[oa]|legging|tops?|shorts?|cropped|ciclista|corrida|yoga|compressao|bermuda|regata|macaquinho|garrafa|squeeze|toalha|bolsa)\b/.test(t))
@@ -382,6 +382,12 @@ const CALCADO_VERAO = [
 ];
 
 const ROUPAS_MASCULINAS = [
+  /* 06/11 measured: the official catalog has no T-shirt products (MLB-T_SHIRTS
+     search = 0) and listings are blocked, so men's garments come back thin.
+     Accessories it does carry fill the showcase first. */
+  "boné masculino aba curva",
+  "cinto masculino couro",
+  "carteira masculina couro",
   "camiseta oversized masculina streetwear",
   "camiseta masculina algodão fio 30",
   "camiseta básica masculina gola redonda",

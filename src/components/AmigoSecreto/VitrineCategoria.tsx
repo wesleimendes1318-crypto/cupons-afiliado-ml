@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { usePrazosDosItens } from "@/lib/prazo-cliente";
 
 import { BotaoCarregarMaisVitrine } from "@/components/AmigoSecreto/BotaoCarregarMaisVitrine";
-import { CartoesDeEspera, PilulaDeEspera } from "@/components/AmigoSecreto/EsperaVitrine";
+import { BarraDeCarga, CartoesDeEspera, PilulaDeEspera } from "@/components/AmigoSecreto/EsperaVitrine";
 import { abrirComparacao } from "@/components/BotoesCartao";
 import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
@@ -91,6 +91,16 @@ export function VitrineCategoria({
   const controles = !contadorFixo && vitrine.produtos.length > 3;
   const n = vitrine.produtos.length;
   const frase = useFraseDeEspera(vitrine.carregando);
+  /* 50 on open, then the next block of 20 ("X de 50 produtos"). */
+  const meta = n < 50 ? 50 : Math.ceil((n + 1) / 20) * 20;
+  /* Weslei, 06/11: always offer more. Terms ran out: widen (shipping to
+     calculate first, then the next value), otherwise read the next page. */
+  const maisResultados = () => {
+    if (vitrine.temMais || !ampliar) return aoCarregarMais();
+    if (!ampliar.freteACalcular) return ampliar.aoAceitarFrete();
+    if (ampliar.proximoMax != null) return ampliar.aoSubirValor();
+    aoCarregarMais();
+  };
   const contador =
     contadorFixo ??
     (vitrine.carregando
@@ -193,19 +203,13 @@ export function VitrineCategoria({
             ))}
             {vitrine.carregando && <CartoesDeEspera quantos={n < 4 ? 2 : 1} />}
           </ul>
-          {vitrine.carregando && (
-            <p className="mb-2 flex items-center gap-2 text-xs text-secondary-ink" aria-live="polite">
-              <span className="size-2 shrink-0 animate-pulse rounded-full bg-[#0071e3]" aria-hidden="true" />
-              Enquanto você olha essas primeiras opções, já estamos garimpando mais para você…
-            </p>
-          )}
-          {vitrine.temMais && (
-            <BotaoCarregarMaisVitrine
-              carregando={vitrine.carregando}
-              aoCarregar={aoCarregarMais}
-              className="mt-1"
-            />
-          )}
+          {vitrine.carregando && <BarraDeCarga n={n} meta={meta} />}
+          {!contadorFixo && <BotaoCarregarMaisVitrine
+            carregando={vitrine.carregando}
+            aoCarregar={maisResultados}
+            rotulo={vitrine.temMais ? undefined : "Buscar mais resultados"}
+            className="mt-1"
+          />}
         </>
       ) : vitrine.carregando ? (
         <div className="relative">
@@ -213,10 +217,16 @@ export function VitrineCategoria({
             <CartoesDeEspera quantos={5} />
           </ul>
           <PilulaDeEspera frase={frase} />
+          <BarraDeCarga n={0} meta={meta} />
         </div>
-      ) : vitrine.temMais ? (
-        <BotaoCarregarMaisVitrine carregando={false} aoCarregar={aoCarregarMais} className="mt-3" />
-      ) : null}
+      ) : contadorFixo ? null : (
+        <BotaoCarregarMaisVitrine
+          carregando={false}
+          aoCarregar={maisResultados}
+          rotulo={vitrine.temMais ? undefined : "Buscar mais resultados"}
+          className="mt-3"
+        />
+      )}
       {ampliar && !vitrine.carregando && n < 12 && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-2xl bg-[#f5f5f7] p-3 text-xs dark:bg-white/5">
           <span className="text-secondary-ink">Poucas opções {ampliar.freteACalcular ? "nessa faixa" : "com frete grátis"}. Quer ver mais?</span>

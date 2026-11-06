@@ -62,3 +62,36 @@ export function PilulaDeEspera({ frase }: { frase: string }) {
     </div>
   );
 }
+
+/* BARRA DE CARGA (Weslei, 06/11: "uma barra sendo carregada com X produtos
+   de 50", same look as the price-tracking animation): blue line that grows
+   with the real count, green dot at its tip, soft shine while loading. */
+export function BarraDeCarga({ n, meta }: { n: number; meta: number }) {
+  const pct = Math.min(100, Math.round((n / Math.max(1, meta)) * 100));
+  return (
+    <div className="mb-2 rounded-2xl bg-[#f5f5f7] p-3 dark:bg-white/5">
+      <p className="flex items-center justify-between gap-2 text-xs font-semibold">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="carga-ponto size-2 shrink-0 rounded-full bg-[#34c759]" aria-hidden="true" />
+          Carregando mais anúncios…
+        </span>
+        <span className="shrink-0 tabular-nums text-secondary-ink">
+          {n} de {meta} produtos
+        </span>
+      </p>
+      <div
+        role="progressbar"
+        aria-label="Anúncios carregados"
+        aria-valuemin={0}
+        aria-valuemax={meta}
+        aria-valuenow={n}
+        className="relative mt-2 h-2 overflow-hidden rounded-full bg-[#e3e3e8] dark:bg-white/10"
+      >
+        <div
+          className="carga-barra relative h-full rounded-full bg-[#0071e3] transition-[width] duration-700 ease-out"
+          style={{ width: `${Math.max(4, pct)}%` }}
+        />
+      </div>
+    </div>
+  );
+}

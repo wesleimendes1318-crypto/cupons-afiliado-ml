@@ -1465,3 +1465,31 @@ details.abertura-nativa[open] > summary .seta-abertura {
     opacity: 1;
   }
 }
+
+/* Barra de carga do Amigo Secreto (06/11): shine across the blue line and a
+   breathing green dot, like the price-tracking animation. */
+@keyframes carga-brilho {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+.carga-barra::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: carga-brilho 1.6s ease-in-out infinite;
+}
+.carga-ponto {
+  animation: acomp-ponto 2.4s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .carga-barra::after,
+  .carga-ponto {
+    animation: none;
+  }
+}

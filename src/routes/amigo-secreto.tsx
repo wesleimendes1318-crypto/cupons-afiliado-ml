@@ -269,7 +269,7 @@ function PaginaAmigoSecreto() {
 
   /* The active person's showcases load in order, two at a time. */
   useEffect(() => {
-    if (!ativo) return;
+    if (!ativo || !estado.faixaEscolhida) return;
     const emCurso = ativo.vitrines.filter((v) => v.carregando).length;
     const fila = ativo.vitrines.filter((v) => !v.carregando && !tentadas.current.has(v.id) && !v.produtos.length);
     fila.slice(0, Math.max(0, 3 - emCurso)).forEach((v) => void carregar(ativo.id, v, META_POR_VITRINE));
@@ -286,7 +286,7 @@ function PaginaAmigoSecreto() {
     if (!proxima) return;
     completadas.current.set(proxima.id, (completadas.current.get(proxima.id) ?? 0) + 1);
     void carregar(ativo.id, proxima, META_FUNDO - proxima.produtos.length);
-  }, [ativo, carregar]);
+  }, [ativo, carregar, estado.faixaEscolhida]);
 
   /* Budget changed: every showcase starts over inside the new range. */
   const mudarFaixa = (min: number | null, max: number | null, freteACalcular = estado.freteACalcular === true) => {
@@ -300,6 +300,7 @@ function PaginaAmigoSecreto() {
       orcamentoPadraoMin: min ?? 0,
       orcamentoPadraoMax: max ?? 0,
       freteACalcular,
+      faixaEscolhida: true,
       amigos: e.amigos.map((a) => ({
         ...a,
         vitrines: a.vitrines.map((v) => ({ ...novaVitrine({ titulo: v.titulo, icone: v.icone, termos: v.termosBusca }), id: v.id })),
@@ -410,6 +411,7 @@ function PaginaAmigoSecreto() {
       <CabecalhoAmigoSecreto
         min={faixa.min}
         max={faixa.max}
+        escolhida={pronto ? estado.faixaEscolhida === true : true}
         aoMudarFaixa={mudarFaixa}
         aoImportar={() => setImportar(true)}
       />
@@ -562,13 +564,24 @@ function PaginaAmigoSecreto() {
           </div>
         )}
 
+        {ativo && ativo.vitrines.length > 0 && pronto && !estado.faixaEscolhida && (
+          <p className="rounded-2xl bg-[#eef4ff] p-4 text-sm font-semibold text-[#0058b0] dark:bg-white/5 dark:text-[#64a8ff]">
+            Escolha o valor do presente no topo para ver as opções.
+          </p>
+        )}
         {ativo &&
+          estado.faixaEscolhida &&
           ativo.vitrines.map((v) => (
             <VitrineCategoria
               key={v.id}
               vitrine={v}
               faixa={textoFaixa}
-              aoCarregarMais={() => void carregar(ativo.id, v, LOTE_EXTRA)}
+              aoCarregarMais={() => {
+                /* "Buscar mais" after the end (06/11): terms stopped by two empty pages get another try. */
+                const ps = passos.current.get(v.id);
+                if (ps && !v.temMais) passos.current.set(v.id, ps.map((p) => (p.cursor != null ? { ...p, fim: false, vazias: 0 } : p)));
+                void carregar(ativo.id, v, LOTE_EXTRA);
+              }}
               favoritos={favoritosAtivo}
               aoFavoritar={favoritar}
               ampliar={ampliar}

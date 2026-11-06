@@ -1,14 +1,8 @@
-/* Fixed top bar of /amigo-secreto: budget (quick chips + custom), import
-   the group list. The delivery CEP lives in the site header (CepTopo). */
+/* Fixed top bar of /amigo-secreto: budget and import the group list.
+   Weslei, 06/11: no preset ranges; the value is asked first (form open until
+   chosen) and stays editable from the chip. The delivery CEP lives in the site header (CepTopo). */
 import { ClipboardPaste } from "lucide-react";
-import { useState } from "react";
-
-const FAIXAS = [
-  { rotulo: "Qualquer valor", min: null, max: null },
-  { rotulo: "Até R$ 50", min: null, max: 50 },
-  { rotulo: "R$ 80 a R$ 100", min: 80, max: 100 },
-  { rotulo: "R$ 100 a R$ 200", min: 100, max: 200 },
-] as const;
+import { useEffect, useState } from "react";
 
 export const rotuloFaixa = (min: number | null, max: number | null) =>
   !max ? (min ? `a partir de R$ ${min}` : "em qualquer valor") : min ? `entre R$ ${min} e R$ ${max}` : `até R$ ${max}`;
@@ -16,23 +10,32 @@ export const rotuloFaixa = (min: number | null, max: number | null) =>
 export function CabecalhoAmigoSecreto({
   min,
   max,
+  escolhida,
   aoMudarFaixa,
   aoImportar,
 }: {
   min: number | null;
   max: number | null;
+  escolhida: boolean;
   aoMudarFaixa: (min: number | null, max: number | null) => void;
   aoImportar: () => void;
 }) {
-  const fixa = FAIXAS.find((f) => f.min === min && f.max === max);
-  const [personalizar, setPersonalizar] = useState(false);
+  const [personalizar, setPersonalizar] = useState(!escolhida);
   const [de, setDe] = useState(String(min ?? ""));
   const [ate, setAte] = useState(max ? String(max) : "");
+  /* Saved state arrives after mount: open the form when no value was chosen yet. */
+  useEffect(() => {
+    if (!escolhida) setPersonalizar(true);
+  }, [escolhida]);
+  useEffect(() => {
+    setDe(min ? String(min) : "");
+    setAte(max ? String(max) : "");
+  }, [min, max]);
   const aplicar = () => {
     const a = Number(de.replace(",", ".")) || null;
     const b = Number(ate.replace(",", ".")) || null;
-    if (a == null && b == null) return aoMudarFaixa(null, null);
     if (b != null && a != null && a >= b) return;
+    setPersonalizar(false);
     aoMudarFaixa(a, b != null ? Math.round(b) : null);
   };
   const chip = (ativo: boolean) =>
@@ -44,27 +47,14 @@ export function CabecalhoAmigoSecreto({
         <div className="flex items-center gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="shrink-0 text-xs font-semibold text-secondary-ink">Valor do presente</span>
-          {FAIXAS.map((f) => (
-            <button
-              key={f.rotulo}
-              type="button"
-              aria-pressed={fixa === f && !personalizar}
-              onClick={() => {
-                setPersonalizar(false);
-                aoMudarFaixa(f.min, f.max);
-              }}
-              className={chip(fixa === f && !personalizar)}
-            >
-              {f.rotulo}
-            </button>
-          ))}
           <button
             type="button"
-            aria-pressed={personalizar || !fixa}
+            aria-expanded={personalizar}
             onClick={() => setPersonalizar((p) => !p)}
-            className={chip(personalizar || !fixa)}
+            className={chip(escolhida)}
           >
-            {!fixa && !personalizar ? rotuloFaixa(min, max) : "Personalizado"}
+            {escolhida ? rotuloFaixa(min, max).replace(/^./, (c) => c.toUpperCase()) : "Escolher valor"}
+            <span className="ml-1.5 opacity-80">· Editar</span>
           </button>
           </div>
           <button
@@ -77,6 +67,10 @@ export function CabecalhoAmigoSecreto({
           </button>
         </div>
         {personalizar && (
+          <>
+          {!escolhida && (
+            <p className="text-sm font-semibold">Quanto você quer gastar em cada presente? Preencha só o que quiser.</p>
+          )}
           <form
             className="animate-conteudo flex flex-wrap items-end gap-2"
             onSubmit={(e) => {
@@ -106,7 +100,18 @@ export function CabecalhoAmigoSecreto({
             <button type="submit" className="h-11 rounded-full bg-[#0071e3] px-5 text-sm font-semibold text-white">
               Aplicar
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPersonalizar(false);
+                aoMudarFaixa(null, null);
+              }}
+              className="vidro-botao h-11 rounded-full px-4 text-sm font-semibold"
+            >
+              Qualquer valor
+            </button>
           </form>
+          </>
         )}
       </div>
     </div>
