@@ -31,3 +31,12 @@ describe("acervo", () => {
     expect(achadoDoGarimpo({ titulo: "Tênis", imagem: null, preco: 99, url_produto: "https://x/p/MLB1", frete_gratis: true })).toBeNull();
   });
 });
+
+import { ordenarPorProcura } from "../src/lib/acervo";
+
+test("most wanted first, ties keep order", () => {
+  const r = (produto: string, extra = {}) => ({ ...base, produto, item: produto.replace("MLB", "MLB9"), ...extra });
+  const lista = [r("MLB1"), r("MLB2"), r("MLB3", { lojaOficial: true }), r("MLB4")] as never[];
+  const s = { vendidos: new Map([["MLB4", 10]]), tendencia: new Set(["MLB2"]), vezes: new Map<string, number>() };
+  expect(ordenarPorProcura(lista, s).map((x: { produto: string }) => x.produto)).toEqual(["MLB4", "MLB2", "MLB3", "MLB1"]);
+});
