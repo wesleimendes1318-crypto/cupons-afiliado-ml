@@ -106,6 +106,8 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           /* The term continues from the same catalog position next time. */
           const resposta: Guardada = { resultados: prontos, proximo: e.cursor ?? 0, variantes: e.variantes ?? [] };
           gravarMemoria(chave, resposta);
+          /* Keeps the term in the daily feed while people still open this showcase. */
+          if (!e.pagina) await pedirGarimpo(db, e.termo, faixaPedida, { cursor: 0, variantes: e.variantes ?? [] });
           return json(request, resposta);
         }
 
