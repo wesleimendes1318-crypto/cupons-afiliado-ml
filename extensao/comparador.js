@@ -618,6 +618,28 @@ export function produtoDoPerfilSocial(urlFinal, html) {
   return null;
 }
 
+/* SHARED-POST HERO (06/11, Weslei: "precisa aceitar a busca de qualquer link,
+   inclusive de afiliado de outra pessoa e converter para o meu!"). Every
+   pasted meli.la in 30 days (8/8, his and third parties') failed: it lands on
+   /social/<affiliate>?ref=<encrypted>, which lists ~5 ads. Measured in the
+   'perfil-social' diagnostics: the shared product is always ONE wide card on
+   top (width 896) and the rest is a grid of 256 px "more from this affiliate".
+   Accept that card only when it is unambiguous: at least 2x wider than every
+   other card and not below any of them. A search showcase ("Búsqueda...",
+   made from a lista.mercadolivre URL) is never a product: refused. */
+export function produtoEmDestaque(amostra, cabecalho = '') {
+  if (/\bb[uú]squeda\b|\bresultados? (para|de)\b/i.test(String(cabecalho || ''))) return null;
+  const cartoes = (Array.isArray(amostra) ? amostra : [])
+    .filter(c => c && c.h && Number(c.larg) > 0 && Number.isFinite(Number(c.y)));
+  if (cartoes.length < 2) return null;
+  const heroi = cartoes.reduce((a, b) => (Number(b.larg) > Number(a.larg) ? b : a));
+  const outros = cartoes.filter(c => c !== heroi);
+  const maiorOutro = Math.max(...outros.map(c => Number(c.larg)));
+  if (Number(heroi.larg) < 2 * maiorOutro) return null;
+  if (outros.some(c => Number(c.y) < Number(heroi.y))) return null;
+  return String(heroi.h).split('#')[0];
+}
+
 /* ------------------------------------------- identidade do produto anunciado
 
    Para comparar o MESMO produto em outras lojas, o que importa e o que o

@@ -15,7 +15,7 @@ import { sincronizarEspelho } from './espelho.js';
 import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
-         primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
+         primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial, produtoEmDestaque,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO, ehBuscaML } from './atendimento.js';
@@ -1597,17 +1597,22 @@ async function produtoDoPerfilNaAba(url) {
         for (const [k, h] of ids) {
           const a = [...document.querySelectorAll('a[href]')].find(x => (x.href || '').split('#')[0] === h);
           const r = a ? a.getBoundingClientRect() : null;
-          amostra.push({ k, texto: a ? (a.innerText || a.getAttribute('aria-label') || '').slice(0, 80) : '',
+          amostra.push({ k, h, texto: a ? (a.innerText || a.getAttribute('aria-label') || '').slice(0, 80) : '',
                          y: r ? Math.round(r.top) : null, larg: r ? Math.round(r.width) : null });
           if (amostra.length >= 8) break;
         }
-        return { links: [...ids.values()].slice(0, 5), amostra };
+        const cabecalho = [document.title, ...[...document.querySelectorAll('h1')].map(x => x.innerText || '')]
+          .join(' ').slice(0, 300);
+        return { links: [...ids.values()].slice(0, 5), amostra, cabecalho };
       }
     });
     const res = (saida && saida.result) || {};
     const achados = res.links || [];
     if (achados.length === 1) return { produto: achados[0], via: 'unico anuncio da tela', fim };
-    return { produto: null, fim, anuncios: achados.length, amostra: res.amostra || null };
+    /* Shared post: the one wide card on top is the shared product (06/11). */
+    const destaque = produtoEmDestaque(res.amostra, res.cabecalho);
+    if (destaque) return { produto: destaque, via: 'cartao em destaque', fim, amostra: res.amostra || null };
+    return { produto: null, fim, anuncios: achados.length, amostra: res.amostra || null, cabecalho: res.cabecalho || null };
   } finally {
     try { await chrome.tabs.remove(aba.id); } catch (e) { /* ja fechada */ }
   }

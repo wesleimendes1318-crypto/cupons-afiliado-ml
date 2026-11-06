@@ -662,3 +662,37 @@ test('envio internacional: tags do evento e tributos da pagina (Switch 2, 01/11)
   const nac = envioInternacionalDoHtml('<script>{"melidata_event":{"item_id":"MLB1234567","tags":["kvs_primary"]}}</script>', 'MLB1234567');
   assert.equal(nac.internacional, false);
 });
+
+import { produtoEmDestaque } from '../comparador.js';
+
+/* Real samples from the 'perfil-social' diagnostics (meli.la/1q2VfNm, 06/11). */
+const POST = [
+  { k: 'MLB30999780', h: 'https://www.mercadolivre.com.br/fone-qcy-t29/p/MLB30999780#x', y: 293, larg: 896 },
+  { k: 'MLB44616858', h: 'https://www.mercadolivre.com.br/a/p/MLB44616858', y: 967, larg: 256 },
+  { k: 'MLB50002371', h: 'https://www.mercadolivre.com.br/b/p/MLB50002371', y: 967, larg: 256 },
+  { k: 'MLBU5646837553', h: 'https://www.mercadolivre.com.br/up/MLBU5646837553', y: 987, larg: 256 },
+];
+
+test('post compartilhado: o cartao largo do topo e o produto', () => {
+  assert.equal(produtoEmDestaque(POST, 'Mercado Livre'),
+    'https://www.mercadolivre.com.br/fone-qcy-t29/p/MLB30999780');
+});
+
+test('post compartilhado: sem cartao claramente maior, nao chuta', () => {
+  assert.equal(produtoEmDestaque(POST.map(c => ({ ...c, larg: 256 }))), null);
+  assert.equal(produtoEmDestaque([{ ...POST[0], larg: 400 }, ...POST.slice(1)]), null);
+});
+
+test('post compartilhado: cartao largo abaixo de outro nao vale', () => {
+  assert.equal(produtoEmDestaque([{ ...POST[0], y: 2000 }, ...POST.slice(1)]), null);
+});
+
+test('vitrine de busca nunca vira produto', () => {
+  assert.equal(produtoEmDestaque(POST, 'Búsqueda de Melhor Escolha'), null);
+  assert.equal(produtoEmDestaque(POST, 'Resultados para fone qcy'), null);
+});
+
+test('um cartao so ou amostra vazia: null (o caminho do anuncio unico ja cobre)', () => {
+  assert.equal(produtoEmDestaque([POST[0]]), null);
+  assert.equal(produtoEmDestaque(null), null);
+});
