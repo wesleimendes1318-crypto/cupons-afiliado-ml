@@ -377,10 +377,15 @@ export function termosDoNo(no: Pick<NoTaxonomia, "slug" | "nome">): string[] {
 /** Termos das folhas da categoria do site com menos de 12 produtos (as
     mais vazias primeiro). */
 export function buscasDosNosRasos(categoria: string, contagem: Record<string, number>): string[] {
-  return Object.values(NOS)
+  const folhas = Object.values(NOS)
     .filter((n) => n.legado === categoria && !n.filhos.length)
-    .map((n) => ({ n, total: subarvore(n.slug).reduce((s, x) => s + (contagem[x] ?? 0), 0) }))
-    .filter((x) => x.total < MINIMO_NO)
+    .map((n) => ({ n, total: subarvore(n.slug).reduce((s, x) => s + (contagem[x] ?? 0), 0) }));
+  /* Weslei, 06/11: "não deixar nenhuma categoria muito vazia ou muito
+     diferente das demais": every leaf below the category's average counts
+     as shallow (never less than MINIMO_NO). */
+  const media = folhas.reduce((s, x) => s + x.total, 0) / Math.max(1, folhas.length);
+  return folhas
+    .filter((x) => x.total < Math.max(MINIMO_NO, media))
     .sort((a, b) => a.total - b.total)
     .flatMap((x) => termosDoNo(x.n));
 }
@@ -473,9 +478,13 @@ export async function atualizarEmAlta(db: Db, opcoes: { categoria?: string | nul
         .filter((e) => e.resumo?.categoria === c)
         .map((e) => Date.parse(e.inicio)),
     );
-  const prioridade = (c: string) =>
-    visiveis(c) < metaPorCategoria(agoraMs) && agoraMs - tentativa(c) > 2 * 3600_000 ? 0 : 1;
   const nomes = Object.keys(CATEGORIAS_EM_ALTA);
+  /* Balance (Weslei, 06/11): a category below the average of the others
+     gets a turn every 30 min (thinnest first); the rest rotate. Same pace
+     and API ceiling per run, only the order changes. */
+  const media = nomes.reduce((s, c) => s + visiveis(c), 0) / nomes.length;
+  const prioridade = (c: string) =>
+    visiveis(c) < Math.min(metaPorCategoria(agoraMs), media) && agoraMs - tentativa(c) > 30 * 60_000 ? 0 : 1;
   /* Abaixo da meta (e sem tentativa nas últimas 2 h) primeiro, com menos
      produtos na frente; depois o rodízio pela tentativa mais antiga. */
   const categoria =

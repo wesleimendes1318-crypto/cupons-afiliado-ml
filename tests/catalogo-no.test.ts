@@ -119,3 +119,13 @@ test("buscas das subcategorias com poucos produtos", async () => {
   assert.ok(termos.includes("mesa de jantar 4 cadeiras"));
   assert.ok(!buscasDosNosRasos("casa", { mesas: 40 }).includes("mesa de jantar 4 cadeiras"));
 });
+
+test("shallow leaves: below the category average counts, not only below 12", async () => {
+  const { buscasDosNosRasos, termosDoNo } = await import("../src/lib/em-alta-catalogo");
+  const { NOS } = await import("../src/content/taxonomia");
+  const folhas = Object.values(NOS).filter((n) => n.legado === "casa" && !n.filhos.length);
+  const contagem = Object.fromEntries(folhas.map((n) => [n.slug, 100]));
+  contagem["mesas"] = 20;
+  const termos = buscasDosNosRasos("casa", contagem);
+  assert.deepEqual(termos, termosDoNo(NOS["mesas"]!));
+});
