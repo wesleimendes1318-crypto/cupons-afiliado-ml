@@ -160,3 +160,38 @@ test("bot: link de outra loja com o produto, só link de afiliado e sem preço",
   const ali = analisarLink("https://pt.aliexpress.com/item/1005001234567890.html");
   assert.equal(tecladoOutraLoja(ali).inline_keyboard[0]![0]!.text, "✍️ Escrever o nome e buscar");
 });
+
+test("busca do ML: lista.mercadolivre vira termo de busca", async () => {
+  const { buscaDoMercadoLivre } = await import("../src/lib/analisar-link");
+  assert.deepEqual(buscaDoMercadoLivre("https://lista.mercadolivre.com.br/qcy-t29-ailybuds-lite"), {
+    termo: "qcy t29 ailybuds lite",
+  });
+  assert.deepEqual(
+    buscaDoMercadoLivre(
+      "https://lista.mercadolivre.com.br/celulares-telefones/iphone-15_Desde_49_NoIndex_True",
+    ),
+    { termo: "iphone 15" },
+  );
+  assert.deepEqual(buscaDoMercadoLivre("https://lista.mercadolivre.com.br/_CustId_2615738264"), {
+    termo: null,
+  });
+  assert.deepEqual(buscaDoMercadoLivre("https://lista.mercadolivre.com.br/pagina/pezzia/"), {
+    termo: null,
+  });
+  assert.deepEqual(buscaDoMercadoLivre("https://www.mercadolivre.com.br/ofertas"), { termo: null });
+  assert.deepEqual(
+    buscaDoMercadoLivre("https://www.mercadolivre.com.br/jm/search?as_word=fone%20qcy"),
+    { termo: "fone qcy" },
+  );
+  // Produto, catálogo, encurtado e link de afiliado nunca são busca.
+  for (const u of [
+    "https://www.mercadolivre.com.br/fone-qcy/p/MLB123456",
+    "https://produto.mercadolivre.com.br/MLB-123456789-fone-_JM",
+    "https://www.mercadolivre.com.br/fone-qcy/up/MLBU123456",
+    "https://meli.la/2ytaJFB",
+    "https://mercadolivre.com.br/sec/1aBcD2e",
+    "https://www.mercadolivre.com.br/social/wesleimendes?ref=abc",
+    "https://www.amazon.com.br/dp/B0ABCDEFGH",
+  ])
+    assert.equal(buscaDoMercadoLivre(u), null, u);
+});

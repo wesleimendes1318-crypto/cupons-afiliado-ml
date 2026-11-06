@@ -25,6 +25,19 @@ const MANTER = [
   'searchVariation', 'variation', 'quantity'
 ];
 
+/* Search/listing page of Mercado Livre (06/11): the generator turns it into
+   a /social/ "Busqueda" showcase, never the product. Positive list only, so
+   /p/MLB, MLB-123, /up/MLBU, meli.la, /sec/ and /social/ keep working. Store
+   showcases (coupon link_vitrine) are a separate, allowed path. */
+export const ehBuscaML = u => {
+  try {
+    const x = new URL(String(u || '').trim());
+    const host = x.hostname.toLowerCase();
+    if (!/(^|\.)(mercadolivre\.com\.br|mercadolivre\.com|mercadolibre\.com(\.[a-z]{2})?)$/.test(host)) return false;
+    return /^lista\./.test(host) || /^\/(ofertas|c|categorias|jm\/search|search)(\/|$)/i.test(x.pathname);
+  } catch (e) { return false; }
+};
+
 /* Endereco que ja aponta para um anuncio ou produto de catalogo. */
 const ehProdutoML = u => /\/p\/MLB\d+/i.test(u) || /\/MLB-?\d+/i.test(u);
 

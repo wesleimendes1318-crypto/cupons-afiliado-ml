@@ -34,3 +34,18 @@ test('endereco de produto passa direto, sem rede', comFetch('x', async (chamadas
   assert.equal(await resolverEncurtado(u), u);
   assert.equal(chamadas.length, 0);
 }));
+
+test('link de busca/lista do ML nunca vira link de afiliado (06/11)', async () => {
+  const { ehBuscaML } = await import('../atendimento.js');
+  for (const u of ['https://lista.mercadolivre.com.br/qcy-t29-ailybuds-lite',
+    'https://lista.mercadolivre.com.br/_CustId_2615738264',
+    'https://www.mercadolivre.com.br/ofertas',
+    'https://www.mercadolivre.com.br/jm/search?as_word=fone'])
+    assert.equal(ehBuscaML(u), true, u);
+  for (const u of ['https://www.mercadolivre.com.br/fone/p/MLB123456',
+    'https://produto.mercadolivre.com.br/MLB-123456789-fone-_JM',
+    'https://www.mercadolivre.com.br/fone/up/MLBU123456',
+    'https://meli.la/2ytaJFB', 'https://mercadolivre.com.br/sec/1aBcD2e',
+    'https://www.mercadolivre.com.br/social/wesleimendes?ref=abc', 'nao e link'])
+    assert.equal(ehBuscaML(u), false, u);
+});

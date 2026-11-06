@@ -18,7 +18,7 @@ import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, 
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
-         PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO } from './atendimento.js';
+         PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO, ehBuscaML } from './atendimento.js';
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
 import { garimparNoPlayer } from './garimpo.js';
 import { sincronizarListas } from './listas.js';
@@ -1789,7 +1789,10 @@ async function vitrineDoCupom(tabId, id) {
   return /^https:\/\/lista\.mercadolivre\.com\.br\//.test(r.url) ? r.url : null;
 }
 
-async function gerarNaAbaSemCadastro(tabId, url, tag = TAG_PADRAO) {
+async function gerarNaAbaSemCadastro(tabId, url, tag = TAG_PADRAO, vitrine = false) {
+  /* Never an affiliate link to a search page (06/11): it opens a search
+     showcase on the profile, not the product the buyer chose. */
+  if (!vitrine && ehBuscaML(url)) throw new Error('nao gerei link: endereco de busca, nao de produto');
   tabId = await abaViva(tabId);
   const resultado = await rodarNoGerador(tabId, chamadaNaPagina, [ROTA_CRIAR, url, tag]);
   {
@@ -1831,6 +1834,8 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO, tipo = 'link', chave = n
      gerar, em todo caminho (pedido, atendimento, avulso). Gerar em cima do
      encurtado levaria a venda para a etiqueta de quem o criou (31/10). */
   url = await resolverEncurtado(url);
+  /* Before the cache too: a search link generated earlier stays in geracoes. */
+  if (tipo !== 'link_vitrine' && ehBuscaML(url)) throw new Error('nao gerei link: endereco de busca, nao de produto');
   const { sincToken } = await chrome.storage.local.get('sincToken');
   const k = chave || chaveDoLink(url);
   const res = await reservarGeracao(sincToken, tipo, k);
@@ -1839,7 +1844,7 @@ async function gerarNaAba(tabId, url, tag = TAG_PADRAO, tipo = 'link', chave = n
   }
   if (res.status !== 'reservado') throw new Error('nao gerei o link: ' + (res.motivo || 'bloqueado pelo cadastro'));
   try {
-    const r = await gerarNaAbaSemCadastro(tabId, url, tag);
+    const r = await gerarNaAbaSemCadastro(tabId, url, tag, tipo === 'link_vitrine');
     await concluirGeracao(sincToken, tipo, k, r.link, null, { codigo: r.codigo || null, url });
     return r;
   } catch (e) {

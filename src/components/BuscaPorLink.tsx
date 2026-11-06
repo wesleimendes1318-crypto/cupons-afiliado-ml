@@ -112,7 +112,13 @@ import {
   itemDoEndereco,
   useAvaliacoesPorItens,
 } from "@/lib/avaliacoes-detalhe";
-import { analisarLink, nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
+import {
+  analisarLink,
+  buscaDoMercadoLivre,
+  nomeParaTela,
+  textoEmVolta,
+  type AnaliseLink,
+} from "@/lib/analisar-link";
 import {
   TROCA_DICA_MS,
   TROCA_MICRO_MS,
@@ -1083,8 +1089,37 @@ export default function BuscaPorLink({
     /* nova: "Atualizar comparação" — compara de novo mesmo com resultado
        recente (Weslei, 27/09: o botão fica sempre). */
     async (bruta: string, nova = false) => {
-      const alvo = bruta.trim();
+      let alvo = bruta.trim();
       if (!alvo) return;
+      /* Search/listing page of Mercado Livre (06/11): never compared as a
+         product nor turned into an affiliate link (it became a /social/
+         search showcase). With a term it becomes the text search, which
+         lists the real catalog products; without one, ask for the product. */
+      const escolhido = melhorLinkML(alvo);
+      if (escolhido && buscaDoMercadoLivre(escolhido)) {
+        // The raw URL keeps ?as_word= (the cleaned one drops it).
+        const termo =
+          (alvo.match(/https?:\/\/[^\s"'<>]+/gi) ?? [])
+            .map((u) => buscaDoMercadoLivre(u)?.termo)
+            .find(Boolean) ??
+          textoEmVolta(alvo) ??
+          null;
+        if (!termo) {
+          ++identificacao.current;
+          limparTimers();
+          atual.current = null;
+          setPedido(null);
+          setOutraLoja(null);
+          setSemFicha(null);
+          setFase("parado");
+          setErro(
+            "Esse link é de uma lista do Mercado Livre, não de um produto. Abra o produto e copie o link dele, ou digite o nome aqui.",
+          );
+          return;
+        }
+        alvo = termo;
+        setUrl(termo);
+      }
       /* Busca por texto entra no perfil local na hora (+3); a por link,
          quando o produto é lido. */
       if (!/^https?:\/\/|\.(com|br|la|ee)\b/i.test(alvo))
