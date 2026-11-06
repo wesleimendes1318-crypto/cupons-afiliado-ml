@@ -60,6 +60,8 @@ export type EstadoAmigoSecreto = {
   amigoAtivoId: string | null;
   /** Also show products with shipping to calculate (off = free shipping only). */
   freteACalcular?: boolean;
+  /** Weslei, 06/11: the budget is asked first; showcases wait for it. */
+  faixaEscolhida?: boolean;
   /** Party date "YYYY-MM-DD" (delivery filter). */
   dataFesta?: string | null;
 };

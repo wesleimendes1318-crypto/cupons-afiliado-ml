@@ -3,8 +3,10 @@ import { LoaderCircle, Plus } from "lucide-react";
 export function BotaoCarregarMaisVitrine({
   carregando,
   aoCarregar,
+  rotulo,
   className = "",
 }: {
+  rotulo?: string | undefined;
   carregando: boolean;
   aoCarregar: () => void;
   className?: string;
@@ -24,7 +26,7 @@ export function BotaoCarregarMaisVitrine({
       ) : (
         <Plus className="size-4" aria-hidden="true" />
       )}
-      {carregando ? "Buscando mais opções selecionadas, aguarde só um instante…" : "+20 opções"}
+      {carregando ? "Buscando mais opções selecionadas, aguarde só um instante…" : (rotulo ?? "+20 opções")}
     </button>
   );
 }

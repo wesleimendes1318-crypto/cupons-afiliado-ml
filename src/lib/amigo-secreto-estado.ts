@@ -50,6 +50,7 @@ export function paraGuardar(e: EstadoAmigoSecreto) {
     orcamentoPadraoMax: e.orcamentoPadraoMax,
     amigoAtivoId: e.amigoAtivoId,
     freteACalcular: e.freteACalcular === true,
+    faixaEscolhida: e.faixaEscolhida === true,
     dataFesta: e.dataFesta ?? null,
     amigos: e.amigos.slice(0, 40).map((a) => ({
       id: a.id,
@@ -112,6 +113,7 @@ export function lerGuardado(bruto: unknown): EstadoAmigoSecreto {
     amigos,
     amigoAtivoId: amigos.some((a) => a.id === ativo) ? ativo : (amigos[0]?.id ?? null),
     freteACalcular: o["freteACalcular"] === true,
+    faixaEscolhida: o["faixaEscolhida"] === true,
     dataFesta: /^\d{4}-\d{2}-\d{2}$/.test(str(o["dataFesta"], 10)) ? str(o["dataFesta"], 10) : null,
   };
 }
