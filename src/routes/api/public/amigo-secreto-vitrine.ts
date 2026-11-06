@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
         if (e.min != null && e.max != null && e.min > e.max)
           return json(request, { erro: "Faixa de preço inválida." }, 400);
         /* Own counter: a page with 6 showcases makes many short calls. */
-        if (excedeuLimite(request, 90, "amigo-v:"))
+        if (excedeuLimite(request, 180, "amigo-v:"))
           return json(request, { erro: "Muitas buscas seguidas. Aguarde um minuto." }, 429);
 
         const faixa = `${e.min ?? ""}-${e.max ?? ""}${e.freteACalcular ? "|f" : ""}`;

@@ -124,7 +124,7 @@ export async function carregarAte(opcoes: {
   let erro: string | null = null;
   let falhas = 0;
   let chamadas = 0;
-  const maximo = opcoes.maxChamadas ?? 18;
+  const maximo = opcoes.maxChamadas ?? 30;
   /* Speed (Weslei, 05/11): up to 3 terms read at the same time. */
   while (chamadas < maximo && novos.length < opcoes.alvo) {
     if (opcoes.cancelado?.()) break;
