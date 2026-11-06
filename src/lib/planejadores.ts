@@ -8,6 +8,7 @@
    No price estimates: totals only add prices of products actually chosen. */
 import { lerLista, type ItemDesejo } from "@/lib/lista-desejos";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
+import { qualidadePrimeiro } from "@/lib/curadoria";
 import { funcionaEm, voltagemDoTexto } from "@/lib/voltagem";
 
 export type Fase = 1 | 2 | 3;
@@ -660,15 +661,13 @@ export function serveNaVoltagem(
   return v == null || funcionaEm(v, volts);
 }
 
-/** Order by the chosen style. Equilibrado keeps the search order with official
-    stores and top-10 best sellers first; nothing is dropped. */
+/** Weslei, 06/11: best sellers and official stores always first; the style
+    only orders inside each tier (econômico: cheaper first; caprichado: pricier
+    first; equilibrado: the search order). Nothing is dropped. */
 export function ordenarOfertas(lista: Resultado[], estilo: Estilo): Resultado[] {
-  const confiavel = (r: Resultado) =>
-    Number(r.lojaOficial === true || (r.maisVendido ?? 999) <= 10);
   const preco = (r: Resultado) => r.preco ?? 1e9;
   const c = [...lista];
-  if (estilo === "economico") return c.sort((a, b) => preco(a) - preco(b));
-  if (estilo === "premium")
-    return c.sort((a, b) => confiavel(b) - confiavel(a) || (b.preco ?? 0) - (a.preco ?? 0));
-  return c.sort((a, b) => confiavel(b) - confiavel(a));
+  if (estilo === "economico") c.sort((a, b) => preco(a) - preco(b));
+  if (estilo === "premium") c.sort((a, b) => (b.preco ?? 0) - (a.preco ?? 0));
+  return qualidadePrimeiro(c);
 }

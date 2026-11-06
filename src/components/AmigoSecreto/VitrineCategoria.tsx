@@ -12,7 +12,7 @@ import { abrirComparacao } from "@/components/BotoesCartao";
 import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
-import { arquetipoDoTitulo, intercalarPorDiversidade } from "@/lib/curadoria";
+import { arquetipoDoTitulo, qualidadePrimeiro } from "@/lib/curadoria";
 import type { VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
 
 /* Weslei, 05/11: gentle, true waiting copy (no jargon). Only what the
@@ -78,11 +78,8 @@ export function VitrineCategoria({
   const precoOu = (r: Resultado, v: number) => r.preco ?? v;
   const produtos =
     ordem === "relevancia"
-      ? /* 06/11: top-50 best sellers lead; the rest keep the server's order (stable sort). */
-        intercalarPorDiversidade(
-          [...filtrados].sort((a, b) => Number((b.maisVendido ?? 999) <= 50) - Number((a.maisVendido ?? 999) <= 50)),
-          (r) => arquetipoDoTitulo(r.nome),
-        )
+      ? /* 06/11: best sellers and official stores lead, kinds interleaved inside each tier. */
+        qualidadePrimeiro(filtrados, (r) => arquetipoDoTitulo(r.nome))
       : [...filtrados].sort((a, b) =>
           ordem === "menor"
             ? precoOu(a, 1e9) - precoOu(b, 1e9)
