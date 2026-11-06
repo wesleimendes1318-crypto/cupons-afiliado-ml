@@ -6,10 +6,17 @@ import { buscaGuiada } from "@/lib/busca-guiada";
 import { chamadaAutorizada, operacaoPausada } from "@/lib/segredo-cron";
 
 /* GARIMPO DO ACERVO (Weslei, 05/11): every 3 min (pg_cron acervo-garimpo)
-   reads the NEXT page of ONE term a visitor asked for in the last 24 h and
-   keeps what fits the budget in acervo_ofertas. One read at a time, no
-   bursts. A term stops after 15 pages or when the catalog runs out. */
+   reads the NEXT page of ONE term a showcase asked for and keeps what fits the
+   budget in acervo_ofertas. One read at a time, no bursts. A term stops after
+   15 pages or when the catalog runs out.
+   DAILY FEED (Weslei, 06/11: "diariamente deve ir alimentando anuncios em
+   todas as vitrines, até mesmo nas personalizadas"): terms stay in the queue
+   for DIAS_NA_FILA days after the last visit, and pg_cron acervo-reabrir
+   re-opens finished ones once a day from page 0, so every showcase (the
+   personalized ones included) gets its top listings re-read and new ones
+   found each day. Listings not re-read age out (ACERVO_HORAS). */
 const MAX_PAGINAS = 15;
+const DIAS_NA_FILA = 30;
 
 type Fila = {
   chave: string;
@@ -36,7 +43,7 @@ export const Route = createFileRoute("/api/public/jobs/garimpar-acervo")({
           .from("acervo_garimpo")
           .select("chave,termo,preco_min,preco_max,frete_a_calcular,pagina,cursor,variantes")
           .eq("fim", false)
-          .gte("pedido_em", new Date(Date.now() - 24 * 3600_000).toISOString())
+          .gte("pedido_em", new Date(Date.now() - DIAS_NA_FILA * 24 * 3600_000).toISOString())
           .order("lido_em", { ascending: true, nullsFirst: true })
           .limit(1)
           .maybeSingle()) as { data: Fila | null };
@@ -45,6 +52,7 @@ export const Route = createFileRoute("/api/public/jobs/garimpar-acervo")({
         const max = data.preco_max == null ? null : Number(data.preco_max);
         let guardados = 0;
         let proximo: number | null = null;
+        let variantes = data.variantes ?? [];
         try {
           const r = await buscaGuiada(
             data.termo,
@@ -68,6 +76,8 @@ export const Route = createFileRoute("/api/public/jobs/garimpar-acervo")({
           await guardarNoAcervo(db, data.termo, bons);
           guardados = bons.length;
           proximo = r.proximo ?? null;
+          /* Page 0 (daily re-open) finds today's brands: they feed the next pages. */
+          if (data.pagina === 0 && r.variantes?.length) variantes = r.variantes.slice(0, 8);
         } catch {
           proximo = data.cursor; // try the same page next time
         }
@@ -76,6 +86,7 @@ export const Route = createFileRoute("/api/public/jobs/garimpar-acervo")({
           .update({
             pagina: data.pagina + 1,
             cursor: proximo ?? data.cursor,
+            variantes,
             fim: proximo == null || data.pagina + 1 > MAX_PAGINAS,
             lido_em: new Date().toISOString(),
           })
