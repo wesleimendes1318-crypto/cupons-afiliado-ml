@@ -46,3 +46,23 @@ test("volume 1 e volume 2 de uma série são produtos diferentes", () => {
   expect(assinaturaDoModelo("Livro Box Harry Potter Volume 1")).not.toBe(assinaturaDoModelo("Livro Box Harry Potter Volume 2"));
   expect(quaseIgual(palavrasDoModelo("Livro Box Harry Potter Volume 1"), palavrasDoModelo("Livro Box Harry Potter Volume 2"))).toBe(false);
 });
+
+import { assinaturaCanonica, ehMesmoProduto } from "@/lib/curadoria";
+
+test("06/11: word order and filler do not hide the same product", () => {
+  expect(assinaturaCanonica("Conjunto Regata e Short Feminino")).toBe(assinaturaCanonica("Conjunto Feminino de Regata e Short"));
+  const v = new Set<string>();
+  const t: string[][] = [];
+  expect(repetido(v, t, "Conjunto Regata e Short Feminino Ateliê Kr para Verão Casual Azul-Marinho GG", null)).toBe(false);
+  expect(repetido(v, t, "Conjunto Feminino com Blusa Regata e Short em Viscolinho", null)).toBe(true);
+  expect(repetido(v, t, "Short Saia Esportivo Ausare Feminino, para Treino e Academia", null)).toBe(false);
+  expect(repetido(v, t, "Short Saia Esportivo Feminino Ausare com Bolso", null)).toBe(true);
+});
+
+test("06/11: different models with template titles stay apart", () => {
+  const p = (s: string) => palavrasDoModelo(s);
+  expect(ehMesmoProduto(p("Luminária Star Wars 16 Cores Controle Cúpula Darth Vader Estrutura 1"), p("Luminária Star Wars 16 Cores Controle Cúpula Mestre Yoda Estrutura Preto"))).toBe(false);
+  expect(ehMesmoProduto(p("Agenda Planner Lilás E Bege Max Bloomy 2026"), p("Agenda Planner Cicero 2026 Capa Dura Bege Block Bloomy 14x21cm"))).toBe(false);
+  expect(ehMesmoProduto(p("Celular Samsung Galaxy A15 128gb"), p("Celular Samsung Galaxy A15 256gb"))).toBe(false);
+  expect(ehMesmoProduto(p("Kit Hidratante Corporal E Creme Para Mãos Eudora Instance"), p("Kit Hidratante Corporal 4 Sabonetes Eudora Instance Frutas Vermelhas"))).toBe(false);
+});

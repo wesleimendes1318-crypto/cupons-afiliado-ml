@@ -25,6 +25,11 @@ const CORES =
 const MULTIPLICADORES =
   /\b(\d+ ?x|x ?\d+|\d+ ?(un|und|unid|unidades|pecas|pcs|ml|l|g|kg)|kit|combo|unidades?|unid|und|pecas?|pcs|com|de|da|do|das|dos|e|para|em)\b/g;
 
+/* Marketing filler, sizes and extra colors that never tell two products apart
+   (Weslei, 06/11: "Ateliê Kr", "Verão", "Casual", "Viscolinho", "Botões"). */
+const ENCHIMENTO =
+  /\b(um|uma|casual|verao|inverno|primavera|outono|luxo|elegante|elegancia|botoes|botao|bolsos?|alta|qualidade|original|promocao|oferta|novo|nova|moda|tendencia|estilo|lindo|linda|conforto|confortavel|viscolinho|viscose|gg|xg|xgg|eg|egg|plus|size|unico|unica|azul ?marinho|verde ?militar|terracota|mostarda|goiaba|off|white)\b/g;
+
 /** Title words that identify the product: no accents, colors, sizes,
     multipliers; common double-letter spellings folded ("multirrestaurador"
     = "multirestaurador"). */
@@ -34,6 +39,7 @@ export function palavrasDoModelo(nome: string | null | undefined): string[] {
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(CORES, " ")
     .replace(MULTIPLICADORES, " ")
+    .replace(ENCHIMENTO, " ")
     .replace(/rr/g, "r")
     .replace(/ss/g, "s")
     .split(/\s+/)
@@ -55,19 +61,38 @@ export function idDaFoto(url: string | null | undefined): string | null {
   return m ? `foto:${m[1]}` : null;
 }
 
-/** Same product under another title: more than 70% of the identifying words
-    shared (Jaccard), only for titles with at least 4 such words. */
-export function quaseIgual(a: string[], b: string[]): boolean {
-  if (a.length < 4 || b.length < 4) return false;
+/** "core:" key: the identifying words in alphabetical order, so the same
+    product with the words in another order ("Conjunto Regata e Short
+    Feminino" / "Conjunto Feminino Regata Short") gets the same key. */
+export function assinaturaCanonica(nome: string | null | undefined): string | null {
+  const p = [...new Set(palavrasDoModelo(nome))].sort();
+  return p.length >= 3 ? `core:${p.join("_")}` : null;
+}
+
+/** Same product under another title (Weslei, 06/11): the shorter title
+    inside the longer one (75%+), or Jaccard >= 0.55. Two guards keep
+    different products apart: a number only one side has (128gb / 256gb,
+    volume 1 / volume 2), and both sides having two or more words of their
+    own (luminária "Darth Vader" / "Mestre Yoda", tênis "Vili Olimp" /
+    "Actvitta Knit"). */
+export function ehMesmoProduto(a: string[], b: string[]): boolean {
+  if (a.length < 3 || b.length < 3) return false;
   const A = new Set(a);
   const B = new Set(b);
-  /* Different numbers on each side (volume 1 / volume 2, 128gb / 256gb) are different products. */
-  const numeros = (X: Set<string>, Y: Set<string>) => [...X].some((w) => /\d/.test(w) && !Y.has(w));
-  if (numeros(A, B) && numeros(B, A)) return false;
-  let comuns = 0;
-  for (const w of A) if (B.has(w)) comuns++;
-  return comuns / (A.size + B.size - comuns) > 0.7;
+  const soA = [...A].filter((w) => !B.has(w));
+  const soB = [...B].filter((w) => !A.has(w));
+  if (soA.some((w) => /\d/.test(w)) && soB.some((w) => /\d/.test(w))) return false;
+  const proprias = Math.min(soA.length, soB.length);
+  if (proprias >= 2) return false;
+  const comuns = A.size - soA.length;
+  /* Containment only when the shorter title has no word of its own: one
+     extra word is often the model name ("Planner Max" / "Planner Cicero"). */
+  if (proprias === 0 && comuns / Math.min(A.size, B.size) >= 0.75) return true;
+  return comuns / (A.size + B.size - comuns) >= 0.55;
 }
+
+/** Kept for callers of the old name. */
+export const quaseIgual = ehMesmoProduto;
 
 /** One gate for repeated products, shared by the curator and Amigo Secreto:
     same photo, same model key, or a near-identical title. Adds the keys to
@@ -81,12 +106,19 @@ export function repetido(
 ): boolean {
   const foto = idDaFoto(imagem);
   const sig = assinaturaDoModelo(nome);
+  const core = assinaturaCanonica(nome);
   const palavras = palavrasDoModelo(nome);
-  if ((foto && vistos.has(foto)) || (sig && vistos.has(sig)) || titulos.some((t) => quaseIgual(t, palavras)))
+  if (
+    (foto && vistos.has(foto)) ||
+    (sig && vistos.has(sig)) ||
+    (core && vistos.has(core)) ||
+    titulos.some((t) => ehMesmoProduto(t, palavras))
+  )
     return true;
   if (marcar) {
     if (foto) vistos.add(foto);
     if (sig) vistos.add(sig);
+    if (core) vistos.add(core);
     titulos.push(palavras);
   }
   return false;
