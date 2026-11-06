@@ -52,6 +52,8 @@ export type PassoTermo = {
   cursor: number | null;
   variantes: string[];
   fim: boolean;
+  /** Pages in a row with nothing inside the budget. */
+  vazias?: number;
 };
 
 export const passosIniciais = (termos: string[]): PassoTermo[] =>
@@ -122,7 +124,7 @@ export async function carregarAte(opcoes: {
   let erro: string | null = null;
   let falhas = 0;
   let chamadas = 0;
-  const maximo = opcoes.maxChamadas ?? 12;
+  const maximo = opcoes.maxChamadas ?? 18;
   /* Speed (Weslei, 05/11): up to 3 terms read at the same time. */
   while (chamadas < maximo && novos.length < opcoes.alvo) {
     if (opcoes.cancelado?.()) break;
@@ -165,8 +167,10 @@ export async function carregarAte(opcoes: {
       if (passo.pagina === 0) passo.variantes = r.resposta.variantes ?? [];
       passo.cursor = r.resposta.proximo ?? null;
       passo.pagina += 1;
-      /* A page with nothing inside the budget ends that term (no more calls on it). */
-      passo.fim = r.resposta.proximo == null || !naFaixa.length;
+      /* Two pages in a row with nothing inside the budget end that term
+         (one empty page is common in narrow budgets: the next one has items). */
+      passo.vazias = naFaixa.length ? 0 : (passo.vazias ?? 0) + 1;
+      passo.fim = r.resposta.proximo == null || passo.vazias >= 2;
     });
     if (parar) break;
   }

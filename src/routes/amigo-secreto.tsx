@@ -235,6 +235,24 @@ function PaginaAmigoSecreto() {
       });
       if (minha !== geracao.current) return;
       passos.current.set(v.id, r.passos);
+      /* At least 20 on open (Weslei, 05/11): when free shipping alone gives
+         fewer, the same terms complete with "frete a calcular" listings
+         (price inside the budget, shipping shown on the card). */
+      const faltam = META_POR_VITRINE - (v.produtos.length + r.novos.length);
+      if (alvo === META_POR_VITRINE && !faixa.freteACalcular && faltam > 0) {
+        await carregarAte({
+          passos: passosIniciais(ampliarTermos(v.termosBusca, ctx)),
+          faixa: { ...faixa, freteACalcular: true },
+          vistos: seen,
+          alvo: faltam,
+          aprovar: (x) => aprovadoNaVitrine(x.nome, ctx),
+          cancelado: () => minha !== geracao.current,
+          aoChegar: (novos) =>
+            minha === geracao.current &&
+            mudarVitrine(amigoId, v.id, (x) => ({ ...x, produtos: [...x.produtos, ...novos] })),
+        });
+        if (minha !== geracao.current) return;
+      }
       mudarVitrine(amigoId, v.id, (x) => ({
         ...x,
         carregando: false,
@@ -403,7 +421,7 @@ function PaginaAmigoSecreto() {
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-secondary-ink">
             Escreva o que cada um gosta e veja vitrines personalizadas {textoFaixa}
-            {faixa.freteACalcular ? ", com frete grátis ou a calcular." : ", só com frete grátis: o preço do cartão já é o que você paga."}
+            {faixa.freteACalcular ? ", com frete grátis ou a calcular." : ", com frete grátis primeiro. Se faltar opção, completamos com frete a calcular, avisado no cartão."}
           </p>
           <label className="mt-2 inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
             <input
