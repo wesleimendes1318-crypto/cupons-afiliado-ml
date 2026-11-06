@@ -26,7 +26,10 @@ export function lerListaPublica(bruto: unknown): ListaPublica | null {
   if (p && typeof p === "object")
     for (const [k, v] of Object.entries(p as Record<string, Record<string, unknown>>))
       if (v && typeof v["em"] === "string")
-        presentes[k] = { nome: typeof v["nome"] === "string" ? v["nome"].slice(0, 40) : "", em: v["em"] };
+        presentes[k] = {
+          nome: typeof v["nome"] === "string" ? v["nome"].slice(0, 40) : "",
+          em: v["em"],
+        };
   return {
     id: o["id"],
     titulo: typeof o["titulo"] === "string" ? o["titulo"] : "",
@@ -78,10 +81,19 @@ export function textoConvite(l: Pick<ListaPublica, "titulo" | "ocasiao">, url: s
 const CHAVE_DONO = "melhorescolha_lista_publica_v1";
 const CHAVE_PRESENTEADOR = "melhorescolha_presenteador_v1";
 
-export function minhaListaPublica(): { id: string; chave: string } | null {
+/* slot: one owner key per list kind on this device (planners keep their own
+   list, so sharing a planner never overwrites the /favoritos list). */
+const chaveDono = (slot?: string) => (slot ? `${CHAVE_DONO}_${slot}` : CHAVE_DONO);
+
+export function minhaListaPublica(slot?: string): { id: string; chave: string } | null {
   try {
-    const o = JSON.parse(localStorage.getItem(CHAVE_DONO) ?? "null") as { id?: unknown; chave?: unknown } | null;
-    return o && typeof o.id === "string" && typeof o.chave === "string" ? { id: o.id, chave: o.chave } : null;
+    const o = JSON.parse(localStorage.getItem(chaveDono(slot)) ?? "null") as {
+      id?: unknown;
+      chave?: unknown;
+    } | null;
+    return o && typeof o.id === "string" && typeof o.chave === "string"
+      ? { id: o.id, chave: o.chave }
+      : null;
   } catch {
     return null;
   }
@@ -136,12 +148,15 @@ async function chamar(corpo: object): Promise<Record<string, unknown> | null> {
 }
 
 /** Creates the list, or updates the one this device already shared (same URL). */
-export async function salvarListaPublica(dados: { titulo: string; ocasiao: string; itens: ItemDesejo[] }) {
-  const minha = minhaListaPublica();
+export async function salvarListaPublica(
+  dados: { titulo: string; ocasiao: string; itens: ItemDesejo[] },
+  slot?: string,
+) {
+  const minha = minhaListaPublica(slot);
   const r = await chamar({ acao: "salvar", ...(minha ?? {}), ...dados });
   if (!r || typeof r["id"] !== "string" || typeof r["chave"] !== "string") return null;
   try {
-    localStorage.setItem(CHAVE_DONO, JSON.stringify({ id: r["id"], chave: r["chave"] }));
+    localStorage.setItem(chaveDono(slot), JSON.stringify({ id: r["id"], chave: r["chave"] }));
   } catch {
     /* the link still works; next share makes a new one */
   }
