@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { generoDaPessoa } from "@/lib/amigo-secreto-curadoria";
 import { interpretacaoDoModelo, interpretarLocal } from "@/lib/amigo-secreto-parser-local";
 import type { Interpretacao } from "@/lib/amigo-secreto-tipos";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
@@ -9,7 +10,7 @@ import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/pub
    model only splits the wishes and writes search terms; it never names a
    product, brand or price. Slower than 3 s or invalid: the local reader. */
 
-const entradaSchema = z.object({ texto: z.string().trim().min(2).max(600) });
+const entradaSchema = z.object({ texto: z.string().trim().min(2).max(600), nome: z.string().trim().max(40).optional() });
 
 const PRAZO_MS = 5_000;
 
@@ -39,8 +40,11 @@ Nunca invente produto, preco ou loja. Nunca fale de inteligencia artificial.
 Responda SO com JSON minificado: {"tamanhos": {...}, "vitrines": [{"titulo": "...", "icone": "...", "termos": ["..."]}]}
 Lista`;
 
-async function comModelo(texto: string): Promise<Interpretacao | null> {
-  const prompt = `${PROMPT}: ${JSON.stringify(texto)}`;
+async function comModelo(texto: string, nome?: string): Promise<Interpretacao | null> {
+  /* 06/11: the first name tells the gender when the text does not (Vinicius got women's jewelry). */
+  const genero = generoDaPessoa(texto, nome);
+  const dica = genero ? ` (pessoa do genero ${genero}: TODO termo de roupa, joia ou acessorio leva "${genero}"/"${genero === "masculino" ? "masculina" : "feminina"}")` : "";
+  const prompt = `${PROMPT}${dica}: ${JSON.stringify(texto)}`;
   try {
     const { perguntarAoLlm } = await import("@/lib/cheaper-inference");
     const { lerJson } = await import("@/lib/conferir-produto");
@@ -68,12 +72,12 @@ export const Route = createFileRoute("/api/public/amigo-secreto-interpretar")({
         } catch {
           return json(request, { erro: "Escreva o que a pessoa gostaria de ganhar." }, 400);
         }
-        const local = interpretarLocal(entrada.texto);
+        const local = interpretarLocal(entrada.texto, entrada.nome);
         /* Over the limit: the local reading answers (no model call). */
         if (excedeuLimite(request, 20, "amigo-i:")) return json(request, { ...local, fonte: "local" });
         let timer: ReturnType<typeof setTimeout> | undefined;
         const lida = await Promise.race([
-          comModelo(entrada.texto),
+          comModelo(entrada.texto, entrada.nome),
           new Promise<null>((r) => {
             timer = setTimeout(() => r(null), PRAZO_MS);
           }),

@@ -2,7 +2,7 @@
    server when the model is slow (> 3 s) or fails, and in the browser when the
    endpoint does not answer. It only splits what the person wrote into
    showcases and search terms; products always come from the catalog search. */
-import { ideiasDaEpoca } from "@/lib/amigo-secreto-curadoria";
+import { generoDaPessoa, ideiasDaEpoca } from "@/lib/amigo-secreto-curadoria";
 import type { Interpretacao, TamanhosAmigo } from "@/lib/amigo-secreto-tipos";
 
 const sem = (s: string) =>
@@ -26,6 +26,8 @@ type Ctx = {
   cores: string[];
   temas: string[];
   tamanhos?: TamanhosAmigo;
+  /** What the person wrote for this showcase, cleaned ("camiseta oversized masculina"). */
+  pedidos?: string[];
 };
 
 const g = (c: Ctx, f: string, m: string) =>
@@ -93,14 +95,28 @@ const CATEGORIAS: Categoria[] = [
   },
   {
     id: "bijuterias",
-    chaves: /bijuteri|\baneis\b|\banel\b|joia|semijoia|colar|brinco|pulseira|acessorio/,
+    chaves: /bijuteri|\baneis\b|\banel\b|joia|semijoia|colar|brinco|pulseira|acessorio|corrente|cordao/,
     icone: "💍",
     titulo: (c) =>
-      c.cores.length ? `Bijuterias e semijoias (${e(c.cores)})` : "Bijuterias e semijoias",
+      c.genero === "masculino"
+        ? `Joias e acessórios masculinos${c.cores.length ? ` (${e(c.cores)})` : ""}`
+        : c.cores.length
+          ? `Bijuterias e semijoias (${e(c.cores)})`
+          : "Bijuterias e semijoias",
     termos: (c) => {
       /* Weslei, 05/11: modern, youthful pieces and the best brands first. */
       const prata = c.cores.some((x) => /prat/.test(x));
       const banho = prata ? "prata" : "banhado a ouro";
+      /* 06/11: men get men's pieces (a bridal set reached Vinicius). */
+      if (c.genero === "masculino")
+        return [
+          `corrente masculina ${prata ? "prata 925" : "banhada a ouro"}`,
+          `pulseira masculina ${prata ? "prata 925" : "banhada a ouro"}`,
+          `corrente grumet masculina ${prata ? "prata" : "dourada"}`,
+          "anel masculino aço inoxidável",
+          "pulseira masculina couro",
+          "cordão masculino aço",
+        ];
       return [
         `colar ponto de luz ${banho}`,
         `brinco argola click zirconia ${banho}`,
@@ -114,6 +130,24 @@ const CATEGORIAS: Categoria[] = [
       ];
     },
     extras: ["porta joias", "caixa organizadora de bijuterias"],
+  },
+  {
+    /* 06/11: everyday clothes ("camiseta oversized masculina") had no showcase
+       and ran as one raw search with 1 result. */
+    id: "roupas",
+    chaves: /camiset|oversized|\bcamisa\b|\bpolo\b|bermuda|jeans|moletom|jaqueta|blusa|vestido|\bsaia\b|cropped|\bcalcas?\b|\bregata\b/,
+    icone: "👕",
+    titulo: (c) => (c.genero === "masculino" ? "Roupas masculinas" : c.genero === "feminino" ? "Roupas femininas" : "Roupas"),
+    termos: (c) => {
+      const gen = g(c, "feminina", "masculina") || "unissex";
+      const pedidos = (c.pedidos ?? []).map((p) => (/feminin|masculin|unissex/.test(p) ? p : `${p} ${gen}`));
+      const basicos =
+        c.genero === "feminino"
+          ? ["blusa feminina", "vestido casual feminino", "camiseta básica feminina", "calça jeans feminina"]
+          : ["camiseta básica algodão masculina", "camisa polo masculina", "bermuda masculina", "camiseta oversized masculina"];
+      return [...pedidos, ...(c.genero ? basicos : ["camiseta oversized unissex", "moletom unissex"])];
+    },
+    extras: ["boné", "meia divertida"],
   },
   {
     id: "skincare",
@@ -239,13 +273,16 @@ const CATEGORIAS: Categoria[] = [
 
 const IDEIAS_PADRAO = ["caneca criativa", "kit presente", "organizador", "garrafa térmica", "luminária decorativa"];
 
-export function generoDoTexto(texto: string): Ctx["genero"] {
-  const s = sem(texto);
-  if (/feminin|\btops?\b|vestido|saia\b|bolsa|salto|sutia|maquiagem|brinco|calcinha/.test(s))
-    return "feminino";
-  if (/masculin|barba|cueca/.test(s)) return "masculino";
-  return null;
+export function generoDoTexto(texto: string, nome?: string | null): Ctx["genero"] {
+  return generoDaPessoa(texto, nome);
 }
+
+/* "alguma camiseta oversized masculina" -> "camiseta oversized masculina". */
+const limparPedido = (p: string) =>
+  p
+    .replace(/\([^)]*\)/g, "")
+    .replace(/^(coisas|itens|algo|alguma?s?|algum|uns|umas?|quero|queria|gostaria de)\s+((de|para|pra)\s+)?/i, "")
+    .trim();
 
 const TAM = "PP|P|M|G|GG|XG|EG|XGG";
 
@@ -288,9 +325,9 @@ export function pedacosDoTexto(texto: string): string[] {
 }
 
 /** Free text of one person -> showcases (2 to 7) + sizes. */
-export function interpretarLocal(texto: string): Interpretacao {
+export function interpretarLocal(texto: string, nome?: string | null): Interpretacao {
   const bruto = texto.slice(0, 600);
-  const genero = generoDoTexto(bruto);
+  const genero = generoDoTexto(bruto, nome);
   const tamanhos = tamanhosDoTexto(bruto);
   const usadas = new Map<string, { cat: Categoria; ctx: Ctx }>();
   const avulsas: string[] = [];
@@ -306,6 +343,8 @@ export function interpretarLocal(texto: string): Interpretacao {
       if (!casa) continue;
       /* Decoration with a theme is the themed showcase, not the generic one. */
       if (cat.id === "decoracao" && temas.length) continue;
+      /* Gym wear is the gym showcase, not everyday clothes. */
+      if (cat.id === "roupas" && CATEGORIAS[0]!.chaves.test(limpo)) continue;
       achou = true;
       const ja = usadas.get(cat.id);
       const ctx: Ctx = {
@@ -313,13 +352,14 @@ export function interpretarLocal(texto: string): Interpretacao {
         cores: [...new Set([...(ja?.ctx.cores ?? []), ...cores])],
         temas: [...new Set([...(ja?.ctx.temas ?? []), ...temas])],
         tamanhos,
+        pedidos: [...new Set([...(ja?.ctx.pedidos ?? []), sem(limparPedido(pedaco)).slice(0, 50)])],
       };
       usadas.set(cat.id, { cat, ctx });
     }
     /* "Roupa P" alone is only a size, not a showcase. */
     const soTamanho = /^(roupas?|veste|tamanho)\b/.test(s) && s.split(" ").length <= 3;
     if (!achou && !soTamanho) {
-      const termo = pedaco.replace(/\([^)]*\)/g, "").replace(/^(coisas|itens|algo) (de|para|pra)\s+/i, "").trim();
+      const termo = limparPedido(pedaco);
       if (termo.length > 2 && termo.length <= 50) avulsas.push(termo);
     }
   }

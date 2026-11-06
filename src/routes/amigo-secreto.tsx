@@ -129,12 +129,12 @@ export const Route = createFileRoute("/amigo-secreto")({
 });
 
 /** Wish text -> showcases. Server first (5 s), the local reader otherwise. */
-async function interpretar(texto: string): Promise<Interpretacao> {
+async function interpretar(texto: string, nome?: string): Promise<Interpretacao> {
   try {
     const r = await fetch("/api/public/amigo-secreto-interpretar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texto: texto.slice(0, 600) }),
+      body: JSON.stringify({ texto: texto.slice(0, 600), ...(nome ? { nome: nome.slice(0, 40) } : {}) }),
       signal: AbortSignal.timeout(6_000),
     });
     const j = (await r.json()) as Interpretacao;
@@ -142,7 +142,7 @@ async function interpretar(texto: string): Promise<Interpretacao> {
   } catch {
     /* local below */
   }
-  return interpretarLocal(texto);
+  return interpretarLocal(texto, nome);
 }
 
 function PaginaAmigoSecreto() {
@@ -221,7 +221,7 @@ function PaginaAmigoSecreto() {
       vistos.current.set(amigoId, seen);
       mudarVitrine(amigoId, v.id, (x) => ({ ...x, carregando: true, erro: null }));
       const amigo = estadoRef.current.amigos.find((a) => a.id === amigoId);
-      const ctx = aplicarPerfil(contextoDaVitrine(v, textoParaLeitura(amigo?.desejosTexto ?? "", amigo?.perfil)), amigo?.perfil);
+      const ctx = aplicarPerfil(contextoDaVitrine(v, textoParaLeitura(amigo?.desejosTexto ?? "", amigo?.perfil), amigo?.nome), amigo?.perfil);
       const r = await carregarAte({
         passos: passos.current.get(v.id) ?? passosIniciais(ampliarTermos(v.termosBusca, ctx)),
         faixa,
@@ -307,7 +307,8 @@ function PaginaAmigoSecreto() {
   const processar = async (amigoId: string, texto: string, perfil?: PerfilAmigo) => {
     setProcessando((s) => new Set(s).add(amigoId));
     const p = perfil ?? estadoRef.current.amigos.find((a) => a.id === amigoId)?.perfil;
-    const lida = await interpretar(textoParaLeitura(texto, p));
+    const nome = estadoRef.current.amigos.find((a) => a.id === amigoId)?.nome;
+    const lida = await interpretar(textoParaLeitura(texto, p), nome);
     setProcessando((s) => {
       const n = new Set(s);
       n.delete(amigoId);
