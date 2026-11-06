@@ -10,7 +10,7 @@
    baixo (NavegacaoInferiorMobile). */
 import { useEffect, useState, type FormEvent } from "react";
 import { ClientOnly, Link, useRouterState } from "@tanstack/react-router";
-import { Gift, Link2, Send } from "lucide-react";
+import { Gift, Link2, ListChecks, Send } from "lucide-react";
 
 import { CepTopo } from "@/components/CepTopo";
 import { BotaoConta } from "@/components/BotaoConta";
@@ -26,8 +26,8 @@ const LINKS = [
   { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
   { to: "/meus-precos", rotulo: "Meus preços", pc: "sm:inline-flex" },
   { to: "/guias", rotulo: "Guias", pc: "lg:inline-flex" },
-  { to: "/planejadores", rotulo: "Planejadores", pc: "2xl:inline-flex" },
-  { to: "/sobre", rotulo: "Sobre", pc: "xl:inline-flex" },
+  /* Sobre from 2xl: its room at 1280 px goes to the Planejadores pill (06/11). */
+  { to: "/sobre", rotulo: "Sobre", pc: "2xl:inline-flex" },
 ] as const;
 
 /* O campo do link da tela inicial está escondido atrás do cabeçalho? */
@@ -192,6 +192,18 @@ export function CabecalhoSite() {
           >
             <Gift className="size-5 xl:size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Amigo Secreto</span>
+          </Link>
+          {/* Planejadores (Weslei, 06/11: "fácil de encontrar, sem bagunçar"):
+                same pill shape, glass instead of blue; from 1280 px (narrower headers are full), label from 1536 px. */}
+          <Link
+            to="/planejadores"
+            aria-label="Planejadores"
+            title="Planejadores: casa nova, enxoval, casamento e mais"
+            className="vidro-botao hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#0071e3] shadow-sm ring-1 ring-black/5 transition active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] xl:inline-flex dark:ring-white/10"
+            activeProps={{ className: "ring-2 ring-[#0071e3]/30" }}
+          >
+            <ListChecks className="size-5 2xl:size-4" aria-hidden="true" />
+            <span className="hidden 2xl:inline">Planejadores</span>
           </Link>
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
             <AtalhoFavoritos />
