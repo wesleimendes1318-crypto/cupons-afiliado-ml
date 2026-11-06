@@ -1,7 +1,7 @@
 /* One checklist item: status (falta / já tenho / comprei / ganhei), the
-   product chosen from real offers (bought through VerNaLoja, which ends in
+   products chosen from real offers (several allowed, Weslei 06/11) (bought through VerNaLoja, which ends in
    Weslei's link: rule no. 1) and "Pedir de presente" for the public list. */
-import { Check, ChevronDown, Gift, Search } from "lucide-react";
+import { Check, ChevronDown, Gift, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
@@ -53,7 +53,8 @@ export function CartaoItemPlanejador({
 }) {
   const [aberto, setAberto] = useState(false);
   const [querPresente, setQuerPresente] = useState(false);
-  const e = estado.escolhido;
+  const escolhidos = estado.escolhidos;
+  const e = escolhidos.length > 0;
   const resolvido = estado.status !== "falta";
 
   return (
@@ -64,7 +65,11 @@ export function CartaoItemPlanejador({
       }
       style={{ animationDelay: `${Math.min(atraso, 8) * 40}ms` }}
     >
-      <ArteDoItem termo={item.termos[0]!} escolhida={e?.foto ?? null} emoji={emoji} />
+      <ArteDoItem
+        termo={item.termos[0]!}
+        escolhidas={escolhidos.flatMap((y) => (y.foto ? [y.foto] : [])).slice(0, 3)}
+        emoji={emoji}
+      />
       <div className="mt-3 flex items-start gap-3">
         <span
           className={
@@ -122,30 +127,57 @@ export function CartaoItemPlanejador({
       </div>
 
       {e && (
-        <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl bg-[#f5f5f7] p-2.5 dark:bg-white/5">
-          {e.foto ? (
-            <img
-              src={e.foto}
-              alt=""
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              className="size-16 shrink-0 rounded-xl bg-white object-contain p-1"
-            />
-          ) : (
-            <span className="size-16 shrink-0 rounded-xl bg-white" aria-hidden="true" />
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[13px] font-semibold leading-snug">{e.titulo}</p>
-            {e.preco != null && (
-              <p className="text-sm font-extrabold tabular-nums">
-                {brl(e.preco)}{" "}
-                <span className="text-[10px] font-normal text-secondary-ink">
-                  em {dia(e.adicionadoEm)}, confira na loja
-                </span>
-              </p>
-            )}
-          </div>
-        </div>
+        <ul className="mt-3 flex flex-col gap-2">
+          {escolhidos.map((y) => (
+            <li
+              key={y.id}
+              className="animate-plano-foto min-w-0 rounded-2xl bg-[#f5f5f7] p-2.5 dark:bg-white/5"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                {y.foto ? (
+                  <img
+                    src={y.foto}
+                    alt=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    className="size-16 shrink-0 rounded-xl bg-white object-contain p-1"
+                  />
+                ) : (
+                  <span className="size-16 shrink-0 rounded-xl bg-white" aria-hidden="true" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-[13px] font-semibold leading-snug">{y.titulo}</p>
+                  {y.preco != null && (
+                    <p className="text-sm font-extrabold tabular-nums">
+                      {brl(y.preco)}{" "}
+                      <span className="text-[10px] font-normal text-secondary-ink">
+                        em {dia(y.adicionadoEm)}, confira na loja
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Tirar ${y.titulo} deste item`}
+                  onClick={() =>
+                    aoMudar((x) => {
+                      const resto = x.escolhidos.filter((z) => z.id !== y.id);
+                      return { ...x, escolhidos: resto, presente: x.presente && resto.length > 0 };
+                    })
+                  }
+                  className="grid size-11 shrink-0 place-items-center rounded-full text-secondary-ink transition hover:bg-black/5 active:scale-90 dark:hover:bg-white/10"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+              {!resolvido && y.url && (
+                <div className="mt-2 sm:w-56">
+                  <VerNaLoja url={y.url} grande />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
       {presenteDeAlguem && estado.status === "falta" && (
         <p className="mt-2 rounded-2xl bg-[#34c759]/10 px-3 py-2 text-xs font-semibold text-[#248a3d]">
@@ -164,32 +196,20 @@ export function CartaoItemPlanejador({
 
       {!resolvido && (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          {e?.url && (
-            <div className="sm:w-56">
-              <VerNaLoja url={e.url} grande />
-            </div>
-          )}
           <button
             type="button"
             aria-expanded={aberto}
             onClick={() => setAberto((v) => !v)}
             className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold text-[#0071e3] ring-1 ring-border transition active:scale-[0.97]"
           >
-            {e ? (
-              <ChevronDown
-                className={"size-4 transition " + (aberto ? "rotate-180" : "")}
-                aria-hidden="true"
-              />
+            {aberto ? (
+              <ChevronDown className="size-4 rotate-180 transition" aria-hidden="true" />
+            ) : e ? (
+              <Plus className="size-4" aria-hidden="true" />
             ) : (
               <Search className="size-4" aria-hidden="true" />
             )}
-            {e
-              ? aberto
-                ? "Fechar opções"
-                : "Trocar produto"
-              : aberto
-                ? "Fechar ofertas"
-                : "Ver ofertas"}
+            {aberto ? "Fechar ofertas" : e ? "Escolher mais" : "Ver ofertas"}
           </button>
           <button
             type="button"
@@ -216,21 +236,17 @@ export function CartaoItemPlanejador({
       )}
       {querPresente && !e && aberto && (
         <p className="mt-2 text-xs font-semibold text-[#0058b0] dark:text-[#64a8ff]">
-          Escolha um produto abaixo para entrar na lista de presentes.
+          Escolha um ou mais produtos abaixo para entrar na lista de presentes.
         </p>
       )}
       {aberto && !resolvido && (
-        <div className="mt-3">
+        <div className="animate-plano-foto mt-3">
           <OfertasDoItem
             item={item}
             estilo={estilo}
             volts={volts}
-            escolhidoId={e?.id ?? null}
-            aoEscolher={(r) => {
-              aoEscolher(r, querPresente || estado.presente);
-              setQuerPresente(false);
-              setAberto(false);
-            }}
+            escolhidosIds={escolhidos.map((y) => y.id)}
+            aoEscolher={(r) => aoEscolher(r, querPresente || estado.presente)}
           />
         </div>
       )}
@@ -238,19 +254,19 @@ export function CartaoItemPlanejador({
   );
 }
 
-/* Card art: the chosen product's photo, else up to 3 real photos of the item's
+/* Card art: the chosen products' photos, else up to 3 real photos of the item's
    offers on white (nothing over the photo); never an empty box. */
 function ArteDoItem({
   termo,
-  escolhida,
+  escolhidas,
   emoji,
 }: {
   termo: string;
-  escolhida: string | null;
+  escolhidas: string[];
   emoji: string;
 }) {
   const { ref, fotos } = useFotosDoTermo(termo);
-  const lista = escolhida ? [escolhida] : (fotos ?? []);
+  const lista = escolhidas.length ? escolhidas : (fotos ?? []);
   return (
     <div
       ref={ref}
@@ -274,7 +290,7 @@ function ArteDoItem({
             />
           </span>
         ))
-      ) : fotos === null && !escolhida ? (
+      ) : fotos === null && !escolhidas.length ? (
         <span className="esqueleto flex-1 rounded-xl" />
       ) : (
         <span className="flex flex-1 items-center justify-center rounded-xl bg-white text-5xl">

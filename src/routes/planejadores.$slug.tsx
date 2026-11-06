@@ -19,6 +19,7 @@ import {
   itemDe,
   itensDoPresente,
   lerEstado,
+  alternarEscolhido,
   mudarItem,
   planejadorDo,
   resumir,
@@ -263,8 +264,8 @@ function Conteudo({ p }: { p: Planejador }) {
             estilo={estado.estilo}
             volts={estado.volts}
             presenteDeAlguem={(() => {
-              const id = itemDe(estado, it.id).escolhido?.id;
-              return id ? presentes[id] : undefined;
+              const ids = itemDe(estado, it.id).escolhidos.map((y) => y.id);
+              return ids.map((id) => presentes[id]).find(Boolean);
             })()}
             atraso={k}
             aoMudar={(f) => setEstado((e) => mudarItem(e, it.id, f))}
@@ -277,7 +278,9 @@ function Conteudo({ p }: { p: Planejador }) {
                 url: res.url,
               });
               if (escolhido)
-                setEstado((e) => mudarItem(e, it.id, (x) => ({ ...x, escolhido, presente })));
+                setEstado((e) =>
+                  mudarItem(e, it.id, (x) => alternarEscolhido(x, escolhido, presente)),
+                );
             }}
           />
         ))}

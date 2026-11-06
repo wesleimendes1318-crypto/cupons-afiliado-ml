@@ -521,7 +521,9 @@ export const planejadorDo = (slug: string) => PLANEJADORES.find((p) => p.slug ==
 
 export type Status = "falta" | "tenho" | "comprei" | "ganhei";
 export type Estilo = "economico" | "equilibrado" | "premium";
-export type EstadoItem = { status: Status; escolhido: ItemDesejo | null; presente: boolean };
+/** Weslei, 06/11: "precisa possibilitar selecionar mais de um" (several products per item). */
+export type EstadoItem = { status: Status; escolhidos: ItemDesejo[]; presente: boolean };
+export const MAX_ESCOLHIDOS = 10;
 export type EstadoPlano = {
   configurado: boolean;
   /** Total the person wants to spend (null = not set). */
@@ -574,16 +576,24 @@ export function lerEstado(bruto: unknown, p: Planejador): EstadoPlano {
     const x = itens[it.id];
     if (!x || typeof x !== "object") continue;
     const status = STATUS.includes(x["status"] as Status) ? (x["status"] as Status) : "falta";
-    const escolhido = x["escolhido"]
-      ? (lerLista({ itens: [x["escolhido"]] }).itens[0] ?? null)
-      : null;
-    e.itens[it.id] = { status, escolhido, presente: x["presente"] === true && escolhido != null };
+    // older saves kept a single `escolhido`
+    const brutos = Array.isArray(x["escolhidos"])
+      ? x["escolhidos"]
+      : x["escolhido"]
+        ? [x["escolhido"]]
+        : [];
+    const escolhidos = lerLista({ itens: brutos.slice(0, MAX_ESCOLHIDOS) }).itens;
+    e.itens[it.id] = {
+      status,
+      escolhidos,
+      presente: x["presente"] === true && escolhidos.length > 0,
+    };
   }
   return e;
 }
 
 export const itemDe = (e: EstadoPlano, id: string): EstadoItem =>
-  e.itens[id] ?? { status: "falta", escolhido: null, presente: false };
+  e.itens[id] ?? { status: "falta", escolhidos: [], presente: false };
 
 export const mudarItem = (
   e: EstadoPlano,
@@ -593,6 +603,15 @@ export const mudarItem = (
   ...e,
   itens: { ...e.itens, [id]: f(itemDe(e, id)) },
 });
+
+/** Adds the product, or removes it when it is already chosen (same id). */
+export function alternarEscolhido(x: EstadoItem, p: ItemDesejo, presente: boolean): EstadoItem {
+  const tem = x.escolhidos.some((y) => y.id === p.id);
+  const escolhidos = tem
+    ? x.escolhidos.filter((y) => y.id !== p.id)
+    : [...x.escolhidos, p].slice(-MAX_ESCOLHIDOS);
+  return { ...x, escolhidos, presente: escolhidos.length > 0 && (presente || x.presente) };
+}
 
 /* ---------- numbers shown in the bar ---------- */
 
@@ -618,10 +637,10 @@ export function resumir(p: Planejador, e: EstadoPlano, fase?: Fase): Resumo {
   };
   for (const it of p.itens) {
     const x = itemDe(e, it.id);
-    const preco = x.escolhido?.preco ?? 0;
+    const preco = x.escolhidos.reduce((s, y) => s + (y.preco ?? 0), 0);
     if (it.fase === 1 && x.status === "falta") {
       r.faltaEssencial += preco;
-      if (!x.escolhido) r.essenciaisSemProduto += 1;
+      if (!x.escolhidos.length) r.essenciaisSemProduto += 1;
     }
     if (x.status === "falta" && !x.presente) r.faltaTotal += preco;
     if (x.status === "comprei") r.gasto += preco;
@@ -636,7 +655,7 @@ export function resumir(p: Planejador, e: EstadoPlano, fase?: Fase): Resumo {
 export const itensDoPresente = (p: Planejador, e: EstadoPlano): ItemDesejo[] =>
   p.itens.flatMap((it) => {
     const x = itemDe(e, it.id);
-    return x.presente && x.escolhido && x.status === "falta" ? [x.escolhido] : [];
+    return x.presente && x.status === "falta" ? x.escolhidos : [];
   });
 
 /** Days until the moving date (negative = already moved). */
