@@ -6,7 +6,16 @@
    (sempre link de afiliado) e Comparar preço. Nada é inventado: sem detalhes guardados,
    o painel diz isso e oferece comparar de novo. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Images, LoaderCircle, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Images,
+  LoaderCircle,
+  MessageCircle,
+  Minus,
+  Plus,
+  X,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,6 +27,7 @@ import {
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CoracaoDesejo } from "@/components/CoracaoDesejo";
 import { acoesDoProduto } from "@/lib/afiliado";
+import { buscarLinkAfiliado, itemDoProduto, linkWhatsApp } from "@/lib/lista-desejos";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { propsFotoGrande } from "@/lib/foto";
 import { registrarAcaoVisitante } from "@/lib/perfil-visitante";
@@ -301,6 +311,27 @@ function Painel({
   };
   const data = dataCurta(vistoEm ?? dados?.comparado_em ?? null);
   const acoes = acoesDoProduto(link, urlProduto);
+  const [zoom, setZoom] = useState(false);
+  /* The heart needs an ML address or a ready link; a listing id is enough. */
+  const desejo = {
+    chave,
+    titulo,
+    preco,
+    foto,
+    link: acoes.comprar && "href" in acoes.comprar ? acoes.comprar.href : link,
+    url:
+      urlProduto ??
+      (acoes.comprar && "gerar" in acoes.comprar ? acoes.comprar.gerar : null) ??
+      (mlb ? `https://produto.mercadolivre.com.br/${mlb.replace(/^MLB/, "MLB-")}` : null),
+  }; /* Heart always in the details (Weslei, 06/11: "precisa ter a opção de
+     coração SEMPRE") plus WhatsApp, both with his link; beside the photo
+     counter so the header stays clean. */
+  const atalhos = (
+    <>
+      <CoracaoDesejo compacto produto={desejo} />
+      <BotaoWhatsApp produto={desejo} />
+    </>
+  );
 
   return (
     <dialog
@@ -337,6 +368,7 @@ function Painel({
               </p>
             )}
           </div>
+          {n === 0 && <div className="flex shrink-0 items-center gap-1.5">{atalhos}</div>}
           <button
             type="button"
             onClick={() => ref.current?.close()}
@@ -366,39 +398,55 @@ function Painel({
               >
                 {galeria.map((u, k) => (
                   <li key={u} className="relative h-full w-full shrink-0 snap-center">
+                    <button
+                      type="button"
+                      onClick={() => setZoom(true)}
+                      aria-label={`Ampliar foto ${k + 1} de ${n}`}
+                      className="absolute inset-0 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3]"
+                    />
                     <img
                       {...propsFotoGrande(u)}
                       alt={`${titulo}: foto ${k + 1} de ${n}`}
                       loading={k === 0 ? "eager" : "lazy"}
                       referrerPolicy="no-referrer"
-                      className="absolute inset-0 h-full w-full object-contain p-2"
+                      className="pointer-events-none absolute inset-0 h-full w-full object-contain p-2"
                     />
                   </li>
                 ))}
               </ul>
-              {n > 1 && (
-                <div className="mt-2 flex items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => ir(atual - 1)}
-                    aria-label="Foto anterior"
-                    className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
-                  >
-                    <ChevronLeft className="size-4" aria-hidden="true" />
-                  </button>
-                  <span className="min-w-12 text-center text-[12px] font-semibold tabular-nums text-[#6e6e73]">
-                    {Math.min(atual, n - 1) + 1} de {n}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => ir(atual + 1)}
-                    aria-label="Próxima foto"
-                    className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
-                  >
-                    <ChevronRight className="size-4" aria-hidden="true" />
-                  </button>
+              <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <div className="flex justify-start">
+                  <CoracaoDesejo compacto produto={desejo} />
                 </div>
-              )}
+                {n > 1 ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => ir(atual - 1)}
+                      aria-label="Foto anterior"
+                      className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                    >
+                      <ChevronLeft className="size-4" aria-hidden="true" />
+                    </button>
+                    <span className="min-w-12 text-center text-[12px] font-semibold tabular-nums text-[#6e6e73]">
+                      {Math.min(atual, n - 1) + 1} de {n}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => ir(atual + 1)}
+                      aria-label="Próxima foto"
+                      className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+                    >
+                      <ChevronRight className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-[#6e6e73]">Toque na foto para ampliar</span>
+                )}
+                <div className="flex justify-end">
+                  <BotaoWhatsApp produto={desejo} />
+                </div>
+              </div>
               {n > 1 && (
                 <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Escolher foto">
                   {galeria.map((u, k) => (
@@ -421,6 +469,20 @@ function Painel({
                     </li>
                   ))}
                 </ul>
+              )}
+              {n > 1 && (
+                <p className="mt-1 text-center text-[11px] text-[#6e6e73]">
+                  Toque na foto para ampliar
+                </p>
+              )}
+              {zoom && (
+                <FotoAmpliada
+                  galeria={galeria}
+                  atual={Math.min(atual, n - 1)}
+                  ir={ir}
+                  titulo={titulo}
+                  fechar={() => setZoom(false)}
+                />
               )}
               {produto && doCatalogo === null && (
                 <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
@@ -562,6 +624,227 @@ function Painel({
             <p className="text-center text-[11px] text-muted-foreground">
               ✓ Você compra direto na loja oficial · Sem taxa extra
             </p>
+          </div>
+        )}
+      </div>
+    </dialog>
+  );
+}
+
+/** WhatsApp share of one product, always with Weslei's link (rule no. 1):
+    the ready link, or link_de_reserva for an ML listing. */
+function BotaoWhatsApp({ produto }: { produto: Parameters<typeof itemDoProduto>[0] }) {
+  const [enviando, setEnviando] = useState(false);
+  const item = itemDoProduto(produto);
+  if (!item) return null;
+  const enviar = async () => {
+    setEnviando(true);
+    /* Opened now (popup blockers), filled after the link comes back. */
+    const janela = window.open("", "_blank");
+    const l = await buscarLinkAfiliado(item);
+    setEnviando(false);
+    if (!l) {
+      janela?.close();
+      return;
+    }
+    const preco = item.preco != null ? `\n💰 ${brl(item.preco)}` : "";
+    const url = linkWhatsApp(
+      `Olha este achado: *${item.titulo.replace(/[*_~`]/g, "")}*${preco}\n👉 ${l}`,
+    );
+    if (janela) janela.location.href = url;
+    else window.location.href = url;
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void enviar()}
+      disabled={enviando}
+      aria-label={`Enviar no WhatsApp: ${item.titulo}`}
+      title="Enviar no WhatsApp"
+      className="vidro-botao grid size-9 place-items-center rounded-full shadow-sm transition active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
+    >
+      {enviando ? (
+        <LoaderCircle className="size-[18px] animate-spin" aria-hidden="true" />
+      ) : (
+        <MessageCircle className="size-[18px] text-[#25d366]" aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
+const ZOOM_MAX = 4;
+
+/** Full-screen photo at the original resolution (-F, up to 1200 px): tap or
+    double-click zooms where touched, pinch zooms, drag/scroll pans, so the
+    text printed on the photo stays readable (Weslei, 06/11). */
+function FotoAmpliada({
+  galeria,
+  atual,
+  ir,
+  titulo,
+  fechar,
+}: {
+  galeria: string[];
+  atual: number;
+  ir: (k: number) => void;
+  titulo: string;
+  fechar: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const caixa = useRef<HTMLDivElement>(null);
+  const [escala, setEscala] = useState(1);
+  const [base, setBase] = useState<{ w: number; h: number } | null>(null);
+  const pinca = useRef<{ d: number; e: number } | null>(null);
+  const n = galeria.length;
+  const u = galeria[atual]!;
+
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+  }, []);
+  useEffect(() => setEscala(1), [atual]);
+
+  /* Fit size of the photo in the box at 1x; zoom multiplies it. */
+  const medir = (im: HTMLImageElement) => {
+    const c = caixa.current;
+    if (!c || !im.naturalWidth) return;
+    const f = Math.min(c.clientWidth / im.naturalWidth, c.clientHeight / im.naturalHeight, 1.5);
+    setBase({ w: im.naturalWidth * f, h: im.naturalHeight * f });
+  };
+
+  /* New zoom keeping the point (x, y) of the box under the finger. */
+  const ampliar = (nova: number, x?: number, y?: number) => {
+    const c = caixa.current;
+    const e = Math.min(ZOOM_MAX, Math.max(1, nova));
+    if (!c) return setEscala(e);
+    const px = x ?? c.clientWidth / 2;
+    const py = y ?? c.clientHeight / 2;
+    const r = e / escala;
+    const sl = (c.scrollLeft + px) * r - px;
+    const st = (c.scrollTop + py) * r - py;
+    setEscala(e);
+    requestAnimationFrame(() => c.scrollTo({ left: sl, top: st }));
+  };
+  const ponto = (cx: number, cy: number) => {
+    const b = caixa.current!.getBoundingClientRect();
+    return [cx - b.left, cy - b.top] as const;
+  };
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={fechar}
+      onKeyDown={(e) => {
+        if (e.key === "+" || e.key === "=") ampliar(escala + 1);
+        else if (e.key === "-") ampliar(escala - 1);
+      }}
+      aria-label={`Foto ampliada: ${titulo}`}
+      className="fixed inset-0 m-0 h-auto max-h-none w-auto max-w-none bg-black p-0 text-white backdrop:bg-black"
+    >
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <span className="text-[13px] font-semibold tabular-nums text-white/80">
+            {n > 1 ? `${atual + 1} de ${n}` : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => ampliar(escala - 1)}
+              disabled={escala <= 1}
+              aria-label="Diminuir zoom"
+              className="grid size-10 place-items-center rounded-full bg-white/15 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <Minus className="size-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => ampliar(escala + 1)}
+              disabled={escala >= ZOOM_MAX}
+              aria-label="Aumentar zoom"
+              className="grid size-10 place-items-center rounded-full bg-white/15 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <Plus className="size-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => ref.current?.close()}
+              aria-label="Fechar foto ampliada"
+              className="grid size-10 place-items-center rounded-full bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <X className="size-5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div
+          ref={caixa}
+          className="relative min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ touchAction: escala > 1 ? "pan-x pan-y" : "pan-y" }}
+          onTouchStart={(e) => {
+            if (e.touches.length === 2) {
+              const [a, b] = [e.touches[0]!, e.touches[1]!];
+              pinca.current = {
+                d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+                e: escala,
+              };
+            }
+          }}
+          onTouchMove={(e) => {
+            const p = pinca.current;
+            if (!p || e.touches.length !== 2) return;
+            const [a, b] = [e.touches[0]!, e.touches[1]!];
+            const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+            const [x, y] = ponto((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+            ampliar((p.e * d) / p.d, x, y);
+          }}
+          onTouchEnd={(e) => {
+            if (e.touches.length < 2) pinca.current = null;
+          }}
+        >
+          <div
+            className="flex min-h-full min-w-full items-center justify-center"
+            style={base ? { width: base.w * escala, height: base.h * escala } : undefined}
+          >
+            <img
+              key={u}
+              {...propsFotoGrande(u)}
+              alt={`${titulo}: foto ${atual + 1} de ${n}`}
+              referrerPolicy="no-referrer"
+              draggable={false}
+              onLoad={(e) => medir(e.currentTarget)}
+              onClick={(e) => {
+                const [x, y] = ponto(e.clientX, e.clientY);
+                ampliar(escala > 1 ? 1 : 2.5, x, y);
+              }}
+              className={`max-w-none select-none bg-white ${escala > 1 ? "cursor-zoom-out" : "cursor-zoom-in"}`}
+              style={
+                base
+                  ? { width: base.w * escala, height: base.h * escala }
+                  : { maxWidth: "100%", maxHeight: "100%" }
+              }
+            />
+          </div>
+        </div>
+        {n > 1 && (
+          <div className="flex items-center justify-center gap-4 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={() => ir(atual - 1)}
+              aria-label="Foto anterior"
+              className="grid size-11 place-items-center rounded-full bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <ChevronLeft className="size-5" aria-hidden="true" />
+            </button>
+            <span className="text-center text-[12px] text-white/70">
+              Toque ou pince para ampliar
+            </span>
+            <button
+              type="button"
+              onClick={() => ir(atual + 1)}
+              aria-label="Próxima foto"
+              className="grid size-11 place-items-center rounded-full bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <ChevronRight className="size-5" aria-hidden="true" />
+            </button>
           </div>
         )}
       </div>
