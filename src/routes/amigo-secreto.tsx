@@ -16,8 +16,8 @@ import { aplicarPerfil, termosDosFavoritos, textoParaLeitura, type PerfilAmigo }
 import { PainelDesejosAmigo } from "@/components/AmigoSecreto/PainelDesejosAmigo";
 import { VitrineCategoria } from "@/components/AmigoSecreto/VitrineCategoria";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
-import { carregarAte, passosIniciais, type PassoTermo } from "@/lib/amigo-secreto-busca";
-import { ampliarTermos, aprovadoNaVitrine, contextoDaVitrine } from "@/lib/amigo-secreto-curadoria";
+import { carregarAte, passosIniciais, restamReservas, type PassoTermo } from "@/lib/amigo-secreto-busca";
+import { ampliarTermos, aprovadoNaVitrine, contextoDaVitrine, termosDeReserva } from "@/lib/amigo-secreto-curadoria";
 import {
   alternarFavorito,
   estadoVazio,
@@ -222,8 +222,10 @@ function PaginaAmigoSecreto() {
       mudarVitrine(amigoId, v.id, (x) => ({ ...x, carregando: true, erro: null }));
       const amigo = estadoRef.current.amigos.find((a) => a.id === amigoId);
       const ctx = aplicarPerfil(contextoDaVitrine(v, textoParaLeitura(amigo?.desejosTexto ?? "", amigo?.perfil), amigo?.nome), amigo?.perfil);
+      const reserva = termosDeReserva(v.termosBusca, ctx);
       const r = await carregarAte({
         passos: passos.current.get(v.id) ?? passosIniciais(ampliarTermos(v.termosBusca, ctx)),
+        termosReserva: reserva,
         faixa,
         vistos: seen,
         alvo,
@@ -245,6 +247,7 @@ function PaginaAmigoSecreto() {
           faixa: { ...faixa, freteACalcular: true },
           vistos: seen,
           alvo: faltam,
+          termosReserva: reserva,
           aprovar: (x) => aprovadoNaVitrine(x.nome, ctx),
           cancelado: () => minha !== geracao.current,
           aoChegar: (novos) =>
@@ -256,7 +259,7 @@ function PaginaAmigoSecreto() {
       mudarVitrine(amigoId, v.id, (x) => ({
         ...x,
         carregando: false,
-        temMais: r.passos.some((p) => !p.fim),
+        temMais: r.passos.some((p) => !p.fim) || restamReservas(r.passos, reserva),
         erro: r.erro,
       }));
     },

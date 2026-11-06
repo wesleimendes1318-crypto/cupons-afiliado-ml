@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { aprovadoNaVitrine, contextoDaVitrine, generoDaPessoa } from "@/lib/amigo-secreto-curadoria";
+import { ampliarTermos, aprovadoNaVitrine, contextoDaVitrine, generoDaPessoa, termosDeReserva } from "@/lib/amigo-secreto-curadoria";
 import { interpretarLocal } from "@/lib/amigo-secreto-parser-local";
 
 test("o nome define o gênero quando o texto não diz", () => {
@@ -42,4 +42,17 @@ test("roupa de academia continua na vitrine de academia", () => {
   const lida = interpretarLocal("legging e top de academia, tamanho M");
   expect(lida.vitrines.some((v) => /academia/i.test(v.titulo))).toBe(true);
   expect(lida.vitrines.some((v) => /^Roupas( femininas)?$/.test(v.titulo))).toBe(false);
+});
+
+test("roupa masculina do dia a dia exige peça masculina no título", () => {
+  const c = contextoDaVitrine({ titulo: "Roupas masculinas", termosBusca: ["camiseta oversized masculina"] }, "camiseta", "Vinicius");
+  expect(aprovadoNaVitrine("Camiseta Oversized Premium Moondu Unissex", c)).toBe(false);
+  expect(aprovadoNaVitrine("Camiseta Oversized Masculina Algodão Pesado", c)).toBe(true);
+  expect(aprovadoNaVitrine("Cropped Masculino", c)).toBe(true);
+});
+
+test("vitrine de roupas tem termos de reserva", () => {
+  const c = contextoDaVitrine({ titulo: "Roupas masculinas", termosBusca: ["camiseta oversized masculina"] }, "camiseta", "Vinicius");
+  expect(ampliarTermos(["camiseta oversized masculina"], c).length).toBe(16);
+  expect(termosDeReserva(["camiseta oversized masculina"], c).length).toBeGreaterThan(0);
 });
