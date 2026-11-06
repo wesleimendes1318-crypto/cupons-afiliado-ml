@@ -40,3 +40,12 @@ test("most wanted first, ties keep order", () => {
   const s = { vendidos: new Map([["MLB4", 10]]), tendencia: new Set(["MLB2"]), vezes: new Map<string, number>() };
   expect(ordenarPorProcura(lista, s).map((x: { produto: string }) => x.produto)).toEqual(["MLB4", "MLB2", "MLB3", "MLB1"]);
 });
+
+describe("acervo related reads", () => {
+  test("wildcard pattern matches accented titles", async () => {
+    const { curinga } = await import("../src/lib/acervo");
+    const re = new RegExp(`^${curinga("luminaria").replace(/_/g, ".")}$`);
+    expect(re.test("luminária")).toBe(true);
+    expect(re.test("luminaria")).toBe(true);
+  });
+});

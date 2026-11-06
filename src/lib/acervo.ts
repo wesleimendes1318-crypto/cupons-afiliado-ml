@@ -101,13 +101,45 @@ export async function lerDoAcervo(
     if (!faixa.freteACalcular) q = q.eq("frete_gratis", true);
     const { data } = await q.order("atualizado_em", { ascending: false }).limit(limite + excluir.length);
     const fora = new Set(excluir);
-    return ((data ?? []) as LinhaAcervo[])
-      .filter((l) => !fora.has(l.produto) && !fora.has(l.item))
+    const doTermo = ((data ?? []) as LinhaAcervo[]).filter((l) => !fora.has(l.produto) && !fora.has(l.item));
+    /* Weslei, 06/11: related searches feed this one while new reads load:
+       listings stored under OTHER terms whose title has every word of this one. */
+    const relacionados = doTermo.length < limite ? await relacionadosNoAcervo(db, termo, faixa, limite * 3) : [];
+    const vistos = new Set(doTermo.map((l) => l.produto));
+    return [...doTermo, ...relacionados.filter((l) => !fora.has(l.produto) && !fora.has(l.item) && !vistos.has(l.produto))]
       .slice(0, limite)
       .map(resultadoDoAcervo);
   } catch {
     return [];
   }
+}
+
+/** ILIKE pattern that also matches accented titles ("luminaria" -> "lumin_ri_"). */
+export const curinga = (palavra: string) => palavra.replace(/[aeiouc]/g, "_");
+
+/** Fresh listings stored under any term, matched by title (every meaningful word). */
+async function relacionadosNoAcervo(
+  db: Db,
+  termo: string,
+  faixa: { min: number | null; max: number | null; freteACalcular?: boolean },
+  limite: number,
+): Promise<LinhaAcervo[]> {
+  const palavras = sem(termo)
+    .split(" ")
+    .filter((w) => w.length > 2 && !PALAVRAS_VAZIAS.has(w));
+  if (!palavras.length) return [];
+  /* Longest word narrows the read; tituloCombina checks the rest. */
+  const chave = curinga(palavras.reduce((a, b) => (b.length > a.length ? b : a)).replace(/s$/, ""));
+  let q = db
+    .from("acervo_ofertas")
+    .select("produto,item,nome,imagem,foto,preco,frete_gratis,internacional,loja_oficial,url,termos,atualizado_em")
+    .ilike("nome", `%${chave}%`)
+    .gte("atualizado_em", new Date(Date.now() - ACERVO_HORAS * 3600_000).toISOString());
+  if (faixa.min != null) q = q.gte("preco", faixa.min);
+  if (faixa.max != null) q = q.lte("preco", faixa.max);
+  if (!faixa.freteACalcular) q = q.eq("frete_gratis", true);
+  const { data } = await q.order("atualizado_em", { ascending: false }).limit(limite);
+  return ((data ?? []) as LinhaAcervo[]).filter((l) => tituloCombina(termo, l.nome));
 }
 
 /** Asks the background job to keep reading this term in this range. */
