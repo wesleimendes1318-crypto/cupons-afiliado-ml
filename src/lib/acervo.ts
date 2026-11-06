@@ -188,3 +188,54 @@ export async function achadosDoGarimpo(
     return [];
   }
 }
+
+/* MOST WANTED FIRST (Weslei, 06/11: "os itens mais desejados [...] buscados
+   como os primeiros resultados"). Real signals only: best-seller rank and
+   trending flag from the catalog robot (em_alta_catalogo), how many times
+   visitors compared the listing (produtos_vistos.vezes) and the category
+   best-seller position the search already returns (maisVendido). */
+export type SinaisProcura = {
+  vendidos: Map<string, number>;
+  tendencia: Set<string>;
+  vezes: Map<string, number>;
+};
+
+export function pontoDeProcura(r: ResultadoBusca, s: SinaisProcura): number {
+  let p = 0;
+  const pos = s.vendidos.get(r.produto) ?? (r.maisVendido != null ? r.maisVendido : undefined);
+  if (pos != null) p += pos <= 20 ? 4 : pos <= 100 ? 3 : pos <= 1000 ? 2 : 1;
+  if (s.tendencia.has(r.produto)) p += 2;
+  p += Math.min(s.vezes.get(r.item) ?? 0, 10) / 2;
+  /* "Sofisticados" (06/11): official brand stores rank a bit higher. */
+  if (r.lojaOficial === true) p += 1;
+  return p;
+}
+
+/** Stable: equal scores keep the order they came in. */
+export function ordenarPorProcura(resultados: ResultadoBusca[], s: SinaisProcura): ResultadoBusca[] {
+  return resultados
+    .map((r, k) => ({ r, k, p: pontoDeProcura(r, s) }))
+    .sort((a, b) => b.p - a.p || a.k - b.k)
+    .map((x) => x.r);
+}
+
+export async function sinaisDeProcura(db: Db, resultados: ResultadoBusca[]): Promise<SinaisProcura> {
+  const s: SinaisProcura = { vendidos: new Map(), tendencia: new Set(), vezes: new Map() };
+  const produtos = [...new Set(resultados.map((r) => r.produto).filter((x) => /^MLB\d+$/.test(x)))].slice(0, 100);
+  const itens = [...new Set(resultados.map((r) => r.item).filter((x) => /^MLB\d+$/.test(x)))].slice(0, 100);
+  if (!produtos.length) return s;
+  try {
+    const [alta, vistos] = await Promise.all([
+      db.from("em_alta_catalogo").select("produto,origem,posicao").in("produto", produtos).in("origem", ["vendidos", "tendencia"]),
+      itens.length ? db.from("produtos_vistos").select("chave,vezes").in("chave", itens) : { data: [] },
+    ]);
+    for (const l of (alta.data ?? []) as { produto: string; origem: string; posicao: number | null }[]) {
+      if (l.origem === "tendencia") s.tendencia.add(l.produto);
+      else if (l.posicao != null) s.vendidos.set(l.produto, Math.min(s.vendidos.get(l.produto) ?? Infinity, l.posicao));
+    }
+    for (const l of (vistos.data ?? []) as { chave: string; vezes: number | null }[]) s.vezes.set(l.chave, l.vezes ?? 0);
+  } catch {
+    /* no signals: original order */
+  }
+  return s;
+}

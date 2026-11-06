@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { cabeNaFaixa } from "@/lib/amigo-secreto-busca";
-import { achadosDoGarimpo, guardarNoAcervo, lerDoAcervo, pedirGarimpo } from "@/lib/acervo";
+import { achadosDoGarimpo, guardarNoAcervo, lerDoAcervo, ordenarPorProcura, pedirGarimpo, sinaisDeProcura } from "@/lib/acervo";
 import { buscaGuiada, normalizarBusca, type ResultadoBusca } from "@/lib/busca-guiada";
 import { repetido } from "@/lib/curadoria";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
@@ -84,7 +84,7 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           return json(request, { erro: "Muitas buscas seguidas. Aguarde um minuto." }, 429);
 
         const faixa = `${e.min ?? ""}-${e.max ?? ""}${e.freteACalcular ? "|f" : ""}`;
-        const chave1 = `amigo5|${faixa}|${normalizarBusca(e.termo)}`;
+        const chave1 = `amigo6|${faixa}|${normalizarBusca(e.termo)}`;
         const chave = e.pagina
           ? `${chave1}|p${e.pagina}|c${e.cursor ?? ""}|n${(e.vistos ?? []).length}`
           : chave1;
@@ -100,7 +100,8 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           lerDoAcervo(db, e.termo, faixaPedida, vistos, e.pagina ? 30 : 40),
           e.pagina ? Promise.resolve([] as ResultadoBusca[]) : achadosDoGarimpo(db, e.termo, faixaPedida),
         ]);
-        const prontos = juntar(achados, doAcervo).filter(cabe);
+        const juntos = juntar(achados, doAcervo).filter(cabe);
+        const prontos = ordenarPorProcura(juntos, await sinaisDeProcura(db, juntos));
         if (prontos.length >= (e.pagina ? META_DO_ACERVO.seguintes : META_DO_ACERVO.primeira)) {
           /* The term continues from the same catalog position next time. */
           const resposta: Guardada = { resultados: prontos, proximo: e.cursor ?? 0, variantes: e.variantes ?? [] };
@@ -148,9 +149,11 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           return json(request, { erro: "A busca não respondeu agora. Tente de novo." }, 502);
         }
         const aoVivo = achado.resultados.filter(cabe);
+        const todos = juntar(achados, aoVivo, doAcervo);
         const resposta: Guardada = {
-          /* Garimpo finds first, then the fresh read, then the acervo. */
-          resultados: juntar(achados, aoVivo, doAcervo),
+          /* Most wanted first (best sellers, trending, most compared, official
+             stores); ties keep garimpo finds, fresh read, then the acervo. */
+          resultados: ordenarPorProcura(todos, await sinaisDeProcura(db, todos)),
           proximo: achado.proximo ?? null,
           variantes: achado.variantes ?? [],
         };
