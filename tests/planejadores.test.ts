@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { itemDoProduto } from "@/lib/lista-desejos";
 import {
   PLANEJADORES,
+  alternarEscolhido,
   diasAte,
   estadoInicial,
   itensDoPresente,
@@ -16,9 +17,9 @@ import {
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 
 const casa = planejadorDo("casa-nova")!;
-const produto = (preco: number) =>
+const produto = (preco: number, chave = "MLB123") =>
   itemDoProduto({
-    chave: "MLB123",
+    chave,
     titulo: "Geladeira Frost Free",
     preco,
     url: "https://www.mercadolivre.com.br/p/MLB123",
@@ -63,15 +64,16 @@ describe("planejadores", () => {
     expect(e.orcamento).toBeNull();
     expect(e.volts).toBeNull();
     expect(e.listaId).toBeNull();
-    expect(e.itens["geladeira"]?.escolhido?.preco).toBe(3000);
-    expect(e.itens["fogao"]).toEqual({ status: "falta", escolhido: null, presente: false });
+    // old single `escolhido` saves still load
+    expect(e.itens["geladeira"]?.escolhidos.map((y) => y.preco)).toEqual([3000]);
+    expect(e.itens["fogao"]).toEqual({ status: "falta", escolhidos: [], presente: false });
     expect(e.itens["inventado"]).toBeUndefined();
   });
 
   test("totals only count chosen products; gifts list only what is still missing", () => {
     let e = { ...estadoInicial(), configurado: true };
-    e = mudarItem(e, "geladeira", (x) => ({ ...x, escolhido: produto(3000), presente: true }));
-    e = mudarItem(e, "colchao", (x) => ({ ...x, status: "comprei", escolhido: produto(1000) }));
+    e = mudarItem(e, "geladeira", (x) => ({ ...x, escolhidos: [produto(3000)], presente: true }));
+    e = mudarItem(e, "colchao", (x) => ({ ...x, status: "comprei", escolhidos: [produto(1000)] }));
     const r = resumir(casa, e);
     expect(r.faltaEssencial).toBe(3000);
     expect(r.gasto).toBe(1000);
@@ -80,6 +82,19 @@ describe("planejadores", () => {
     expect(itensDoPresente(casa, e).map((i) => i.id)).toEqual(["MLB123"]);
     e = mudarItem(e, "geladeira", (x) => ({ ...x, status: "ganhei" }));
     expect(itensDoPresente(casa, e)).toEqual([]);
+  });
+
+  test("several products per item: toggle, totals and gifts", () => {
+    let e = { ...estadoInicial(), configurado: true };
+    e = mudarItem(e, "geladeira", (x) => alternarEscolhido(x, produto(3000, "MLB1"), true));
+    e = mudarItem(e, "geladeira", (x) => alternarEscolhido(x, produto(2000, "MLB2"), false));
+    expect(resumir(casa, e).faltaEssencial).toBe(5000);
+    expect(itensDoPresente(casa, e).map((i) => i.id)).toEqual(["MLB1", "MLB2"]);
+    const salvo = lerEstado(JSON.parse(JSON.stringify(e)), casa);
+    expect(salvo.itens["geladeira"]?.escolhidos.length).toBe(2);
+    e = mudarItem(e, "geladeira", (x) => alternarEscolhido(x, produto(3000, "MLB1"), false));
+    e = mudarItem(e, "geladeira", (x) => alternarEscolhido(x, produto(2000, "MLB2"), false));
+    expect(e.itens["geladeira"]).toEqual({ status: "falta", escolhidos: [], presente: false });
   });
 
   test("voltage gate and ordering", () => {
