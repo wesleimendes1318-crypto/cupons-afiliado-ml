@@ -61,6 +61,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { roboAtivo } from "@/lib/robo";
 import { ICONE_CATEGORIA, TOM_CATEGORIA } from "@/routes/categorias.index";
 import { cn } from "@/lib/utils";
+import { PLANEJADORES } from "@/lib/planejadores";
 import { AnimacaoAcompanhar } from "@/components/AnimacaoAcompanhar";
 import { useEsperasAtivas } from "@/components/EsperaAtiva";
 
@@ -1970,6 +1971,35 @@ function Index() {
           {/* MODO DECISÃO (Weslei, 02/11): com uma comparação na tela, nada de
             vitrines, busca guiada nem atalhos abaixo do resultado. */}
           {buscaParada && <BuscaGuiada contexto="home" naHome className="mt-8" />}
+
+          {/* Planejadores (Weslei, 06/11): one chip row, easy to find on every width. */}
+          {buscaParada && (
+            <nav aria-label="Planeje um momento" className="mt-8">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="text-lg font-extrabold tracking-tight">Planeje um momento</h2>
+                <Link
+                  to="/planejadores"
+                  className="shrink-0 text-sm font-semibold text-[#0071e3] hover:underline"
+                >
+                  Ver todos
+                </Link>
+              </div>
+              <ul className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                {PLANEJADORES.map((p) => (
+                  <li key={p.slug} className="shrink-0">
+                    <Link
+                      to="/planejadores/$slug"
+                      params={{ slug: p.slug }}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-card px-4 text-sm font-semibold shadow-sm ring-1 ring-border transition active:scale-[0.97] hover:ring-[#0071e3]"
+                    >
+                      <span aria-hidden="true">{p.emoji}</span>
+                      {p.titulo}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
 
           {buscaParada && (
             /* Explore por categoria (home-v2), com as artes (09/10). */
