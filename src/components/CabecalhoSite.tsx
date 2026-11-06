@@ -71,6 +71,9 @@ export function CabecalhoSite() {
   const caminho = useRouterState({ select: (s) => s.location.pathname });
   const naInicial = caminho === "/";
   const mostrarCampo = useCampoForaDaTela(naInicial);
+  /* Header search visible: pills go icon-only, or their labels squeeze the
+     field to ~20 px and "Buscar" sits on top of the links (06/11 print). */
+  const compacto = naInicial && mostrarCampo;
   const [valor, setValor] = useState("");
 
   /* Link ou texto: a caixa da home compara ou busca (mesma busca universal). */
@@ -190,8 +193,8 @@ export function CabecalhoSite() {
             className="hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#0071e3] px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] md:inline-flex"
             activeProps={{ className: "ring-2 ring-[#0071e3]/30 ring-offset-2" }}
           >
-            <Gift className="size-5 xl:size-4" aria-hidden="true" />
-            <span className="hidden xl:inline">Amigo Secreto</span>
+            <Gift className={compacto ? "size-5" : "size-5 xl:size-4"} aria-hidden="true" />
+            <span className={compacto ? "hidden" : "hidden xl:inline"}>Amigo Secreto</span>
           </Link>
           {/* Planejadores (Weslei, 06/11: "fácil de encontrar, sem bagunçar"):
                 same pill shape, glass instead of blue; from 1280 px (narrower headers are full), label from 1536 px. */}
@@ -202,8 +205,8 @@ export function CabecalhoSite() {
             className="vidro-botao hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#0071e3] shadow-sm ring-1 ring-black/5 transition active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] xl:inline-flex dark:ring-white/10"
             activeProps={{ className: "ring-2 ring-[#0071e3]/30" }}
           >
-            <ListChecks className="size-5 2xl:size-4" aria-hidden="true" />
-            <span className="hidden 2xl:inline">Planejadores</span>
+            <ListChecks className={compacto ? "size-5" : "size-5 2xl:size-4"} aria-hidden="true" />
+            <span className={compacto ? "hidden" : "hidden 2xl:inline"}>Planejadores</span>
           </Link>
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
             <AtalhoFavoritos />
@@ -223,7 +226,7 @@ export function CabecalhoSite() {
             className="hidden min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 vidro-botao rounded-full border border-[#7547E8]/50 min-[360px]:inline-flex px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
           >
             <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
-            <span className="hidden min-[480px]:inline sm:hidden md:inline">
+            <span className={compacto ? "hidden" : "hidden min-[480px]:inline sm:hidden md:inline"}>
               Ofertas no Telegram
             </span>
             {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
