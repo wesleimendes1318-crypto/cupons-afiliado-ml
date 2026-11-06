@@ -140,7 +140,14 @@ const CATEGORIAS: Categoria[] = [
     titulo: (c) => (c.genero === "masculino" ? "Roupas masculinas" : c.genero === "feminino" ? "Roupas femininas" : "Roupas"),
     termos: (c) => {
       const gen = g(c, "feminina", "masculina") || "unissex";
-      const pedidos = (c.pedidos ?? []).map((p) => (/feminin|masculin|unissex/.test(p) ? p : `${p} ${gen}`));
+      const pedidos = (c.pedidos ?? []).flatMap((p) => {
+        const x = /feminin|masculin|unissex/.test(p) ? p : `${p} ${gen}`;
+        /* Weslei, 06/11: "Oversized não precisa ser no título, pode ser o
+           tamanho gg ou maior" -> the same piece in GG / XGG / plus size. */
+        if (!/oversized/.test(x)) return [x];
+        const base = x.replace(/\s*oversized\s*/, " ").replace(/\s+/g, " ").trim();
+        return [x, `${base} gg`, `${base} xgg`, `${base} plus size`];
+      });
       const basicos =
         c.genero === "feminino"
           ? ["blusa feminina", "vestido casual feminino", "camiseta básica feminina", "calça jeans feminina"]
