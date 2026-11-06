@@ -14,6 +14,7 @@ const COLUNAS = [
     links: [
       { to: "/guias", rotulo: "Guias" },
       { to: "/amigo-secreto", rotulo: "Amigo Secreto" },
+      { to: "/planejadores", rotulo: "Planejadores" },
       { to: "/natal", rotulo: "Natal" },
       { to: "/dia-das-criancas", rotulo: "Dia das Crianças" },
       { to: "/brinquedos", rotulo: "Brinquedos por idade" },

@@ -26,6 +26,7 @@ const LINKS = [
   { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
   { to: "/meus-precos", rotulo: "Meus preços", pc: "sm:inline-flex" },
   { to: "/guias", rotulo: "Guias", pc: "lg:inline-flex" },
+  { to: "/planejadores", rotulo: "Planejadores", pc: "2xl:inline-flex" },
   { to: "/sobre", rotulo: "Sobre", pc: "xl:inline-flex" },
 ] as const;
 

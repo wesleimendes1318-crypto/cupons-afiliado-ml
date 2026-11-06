@@ -36,6 +36,8 @@ import { Route as CategoriasSlugRouteImport } from './routes/categorias.$slug'
 import { Route as GuiasIndexRouteImport } from './routes/guias.index'
 import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as ListaIdRouteImport } from './routes/lista.$id'
+import { Route as PlanejadoresIndexRouteImport } from './routes/planejadores.index'
+import { Route as PlanejadoresSlugRouteImport } from './routes/planejadores.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
 import { Route as ApiPublicAmigoSecretoInterpretarRouteImport } from './routes/api/public/amigo-secreto-interpretar'
@@ -206,6 +208,16 @@ const GuiasSlugRoute = GuiasSlugRouteImport.update({
 const ListaIdRoute = ListaIdRouteImport.update({
   id: '/lista/$id',
   path: '/lista/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejadoresIndexRoute = PlanejadoresIndexRouteImport.update({
+  id: '/planejadores/',
+  path: '/planejadores/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejadoresSlugRoute = PlanejadoresSlugRouteImport.update({
+  id: '/planejadores/$slug',
+  path: '/planejadores/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
@@ -421,8 +433,10 @@ export interface FileRoutesByFullPath {
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/lista/$id': typeof ListaIdRoute
+  '/planejadores/$slug': typeof PlanejadoresSlugRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
+  '/planejadores/': typeof PlanejadoresIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
@@ -485,8 +499,10 @@ export interface FileRoutesByTo {
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/lista/$id': typeof ListaIdRoute
+  '/planejadores/$slug': typeof PlanejadoresSlugRoute
   '/categorias': typeof CategoriasIndexRoute
   '/guias': typeof GuiasIndexRoute
+  '/planejadores': typeof PlanejadoresIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
@@ -550,8 +566,10 @@ export interface FileRoutesById {
   '/categorias/$slug': typeof CategoriasSlugRoute
   '/guias/$slug': typeof GuiasSlugRoute
   '/lista/$id': typeof ListaIdRoute
+  '/planejadores/$slug': typeof PlanejadoresSlugRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
+  '/planejadores/': typeof PlanejadoresIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/ajudar-escolher': typeof ApiPublicAjudarEscolherRoute
   '/api/public/amigo-secreto-interpretar': typeof ApiPublicAmigoSecretoInterpretarRoute
@@ -616,8 +634,10 @@ export interface FileRouteTypes {
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/lista/$id'
+    | '/planejadores/$slug'
     | '/categorias/'
     | '/guias/'
+    | '/planejadores/'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/amigo-secreto-interpretar'
@@ -680,8 +700,10 @@ export interface FileRouteTypes {
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/lista/$id'
+    | '/planejadores/$slug'
     | '/categorias'
     | '/guias'
+    | '/planejadores'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/amigo-secreto-interpretar'
@@ -744,8 +766,10 @@ export interface FileRouteTypes {
     | '/categorias/$slug'
     | '/guias/$slug'
     | '/lista/$id'
+    | '/planejadores/$slug'
     | '/categorias/'
     | '/guias/'
+    | '/planejadores/'
     | '/.lovable/oauth/consent'
     | '/api/public/ajudar-escolher'
     | '/api/public/amigo-secreto-interpretar'
@@ -809,8 +833,10 @@ export interface RootRouteChildren {
   CategoriasSlugRoute: typeof CategoriasSlugRoute
   GuiasSlugRoute: typeof GuiasSlugRoute
   ListaIdRoute: typeof ListaIdRoute
+  PlanejadoresSlugRoute: typeof PlanejadoresSlugRoute
   CategoriasIndexRoute: typeof CategoriasIndexRoute
   GuiasIndexRoute: typeof GuiasIndexRoute
+  PlanejadoresIndexRoute: typeof PlanejadoresIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicAjudarEscolherRoute: typeof ApiPublicAjudarEscolherRoute
   ApiPublicAmigoSecretoInterpretarRoute: typeof ApiPublicAmigoSecretoInterpretarRoute
@@ -1037,6 +1063,20 @@ declare module '@tanstack/react-router' {
       path: '/lista/$id'
       fullPath: '/lista/$id'
       preLoaderRoute: typeof ListaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejadores/': {
+      id: '/planejadores/'
+      path: '/planejadores'
+      fullPath: '/planejadores/'
+      preLoaderRoute: typeof PlanejadoresIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejadores/$slug': {
+      id: '/planejadores/$slug'
+      path: '/planejadores/$slug'
+      fullPath: '/planejadores/$slug'
+      preLoaderRoute: typeof PlanejadoresSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -1314,8 +1354,10 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriasSlugRoute: CategoriasSlugRoute,
   GuiasSlugRoute: GuiasSlugRoute,
   ListaIdRoute: ListaIdRoute,
+  PlanejadoresSlugRoute: PlanejadoresSlugRoute,
   CategoriasIndexRoute: CategoriasIndexRoute,
   GuiasIndexRoute: GuiasIndexRoute,
+  PlanejadoresIndexRoute: PlanejadoresIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicAjudarEscolherRoute: ApiPublicAjudarEscolherRoute,
   ApiPublicAmigoSecretoInterpretarRoute: ApiPublicAmigoSecretoInterpretarRoute,
