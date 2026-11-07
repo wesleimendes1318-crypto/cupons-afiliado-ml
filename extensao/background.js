@@ -22,6 +22,7 @@ import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, a
 import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPendente } from './multiloja.js';
 import { garimparNoPlayer } from './garimpo.js';
 import { sincronizarListas } from './listas.js';
+import { gerarLinkAfiliadoShopee } from './shopee.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -5021,6 +5022,9 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         responder({ ok: true, dados: await atenderLink(msg.url, { tag: msg.tag, buscarAlternativa: msg.alternativas !== false }) });
       } else if (msg.tipo === 'linkDe') {
         responder({ ok: true, link: await gerarLinkAvulso(msg.url, msg.tag) });
+      } else if (msg.tipo === 'linkShopee') {
+        // Popup 1-Click (1.181.0): his Shopee affiliate link, never throws.
+        responder({ ok: true, dados: await gerarLinkAfiliadoShopee(msg.url) });
       } else if (msg.tipo === 'sincronizar') {
         const indice = await obterIndice(true);
         responder({ ok: true, res: await sincronizarComSite(indice.lista, true) });
