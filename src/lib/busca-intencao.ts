@@ -274,6 +274,9 @@ export function tipoUsadoComoDetalhe(nome: string, tipo: string, consulta: strin
   const pedido = normalizar(consulta);
   const qual = new RegExp(`\\b${raiz}(?:e?s)? (?:de|para|pra) ([a-z]{4,})`).exec(pedido)?.[1];
   if (!qual || NAO_E_TIPO.has(qual)) return false;
+  /* 07/11: "roupa de academia" is any gym piece (camiseta dry fit, bermuda de
+     treino); qualificadorFora checks the piece and the gym words instead. */
+  if (raiz === "roupa" && RE_USO_ACADEMIA.test(qual)) return false;
   const t = ` ${normalizar(nome)} `;
   const qualRaiz = qual.replace(/(es|s)$/, "");
   if (t.includes(` ${qual} `) || t.includes(` ${qualRaiz} `) || t.includes(` ${qualRaiz}s `))
@@ -298,6 +301,7 @@ const PECAS_DE_ROUPA = new Set(
 const RE_USO_ACADEMIA =
   /\b(academia|fitness|treinos?|dry ?fit|esportiv[oa]s?|esportes?|corridas?|crossfit|musculacao|gym|compressao|running|caminhada|suplex|segunda pele|workout|training)\b/;
 
+const ROUPA_DE_CASA = /\broupas? (de|para) (cama|banho|mesa)\b/;
 const singular = (w: string) => w.replace(/(oes|aes)$/, "ao").replace(/(es|s)$/, "");
 
 export function generoDoPedido(pedido: string): "m" | "f" | null {
@@ -317,7 +321,11 @@ export function qualificadorFora(titulo: string, pedido: string): boolean {
   const tipoPedido = singular(tipoDoProduto(pedido) ?? "");
   const ehRoupa = PECAS_DE_ROUPA.has(tipoPedido);
   /* "roupa de ..." is any piece of clothing, never a bag or a bottle. */
-  if (tipoPedido === "roupa" && !PECAS_DE_ROUPA.has(singular(tipoDoProduto(titulo) ?? "")))
+  if (
+    tipoPedido === "roupa" &&
+    !ROUPA_DE_CASA.test(pedido) &&
+    !PECAS_DE_ROUPA.has(singular(tipoDoProduto(titulo) ?? ""))
+  )
     return true;
   if (ehRoupa && RE_USO_ACADEMIA.test(pedido) && !RE_USO_ACADEMIA.test(titulo)) return true;
   return false;
@@ -327,7 +335,7 @@ export function qualificadorFora(titulo: string, pedido: string): boolean {
     real pieces of that gender and use ("camiseta academia masculina"...). */
 export function buscasDeRoupa(q: string): string[] {
   const t = normalizar(q);
-  if (singular(tipoDoProduto(t) ?? "") !== "roupa") return [];
+  if (singular(tipoDoProduto(t) ?? "") !== "roupa" || ROUPA_DE_CASA.test(t)) return [];
   const g = generoDoPedido(t);
   const resto = t
     .replace(/\broupas?\b/g, " ")

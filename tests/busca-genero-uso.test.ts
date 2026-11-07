@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { buscasDeRoupa, extrairIntencaoRapida, foraDaIntencao } from "@/lib/busca-intencao";
+import {
+  buscasDeRoupa,
+  extrairIntencaoRapida,
+  foraDaIntencao,
+  qualificadorFora,
+} from "@/lib/busca-intencao";
 
 /* Weslei, 07/11: real titles from the "roupa de academia masculino" screen. */
 const q = "roupa de academia masculino";
@@ -53,4 +58,24 @@ test("gênero pedido vale para qualquer produto", () => {
 test("uso pedido na roupa: academia exige peça de treino", () => {
   expect(fora("Camiseta Masculina Social Algodão", "camiseta academia masculina")).toBe(true);
   expect(fora("Camiseta Masculina Dry Fit", "camiseta academia masculina")).toBe(false);
+});
+
+test("roupa de academia: peça de treino sem a palavra academia fica (07/11, vinha vazio)", () => {
+  // the remote reading types it as "roupa", like the live site did
+  const lida = { ...i, tipoProduto: "roupa" };
+  for (const n of [
+    "Camiseta Masculina Dry Fit Básica",
+    "Kit 3 Camisetas Dry Fit Masculina",
+    "Bermuda Masculina Treino Tactel",
+    "Regata Masculina Fitness",
+    "Conjunto Masculino Treino Bermuda e Camiseta",
+  ])
+    expect(foraDaIntencao(n, lida, q)).toBe(false);
+});
+
+test("roupa de cama não é roupa de vestir", () => {
+  expect(qualificadorFora("jogo de lencol casal 4 pecas algodao", "roupa de cama casal")).toBe(
+    false,
+  );
+  expect(buscasDeRoupa("roupa de cama casal")).toEqual([]);
 });
