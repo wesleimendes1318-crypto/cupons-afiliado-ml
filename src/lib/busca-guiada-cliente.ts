@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { foraDoModelo } from "@/lib/busca-intencao";
+import { foraDaIntencao, foraDoModelo } from "@/lib/busca-intencao";
 import { lerConsentimento } from "@/lib/consentimento";
 import { pareceFalso } from "@/lib/falsificado";
 import { enviarEvento } from "@/lib/medicao";
@@ -42,6 +42,8 @@ export type Resposta = {
   modelo?: string | null;
   /* Modelo fora do catálogo oficial: busca nos anúncios pela extensão. */
   anuncios?: { id: number; chave: string } | null;
+  /** Apparel listings read by the extension, one per piece, with its lock words. */
+  anunciosPecas?: { id: number; chave: string; marca: string; modelo: string }[];
   /* "Carregar mais": de onde continuar (null = o catálogo acabou). */
   proximo?: number | null;
 };
@@ -96,37 +98,52 @@ export function anunciosValidos(
   });
 }
 
-/** Acompanha a busca nos anúncios (a cada 3 s, até 2 min). */
-export function useAnunciosPeloNome(resposta: Resposta | null): EstadoAnuncios | null {
-  const pedido = resposta?.anuncios ?? null;
+/** Acompanha a busca nos anúncios (a cada 3 s, até 2 min): a do modelo e
+    as das peças de roupa (07/11), juntas; q é o pedido digitado, que filtra
+    de novo cada anúncio (gênero, peça, uso). */
+export function useAnunciosPeloNome(resposta: Resposta | null, q?: string): EstadoAnuncios | null {
+  const pedidos = [
+    ...(resposta?.anuncios
+      ? [{ ...resposta.anuncios, marca: resposta.marca, modelo: resposta.modelo }]
+      : []),
+    ...(resposta?.anunciosPecas ?? []),
+  ];
+  const assinatura = pedidos.map((p) => `${p.id}:${p.chave}`).join(",");
   const [estado, setEstado] = useState<EstadoAnuncios | null>(null);
   useEffect(() => {
     setEstado(null);
-    if (!pedido) return;
+    if (!pedidos.length) return;
     let vivo = true;
     const fim = Date.now() + 120_000;
+    const prontos = new Map<number, Resultado[]>();
     setEstado({ estado: "buscando", itens: [] });
     const olhar = async () => {
       if (!vivo) return;
-      const { data } = await supabase
-        .rpc("ver_busca_anuncios" as never, { p_id: pedido.id, p_chave: pedido.chave } as never)
-        .then(
-          (r) => r,
-          () => ({ data: null }),
-        );
-      if (!vivo) return;
-      const d = data as { estado?: string; resultado?: unknown } | null;
-      if (d?.estado === "pronto") {
-        setEstado({
-          estado: "pronto",
-          itens: anunciosValidos(d.resultado, resposta?.marca, resposta?.modelo),
-        });
+      for (const p of pedidos) {
+        if (prontos.has(p.id)) continue;
+        const { data } = await supabase
+          .rpc("ver_busca_anuncios" as never, { p_id: p.id, p_chave: p.chave } as never)
+          .then(
+            (r) => r,
+            () => ({ data: null }),
+          );
+        if (!vivo) return;
+        const d = data as { estado?: string; resultado?: unknown } | null;
+        if (d?.estado === "pronto")
+          prontos.set(
+            p.id,
+            anunciosValidos(d.resultado, p.marca, p.modelo).filter(
+              (r) => !q || !resposta || !foraDaIntencao(r.nome, resposta, q),
+            ),
+          );
+        else if (d?.estado === "falhou") prontos.set(p.id, []);
+      }
+      const itens = [...prontos.values()].flat();
+      if (prontos.size === pedidos.length || Date.now() > fim) {
+        setEstado({ estado: itens.length || prontos.size ? "pronto" : "falhou", itens });
         return;
       }
-      if (d?.estado === "falhou" || Date.now() > fim) {
-        setEstado({ estado: "falhou", itens: [] });
-        return;
-      }
+      if (itens.length) setEstado({ estado: "buscando", itens });
       setTimeout(() => void olhar(), 3_000);
     };
     void olhar();
@@ -134,7 +151,7 @@ export function useAnunciosPeloNome(resposta: Resposta | null): EstadoAnuncios |
       vivo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pedido?.id, pedido?.chave]);
+  }, [assinatura]);
   return estado;
 }
 
@@ -235,7 +252,7 @@ export function chaveDaSessao(q: string, contexto: string, modo: string, no?: st
     .trim();
   let h = 5381;
   for (let i = 0; i < n.length; i++) h = ((h * 33) ^ n.charCodeAt(i)) >>> 0;
-  return `bg4_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
+  return `bg5_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
 }
 function lerDaSessao(chave: string): Resposta | null {
   try {

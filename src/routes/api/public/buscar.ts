@@ -10,7 +10,12 @@ import {
 } from "@/lib/busca-guiada";
 import { NOS, subarvore } from "@/content/taxonomia";
 import { classificar, departamentoDe } from "@/lib/classificar";
-import { extrairIntencaoRapida, MENSAGEM_SEM_OPCOES } from "@/lib/busca-intencao";
+import {
+  buscasDeRoupa,
+  extrairIntencaoRapida,
+  generoDoPedido,
+  MENSAGEM_SEM_OPCOES,
+} from "@/lib/busca-intencao";
 import {
   cabecalhosCors,
   excedeuLimite,
@@ -109,8 +114,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           : CONTEXTOS[contexto];
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
-        /* Key version bump drops answers cached before a filter change (v24, 07/11: gym pieces without the word "academia" are kept). */
-        const chave1 = `v24|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        /* Key version bump drops answers cached before a filter change (v25, 07/11: apparel listings per piece, gendered clothing must say the gender). */
+        const chave1 = `v25|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina
           ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
           : chave1;
@@ -257,6 +262,26 @@ export const Route = createFileRoute("/api/public/buscar")({
             const p = data as { ok?: boolean; id?: number; chave?: string } | null;
             if (p?.ok && p.id && p.chave) anuncios = { id: p.id, chave: p.chave };
           }
+          /* ROUPA NOS ANÚNCIOS (Weslei, 07/11: "roupa de academia masculino"
+             voltou com 1 item: quase nenhuma roupa do catálogo tem oferta).
+             Poucos achados: a extensão lê a busca de anúncios de cada peça,
+             travada na peça e no gênero digitado (os dois no título). */
+          const anunciosPecas: { id: number; chave: string; marca: string; modelo: string }[] = [];
+          const genero = generoDoPedido(entrada.q.toLowerCase());
+          if (genero && achado.resultados.length < 12 && !pagina && !modoProduto && !exato) {
+            const trava = genero === "m" ? "masculin" : "feminin";
+            for (const termo of buscasDeRoupa(entrada.q)) {
+              const peca = termo.split(" ")[0]!;
+              const { data } = await db.rpc("pedir_busca_anuncios", {
+                p_termo: termo,
+                p_marca: trava,
+                p_modelo: peca,
+              });
+              const p = data as { ok?: boolean; id?: number; chave?: string } | null;
+              if (p?.ok && p.id && p.chave)
+                anunciosPecas.push({ id: p.id, chave: p.chave, marca: trava, modelo: peca });
+            }
+          }
           const resposta: RespostaBusca = {
             /* Modelo citado e nada igual: diz isso em vez de mostrar outro. */
             resumo:
@@ -278,6 +303,7 @@ export const Route = createFileRoute("/api/public/buscar")({
             marca: marca ?? null,
             modelo: modelo ?? null,
             anuncios,
+            ...(anunciosPecas.length ? { anunciosPecas } : {}),
             variantes: achado.variantes ?? [],
             ...(achado.proximo !== undefined ? { proximo: achado.proximo } : {}),
           };

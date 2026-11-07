@@ -328,6 +328,15 @@ export function qualificadorFora(titulo: string, pedido: string): boolean {
   )
     return true;
   if (ehRoupa && RE_USO_ACADEMIA.test(pedido) && !RE_USO_ACADEMIA.test(titulo)) return true;
+  /* 07/11 ("Conjunto Roupa Fitness Paris" was a women's set): clothing for a
+     gender must say that gender (or unissex) in the title. */
+  if (
+    (ehRoupa || tipoPedido === "roupa") &&
+    g &&
+    !/\bunissex\b/.test(titulo) &&
+    !(g === "m" ? masc : fem)
+  )
+    return true;
   return false;
 }
 

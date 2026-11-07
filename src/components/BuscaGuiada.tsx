@@ -456,7 +456,7 @@ export function ResultadosDaBusca({
   const geracao = useRef(0);
 
   /* Modelo fora do catálogo oficial: anúncios lidos pela extensão (28/10). */
-  const anuncios = useAnunciosPeloNome(resposta);
+  const anuncios = useAnunciosPeloNome(resposta, q);
   const exato = [resposta?.marca, resposta?.modelo].filter(Boolean).join(" ");
   const remotos = useMemo(
     () =>
@@ -466,7 +466,7 @@ export function ResultadosDaBusca({
   const resumoTela =
     anuncios?.estado === "pronto" && anuncios.itens.length
       ? `Encontrei ${anuncios.itens.length === 1 ? "1 opção compatível" : `${anuncios.itens.length} opções compatíveis`} com o seu pedido, do mais barato ao mais caro.`
-      : anuncios && anuncios.estado !== "buscando"
+      : anuncios && anuncios.estado !== "buscando" && !remotos.length
         ? MENSAGEM_SEM_OPCOES
         : resposta?.resumo ||
           (resposta?.resultados.length ? "Opções encontradas para o que você pediu:" : null);
