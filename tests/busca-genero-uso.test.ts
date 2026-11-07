@@ -79,3 +79,32 @@ test("roupa de cama não é roupa de vestir", () => {
   );
   expect(buscasDeRoupa("roupa de cama casal")).toEqual([]);
 });
+
+test("roupa com gênero pedido precisa dizer o gênero no título (07/11, conjunto Paris)", () => {
+  expect(foraDaIntencao("Conjunto Roupa Fitness Paris SOMAMI", i, q)).toBe(true);
+  expect(fora("Camiseta Dry Fit Unissex Treino", "camiseta academia masculina")).toBe(false);
+  // fora de roupa a regra não vale: perfume sem gênero no título fica
+  expect(fora("Perfume Malbec 100ml", "perfume masculino")).toBe(false);
+});
+
+test("anúncios das peças: trava no gênero e na peça, depois o filtro do pedido", async () => {
+  const { anunciosValidos } = await import("@/lib/busca-guiada-cliente");
+  const item = (n: number, titulo: string) => ({
+    item: `MLB${1000000 + n}`,
+    url: `https://produto.mercadolivre.com.br/MLB-${1000000 + n}-x`,
+    titulo,
+    preco: 49.9,
+  });
+  const resultado = {
+    itens: [
+      item(1, "Camiseta Masculina Dry Fit Academia Treino"),
+      item(2, "Camiseta Feminina Dry Fit Academia"),
+      item(3, "Bermuda Masculina Tactel"),
+      item(4, "Kit 3 Camisetas Masculinas Dry Fit"),
+    ],
+  };
+  const r = anunciosValidos(resultado, "masculin", "camiseta").filter(
+    (x) => !foraDaIntencao(x.nome, i, q),
+  );
+  expect(r.map((x) => x.item)).toEqual(["MLB1000001", "MLB1000004"]);
+});

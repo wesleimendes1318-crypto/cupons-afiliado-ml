@@ -84,6 +84,8 @@ export type RespostaBusca = {
   marca?: string | null;
   modelo?: string | null;
   anuncios?: { id: number; chave: string } | null;
+  /** Apparel listings read by the extension, one per piece, with its lock words. */
+  anunciosPecas?: { id: number; chave: string; marca: string; modelo: string }[];
   /** Buscas com as marcas achadas na 1ª página ("Carregar mais"). */
   variantes?: string[];
   /** Próxima leitura do "Carregar mais" (null = o catálogo acabou). */
