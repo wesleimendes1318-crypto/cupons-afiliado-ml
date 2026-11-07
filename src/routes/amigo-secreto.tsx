@@ -571,7 +571,16 @@ function PaginaAmigoSecreto() {
           </p>
         )}
         {ativo && estado.faixaEscolhida && faixa.max != null && (
-          <KitPresente key={`kit-${ativo.id}`} nome={ativo.nome} vitrines={ativo.vitrines} teto={faixa.max} />
+          <KitPresente
+            key={`kit-${ativo.id}`}
+            nome={ativo.nome}
+            vitrines={ativo.vitrines}
+            teto={faixa.max}
+            preparar={(v) => {
+              const ctx = aplicarPerfil(contextoDaVitrine(v, textoParaLeitura(ativo.desejosTexto ?? "", ativo.perfil), ativo.nome), ativo.perfil);
+              return { termos: ampliarTermos(v.termosBusca, ctx), aprovar: (x) => aprovadoNaVitrine(x.nome, ctx) };
+            }}
+          />
         )}
         {ativo &&
           estado.faixaEscolhida &&
