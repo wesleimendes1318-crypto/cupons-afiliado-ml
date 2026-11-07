@@ -169,6 +169,29 @@ const NEGATIVOS_UNIVERSAIS = ["miniatura", "chaveiro", "maquete", "de brinquedo"
 const BUSCA_INFANTIL =
   /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|colecao|colecionavel)\b/;
 
+/* Weslei, 07/11 ("mesa de jantar de luxo" trouxe luminária de mesa,
+   organizador de cabos de mesa, mousepad de mesa). The type word in the title
+   was only a detail of another product. When the request names a kind
+   ("mesa DE JANTAR", "cadeira DE ESCRITORIO") and the title is another
+   product (its first word is not the type), the kind must be in the title. */
+const NAO_E_TIPO = new Set(["luxo", "qualidade", "verdade", "marca", "presente", "boa", "bom"]);
+export function tipoUsadoComoDetalhe(nome: string, tipo: string, consulta: string): boolean {
+  const raiz =
+    normalizar(tipo)
+      .split(" ")[0]
+      ?.replace(/(es|s)$/, "") ?? "";
+  if (raiz.length < 3) return false;
+  const pedido = normalizar(consulta);
+  const qual = new RegExp(`\\b${raiz}(?:e?s)? (?:de|para|pra) ([a-z]{4,})`).exec(pedido)?.[1];
+  if (!qual || NAO_E_TIPO.has(qual)) return false;
+  const t = ` ${normalizar(nome)} `;
+  const qualRaiz = qual.replace(/(es|s)$/, "");
+  if (t.includes(` ${qual} `) || t.includes(` ${qualRaiz} `) || t.includes(` ${qualRaiz}s `))
+    return false;
+  const cabeca = (tipoDoProduto(nome) ?? "").replace(/(es|s)$/, "");
+  return cabeca !== raiz;
+}
+
 /** O título mostra outro produto? (termo negativo do modelo, do tipo ou
     universal, com plural simples; o que a pessoa digitou nunca exclui).
     Sem tipo informado, vale o tipo da própria consulta. */
@@ -182,10 +205,13 @@ export function foraDaIntencao(
   const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
   // Weslei, 02/11: "lava e seca" trazia lavadora que só lava. Pedido com as
   // duas funções exige a secagem no nome.
-  if (/\blava(dora)?s? e seca(dora)?s?\b|\blava ?seca\b/.test(pedido) &&
-      !/\bseca(dora|gem)?s?\b|\blava ?seca\b|\bwasher ?dryer\b/.test(normalizar(nome)))
+  if (
+    /\blava(dora)?s? e seca(dora)?s?\b|\blava ?seca\b/.test(pedido) &&
+    !/\bseca(dora|gem)?s?\b|\blava ?seca\b|\bwasher ?dryer\b/.test(normalizar(nome))
+  )
     return true;
   const tipo = intencao.tipoProduto ?? tipoDoProduto(consulta) ?? "";
+  if (tipoUsadoComoDetalhe(nome, tipo, consulta)) return true;
   const t = ` ${normalizar(nome)} `;
   const termos = [
     ...(intencao.termosNegativos ?? []),
@@ -193,7 +219,8 @@ export function foraDaIntencao(
     ...regrasDoPedido(consulta).flatMap((r) => r.negativos),
     ...(BUSCA_INFANTIL.test(pedido) ? [] : NEGATIVOS_UNIVERSAIS),
     /* Weslei, 05/11: adult clothing ("feminino", "masculino") never shows kids' pieces. */
-    ...(!BUSCA_INFANTIL.test(pedido) && /\b(feminin[oa]s?|masculin[oa]s?|adult[oa]s?|mulher|homem)\b/.test(pedido)
+    ...(!BUSCA_INFANTIL.test(pedido) &&
+    /\b(feminin[oa]s?|masculin[oa]s?|adult[oa]s?|mulher|homem)\b/.test(pedido)
       ? ["menina", "menino", "infantil", "juvenil", "bebe", "kids"]
       : []),
   ];
