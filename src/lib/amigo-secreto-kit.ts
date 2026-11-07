@@ -45,7 +45,7 @@ function aleatorio(seed: number) {
 export function montarKit(
   candidatos: Candidato[],
   limite: number,
-  opcoes: { estilo: EstiloKit; seed: number; misturar: boolean },
+  opcoes: { estilo: EstiloKit; seed: number; misturar: boolean; minimo?: number | null },
 ): Kit | null {
   const rnd = aleatorio(opcoes.seed);
   const luxo = opcoes.estilo === "luxo";
@@ -67,18 +67,24 @@ export function montarKit(
   let total = ancora.custo;
   const grupos = new Set([ancora.grupo]);
   const tipos = new Set([arquetipoDoTitulo(ancora.r.nome)]);
-  for (const c of lista) {
-    if (escolhidos.length >= maxItens) break;
-    if (escolhidos.includes(c) || total + c.custo > limite) continue;
-    if (opcoes.misturar && grupos.has(c.grupo)) continue;
-    const tipo = arquetipoDoTitulo(c.r.nome);
-    if (tipos.has(tipo)) continue;
-    escolhidos.push(c);
-    total += c.custo;
-    grupos.add(c.grupo);
-    tipos.add(tipo);
+  /* Mixing: first pass takes one item per showcase, the second fills the
+     kit from any showcase (still never two of the same kind). */
+  for (const umPorGrupo of opcoes.misturar ? [true, false] : [false]) {
+    for (const c of lista) {
+      if (escolhidos.length >= maxItens) break;
+      if (escolhidos.includes(c) || total + c.custo > limite) continue;
+      if (umPorGrupo && grupos.has(c.grupo)) continue;
+      const tipo = arquetipoDoTitulo(c.r.nome);
+      if (tipos.has(tipo)) continue;
+      escolhidos.push(c);
+      total += c.custo;
+      grupos.add(c.grupo);
+      tipos.add(tipo);
+    }
   }
   if (!luxo && escolhidos.length < 2) return null;
+  /* The kit follows the range the person chose: below its minimum is no kit. */
+  if (opcoes.minimo && total < opcoes.minimo) return null;
   return { itens: escolhidos.map((c) => c.r), total: Math.round(total * 100) / 100 };
 }
 
@@ -87,7 +93,7 @@ export function montarKit(
 export function kitsDoPresente(
   candidatos: Candidato[],
   tetoValor: number,
-  opcoes: { estilo: EstiloKit; seed: number; misturar: boolean },
+  opcoes: { estilo: EstiloKit; seed: number; misturar: boolean; minimo?: number | null },
 ): { dentro: Kit | null; melhor: Kit | null } {
   const dentro = montarKit(candidatos, tetoValor, opcoes);
   const melhor = montarKit(candidatos, tetoValor * (1 + FOLGA_MELHOR), { ...opcoes, seed: opcoes.seed + 7919 });

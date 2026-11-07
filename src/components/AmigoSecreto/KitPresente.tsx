@@ -27,11 +27,13 @@ export function KitPresente({
   nome,
   vitrines,
   teto,
+  minimo,
   preparar,
 }: {
   nome: string;
   vitrines: VitrineCategoriaAmigo[];
   teto: number;
+  minimo: number | null;
   preparar: PrepararKit;
 }) {
   const [origem, setOrigem] = useState<string>("todas");
@@ -45,7 +47,7 @@ export function KitPresente({
   const [feitas, setFeitas] = useState<string[]>([]);
   const comProdutos = vitrines.filter((v) => v.produtos.length > 0);
   const maxPeca = Math.round(teto * (1 + FOLGA_MELHOR) * PARTE_MAX_ITEM);
-  const chave = `${vitrines.map((v) => v.id).join("|")}@${teto}`;
+  const chave = `${vitrines.map((v) => v.id).join("|")}@${minimo ?? 0}-${teto}`;
   /* Starts after the first showcase batch, so the reads do not pile up. */
   const livre = vitrines.length > 0 && !vitrines.some((v) => v.carregando) && vitrines.some((v) => v.produtos.length > 0);
   const iniciada = useRef<string | null>(null);
@@ -66,7 +68,7 @@ export function KitPresente({
       for (const v of vitrines.slice(0, MAX_VITRINES_KIT)) {
         if (cancelado) return;
         const { termos, aprovar } = preparar(v);
-        const lidos = termos.slice(0, 3);
+        const lidos = termos.slice(0, 6);
         if (!lidos.length) continue;
         setBuscando(lidos);
         const vistos = new Set(v.produtos.flatMap(idsDoResultado));
@@ -74,8 +76,8 @@ export function KitPresente({
           passos: passosIniciais(lidos),
           faixa: { min: Math.max(5, Math.round(teto * 0.1)), max: maxPeca },
           vistos,
-          alvo: 8,
-          maxChamadas: 3,
+          alvo: 10,
+          maxChamadas: 6,
           aprovar,
           cancelado: () => cancelado,
         });
@@ -95,9 +97,9 @@ export function KitPresente({
     const candidatos: Candidato[] = fonte.flatMap((v) =>
       [...(pecas[v.id] ?? []), ...v.produtos].map((r) => ({ r, grupo: v.id })),
     );
-    return kitsDoPresente(candidatos, teto, { estilo, seed, misturar: origem === "todas" && fonte.length > 1 });
+    return kitsDoPresente(candidatos, teto, { estilo, seed, minimo, misturar: origem === "todas" && fonte.length > 1 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vitrines, pecas, origem, estilo, seed, teto]);
+  }, [vitrines, pecas, origem, estilo, seed, teto, minimo]);
 
   if (!comProdutos.length && !buscando.length && !Object.values(pecas).some((p) => p.length)) return null;
 
@@ -152,7 +154,7 @@ export function KitPresente({
         </button>
       </div>
 
-      <BlocoKit titulo={`Dentro de ${brl(teto)}`} kit={dentro} vazio={
+      <BlocoKit titulo={minimo ? `Entre ${brl(minimo)} e ${brl(teto)}` : `Até ${brl(teto)}`} kit={dentro} vazio={
           buscando.length
             ? "Procurando peças mais em conta para montar o kit…"
             : estilo === "custo"
