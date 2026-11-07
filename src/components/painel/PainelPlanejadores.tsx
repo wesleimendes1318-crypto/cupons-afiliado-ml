@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { BarraProgresso } from "@/components/painel/animacao";
+import { Anel, BarraProgresso } from "@/components/painel/animacao";
 import {
   chaveDoPlano,
   lerEstado,
@@ -70,19 +70,18 @@ export function PainelPlanejadores({ planos }: { planos: PlanoAtivo[] | null }) 
               className="group block rounded-3xl border border-border bg-card p-4 transition hover:-translate-y-0.5 active:scale-[0.99] motion-reduce:transform-none"
             >
               <span className="flex items-center gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#f5f5f7] text-2xl dark:bg-white/5" aria-hidden="true">
-                  {p.emoji}
-                </span>
+                <Anel pct={pct} cor={pct >= 100 ? "#34c759" : "#0071e3"}>
+                  <span className="painel-pop text-xl" style={{ animationDelay: `${200 + k * 60}ms` }} aria-hidden="true">
+                    {p.emoji}
+                  </span>
+                </Anel>
                 <span className="min-w-0 flex-1">
                   <span className="block font-bold text-foreground">{p.titulo}</span>
-                  <span className="block text-xs">
-                    {r.resolvidos} de {r.total} itens resolvidos
+                  <span className="block text-xs tabular-nums">
+                    {Math.round(pct)}% · {r.resolvidos} de {r.total} itens resolvidos
                   </span>
                 </span>
                 <ChevronRight className="size-5 shrink-0" aria-hidden="true" />
-              </span>
-              <span className="mt-3 block">
-                <BarraProgresso pct={pct} rotulo={`${p.titulo}: itens resolvidos`} />
               </span>
               <span className="mt-2 flex flex-wrap justify-between gap-x-3 text-xs tabular-nums">
                 <span>

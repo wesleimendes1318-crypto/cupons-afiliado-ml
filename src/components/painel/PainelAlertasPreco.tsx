@@ -462,7 +462,7 @@ export function PainelAlertasPreco({ dados }: { dados?: DadosMeusPrecos } = {}) 
   return (
     <>
       <AnimacaoAcompanhar compacto className="mb-6" />
-      <AvisoConta />
+      {!dados && <AvisoConta />}
       {itens == null ? (
         <p className="flex items-center gap-2">
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> Carregando…

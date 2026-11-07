@@ -30,7 +30,7 @@ const dia = (iso: string) =>
   new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 const temLink = (i: ItemDesejo) => ehLinkDeCompra(i.linkAfiliado, i.loja);
 
-export function PainelListasDesejos() {
+export function PainelListasDesejos({ noPainel = false }: { noPainel?: boolean } = {}) {
   const lista = useListaDesejos();
   const usuario = useConta();
   const itens = lista.itens;
@@ -100,7 +100,7 @@ export function PainelListasDesejos() {
 
   return (
     <>
-      {usuario ? (
+      {noPainel ? null : usuario ? (
         <p className="mb-5 rounded-2xl bg-card px-4 py-3 text-sm text-secondary-ink">
           Salva na sua conta: <strong className="text-foreground">{usuario.email}</strong>
         </p>

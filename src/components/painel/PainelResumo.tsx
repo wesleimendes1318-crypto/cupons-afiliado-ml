@@ -5,7 +5,7 @@
 import { Bell, Gift, Heart, ListChecks, TrendingDown } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { BarraProgresso, useContagem } from "@/components/painel/animacao";
+import { BarraProgresso, MiniGrafico, useContagem } from "@/components/painel/animacao";
 import type { Item } from "@/components/painel/PainelAlertasPreco";
 
 const brl = (n: number) =>
@@ -48,12 +48,13 @@ export function PainelResumo({ precos, desejos, planos, amigos, irPara }: Resumo
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <Kpi i={0} icone={<Bell className="size-4" />} valor={lista.length} rotulo="Preços acompanhados" onClick={() => irPara("precos")} />
-        <Kpi i={1} icone={<TrendingDown className="size-4" />} valor={hoje} rotulo="Caíram hoje" cor="#248a3d" onClick={() => irPara("precos")} />
+        <Kpi i={1} icone={<TrendingDown className={`size-4 ${hoje ? "painel-queda" : ""}`} style={{ animationDelay: "700ms" }} />} valor={hoje} rotulo="Caíram hoje" cor="#248a3d" onClick={() => irPara("precos")} />
         <Kpi i={2} icone={<Heart className="size-4" />} valor={desejos} rotulo="Na lista de desejos" onClick={() => irPara("desejos")} />
         <Kpi i={3} icone={<ListChecks className="size-4" />} valor={planos + amigos} rotulo="Listas em andamento" onClick={() => irPara(planos ? "planejadores" : "amigo")} />
       </div>
 
-      <div className="animate-cartao rounded-3xl bg-[#f5f5f7] p-4 dark:bg-white/5" style={{ animationDelay: "240ms" }}>
+      <div className="animate-cartao relative overflow-hidden rounded-3xl bg-[#f5f5f7] p-4 dark:bg-white/5" style={{ animationDelay: "240ms" }}>
+        <span className="painel-brilho pointer-events-none absolute inset-0" aria-hidden="true" />
         <p className="text-xs">Queda somada desde que você começou a acompanhar</p>
         <p className="mt-0.5 text-3xl font-extrabold tracking-tight text-[#248a3d] tabular-nums">
           <Dinheiro valor={somada} />
@@ -81,6 +82,13 @@ export function PainelResumo({ precos, desejos, planos, amigos, irPara }: Resumo
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="line-clamp-1 text-sm font-semibold text-foreground">{i.titulo ?? "Produto acompanhado"}</span>
+                    <span className="mt-1 block">
+                      <MiniGrafico
+                        pontos={[...(i.historico ?? [])].sort((a, b) => a.em.localeCompare(b.em)).map((h) => h.p)}
+                        atraso={400 + k * 120}
+                        className="h-8 w-full"
+                      />
+                    </span>
                     <span className="mt-1 block">
                       <BarraProgresso pct={(queda(i) / maior) * 100} cor="#34c759" rotulo={`Queda de ${brl(queda(i))}`} />
                     </span>
@@ -145,7 +153,7 @@ function Kpi({
       className="animate-cartao flex min-h-24 flex-col justify-between rounded-3xl border border-border bg-card p-3.5 text-left transition hover:-translate-y-0.5 active:scale-[0.98] motion-reduce:transform-none"
       style={{ animationDelay: `${i * 60}ms` }}
     >
-      <span className="grid size-8 place-items-center rounded-full" style={{ color: cor, backgroundColor: `${cor}14` }} aria-hidden>
+      <span className="painel-pop grid size-8 place-items-center rounded-full" style={{ color: cor, backgroundColor: `${cor}14`, animationDelay: `${150 + i * 80}ms` }} aria-hidden>
         {icone}
       </span>
       <span>

@@ -57,7 +57,11 @@ export function PainelAmigoSecreto({ estado }: { estado: EstadoAmigoSecreto | nu
               <span
                 className={`grid size-9 shrink-0 place-items-center rounded-full ${a.comprado ? "bg-[#34c759] text-white" : "bg-[#f5f5f7] text-[#0071e3] dark:bg-white/10"}`}
               >
-                {a.comprado ? <Check className="size-4" aria-hidden /> : <Gift className="size-4" aria-hidden />}
+                {a.comprado ? (
+                  <Check className="painel-pop size-4" style={{ animationDelay: `${250 + k * 60}ms` }} aria-hidden />
+                ) : (
+                  <Gift className="painel-pop size-4" style={{ animationDelay: `${250 + k * 60}ms` }} aria-hidden />
+                )}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-foreground">{a.nome || "Sem nome"}</span>
