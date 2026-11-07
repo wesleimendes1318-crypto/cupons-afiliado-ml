@@ -106,6 +106,39 @@ export function VerDetalhesVitrine({
   coracao?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
+  const botao = useRef<HTMLButtonElement>(null);
+  const abrirRef = useRef<() => void>(() => {});
+  /* Tapping anywhere on the card opens the details (Weslei, 07/11: "Sempre
+     deve abrir detalhes em todos os anúncios e vitrines"). Buttons and links
+     inside the card keep their own action. */
+  useEffect(() => {
+    const cartao = botao.current?.parentElement?.closest<HTMLElement>("article, li, [data-cartao]");
+    if (!cartao || cartao.dataset["detalhes"]) return;
+    /* Several products in one box (e.g. a list): only the photo opens. */
+    const outros = cartao.querySelectorAll<HTMLElement>("[data-detalhes-chave]");
+    if ([...outros].some((b) => b.dataset["detalhesChave"] !== chave)) return;
+    cartao.dataset["detalhes"] = chave;
+    cartao.classList.add("cursor-pointer");
+    const aoTocar = (e: MouseEvent) => {
+      const alvo = e.target as HTMLElement | null;
+      if (!alvo || e.defaultPrevented) return;
+      const ativo = alvo.closest(
+        "a, button, input, select, textarea, label, summary, dialog, [role=button], [role=dialog]",
+      );
+      /* A link wrapping the whole card (it holds the photo) counts as the card. */
+      const envolve = ativo?.tagName === "A" && botao.current && ativo.contains(botao.current);
+      if (ativo && !envolve && ativo !== cartao && cartao.contains(ativo)) return;
+      if (window.getSelection()?.toString()) return;
+      e.preventDefault();
+      abrirRef.current();
+    };
+    cartao.addEventListener("click", aoTocar);
+    return () => {
+      cartao.removeEventListener("click", aoTocar);
+      cartao.classList.remove("cursor-pointer");
+      delete cartao.dataset["detalhes"];
+    };
+  }, [chave]);
   /* Abrir fotos e detalhes é interesse aprofundado (+4 no perfil local). */
   const abrir = () => {
     setAberto(true);
@@ -120,6 +153,7 @@ export function VerDetalhesVitrine({
       },
     });
   };
+  abrirRef.current = abrir;
   /* Anúncio do Mercado Livre (detalhes e galeria oficial); sem ele, o
      carrossel abre só com as fotos que já temos. */
   const mlb = /^MLB\d{5,}$/.test(chave)
@@ -128,11 +162,12 @@ export function VerDetalhesVitrine({
   const extras = (fotos ?? []).filter((u): u is string => !!u);
   const canto =
     coracao && gatilho ? (
-      <div className="absolute right-2 top-2 z-10">
+      <div className="absolute right-2 top-2 z-10 flex flex-col gap-1.5">
         <CoracaoDesejo
           compacto
           produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }}
         />
+        <BotaoWhatsApp produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }} />
       </div>
     ) : null;
   if (!mlb && !imagem && !extras.length)
@@ -147,6 +182,8 @@ export function VerDetalhesVitrine({
       {canto}
       {gatilho ? (
         <button
+          ref={botao}
+          data-detalhes-chave={chave}
           type="button"
           onClick={(e) => {
             /* A foto nunca leva para fora (link do cartão pai). */
@@ -161,6 +198,8 @@ export function VerDetalhesVitrine({
         </button>
       ) : (
         <button
+          ref={botao}
+          data-detalhes-chave={chave}
           type="button"
           onClick={abrir}
           className={`inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-[#0058b0] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] ${className}`}

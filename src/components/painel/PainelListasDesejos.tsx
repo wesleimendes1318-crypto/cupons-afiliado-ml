@@ -7,7 +7,8 @@ import { Link } from "@tanstack/react-router";
 import { Check, Copy, Heart, LoaderCircle, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { CompararPreco, ComprarComSeguranca, SinoAcompanhar } from "@/components/BotoesCartao";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CompartilharListaPublica } from "@/components/CompartilharListaPublica";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
@@ -23,7 +24,6 @@ import {
   useListaDesejos,
   type ItemDesejo,
 } from "@/lib/lista-desejos";
-
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const dia = (iso: string) =>
@@ -282,25 +282,29 @@ function CartaoDesejo({
           aoTocar={() => mudarLista((l) => remover(l, [i.id]))}
         />
       </div>
-      <button
-        type="button"
-        onClick={aoMarcar}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="relative block aspect-[4/3] w-full bg-white min-[360px]:aspect-square sm:aspect-[4/3]"
-      >
-        {i.foto ? (
-          <img
-            src={i.foto}
-            alt=""
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-3"
-          />
-        ) : (
-          <Heart className="absolute inset-0 m-auto size-6 text-[#86868b]" />
-        )}
-      </button>
+      <VerDetalhesVitrine
+        chave={i.id}
+        titulo={i.titulo}
+        imagem={i.foto}
+        preco={i.preco}
+        link={i.linkAfiliado}
+        urlProduto={i.url}
+        vistoEm={i.adicionadoEm}
+        className="relative aspect-[4/3] w-full bg-white min-[360px]:aspect-square sm:aspect-[4/3]"
+        gatilho={
+          i.foto ? (
+            <img
+              src={i.foto}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 h-full w-full object-contain p-3"
+            />
+          ) : (
+            <Heart className="absolute inset-0 m-auto size-6 text-[#86868b]" />
+          )
+        }
+      />
       <div className="flex flex-1 flex-col border-t border-border/60 p-2.5 sm:p-3">
         <p className="min-h-5">
           <SeloMarketplace links={[i.linkAfiliado ?? i.url]} />
@@ -323,7 +327,13 @@ function CartaoDesejo({
           ) : i.url ? (
             <VerNaLoja url={i.url} grande />
           ) : null}
-          {i.loja === "mercadolivre" && i.url && <CompararPreco url={i.url} />}
+          {i.loja === "mercadolivre" && i.url && (
+            <SinoAcompanhar url={i.url} titulo={i.titulo}>
+              <div className="flex min-w-0 flex-1">
+                <CompararPreco url={i.url} />
+              </div>
+            </SinoAcompanhar>
+          )}
           {buscando && (
             <p className="flex items-center justify-center gap-1 text-[10px] text-secondary-ink">
               <LoaderCircle className="size-3 animate-spin" aria-hidden="true" /> Preparando o link
