@@ -10,6 +10,8 @@
    imagem nao da para garantir (caso real: capinha com borda preta x capinha
    toda transparente). */
 
+import { travaDeComparacao } from "@/lib/modelo-titulo";
+
 export type Anuncio = {
   titulo?: string | null | undefined;
   categoria?: string | null | undefined;
@@ -650,6 +652,20 @@ export async function conferirMesmoProduto(
       a.igual = false;
       a.parecido = true;
       a.motivo = MUDA_PECA;
+    }
+  }
+  /* Comparison shield by title (07/11): rival brand or accessory leaves;
+     same line with another number/tier is only similar. */
+  for (const a of avaliacao) {
+    const t = travaDeComparacao(original.titulo, lista[a.indice]?.titulo);
+    if (!t) continue;
+    a.igual = false;
+    if ("descartar" in t) {
+      a.parecido = false;
+      a.motivo = t.descartar;
+    } else {
+      a.parecido = true;
+      if (!/\bmodelo\b/i.test(a.motivo)) a.motivo = [t.muda, a.motivo].filter(Boolean).join("; ");
     }
   }
   const iguais = avaliacao
