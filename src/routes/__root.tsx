@@ -24,6 +24,7 @@ import { ADSENSE_ATIVO, ADSENSE_CLIENTE } from "../components/Anuncio";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ehLinkDeCompra } from "../lib/afiliado";
 import { ouvirComprasDoVisitante } from "../lib/perfil-visitante";
+import { instalarArrastarTrilhos } from "../lib/arrastar-trilho";
 
 function NotFoundComponent() {
   return (
@@ -188,6 +189,7 @@ function RootComponent() {
   const comCabecalho = !/^\/(login|\.lovable|admin)/.test(caminho);
   /* Perfil local do visitante (27/10): clique de compra num cartão. */
   useEffect(() => ouvirComprasDoVisitante((href) => ehLinkDeCompra(href)), []);
+  useEffect(instalarArrastarTrilhos, []);
 
   return (
     <QueryClientProvider client={queryClient}>

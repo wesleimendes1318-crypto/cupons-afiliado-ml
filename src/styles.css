@@ -1564,3 +1564,39 @@ details.abertura-nativa[open] > summary .seta-abertura {
     animation: none;
   }
 }
+
+/* Scrollbars (Weslei, 07/11: "melhore o design de todas as barras de
+   rolagem"): thin, rounded, low contrast; inner scrollers show the thumb only
+   while hovered or focused (idle = invisible). The page scrollbar stays
+   visible. In @layer base so utilities like [scrollbar-width:none] still win. */
+:root {
+  /* Neutral grey reads on light pages, dark mode and dark campaign rails. */
+  --barra-rolagem: rgb(128 128 128 / 0.45);
+}
+@layer base {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--barra-rolagem) transparent;
+  }
+  body * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  body *:hover,
+  body *:focus-within {
+    scrollbar-color: var(--barra-rolagem) transparent;
+  }
+  /* No ::-webkit-scrollbar rules: Chrome/Edge use the standard properties
+     above, and in Safari they would replace the auto-hiding overlay bars
+     with always-visible ones. */
+}
+/* Mouse drag on horizontal rails (src/lib/arrastar-trilho.ts). */
+html.arrastando-trilho,
+html.arrastando-trilho * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+html.arrastando-trilho [data-arrastando] {
+  scroll-snap-type: none !important;
+  scroll-behavior: auto !important;
+}

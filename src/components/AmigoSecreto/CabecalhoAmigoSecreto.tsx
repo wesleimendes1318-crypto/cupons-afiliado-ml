@@ -46,7 +46,8 @@ export function CabecalhoAmigoSecreto({
       <div className="mx-auto flex max-w-[1200px] flex-col gap-2 px-4 py-2.5 sm:px-6">
         <div className="flex items-center gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <span className="shrink-0 text-xs font-semibold text-secondary-ink">Valor do presente</span>
+          {/* Below 400 px the label pushed the chip under "Colar lista" (sweep 07/11). */}
+          <span className="hidden shrink-0 text-xs font-semibold text-secondary-ink min-[400px]:inline">Valor do presente</span>
           <button
             type="button"
             aria-expanded={personalizar}
