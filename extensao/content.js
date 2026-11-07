@@ -59,25 +59,82 @@
     return null;
   }
 
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const SITE = 'https://melhorescolha.io/?link=';
+
+  /* Floating glass island (1.181.0). Only facts already known here: the
+     seller's coupon from the local index. No price verdict on its own: that
+     would read other stores on every product page opened and risk his ML
+     account; "Comparar ofertas" sends the product to the site instead. */
   async function marcarProduto() {
     if (document.getElementById('caml-selo')) return;
+    const { seloAtivo } = await chrome.storage.local.get('seloAtivo').catch(() => ({}));
+    if (seloAtivo === false) return;
     const nome = nomeVendedor();
     if (!nome) return;
     const r = await pedir({ tipo: 'vendedor', nome });
     if (!r.ok) return;
 
+    const c = r.cupom;
     const selo = document.createElement('div');
     selo.id = 'caml-selo';
-    selo.className = 'caml-selo ' + (r.cupom ? 'caml-sim' : 'caml-nao');
-    selo.innerHTML = r.cupom
-      ? `<b>CUPOM DISPONIVEL</b> ${r.cupom.titulo}
-         <span>${r.cupom.vendedor} &middot; orcamento ${brl(r.cupom.orcamento)} &middot; vence ${dataBR(r.cupom.vence)}</span>
-         <a href="https://www.mercadolivre.com.br/afiliados/coupons#hub" target="_blank">gerar codigo</a>`
-      : `<b>SEM CUPOM DE AFILIADO</b>
-         <span>${nome} nao tem campanha ativa. A comissao do link continua valendo.</span>`;
+    selo.className = 'me-flutuante';
+    selo.setAttribute('role', 'complementary');
+    selo.setAttribute('aria-label', 'Melhor Escolha');
+    selo.innerHTML = `
+      <div class="me-topo">
+        <button class="me-marca" type="button" data-a="abrir"><span class="me-ponto ${c ? 'ok' : ''}"></span>Melhor Escolha</button>
+        <button class="me-icone" type="button" data-a="min" aria-label="Minimizar" title="Minimizar">–</button>
+      </div>
+      <div class="me-corpo">
+        ${c
+          ? `<span class="me-badge verde">Cupom de ${esc(c.titulo)} nesta loja</span>
+             <div class="me-sub">${esc(c.vendedor)} · orçamento ${brl(c.orcamento)} · vence ${dataBR(c.vence)}
+               · <a href="https://www.mercadolivre.com.br/afiliados/coupons#hub" target="_blank" rel="noopener">gerar código</a></div>`
+          : `<span class="me-badge neutro">Sem cupom de afiliado nesta loja</span>
+             <div class="me-sub">${esc(nome)} não tem campanha ativa. A comissão do link continua valendo.</div>`}
+        <div class="me-acoes">
+          <button class="me-bt pri" type="button" data-a="comparar">Comparar ofertas</button>
+          <button class="me-bt sec" type="button" data-a="acompanhar">Acompanhar preço</button>
+          <button class="me-bt sec me-copiar" type="button" data-a="copiar" aria-label="Copiar link de afiliado (meli.la)" title="Copiar link de afiliado (meli.la)">⧉</button>
+        </div>
+        <input class="me-link" type="text" readonly hidden aria-label="Seu link de afiliado">
+        <div class="me-sub me-aviso" hidden></div>
+      </div>`;
     document.body.appendChild(selo);
-    setTimeout(() => selo.classList.add('caml-min'), 9000);
-    selo.addEventListener('click', () => selo.classList.toggle('caml-min'));
+
+    const minimizar = sim => selo.classList.toggle('me-min', sim);
+    let base = scrollY;
+    addEventListener('scroll', () => {
+      if (!selo.classList.contains('me-min') && scrollY - base > 320) minimizar(true);
+    }, { passive: true });
+
+    selo.addEventListener('click', async e => {
+      const a = e.target.closest('[data-a]');
+      if (!a) return;
+      const acao = a.dataset.a;
+      if (acao === 'min') { minimizar(true); return; }
+      if (acao === 'abrir') { if (selo.classList.contains('me-min')) { base = scrollY; minimizar(false); } return; }
+      if (acao === 'comparar' || acao === 'acompanhar') { window.open(SITE + encodeURIComponent(location.href), '_blank', 'noopener'); return; }
+      if (acao === 'copiar') {
+        const campo = selo.querySelector('.me-link');
+        const aviso = selo.querySelector('.me-aviso');
+        a.disabled = true; a.textContent = '…'; aviso.hidden = true;
+        /* linkDe = his ML generator (meli.la), with the search-page guard. */
+        const g = await pedir({ tipo: 'linkDe', url: location.href });
+        a.disabled = false;
+        if (!g.ok || !g.link) {
+          a.textContent = '⧉';
+          aviso.hidden = false;
+          aviso.textContent = 'Não gerei o link agora: ' + String(g.erro || 'sem resposta').slice(0, 140);
+          return;
+        }
+        campo.hidden = false; campo.value = g.link;
+        try { await navigator.clipboard.writeText(g.link); a.textContent = '✓'; a.classList.add('feito'); }
+        catch (err) { campo.select(); a.textContent = '⧉'; aviso.hidden = false; aviso.textContent = 'Link pronto: use Ctrl+C para copiar.'; }
+        setTimeout(() => { a.textContent = '⧉'; a.classList.remove('feito'); }, 1800);
+      }
+    });
   }
 
   /* -------------------------------------------------------- pagina busca */

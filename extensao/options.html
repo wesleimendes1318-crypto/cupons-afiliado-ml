@@ -2,62 +2,132 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Cupons Afiliado ML — opções</title>
+<title>Melhor Escolha — opções</title>
 <style>
-  :root{color-scheme:light dark}
-  body{max-width:620px;margin:40px auto;padding:0 20px;
-       font:14px/1.6 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-  h1{font-size:19px;margin:0 0 4px}
-  p.sub{color:#777;margin:0 0 26px;font-size:13px}
-  label{display:block;font-weight:600;margin:18px 0 6px;font-size:13px}
-  input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;
-               font:inherit;background:transparent;color:inherit}
-  button{margin-top:18px;padding:10px 18px;border:0;border-radius:8px;
-         background:#3483fa;color:#fff;font:600 14px inherit;cursor:pointer}
-  .aviso{margin-top:24px;padding:12px 14px;border-radius:8px;
-         background:rgba(193,18,31,.08);border:1px solid rgba(193,18,31,.25);font-size:12.5px}
-  .ok{margin-top:14px;color:#0f7b3f;font-weight:600;font-size:13px;min-height:20px}
-  .dica{font-size:12px;color:#777;margin-top:5px}
+  :root {
+    color-scheme: light dark;
+    --canvas: #f5f5f7; --cartao: #fff; --tinta: #1c1c1e; --tinta2: #6e6e73; --linha: rgba(0,0,0,.08);
+    --azul: #0071e3; --verde: #34c759; --verde-tinta: #248a3d; --vermelho: #ff3b30; --campo: #f5f5f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --canvas: #1c1c1e; --cartao: #2c2c2e; --tinta: #f5f5f7; --tinta2: #a1a1a6; --linha: rgba(255,255,255,.12);
+            --verde-tinta: #30d158; --campo: #1c1c1e; }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--tinta);
+         font: 14px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Roboto, sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 28px; letter-spacing: -.02em; margin: 0 0 4px; }
+  p.sub { color: var(--tinta2); margin: 0 0 28px; font-size: 14px; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta2); margin: 28px 16px 8px; }
+  .grupo { background: var(--cartao); border-radius: 24px; box-shadow: 0 0 0 1px var(--linha); overflow: hidden; }
+  .linha { display: flex; align-items: center; gap: 16px; padding: 14px 18px; }
+  .linha + .linha, .linha + .campo-bloco, .campo-bloco + .linha, .campo-bloco + .campo-bloco { border-top: 1px solid var(--linha); }
+  .linha .txt { flex: 1; }
+  .linha .txt b { display: block; font-weight: 600; font-size: 14px; }
+  .linha .txt span, .dica { display: block; font-size: 12.5px; color: var(--tinta2); margin-top: 2px; }
+  .campo-bloco { padding: 14px 18px; }
+  .campo-bloco label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  input[type=text], input[type=password], select { width: 100%; padding: 11px 13px; border: 0; border-radius: 16px;
+       font: inherit; background: var(--campo); color: inherit; box-shadow: inset 0 0 0 1px var(--linha); }
+  input:focus, select:focus { outline: 2px solid var(--azul); outline-offset: 0; }
+
+  /* iOS-style switch on a real checkbox (keyboard and screen readers keep working) */
+  .chave { appearance: none; -webkit-appearance: none; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 999px;
+           background: rgba(120,120,128,.24); position: relative; cursor: pointer; transition: background .25s cubic-bezier(.16,1,.3,1); }
+  .chave::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff;
+                  box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16); transition: transform .25s cubic-bezier(.16,1,.3,1); }
+  .chave:checked { background: var(--verde); }
+  .chave:checked::after { transform: translateX(20px); }
+  .chave:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+  .chave:disabled { opacity: .5; }
+
+  .rodape { display: flex; align-items: center; gap: 14px; margin-top: 24px; flex-wrap: wrap; }
+  button { padding: 12px 22px; border: 0; border-radius: 16px; background: var(--azul); color: #fff;
+           font: 600 15px inherit; cursor: pointer; transition: transform .2s cubic-bezier(.16,1,.3,1); }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .55; cursor: default; transform: none; }
+  .ok { color: var(--verde-tinta); font-weight: 600; font-size: 13px; min-height: 20px; }
+  .link-admin { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; color: var(--azul);
+                text-decoration: none; font-weight: 600; border-top: 1px solid var(--linha); }
+  .estado-token { font-size: 12.5px; margin-top: 8px; color: var(--tinta2); }
+  .estado-token.ok { color: var(--verde-tinta); } .estado-token.erro { color: var(--vermelho); }
+  .aviso { margin-top: 28px; padding: 14px 18px; border-radius: 24px; background: rgba(255,59,48,.08); font-size: 12.5px; color: var(--tinta2); }
+  .aviso b { color: var(--tinta); }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
 </style>
 </head>
 <body>
+<main>
   <h1>Opções</h1>
-  <p class="sub">O token do site é obrigatório. A chave da Gemini aqui é só reserva: a conferência pela foto usa primeiro a chave guardada no site (Lovable).</p>
+  <p class="sub">Melhor Escolha no Chrome: link de afiliado em um clique, comparação e o selo nas páginas do Mercado Livre.</p>
 
-  <label for="key">Chave da API do Gemini</label>
-  <input type="password" id="key" placeholder="cole aqui e salve uma vez só" autocomplete="off">
-  <div class="dica">Fica salva só neste Chrome e é enviada apenas para a Google, quando a chave do site não responder.</div>
-
-  <label for="modelo">Modelo</label>
-  <select id="modelo">
-    <option value="gemini-flash-latest">gemini-flash-latest (rápido e barato)</option>
-    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-    <option value="gemini-2.5-pro">gemini-2.5-pro (mais caro)</option>
-  </select>
-
-  <label for="sinc">Token de sincronia com o site</label>
-  <input type="password" id="sinc" placeholder="cole o token gerado para o seu banco" autocomplete="off">
-  <div class="dica">Sem ele a extensão não recebe os pedidos do site: nenhum cliente é atendido.</div>
-
-  <label class="chk" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:12px">
-    <input type="checkbox" id="sincauto" checked style="width:auto"> sincronizar automaticamente a cada atualizacao
-  </label>
-
-  <label for="ntfy">Aviso no celular (opcional): tópico do ntfy</label>
-  <input type="text" id="ntfy" placeholder="ex: cupons-weslei-8k2q" autocomplete="off">
-  <div class="dica">Quando o Mercado Livre pedir verificação, chega um aviso no celular. Instale o app
-    gratuito <b>ntfy</b> (Android ou iPhone), toque em "+" e assine um tópico com um nome difícil de adivinhar;
-    cole o mesmo nome aqui. No computador o aviso aparece sempre, com ou sem isto.</div>
-
-  <button id="salvar">Salvar</button>
-  <div class="ok" id="ok"></div>
-
-  <div class="aviso">
-    <b>Sobre segurança:</b> qualquer chave que você cole em um chat, e-mail ou documento
-    deve ser considerada exposta. Gere uma nova no Google AI Studio e cole só aqui.
-    Se a chave vazar, quem tiver ela gasta na sua conta.
+  <h2>Na loja</h2>
+  <div class="grupo">
+    <label class="linha">
+      <span class="txt"><b>Mostrar o selo nas páginas de produto do Mercado Livre</b>
+        <span>A ilha flutuante com o cupom da loja, "Comparar ofertas", "Acompanhar preço" e o link de afiliado.</span></span>
+      <input type="checkbox" class="chave" id="selo" checked>
+    </label>
+    <label class="linha">
+      <span class="txt"><b>Copiar o link de afiliado ao clicar no ícone</b>
+        <span>Na página de um produto, o link é gerado e copiado assim que o popup abre.</span></span>
+      <input type="checkbox" class="chave" id="copiarabrir">
+    </label>
   </div>
 
-  <script src="options.js"></script>
+  <h2>Hub do fundador</h2>
+  <div class="grupo">
+    <div class="campo-bloco">
+      <label for="sinc">Token de sincronia com o site</label>
+      <input type="password" id="sinc" placeholder="cole o token gerado para o seu banco" autocomplete="off">
+      <div class="dica">Sem ele a extensão não recebe os pedidos do site: nenhum cliente é atendido.</div>
+      <div class="estado-token" id="estadoToken"></div>
+    </div>
+    <label class="linha">
+      <span class="txt"><b>Sincronizar automaticamente</b><span>A cada atualização dos cupons.</span></span>
+      <input type="checkbox" class="chave" id="sincauto" checked>
+    </label>
+    <a class="link-admin" href="https://melhorescolha.io/admin" target="_blank" rel="noopener">Abrir o painel do fundador <span>/admin ›</span></a>
+  </div>
+
+  <h2>Conferência pela foto</h2>
+  <div class="grupo">
+    <div class="campo-bloco">
+      <label for="key">Chave de reserva da Google</label>
+      <input type="password" id="key" placeholder="cole aqui e salve uma vez só" autocomplete="off">
+      <div class="dica">Só reserva: a conferência usa primeiro a chave guardada no site. Fica salva só neste Chrome e vai apenas para a Google, quando a chave do site não responder.</div>
+    </div>
+    <div class="campo-bloco">
+      <label for="modelo">Modo da conferência</label>
+      <select id="modelo">
+        <option value="gemini-flash-latest">Rápido e barato (recomendado)</option>
+        <option value="gemini-2.5-flash">Equilibrado</option>
+        <option value="gemini-2.5-pro">Mais preciso (mais caro)</option>
+      </select>
+    </div>
+  </div>
+
+  <h2>Avisos</h2>
+  <div class="grupo">
+    <div class="campo-bloco">
+      <label for="ntfy">Aviso no celular (opcional): tópico do ntfy</label>
+      <input type="text" id="ntfy" placeholder="ex: cupons-weslei-8k2q" autocomplete="off">
+      <div class="dica">Quando o Mercado Livre pedir verificação, chega um aviso no celular. Instale o app gratuito <b>ntfy</b> (Android ou iPhone), toque em "+" e assine um tópico com um nome difícil de adivinhar; cole o mesmo nome aqui. No computador o aviso aparece sempre, com ou sem isto.</div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    <button id="salvar">Salvar</button>
+    <div class="ok" id="ok"></div>
+  </div>
+
+  <div class="aviso">
+    <b>Sobre segurança:</b> qualquer chave que você cole em um chat, e-mail ou documento deve ser considerada exposta. Gere uma nova no painel de chaves da Google e cole só aqui. Se a chave vazar, quem tiver ela gasta na sua conta.
+  </div>
+</main>
+<script src="options.js"></script>
 </body>
 </html>
