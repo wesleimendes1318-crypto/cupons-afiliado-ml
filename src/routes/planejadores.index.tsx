@@ -1,6 +1,9 @@
-/* PLANNERS HUB (Weslei, 06/11/2026): one card per life moment. */
+/* PLANNERS HUB (Weslei, 06/11/2026): one card per life moment.
+   07/11 ("precisa de um espaço no site facil de ver e acessar essas
+   ferramentas"): it is also the tools page of the "Planejar" tab, so Amigo
+   Secreto and the wish list sit on top. */
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Gift, Heart } from "lucide-react";
 
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { SITE } from "@/lib/lista-publica";
@@ -30,14 +33,56 @@ function Hub() {
       <main className="mx-auto flex max-w-[960px] flex-col gap-6 px-4 pb-16 pt-6 sm:px-6">
         <header className="animate-conteudo">
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-[40px]">
-            Um momento novo,
-            <span className="block text-[#0071e3]">uma lista pronta.</span>
+            Planeje e presenteie
+            <span className="block text-[#0071e3]">sem esquecer nada.</span>
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-secondary-ink">
-            Escolha o momento e veja o que comprar primeiro, o que pode esperar e o que costuma ser
-            esquecido. O que você quiser ganhar vira uma lista de presentes.
+            Amigo Secreto, lista de desejos e listas prontas para cada momento, num só lugar. Em
+            cada momento você vê o que comprar primeiro, o que pode esperar e o que costuma ser
+            esquecido.
           </p>
         </header>
+        <ul aria-label="Para presentes" className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              {
+                to: "/amigo-secreto",
+                Icone: Gift,
+                cor: "#0071e3",
+                titulo: "Amigo Secreto",
+                texto: "Sorteio, perfil de cada amigo e presentes que combinam com ele.",
+              },
+              {
+                to: "/favoritos",
+                Icone: Heart,
+                cor: "#ff2d55",
+                titulo: "Lista de desejos",
+                texto: "Guarde o que você quer e mande a lista no WhatsApp.",
+              },
+            ] as const
+          ).map(({ to, Icone, cor, titulo, texto }, k) => (
+            <li key={to} className="animate-cartao" style={{ animationDelay: `${k * 40}ms` }}>
+              <Link
+                to={to}
+                className="group flex min-h-20 items-center gap-4 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] sm:p-5"
+              >
+                <span
+                  className="grid size-12 shrink-0 place-items-center rounded-2xl transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 motion-reduce:transform-none"
+                  style={{ background: `${cor}1a`, color: cor }}
+                  aria-hidden="true"
+                >
+                  <Icone className="size-6" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-lg font-extrabold tracking-tight">{titulo}</span>
+                  <span className="mt-0.5 block text-sm text-secondary-ink">{texto}</span>
+                </span>
+                <ChevronRight className="size-5 shrink-0 text-secondary-ink" aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <h2 className="-mb-2 text-xl font-extrabold tracking-tight">Planeje um momento</h2>
         <ul className="grid gap-3 sm:grid-cols-2">
           {PLANEJADORES.map((p, k) => (
             <li key={p.slug} className="animate-cartao" style={{ animationDelay: `${k * 40}ms` }}>
