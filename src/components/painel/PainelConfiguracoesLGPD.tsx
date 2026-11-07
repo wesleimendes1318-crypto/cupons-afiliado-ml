@@ -373,7 +373,7 @@ export function PainelConfiguracoesLGPD() {
             </p>
           )}
 
-          {usuario && (
+          {usuario && EXCLUSAO_PRONTA && (
             <div className="rounded-2xl border border-destructive/30 p-4">
               <p className="flex items-center gap-2 font-semibold text-destructive">
                 <TriangleAlert className="size-4" aria-hidden /> Excluir minha conta
@@ -428,6 +428,10 @@ export function PainelConfiguracoesLGPD() {
     </>
   );
 }
+
+/* shortcut: hidden until supabase/migrations/20261107010000_excluir_minha_conta.sql
+   is applied on the DB; flip to true right after applying it. */
+const EXCLUSAO_PRONTA = false;
 
 /* Local copies of what the account held (wishlist, Secret Santa, planners,
    taste profile), so nothing comes back on this device after deletion. */
