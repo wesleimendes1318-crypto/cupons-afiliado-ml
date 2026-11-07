@@ -185,8 +185,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const caminho = useRouterState({ select: (s) => s.location.pathname });
-  /* Cabeçalho único (home-v2, 06/10); telas técnicas ficam sem ele. */
-  const comCabecalho = !/^\/(login|\.lovable|admin)/.test(caminho);
+  /* Cabeçalho único (home-v2, 06/10); telas técnicas ficam sem ele. O /admin
+     fica dentro do site desde 07/11 (Weslei). */
+  const comCabecalho = !/^\/(login|\.lovable)/.test(caminho);
   /* Perfil local do visitante (27/10): clique de compra num cartão. */
   useEffect(() => ouvirComprasDoVisitante((href) => ehLinkDeCompra(href)), []);
   useEffect(instalarArrastarTrilhos, []);
