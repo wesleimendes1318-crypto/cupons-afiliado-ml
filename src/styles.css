@@ -1628,3 +1628,39 @@ html.arrastando-trilho [data-arrastando] {
   .painel-traco, .painel-ponto, .painel-pop, .painel-da-direita, .painel-da-esquerda, .painel-queda, .painel-brilho { animation: none; }
   .painel-pilula { transition: none; }
 }
+
+/* SaaS sidebar (MenuLateral, 07/11): its width pads the page content.
+   Rail at 1280-1439 px (the home hero needs ~1050 px of content), full from 1440 px
+   unless collapsed. */
+:root {
+  --largura-menu: 0px;
+}
+@media (min-width: 1280px) {
+  :root {
+    --largura-menu: 72px;
+  }
+}
+@media (min-width: 1440px) {
+  :root:not([data-menu-recolhido]) {
+    --largura-menu: 232px;
+  }
+}
+
+/* Glass drawer (BotaoGaveta): slides in from the left. */
+dialog.menu-gaveta[open] {
+  animation: menu-gaveta-entra 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+dialog.menu-gaveta[open]::backdrop {
+  animation: fundo-escurece 0.28s ease-out;
+}
+@keyframes menu-gaveta-entra {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.menu-gaveta[open],
+  dialog.menu-gaveta[open]::backdrop {
+    animation: none;
+  }
+}

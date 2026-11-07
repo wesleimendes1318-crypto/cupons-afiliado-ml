@@ -29,7 +29,7 @@ export function BotoesNavegacao() {
       aria-label="Navegação rápida"
       aria-hidden={!visivel}
       className={
-        "fixed bottom-[calc(1.5rem+var(--folga-compra,0px)+var(--folga-abas,0px))] left-4 z-40 flex items-center gap-1 vidro-botao rounded-full p-1 transition duration-200 motion-reduce:transition-none " +
+        "fixed bottom-[calc(1.5rem+var(--folga-compra,0px)+var(--folga-abas,0px))] left-[calc(var(--largura-menu,0px)+1rem)] z-40 flex items-center gap-1 vidro-botao rounded-full p-1 transition duration-200 motion-reduce:transition-none " +
         (visivel ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")
       }
     >

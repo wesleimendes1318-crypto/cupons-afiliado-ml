@@ -7,28 +7,23 @@
    "Cole o link de outro produto" (PC) ou o ícone do link (celular), para
    comparar outro produto sem voltar ao topo. No celular (25/10) o topo é
    uma barra de app limpa (marca + Telegram): as páginas ficam nas abas de
-   baixo (NavegacaoInferiorMobile). */
+   baixo (NavegacaoInferiorMobile).
+   07/11 (SaaS layout): from 1280 px the pages live in the sidebar
+   (MenuLateral) and the header keeps the global search on every page, CEP,
+   account and Telegram (search from 1024 px); below 1280 px the menu
+   button opens the drawer. */
 import { useEffect, useState, type FormEvent } from "react";
 import { ClientOnly, Link, useRouterState } from "@tanstack/react-router";
-import { Gift, LayoutGrid, Link2, ListChecks, Send, Tag } from "lucide-react";
+import { Gift, LayoutGrid, Link2, Send, Tag } from "lucide-react";
 
 import { CepTopo } from "@/components/CepTopo";
 import { BotaoConta } from "@/components/BotaoConta";
 import { AtalhoFavoritos } from "@/components/CoracaoDesejo";
+import { abrirComparacao } from "@/components/BotoesCartao";
+import { BotaoGaveta } from "@/components/MenuLateral";
 
 import { SugestoesBusca, useSugestoesBusca } from "@/components/SugestoesBusca";
 import { LINK_CANAL } from "@/lib/telegram-publico";
-
-/* "Categorias" (23/10, navegação mais completa): no PC só a partir de
-   1280 px (em 1024 px o campo "Cole o link de outro produto" ocupa o
-   espaço); no celular, nas abas de baixo. */
-const LINKS = [
-  { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
-  { to: "/meus-precos", rotulo: "Meus preços", pc: "lg:inline-flex" },
-  { to: "/guias", rotulo: "Guias", pc: "lg:inline-flex" },
-  /* Sobre from 2xl: its room at 1280 px goes to the Planejadores pill (06/11). */
-  { to: "/sobre", rotulo: "Sobre", pc: "2xl:inline-flex" },
-] as const;
 
 /* O campo do link da tela inicial está escondido atrás do cabeçalho? */
 function useCampoForaDaTela(ativo: boolean) {
@@ -70,15 +65,18 @@ export function irAoCampo() {
 export function CabecalhoSite() {
   const caminho = useRouterState({ select: (s) => s.location.pathname });
   const naInicial = caminho === "/";
-  const mostrarCampo = useCampoForaDaTela(naInicial);
+  const campoForaDaTela = useCampoForaDaTela(naInicial);
+  /* Global search (07/11): on every page from 1024 px; on the home only once
+     its own field leaves the screen. */
+  const mostrarCampo = naInicial ? campoForaDaTela : true;
   /* Header search visible: pills go icon-only, or their labels squeeze the
      field to ~20 px and "Buscar" sits on top of the links (06/11 print). */
-  const compacto = naInicial && mostrarCampo;
+  const compacto = mostrarCampo;
   const [valor, setValor] = useState("");
 
   /* Link ou texto: a caixa da home compara ou busca (mesma busca universal). */
   const enviar = (alvo: string) => {
-    window.dispatchEvent(new CustomEvent("comparar-link", { detail: alvo }));
+    abrirComparacao(alvo);
     setValor("");
   };
   const sugestoes = useSugestoesBusca(valor, enviar);
@@ -88,7 +86,7 @@ export function CabecalhoSite() {
     const alvo = valor.trim();
     sugestoes.fechar();
     if (!alvo) {
-      irAoCampo();
+      if (naInicial) irAoCampo();
       return;
     }
     enviar(alvo);
@@ -97,6 +95,7 @@ export function CabecalhoSite() {
   return (
     <header className="sticky top-0 z-40 border-b border-black/[0.06] vidro-barra dark:border-white/10">
       <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-2 px-4 min-[400px]:gap-3 sm:h-[60px] sm:gap-4 sm:px-6 lg:px-8">
+        <BotaoGaveta />
         <Link
           to="/"
           aria-label="Melhor Escolha, página inicial"
@@ -109,14 +108,13 @@ export function CabecalhoSite() {
             height={40}
             className="size-9 rounded-[22%] shadow-sm sm:size-10"
           />
-          <span className="text-base font-extrabold tracking-tight text-[#21134A] dark:text-white sm:text-lg">
+          <span className="hidden text-base min-[360px]:inline font-extrabold tracking-tight text-[#21134A] dark:text-white sm:text-lg">
             Melhor Escolha
           </span>
         </Link>
 
         {/* PC: comparar outro produto direto do cabeçalho (a partir de 1024 px;
               no tablet o campo não cabe ao lado dos links, 18/10). */}
-        {naInicial && (
           <form
             ref={sugestoes.caixa}
             role="search"
@@ -155,12 +153,11 @@ export function CabecalhoSite() {
             </button>
             <SugestoesBusca estado={sugestoes} />
           </form>
-        )}
 
         <nav aria-label="Páginas do site" className="ml-auto flex items-center gap-1 sm:gap-2">
           {/* Tablet: o ícone do link leva ao campo (alvo de 44 px); no celular
                 ele fica nas abas de baixo. */}
-          {naInicial && mostrarCampo && (
+          {naInicial && campoForaDaTela && (
             <button
               type="button"
               onClick={irAoCampo}
@@ -171,19 +168,6 @@ export function CabecalhoSite() {
               <Link2 className="size-5" aria-hidden="true" />
             </button>
           )}
-          {LINKS.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              className={
-                "hidden rounded-full px-3 py-2 text-sm font-medium text-[#1d1d1f] whitespace-nowrap transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white/90 dark:hover:bg-white/10 " +
-                l.pc
-              }
-              activeProps={{ className: "font-semibold text-[#7547E8]" }}
-            >
-              {l.rotulo}
-            </Link>
-          ))}
           {/* Tablets have no bottom tabs (sm:hidden) and no room for text links
                 (the nav ran past 768 px screens, 06/11): icons until the text fits. */}
           <Link
@@ -191,9 +175,10 @@ export function CabecalhoSite() {
             aria-label="Meus preços"
             title="Meus preços"
             className={
-              "hidden size-11 shrink-0 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white lg:hidden " +
+              "hidden size-11 shrink-0 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white xl:hidden " +
               /* 640-767 px on the home: the paste-link icon takes this room. */
-              (compacto ? "md:inline-flex" : "sm:inline-flex")
+              /* 640-767 px: room goes to the menu button (Meus preços is in the drawer). */
+              "md:inline-flex"
             }
             activeProps={{ className: "!text-[#7547E8]" }}
           >
@@ -205,7 +190,7 @@ export function CabecalhoSite() {
             title="Categorias"
             className={
               "hidden size-11 shrink-0 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white xl:hidden " +
-              (compacto ? "lg:inline-flex" : "md:inline-flex")
+              (compacto && naInicial ? "hidden" : "md:inline-flex")
             }
             activeProps={{ className: "!text-[#7547E8]" }}
           >
@@ -217,27 +202,19 @@ export function CabecalhoSite() {
             to="/amigo-secreto"
             aria-label="Amigo Secreto"
             title="Amigo Secreto: presentes por pessoa no valor combinado"
-            className="hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#0071e3] px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] md:inline-flex"
+            className="hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#0071e3] px-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] md:inline-flex xl:hidden"
             activeProps={{ className: "ring-2 ring-[#0071e3]/30 ring-offset-2" }}
           >
             <Gift className={compacto ? "size-5" : "size-5 xl:size-4"} aria-hidden="true" />
-            <span className={compacto ? "hidden" : "hidden xl:inline"}>Amigo Secreto</span>
+            <span className="hidden">Amigo Secreto</span>
           </Link>
-          {/* Planejadores (Weslei, 06/11: "fácil de encontrar, sem bagunçar"):
-                same pill shape, glass instead of blue; from 1280 px (narrower headers are full), label from 1536 px. */}
-          <Link
-            to="/planejadores"
-            aria-label="Planejadores"
-            title="Planejadores: casa nova, enxoval, casamento e mais"
-            className="vidro-botao hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#0071e3] shadow-sm ring-1 ring-black/5 transition active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] xl:inline-flex dark:ring-white/10"
-            activeProps={{ className: "ring-2 ring-[#0071e3]/30" }}
-          >
-            <ListChecks className={compacto ? "size-5" : "size-5 2xl:size-4"} aria-hidden="true" />
-            <span className={compacto ? "hidden" : "hidden 2xl:inline"}>Planejadores</span>
-          </Link>
-          <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
-            <AtalhoFavoritos />
-          </ClientOnly>
+          {/* Phones: the wish list lives in the drawer and the Planejar tab, which
+                frees the room for the menu button at 320 px (07/11). */}
+          <div className="hidden sm:contents">
+            <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
+              <AtalhoFavoritos />
+            </ClientOnly>
+          </div>
           <ClientOnly fallback={<span className="inline-block size-10" aria-hidden />}>
             <CepTopo />
           </ClientOnly>
