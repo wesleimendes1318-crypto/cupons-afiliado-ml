@@ -5,6 +5,7 @@ import { Check, ChevronDown, Gift, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 
 import { VerNaLoja } from "@/components/BuscaPorLink";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { OfertasDoItem } from "@/components/planejadores/OfertasDoItem";
 import { useFotosDoTermo } from "@/lib/fotos-do-plano";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
@@ -135,12 +136,23 @@ export function CartaoItemPlanejador({
             >
               <div className="flex min-w-0 items-center gap-3">
                 {y.foto ? (
-                  <img
-                    src={y.foto}
-                    alt=""
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    className="size-16 shrink-0 rounded-xl bg-white object-contain p-1"
+                  <VerDetalhesVitrine
+                    chave={y.id}
+                    titulo={y.titulo}
+                    imagem={y.foto}
+                    preco={y.preco}
+                    urlProduto={y.url}
+                    vistoEm={y.adicionadoEm}
+                    className="relative size-16 shrink-0"
+                    gatilho={
+                      <img
+                        src={y.foto}
+                        alt=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="size-16 rounded-xl bg-white object-contain p-1"
+                      />
+                    }
                   />
                 ) : (
                   <span className="size-16 shrink-0 rounded-xl bg-white" aria-hidden="true" />

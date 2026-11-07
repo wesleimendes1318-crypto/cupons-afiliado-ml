@@ -7,7 +7,8 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Check, Gift, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { CompararPreco, ComprarComSeguranca } from "@/components/BotoesCartao";
+import { CompararPreco, ComprarComSeguranca, SinoAcompanhar } from "@/components/BotoesCartao";
+import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { SeloMarketplace } from "@/components/SeloMarketplace";
@@ -49,7 +50,12 @@ export const Route = createFileRoute("/lista/$id")({
         { property: "og:description", content: descricao },
         { property: "og:type", content: "website" },
         { property: "og:url", content: url },
-        ...(foto ? [{ property: "og:image", content: foto }, { name: "twitter:image", content: foto }] : []),
+        ...(foto
+          ? [
+              { property: "og:image", content: foto },
+              { name: "twitter:image", content: foto },
+            ]
+          : []),
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: titulo },
         { name: "twitter:description", content: descricao },
@@ -180,17 +186,29 @@ function CartaoPresente({
       style={{ animationDelay: `${Math.min(atraso, 8) * 40}ms` }}
     >
       <div className="relative aspect-[4/3] w-full bg-white min-[360px]:aspect-square sm:aspect-[4/3]">
-        {i.foto ? (
-          <img
-            src={i.foto}
-            alt=""
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="absolute inset-0 h-full w-full object-contain p-3"
-          />
-        ) : (
-          <Gift className="absolute inset-0 m-auto size-6 text-[#86868b]" aria-hidden="true" />
-        )}
+        <VerDetalhesVitrine
+          chave={i.id}
+          titulo={i.titulo}
+          imagem={i.foto}
+          preco={i.preco}
+          link={i.linkAfiliado}
+          urlProduto={i.url}
+          vistoEm={i.adicionadoEm}
+          className="absolute inset-0"
+          gatilho={
+            i.foto ? (
+              <img
+                src={i.foto}
+                alt=""
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-contain p-3"
+              />
+            ) : (
+              <Gift className="absolute inset-0 m-auto size-6 text-[#86868b]" aria-hidden="true" />
+            )
+          }
+        />
         {comprado && (
           <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#34c759] px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
             <Check className="size-3.5" aria-hidden="true" /> Já comprado
@@ -215,7 +233,9 @@ function CartaoPresente({
         <div className="mt-auto flex flex-col gap-1.5 pt-2.5">
           {comprado ? (
             <p className="rounded-2xl bg-[#34c759]/10 px-3 py-2 text-center text-xs font-semibold text-[#248a3d]">
-              {presente.nome ? `${presente.nome} já comprou este presente` : "Alguém já comprou este presente"}
+              {presente.nome
+                ? `${presente.nome} já comprou este presente`
+                : "Alguém já comprou este presente"}
             </p>
           ) : temLink ? (
             /* REGRA Nº 1: link de afiliado guardado ou gerado no clique. */
@@ -223,7 +243,13 @@ function CartaoPresente({
           ) : i.url ? (
             <VerNaLoja url={i.url} grande />
           ) : null}
-          {!comprado && i.loja === "mercadolivre" && i.url && <CompararPreco url={i.url} />}
+          {!comprado && i.loja === "mercadolivre" && i.url && (
+            <SinoAcompanhar url={i.url} titulo={i.titulo}>
+              <div className="flex min-w-0 flex-1">
+                <CompararPreco url={i.url} />
+              </div>
+            </SinoAcompanhar>
+          )}
 
           {comprado ? (
             meu && (
@@ -271,7 +297,9 @@ function CartaoPresente({
               <Gift className="size-4" aria-hidden="true" /> Marcar como comprado
             </button>
           )}
-          {erro && <p className="text-center text-[11px] text-[#d70015]">Não deu agora. Tente de novo.</p>}
+          {erro && (
+            <p className="text-center text-[11px] text-[#d70015]">Não deu agora. Tente de novo.</p>
+          )}
           <button
             type="button"
             aria-pressed={salvo}
