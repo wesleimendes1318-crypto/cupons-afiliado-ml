@@ -12,7 +12,6 @@ import {
   Copy,
   Headphones,
   Info,
-  LayoutGrid,
   Link2,
   LoaderCircle,
   Package,
@@ -25,7 +24,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   ToyBrick,
-  TrendingDown,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -42,6 +40,7 @@ import {
 import { GradeDepartamentos } from "@/components/GradeDepartamentos";
 import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import BuscaPorLink from "@/components/BuscaPorLink";
+import { FerramentasHome } from "@/components/FerramentasHome";
 import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { InstalarApp } from "@/components/InstalarApp";
@@ -1972,6 +1971,9 @@ function Index() {
             vitrines, busca guiada nem atalhos abaixo do resultado. */}
           {buscaParada && <BuscaGuiada contexto="home" naHome className="mt-8" />}
 
+          {/* Every feature one tap away (Weslei, 07/11). */}
+          {buscaParada && <FerramentasHome className="mt-8" />}
+
           {/* Planejadores (Weslei, 06/11): one chip row, easy to find on every width. */}
           {buscaParada && (
             <nav aria-label="Planeje um momento" className="mt-8">
@@ -2040,45 +2042,8 @@ function Index() {
           )}
           {buscaParada && <InstalarApp className="mt-4" />}
 
-          {/* Acesso rápido (02/10): o resto do site a um toque, sem tirar o foco
-            da caixa do link. */}
+          {/* Acesso rápido moved up into FerramentasHome (07/11). */}
           {!buscaParada && esperas === 0 && <CompararOutro />}
-          {buscaParada && (
-          <nav aria-label="Acesso rápido" className="mt-8 grid gap-3 sm:grid-cols-3">
-            {[
-              {
-                to: "/meus-precos",
-                icone: TrendingDown,
-                titulo: "Meus preços",
-                texto: "Produtos que você acompanha",
-              },
-              {
-                to: "/guias",
-                icone: BookOpen,
-                titulo: "Guias de compra",
-                texto: "Como escolher sem cair em armadilha",
-              },
-              {
-                to: "/categorias",
-                icone: LayoutGrid,
-                titulo: "Categorias",
-                texto: "Comparações por tipo de produto",
-              },
-            ].map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-ml-blue"
-              >
-                <item.icone className="size-5 shrink-0 text-ml-blue" aria-hidden="true" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold">{item.titulo}</span>
-                  <span className="block text-xs text-secondary-ink">{item.texto}</span>
-                </span>
-              </Link>
-            ))}
-          </nav>
-          )}
 
           {MOSTRAR_CUPONS && (
             <>
