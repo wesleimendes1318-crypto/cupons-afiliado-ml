@@ -54,3 +54,26 @@ test("kit de custo nunca é 1 item só no teto (07/11)", () => {
   expect(k.itens.length).toBeGreaterThanOrEqual(2);
   expect(k.itens.every((x) => x.preco <= 50)).toBe(true);
 });
+
+test("misturar com 2 vitrines ainda junta mais de 2 itens (07/11)", () => {
+  const dois: Candidato[] = [
+    { r: r(11, "Vela Aromática Vidro", 20), grupo: "decor" },
+    { r: r(12, "Bandeja Espelhada", 24), grupo: "decor" },
+    { r: r(13, "Luminária Touch", 30), grupo: "decor" },
+    { r: r(14, "Caneca Inox", 18), grupo: "cozinha" },
+  ];
+  const k = montarKit(dois, 100, { estilo: "custo", seed: 1, misturar: true })!;
+  expect(k.itens.length).toBeGreaterThanOrEqual(3);
+  expect(new Set(k.itens.map((x) => x.produto)).size).toBe(k.itens.length);
+  expect(k.total).toBeLessThanOrEqual(100);
+});
+
+test("kit respeita o mínimo escolhido pela pessoa (07/11)", () => {
+  const baratos: Candidato[] = [
+    { r: r(21, "Vela Aromática", 20), grupo: "a" },
+    { r: r(22, "Caneca Inox", 18), grupo: "b" },
+  ];
+  expect(montarKit(baratos, 100, { estilo: "custo", seed: 1, misturar: true, minimo: 80 })).toBeNull();
+  const k = montarKit(cands, 100, { estilo: "custo", seed: 1, misturar: true, minimo: 80 });
+  if (k) expect(k.total).toBeGreaterThanOrEqual(80);
+});
