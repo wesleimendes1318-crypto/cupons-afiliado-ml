@@ -194,6 +194,56 @@ export function itensDasTabelas(tabelas, pagina = '') {
   return itens;
 }
 
+/* ---------- "Minha receita" do hub (print do Weslei, 07/11) ----------
+   Saldo pendente R$ 468,68 / Em revisao R$ 192,24 / Em processo de
+   pagamento R$ 276,44 / A pagar em 12/nov R$ 276,45 / Historico da receita:
+   "Outubro, Periodo atual, Em revisao ate o fim de dezembro, R$ 192,24" e
+   "Maio a setembro, Em processo de pagamento, R$ 276,45". Nao e tabela:
+   le pelas linhas da tela. O R$ tem de vir na linha ou nas 3 seguintes. */
+const MESES = 'janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro';
+const RE_PERIODO = new RegExp(`^(${MESES})( (a|e) (${MESES}))?( de \\d{4})?$`, 'i');
+
+export function lerReceitaML(linhas) {
+  const ls = (linhas || []).map(l => String(l || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const valorApos = k => {
+    for (let j = k; j < Math.min(ls.length, k + 4); j++) {
+      if (j > k && (RE_PERIODO.test(ls[j]) || /^a pagar em/i.test(ls[j]))) break;
+      const v = reaisEmCentavos(ls[j].slice(ls[j].indexOf('R$') >= 0 ? ls[j].indexOf('R$') : 0));
+      if (v != null) return v;
+    }
+    return null;
+  };
+  const out = { saldo_pendente_centavos: null, em_revisao_centavos: null, em_pagamento_centavos: null, a_pagar: [], historico: [] };
+  const iHist = ls.findIndex(l => /^hist[oó]rico da receita/i.test(l));
+  const topo = iHist < 0 ? ls.length : iHist;
+  for (let k = 0; k < topo; k++) {
+    const l = ls[k];
+    if (/^saldo pendente/i.test(l) && out.saldo_pendente_centavos == null) out.saldo_pendente_centavos = valorApos(k);
+    else if (/^em revis[aã]o/i.test(l) && out.em_revisao_centavos == null) out.em_revisao_centavos = valorApos(k);
+    else if (/^em processo de pagamento/i.test(l) && out.em_pagamento_centavos == null) out.em_pagamento_centavos = valorApos(k);
+    else if (/^a pagar em/i.test(l)) {
+      const data = /^a pagar em\s+(.+?)(\s+R\$.*)?$/i.exec(l)[1];
+      const c = valorApos(k);
+      if (c != null) out.a_pagar.push({ data: data.slice(0, 20), centavos: c });
+    }
+  }
+  if (iHist >= 0) {
+    for (let k = iHist + 1; k < ls.length && out.historico.length < 24; k++) {
+      if (!RE_PERIODO.test(ls[k])) continue;
+      const bloco = [];
+      for (let j = k + 1; j < Math.min(ls.length, k + 5) && !RE_PERIODO.test(ls[j]); j++) bloco.push(ls[j]);
+      const status = bloco.find(b => /revis|pagamento|pago|dispon|liberad|cancel/i.test(b) && !/R\$/.test(b)) || null;
+      out.historico.push({
+        periodo: ls[k].slice(0, 40),
+        atual: bloco.some(b => /per[ií]odo atual/i.test(b)),
+        status: status && status.slice(0, 80),
+        centavos: valorApos(k)
+      });
+    }
+  }
+  return out;
+}
+
 /** Maior "itens por pagina" oferecido (minimiza pedidos ao portal). */
 export function maiorOpcao(textos) {
   const ns = (textos || []).map(t => /^\s*(\d{1,4})\s*(itens|resultados|linhas|por p[aá]gina)?\s*$/i.exec(String(t || ''))).filter(Boolean).map(m => Number(m[1]));
@@ -288,7 +338,7 @@ async function lerPainel(p, dep) {
     const links = tela.links.filter(l => p.seguirHref && p.seguirHref.test(l.h) && l.t).map(l => l.t).slice(0, 20);
     /* Mercado Livre: alem do hub, abre a pagina de relatorio/ganhos do
        proprio portal (navegacao GET, nada clicado) e completa o que faltou. */
-    const itens = []; const tabelasLidas = [];
+    const itens = []; const tabelasLidas = []; let receita = null;
     if (p.seguir) {
       const vistos = new Set([p.url]);
       const alvos = tela.links.filter(l => p.seguir.test(l.t) && p.seguirHref.test(l.h))
@@ -301,6 +351,8 @@ async function lerPainel(p, dep) {
         if (await confere()) break;
         tela = await ler();
         r = juntarLeituras(lerResumoDoPainel(tela.linhas), r);
+        const rec = lerReceitaML(tela.linhas);
+        if (rec.saldo_pendente_centavos != null || rec.historico.length) receita = rec;
         const [t] = await chrome.scripting.executeScript({ target: { tabId: aba.id }, func: lerTabelasNaAba });
         const tabelas = (t && t.result) || [];
         const pagina = alvo.t.slice(0, 40);
@@ -312,7 +364,12 @@ async function lerPainel(p, dep) {
     r.links_portal = links;
     r.itens = itens.slice(0, 500);
     r.tabelas = tabelasLidas.slice(0, 6);
-    const temNumero = r.itens.length > 0 || ['comissao_centavos', 'aprovada_centavos', 'pendente_centavos', 'pedidos', 'cliques'].some(k => r[k] != null);
+    if (receita) {
+      r.receita = receita;
+      // O "Saldo pendente" da Receita e o valor a receber oficial.
+      if (receita.saldo_pendente_centavos != null) r.pendente_centavos = receita.saldo_pendente_centavos;
+    }
+    const temNumero = r.itens.length > 0 || !!r.receita || ['comissao_centavos', 'aprovada_centavos', 'pendente_centavos', 'pedidos', 'cliques'].some(k => r[k] != null);
     return { status: temNumero ? 'lido' : 'sem_numeros', ...r,
       pagina: ((await chrome.tabs.get(aba.id)).url || '').split('?')[0].slice(0, 120) };
   } catch (e) {

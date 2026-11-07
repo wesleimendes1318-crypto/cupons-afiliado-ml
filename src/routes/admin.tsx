@@ -47,6 +47,7 @@ import {
   aReceberPorData,
   perguntarAoCopiloto,
   type ItemHub,
+  type ReceitaML,
   type MensagemCopiloto,
 } from "@/lib/copiloto-admin";
 import {
@@ -787,6 +788,7 @@ type LinhaHub = {
   taxa_conversao: number | null;
   trecho_lido: { rotulo: string; valor: string }[] | null;
   itens: ItemHub[] | null;
+  receita: ReceitaML | null;
   tabelas: { pagina: string; cab: string[]; linhas: string[][]; total: number }[] | null;
 };
 
@@ -810,6 +812,56 @@ const STATUS_COMANDO: Record<ComandoSinc["status"], string> = {
   erro: "Falhou",
 };
 
+/* "Minha receita" como o hub mostra (print do Weslei, 07/11). */
+function MinhaReceita({ r }: { r: ReceitaML }) {
+  const linhaValor = (rotulo: string, c: number | null, forte = false) => (
+    <li className="flex justify-between gap-2">
+      <span className={forte ? "font-semibold text-[#1d1d1f]" : "text-[#6e6e73]"}>{rotulo}</span>
+      <b className={`tabular-nums ${forte ? "text-[#34c759]" : "text-[#1d1d1f]"}`}>
+        {c == null ? "—" : reais(c)}
+      </b>
+    </li>
+  );
+  return (
+    <div className="mt-2 space-y-2 text-xs">
+      <ul className="space-y-1.5 rounded-2xl bg-[#f5f5f7] p-3">
+        {linhaValor("Saldo pendente", r.saldo_pendente_centavos, true)}
+        {linhaValor("Em revisão", r.em_revisao_centavos)}
+        {linhaValor("Em processo de pagamento", r.em_pagamento_centavos)}
+      </ul>
+      {r.a_pagar.map((a) => (
+        <p
+          key={a.data}
+          className="flex justify-between gap-2 rounded-2xl bg-[#e8f8ee] p-3 font-semibold text-[#1d1d1f]"
+        >
+          <span>A pagar em {a.data}</span>
+          <span className="tabular-nums">{reais(a.centavos)}</span>
+        </p>
+      ))}
+      {!!r.historico.length && (
+        <ul className="divide-y divide-[#e5e5ea] rounded-2xl border border-[#e5e5ea]">
+          {r.historico.map((h) => (
+            <li key={h.periodo} className="flex items-start justify-between gap-2 px-3 py-2">
+              <span className="min-w-0">
+                <span className="block font-semibold text-[#1d1d1f]">
+                  {h.periodo}
+                  {h.atual && (
+                    <span className="ml-1 font-normal text-[#86868b]">· período atual</span>
+                  )}
+                </span>
+                {h.status && <span className="block text-[#6e6e73]">{h.status}</span>}
+              </span>
+              <b className="shrink-0 tabular-nums text-[#1d1d1f]">
+                {h.centavos == null ? "—" : reais(h.centavos)}
+              </b>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /* Hub de afiliados do Mercado Livre: últimas leituras da extensão (RLS:
    só a conta mestre lê metricas_hub_ml). Valor não lido fica "—". */
 function HubMercadoLivre({
@@ -824,7 +876,7 @@ function HubMercadoLivre({
     void supabase
       .from("metricas_hub_ml" as never)
       .select(
-        "id, capturado_em, periodo, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, trecho_lido, itens, tabelas",
+        "id, capturado_em, periodo, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, trecho_lido, itens, tabelas, receita",
       )
       .order("capturado_em", { ascending: false })
       .limit(10)
@@ -880,6 +932,19 @@ function HubMercadoLivre({
         ],
         linhas: vendas,
       },
+      ...(linha?.receita
+        ? [
+            {
+              titulo: "Histórico da receita (Mercado Livre)",
+              colunas: [
+                { chave: "periodo", rotulo: "Período" },
+                { chave: "status", rotulo: "Status" },
+                { chave: "centavos", rotulo: "Valor", tipo: "reais" as const },
+              ],
+              linhas: linha.receita.historico,
+            },
+          ]
+        : []),
       {
         titulo: "A receber por data",
         colunas: [
@@ -1018,7 +1083,9 @@ function HubMercadoLivre({
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-bold text-[#1d1d1f]">A receber</h3>
-                {aReceber.length ? (
+                {linha.receita ? (
+                  <MinhaReceita r={linha.receita} />
+                ) : aReceber.length ? (
                   <ul className="mt-2 space-y-1.5 rounded-2xl bg-[#f5f5f7] p-3 text-xs">
                     {aReceber.map((a) => (
                       <li key={a.data} className="flex justify-between gap-2">
