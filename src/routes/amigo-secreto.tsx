@@ -14,6 +14,7 @@ import { ImportarLista } from "@/components/AmigoSecreto/ImportarLista";
 import { QuestionarioPerfil } from "@/components/AmigoSecreto/QuestionarioPerfil";
 import { aplicarPerfil, termosDosFavoritos, textoParaLeitura, type PerfilAmigo } from "@/lib/amigo-secreto-perfil";
 import { PainelDesejosAmigo } from "@/components/AmigoSecreto/PainelDesejosAmigo";
+import { KitPresente } from "@/components/AmigoSecreto/KitPresente";
 import { VitrineCategoria } from "@/components/AmigoSecreto/VitrineCategoria";
 import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { carregarAte, passosIniciais, restamReservas, type PassoTermo } from "@/lib/amigo-secreto-busca";
@@ -568,6 +569,9 @@ function PaginaAmigoSecreto() {
           <p className="rounded-2xl bg-[#eef4ff] p-4 text-sm font-semibold text-[#0058b0] dark:bg-white/5 dark:text-[#64a8ff]">
             Escolha o valor do presente no topo para ver as opções.
           </p>
+        )}
+        {ativo && estado.faixaEscolhida && faixa.max != null && (
+          <KitPresente key={`kit-${ativo.id}`} nome={ativo.nome} vitrines={ativo.vitrines} teto={faixa.max} />
         )}
         {ativo &&
           estado.faixaEscolhida &&

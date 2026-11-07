@@ -50,3 +50,39 @@ test('rodada automatica a cada 12 h', () => {
   assert.equal(deveRodarSozinha(Date.now() - 3600e3), false);
   assert.equal(deveRodarSozinha(Date.now() - 13 * 3600e3), true);
 });
+
+import { itensDasTabelas, maiorOpcao } from '../espelho.js';
+
+test('vendas por produto: valor, %, direta/indireta, status e datas', () => {
+  const itens = itensDasTabelas([{
+    cab: ['Produto', 'Data da venda', 'Tipo de venda', 'Valor da venda', 'Comissão (%)', 'Comissão', 'Status', 'Liberação'],
+    linhas: [
+      ['Fone Bluetooth X', '05/11/2026', 'Venda direta', 'R$ 199,90', '8%', 'R$ 15,99', 'Pendente', '05/12/2026'],
+      ['Capa de celular', '04/11/2026', 'Venda indireta', 'R$ 30,00', '4%', 'R$ 1,20', 'Liberado', '-'],
+      ['', '', '', '', '', '', '', '']
+    ]
+  }], 'Métricas');
+  assert.equal(itens.length, 2);
+  assert.deepEqual(
+    { ...itens[0], bruto: undefined },
+    { produto: 'Fone Bluetooth X', valor_centavos: 19990, comissao_centavos: 1599, comissao_pct: 8, tipo: 'direta',
+      status: 'Pendente', data: '05/11/2026', liberacao: '05/12/2026', quantidade: null, pagina: 'Métricas', bruto: undefined });
+  assert.equal(itens[1].tipo, 'indireta');
+  assert.equal(itens[0].bruto['Comissão (%)'], '8%');
+});
+
+test('receita (descricao no lugar do produto); tabela sem dinheiro nao entra', () => {
+  const itens = itensDasTabelas([
+    { cab: ['Data', 'Descrição', 'Valor a receber', 'Situação'], linhas: [['10/12/2026', 'Comissões de novembro', 'R$ 42,10', 'A liberar']] },
+    { cab: ['Produto', 'Cliques'], linhas: [['Fone', '12']] }
+  ]);
+  assert.equal(itens.length, 1);
+  assert.equal(itens[0].produto, 'Comissões de novembro');
+  assert.equal(itens[0].comissao_centavos, 4210);
+  assert.equal(itens[0].status, 'A liberar');
+});
+
+test('maior opcao de itens por pagina', () => {
+  assert.equal(maiorOpcao(['10', '25 itens', '50', '100 por página']), 100);
+  assert.equal(maiorOpcao(['Todos', 'Mais vendidos']), null);
+});

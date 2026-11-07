@@ -7,6 +7,9 @@ import { abrirLogin, sair, useConta } from "@/lib/auth-otp";
 import { useSincroniaDesejos } from "@/lib/lista-desejos";
 import { useSincroniaConta } from "@/lib/sincronia-conta";
 
+/* Só mostra o atalho; os números continuam protegidos no banco (eh_fundador). */
+const FUNDADORES = ["wes_lei18@hotmail.com", "weslei.mendes1318@gmail.com"];
+
 export function BotaoConta() {
   const usuario = useConta();
   useSincroniaConta(Boolean(usuario));
@@ -34,12 +37,23 @@ export function BotaoConta() {
                 <span className="size-2 rounded-full bg-[#34c759]" /> Buscas e preferências salvas
                 na conta
               </p>
-              <a href="/perfil" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
-                Meu perfil e preferências
+              <a href="/painel" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
+                Meu painel
               </a>
               <a href="/meus-precos" className="block rounded-xl px-2 py-2 hover:bg-muted">
                 Meus preços
               </a>
+              <a href="/painel?aba=ajustes" className="block rounded-xl px-2 py-2 hover:bg-muted">
+                Ajustes e privacidade
+              </a>
+              {FUNDADORES.includes(email.toLowerCase()) && (
+                <a
+                  href="/admin"
+                  className="block rounded-xl px-2 py-2 font-semibold text-[#0071e3] hover:bg-muted"
+                >
+                  Painel do fundador
+                </a>
+              )}
               <button
                 type="button"
                 onClick={() => {

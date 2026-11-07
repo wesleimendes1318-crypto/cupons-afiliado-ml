@@ -7,8 +7,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
+  ArrowUpDown,
   Download,
   LoaderCircle,
+  LogOut,
+  Maximize2,
   MousePointerClick,
   RefreshCw,
   Send,
@@ -40,7 +43,12 @@ import {
 } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { sair } from "@/lib/auth-otp";
-import { perguntarAoCopiloto, type MensagemCopiloto } from "@/lib/copiloto-admin";
+import {
+  aReceberPorData,
+  perguntarAoCopiloto,
+  type ItemHub,
+  type MensagemCopiloto,
+} from "@/lib/copiloto-admin";
 import {
   baixarDossie,
   buscasDoDia,
@@ -185,6 +193,36 @@ function Admin() {
   const topoFunil = Math.max(1, ...funil.map((f) => f.valor));
   const maxCat = Math.max(1, ...p.categorias.map((c) => c.buscas));
   const vistoHa = ha(p.saude.extensao_visto_em);
+  const xDias: Expandir = {
+    titulo: "Números por dia",
+    colunas: [
+      { chave: "dia", rotulo: "Dia" },
+      { chave: "visitas", rotulo: "Visitas", tipo: "num" },
+      { chave: "buscas_link", rotulo: "Buscas por link", tipo: "num" },
+      { chave: "buscas_texto", rotulo: "Buscas por texto", tipo: "num" },
+      { chave: "comparacoes", rotulo: "Comparações", tipo: "num" },
+      { chave: "cliques_ml", rotulo: "Cliques ML", tipo: "num" },
+      { chave: "cliques_amazon", rotulo: "Cliques Amazon", tipo: "num" },
+      { chave: "cliques_shopee", rotulo: "Cliques Shopee", tipo: "num" },
+      { chave: "favoritados", rotulo: "Favoritados", tipo: "num" },
+      { chave: "alertas_ativos", rotulo: "Alertas ativos", tipo: "num" },
+      { chave: "alertas_disparados", rotulo: "Alertas disparados", tipo: "num" },
+    ],
+    linhas: [...p.serie].reverse(),
+  };
+  const xVendas: Expandir = {
+    titulo: "Leituras dos portais de afiliado",
+    colunas: [
+      { chave: "data", rotulo: "Mês" },
+      { chave: "marketplace", rotulo: "Portal" },
+      { chave: "comissao_centavos", rotulo: "Comissão", tipo: "reais" },
+      { chave: "pedidos", rotulo: "Pedidos", tipo: "num" },
+      { chave: "cliques", rotulo: "Cliques", tipo: "num" },
+      { chave: "status", rotulo: "Status" },
+      { chave: "capturado_em", rotulo: "Lido em", tipo: "data" },
+    ],
+    linhas: p.vendas,
+  };
   const extensaoViva =
     vistoHa != null && Date.now() - new Date(p.saude.extensao_visto_em!).getTime() < 10 * 60_000;
 
@@ -202,6 +240,19 @@ function Admin() {
             <p className="mt-1 text-sm text-[#6e6e73]">
               {p.de.split("-").reverse().join("/")} a {p.ate.split("-").reverse().join("/")} ·
               atualizado {quando(p.gerado_em)}
+            </p>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#6e6e73]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm">
+                <span className="size-2 rounded-full bg-[#34c759]" /> Conectado como{" "}
+                <b className="break-all text-[#1d1d1f]">{email ?? "—"}</b>
+              </span>
+              <button
+                type="button"
+                onClick={() => void sair().then(() => setEstado("entrar"))}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-semibold text-[#1d1d1f] shadow-sm transition hover:text-[#ff3b30] active:scale-95"
+              >
+                <LogOut className="size-3.5" /> Sair
+              </button>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -240,7 +291,7 @@ function Admin() {
             >
               <Download className="size-4" /> Baixar Dossiê Estratégico (.md)
             </button>
-            <CopilotoAdmin />
+            <CopilotoAdmin dias={dias} />
           </div>
         </header>
 
@@ -300,6 +351,7 @@ function Admin() {
         <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Cartao
             titulo="Evolução diária"
+            expandir={xDias}
             sub="Buscas x cliques em links de afiliado"
             className="lg:col-span-2"
             atraso={220}
@@ -365,7 +417,12 @@ function Admin() {
             </div>
           </Cartao>
 
-          <Cartao titulo="Marketplaces" sub="Cliques em links de afiliado" atraso={280}>
+          <Cartao
+            titulo="Marketplaces"
+            sub="Cliques em links de afiliado"
+            atraso={280}
+            expandir={{ ...xDias, blocos: [xDias, xVendas] }}
+          >
             {r.totalCliques === 0 ? (
               <Vazio>Nenhum clique medido no período.</Vazio>
             ) : (
@@ -416,6 +473,7 @@ function Admin() {
         <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Cartao
             titulo="Funil do comparador"
+            expandir={xDias}
             sub="Visitou → buscou → comparou → clicou"
             atraso={320}
           >
@@ -452,7 +510,19 @@ function Admin() {
             </p>
           </Cartao>
 
-          <Cartao titulo="Categorias mais buscadas" sub="Produtos colados no período" atraso={360}>
+          <Cartao
+            titulo="Categorias mais buscadas"
+            sub="Produtos colados no período"
+            atraso={360}
+            expandir={{
+              titulo: "Categorias mais buscadas",
+              colunas: [
+                { chave: "nome", rotulo: "Categoria" },
+                { chave: "buscas", rotulo: "Buscas", tipo: "num" },
+              ],
+              linhas: p.categorias,
+            }}
+          >
             {!p.categorias.length ? (
               <Vazio>Sem buscas no período.</Vazio>
             ) : (
@@ -480,6 +550,14 @@ function Admin() {
 
           <Cartao
             titulo="Termos com mais intenção"
+            expandir={{
+              titulo: "Termos buscados nos anúncios",
+              colunas: [
+                { chave: "termo", rotulo: "Termo" },
+                { chave: "vezes", rotulo: "Vezes", tipo: "num" },
+              ],
+              linhas: p.termos,
+            }}
             sub="Buscados nos anúncios pelo nome"
             atraso={400}
           >
@@ -503,6 +581,7 @@ function Admin() {
         <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Cartao
             titulo="Espelho de afiliado"
+            expandir={xVendas}
             sub="Lido dos seus painéis de afiliado"
             className="lg:col-span-2"
             atraso={440}
@@ -584,6 +663,74 @@ function Admin() {
           </Cartao>
         </section>
 
+        <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Cartao
+            titulo="Produtos mais buscados"
+            sub="Colados no comparador no período"
+            atraso={500}
+            expandir={{
+              titulo: "Produtos mais buscados",
+              colunas: [
+                { chave: "titulo", rotulo: "Produto" },
+                { chave: "categoria", rotulo: "Categoria" },
+                { chave: "vezes", rotulo: "Buscas", tipo: "num" },
+                { chave: "cliques", rotulo: "Cliques", tipo: "num" },
+                { chave: "preco", rotulo: "Preço colado" },
+                { chave: "melhor_preco", rotulo: "Melhor preço" },
+                { chave: "melhor_loja", rotulo: "Melhor loja" },
+              ],
+              linhas: p.top_produtos,
+            }}
+          >
+            {!p.top_produtos.length ? (
+              <Vazio>Sem produtos no período.</Vazio>
+            ) : (
+              <ol className="space-y-2 text-sm">
+                {p.top_produtos.slice(0, 5).map((t, i) => (
+                  <li key={t.titulo + i} className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 break-words text-[#1d1d1f]">
+                      <b className="mr-1.5 text-[#86868b]">{i + 1}</b>
+                      {t.titulo}
+                    </span>
+                    <span className="shrink-0 text-xs tabular-nums text-[#6e6e73]">
+                      {inteiro(t.vezes)} buscas · {inteiro(t.cliques)} cliques
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Cartao>
+          <Cartao
+            titulo="Procuras sem boa oferta"
+            sub="O que o cliente buscou e o site não resolveu bem"
+            atraso={540}
+            expandir={{
+              titulo: "Procuras sem boa oferta",
+              colunas: [
+                { chave: "titulo", rotulo: "Produto" },
+                { chave: "categoria", rotulo: "Categoria" },
+                { chave: "motivo", rotulo: "Motivo" },
+                { chave: "lojas", rotulo: "Lojas", tipo: "num" },
+                { chave: "preco", rotulo: "Preço" },
+              ],
+              linhas: p.gaps,
+            }}
+          >
+            {!p.gaps.length ? (
+              <Vazio>Nenhuma no período.</Vazio>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {p.gaps.slice(0, 5).map((g, i) => (
+                  <li key={g.titulo + i} className="min-w-0">
+                    <span className="block break-words text-[#1d1d1f]">{g.titulo}</span>
+                    <span className="block text-xs text-[#6e6e73]">{g.motivo}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Cartao>
+        </section>
+
         <HubMercadoLivre atualizado={p.gerado_em} comando={p.comando} />
       </div>
     </Tela>
@@ -639,6 +786,8 @@ type LinhaHub = {
   cliques_totais: number | null;
   taxa_conversao: number | null;
   trecho_lido: { rotulo: string; valor: string }[] | null;
+  itens: ItemHub[] | null;
+  tabelas: { pagina: string; cab: string[]; linhas: string[][]; total: number }[] | null;
 };
 
 const CAMPOS_HUB = [
@@ -675,7 +824,7 @@ function HubMercadoLivre({
     void supabase
       .from("metricas_hub_ml" as never)
       .select(
-        "id, capturado_em, periodo, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, trecho_lido",
+        "id, capturado_em, periodo, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, trecho_lido, itens, tabelas",
       )
       .order("capturado_em", { ascending: false })
       .limit(10)
@@ -699,6 +848,67 @@ function HubMercadoLivre({
         },
       ]
     : [];
+  const vendas = linha?.itens ?? [];
+  const aReceber = aReceberPorData(vendas);
+  const xHub: Expandir = {
+    titulo: "Vendas por produto (hub do Mercado Livre)",
+    colunas: [
+      { chave: "produto", rotulo: "Produto" },
+      { chave: "data", rotulo: "Data" },
+      { chave: "tipo", rotulo: "Tipo" },
+      { chave: "valor_centavos", rotulo: "Valor", tipo: "reais" },
+      { chave: "comissao_pct", rotulo: "% comissão", tipo: "pct" },
+      { chave: "comissao_centavos", rotulo: "Comissão", tipo: "reais" },
+      { chave: "status", rotulo: "Status" },
+      { chave: "liberacao", rotulo: "Liberação" },
+      { chave: "pagina", rotulo: "Página" },
+    ],
+    linhas: vendas,
+    blocos: [
+      {
+        titulo: "Vendas por produto (hub do Mercado Livre)",
+        colunas: [
+          { chave: "produto", rotulo: "Produto" },
+          { chave: "data", rotulo: "Data" },
+          { chave: "tipo", rotulo: "Tipo" },
+          { chave: "valor_centavos", rotulo: "Valor", tipo: "reais" },
+          { chave: "comissao_pct", rotulo: "% comissão", tipo: "pct" },
+          { chave: "comissao_centavos", rotulo: "Comissão", tipo: "reais" },
+          { chave: "status", rotulo: "Status" },
+          { chave: "liberacao", rotulo: "Liberação" },
+          { chave: "pagina", rotulo: "Página" },
+        ],
+        linhas: vendas,
+      },
+      {
+        titulo: "A receber por data",
+        colunas: [
+          { chave: "data", rotulo: "Liberação" },
+          { chave: "centavos", rotulo: "Valor", tipo: "reais" },
+        ],
+        linhas: aReceber,
+      },
+      {
+        titulo: "Histórico de leituras",
+        colunas: [
+          { chave: "capturado_em", rotulo: "Lido em", tipo: "data" },
+          { chave: "comissao_estimada_centavos", rotulo: "Ganho estimado", tipo: "reais" },
+          { chave: "comissao_aprovada_centavos", rotulo: "Aprovada", tipo: "reais" },
+          { chave: "comissao_pendente_centavos", rotulo: "Pendente", tipo: "reais" },
+          { chave: "faturamento_gerado_centavos", rotulo: "Vendas geradas", tipo: "reais" },
+          { chave: "pedidos_totais", rotulo: "Pedidos", tipo: "num" },
+          { chave: "cliques_totais", rotulo: "Cliques", tipo: "num" },
+        ],
+        linhas: linhas === "carregando" ? [] : linhas,
+      },
+      /* Como o portal mostrou (confere a leitura coluna por coluna). */
+      ...(linha?.tabelas ?? []).map((t) => ({
+        titulo: `Tabela lida em "${t.pagina}" (${t.total} linhas)`,
+        colunas: t.cab.map((c, i) => ({ chave: String(i), rotulo: c || `Coluna ${i + 1}` })),
+        linhas: t.linhas.map((l) => Object.fromEntries(l.map((v, i) => [String(i), v]))),
+      })),
+    ],
+  };
   const proxima = linha
     ? quando(new Date(new Date(linha.capturado_em).getTime() + 12 * 3600e3).toISOString())
     : null;
@@ -709,6 +919,7 @@ function HubMercadoLivre({
         titulo="Hub de afiliados do Mercado Livre"
         sub={linha ? `Período: ${mesDe(linha.capturado_em)} (acumulado do mês)` : "Mês atual"}
         atraso={520}
+        expandir={linha ? xHub : undefined}
       >
         {linhas === "carregando" ? (
           <Vazio>Carregando…</Vazio>
@@ -752,12 +963,84 @@ function HubMercadoLivre({
                   className="min-w-0 rounded-2xl bg-[#f5f5f7] p-3 animate-cartao"
                   style={{ animationDelay: `${560 + i * 50}ms` }}
                 >
-                  <p className="text-[11px] font-semibold leading-tight text-[#6e6e73]">{it.rotulo}</p>
+                  <p className="text-[11px] font-semibold leading-tight text-[#6e6e73]">
+                    {it.rotulo}
+                  </p>
                   <p className="mt-1 whitespace-nowrap text-sm font-bold tracking-tight text-[#1d1d1f] min-[360px]:text-base sm:text-lg">
                     {it.valor == null ? "—" : <Contador valor={it.valor} formato={it.formato} />}
                   </p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="min-w-0 lg:col-span-2">
+                <h3 className="text-sm font-bold text-[#1d1d1f]">Vendas por produto</h3>
+                {!vendas.length ? (
+                  <p className="mt-2 rounded-2xl bg-[#f5f5f7] p-3 text-xs text-[#6e6e73]">
+                    {linha.tabelas?.length
+                      ? "Li as tabelas do hub, mas nenhuma tinha produto e valor. Veja em “Ver tudo” como o portal mostrou."
+                      : "Nenhuma venda listada na última leitura. Com a extensão 1.182.0, a leitura abre Métricas e Receita do hub."}
+                  </p>
+                ) : (
+                  <ul className="mt-2 divide-y divide-[#e5e5ea] rounded-2xl border border-[#e5e5ea]">
+                    {[...vendas]
+                      .sort((a, b) => (b.comissao_centavos ?? 0) - (a.comissao_centavos ?? 0))
+                      .slice(0, 6)
+                      .map((v, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start justify-between gap-3 px-3 py-2 text-xs"
+                        >
+                          <span className="min-w-0">
+                            <span className="block break-words font-semibold text-[#1d1d1f]">
+                              {v.produto ?? "—"}
+                            </span>
+                            <span className="block text-[#6e6e73]">
+                              {[v.data, v.tipo && `venda ${v.tipo}`, v.status]
+                                .filter(Boolean)
+                                .join(" · ") || "—"}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right tabular-nums">
+                            <span className="block font-bold text-[#1d1d1f]">
+                              {v.comissao_centavos == null ? "—" : reais(v.comissao_centavos)}
+                            </span>
+                            <span className="block text-[#6e6e73]">
+                              {v.comissao_pct == null ? "" : `${pct(v.comissao_pct)} de `}
+                              {v.valor_centavos == null ? "—" : reais(v.valor_centavos)}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-[#1d1d1f]">A receber</h3>
+                {aReceber.length ? (
+                  <ul className="mt-2 space-y-1.5 rounded-2xl bg-[#f5f5f7] p-3 text-xs">
+                    {aReceber.map((a) => (
+                      <li key={a.data} className="flex justify-between gap-2">
+                        <span className="text-[#6e6e73]">{a.data}</span>
+                        <b className="tabular-nums text-[#1d1d1f]">{reais(a.centavos)}</b>
+                      </li>
+                    ))}
+                    <li className="flex justify-between gap-2 border-t border-[#e5e5ea] pt-1.5">
+                      <span className="font-semibold">Total</span>
+                      <b className="tabular-nums text-[#34c759]">
+                        {reais(aReceber.reduce((t, a) => t + a.centavos, 0))}
+                      </b>
+                    </li>
+                  </ul>
+                ) : (
+                  <p className="mt-2 rounded-2xl bg-[#f5f5f7] p-3 text-xs text-[#6e6e73]">
+                    {linha.comissao_pendente_centavos != null
+                      ? `${reais(linha.comissao_pendente_centavos)} pendente no resumo do hub; as datas de liberação aparecem quando o hub listar.`
+                      : "O hub ainda não mostrou valores a receber com data."}
+                  </p>
+                )}
+              </div>
             </div>
 
             <h3 className="mt-5 text-sm font-bold text-[#1d1d1f]">Histórico de leituras</h3>
@@ -823,8 +1106,7 @@ function HubMercadoLivre({
               </details>
             )}
             <p className="mt-3 text-[11px] text-[#86868b]">
-              Números do mês corrente, como o hub mostra. Produtos mais vendidos ainda não aparecem:
-              o hub não mostrou essa lista na leitura.
+              Números do mês corrente, como o hub mostra. Valor que o hub não mostrou fica “—”.
             </p>
           </>
         )}
@@ -947,7 +1229,7 @@ function SincronizarVendas({
   );
 }
 
-function CopilotoAdmin() {
+function CopilotoAdmin({ dias }: { dias: number }) {
   const [aberto, setAberto] = useState(false);
   const [conversa, setConversa] = useState<MensagemCopiloto[]>([]);
   const [texto, setTexto] = useState("");
@@ -963,7 +1245,7 @@ function CopilotoAdmin() {
     setErro(null);
     setPensando(true);
     try {
-      const r = await perguntarAoCopiloto({ data: { historico } });
+      const r = await perguntarAoCopiloto({ data: { historico, dias } });
       if ("resposta" in r && r.resposta)
         setConversa([...historico, { papel: "copiloto", texto: r.resposta }]);
       else
@@ -994,7 +1276,8 @@ function CopilotoAdmin() {
               <Sparkles className="size-4 text-[#0071e3]" /> Copiloto
             </SheetTitle>
             <SheetDescription className="text-xs">
-              Responde com os números dos últimos 7 dias. Nada desta conversa é guardado.
+              Responde com os números dos últimos {dias} dias, os portais de afiliado e a última
+              leitura do hub do Mercado Livre. Nada desta conversa é guardado.
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
@@ -1021,7 +1304,7 @@ function CopilotoAdmin() {
                     : "bg-white text-[#1d1d1f] shadow-sm"
                 }`}
               >
-                {m.texto}
+                {m.papel === "voce" ? m.texto : <TextoSimples texto={m.texto} />}
               </div>
             ))}
             {pensando && (
@@ -1091,7 +1374,7 @@ function Aviso({ texto, botao, acao }: { texto: string; botao: string; acao: () 
 }
 
 function Tela({ children }: { children: ReactNode }) {
-  return <main className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f]">{children}</main>;
+  return <main className="min-h-screen bg-[#f5f5f7] pb-24 text-[#1d1d1f] md:pb-0">{children}</main>;
 }
 
 function Kpi({
@@ -1126,22 +1409,205 @@ function Cartao({
   sub,
   className = "",
   atraso,
+  expandir,
   children,
 }: {
   titulo: string;
   sub?: string;
   className?: string;
   atraso: number;
+  expandir?: Expandir | undefined;
   children: ReactNode;
 }) {
+  const [aberto, setAberto] = useState(false);
   return (
     <div
-      className={`rounded-3xl bg-white p-5 shadow-sm animate-cartao ${className}`}
+      className={`min-w-0 rounded-3xl bg-white p-5 shadow-sm animate-cartao ${className}`}
       style={{ animationDelay: `${atraso}ms` }}
     >
-      <h2 className="text-base font-bold text-[#1d1d1f]">{titulo}</h2>
+      <div className="flex items-start justify-between gap-2">
+        <h2 className="text-base font-bold text-[#1d1d1f]">{titulo}</h2>
+        {expandir && (
+          <button
+            type="button"
+            onClick={() => setAberto(true)}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#f5f5f7] px-2.5 py-1 text-[11px] font-semibold text-[#0071e3] transition hover:bg-[#e8e8ed] active:scale-95"
+            aria-label={`Ver todos os dados: ${titulo}`}
+          >
+            <Maximize2 className="size-3" /> Ver tudo
+          </button>
+        )}
+      </div>
       {sub && <p className="mb-4 text-xs text-[#86868b]">{sub}</p>}
       {children}
+      {expandir && (
+        <Sheet open={aberto} onOpenChange={setAberto}>
+          <SheetContent className="flex w-full flex-col gap-0 bg-[#f5f5f7] p-0 sm:max-w-3xl">
+            <SheetHeader className="border-b border-[#e5e5ea] bg-white px-5 py-4 text-left">
+              <SheetTitle className="text-base">{expandir.titulo ?? titulo}</SheetTitle>
+              <SheetDescription className="text-xs">
+                Filtre, ordene tocando no título da coluna e baixe em planilha (.csv).
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto p-4">
+              {(expandir.blocos ?? [expandir]).map((b, i) => (
+                <TabelaCompleta key={i} {...b} />
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+type Coluna = { chave: string; rotulo: string; tipo?: "reais" | "num" | "pct" | "data" };
+type BlocoTabela = {
+  titulo?: string;
+  colunas: Coluna[];
+  linhas: Record<string, unknown>[];
+};
+type Expandir = BlocoTabela & { blocos?: BlocoTabela[] };
+
+function celula(v: unknown, tipo?: Coluna["tipo"]) {
+  if (v == null || v === "") return "—";
+  if (tipo === "reais" && typeof v === "number") return reais(v);
+  if (tipo === "num" && typeof v === "number") return inteiro(v);
+  if (tipo === "pct" && typeof v === "number") return pct(v);
+  if (tipo === "data" && typeof v === "string") return quando(v);
+  return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+
+/* Tabela inteira de um cartão: filtro, ordem por coluna e .csv (07/11,
+   "preciso da possibilidade de expandir dados e consultas"). */
+function TabelaCompleta({ titulo, colunas, linhas }: BlocoTabela) {
+  const [filtro, setFiltro] = useState("");
+  const [ordem, setOrdem] = useState<{ chave: string; desc: boolean } | null>(null);
+  const f = filtro.trim().toLowerCase();
+  let vistas = f
+    ? linhas.filter((l) =>
+        colunas.some((c) => celula(l[c.chave], c.tipo).toLowerCase().includes(f)),
+      )
+    : linhas;
+  if (ordem) {
+    const k = ordem.chave;
+    vistas = [...vistas].sort((a, b) => {
+      const x = a[k];
+      const y = b[k];
+      if (x == null) return 1;
+      if (y == null) return -1;
+      const r =
+        typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      return ordem.desc ? -r : r;
+    });
+  }
+  const baixar = () => {
+    const esc = (t: string) => `"${t.replace(/"/g, '""')}"`;
+    const csv = [
+      colunas.map((c) => esc(c.rotulo)).join(";"),
+      ...vistas.map((l) => colunas.map((c) => esc(celula(l[c.chave], c.tipo))).join(";")),
+    ].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `${(titulo ?? "dados").toLowerCase().replace(/[^a-z0-9]+/gi, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  return (
+    <div className="mb-6">
+      {titulo && <h3 className="mb-2 text-sm font-bold text-[#1d1d1f]">{titulo}</h3>}
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <input
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+          placeholder="Filtrar…"
+          aria-label={`Filtrar ${titulo ?? "tabela"}`}
+          className="min-w-0 flex-1 rounded-full border border-[#e5e5ea] bg-white px-3 py-1.5 text-sm outline-none focus:border-[#0071e3]"
+        />
+        <span className="text-xs text-[#6e6e73]">
+          {vistas.length} de {linhas.length}
+        </span>
+        <button
+          type="button"
+          onClick={baixar}
+          disabled={!vistas.length}
+          className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#1d1d1f] shadow-sm disabled:opacity-40"
+        >
+          <Download className="size-3.5" /> .csv
+        </button>
+      </div>
+      {!linhas.length ? (
+        <Vazio>Sem dados para mostrar.</Vazio>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-[#e5e5ea] bg-white">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#f5f5f7] text-[#6e6e73]">
+              <tr>
+                {colunas.map((c) => (
+                  <th key={c.chave} className="whitespace-nowrap px-3 py-2 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOrdem((o) =>
+                          o?.chave === c.chave
+                            ? { chave: c.chave, desc: !o.desc }
+                            : { chave: c.chave, desc: true },
+                        )
+                      }
+                      className="inline-flex items-center gap-1 hover:text-[#1d1d1f]"
+                    >
+                      {c.rotulo} <ArrowUpDown className="size-3 opacity-50" />
+                    </button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="tabular-nums text-[#1d1d1f]">
+              {vistas.slice(0, 1000).map((l, i) => (
+                <tr key={i} className="border-t border-[#e5e5ea]">
+                  {colunas.map((c) => (
+                    <td key={c.chave} className="max-w-[260px] px-3 py-2 align-top">
+                      {celula(l[c.chave], c.tipo)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Resposta do copiloto: **negrito** e listas "- " sem biblioteca. */
+function TextoSimples({ texto }: { texto: string }) {
+  const negrito = (t: string) =>
+    t
+      .split(/(\*\*[^*]+\*\*)/g)
+      .map((x, i) => (/^\*\*[^*]+\*\*$/.test(x) ? <strong key={i}>{x.slice(2, -2)}</strong> : x));
+  return (
+    <div className="space-y-1.5 whitespace-normal">
+      {texto.split("\n").map((l, i) => {
+        const t = l.trim();
+        if (!t) return null;
+        const item = /^[-*•]\s+(.*)$/.exec(t);
+        const titulo = /^#{1,4}\s+(.*)$/.exec(t);
+        if (item)
+          return (
+            <p key={i} className="flex gap-2">
+              <span className="text-[#0071e3]">•</span>
+              <span>{negrito(item[1]!)}</span>
+            </p>
+          );
+        if (titulo)
+          return (
+            <p key={i} className="font-bold">
+              {negrito(titulo[1]!)}
+            </p>
+          );
+        return <p key={i}>{negrito(t)}</p>;
+      })}
     </div>
   );
 }
