@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 
 import { SeloCep, useCepDestino } from "@/components/CepDestino";
+import { voltagemDaRegiao } from "@/lib/voltagem";
 
 export function CepTopo() {
   const { regiao, trocar } = useCepDestino(true);
@@ -42,6 +43,9 @@ export function CepTopo() {
   }, [regiao?.cep]);
 
   const rotulo = !regiao || regiao.padrao ? "Informar CEP" : (regiao.cidade ?? regiao.cep);
+  /* Voltage of the delivery city (07/11): only for a CEP the visitor has,
+     never for the national default. */
+  const rede = regiao && !regiao.padrao ? voltagemDaRegiao(regiao.cidade, regiao.uf) : null;
 
   return (
     <div ref={caixa} className="relative">
@@ -58,7 +62,9 @@ export function CepTopo() {
       >
         <MapPin className="size-4 shrink-0 text-[#0071e3]" aria-hidden />
         <span className="hidden min-w-0 flex-col items-start leading-tight min-[480px]:flex">
-          <span className="text-[10px] font-normal text-secondary-ink">Entregar em</span>
+          <span className="text-[10px] font-normal text-secondary-ink">
+            Entregar em{rede && <span className="hidden xl:inline"> · {rede.volts} V</span>}
+          </span>
           <span className="max-w-[100px] truncate">{rotulo}</span>
         </span>
       </button>
@@ -69,6 +75,12 @@ export function CepTopo() {
             Frete e prazo de entrega de cada loja são calculados para este CEP.
           </p>
           <SeloCep regiao={regiao} trocar={trocar} className="mt-3" />
+          {rede && (
+            <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs text-secondary-ink">
+              Tomada usual em {rede.cidade}: <strong className="text-foreground">{rede.volts} V</strong>.
+              Confira na sua tomada antes de comprar eletrodomésticos.
+            </p>
+          )}
         </div>
       )}
     </div>

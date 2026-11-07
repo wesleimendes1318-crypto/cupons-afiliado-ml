@@ -25,6 +25,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ehLinkDeCompra } from "../lib/afiliado";
 import { ouvirComprasDoVisitante } from "../lib/perfil-visitante";
 import { instalarArrastarTrilhos } from "../lib/arrastar-trilho";
+import { instalarFotoReserva } from "../lib/foto-reserva";
+import { BarraLateral } from "../components/MenuLateral";
 
 function NotFoundComponent() {
   return (
@@ -145,6 +147,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [
       /* Consent Mode v2: tudo negado antes de qualquer script do Google. */
       { children: SCRIPT_CONSENTIMENTO_PADRAO },
+      /* Collapsed sidebar before first paint (no jump on load). */
+      {
+        children:
+          "try{if(localStorage.getItem('menu-recolhido')==='1')document.documentElement.setAttribute('data-menu-recolhido','')}catch(e){}",
+      },
       /* Código do AdSense no <head> de todas as páginas (02/11), depois do
          consentimento negado: sem autorização, o Google não grava cookies de
          anúncio. defer (e não async): o React subiria um async para antes do
@@ -170,7 +177,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -191,12 +198,20 @@ function RootComponent() {
   /* Perfil local do visitante (27/10): clique de compra num cartão. */
   useEffect(() => ouvirComprasDoVisitante((href) => ehLinkDeCompra(href)), []);
   useEffect(instalarArrastarTrilhos, []);
+  useEffect(instalarFotoReserva, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       {comCabecalho && <CabecalhoSite />}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {comCabecalho && <BarraLateral />}
+      {comCabecalho ? (
+        <div className="pl-[var(--largura-menu)] transition-[padding] duration-200 ease-out motion-reduce:transition-none">
+          <Outlet />
+        </div>
+      ) : (
+        <Outlet />
+      )}
       {comCabecalho && <NavegacaoInferiorMobile />}
       <BotoesNavegacao />
       <BannerConsentimento />
