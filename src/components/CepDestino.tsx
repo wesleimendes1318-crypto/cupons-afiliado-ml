@@ -339,12 +339,12 @@ export function SeloCep({
               setCep(formatarCep(e.target.value));
               setEstado("parado");
             }}
-            className="w-28 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground"
+            className="h-10 w-28 rounded-xl border border-border bg-card px-3 text-sm text-foreground"
           />
           <button
             type="submit"
             disabled={estado === "buscando"}
-            className="rounded-md bg-ml-blue px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
+            className="h-10 rounded-full bg-[#0071e3] px-4 text-xs font-semibold text-white transition hover:brightness-110 active:scale-[0.97] disabled:opacity-60 motion-reduce:transition-none"
           >
             {estado === "buscando" ? "Buscando..." : "Usar este CEP"}
           </button>

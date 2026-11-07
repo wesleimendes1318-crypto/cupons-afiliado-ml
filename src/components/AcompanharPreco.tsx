@@ -181,13 +181,13 @@ export function AcompanharPreco({
               }
               value={alvo}
               onChange={(e) => setAlvo(e.target.value.replace(/[^\d.,]/g, ""))}
-              className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+              className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"
             />
           </label>
           <button
             type="submit"
             disabled={estado === "salvando"}
-            className="inline-flex items-center gap-1.5 rounded-md bg-ml-blue px-3 py-2 text-xs font-bold text-white hover:brightness-95 disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#0071e3] px-4 text-xs font-semibold text-white transition hover:brightness-110 active:scale-[0.97] disabled:opacity-60 motion-reduce:transition-none"
           >
             {estado === "salvando" ? (
               <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />

@@ -39,7 +39,7 @@ function ehPaginaDaExtensao() {
 function travarPorEstarSoltaNoDisco() {
   const b = $('salvar');
   if (b) { b.disabled = true; b.textContent = 'Abra pelo Chrome, nao pelo arquivo'; }
-  for (const id of ['key', 'sinc', 'ntfy', 'modelo', 'sincauto']) {
+  for (const id of ['key', 'sinc', 'ntfy', 'modelo', 'sincauto', 'selo', 'copiarabrir']) {
     const el = $(id);
     if (el) { el.disabled = true; el.value = ''; }
   }
@@ -74,7 +74,7 @@ function contextoMorto(e) {
     .test(String((e && e.message) || e));
 }
 
-const CAMPOS = ['geminiKey', 'geminiModel', 'sincToken', 'sincAuto', 'ntfyTopico'];
+const CAMPOS = ['geminiKey', 'geminiModel', 'sincToken', 'sincAuto', 'ntfyTopico', 'seloAtivo', 'copiarAoAbrir'];
 
 /* Senha do banco proprio (18/10, 1.167.1): so letras. Numero e espaco que
    entrarem no campo (tecla 9 presa no notebook) sao descartados ao salvar. */
@@ -110,6 +110,9 @@ async function carregar() {
     if (d.geminiModel) $('modelo').value = d.geminiModel;
     if (d.sincToken) $('sinc').value = d.sincToken;
     $('sincauto').checked = d.sincAuto !== false;
+    $('selo').checked = d.seloAtivo !== false;
+    $('copiarabrir').checked = d.copiarAoAbrir === true;
+    mostrarEstadoToken(d.sincToken);
   } catch (e) {
     avisar(contextoMorto(e)
       ? 'Esta aba ficou velha porque a extensao se atualizou. Aperte F5 para recarregar e tente de novo.'
@@ -126,7 +129,9 @@ $('salvar').addEventListener('click', async () => {
       geminiModel: $('modelo').value,
       sincToken: limparToken($('sinc').value),
       sincAuto: $('sincauto').checked,
-      ntfyTopico: $('ntfy').value.trim().replace(/[^A-Za-z0-9_-]/g, '')
+      ntfyTopico: $('ntfy').value.trim().replace(/[^A-Za-z0-9_-]/g, ''),
+      seloAtivo: $('selo').checked,
+      copiarAoAbrir: $('copiarabrir').checked
     };
 
     await gravarStorage(querido);
@@ -138,7 +143,9 @@ $('salvar').addEventListener('click', async () => {
                && salvo.sincToken === querido.sincToken
                && salvo.geminiModel === querido.geminiModel
                && salvo.ntfyTopico === querido.ntfyTopico
-               && (salvo.sincAuto !== false) === querido.sincAuto;
+               && (salvo.sincAuto !== false) === querido.sincAuto
+               && salvo.seloAtivo === querido.seloAtivo
+               && salvo.copiarAoAbrir === querido.copiarAoAbrir;
 
     if (!bateu) {
       avisar('Cliquei em salvar mas ao reler o valor voltou diferente. Aperte F5 e tente de novo.', true);
@@ -146,6 +153,7 @@ $('salvar').addEventListener('click', async () => {
     }
 
     const temToken = Boolean(querido.sincToken);
+    mostrarEstadoToken(querido.sincToken);
     avisar(temToken
       ? 'Salvo e conferido. O token de sincronia esta guardado.'
       : 'Salvo e conferido. O token de sincronia ficou vazio, entao o site nao vai ser alimentado.');
@@ -157,6 +165,23 @@ $('salvar').addEventListener('click', async () => {
     b.disabled = false;
   }
 });
+
+/* Token check without a new server call: the last real sync with the site
+   says whether the saved token works (ultimaSincronia, from background). */
+async function mostrarEstadoToken(token) {
+  const el = $('estadoToken');
+  if (!el) return;
+  el.className = 'estado-token';
+  if (!token) { el.textContent = 'Nenhum token salvo.'; el.classList.add('erro'); return; }
+  try {
+    const { ultimaSincronia: u } = await chrome.storage.local.get('ultimaSincronia');
+    if (!u) { el.textContent = 'Token salvo. Ainda sem sincronia para confirmar.'; return; }
+    const min = Math.max(0, Math.round((Date.now() - u.quando) / 60000));
+    if (u.erro) { el.textContent = `Última sincronia falhou há ${min} min: ${u.erro}`; el.classList.add('erro'); return; }
+    el.textContent = `✓ Última sincronia com o site deu certo há ${min} min.`;
+    el.classList.add('ok');
+  } catch (e) { el.textContent = ''; }
+}
 
 if (ehPaginaDaExtensao()) {
   carregar();

@@ -473,7 +473,7 @@ export function PainelAlertasPreco({ dados }: { dados?: DadosMeusPrecos } = {}) 
           <p className="mt-1">Compare um produto e toque em "Acompanhar preço" no resultado.</p>
           <Link
             to="/"
-            className="mt-3 inline-block rounded-md bg-ml-blue px-4 py-2 text-sm font-bold text-white hover:brightness-95"
+            className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[#0071e3] px-5 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.97] motion-reduce:transition-none"
           >
             Comparar um produto
           </Link>

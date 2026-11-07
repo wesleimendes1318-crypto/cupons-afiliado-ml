@@ -1,5 +1,7 @@
 /* Cupons Afiliado ML - popup */
 
+import { lojaDaAba, NOME_LOJA, urlComparacaoNoSite, tituloLimpo } from './aba-atual.js';
+
 const $ = id => document.getElementById(id);
 
 const norm = s => (s ?? '').toString().toLowerCase()
@@ -121,16 +123,18 @@ $('atualizar').addEventListener('click', () => carregar(true));
    v1.2 — abas, caçador de produto e texto de venda
    ================================================================ */
 
-document.querySelectorAll('.aba').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.aba').forEach(x => x.classList.toggle('ativa', x === b));
-    $('painel-atender').hidden = b.dataset.aba !== 'atender';
-    $('painel-cupons').hidden  = b.dataset.aba !== 'cupons';
-    $('painel-cacar').hidden   = b.dataset.aba !== 'cacar';
-    if (b.dataset.aba === 'cacar')   $('termo').focus();
-    if (b.dataset.aba === 'atender') $('urlcli').focus();
+function abrirAba(nome) {
+  document.querySelectorAll('.aba').forEach(x => {
+    x.classList.toggle('ativa', x.dataset.aba === nome);
+    x.setAttribute('aria-selected', x.dataset.aba === nome ? 'true' : 'false');
+    const painel = $('painel-' + x.dataset.aba);
+    if (painel) painel.hidden = x.dataset.aba !== nome;
   });
-});
+  if (nome === 'cacar')   $('termo').focus();
+  if (nome === 'atender') $('urlcli').focus();
+  try { localStorage.setItem('popupAba', nome); } catch (e) { /* convenience only */ }
+}
+document.querySelectorAll('.aba').forEach(b => b.addEventListener('click', () => abrirAba(b.dataset.aba)));
 
 function escapar(s) {
   return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -210,7 +214,8 @@ async function mostrarStatusSincronia() {
   const r = await pedir({ tipo: 'statusSincronia' });
   const el = $('sincinfo');
   if (!el || !r.ok) return;
-  if (!r.configurado) { el.textContent = 'Site: token de sincronia nao configurado (opcoes da extensao).'; return; }
+  el.hidden = false;
+  if (!r.configurado) { el.textContent = 'Site: token de sincronia não configurado (Opções da extensão).'; return; }
   const u = r.ultima;
   if (!u) { el.textContent = 'Site: configurado, ainda sem sincronia.'; return; }
   const min = Math.round((Date.now() - u.quando) / 60000);
@@ -250,12 +255,16 @@ mostrarStatusSincronia();
    v1.4 - Link do cliente entra, meu link sai
    ================================================================ */
 
-function copiarPara(botao, texto, rotulo) {
-  navigator.clipboard.writeText(texto).then(() => {
-    const antes = botao.textContent;
-    botao.textContent = 'copiado';
-    setTimeout(() => { botao.textContent = antes; }, 1400);
-  }).catch(() => { botao.textContent = 'falhou'; });
+function copiarPara(botao, texto) {
+  return navigator.clipboard.writeText(texto).then(() => {
+    const antes = botao.dataset.rotulo || botao.textContent;
+    botao.dataset.rotulo = antes;
+    botao.classList.add('feito');
+    botao.innerHTML = '<span class="marcado">✓</span> Copiado!';
+    try { navigator.vibrate && navigator.vibrate(8); } catch (e) { /* no haptics on desktop */ }
+    setTimeout(() => { botao.textContent = antes; botao.classList.remove('feito'); }, 1600);
+    return true;
+  }).catch(() => { botao.textContent = 'Não copiou: selecione e use Ctrl+C'; return false; });
 }
 
 /* Mesma leitura do site: o cupom so e "bom" quando desconta de verdade neste
@@ -333,6 +342,7 @@ function mostrarAtendimento(d) {
   if (o) {
     const alt = document.createElement('div');
     alt.className = 'alt';
+
     const economia = o.economia != null ? ` · economia de ${brl(o.economia)}` : '';
     const final = o.final != null ? ` · sai por ${brl(o.final)}` : '';
     alt.innerHTML = `
@@ -346,6 +356,19 @@ function mostrarAtendimento(d) {
         <button class="pri" data-c="alt">copiar</button>
       </div>`;
     alt.querySelector('[data-c="alt"]').addEventListener('click', e => copiarPara(e.target, o.link));
+    /* Savings only when the other store really costs less (never invented). */
+    if (o.economia != null && o.economia > 0) {
+      const pilula = document.createElement('div');
+      pilula.style.marginBottom = '8px';
+      pilula.innerHTML = `<span class="pilula verde">Economize até ${brl(o.economia)}</span>`;
+      alt.prepend(pilula);
+    }
+    /* o.link is the affiliate link generated for that store (rule no. 1). */
+    const comprar = document.createElement('a');
+    comprar.className = 'bt pri'; comprar.style.marginTop = '10px';
+    comprar.href = o.link; comprar.target = '_blank'; comprar.rel = 'noopener';
+    comprar.textContent = o.economia > 0 ? 'Comprar na loja mais barata' : 'Abrir nesta loja';
+    alt.append(comprar);
     el.append(alt);
   } else if (d.procurouOutra) {
     const nada = document.createElement('div');
@@ -356,6 +379,7 @@ function mostrarAtendimento(d) {
     el.append(nada);
   }
 
+  el.classList.add('cartao');
   const saida = $('saidaa');
   saida.textContent = '';
   saida.append(el);
@@ -365,13 +389,13 @@ async function atender() {
   const url = $('urlcli').value.trim();
   if (!url) return;
   const bt = $('btatender');
-  bt.disabled = true; bt.textContent = 'gerando...';
+  bt.disabled = true; bt.textContent = 'Comparando…';
   $('infoa').textContent = 'lendo o anúncio, conferindo o cupom real, criando o código e gerando o seu link...';
   $('saidaa').textContent = '';
 
   const t0 = performance.now();
   const r = await pedir({ tipo: 'atender', url, alternativas: $('altok').checked });
-  bt.disabled = false; bt.textContent = 'Gerar meu link';
+  bt.disabled = false; bt.textContent = 'Comparar e gerar meu link';
 
   if (!r.ok) {
     $('infoa').textContent = 'Não deu: ' + r.erro;
@@ -426,8 +450,12 @@ mostrarFreio();
 async function mostrarEstado() {
   const el = $('estado');
   const r = await pedir({ tipo: 'estadoGeral' });
-  if (!r || !r.ok) { el.textContent = 'Não consegui ler o estado da extensão.'; return; }
+  if (!r || !r.ok) { el.textContent = 'Não consegui ler o estado da extensão.'; $('ponto').className = 'ponto erro'; return; }
   const d = r.dados;
+  $('versao').textContent = 'v' + d.versao;
+  $('ponto').className = 'ponto ' + (d.token ? 'ok' : 'erro');
+  $('ponto').title = d.token ? 'Sincronizada com o site' : 'Sem token do site (Opções)';
+  $('hubToken').textContent = d.token ? 'sim' : 'não (Opções)';
   const linhas = [];
   linhas.push(`<b>Versão ${escapar(d.versao)}</b> · ${d.token ? 'ligada ao site' : '<span style="color:#c00">sem token do site (Opções)</span>'}`);
   if (d.anonimaBloqueadaAte && d.anonimaBloqueadaAte > Date.now()) {
@@ -439,7 +467,7 @@ async function mostrarEstado() {
   const u = d.ultimo;
   if (u) {
     const min = Math.max(0, Math.round((Date.now() - u.quando) / 60000));
-    const ia = u.ia === 'conferiu' ? 'Gemini conferiu pela foto' : u.ia === 'indisponivel' ? 'Gemini sem cota agora' : 'sem conferência necessária';
+    const ia = u.ia === 'conferiu' ? 'conferido pela foto' : u.ia === 'indisponivel' ? 'conferência pela foto sem cota agora' : 'sem conferência necessária';
     linhas.push(`Último cliente: há ${min} min${u.segundos ? `, em ${Math.round(u.segundos)} s` : ''} · ${u.lojas} lojas comparadas`
       + `${u.maisBaratas ? ` (${u.maisBaratas} mais baratas)` : ''} · ${ia} · ${u.comLink ? 'seu link gerado' : 'link gerado no clique'}.`);
   } else {
@@ -448,3 +476,144 @@ async function mostrarEstado() {
   el.innerHTML = linhas.join('<br>');
 }
 mostrarEstado();
+
+
+/* ================================================================
+   1.181.0 - 1-Click, Hub and Acompanhar tabs (07/11/2026)
+   ================================================================ */
+
+const ROTULO_COPIAR = {
+  mercadolivre: 'Copiar link de afiliado (meli.la)',
+  amazon: 'Copiar link de afiliado (Amazon)',
+  shopee: 'Copiar link de afiliado (Shopee)'
+};
+
+async function abaAtiva() {
+  try {
+    const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return t || null;
+  } catch (e) { return null; }
+}
+
+/* Photo and title from the page itself (og: tags); only on store pages,
+   which are in host_permissions. Missing photo is fine. */
+async function lerProdutoDaAba(aba) {
+  try {
+    const [saida] = await chrome.scripting.executeScript({
+      target: { tabId: aba.id },
+      func: () => {
+        const m = p => (document.querySelector(`meta[property="${p}"], meta[name="${p}"]`) || {}).content || '';
+        const img = m('og:image') || (document.querySelector('#landingImage, .ui-pdp-gallery__figure img, img.ui-pdp-image') || {}).src || '';
+        return { titulo: m('og:title') || document.title || '', foto: img };
+      }
+    });
+    return (saida && saida.result) || {};
+  } catch (e) { return {}; }
+}
+
+function pintarProduto(alvo, info, loja) {
+  alvo.textContent = '';
+  if (info.foto && /^https:\/\//.test(info.foto)) {
+    const img = document.createElement('img');
+    img.src = info.foto; img.alt = '';
+    img.addEventListener('error', () => img.replaceWith(Object.assign(document.createElement('div'), { className: 'sem-foto', textContent: '🛍️' })));
+    alvo.append(img);
+  } else {
+    alvo.append(Object.assign(document.createElement('div'), { className: 'sem-foto', textContent: '🛍️' }));
+  }
+  const txt = document.createElement('div');
+  txt.innerHTML = `<div class="tit">${escapar(tituloLimpo(info.titulo) || 'Produto')}</div>
+    <span class="selo-loja ${loja}">${escapar(NOME_LOJA[loja])}</span>`;
+  alvo.append(txt);
+}
+
+function mostrarVazio(el, aba, det) {
+  el.hidden = false;
+  el.innerHTML = det && det.busca
+    ? `<b>Esta é uma página de busca</b>Abra um produto no ${escapar(NOME_LOJA[det.loja])} para gerar o link. Link de busca não vira link de afiliado.`
+    : '<b>Abra um produto</b>Entre na página de um produto do Mercado Livre, da Amazon ou da Shopee e clique de novo no ícone.';
+}
+
+let ABA = null, DET = null, LINK_PRONTO = null;
+
+/* Every link shown here is his affiliate link: meli.la from the ML generator
+   (search pages refused there too), Amazon /dp/ASIN?tag=melhoresc0fff-20,
+   Shopee from his affiliate panel. */
+async function gerarLinkDaAba() {
+  if (LINK_PRONTO) return LINK_PRONTO;
+  if (DET.loja === 'amazon') return DET.linkPronto;
+  if (DET.loja === 'shopee') {
+    const r = await pedir({ tipo: 'linkShopee', url: ABA.url });
+    if (!r.ok || !r.dados || !r.dados.link) throw new Error((r.dados && r.dados.erro) || r.erro || 'sem link');
+    return r.dados.link;
+  }
+  const r = await pedir({ tipo: 'linkDe', url: ABA.url });
+  if (!r.ok || !r.link) throw new Error(r.erro || 'sem link');
+  return r.link;
+}
+
+async function copiarLinkDaAba() {
+  const bt = $('btcopiar');
+  bt.disabled = true; bt.textContent = 'Gerando seu link…';
+  $('notaClique').textContent = '';
+  try {
+    LINK_PRONTO = await gerarLinkDaAba();
+    $('caixaClique').hidden = false;
+    $('linkClique').value = LINK_PRONTO;
+    bt.disabled = false;
+    bt.textContent = ROTULO_COPIAR[DET.loja];
+    const copiou = await copiarPara(bt, LINK_PRONTO);
+    if (!copiou) $('linkClique').select();
+  } catch (e) {
+    bt.disabled = false;
+    bt.textContent = ROTULO_COPIAR[DET.loja];
+    $('notaClique').textContent = 'Não consegui gerar agora: ' + textoDoErro(e.message || e).replace(/^Não consegui agora: /, '');
+  }
+}
+
+async function prepararAbaAtual() {
+  ABA = await abaAtiva();
+  DET = ABA ? lojaDaAba(ABA.url) : null;
+  const ok = !!(DET && DET.produto);
+  $('cliqueProduto').hidden = !ok;
+  $('acompProduto').hidden = !ok;
+  $('cliqueVazio').hidden = ok;
+  $('acompVazio').hidden = ok;
+  if (!ok) { mostrarVazio($('cliqueVazio'), ABA, DET); mostrarVazio($('acompVazio'), ABA, DET); return; }
+
+  $('btcopiar').textContent = ROTULO_COPIAR[DET.loja];
+  const info = await lerProdutoDaAba(ABA);
+  if (!info.titulo) info.titulo = ABA.title;
+  document.querySelectorAll('[data-produto]').forEach(el => pintarProduto(el, info, DET.loja));
+
+  const { copiarAoAbrir } = await chrome.storage.local.get('copiarAoAbrir').catch(() => ({}));
+  if (copiarAoAbrir) copiarLinkDaAba();
+}
+
+$('btcopiar').addEventListener('click', copiarLinkDaAba);
+$('btcompararsite').addEventListener('click', () => ABA && chrome.tabs.create({ url: urlComparacaoNoSite(ABA.url) }));
+$('btacompanhar').addEventListener('click', () => ABA && chrome.tabs.create({ url: urlComparacaoNoSite(ABA.url) }));
+$('btusaraba').addEventListener('click', () => {
+  if (!ABA || !DET || DET.loja !== 'mercadolivre' || !DET.produto) {
+    $('infoa').textContent = 'A aba aberta não é um produto do Mercado Livre. Para Amazon e Shopee, use "Abrir comparação no site" na aba 1-Click.';
+    return;
+  }
+  $('urlcli').value = ABA.url;
+  atender();
+});
+$('btopcoes').addEventListener('click', () => chrome.runtime.openOptionsPage());
+$('bthubsinc').addEventListener('click', () => chrome.tabs.create({ url: 'https://melhorescolha.io/admin' }));
+
+async function mostrarHub() {
+  const { espelhoUltimo } = await chrome.storage.local.get('espelhoUltimo').catch(() => ({}));
+  if (!espelhoUltimo) { $('hubUltima').textContent = 'ainda não leu'; return; }
+  const min = Math.max(0, Math.round((Date.now() - espelhoUltimo) / 60000));
+  $('hubUltima').textContent = min < 60 ? `há ${min} min` : min < 2880 ? `há ${Math.round(min / 60)} h` : new Date(espelhoUltimo).toLocaleString('pt-BR');
+}
+
+mostrarHub();
+prepararAbaAtual();
+try {
+  const salva = localStorage.getItem('popupAba');
+  if (salva && $('painel-' + salva) && salva !== 'cupons' && salva !== 'cacar') abrirAba(salva);
+} catch (e) { /* convenience only */ }

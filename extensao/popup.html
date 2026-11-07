@@ -4,141 +4,269 @@
 <meta charset="utf-8">
 <title>Melhor Escolha</title>
 <style>
-  :root { color-scheme: light dark; }
-  *, *::before, *::after { box-sizing: border-box; }
-  body { width: 480px; max-width: 100%; overflow-x: hidden; margin: 0; font: 13px/1.45 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-         background: #fff; color: #1a1a1a; }
-  header { padding: 10px 12px; background: #ffe600; display: flex; align-items: center; gap: 8px; }
-  header h1 { font-size: 13px; margin: 0; flex: 1; color: #1a1a1a; }
-  .bar { padding: 9px 12px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid #eee; }
-  input, select, button { font: inherit; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px;
-                          background: #fff; color: #1a1a1a; }
-  input[type=text] { flex: 1; min-width: 150px; }
-  input[type=number] { width: 70px; }
-  button { cursor: pointer; border-color: #3483fa; color: #3483fa; font-weight: 600; }
-  button.pri { background: #3483fa; color: #fff; }
-  #info { padding: 6px 12px; font-size: 11.5px; color: #555; background: #fafafa; border-bottom: 1px solid #eee; }
-  #lista { max-height: 380px; overflow: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  th { position: sticky; top: 0; background: #f2f2f2; text-align: left; padding: 6px 8px;
-       font-size: 10.5px; text-transform: uppercase; color: #555; }
-  td { padding: 6px 8px; border-bottom: 1px solid #f3f3f3; font-size: 12px; }
-  td a { color: #3483fa; text-decoration: none; }
-  .urg { color: #c1121f; font-weight: 600; }
-  .vazio { padding: 24px 12px; text-align: center; color: #777; }
+  /* Same tokens as the site (src/styles.css): Apple canvas, white cards,
+     liquid glass only on bars and buttons, blue #0071e3 for the action. */
+  :root {
+    color-scheme: light dark;
+    --canvas: #f5f5f7; --cartao: #fff; --tinta: #1c1c1e; --tinta2: #6e6e73; --linha: rgba(0,0,0,.08);
+    --azul: #0071e3; --verde: #34c759; --verde-tinta: #248a3d; --laranja: #ff9500; --laranja-tinta: #c93400; --vermelho: #ff3b30;
+    --vidro: rgba(255,255,255,.82); --campo: #fff;
+    --r2: 16px; --r3: 24px;
+    --mola: cubic-bezier(.16,1,.3,1);
+  }
   @media (prefers-color-scheme: dark) {
-    body { background: #1e1e1e; color: #eaeaea; }
-    header { background: #3a3620; } header h1 { color: #eaeaea; }
-    .bar, #info, td { border-color: #333; }
-    #info { background: #242424; color: #aaa; }
-    input, select, button { background: #2a2a2a; color: #eaeaea; border-color: #444; }
-    button.pri { background: #3483fa; color: #fff; }
-    th { background: #2a2a2a; color: #aaa; }
+    :root { --canvas: #1c1c1e; --cartao: #2c2c2e; --tinta: #f5f5f7; --tinta2: #a1a1a6; --linha: rgba(255,255,255,.12);
+            --vidro: rgba(28,28,30,.82); --campo: #1c1c1e; --verde-tinta: #30d158; --laranja-tinta: #ff9f0a; }
   }
-  .abas{display:flex;gap:4px;padding:8px 10px 0;border-bottom:1px solid #eee}
-  .aba{border:0;background:transparent;padding:8px 12px;border-radius:7px 7px 0 0;
-       font-weight:600;color:#777;cursor:pointer}
-  .aba.ativa{background:#3483fa;color:#fff}
-  #infoc{padding:9px 12px;font-size:12px;color:#555;background:#fafafa;border-bottom:1px solid #eee}
-  #listac{max-height:360px;overflow:auto}
-  .hit{padding:10px 12px;border-bottom:1px solid #f3f3f3}
-  .hit a{color:#3483fa;text-decoration:none;font-weight:600;display:block;font-size:12.5px}
-  .hit .meta{font-size:11.5px;color:#666;margin-top:3px}
-  .hit .cup{display:inline-block;background:rgba(15,123,63,.14);color:#0f7b3f;
-            font-weight:700;font-size:11px;padding:1px 7px;border-radius:999px}
-  .hit button{margin-top:6px;font-size:11px;padding:4px 9px}
-  .hit pre{white-space:pre-wrap;background:#f6f6f6;padding:8px;border-radius:6px;
-           font:12px inherit;margin:7px 0 0}
-  @media (prefers-color-scheme:dark){
-    .abas{border-color:#333} .aba{color:#999}
-    #infoc{background:#242424;color:#aaa;border-color:#333}
-    .hit{border-color:#2e2e2e} .hit pre{background:#262626}
+  *, *::before, *::after { box-sizing: border-box; }
+  body { width: 480px; max-width: 100%; overflow-x: hidden; margin: 0; background: var(--canvas); color: var(--tinta);
+         font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Roboto, sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--azul); text-decoration: none; }
+  [hidden] { display: none !important; }
+
+  /* ---------- top bar (glass) ---------- */
+  header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+           background: var(--vidro); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+           border-bottom: 1px solid var(--linha); }
+  .marca { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 999px;
+           background: var(--cartao); box-shadow: 0 0 0 1px var(--linha); font-weight: 650; font-size: 13px; letter-spacing: -.01em; }
+  .ponto { width: 8px; height: 8px; border-radius: 50%; background: #c7c7cc; }
+  .ponto.ok { background: var(--verde); box-shadow: 0 0 0 3px rgba(52,199,89,.2); }
+  .ponto.erro { background: var(--vermelho); }
+  .versao { flex: 1; font-size: 11px; color: var(--tinta2); }
+  .icone { border: 0; background: transparent; cursor: pointer; padding: 6px; border-radius: 999px; color: var(--tinta2); font-size: 15px; line-height: 1; }
+  .icone:hover { background: var(--linha); }
+
+  /* ---------- segmented tabs ---------- */
+  .abas { display: flex; gap: 2px; margin: 10px 12px 0; padding: 3px; border-radius: 999px; background: rgba(118,118,128,.12); }
+  .aba { flex: 1; border: 0; background: transparent; padding: 7px 4px; border-radius: 999px; cursor: pointer;
+         font-size: 12px; font-weight: 600; color: var(--tinta2); white-space: nowrap; transition: background .25s var(--mola), color .25s; }
+  .aba.ativa { background: var(--cartao); color: var(--tinta); box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px var(--linha); }
+  .painel { padding: 12px; }
+
+  /* ---------- cards & buttons ---------- */
+  .cartao { background: var(--cartao); border-radius: var(--r3); padding: 14px; box-shadow: 0 0 0 1px var(--linha); }
+  .cartao + .cartao, .cartao + .acoes, .acoes + .cartao { margin-top: 10px; }
+  .produto { display: flex; gap: 12px; align-items: center; }
+  .produto img { width: 64px; height: 64px; flex: none; object-fit: contain; border-radius: var(--r2); background: #fff; box-shadow: 0 0 0 1px var(--linha); }
+  .produto .sem-foto { width: 64px; height: 64px; flex: none; border-radius: var(--r2); background: var(--canvas); display: grid; place-items: center; font-size: 22px; }
+  .produto .tit { font-weight: 600; font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+  .selo-loja { display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 650; }
+  .selo-loja.mercadolivre { background: #fff159; color: #2d3277; }
+  .selo-loja.amazon { background: #232f3e; color: #fff; }
+  .selo-loja.shopee { background: #ee4d2d; color: #fff; }
+  .acoes { display: grid; gap: 8px; margin-top: 12px; }
+  .bt { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; border: 0; cursor: pointer;
+        padding: 12px 14px; border-radius: var(--r2); font-weight: 650; font-size: 13.5px; text-align: center;
+        transition: transform .2s var(--mola), background .2s, opacity .2s; }
+  .bt:active { transform: scale(.97); }
+  .bt:disabled { opacity: .55; cursor: default; transform: none; }
+  .bt.pri { background: var(--azul); color: #fff; }
+  .bt.pri:hover:not(:disabled) { background: #0077ed; }
+  .bt.pri.feito { background: var(--verde); }
+  .bt.sec { background: rgba(0,113,227,.1); color: var(--azul); }
+  .bt.sec:hover:not(:disabled) { background: rgba(0,113,227,.16); }
+  .bt.peq { padding: 8px 12px; font-size: 12.5px; width: auto; }
+  .marcado { display: inline-block; animation: marcar .45s var(--mola); }
+  @keyframes marcar { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .vazio { padding: 26px 14px; text-align: center; color: var(--tinta2); }
+  .vazio b { display: block; color: var(--tinta); font-size: 14px; margin-bottom: 4px; }
+  .nota { font-size: 11.5px; color: var(--tinta2); margin-top: 8px; line-height: 1.45; }
+  .pilula { display: inline-block; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+  .pilula.verde { background: rgba(52,199,89,.16); color: var(--verde-tinta); }
+  .pilula.laranja { background: rgba(255,149,0,.16); color: var(--laranja-tinta); }
+  .caixa-link { display: flex; gap: 6px; margin-top: 10px; }
+  .caixa-link input { flex: 1; min-width: 0; font-weight: 600; font-size: 12.5px; padding: 9px 11px; border: 0;
+                      border-radius: 12px; background: var(--canvas); box-shadow: inset 0 0 0 1px var(--linha); }
+  .caixa-link .bt { width: auto; padding: 9px 14px; font-size: 12.5px; }
+  .linha-bt { display: flex; gap: 8px; }
+  .linha-bt .bt { flex: 1; }
+
+  textarea, .campo, select { width: 100%; padding: 10px 12px; border: 0; border-radius: var(--r2); background: var(--campo);
+                             box-shadow: inset 0 0 0 1px var(--linha); resize: vertical; }
+  textarea:focus, .campo:focus, select:focus, .caixa-link input:focus { outline: 2px solid var(--azul); outline-offset: 0; }
+  .chk { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--tinta2); }
+
+  /* ---------- status / brake ---------- */
+  #freio { margin: 10px 12px 0; padding: 12px 14px; border-radius: var(--r2); background: rgba(255,149,0,.14); font-size: 12px; line-height: 1.4; }
+  #freio b { color: var(--laranja-tinta); }
+  #freiotxt { margin: 3px 0 9px; color: var(--tinta2); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; }
+  .kv dt { color: var(--tinta2); } .kv dd { margin: 0; font-weight: 600; text-align: right; }
+  .links { display: grid; gap: 6px; margin-top: 10px; }
+  .links a { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-radius: var(--r2);
+             background: var(--canvas); color: var(--tinta); font-weight: 600; }
+  .links a span { color: var(--tinta2); font-weight: 400; font-size: 11.5px; }
+  #estado { font-size: 12px; line-height: 1.55; color: var(--tinta2); }
+  #estado b { color: var(--tinta); }
+  #sincinfo { font-size: 11.5px; color: var(--tinta2); margin-top: 8px; }
+
+  /* ---------- comparator result (from "Link do cliente") ---------- */
+  #infoa { font-size: 11.5px; color: var(--tinta2); margin-top: 8px; line-height: 1.45; }
+  .res { margin-top: 10px; }
+  .res .tit { font-weight: 600; font-size: 13px; line-height: 1.35; word-break: break-word; }
+  .res .pre { font-weight: 700; font-size: 17px; margin-top: 4px; letter-spacing: -.01em; }
+  .res .meta, .meta { font-size: 11.5px; color: var(--tinta2); margin-top: 4px; }
+  .msg { white-space: pre-wrap; background: var(--canvas); border-radius: 12px; padding: 10px; font-size: 12px; line-height: 1.5;
+         margin-top: 10px; max-height: 190px; overflow: auto; }
+  .aval { border-radius: 12px; padding: 9px 11px; font-size: 12px; margin-top: 10px; line-height: 1.45; }
+  .aval.bom { background: rgba(52,199,89,.14); color: var(--verde-tinta); }
+  .aval.ruim { background: rgba(255,59,48,.1); color: var(--vermelho); }
+  .aval.neutro { background: var(--canvas); color: var(--tinta2); }
+  .alt { border-top: 1px solid var(--linha); margin-top: 12px; padding-top: 12px; }
+  .res button, .hit button { border: 0; cursor: pointer; padding: 9px 14px; border-radius: 12px; font-weight: 650; font-size: 12.5px;
+                              background: rgba(0,113,227,.1); color: var(--azul); transition: transform .2s var(--mola); }
+  .res button.pri { background: var(--azul); color: #fff; }
+  .res button:active, .hit button:active { transform: scale(.97); }
+  .res > button { margin-top: 10px; }
+  .cup { display: inline-block; background: rgba(52,199,89,.16); color: var(--verde-tinta); font-weight: 700; font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+
+  /* ---------- hidden legacy tabs (coupons index, product hunt) ---------- */
+  .bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .bar input[type=text] { flex: 1; min-width: 150px; } .bar input[type=number] { width: 70px; }
+  .bar input, .bar select { width: auto; padding: 7px 10px; border: 0; border-radius: 12px; background: var(--campo); box-shadow: inset 0 0 0 1px var(--linha); }
+  #info, #infoc { font-size: 11.5px; color: var(--tinta2); margin-bottom: 8px; }
+  #lista, #listac { max-height: 360px; overflow: auto; border-radius: var(--r2); background: var(--cartao); box-shadow: 0 0 0 1px var(--linha); }
+  table { width: 100%; border-collapse: collapse; }
+  th { position: sticky; top: 0; background: var(--cartao); text-align: left; padding: 7px 9px; font-size: 10.5px; text-transform: uppercase; color: var(--tinta2); }
+  td { padding: 7px 9px; border-top: 1px solid var(--linha); font-size: 12px; }
+  .urg { color: var(--vermelho); font-weight: 600; }
+  .hit { padding: 10px 12px; border-top: 1px solid var(--linha); }
+  .hit a { font-weight: 600; display: block; font-size: 12.5px; }
+  .hit pre { white-space: pre-wrap; background: var(--canvas); padding: 8px; border-radius: 10px; font: 12px inherit; margin: 7px 0 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .bt:active { transform: none; }
   }
-  #infoa{padding:9px 12px;font-size:11.5px;color:#666;background:#fafafa;border-bottom:1px solid #eee;line-height:1.45}
-  #saidaa{padding:0 12px 12px}
-  .res{border:1px solid #e6e6e6;border-radius:8px;padding:11px;margin-top:11px}
-  .res .tit{font-weight:600;font-size:12.5px;line-height:1.35;word-break:break-word}
-  .res .pre{color:#0f7b3f;font-weight:700;font-size:14px;margin-top:3px}
-  .res .meta{font-size:11.5px;color:#666;margin-top:4px}
-  .caixa-link{display:flex;gap:6px;margin-top:9px}
-  .caixa-link input{flex:1;min-width:0;font:600 12.5px inherit;padding:7px 8px;
-                    border:1px solid #3483fa;border-radius:6px;background:#f2f7ff;color:#1a1a1a}
-  .msg{white-space:pre-wrap;background:#f6f6f6;border-radius:6px;padding:9px;
-       font:12px/1.5 inherit;margin-top:9px;max-height:190px;overflow:auto}
-  .aval{border-radius:6px;padding:8px 10px;font-size:11.5px;margin-top:8px;line-height:1.45}
-  .aval.bom{background:rgba(15,123,63,.1);color:#0f7b3f}
-  .aval.ruim{background:rgba(193,18,31,.09);color:#c1121f}
-  .aval.neutro{background:rgba(0,0,0,.05);color:#555}
-  .alt{border-top:1px dashed #ddd;margin-top:10px;padding-top:9px}
-  .alt a{color:#3483fa;text-decoration:none;font-size:12px;font-weight:600;display:block;word-break:break-word}
-  @media(prefers-color-scheme:dark){
-    #infoa{background:#242424;color:#aaa;border-color:#333}
-    .res{border-color:#333} .msg{background:#262626}
-    .caixa-link input{background:#17243a;color:#eaeaea}
-    .alt{border-color:#3a3a3a}
-  }
+  @media (prefers-reduced-transparency: reduce) { header { background: var(--canvas); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 </style>
 </head>
 <body>
-  <header><h1>Melhor Escolha · comparador de preços</h1>
-    <button id="btsinc" hidden title="Lista de cupons bloqueada pelo Mercado Livre">Sincronizar site</button>
-    <button id="atualizar" hidden>Atualizar</button></header>
-  <div id="estado" style="padding:9px 12px;font-size:12px;line-height:1.5;border-bottom:1px solid #eee">carregando estado…</div>
-  <div id="freio" hidden style="background:#fff8e1;border-bottom:1px solid #f0c36d;padding:9px 12px;font-size:12px;line-height:1.4">
+  <header>
+    <span class="marca"><span class="ponto" id="ponto"></span>Melhor Escolha</span>
+    <span class="versao" id="versao"></span>
+    <button class="icone" id="btsinc" hidden title="Lista de cupons bloqueada pelo Mercado Livre">⟳</button>
+    <button class="icone" id="atualizar" hidden title="Atualizar">↻</button>
+    <button class="icone" id="btopcoes" title="Opções">⚙︎</button>
+  </header>
+
+  <div id="freio" hidden>
     <b>Pausa de segurança do Mercado Livre</b>
-    <div id="freiotxt" style="margin:3px 0 7px;color:#555"></div>
-    <div style="display:flex;gap:6px">
-      <button id="btverif" class="pri" style="flex:1">1. Resolver verificação</button>
-      <button id="btliberar" style="flex:1">2. Já resolvi, liberar</button>
+    <div id="freiotxt"></div>
+    <div class="linha-bt">
+      <button id="btverif" class="bt pri peq">1. Resolver verificação</button>
+      <button id="btliberar" class="bt sec peq">2. Já resolvi, liberar</button>
     </div>
   </div>
-  <div class="abas">
-    <button class="aba ativa" data-aba="atender">Link do cliente</button>
+
+  <nav class="abas" role="tablist">
+    <button class="aba ativa" data-aba="clique" role="tab">1-Click Afiliado</button>
+    <button class="aba" data-aba="atender" role="tab">Comparador</button>
+    <button class="aba" data-aba="hub" role="tab">Hub Métricas</button>
+    <button class="aba" data-aba="acompanhar" role="tab">Acompanhar</button>
     <button class="aba" data-aba="cupons" hidden>Cupons</button>
     <button class="aba" data-aba="cacar" hidden>Caçar produto</button>
-  </div>
+  </nav>
 
-  <div id="painel-atender">
-    <div class="bar" style="flex-direction:column;align-items:stretch">
-      <textarea id="urlcli" rows="3" placeholder="Cole aqui o link que o cliente mandou"
-        style="width:100%;resize:vertical;font:inherit;padding:8px;border:1px solid #ccc;border-radius:6px"></textarea>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="pri" id="btatender" style="flex:1">Gerar meu link</button>
-        <label class="chk" style="font-size:11.5px;color:#777;display:flex;gap:5px;align-items:center">
-          <input type="checkbox" id="altok" checked> comparar com outras lojas
-        </label>
+  <!-- 1-Click: affiliate link for the product on the open tab -->
+  <section class="painel" id="painel-clique">
+    <div id="cliqueVazio" class="cartao vazio" hidden></div>
+    <div id="cliqueProduto" hidden>
+      <div class="cartao">
+        <div class="produto" data-produto></div>
+        <div class="acoes">
+          <button class="bt pri" id="btcopiar">Copiar link de afiliado</button>
+          <button class="bt sec" id="btcompararsite">Abrir comparação no site</button>
+        </div>
+        <div class="caixa-link" id="caixaClique" hidden>
+          <input type="text" readonly id="linkClique" aria-label="Seu link de afiliado">
+        </div>
+        <div class="nota" id="notaClique"></div>
       </div>
     </div>
-    <div id="infoa">Leio o anúncio, procuro o MESMO produto em outras lojas (a Gemini confere pela foto) e mostro a mais barata. Todo link que sai daqui é o seu link de afiliado.</div>
-    <div id="saidaa"></div>
-  </div>
-  <div id="painel-cupons" hidden>
-  <div class="bar">
-    <input type="text" id="q" placeholder="vendedor ou termo (virgula para varios)">
-    <select id="tipo"><option value="">todos</option><option value="%">so %</option><option value="R$">so R$</option></select>
-    <input type="number" id="min" placeholder="min" min="0">
-    <select id="ord">
-      <option value="desconto">maior desconto</option>
-      <option value="orcamento">maior orcamento</option>
-      <option value="dias">vence antes</option>
-      <option value="vendedor">vendedor A-Z</option>
-    </select>
-    <button id="csv">CSV</button>
-  </div>
-  <div id="info">carregando...</div>
-  <div id="lista"><div class="vazio">carregando indice de cupons...</div></div>
-  </div>
+  </section>
 
-  <div id="painel-cacar" hidden>
-    <div class="bar">
-      <input type="text" id="termo" placeholder="o que voce quer vender (ex: lencol berco)">
-      <label class="chk"><input type="checkbox" id="full" checked> so entrega rapida (Full)</label>
-      <button class="pri" id="btcacar">Cacar</button>
+  <!-- Comparador: the "Link do cliente" flow (paste -> my link + same product in other stores) -->
+  <section class="painel" id="painel-atender" hidden>
+    <div class="cartao">
+      <textarea id="urlcli" rows="3" placeholder="Cole o link que o cliente mandou"></textarea>
+      <div class="linha-bt" style="margin-top:8px">
+        <button class="bt pri" id="btatender">Comparar e gerar meu link</button>
+        <button class="bt sec peq" id="btusaraba" title="Usa o produto da aba aberta">Usar a aba atual</button>
+      </div>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="altok" checked> procurar o mesmo produto em outras lojas</label>
+      <div id="infoa">Leio o anúncio, procuro o mesmo produto em outras lojas (conferido pela foto) e mostro a que sai mais barata. Todo link que sai daqui é o seu link de afiliado.</div>
     </div>
-    <div id="infoc">Digite um produto. Eu busco no Mercado Livre, descubro o vendedor de cada anuncio e mostro so os que tem cupom de afiliado.</div>
+    <div id="saidaa"></div>
+  </section>
+
+  <!-- Hub: founder affiliate stats shortcut -->
+  <section class="painel" id="painel-hub" hidden>
+    <div class="cartao">
+      <dl class="kv">
+        <dt>Última rodada no hub</dt><dd id="hubUltima">—</dd>
+        <dt>Ligada ao site</dt><dd id="hubToken">—</dd>
+      </dl>
+      <div class="acoes">
+        <button class="bt pri" id="bthubsinc">Sincronizar vendas do hub agora</button>
+      </div>
+      <div class="nota">Abre o painel do fundador; o botão "Sincronizar vendas agora" de lá pede a leitura do Mercado Livre, da Amazon e da Shopee a esta extensão. Sozinha, ela lê a cada 12 horas.</div>
+      <div class="links">
+        <a href="https://melhorescolha.io/admin" target="_blank" rel="noopener">Painel do fundador <span>/admin</span></a>
+        <a href="https://melhorescolha.io/perfil" target="_blank" rel="noopener">Minha conta <span>/perfil</span></a>
+      </div>
+    </div>
+    <div class="cartao">
+      <div id="estado">carregando estado…</div>
+      <div id="sincinfo" hidden></div>
+    </div>
+  </section>
+
+  <!-- Acompanhar: send the open product to the site's price tracking -->
+  <section class="painel" id="painel-acompanhar" hidden>
+    <div id="acompVazio" class="cartao vazio" hidden></div>
+    <div id="acompProduto" hidden>
+      <div class="cartao">
+        <div class="produto" data-produto></div>
+        <div class="acoes">
+          <button class="bt pri" id="btacompanhar">Acompanhar preço no site</button>
+          <a class="bt sec" href="https://melhorescolha.io/meus-precos" target="_blank" rel="noopener">Ver meus preços</a>
+        </div>
+        <div class="nota">Abre o produto no Melhor Escolha; toque em "Acompanhar" lá para receber o aviso quando o preço baixar.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="painel" id="painel-cupons" hidden>
+    <div class="bar">
+      <input type="text" id="q" placeholder="vendedor ou termo (vírgula para vários)">
+      <select id="tipo"><option value="">todos</option><option value="%">só %</option><option value="R$">só R$</option></select>
+      <input type="number" id="min" placeholder="mín" min="0">
+      <select id="ord">
+        <option value="desconto">maior desconto</option>
+        <option value="orcamento">maior orçamento</option>
+        <option value="dias">vence antes</option>
+        <option value="vendedor">vendedor A-Z</option>
+      </select>
+      <button class="bt sec peq" id="csv">CSV</button>
+    </div>
+    <div id="info">carregando...</div>
+    <div id="lista"><div class="vazio">carregando índice de cupons...</div></div>
+  </section>
+
+  <section class="painel" id="painel-cacar" hidden>
+    <div class="bar">
+      <input type="text" id="termo" placeholder="o que você quer vender (ex: lençol berço)">
+      <label class="chk"><input type="checkbox" id="full" checked> só entrega rápida (Full)</label>
+      <button class="bt pri peq" id="btcacar">Caçar</button>
+    </div>
+    <div id="infoc">Digite um produto. Eu busco no Mercado Livre, descubro o vendedor de cada anúncio e mostro só os que têm cupom de afiliado.</div>
     <div id="listac"></div>
-  </div>
-  <script src="popup.js"></script>
-  <div id="sincinfo" hidden style="padding:7px 12px;font-size:11px;color:#777;border-top:1px solid #eee"></div>
+  </section>
+
+  <script type="module" src="popup.js"></script>
 </body>
 </html>

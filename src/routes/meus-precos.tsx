@@ -21,7 +21,7 @@ export const Route = createFileRoute("/meus-precos")({
 function MeusPrecos() {
   return (
     <LayoutConteudo
-      etiqueta="Teste"
+      etiqueta="Seus produtos"
       titulo="Meus preços"
       resumo="Os produtos que você acompanha. Eu confiro o preço de tempos em tempos e mostro aqui quando cai. Esta página atualiza sozinha."
     >
