@@ -32,10 +32,14 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
 function createSupabaseAdminClient() {
   const SUPABASE_URL = SUPABASE_URL_SITE;
-  const SUPABASE_SERVICE_ROLE_KEY = chaveDeServico().chave;
+  const { chave: SUPABASE_SERVICE_ROLE_KEY, origem } = chaveDeServico();
 
   if (!SUPABASE_SERVICE_ROLE_KEY) {
-    const message = `Missing Supabase secret: ${NOME_SECRET_SERVICO} (Lovable → Secrets).`;
+    // Thrown lazily on first use, so routes that never touch the admin client keep working.
+    const message =
+      origem === 'varias'
+        ? `Several sb_secret_ values in env and none named ${NOME_SECRET_SERVICO}; rename the right one (Lovable → Project Settings → Secrets).`
+        : `Missing Supabase secret: ${NOME_SECRET_SERVICO} (Lovable → Project Settings → Secrets).`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }

@@ -250,9 +250,25 @@ export function curarResultados<T>(
 /** Gift archetype of a title: its first identifying word, singular
     ("Vasos Decorativos Cerâmica" -> "vaso"). */
 export function arquetipoDoTitulo(nome: string | null | undefined): string {
-  const w = palavrasDoModelo(nome)[0] ?? "";
-  return w.length > 4 ? w.replace(/(oes|aes)$/, "ao").replace(/s$/, "") : w;
+  /* 07/11: "Kit Vasos" is a vase, and "Abajur" and "Luminária" are one kind. */
+  const w = palavrasDoModelo(nome).find((p) => !GENERICOS.has(p) && !/^\d+$/.test(p)) ?? "";
+  const k = w.length > 4 ? w.replace(/(oes|aes)$/, "ao").replace(/s$/, "") : w;
+  return MESMO_TIPO[k] ?? k;
 }
+const GENERICOS = new Set(["kit", "conjunto", "jogo", "par", "combo", "mini", "super"]);
+const MESMO_TIPO: Record<string, string> = {
+  abajur: "luminaria",
+  luminaria: "luminaria",
+  luz: "luminaria",
+  aromatizador: "difusor",
+  difusor: "difusor",
+  poster: "quadro",
+  quadro: "quadro",
+  capinha: "capa",
+  vasinho: "vaso",
+  headphone: "fone",
+  headset: "fone",
+};
 
 /* Weslei, 06/11: no archetype monopoly ("Decoração" with 60 vases). Round
    robin over archetypes, each group keeping its own order (best first), so

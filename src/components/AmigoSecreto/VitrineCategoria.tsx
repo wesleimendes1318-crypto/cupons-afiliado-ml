@@ -7,12 +7,16 @@ import { useEffect, useState } from "react";
 import { usePrazosDosItens } from "@/lib/prazo-cliente";
 
 import { BotaoCarregarMaisVitrine } from "@/components/AmigoSecreto/BotaoCarregarMaisVitrine";
-import { BarraDeCarga, CartoesDeEspera, PilulaDeEspera } from "@/components/AmigoSecreto/EsperaVitrine";
+import {
+  BarraDeCarga,
+  CartoesDeEspera,
+  PilulaDeEspera,
+} from "@/components/AmigoSecreto/EsperaVitrine";
 import { abrirComparacao } from "@/components/BotoesCartao";
 import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
-import { arquetipoDoTitulo, qualidadePrimeiro } from "@/lib/curadoria";
+import { arquetipoDoTitulo, limitarPorArquetipo, qualidadePrimeiro } from "@/lib/curadoria";
 import type { VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
 
 /* Weslei, 05/11: gentle, true waiting copy (no jargon). Only what the
@@ -47,7 +51,12 @@ export function VitrineCategoria({
   /** "YYYY-MM-DD": only what arrives by then (needs the CEP). */
   dataFesta?: string | null;
   /** Thin showcase: offer shipping-to-calculate or a slightly higher budget. */
-  ampliar?: { freteACalcular: boolean; proximoMax: number | null; aoAceitarFrete: () => void; aoSubirValor: () => void };
+  ampliar?: {
+    freteACalcular: boolean;
+    proximoMax: number | null;
+    aoAceitarFrete: () => void;
+    aoSubirValor: () => void;
+  };
   vitrine: VitrineCategoriaAmigo;
   /** "entre R$ 80 e R$ 100" */
   faixa: string;
@@ -60,7 +69,9 @@ export function VitrineCategoria({
 }) {
   /* Store-like controls per showcase (Weslei, 05/11): sort, free shipping
      and "arrives before the party" by the CEP in the header. */
-  const [ordem, setOrdem] = useState<"relevancia" | "menor" | "maior" | "vendidos" | "economia">("relevancia");
+  const [ordem, setOrdem] = useState<"relevancia" | "menor" | "maior" | "vendidos" | "economia">(
+    "relevancia",
+  );
   const [soGratis, setSoGratis] = useState(false);
   /* "Ver todos" (Weslei, 05/11): the rail opens into a grid with every
      listing loaded, and loads the next 20 right away. */
@@ -79,7 +90,13 @@ export function VitrineCategoria({
   const produtos =
     ordem === "relevancia"
       ? /* 06/11: best sellers and official stores lead, kinds interleaved inside each tier. */
-        qualidadePrimeiro(filtrados, (r) => arquetipoDoTitulo(r.nome))
+        /* 07/11: then no kind takes more than 2 of each 10 cards (nothing dropped). */
+        limitarPorArquetipo(
+          qualidadePrimeiro(filtrados, (r) => arquetipoDoTitulo(r.nome)),
+          (r) => arquetipoDoTitulo(r.nome),
+          2,
+          10,
+        )
       : [...filtrados].sort((a, b) =>
           ordem === "menor"
             ? precoOu(a, 1e9) - precoOu(b, 1e9)
@@ -126,7 +143,10 @@ export function VitrineCategoria({
             aria-live="polite"
           >
             {vitrine.carregando && (
-              <span className="size-2 shrink-0 animate-pulse rounded-full bg-[#34c759]" aria-hidden="true" />
+              <span
+                className="size-2 shrink-0 animate-pulse rounded-full bg-[#34c759]"
+                aria-hidden="true"
+              />
             )}
             {contador}
           </p>
@@ -166,13 +186,22 @@ export function VitrineCategoria({
             type="button"
             aria-pressed={soGratis}
             onClick={() => setSoGratis((v) => !v)}
-            className={"min-h-11 rounded-full px-4 font-semibold " + (soGratis ? "bg-[#0071e3] text-white" : "bg-card ring-1 ring-border")}
+            className={
+              "min-h-11 rounded-full px-4 font-semibold " +
+              (soGratis ? "bg-[#0071e3] text-white" : "bg-card ring-1 ring-border")
+            }
           >
             Frete grátis
           </button>
-          {dataFesta && !cep && <span className="text-secondary-ink">Informe o CEP no topo para ver o que chega antes da festa.</span>}
+          {dataFesta && !cep && (
+            <span className="text-secondary-ink">
+              Informe o CEP no topo para ver o que chega antes da festa.
+            </span>
+          )}
           {dataFesta && cep && filtrados.length < n && (
-            <span className="text-secondary-ink">{n - filtrados.length} não chegam a tempo e ficaram de fora.</span>
+            <span className="text-secondary-ink">
+              {n - filtrados.length} não chegam a tempo e ficaram de fora.
+            </span>
           )}
         </div>
       )}
@@ -205,12 +234,14 @@ export function VitrineCategoria({
             {vitrine.carregando && <CartoesDeEspera quantos={n < 4 ? 2 : 1} />}
           </ul>
           {vitrine.carregando && <BarraDeCarga n={n} meta={meta} />}
-          {!contadorFixo && <BotaoCarregarMaisVitrine
-            carregando={vitrine.carregando}
-            aoCarregar={maisResultados}
-            rotulo={vitrine.temMais ? undefined : "Buscar mais resultados"}
-            className="mt-1"
-          />}
+          {!contadorFixo && (
+            <BotaoCarregarMaisVitrine
+              carregando={vitrine.carregando}
+              aoCarregar={maisResultados}
+              rotulo={vitrine.temMais ? undefined : "Buscar mais resultados"}
+              className="mt-1"
+            />
+          )}
         </>
       ) : vitrine.carregando ? (
         <div className="relative">
@@ -230,15 +261,28 @@ export function VitrineCategoria({
       )}
       {ampliar && !vitrine.carregando && n < 12 && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-2xl bg-[#f5f5f7] p-3 text-xs dark:bg-white/5">
-          <span className="text-secondary-ink">Poucas opções {ampliar.freteACalcular ? "nessa faixa" : "com frete grátis"}. Quer ver mais?</span>
+          <span className="text-secondary-ink">
+            Poucas opções {ampliar.freteACalcular ? "nessa faixa" : "com frete grátis"}. Quer ver
+            mais?
+          </span>
           {!ampliar.freteACalcular && (
-            <button type="button" onClick={ampliar.aoAceitarFrete} className="min-h-11 rounded-full bg-card px-3 font-semibold ring-1 ring-border">
+            <button
+              type="button"
+              onClick={ampliar.aoAceitarFrete}
+              className="min-h-11 rounded-full bg-card px-3 font-semibold ring-1 ring-border"
+            >
               Incluir frete a calcular
             </button>
           )}
-          {ampliar.proximoMax != null && <button type="button" onClick={ampliar.aoSubirValor} className="min-h-11 rounded-full bg-card px-3 font-semibold ring-1 ring-border">
-            Ver até R$ {ampliar.proximoMax}
-          </button>}
+          {ampliar.proximoMax != null && (
+            <button
+              type="button"
+              onClick={ampliar.aoSubirValor}
+              className="min-h-11 rounded-full bg-card px-3 font-semibold ring-1 ring-border"
+            >
+              Ver até R$ {ampliar.proximoMax}
+            </button>
+          )}
         </div>
       )}
     </section>
