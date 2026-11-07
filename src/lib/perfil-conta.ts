@@ -27,6 +27,10 @@ export type PerfilConta = {
   nome: string;
   interesses: string[];
   voltagem: Voltagem;
+  /** Only the first 5 digits (region for shipping/voltage), never the full CEP. */
+  cep: string;
+  /** "Campinas/SP": from the CEP lookup, no street or number. */
+  cidadeUf: string;
   freteGratis: boolean;
   avisosEmail: boolean;
   termos: string[];
@@ -34,13 +38,21 @@ export type PerfilConta = {
 
 const SLUGS = new Set<string>(INTERESSES.map((i) => i.slug));
 
+/** "13010-000" -> "13010". Anything shorter than 5 digits is dropped. */
+export function prefixoCep(v: unknown): string {
+  const d = typeof v === "string" ? v.replace(/\D/g, "") : "";
+  return d.length >= 5 ? d.slice(0, 5) : "";
+}
+
 export function limparPerfilConta(bruto: unknown): PerfilConta {
-  const m = (bruto && typeof bruto === "object" ? bruto : {}) as { nome?: unknown; interesses?: unknown; voltagem?: unknown; freteGratis?: unknown; avisosEmail?: unknown; termos?: unknown };
+  const m = (bruto && typeof bruto === "object" ? bruto : {}) as { nome?: unknown; interesses?: unknown; voltagem?: unknown; cep?: unknown; cidadeUf?: unknown; freteGratis?: unknown; avisosEmail?: unknown; termos?: unknown };
   const lista = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
   return {
     nome: typeof m.nome === "string" ? m.nome.trim().slice(0, 40) : "",
     interesses: lista(m.interesses).filter((s) => SLUGS.has(s)),
     voltagem: m.voltagem === "127" || m.voltagem === "220" ? m.voltagem : "auto",
+    cep: prefixoCep(m.cep),
+    cidadeUf: typeof m.cidadeUf === "string" ? m.cidadeUf.replace(/[^\p{L}\s'/-]/gu, "").trim().slice(0, 40) : "",
     freteGratis: m.freteGratis !== false,
     avisosEmail: m.avisosEmail === true,
     termos: lista(m.termos)
@@ -50,7 +62,9 @@ export function limparPerfilConta(bruto: unknown): PerfilConta {
 }
 
 /** Grava na conta, levando junto as últimas buscas deste aparelho. */
-export async function salvarPerfilConta(p: Omit<PerfilConta, "termos">) {
+export async function salvarPerfilConta(
+  p: Omit<PerfilConta, "termos" | "cep" | "cidadeUf"> & Partial<Pick<PerfilConta, "cep" | "cidadeUf">>,
+) {
   const local = obterPerfil()?.termosRecentes.map((t) => t.termo) ?? [];
   const perfil = limparPerfilConta({ ...p, termos: local });
   const { error } = await supabase.auth.updateUser({ data: { perfil } });
@@ -70,4 +84,16 @@ export function aplicarPerfilDaConta(metadados: unknown) {
 export async function apagarPerfilConta() {
   const { error } = await supabase.auth.updateUser({ data: { perfil: null } });
   return error ? "Não deu para apagar agora. Tente de novo." : null;
+}
+
+/** LGPD art. 18 (Weslei, 06/11): deletes the account and everything tied to it
+    on the server (tracked prices, wishlist, Secret Santa, public lists, the
+    login itself). excluir_minha_conta() only acts on auth.uid(); the caller then
+    signs out with sair(). */
+export async function excluirContaInteira(navegador: string | null) {
+  const { error } = await supabase.rpc(
+    "excluir_minha_conta" as never,
+    { p_navegador: navegador } as never,
+  );
+  return error ? "Não deu para excluir agora. Tente de novo em instantes." : null;
 }
