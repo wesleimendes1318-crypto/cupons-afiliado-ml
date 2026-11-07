@@ -1600,3 +1600,31 @@ html.arrastando-trilho [data-arrastando] {
   scroll-snap-type: none !important;
   scroll-behavior: auto !important;
 }
+
+/* PAINEL DO VISITANTE (Weslei, 07/11: "crie novas animações"). Same easing as
+   the login and the cards; each plays once (nothing loops near a buy button).
+   Everything off with prefers-reduced-motion. */
+@keyframes painel-traco { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes painel-ponto { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes painel-pop { 0% { transform: scale(0.4) rotate(-12deg); opacity: 0; } 65% { transform: scale(1.12) rotate(4deg); opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes painel-da-direita { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes painel-da-esquerda { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+@keyframes painel-brilho { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes painel-queda { 0% { transform: translateY(-4px); opacity: 0; } 50% { transform: translateY(2px); opacity: 1; } 100% { transform: none; opacity: 1; } }
+.painel-traco { animation: painel-traco 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.painel-ponto { animation: painel-ponto 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.painel-pop { animation: painel-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.painel-da-direita { animation: painel-da-direita 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.painel-da-esquerda { animation: painel-da-esquerda 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.painel-queda { animation: painel-queda 0.6s cubic-bezier(0.22, 1, 0.36, 1) 3 both; }
+.painel-brilho {
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.65) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: painel-brilho 1.4s ease-out 0.5s both;
+}
+.painel-pilula { transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), width 0.38s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .painel-traco, .painel-ponto, .painel-pop, .painel-da-direita, .painel-da-esquerda, .painel-queda, .painel-brilho { animation: none; }
+  .painel-pilula { transition: none; }
+}

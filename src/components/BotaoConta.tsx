@@ -34,11 +34,14 @@ export function BotaoConta() {
                 <span className="size-2 rounded-full bg-[#34c759]" /> Buscas e preferências salvas
                 na conta
               </p>
-              <a href="/perfil" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
-                Meu perfil e preferências
+              <a href="/painel" className="mt-2 block rounded-xl px-2 py-2 hover:bg-muted">
+                Meu painel
               </a>
               <a href="/meus-precos" className="block rounded-xl px-2 py-2 hover:bg-muted">
                 Meus preços
+              </a>
+              <a href="/painel?aba=ajustes" className="block rounded-xl px-2 py-2 hover:bg-muted">
+                Ajustes e privacidade
               </a>
               <button
                 type="button"
