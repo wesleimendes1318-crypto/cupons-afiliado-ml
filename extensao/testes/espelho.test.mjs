@@ -109,3 +109,16 @@ test('Minha receita com valor na mesma linha', () => {
   assert.equal(r.saldo_pendente_centavos, 1000);
   assert.deepEqual(r.a_pagar, [{ data: '12/nov', centavos: 500 }]);
 });
+
+test('Minha receita no PC (lido em 07/11 13:49): valor quebrado e Processando', () => {
+  const r = lerReceitaML(['Saldo pendente', 'R$', '468', ',', '68', 'Ir para Métricas', 'Em revisão R$192,24', 'Processando R$276,44',
+    'Histórico da receita', 'Outubro Período atual Em revisão até o fim de dezembro R$ 192 , 24',
+    'Maio a setembro Em processo de pagamento R$ 276 , 45']);
+  assert.equal(r.saldo_pendente_centavos, 46868);
+  assert.equal(r.em_revisao_centavos, 19224);
+  assert.equal(r.em_pagamento_centavos, 27644);
+  assert.deepEqual(r.historico, [
+    { periodo: 'Outubro', atual: true, status: 'Em revisão até o fim de dezembro', centavos: 19224 },
+    { periodo: 'Maio a setembro', atual: false, status: 'Em processo de pagamento', centavos: 27645 }
+  ]);
+});

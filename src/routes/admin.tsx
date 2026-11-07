@@ -106,6 +106,7 @@ function Admin() {
   const [painel, setPainel] = useState<Painel | null>(null);
   const [carregando, setCarregando] = useState(false);
   const semMovimento = useSemMovimento();
+  const leiturasHub = useLeiturasHub(painel?.gerado_em ?? null);
 
   const carregar = useCallback(async (n: number) => {
     setCarregando(true);
@@ -587,40 +588,7 @@ function Admin() {
             className="lg:col-span-2"
             atraso={440}
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {(["mercadolivre", "amazon", "shopee"] as const).map((m) => {
-                const vs = p.vendas.filter((v) => v.marketplace === m);
-                const com = vs.some((v) => v.comissao_centavos != null)
-                  ? vs.reduce((t, v) => t + (v.comissao_centavos ?? 0), 0)
-                  : null;
-                const ped = vs.some((v) => v.pedidos != null)
-                  ? vs.reduce((t, v) => t + (v.pedidos ?? 0), 0)
-                  : null;
-                return (
-                  <div key={m} className="rounded-2xl bg-[#f5f5f7] p-4">
-                    <p className="text-xs font-semibold text-[#6e6e73]">
-                      {m === "mercadolivre"
-                        ? "Mercado Livre"
-                        : m === "amazon"
-                          ? "Amazon"
-                          : "Shopee"}
-                    </p>
-                    {com == null && ped == null ? (
-                      <p className="mt-2 text-sm font-semibold text-[#6e6e73]">{AGUARDANDO}</p>
-                    ) : (
-                      <>
-                        <p className="mt-1 text-xl font-bold text-[#1d1d1f]">
-                          {com == null ? "—" : reais(com)}
-                        </p>
-                        <p className="text-xs text-[#6e6e73]">
-                          {ped == null ? "—" : `${inteiro(ped)} pedidos`}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <EspelhoPortais vendas={p.vendas} leiturasHub={leiturasHub} />
             <SincronizarVendas ultimo={p.comando} aoTerminar={() => void carregar(dias)} />
           </Cartao>
 
@@ -732,7 +700,7 @@ function Admin() {
           </Cartao>
         </section>
 
-        <HubMercadoLivre atualizado={p.gerado_em} comando={p.comando} />
+        <HubMercadoLivre linhas={leiturasHub} comando={p.comando} />
       </div>
     </Tela>
   );
@@ -862,17 +830,126 @@ function MinhaReceita({ r }: { r: ReceitaML }) {
   );
 }
 
+/* Quadros do espelho + saldo total das 3 plataformas (07/11: "o saldo precisa
+   refletir assim como acontece com a amazon, mas precisa abrir detalhamento
+   de pagamento" e "preciso de um saldo total, das 3 plataformas"). */
+function EspelhoPortais({
+  vendas,
+  leiturasHub,
+}: {
+  vendas: Painel["vendas"];
+  leiturasHub: LinhaHub[] | "carregando";
+}) {
+  const [detalhe, setDetalhe] = useState(false);
+  const hub = leiturasHub === "carregando" ? null : (leiturasHub[0] ?? null);
+  // ML: saldo a receber da tela Receita; Amazon e Shopee: comissões do mês.
+  const saldoMl = hub?.receita?.saldo_pendente_centavos ?? hub?.comissao_pendente_centavos ?? null;
+  const portais = (["mercadolivre", "amazon", "shopee"] as const).map((m) => {
+    const vs = vendas.filter((v) => v.marketplace === m);
+    const com = vs.some((v) => v.comissao_centavos != null)
+      ? vs.reduce((t, v) => t + (v.comissao_centavos ?? 0), 0)
+      : null;
+    const ped = vs.some((v) => v.pedidos != null)
+      ? vs.reduce((t, v) => t + (v.pedidos ?? 0), 0)
+      : null;
+    const saldo = m === "mercadolivre" && saldoMl != null;
+    return { m, valor: saldo ? saldoMl : com, ped, saldo };
+  });
+  const somados = portais.filter((x) => x.valor != null);
+  const total = somados.length ? somados.reduce((t, x) => t + (x.valor ?? 0), 0) : null;
+  const NOMES = { mercadolivre: "Mercado Livre", amazon: "Amazon", shopee: "Shopee" } as const;
+
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2 rounded-2xl bg-[#1d1d1f] p-4 text-white">
+        <div>
+          <p className="text-xs font-semibold text-white/70">Saldo total das 3 plataformas</p>
+          <p className="mt-1 text-2xl font-extrabold tracking-tight">
+            {total == null ? "—" : <Contador valor={total} formato={reais} />}
+          </p>
+        </div>
+        <p className="max-w-[260px] text-[11px] leading-snug text-white/60">
+          Mercado Livre: saldo a receber. Amazon e Shopee: comissões do mês, como cada portal
+          mostra.{somados.length < 3 ? ` ${3 - somados.length} sem valor lido.` : ""}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {portais.map(({ m, valor, ped, saldo }) => {
+          const conteudo = (
+            <>
+              <p className="flex items-center justify-between gap-2 text-xs font-semibold text-[#6e6e73]">
+                {NOMES[m]}
+                {m === "mercadolivre" && hub && (
+                  <span className="whitespace-nowrap text-[11px] text-[#0071e3]">
+                    Detalhar<span className="sm:hidden lg:inline xl:hidden"> pagamento</span> ›
+                  </span>
+                )}
+              </p>
+              {valor == null && ped == null ? (
+                <p className="mt-2 text-sm font-semibold text-[#6e6e73]">{AGUARDANDO}</p>
+              ) : (
+                <>
+                  <p className="mt-1 text-xl font-bold text-[#1d1d1f]">
+                    {valor == null ? "—" : reais(valor)}
+                  </p>
+                  <p className="text-xs text-[#6e6e73]">
+                    {saldo ? "a receber" : "comissões"} ·{" "}
+                    {ped == null ? "—" : `${inteiro(ped)} ${ped === 1 ? "pedido" : "pedidos"}`}
+                  </p>
+                </>
+              )}
+            </>
+          );
+          return m === "mercadolivre" && hub ? (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setDetalhe(true)}
+              className="rounded-2xl bg-[#f5f5f7] p-4 text-left transition hover:bg-[#ececf0] active:scale-[0.99]"
+            >
+              {conteudo}
+            </button>
+          ) : (
+            <div key={m} className="rounded-2xl bg-[#f5f5f7] p-4">
+              {conteudo}
+            </div>
+          );
+        })}
+      </div>
+      {hub && (
+        <Sheet open={detalhe} onOpenChange={setDetalhe}>
+          <SheetContent className="flex w-full flex-col gap-0 bg-[#f5f5f7] p-0 sm:max-w-md">
+            <SheetHeader className="border-b border-[#e5e5ea] bg-white px-5 py-4 text-left">
+              <SheetTitle className="text-base">Pagamentos do Mercado Livre</SheetTitle>
+              <SheetDescription className="text-xs">
+                Como a tela “Minha receita” do hub mostrou em {quando(hub.capturado_em)}.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto p-4">
+              {hub.receita ? (
+                <MinhaReceita r={hub.receita} />
+              ) : (
+                <Vazio>
+                  {saldoMl != null
+                    ? `Saldo pendente ${reais(saldoMl)}. O detalhamento aparece na próxima sincronização.`
+                    : "A tela Minha receita ainda não foi lida."}
+                </Vazio>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+    </>
+  );
+}
+
 /* Hub de afiliados do Mercado Livre: últimas leituras da extensão (RLS:
    só a conta mestre lê metricas_hub_ml). Valor não lido fica "—". */
-function HubMercadoLivre({
-  atualizado,
-  comando,
-}: {
-  atualizado: string;
-  comando: ComandoSinc | null;
-}) {
+/* Últimas leituras do hub (RLS: só a conta mestre lê metricas_hub_ml). */
+function useLeiturasHub(atualizado: string | null) {
   const [linhas, setLinhas] = useState<LinhaHub[] | "carregando">("carregando");
   useEffect(() => {
+    if (!atualizado) return;
     void supabase
       .from("metricas_hub_ml" as never)
       .select(
@@ -882,7 +959,16 @@ function HubMercadoLivre({
       .limit(10)
       .then(({ data }) => setLinhas((data as LinhaHub[] | null) ?? []));
   }, [atualizado]);
+  return linhas;
+}
 
+function HubMercadoLivre({
+  linhas,
+  comando,
+}: {
+  linhas: LinhaHub[] | "carregando";
+  comando: ComandoSinc | null;
+}) {
   const linha = linhas === "carregando" ? null : (linhas[0] ?? null);
   const leituraMl = comando?.resultado?.marketplaces?.find((m) => m.marketplace === "mercadolivre");
   const itens: { rotulo: string; valor: number | null; formato: (n: number) => string }[] = linha
