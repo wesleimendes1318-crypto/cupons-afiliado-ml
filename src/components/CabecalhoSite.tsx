@@ -10,7 +10,7 @@
    baixo (NavegacaoInferiorMobile). */
 import { useEffect, useState, type FormEvent } from "react";
 import { ClientOnly, Link, useRouterState } from "@tanstack/react-router";
-import { Gift, Link2, ListChecks, Send } from "lucide-react";
+import { Gift, LayoutGrid, Link2, ListChecks, Send, Tag } from "lucide-react";
 
 import { CepTopo } from "@/components/CepTopo";
 import { BotaoConta } from "@/components/BotaoConta";
@@ -24,7 +24,7 @@ import { LINK_CANAL } from "@/lib/telegram-publico";
    espaço); no celular, nas abas de baixo. */
 const LINKS = [
   { to: "/categorias", rotulo: "Categorias", pc: "xl:inline-flex" },
-  { to: "/meus-precos", rotulo: "Meus preços", pc: "sm:inline-flex" },
+  { to: "/meus-precos", rotulo: "Meus preços", pc: "lg:inline-flex" },
   { to: "/guias", rotulo: "Guias", pc: "lg:inline-flex" },
   /* Sobre from 2xl: its room at 1280 px goes to the Planejadores pill (06/11). */
   { to: "/sobre", rotulo: "Sobre", pc: "2xl:inline-flex" },
@@ -184,6 +184,33 @@ export function CabecalhoSite() {
               {l.rotulo}
             </Link>
           ))}
+          {/* Tablets have no bottom tabs (sm:hidden) and no room for text links
+                (the nav ran past 768 px screens, 06/11): icons until the text fits. */}
+          <Link
+            to="/meus-precos"
+            aria-label="Meus preços"
+            title="Meus preços"
+            className={
+              "hidden size-11 shrink-0 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white lg:hidden " +
+              /* 640-767 px on the home: the paste-link icon takes this room. */
+              (compacto ? "md:inline-flex" : "sm:inline-flex")
+            }
+            activeProps={{ className: "!text-[#7547E8]" }}
+          >
+            <Tag className="size-5" aria-hidden="true" />
+          </Link>
+          <Link
+            to="/categorias"
+            aria-label="Categorias"
+            title="Categorias"
+            className={
+              "hidden size-11 shrink-0 items-center justify-center rounded-full text-[#0f1729] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white xl:hidden " +
+              (compacto ? "lg:inline-flex" : "md:inline-flex")
+            }
+            activeProps={{ className: "!text-[#7547E8]" }}
+          >
+            <LayoutGrid className="size-5" aria-hidden="true" />
+          </Link>
           {/* Amigo Secreto (Weslei, 05/11: "botão fácil de encontrar"): pill
                 in the header from 768 px (label from 1280 px); phones: bottom tab. */}
           <Link
@@ -226,7 +253,7 @@ export function CabecalhoSite() {
             className="hidden min-h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 vidro-botao rounded-full border border-[#7547E8]/50 min-[360px]:inline-flex px-2.5 text-sm font-semibold text-[#21134A] transition-colors hover:bg-[#7547E8]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:text-white min-[360px]:px-3 sm:px-4"
           >
             <Send className="size-4 text-[#7547E8]" aria-hidden="true" />
-            <span className={compacto ? "hidden" : "hidden min-[480px]:inline sm:hidden md:inline"}>
+            <span className={compacto ? "hidden" : "hidden min-[480px]:inline sm:hidden xl:inline"}>
               Ofertas no Telegram
             </span>
             {/* Telas de 320 px (18/10): só o ícone, para caber ao lado da marca. */}
