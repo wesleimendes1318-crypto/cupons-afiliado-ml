@@ -853,6 +853,12 @@ export async function buscaGuiada(
   if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
     juntar(await maisVendidosDaCategoria(q, opcoes, listas));
   }
+  /* 07/11 (apparel: few catalog products have an offer): best sellers of
+     each piece's own category (camisetas esportivas, shorts...). */
+  if (pagina === 0 && pecas.length && achados.length < MINIMO_RESULTADOS) {
+    for (const r of await Promise.all(pecas.map((p) => maisVendidosDaCategoria(p, opcoes))))
+      juntar(r);
+  }
   /* SEMPRE O ANÚNCIO (Weslei, 02/11: "pesquisei um modelo que tem no
      Mercado Livre e não retornou"). Produto do catálogo sem oferta destacada
      (a maioria das Brastemp lava e seca) entra no fim, sem preço, só com
