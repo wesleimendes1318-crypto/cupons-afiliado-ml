@@ -353,9 +353,9 @@ export function buscasDeRoupa(q: string): string[] {
     .trim();
   const pecas =
     g === "f"
-      ? ["legging", "conjunto", "top"]
+      ? ["legging", "conjunto", "top", "short", "macaquinho"]
       : g === "m"
-        ? ["camiseta", "bermuda", "regata"]
+        ? ["camiseta", "bermuda", "regata", "short", "conjunto"]
         : ["camiseta", "conjunto", "bermuda"];
   return pecas.map((p) => `${p} ${resto}`.trim().slice(0, 60));
 }
