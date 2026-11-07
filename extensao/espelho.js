@@ -28,7 +28,9 @@ export const PAINEIS = [
     marketplace: 'mercadolivre', nome: 'Mercado Livre',
     url: 'https://www.mercadolivre.com.br/afiliados/hub',
     dominio: /mercadolivre\.com\.br\/afiliados/i,
-    seguir: /relat[oó]rio|desempenho|m[eé]tricas|resultados|meus ganhos|ganhos/i,
+    /* 07/11: o hub mostra "Métricas" e "Receita"; as duas sao lidas
+       (vendas por produto e o que tem a receber, com datas). */
+    seguir: /relat[oó]rio|desempenho|m[eé]tricas|resultados|meus ganhos|ganhos|receita/i,
     seguirHref: /mercadolivre\.com\.br\/afiliados\//i
   },
   {
@@ -129,6 +131,75 @@ export function juntarLeituras(a, b) {
   return out;
 }
 
+/* ---------- vendas por produto (Metricas / Receita do hub, 07/11) ----------
+   Weslei: "preciso saber os produtos, o valor, a margem de comissao, se foi
+   direta, qual o valor tenho para receber, quando". O hub mostra isso em
+   tabelas; o cabecalho de cada coluna diz o que e. Coluna nao reconhecida
+   fica no "bruto" da linha (o /admin mostra tudo), nunca adivinhada. */
+const COLUNAS = [
+  { campo: 'liberacao', re: /libera|dispon[ií]vel (em|a partir)|previs|data (de|do) pagamento|pago em|receber em/i },
+  { campo: 'data', re: /^data|data d[ao] (venda|pedido|compra)|vendid[oa] em|^dia$|criad[oa]/i },
+  { campo: 'produto', re: /produto|an[uú]ncio|^item|t[ií]tulo|descri/i },
+  { campo: 'tipo', re: /^tipo|origem|tipo de venda|direta|indireta/i },
+  { campo: 'status', re: /status|situa[cç][aã]o|estado/i },
+  { campo: 'comissao_pct', re: /%|taxa|percentual|margem/i },
+  { campo: 'comissao_centavos', re: /comiss[aã]o|ganho|receita|a receber|valor (a|para) receber/i },
+  { campo: 'quantidade', re: /^(qtd|quant|unidades)/i },
+  { campo: 'valor_centavos', re: /valor|pre[cç]o|total|venda/i }
+];
+
+function colunasDe(cab) {
+  const usadas = {};
+  (cab || []).forEach((h, i) => {
+    const t = String(h || '').trim();
+    const c = COLUNAS.find(x => x.re.test(t) && usadas[x.campo] == null);
+    if (c) usadas[c.campo] = i;
+  });
+  return usadas;
+}
+
+const pctDe = t => { const m = /(\d{1,3}(?:[.,]\d{1,2})?)\s*%/.exec(t || ''); return m ? Number(m[1].replace(',', '.')) : null; };
+
+/** tabelas: [{ cab: [..], linhas: [[..], ..] }] -> itens. Entra tabela com
+    dinheiro (comissao ou valor) E produto ou data (a Receita lista
+    pagamentos por data, sem produto: produto fica null). */
+export function itensDasTabelas(tabelas, pagina = '') {
+  const itens = [];
+  for (const t of tabelas || []) {
+    const col = colunasDe(t.cab);
+    if (col.comissao_centavos == null && col.valor_centavos == null) continue;
+    if (col.produto == null && col.data == null && col.liberacao == null) continue;
+    for (const l of t.linhas || []) {
+      const cel = k => (col[k] == null ? '' : String(l[col[k]] || '').replace(/\s+/g, ' ').trim());
+      const produto = cel('produto') || null;
+      if (col.produto != null && !produto) continue;
+      const tipo = /indiret/i.test(cel('tipo') || l.join(' ')) ? 'indireta' : /diret/i.test(cel('tipo') || l.join(' ')) ? 'direta' : (cel('tipo') || null);
+      const qtd = /^\d+$/.test(cel('quantidade')) ? Number(cel('quantidade')) : null;
+      itens.push({
+        produto: produto && produto.slice(0, 140),
+        valor_centavos: reaisEmCentavos(cel('valor_centavos')),
+        comissao_centavos: reaisEmCentavos(cel('comissao_centavos')),
+        comissao_pct: pctDe(cel('comissao_pct')) ?? pctDe(cel('comissao_centavos')),
+        tipo,
+        status: cel('status') || null,
+        data: cel('data') || null,
+        liberacao: cel('liberacao') || null,
+        quantidade: qtd,
+        pagina,
+        bruto: Object.fromEntries((t.cab || []).map((h, i) => [String(h || `col${i + 1}`).slice(0, 40), String(l[i] || '').slice(0, 120)]))
+      });
+      if (itens.length >= 500) return itens;
+    }
+  }
+  return itens;
+}
+
+/** Maior "itens por pagina" oferecido (minimiza pedidos ao portal). */
+export function maiorOpcao(textos) {
+  const ns = (textos || []).map(t => /^\s*(\d{1,4})\s*(itens|resultados|linhas|por p[aá]gina)?\s*$/i.exec(String(t || ''))).filter(Boolean).map(m => Number(m[1]));
+  return ns.length ? Math.max(...ns) : null;
+}
+
 export function deveRodarSozinha(ultima, agora = Date.now()) {
   return !ultima || agora - ultima >= AUTOMATICA_MS;
 }
@@ -144,6 +215,52 @@ async function lerTela() {
   const links = [...document.querySelectorAll('a[href]')].slice(0, 300)
     .map(a => ({ t: (a.innerText || a.getAttribute('aria-label') || '').trim().slice(0, 60), h: a.href }));
   return { linhas, links };
+}
+
+/* Roda NA aba do portal (sem acesso ao modulo): pede a maior pagina que o
+   portal oferece, le as tabelas e segue "proxima" ate 5 paginas. */
+async function lerTabelasNaAba() {
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  const txt = e => (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim();
+  const num = t => { const m = /^\s*(\d{1,4})\s*(itens|resultados|linhas|por p[aá]gina)?\s*$/i.exec(t); return m ? Number(m[1]) : null; };
+  // 1) Maior tamanho de pagina: <select> nativo ou lista do Andes.
+  for (const sel of document.querySelectorAll('select')) {
+    const ops = [...sel.options].map(o => [o, num(o.textContent)]).filter(x => x[1]);
+    if (ops.length < 2) continue;
+    const [maior] = ops.sort((a, b) => b[1] - a[1])[0];
+    if (sel.value !== maior.value) { sel.value = maior.value; sel.dispatchEvent(new Event('change', { bubbles: true })); await espera(2500); }
+  }
+  const rotulo = [...document.querySelectorAll('label, span, p, div')].find(e => e.children.length < 3 && /(itens|resultados|linhas|registros) por p[aá]gina|mostrar/i.test(txt(e)) && txt(e).length < 40);
+  if (rotulo) {
+    const botao = (rotulo.closest('div') || rotulo.parentElement || document).querySelector('button, [role="combobox"], [aria-haspopup]');
+    if (botao) {
+      botao.click(); await espera(800);
+      const ops = [...document.querySelectorAll('[role="option"], [role="menuitem"], li')].map(o => [o, num(txt(o))]).filter(x => x[1]);
+      if (ops.length) { ops.sort((a, b) => b[1] - a[1])[0][0].click(); await espera(2500); }
+      else document.body.click();
+    }
+  }
+  const lerUma = () => {
+    const out = [];
+    for (const tb of [...document.querySelectorAll('table, [role="table"], [role="grid"]')].slice(0, 6)) {
+      const linhas = [...tb.querySelectorAll('tr, [role="row"]')];
+      if (!linhas.length) continue;
+      const cels = r => [...r.querySelectorAll('th, td, [role="columnheader"], [role="cell"], [role="gridcell"]')].map(c => txt(c).slice(0, 160));
+      const cab = cels(linhas[0]);
+      out.push({ cab, linhas: linhas.slice(1).map(cels).filter(l => l.some(Boolean)).slice(0, 300) });
+    }
+    return out;
+  };
+  let tabelas = lerUma();
+  for (let pag = 0; pag < 4 && tabelas.length; pag++) {
+    const prox = [...document.querySelectorAll('a, button')].find(b => /^(pr[oó]xim[ao]|seguinte|siguiente|next|›|»)$/i.test(txt(b) || b.getAttribute('aria-label') || '') && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
+    if (!prox) break;
+    prox.click(); await espera(3000);
+    const novas = lerUma();
+    if (!novas.length || JSON.stringify(novas[0].linhas[0]) === JSON.stringify(tabelas[0].linhas.at(-1))) break;
+    novas.forEach((t, i) => { if (tabelas[i]) tabelas[i].linhas.push(...t.linhas); else tabelas.push(t); });
+  }
+  return tabelas;
 }
 
 async function lerPainel(p, dep) {
@@ -171,21 +288,31 @@ async function lerPainel(p, dep) {
     const links = tela.links.filter(l => p.seguirHref && p.seguirHref.test(l.h) && l.t).map(l => l.t).slice(0, 20);
     /* Mercado Livre: alem do hub, abre a pagina de relatorio/ganhos do
        proprio portal (navegacao GET, nada clicado) e completa o que faltou. */
+    const itens = []; const tabelasLidas = [];
     if (p.seguir) {
-      const alvo = tela.links.find(l => p.seguir.test(l.t) && p.seguirHref.test(l.h) && l.h.split('#')[0] !== p.url);
-      if (alvo) {
+      const vistos = new Set([p.url]);
+      const alvos = tela.links.filter(l => p.seguir.test(l.t) && p.seguirHref.test(l.h))
+        .filter(l => { const u = l.h.split('#')[0]; if (vistos.has(u)) return false; vistos.add(u); return true; })
+        .slice(0, 3);
+      for (const alvo of alvos) {
         await chrome.tabs.update(aba.id, { url: alvo.h });
         await esperarCarregar(aba.id, 25000);
         await sleep(5000);
-        const ruim2 = await confere();
-        if (!ruim2) {
-          tela = await ler();
-          r = juntarLeituras(lerResumoDoPainel(tela.linhas), r);
-        }
+        if (await confere()) break;
+        tela = await ler();
+        r = juntarLeituras(lerResumoDoPainel(tela.linhas), r);
+        const [t] = await chrome.scripting.executeScript({ target: { tabId: aba.id }, func: lerTabelasNaAba });
+        const tabelas = (t && t.result) || [];
+        const pagina = alvo.t.slice(0, 40);
+        itens.push(...itensDasTabelas(tabelas, pagina));
+        for (const tb of tabelas.slice(0, 3)) tabelasLidas.push({ pagina, cab: tb.cab.slice(0, 12), linhas: tb.linhas.slice(0, 40).map(l => l.slice(0, 12)), total: tb.linhas.length });
+        await sleep(2500);
       }
     }
     r.links_portal = links;
-    const temNumero = ['comissao_centavos', 'aprovada_centavos', 'pendente_centavos', 'pedidos', 'cliques'].some(k => r[k] != null);
+    r.itens = itens.slice(0, 500);
+    r.tabelas = tabelasLidas.slice(0, 6);
+    const temNumero = r.itens.length > 0 || ['comissao_centavos', 'aprovada_centavos', 'pendente_centavos', 'pedidos', 'cliques'].some(k => r[k] != null);
     return { status: temNumero ? 'lido' : 'sem_numeros', ...r,
       pagina: ((await chrome.tabs.get(aba.id)).url || '').split('?')[0].slice(0, 120) };
   } catch (e) {
