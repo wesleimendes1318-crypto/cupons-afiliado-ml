@@ -14,7 +14,7 @@ const r = (id: number, nome: string, preco: number, extra: Partial<Resultado> = 
   ...extra,
 });
 const cands: Candidato[] = [
-  { r: r(1, "Perfume Floral 100ml", 60, { maisVendido: 3 }), grupo: "perfume" },
+  { r: r(1, "Perfume Floral 100ml", 45, { maisVendido: 3 }), grupo: "perfume" },
   { r: r(2, "Perfume Amadeirado 50ml", 55), grupo: "perfume" },
   { r: r(3, "Caneca Térmica Inox", 35, { lojaOficial: true }), grupo: "cozinha" },
   { r: r(4, "Livro Romance Best Seller", 40, { maisVendido: 20 }), grupo: "livros" },
@@ -42,4 +42,15 @@ test("kit melhor fica entre o teto e +20%", () => {
 test("luxo usa no máximo 2 itens", () => {
   const k = montarKit(cands, 100, { estilo: "luxo", seed: 3, misturar: true })!;
   expect(k.itens.length).toBeLessThanOrEqual(2);
+});
+
+test("kit de custo nunca é 1 item só no teto (07/11)", () => {
+  const caros: Candidato[] = [
+    { r: r(7, "Espelho Orgânico Moldura", 99.99, { maisVendido: 3 }), grupo: "decor" },
+    { r: r(8, "Luminária de Mesa", 89), grupo: "decor" },
+  ];
+  expect(montarKit(caros, 100, { estilo: "custo", seed: 1, misturar: false })).toBeNull();
+  const k = montarKit([...caros, ...cands], 100, { estilo: "custo", seed: 1, misturar: false })!;
+  expect(k.itens.length).toBeGreaterThanOrEqual(2);
+  expect(k.itens.every((x) => x.preco <= 50)).toBe(true);
 });

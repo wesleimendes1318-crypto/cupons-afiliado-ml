@@ -14,6 +14,9 @@ export type Candidato = { r: Resultado; grupo: string };
 export type Kit = { itens: Resultado[]; total: number };
 
 export const FOLGA_MELHOR = 0.2;
+/* Value kit (Weslei, 07/11: "reunir variedades e custo menor"): no single
+   item may take more than half of the budget, and a kit has 2+ items. */
+export const PARTE_MAX_ITEM = 0.5;
 
 /** What the buyer pays for one card; null when unknown (never in a kit). */
 export function custoDoCartao(r: Resultado): number | null {
@@ -45,9 +48,11 @@ export function montarKit(
   opcoes: { estilo: EstiloKit; seed: number; misturar: boolean },
 ): Kit | null {
   const rnd = aleatorio(opcoes.seed);
+  const luxo = opcoes.estilo === "luxo";
+  const tetoItem = luxo ? limite : limite * PARTE_MAX_ITEM;
   const lista = candidatos
     .map((c) => ({ ...c, custo: custoDoCartao(c.r), tier: tierDeQualidade(c.r), sorte: rnd() }))
-    .filter((c): c is typeof c & { custo: number } => c.custo != null && c.custo > 0 && c.custo <= limite)
+    .filter((c): c is typeof c & { custo: number } => c.custo != null && c.custo > 0 && c.custo <= tetoItem)
     /* Quality tier decides; the draw only reorders inside a tier. Luxury
        also prefers the pricier piece of the same tier (fewer, better items). */
     .sort((a, b) =>
@@ -56,11 +61,8 @@ export function montarKit(
       a.sorte - b.sorte,
     );
   if (!lista.length) return null;
-  const maxItens = opcoes.estilo === "luxo" ? 2 : 4;
-  /* Anchor: luxury takes the best piece using most of the budget; value
-     takes the best piece up to 60% of it, leaving room for companions. */
-  const teto = opcoes.estilo === "luxo" ? limite : limite * 0.6;
-  const ancora = lista.find((c) => c.custo <= teto) ?? lista[0]!;
+  const maxItens = luxo ? 2 : 5;
+  const ancora = lista[0]!;
   const escolhidos = [ancora];
   let total = ancora.custo;
   const grupos = new Set([ancora.grupo]);
@@ -76,6 +78,7 @@ export function montarKit(
     grupos.add(c.grupo);
     tipos.add(tipo);
   }
+  if (!luxo && escolhidos.length < 2) return null;
   return { itens: escolhidos.map((c) => c.r), total: Math.round(total * 100) / 100 };
 }
 
