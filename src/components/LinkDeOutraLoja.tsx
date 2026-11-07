@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { ArrowUpRight, ChevronDown, Loader2, Search, ShieldCheck, Store } from "lucide-react";
+import { BarraDeLojas } from "@/components/BarraDeLojas";
 import { LinkPronto } from "@/components/LinkPronto";
 
 import { ResultadosDaBusca, type ConsultaBusca } from "@/components/BuscaGuiada";
@@ -377,6 +378,25 @@ export function LinkDeOutraLoja({
           abrir={abrir}
           comparar={comparar}
           buscaAmazon={termoGarimpo ? urlBuscaAmazon(termoGarimpo) : null}
+        />
+      )}
+
+      {/* Floating store bar (07/11): only with 2+ stores open below. */}
+      {mostrarPlacar && abertos.filter((p) => ordemPlacar.includes(p)).length > 1 && (
+        <BarraDeLojas
+          ir={(p) => rolarAte(`secao-garimpo-${p}`)}
+          itens={ordemPlacar
+            .filter((p) => abertos.includes(p))
+            .map((p) => {
+              const e = estados.find((x) => x.player === p);
+              return {
+                chave: p,
+                nome: NOME_PLAYER[p],
+                curto: p === "mercadolivre" ? "ML" : NOME_PLAYER[p],
+                valor: e?.melhor?.preco ?? (e?.status === "carregando" ? "Buscando" : "—"),
+                vence: vencedor === p,
+              };
+            })}
         />
       )}
 

@@ -6,7 +6,7 @@ import { avaliacoesValidas } from "@/lib/avaliacoes";
 import { ehLinkDeCompra } from "@/lib/afiliado";
 import type { LojaExterna, ResumoMarketplace } from "@/lib/coletor-multiloja";
 import { pareceFalso } from "@/lib/falsificado";
-import { diferencaDeModelo } from "@/lib/modelo-titulo";
+import { diferencaDeModelo, travaDeComparacao } from "@/lib/modelo-titulo";
 
 export type RespostaMultiloja = {
   ativo: boolean;
@@ -107,8 +107,14 @@ export function limparResultado(r: unknown, tituloColado?: string | null): Respo
        "Cor: Preto -> Roxo" contra o "Echo Dot 5ª Geração"): versão ou geração
        diferente nunca é o mesmo produto; o "Muda" ganha a linha do modelo e a
        qualidade, julgada sem saber disso, volta a "não confirmada". */
+    /* Comparison shield (07/11): rival brand or accessory never shows. */
+    .filter((l) => {
+      const t = travaDeComparacao(tituloColado, l.titulo);
+      return !(t && "descartar" in t);
+    })
     .map((l) => {
-      const dif = diferencaDeModelo(tituloColado, l.titulo);
+      const t = travaDeComparacao(tituloColado, l.titulo);
+      const dif = (t && "muda" in t ? t.muda : null) ?? diferencaDeModelo(tituloColado, l.titulo);
       if (!dif || /\bmodelo\b/i.test(l.muda ?? ""))
         return dif ? { ...l, relacao: "parecido" as const } : l;
       return {

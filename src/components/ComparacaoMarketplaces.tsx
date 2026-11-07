@@ -65,6 +65,7 @@ import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
 import { termoDeBuscaExterna } from "@/lib/termo-busca-externa";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { Avaliacoes } from "@/components/Avaliacoes";
+import { BarraDeLojas } from "@/components/BarraDeLojas";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -819,6 +820,88 @@ function CartaoAlternativa({
 
 const ROTULOS = ["Correspondência", "Produto", "Frete", "Total", "Vendedor", "Ação"] as const;
 
+const NOME_CURTO: Record<Jogador, string> = {
+  mercadolivre: "ML",
+  amazon: "Amazon",
+  shopee: "Shopee",
+};
+
+/* PLACAR NO TOPO (Weslei, 07/11): the decision in one sentence. Savings in
+   reais only when BOTH totals (product + shipping) are confirmed; otherwise
+   only the winner and its confirmed total. */
+function PlacarDecisaoTopo({
+  vencedor,
+  totalMl,
+  outrosComparados,
+  acao,
+}: {
+  vencedor: OfertaDoJogador;
+  totalMl: number | null;
+  outrosComparados: boolean;
+  acao: ReactNode;
+}) {
+  const t = totalConfirmado(vencedor);
+  const ehMl = vencedor.jogador === "mercadolivre";
+  const economia =
+    !ehMl && t != null && totalMl != null ? Math.round((totalMl - t) * 100) / 100 : null;
+  const titulo =
+    economia != null && economia > 5
+      ? `Economize ${brl(economia)} comprando na ${NOME_DO_JOGADOR[vencedor.jogador]}!`
+      : ehMl && outrosComparados
+        ? "Você já encontrou a melhor escolha no Mercado Livre!"
+        : `Melhor escolha: ${NOME_DO_JOGADOR[vencedor.jogador]}`;
+  const sub =
+    economia != null && economia > 5
+      ? `Mesmo produto, conferido pela foto. Total de ${brl(t as number)} já com o frete, contra ${brl(totalMl as number)} no Mercado Livre.`
+      : t != null
+        ? `Mesmo produto. Total de ${brl(t)} confirmado, já com o frete.`
+        : "";
+  return (
+    <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-success/30 bg-success/[0.07] p-3.5 @xl:flex-row @xl:items-center @xl:justify-between sm:p-4">
+      <div className="flex min-w-0 items-start gap-2.5">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-success text-white">
+          <Check className="size-5" strokeWidth={3} aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[17px] font-bold leading-snug tracking-tight text-foreground [overflow-wrap:anywhere]">
+            {titulo}
+          </p>
+          {sub && <p className="mt-0.5 text-[13px] leading-snug text-secondary-ink">{sub}</p>}
+        </div>
+      </div>
+      <div className="w-full @xl:w-60 @xl:shrink-0">{acao}</div>
+    </div>
+  );
+}
+
+function SeletorLojasFlutuante({
+  colunas,
+  vencedor,
+  ir,
+}: {
+  colunas: Coluna[];
+  vencedor: Jogador | null;
+  ir: (j: Jogador) => void;
+}) {
+  return (
+    <BarraDeLojas
+      className="top-[7.25rem] sm:top-[8.25rem]"
+      ir={(k) => ir(k as Jogador)}
+      itens={colunas.map((c) => ({
+        chave: c.jogador,
+        nome: NOME_DO_JOGADOR[c.jogador],
+        curto: NOME_CURTO[c.jogador],
+        valor: c.oferta
+          ? (totalConfirmado(c.oferta) ?? c.oferta.preco)
+          : c.situacao === "sob_demanda"
+            ? "Comparar"
+            : "—",
+        vence: vencedor === c.jogador,
+      }))}
+    />
+  );
+}
+
 export function ComparacaoMarketplaces({
   pedidoId,
   colado,
@@ -856,6 +939,20 @@ export function ComparacaoMarketplaces({
   const [destaque, setDestaque] = useState<Jogador | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  const [focoLoja, setFocoLoja] = useState<Jogador | null>(null);
+  const timerLoja = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timerLoja.current), []);
+  const irParaLoja = useCallback((j: Jogador) => {
+    /* Desktop column or phone card: whichever is rendered (the other is display:none). */
+    const el = [`coluna-${j}`, `cartao-${j}`]
+      .map((id) => document.getElementById(id))
+      .find((e) => e && e.offsetParent !== null);
+    if (!el) return;
+    el.scrollIntoView({ behavior: semMovimento() ? "auto" : "smooth", block: "start" });
+    setFocoLoja(j);
+    clearTimeout(timerLoja.current);
+    timerLoja.current = setTimeout(() => setFocoLoja(null), 1800);
+  }, []);
   const verAlternativa = useCallback((j: Jogador) => {
     const el = document.getElementById(`alternativa-${j}`);
     if (!el) return;
@@ -1217,18 +1314,37 @@ export function ComparacaoMarketplaces({
                 )}
               </div>
             )}
-            {!compacto && (v || m) && (
+            {!compacto && v && (
+              <PlacarDecisaoTopo
+                vencedor={v}
+                totalMl={ml ? totalConfirmado(ml) : null}
+                outrosComparados={
+                  buscando.length === 0 && (consultado("amazon") || consultado("shopee"))
+                }
+                acao={(() => {
+                  const c = colunas.find((x) => x.jogador === v.jogador);
+                  return c ? (
+                    <Acao
+                      c={c}
+                      colado={colado}
+                      gerarLink={gerarLink}
+                      verAlternativa={verAlternativa}
+                      pedir={(mk) => void pedir(mk)}
+                      podePedir={podePedir}
+                    />
+                  ) : null;
+                })()}
+              />
+            )}
+            {!compacto && decisao.ofertas.length > 1 && (
+              <SeletorLojasFlutuante
+                colunas={colunas}
+                vencedor={v?.jogador ?? null}
+                ir={irParaLoja}
+              />
+            )}
+            {!compacto && m && (
               <div className="mt-2 space-y-1 text-xs leading-relaxed">
-                {v && (
-                  <p>
-                    <strong>🔥 Melhor escolha: {NOME_DO_JOGADOR[v.jogador]}</strong>
-                    {(() => {
-                      const t = totalConfirmado(v);
-                      return t != null ? ` · total de ${brl(t)} confirmado` : "";
-                    })()}
-                    .
-                  </p>
-                )}
                 {m && (
                   <p className="text-amber-900 dark:text-amber-200">
                     <strong>
@@ -1277,9 +1393,13 @@ export function ComparacaoMarketplaces({
                 {colunas.map((c, idx) => (
                   <div
                     key={c.jogador}
+                    id={`coluna-${c.jogador}`}
                     role="group"
                     aria-label={NOME_DO_JOGADOR[c.jogador]}
-                    className="relative row-span-7 grid grid-rows-subgrid"
+                    className={
+                      "relative row-span-7 grid scroll-mt-56 grid-rows-subgrid rounded-xl transition-shadow duration-300 " +
+                      (focoLoja === c.jogador ? "ring-2 ring-[#0071e3]/50" : "")
+                    }
                   >
                     <span
                       className={
@@ -1339,8 +1459,10 @@ export function ComparacaoMarketplaces({
                 {colunas.map((c) => (
                   <li
                     key={c.jogador}
+                    id={`cartao-${c.jogador}`}
                     className={
-                      "rounded-2xl border bg-card p-3 " +
+                      "scroll-mt-48 rounded-2xl border bg-card p-3 transition-shadow duration-300 " +
+                      (focoLoja === c.jogador ? "outline outline-2 outline-[#0071e3]/50 " : "") +
                       (ehVencedor(c)
                         ? "border-success/60 shadow-lg shadow-success/15 ring-2 ring-success/40"
                         : "border-border")
