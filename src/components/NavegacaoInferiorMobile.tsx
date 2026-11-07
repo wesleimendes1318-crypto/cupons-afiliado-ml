@@ -1,11 +1,14 @@
 /* Abas do celular (Weslei, 25/10: "simular um aplicativo nativo"): barra de
-   vidro embaixo com Início, Colar link, Categorias, Meus preços e Ofertas.
+   vidro embaixo com Início, Colar link, Categorias, Planejar, Meus preços e
+   Ofertas. "Planejar" (Weslei, 07/11: "precisa do botao de planejar no app")
+   abre o hub /planejadores, que reúne Amigo Secreto, lista de desejos e os
+   planejadores; a aba fica ativa em qualquer uma dessas páginas.
    Só abaixo de sm (o PC segue com o cabeçalho). Quando a barra de compra do
    resultado aparece (html[data-compra]), as abas descem e a compra fica sozinha
    embaixo: o botão de compra tem prioridade. A folga do conteúdo e da
    navegação rápida vem de --folga-abas (styles.css). */
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Gift, Home, LayoutGrid, Link2, Send, Tag } from "lucide-react";
+import { Home, LayoutGrid, Link2, ListChecks, Send, Tag } from "lucide-react";
 
 import { irAoCampo } from "@/components/CabecalhoSite";
 import { LINK_CANAL } from "@/lib/telegram-publico";
@@ -14,8 +17,11 @@ const ABA =
   "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-center text-[10px] font-semibold leading-[1.1] [&>svg]:shrink-0 text-[#6b6b70] transition-transform duration-100 ease-out select-none active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] motion-reduce:transition-none dark:text-white/60";
 const ATIVA = { className: "font-bold !text-[#7547E8]" };
 
+const FERRAMENTAS = ["/planejadores", "/amigo-secreto", "/favoritos", "/lista/"];
+
 export function NavegacaoInferiorMobile() {
   const caminho = useRouterState({ select: (s) => s.location.pathname });
+  const emFerramentas = FERRAMENTAS.some((f) => caminho.startsWith(f));
   const navegar = useNavigate();
 
   const colarLink = () => {
@@ -61,13 +67,13 @@ export function NavegacaoInferiorMobile() {
         Categorias
       </Link>
       <Link
-        to="/amigo-secreto"
-        onClick={() => topoSeAtiva("/amigo-secreto")}
-        activeProps={ATIVA}
-        className={ABA}
+        to="/planejadores"
+        onClick={() => topoSeAtiva("/planejadores")}
+        aria-current={emFerramentas ? "page" : undefined}
+        className={ABA + (emFerramentas ? " " + ATIVA.className : "")}
       >
-        <Gift className="size-6 text-[#0071e3]" strokeWidth={1.8} aria-hidden="true" />
-        Amigo Secreto
+        <ListChecks className="size-6 text-[#0071e3]" strokeWidth={1.8} aria-hidden="true" />
+        Planejar
       </Link>
       <Link
         to="/meus-precos"
