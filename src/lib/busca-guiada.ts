@@ -20,6 +20,7 @@ import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
 import {
   acessorioDoPedido,
+  buscasDeRoupa,
   comAcessorio,
   extrairIntencaoRapida,
   modeloDaFrase,
@@ -666,13 +667,18 @@ export async function buscaGuiada(
      título) e a frase do cliente é a 1ª busca. */
   const marcaPedida = lidaBruta.marca || marcaDoTitulo(q);
   const frase = normalizar(q).replace(/\s+/g, " ").trim().slice(0, 60);
-  const lida = marcaPedida
+  const comMarca = marcaPedida
     ? {
         ...lidaBruta,
         marca: marcaPedida,
         buscas: [...new Set([frase, ...lidaBruta.buscas])].slice(0, 3),
       }
     : lidaBruta;
+  /* 07/11: a generic "roupa de ..." always searches the real pieces first. */
+  const pecas = buscasDeRoupa(q);
+  const lida = pecas.length
+    ? { ...comMarca, buscas: [...new Set([...pecas, ...comMarca.buscas])].slice(0, 4) }
+    : comMarca;
   /* APARELHO (Weslei, 02/11: "voltou 1 máquina e muito cara"): a busca do
      catálogo por "lava e seca" devolve nicho, placa, mop e lava-louças; o
      aparelho real vem pela marca, só da categoria oficial, e os mais

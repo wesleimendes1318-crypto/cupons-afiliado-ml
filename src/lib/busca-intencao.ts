@@ -282,6 +282,67 @@ export function tipoUsadoComoDetalhe(nome: string, tipo: string, consulta: strin
   return cabeca !== raiz;
 }
 
+/* QUALIFICADORES DA FRASE (Weslei, 07/11: "roupa de academia masculino"
+   trouxe legging feminina, bolsa de academia e roupa de umbanda). O que a
+   pessoa digitou vira trava: gênero, peça de roupa e uso (academia). */
+const RE_FEM = /\b(feminin[oa]s?|mulher(es)?|women|woman|ladies|damas?)\b/;
+const RE_MASC = /\b(masculin[oa]s?|homens?|men|mens|male)\b/;
+/* Pieces sold for women unless the title says otherwise. */
+const PECA_FEMININA =
+  /\b(leggings?|tops?|cropped|croped|saias?|sutias?|vestidos?|biquinis?|maios?|bodys?|calcinhas?|lingeries?|macaquinhos?|shortsaias?)\b/;
+const PECAS_DE_ROUPA = new Set(
+  "roupa camiseta camisa regata bermuda short calca conjunto legging top jaqueta moletom blusa macacao macaquinho cropped saia vestido agasalho colete cueca body corta-vento blusao camisao".split(
+    " ",
+  ),
+);
+const RE_USO_ACADEMIA =
+  /\b(academia|fitness|treinos?|dry ?fit|esportiv[oa]s?|esportes?|corridas?|crossfit|musculacao|gym|compressao|running|caminhada|suplex|segunda pele|workout|training)\b/;
+
+const singular = (w: string) => w.replace(/(oes|aes)$/, "ao").replace(/(es|s)$/, "");
+
+export function generoDoPedido(pedido: string): "m" | "f" | null {
+  if (/\bunissex\b/.test(pedido)) return null;
+  const f = RE_FEM.test(pedido);
+  const m = RE_MASC.test(pedido);
+  return f === m ? null : f ? "f" : "m";
+}
+
+/** Gênero, peça e uso pedidos e o título não cumpre (normalizados). */
+export function qualificadorFora(titulo: string, pedido: string): boolean {
+  const g = generoDoPedido(pedido);
+  const fem = RE_FEM.test(titulo);
+  const masc = RE_MASC.test(titulo);
+  if (g === "m" && !masc && (fem || PECA_FEMININA.test(titulo))) return true;
+  if (g === "f" && masc && !fem) return true;
+  const tipoPedido = singular(tipoDoProduto(pedido) ?? "");
+  const ehRoupa = PECAS_DE_ROUPA.has(tipoPedido);
+  /* "roupa de ..." is any piece of clothing, never a bag or a bottle. */
+  if (tipoPedido === "roupa" && !PECAS_DE_ROUPA.has(singular(tipoDoProduto(titulo) ?? "")))
+    return true;
+  if (ehRoupa && RE_USO_ACADEMIA.test(pedido) && !RE_USO_ACADEMIA.test(titulo)) return true;
+  return false;
+}
+
+/** "roupa de academia masculino" is never a catalog product: search the
+    real pieces of that gender and use ("camiseta academia masculina"...). */
+export function buscasDeRoupa(q: string): string[] {
+  const t = normalizar(q);
+  if (singular(tipoDoProduto(t) ?? "") !== "roupa") return [];
+  const g = generoDoPedido(t);
+  const resto = t
+    .replace(/\broupas?\b/g, " ")
+    .replace(/\b(de|para|pra)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const pecas =
+    g === "f"
+      ? ["legging", "conjunto", "top"]
+      : g === "m"
+        ? ["camiseta", "bermuda", "regata"]
+        : ["camiseta", "conjunto", "bermuda"];
+  return pecas.map((p) => `${p} ${resto}`.trim().slice(0, 60));
+}
+
 /** O título mostra outro produto? (termo negativo do modelo, do tipo ou
     universal, com plural simples; o que a pessoa digitou nunca exclui).
     Sem tipo informado, vale o tipo da própria consulta. */
@@ -299,6 +360,7 @@ export function foraDaIntencao(
   )
     return true;
   if (itemSecundarioFora(consulta, nome)) return true;
+  if (qualificadorFora(normalizar(nome), normalizar(consulta))) return true;
   const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
   // Weslei, 02/11: "lava e seca" trazia lavadora que só lava. Pedido com as
   // duas funções exige a secagem no nome.
@@ -451,6 +513,8 @@ export function extrairIntencaoRapida(q: string): {
       ...new Set((SINONIMOS_ACESSORIO[acessorio] ?? [acessorio]).map((a) => `${a} ${sem}`.trim())),
     ];
   }
+  const roupa = buscasDeRoupa(frase);
+  if (roupa.length) buscas = [...roupa, ...buscas];
   return {
     buscas: buscas.filter((b) => b.length >= 2).slice(0, 3),
     precoMin: min,
