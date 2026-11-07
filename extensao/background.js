@@ -5078,6 +5078,12 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         responder({ ok: true, res: await gerarEtiquetas(msg.limite || 20) });
       } else if (msg.tipo === 'gerarLinksCupons') {
         responder({ ok: true, res: await gerarLinksDeCupons(msg.limite || 60) });
+      } else if (msg.tipo === 'registrarHubLote') {
+        // On-page hub collector (hub-coletor.js, 1.185.0): one batch of <= 100.
+        const { sincToken } = await chrome.storage.local.get('sincToken');
+        if (!sincToken) responder({ ok: false, erro: 'extensão sem a senha do site (abra as opções)' });
+        else if (!Array.isArray(msg.itens) || !msg.itens.length || msg.itens.length > 100) responder({ ok: false, erro: 'lote inválido' });
+        else responder({ ok: true, resposta: await registrarHub(sincToken, msg.itens) });
       } else if (msg.tipo === 'aquecer') {
         obterIndice().catch(() => {});
         responder({ ok: true });
