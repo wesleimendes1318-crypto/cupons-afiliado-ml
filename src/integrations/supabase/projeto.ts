@@ -16,9 +16,30 @@ export const NOME_SECRET_SERVICO = "MEU_SUPABASE_SERVICE_ROLE_KEY";
    único Secret cujo VALOR é uma chave secreta nova do Supabase (sb_secret_),
    fora o SUPABASE_SERVICE_ROLE_KEY que o Lovable Cloud injeta para o banco
    pausado. Nunca devolve nem registra o valor fora do servidor. */
+const NOMES_ALTERNATIVOS = ["SUPABASE_SERVICE_KEY", "SERVICE_ROLE_KEY"];
+
+function chaveDesteProjeto(v: string): boolean {
+  if (v.startsWith("sb_secret_")) return true;
+  try {
+    const corpo = v.split(".")[1];
+    if (!corpo) return false;
+    const json = JSON.parse(atob(corpo.replace(/-/g, "+").replace(/_/g, "/")));
+    return json?.ref === SUPABASE_PROJETO_SITE && json?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 export function chaveDeServico(env: Record<string, string | undefined> = process.env) {
   const direta = env[NOME_SECRET_SERVICO]?.trim();
   if (direta) return { chave: direta, origem: "nome" as const };
+  /* 07/11: common alternative names, accepted only when the value is a key
+     of THIS project (sb_secret_ or a legacy JWT whose ref is ours), so a key
+     of the paused Lovable Cloud DB is never picked up by mistake. */
+  for (const nome of NOMES_ALTERNATIVOS) {
+    const v = env[nome]?.trim();
+    if (v && chaveDesteProjeto(v)) return { chave: v, origem: "nome" as const };
+  }
   const candidatas = Object.entries(env).filter(
     ([nome, valor]) =>
       nome !== "SUPABASE_SERVICE_ROLE_KEY" && (valor ?? "").trim().startsWith("sb_secret_"),

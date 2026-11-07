@@ -349,3 +349,6 @@ export function buscaDoMercadoLivre(url: string): { termo: string | null } | nul
   const termo = limparSlug(ultimo);
   return { termo: /\p{L}/u.test(termo) && termo.length >= 2 ? termo : null };
 }
+
+/** True for a Mercado Livre search/listing page (never a product). */
+export const ehUrlDeBuscaML = (url: string) => buscaDoMercadoLivre(url) != null;

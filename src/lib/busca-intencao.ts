@@ -17,14 +17,104 @@ export type IntencaoDoFiltro = {
 
 const junto = (s: string) => normalizar(s).replace(/ /g, "");
 
+/* ECOSSISTEMA (Weslei, 07/11: "muito muito assertivo"). Linhas que dizem a
+   marca sozinhas e as marcas rivais: buscando iPhone, Galaxy/Redmi/Moto não
+   entram, e "iPhone 17 Pro Max" sem "Apple" no título continua valendo. */
+const ECOSSISTEMAS: { marca: string; re: RegExp; linha: RegExp }[] = [
+  {
+    marca: "apple",
+    re: /\b(apple|iphone|ipad|airpods?|macbook|imac|apple watch)\b/,
+    linha: /\b(iphone|ipad|airpods?|macbook|imac|apple watch)\b/,
+  },
+  { marca: "samsung", re: /\b(samsung|galaxy)\b/, linha: /\bgalaxy\b/ },
+  { marca: "xiaomi", re: /\b(xiaomi|redmi|poco)\b/, linha: /\b(redmi|poco)\b/ },
+  {
+    marca: "motorola",
+    re: /\b(motorola|moto ?[ge] ?\d{1,3}|moto edge|razr)\b/,
+    linha: /\b(moto ?[ge] ?\d{1,3}|moto edge|razr)\b/,
+  },
+];
+
+function ecossistemaDoPedido(marca?: string | null, modelo?: string | null) {
+  const m = normalizar(marca ?? "");
+  const md = normalizar(modelo ?? "");
+  return ECOSSISTEMAS.find((e) => e.marca === m || e.linha.test(md)) ?? null;
+}
+
+/* Spaces optional ("TC7900" = "TC 7900"), but numbers never merge:
+   "galaxy s2" is not "galaxy s24", "iphone 1" is not "iphone 15". */
+function contemSemEmendar(titulo: string, pedido: string) {
+  const c = [...junto(pedido)];
+  if (!c.length) return true;
+  const corpo = c.map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s-]?");
+  const re = new RegExp(
+    `${/\d/.test(c[0]!) ? "(?<!\\d)" : ""}${corpo}${/\d/.test(c[c.length - 1]!) ? "(?!\\d)" : ""}`,
+  );
+  return re.test(normalizar(titulo));
+}
+
 /** Outra marca, outro modelo ou outra versão (Pro, Max, geração) do que foi
     pedido (Weslei, 28/10: "muito assertiva, no modelo, versões tudo"; "Nike
     TC 7900" trazia Vans Old Skool). Sem marca nem modelo, não filtra. */
 export function foraDoModelo(nome: string, marca?: string | null, modelo?: string | null) {
-  const t = junto(nome);
-  const pedidos = [marca, modelo].filter((v): v is string => !!v && junto(v).length >= 2);
-  if (pedidos.some((v) => !t.includes(junto(v)))) return true;
+  const eco = ecossistemaDoPedido(marca, modelo);
+  /* A linha já diz a marca ("iPhone" = Apple): a marca não precisa estar escrita. */
+  const marcaImplicita = !!eco && !!modelo && eco.linha.test(normalizar(modelo));
+  const pedidos = [marcaImplicita ? null : marca, modelo].filter(
+    (v): v is string => !!v && junto(v).length >= 2,
+  );
+  if (pedidos.some((v) => !contemSemEmendar(nome, v))) return true;
+  if (eco) {
+    const n = normalizar(nome);
+    const pedido = normalizar(`${marca ?? ""} ${modelo ?? ""}`);
+    if (ECOSSISTEMAS.some((r) => r !== eco && r.re.test(n) && !r.re.test(pedido))) return true;
+  }
   return !!modelo && diferencaDeModelo([marca, modelo].filter(Boolean).join(" "), nome) != null;
+}
+
+/* Aparelho citado pelo nome da linha, sem rede (a interpretação remota pode
+   não responder, e a prévia nunca espera por ela). Só linhas inequívocas. */
+const RE_LINHAS: { marca: string; re: RegExp }[] = [
+  {
+    marca: "Apple",
+    re: /\b(iphone ?\d{1,2}e?(?: ?(?:pro max|pro|plus|max|mini|air))?|ipad(?: ?(?:pro|air|mini))?|apple watch(?: ?(?:series ?\d{1,2}|ultra ?\d?|se))?|airpods(?: ?(?:pro|max))?(?: ?\d)?)\b/,
+  },
+  {
+    marca: "Samsung",
+    re: /\b(galaxy ?(?:[saz] ?\d{1,3}|note ?\d{1,2}|z ?(?:flip|fold) ?\d?)(?: ?(?:ultra|plus|fe|edge))?)\b/,
+  },
+  {
+    marca: "Xiaomi",
+    re: /\b((?:redmi|poco) ?(?:note ?)?[a-z]?\d{1,2}[a-z]?(?: ?(?:pro\+?|pro|plus|ultra|s))?)\b/,
+  },
+  {
+    marca: "Motorola",
+    re: /\b(moto ?[ge] ?\d{1,3}(?: ?(?:power|play|stylus|plus))?|moto edge ?\d{0,2}(?: ?(?:pro|plus|ultra|neo))?)\b/,
+  },
+];
+
+/** Marca e modelo da linha citada na frase ("capa iphone 17 pro max" ->
+    Apple, "iphone 17 pro max"). Sem linha conhecida: null. */
+export function modeloDaFrase(q: string): { marca: string; modelo: string } | null {
+  const t = normalizar(q);
+  for (const { marca, re } of RE_LINHAS) {
+    const m = re.exec(t);
+    if (m?.[1] && /\d|ipad|airpods|apple watch/.test(m[1])) return { marca, modelo: m[1].trim() };
+  }
+  return null;
+}
+
+/* Busca pelo aparelho (sem palavra de acessório): capa, película, cabo e
+   carregador "para iPhone 17 Pro Max" não são o aparelho. O acessório vem
+   ANTES do modelo no título ("Capa iPhone..."); "iPhone ... com cabo" fica. */
+const RE_ACESSORIO_DO_APARELHO =
+  /\b(capas?|capinhas?|peliculas?|cases?|cabos?|carregador(es)?|suportes?|baterias?|vidros?|protetor(es)?|lentes?|adaptador(es)?|pulseiras?|carcacas?|kit|compativel|para)\b/;
+function acessorioDoAparelho(nome: string, modelo: string): boolean {
+  const t = normalizar(nome);
+  const m = normalizar(modelo);
+  const pos = t.indexOf(m);
+  const antes = pos >= 0 ? t.slice(0, pos) : t;
+  return RE_ACESSORIO_DO_APARELHO.test(antes);
 }
 
 /* Negativos que valem sem o modelo. Por tipo: conector de outro sinal e
@@ -201,6 +291,13 @@ export function foraDaIntencao(
   consulta: string,
 ): boolean {
   if (foraDoModelo(nome, intencao.marca, intencao.modelo)) return true;
+  if (
+    intencao.modelo &&
+    !acessorioDoPedido(consulta) &&
+    ECOSSISTEMAS.some((e) => e.linha.test(normalizar(intencao.modelo!))) &&
+    acessorioDoAparelho(nome, intencao.modelo)
+  )
+    return true;
   if (itemSecundarioFora(consulta, nome)) return true;
   const pedido = normalizar(`${consulta} ${intencao.contextoUso ?? ""}`.replace(/_/g, " "));
   // Weslei, 02/11: "lava e seca" trazia lavadora que só lava. Pedido com as

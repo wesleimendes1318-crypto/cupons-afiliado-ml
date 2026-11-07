@@ -174,7 +174,9 @@ export async function carregarAte(opcoes: {
         erro = r.erro;
         /* Too many requests: stop and let "+20 opções" try again later. */
         if (r.status === 429 || ++falhas >= 3) parar = true;
-        passo.fim = true;
+        /* 07/11: only a permanent answer ends the term; a 429 or a network
+           failure leaves it for the next "+20" instead of killing it. */
+        passo.fim = r.status !== 429 && r.status !== 0 && r.status < 500;
         return;
       }
       const naFaixa = (r.resposta.resultados ?? []).filter((x) =>

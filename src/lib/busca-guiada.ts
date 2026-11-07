@@ -19,8 +19,10 @@ import { ampliarDominios } from "@/lib/familias-dominio";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
 import {
+  acessorioDoPedido,
   comAcessorio,
   extrairIntencaoRapida,
+  modeloDaFrase,
   foraDaIntencao,
   pisoDoAparelho,
   regraDoAparelho,
@@ -603,7 +605,14 @@ async function doEstoque(
           .from("acervo_ofertas" as any)
           .select("produto,item,nome,imagem,preco,url,frete_gratis,loja_oficial")
           .gte("atualizado_em", new Date(Date.now() - ACERVO_HORAS * 3600_000).toISOString())
-          .or(tipos.map((t) => `nome.ilike.%${curinga(t.replace(/[^a-z0-9]/g, "").replace(/(es|s)$/, ""))}%`).join(","))
+          .or(
+            tipos
+              .map(
+                (t) =>
+                  `nome.ilike.%${curinga(t.replace(/[^a-z0-9]/g, "").replace(/(es|s)$/, ""))}%`,
+              )
+              .join(","),
+          )
           .order("atualizado_em", { ascending: false })
           .limit(120)
       : Promise.resolve({ data: [] });
@@ -611,7 +620,10 @@ async function doEstoque(
       consulta.order("posicao", { ascending: true }).limit(120),
       doAcervo,
     ]);
-    const linhasAcervo = ((acervo.data ?? []) as unknown as LinhaEstoque[]).map((l) => ({ ...l, dominio_ml: null }));
+    const linhasAcervo = ((acervo.data ?? []) as unknown as LinhaEstoque[]).map((l) => ({
+      ...l,
+      dominio_ml: null,
+    }));
     return [
       ...filtrarEstoque((data ?? []) as unknown as LinhaEstoque[], buscas, opcoes),
       /* No domain column in the acervo: the type in the title decides. */
@@ -638,7 +650,17 @@ export async function buscaGuiada(
     previa?: boolean;
   } = {},
 ) {
-  const lidaBruta = intencaoAnterior ?? (await interpretar(q, contexto));
+  const lidaSemLinha = intencaoAnterior ?? (await interpretar(q, contexto));
+  /* 07/11: a device line in the phrase ("iphone 17 pro max") always locks
+     the model, even when the remote reading or the preview has none. */
+  const linha = lidaSemLinha.modelo ? null : modeloDaFrase(q);
+  const lidaBruta = linha
+    ? {
+        ...lidaSemLinha,
+        modelo: linha.modelo,
+        marca: acessorioDoPedido(q) ? null : lidaSemLinha.marca || linha.marca,
+      }
+    : lidaSemLinha;
   /* MARCA DIGITADA MANDA (Weslei, 02/11: "Lava e Seca Brastemp" voltou só
      Midea, LG e Samsung). A marca citada vira trava (foraDoModelo exige no
      título) e a frase do cliente é a 1ª busca. */

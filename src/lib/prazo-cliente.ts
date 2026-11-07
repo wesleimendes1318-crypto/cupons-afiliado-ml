@@ -15,20 +15,54 @@ let agendado: ReturnType<typeof setTimeout> | null = null;
 
 const chave = (cep: string, item: string) => `${cep}|${item}`;
 
-async function enviar(cep: string, itens: string[]) {
-  let prazos: Record<string, ResumoEntrega | null> = {};
-  try {
-    const r = await fetch("/api/public/prazo-itens", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itens, cep }),
-    });
-    if (r.ok) prazos = ((await r.json()) as { prazos?: typeof prazos }).prazos ?? {};
-  } catch {
-    /* falha de rede: fica "Frete e prazo no anúncio" */
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/* Pergunta o lote; 429/5xx/rede tentam de novo em 1 s e 3 s. Devolve só os
+   itens que o servidor respondeu (ele omite os que não conseguiu ler). */
+async function consultar(
+  cep: string,
+  itens: string[],
+  tentativas = [1000, 3000],
+): Promise<Record<string, ResumoEntrega | null> | null> {
+  for (let i = 0; ; i++) {
+    try {
+      const r = await fetch("/api/public/prazo-itens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itens, cep }),
+      });
+      if (r.ok)
+        return ((await r.json()) as { prazos?: Record<string, ResumoEntrega | null> }).prazos ?? {};
+      if (r.status < 500 && r.status !== 429) return null;
+    } catch {
+      /* falha de rede: tenta de novo */
+    }
+    if (i >= tentativas.length) return null;
+    await espera(tentativas[i]!);
   }
-  for (const it of itens) guardados.set(chave(cep, it), prazos[it] ?? null);
+}
+
+/* 07/11: antes, falha ou item omitido virava null para sempre (pedidos nunca
+   liberava). Agora só a resposta explícita do servidor fica guardada; o resto
+   mostra "Frete e prazo no anúncio" por ora e volta a ser pedido na próxima
+   vez que a tela pedir (rolagem, mais cartões, nova aba). */
+export async function enviar(cep: string, itens: string[], tentativas?: number[]) {
+  const prazos = (await consultar(cep, itens, tentativas)) ?? {};
+  for (const it of itens) {
+    const k = chave(cep, it);
+    if (it in prazos) guardados.set(k, prazos[it] ?? null);
+    else {
+      if (!guardados.has(k)) guardados.set(k, null);
+      pedidos.delete(k);
+    }
+  }
   ouvintes.forEach((f) => f());
+}
+
+/** Só para testes. */
+export function estadoDoPrazo(cep: string, item: string) {
+  const k = chave(cep, item);
+  return { guardado: guardados.get(k), pedido: pedidos.has(k) };
 }
 
 function pedir(cep: string, item: string) {
