@@ -205,13 +205,18 @@ const RE_PERIODO = new RegExp(`^(${MESES})( (a|e) (${MESES}))?( de \\d{4})?$`, '
 
 export function lerReceitaML(linhas) {
   const ls = (linhas || []).map(l => String(l || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  /* No PC (07/11 13:49) o valor vem quebrado: "R$" / "468" / "," / "68" e
+     "R$ 192 , 24"; junta a janela ate o proximo rotulo e le o 1o R$. */
+  const RE_LIMITE = /^(saldo pendente|em revis[aã]o|em processo de pagamento|processando|a pagar em|hist[oó]rico da receita)/i;
   const valorApos = k => {
-    for (let j = k; j < Math.min(ls.length, k + 4); j++) {
-      if (j > k && (RE_PERIODO.test(ls[j]) || /^a pagar em/i.test(ls[j]))) break;
-      const v = reaisEmCentavos(ls[j].slice(ls[j].indexOf('R$') >= 0 ? ls[j].indexOf('R$') : 0));
-      if (v != null) return v;
+    const jan = [ls[k]];
+    for (let j = k + 1; j < Math.min(ls.length, k + 8); j++) {
+      if (RE_PERIODO.test(ls[j].split(/\s+(?=per[ií]odo|em |r\$)/i)[0]) || RE_LIMITE.test(ls[j])) break;
+      jan.push(ls[j]);
     }
-    return null;
+    const t = corrido(jan);
+    const i = t.indexOf('R$');
+    return i < 0 ? null : reaisEmCentavos(t.slice(i));
   };
   const out = { saldo_pendente_centavos: null, em_revisao_centavos: null, em_pagamento_centavos: null, a_pagar: [], historico: [] };
   const iHist = ls.findIndex(l => /^hist[oó]rico da receita/i.test(l));
@@ -220,7 +225,7 @@ export function lerReceitaML(linhas) {
     const l = ls[k];
     if (/^saldo pendente/i.test(l) && out.saldo_pendente_centavos == null) out.saldo_pendente_centavos = valorApos(k);
     else if (/^em revis[aã]o/i.test(l) && out.em_revisao_centavos == null) out.em_revisao_centavos = valorApos(k);
-    else if (/^em processo de pagamento/i.test(l) && out.em_pagamento_centavos == null) out.em_pagamento_centavos = valorApos(k);
+    else if (/^(em processo de pagamento|processando)/i.test(l) && out.em_pagamento_centavos == null) out.em_pagamento_centavos = valorApos(k);
     else if (/^a pagar em/i.test(l)) {
       const data = /^a pagar em\s+(.+?)(\s+R\$.*)?$/i.exec(l)[1];
       const c = valorApos(k);
@@ -228,16 +233,20 @@ export function lerReceitaML(linhas) {
     }
   }
   if (iHist >= 0) {
+    const periodoDe = l => RE_PERIODO.test(l.split(/\s+(?=per[ií]odo|em |r\$)/i)[0]);
     for (let k = iHist + 1; k < ls.length && out.historico.length < 24; k++) {
-      if (!RE_PERIODO.test(ls[k])) continue;
-      const bloco = [];
-      for (let j = k + 1; j < Math.min(ls.length, k + 5) && !RE_PERIODO.test(ls[j]); j++) bloco.push(ls[j]);
-      const status = bloco.find(b => /revis|pagamento|pago|dispon|liberad|cancel/i.test(b) && !/R\$/.test(b)) || null;
+      if (!periodoDe(ls[k])) continue;
+      const [nome, ...resto] = ls[k].split(/\s+(?=per[ií]odo|em |r\$)/i);
+      const bloco = resto.length ? [resto.join(' ')] : [];
+      for (let j = k + 1; j < Math.min(ls.length, k + 8) && !periodoDe(ls[j]); j++) bloco.push(ls[j]);
+      const texto = bloco.join(' ');
+      const st = /((em revis[aã]o|pago|dispon[ií]vel|liberad[oa]).*?(?=\s*R\$|$)|em processo de pagamento|processando|cancelad[oa])/i.exec(texto);
+      const iR = corrido(bloco).indexOf('R$');
       out.historico.push({
-        periodo: ls[k].slice(0, 40),
-        atual: bloco.some(b => /per[ií]odo atual/i.test(b)),
-        status: status && status.slice(0, 80),
-        centavos: valorApos(k)
+        periodo: nome.slice(0, 40),
+        atual: /per[ií]odo atual/i.test(texto),
+        status: st ? st[1].trim().slice(0, 80) : null,
+        centavos: iR < 0 ? null : reaisEmCentavos(corrido(bloco).slice(iR))
       });
     }
   }
