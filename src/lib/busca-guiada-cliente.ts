@@ -98,7 +98,7 @@ export function anunciosValidos(
   });
 }
 
-/** Acompanha a busca nos anúncios (a cada 3 s, até 2 min): a do modelo e
+/** Acompanha a busca nos anúncios (a cada 3 s, até 5 min: a extensão atende ~1 por minuto): a do modelo e
     as das peças de roupa (07/11), juntas; q é o pedido digitado, que filtra
     de novo cada anúncio (gênero, peça, uso). */
 export function useAnunciosPeloNome(resposta: Resposta | null, q?: string): EstadoAnuncios | null {
@@ -114,7 +114,7 @@ export function useAnunciosPeloNome(resposta: Resposta | null, q?: string): Esta
     setEstado(null);
     if (!pedidos.length) return;
     let vivo = true;
-    const fim = Date.now() + 120_000;
+    const fim = Date.now() + 300_000;
     const prontos = new Map<number, Resultado[]>();
     setEstado({ estado: "buscando", itens: [] });
     const olhar = async () => {
