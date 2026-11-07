@@ -47,52 +47,85 @@ const RE_LOGIN = /\/jms\/|\/login|signin|\/ap\/|registration|\/buyer\/login|acco
 
 /* ---------------- funcoes puras (testadas) ---------------- */
 
-const RE_COMISSAO = /ganhos|comiss[aã]o|receita|earnings|rendimento/i;
-const RE_PEDIDOS = /pedidos|vendas|itens (pedidos|vendidos|enviados)|convers[oõ]es|orders/i;
-const RE_CLIQUES = /cliques|clicks/i;
-const RE_ROTULO = new RegExp([RE_COMISSAO, RE_PEDIDOS, RE_CLIQUES].map(r => r.source).join('|'), 'i');
+/* Rotulos por campo, do mais especifico para o generico. Lidos de verdade
+   em 05-06/11: o hub do ML tem "GANHOS / EXTRAS 18% R$ 349" (cartao de
+   produto: preco com comissao extra, NAO e ganho) e "Ganho estimado R$ 0";
+   a Amazon escreve "Total de comissões R$0.41" (ponto decimal) e o grafico
+   de cliques solta "06Oct 09 12 15" (eixo, nao contagem). */
+const CAMPOS = [
+  { campo: 'aprovada_centavos', tipo: 'reais', re: /dispon[ií]ve(l|is)|aprovad|liberad|para (sacar|retirar)/i },
+  { campo: 'pendente_centavos', tipo: 'reais', re: /pendente|em an[aá]lise|a liberar|em processamento/i },
+  { campo: 'faturamento_centavos', tipo: 'reais', re: /faturamento|vendas geradas|valor (total )?(das |de |do )?(vendas|pedidos?)|gmv/i },
+  { campo: 'comissao_centavos', tipo: 'reais', re: /ganhos? estimados?|ganhos? (totais|do m[eê]s)|total de comiss|comiss[aã]o (estimada|total)|^(ganhos?|comiss[oõ]es|earnings|receita)$/i },
+  { campo: 'conversao_pct', tipo: 'pct', re: /convers[aã]o|taxa de convers/i },
+  { campo: 'cliques', tipo: 'conta', re: /cliques|clicks/i },
+  { campo: 'pedidos', tipo: 'conta', re: /^(pedidos|vendas|itens (pedidos|vendidos|enviados)|total de (produtos|itens) (pedidos|vendidos)|orders)\b/i }
+];
+const RE_ROTULO = new RegExp(CAMPOS.map(c => c.re.source.replace(/\^|\$/g, '')).join('|'), 'i');
 
 function reaisEmCentavos(t) {
-  const m = /R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?(?!\s*%)/.exec(t);
+  const i = t.indexOf('R$');
+  if (i < 0 || t.slice(0, i).includes('%')) return null;
+  const resto = t.slice(i);
+  const ponto = /^R\$\s*(\d+)\.(\d{2})(?![\d,])/.exec(resto);
+  if (ponto) return Number(ponto[1]) * 100 + Number(ponto[2]);
+  const m = /^R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?(?!\s*%)/.exec(resto);
   if (!m) return null;
   return Number(m[1].replace(/\./g, '')) * 100 + Number((m[2] || '0').padEnd(2, '0'));
 }
 
-function contagem(t) {
-  if (/R\$|%/.test(t)) return null;
-  const m = /(?:^|\s)(\d{1,3}(?:\.\d{3})+|\d+)(?:\s|$)/.exec(t);
-  return m ? Number(m[1].replace(/\./g, '')) : null;
-}
+const RE_INTEIRO = /^(\d{1,3}(?:\.\d{3})+|\d+)$/;
+const inteiro = t => Number(t.replace(/\./g, ''));
 
 /** Junta "R$" / "1.234" / "," / "56" quebrados em linhas. */
 function corrido(ls) {
   return ls.join(' ').replace(/R\$\s+/g, 'R$ ').replace(/\s*,\s*(\d{2})\b/g, ',$1');
 }
 
-/** Le comissao (centavos), pedidos e cliques das linhas da tela. O valor
-    tem de estar na linha do rotulo ou nas 4 seguintes, antes de outro
-    rotulo. Primeiro achado vale (o resumo fica no topo dos portais). */
+/** Le os numeros do resumo pelas linhas da tela. Dinheiro: o R$ tem de vir
+    na linha do rotulo ou nas 4 seguintes, sem % antes (taxa de comissao).
+    Contagem: "Cliques: 12" ou a 1a linha seguinte so com o numero.
+    Primeiro achado de cada campo vale; nada achado = null (nunca chuta). */
 export function lerResumoDoPainel(linhas) {
   const ls = (linhas || []).map(l => String(l || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
-  const out = { comissao_centavos: null, pedidos: null, cliques: null, achados: [] };
+  const out = { comissao_centavos: null, aprovada_centavos: null, pendente_centavos: null,
+    faturamento_centavos: null, conversao_pct: null, pedidos: null, cliques: null, achados: [] };
   ls.forEach((l, k) => {
-    if (!RE_ROTULO.test(l) || l.length > 60) return;
-    const janela = [l.replace(RE_ROTULO, ' ')];
-    for (let j = k + 1; j < Math.min(ls.length, k + 5) && !RE_ROTULO.test(ls[j]); j++) janela.push(ls[j]);
-    const texto = corrido(janela);
-    let campo = null; let valor = null;
-    if (RE_COMISSAO.test(l) && !/taxa|%|extra/i.test(l) && out.comissao_centavos == null) {
-      valor = reaisEmCentavos(texto); campo = 'comissao_centavos';
-    } else if (RE_CLIQUES.test(l) && out.cliques == null) {
-      valor = janela.map(contagem).find(v => v != null) ?? null; campo = 'cliques';
-    } else if (RE_PEDIDOS.test(l) && out.pedidos == null) {
-      valor = janela.map(contagem).find(v => v != null) ?? null; campo = 'pedidos';
+    if (l.length > 60 || !RE_ROTULO.test(l)) return;
+    const c = CAMPOS.find(x => x.re.test(l) && out[x.campo] == null);
+    if (!c) return;
+    const resto = l.replace(c.re, ' ').trim();
+    const seguintes = [];
+    for (let j = k + 1; j < Math.min(ls.length, k + 5) && !RE_ROTULO.test(ls[j]); j++) seguintes.push(ls[j]);
+    let valor = null; let visto = '';
+    if (c.tipo === 'reais') {
+      visto = corrido([resto, ...seguintes]);
+      valor = reaisEmCentavos(visto);
+    } else if (c.tipo === 'pct') {
+      visto = corrido([resto, ...seguintes.slice(0, 2)]);
+      const m = /(\d{1,3}(?:[.,]\d{1,2})?)\s*%/.exec(visto);
+      valor = m ? Number(m[1].replace(',', '.')) : null;
+    } else {
+      const proprio = /^[:\s]*(\d{1,3}(?:\.\d{3})+|\d+)$/.exec(resto);
+      if (proprio) { valor = inteiro(proprio[1]); visto = resto; }
+      else if (seguintes[0] && RE_INTEIRO.test(seguintes[0])) { valor = inteiro(seguintes[0]); visto = seguintes[0]; }
     }
-    if (campo && valor != null) {
-      out[campo] = valor;
-      if (out.achados.length < 12) out.achados.push({ rotulo: l.slice(0, 60), valor: texto.slice(0, 80) });
+    if (valor != null) {
+      out[c.campo] = valor;
+      if (out.achados.length < 14) out.achados.push({ rotulo: l.slice(0, 60), valor: visto.slice(0, 80) });
     }
   });
+  return out;
+}
+
+/** Junta duas leituras: a primeira vale, a segunda so preenche o que faltou. */
+export function juntarLeituras(a, b) {
+  const out = { ...a, achados: [...(a.achados || [])] };
+  for (const k of Object.keys(b)) {
+    if (k === 'achados' || out[k] != null) continue;
+    out[k] = b[k];
+  }
+  for (const x of b.achados || []) if (!out.achados.some(y => y.rotulo === x.rotulo)) out.achados.push(x);
   return out;
 }
 
@@ -135,22 +168,24 @@ async function lerPainel(p, dep) {
     };
     let tela = await ler();
     let r = lerResumoDoPainel(tela.linhas);
-    /* Mercado Livre: o resumo de ganhos fica numa pagina do portal ligada
-       ao hub. Segue so link do proprio portal (navegacao GET, nada clicado). */
-    if (p.seguir && r.comissao_centavos == null) {
+    const links = tela.links.filter(l => p.seguirHref && p.seguirHref.test(l.h) && l.t).map(l => l.t).slice(0, 20);
+    /* Mercado Livre: alem do hub, abre a pagina de relatorio/ganhos do
+       proprio portal (navegacao GET, nada clicado) e completa o que faltou. */
+    if (p.seguir) {
       const alvo = tela.links.find(l => p.seguir.test(l.t) && p.seguirHref.test(l.h) && l.h.split('#')[0] !== p.url);
       if (alvo) {
         await chrome.tabs.update(aba.id, { url: alvo.h });
         await esperarCarregar(aba.id, 25000);
         await sleep(5000);
         const ruim2 = await confere();
-        if (ruim2) return ruim2;
-        tela = await ler();
-        const r2 = lerResumoDoPainel(tela.linhas);
-        if (r2.achados.length >= r.achados.length) r = r2;
+        if (!ruim2) {
+          tela = await ler();
+          r = juntarLeituras(lerResumoDoPainel(tela.linhas), r);
+        }
       }
     }
-    const temNumero = r.comissao_centavos != null || r.pedidos != null || r.cliques != null;
+    r.links_portal = links;
+    const temNumero = ['comissao_centavos', 'aprovada_centavos', 'pendente_centavos', 'pedidos', 'cliques'].some(k => r[k] != null);
     return { status: temNumero ? 'lido' : 'sem_numeros', ...r,
       pagina: ((await chrome.tabs.get(aba.id)).url || '').split('?')[0].slice(0, 120) };
   } catch (e) {

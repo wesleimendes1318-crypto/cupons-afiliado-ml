@@ -16,7 +16,7 @@ import {
   Target,
   Wallet,
 } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -96,6 +96,7 @@ function Admin() {
   const [dias, setDias] = useState(30);
   const [painel, setPainel] = useState<Painel | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const semMovimento = useSemMovimento();
 
   const carregar = useCallback(async (n: number) => {
     setCarregando(true);
@@ -250,7 +251,7 @@ function Admin() {
             ) : (
               <>
                 <p className="text-3xl font-extrabold tracking-tight text-[#1d1d1f]">
-                  {reais(r.comissaoMes)}
+                  <Contador valor={r.comissaoMes} formato={reais} />
                 </p>
                 <p
                   className={`mt-1 text-xs font-semibold ${r.variacaoSemana == null ? "text-[#6e6e73]" : r.variacaoSemana >= 0 ? "text-[#34c759]" : "text-[#ff3b30]"}`}
@@ -271,7 +272,7 @@ function Admin() {
             titulo="Cliques em links de afiliado"
           >
             <p className="text-3xl font-extrabold tracking-tight text-[#1d1d1f]">
-              {inteiro(r.totalCliques)}
+              <Contador valor={r.totalCliques} formato={inteiro} />
             </p>
             <p className="mt-1 text-xs text-[#6e6e73]">
               ML {inteiro(r.cliques.ml)} · Amazon {inteiro(r.cliques.amazon)} · Shopee{" "}
@@ -280,7 +281,7 @@ function Admin() {
           </Kpi>
           <Kpi atraso={120} icone={<Target className="size-4" />} titulo="Taxa de decisão">
             <p className="text-3xl font-extrabold tracking-tight text-[#1d1d1f]">
-              {pct(r.taxaDecisao)}
+              {r.taxaDecisao == null ? "—" : <Contador valor={r.taxaDecisao} formato={pct} />}
             </p>
             <p className="mt-1 text-xs text-[#6e6e73]">
               {inteiro(r.totalCliques)} cliques em {inteiro(r.buscas)} buscas
@@ -288,7 +289,7 @@ function Admin() {
           </Kpi>
           <Kpi atraso={180} icone={<Bell className="size-4" />} titulo="Meus preços">
             <p className="text-3xl font-extrabold tracking-tight text-[#1d1d1f]">
-              {inteiro(p.monitorados)}
+              <Contador valor={p.monitorados} formato={inteiro} />
             </p>
             <p className="mt-1 text-xs text-[#6e6e73]">
               produtos monitorados · {inteiro(r.alertasDisparados)} alertas disparados
@@ -344,6 +345,9 @@ function Admin() {
                     stroke={AZUL}
                     strokeWidth={2.5}
                     fill="url(#gBuscas)"
+                    isAnimationActive={!semMovimento}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
                   />
                   <Area
                     type="monotone"
@@ -352,6 +356,9 @@ function Admin() {
                     stroke={VERDE}
                     strokeWidth={2.5}
                     fill="url(#gCliques)"
+                    isAnimationActive={!semMovimento}
+                    animationDuration={1400}
+                    animationEasing="ease-out"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -373,6 +380,9 @@ function Admin() {
                       outerRadius={72}
                       paddingAngle={3}
                       stroke="none"
+                      isAnimationActive={!semMovimento}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
                     >
                       {pizza.map((f) => (
                         <Cell key={f.nome} fill={f.cor} />
@@ -425,8 +435,9 @@ function Admin() {
                   </div>
                   <div className="mt-1 h-2 rounded-full bg-[#f5f5f7]">
                     <div
-                      className="h-2 rounded-full transition-[width] duration-700 ease-out"
+                      className="h-2 rounded-full transition-[width] duration-700 ease-out animate-barra"
                       style={{
+                        animationDelay: `${320 + i * 90}ms`,
                         width: `${Math.max(2, (f.valor / topoFunil) * 100)}%`,
                         background: i === 3 ? VERDE : AZUL,
                       }}
@@ -446,7 +457,7 @@ function Admin() {
               <Vazio>Sem buscas no período.</Vazio>
             ) : (
               <ul className="space-y-2.5">
-                {p.categorias.map((c) => (
+                {p.categorias.map((c, i) => (
                   <li key={c.nome}>
                     <div className="flex justify-between gap-2 text-sm">
                       <span className="truncate text-[#1d1d1f]">{c.nome}</span>
@@ -454,8 +465,11 @@ function Admin() {
                     </div>
                     <div className="mt-1 h-1.5 rounded-full bg-[#f5f5f7]">
                       <div
-                        className="h-1.5 rounded-full bg-[#0071e3]"
-                        style={{ width: `${(c.buscas / maxCat) * 100}%` }}
+                        className="h-1.5 rounded-full bg-[#0071e3] animate-barra"
+                        style={{
+                          width: `${(c.buscas / maxCat) * 100}%`,
+                          animationDelay: `${360 + i * 70}ms`,
+                        }}
                       />
                     </div>
                   </li>
@@ -569,8 +583,253 @@ function Admin() {
             </ul>
           </Cartao>
         </section>
+
+        <HubMercadoLivre atualizado={p.gerado_em} comando={p.comando} />
       </div>
     </Tela>
+  );
+}
+
+function useSemMovimento() {
+  const [sem, setSem] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setSem(m.matches);
+    const mudou = () => setSem(m.matches);
+    m.addEventListener("change", mudou);
+    return () => m.removeEventListener("change", mudou);
+  }, []);
+  return sem;
+}
+
+/* Número que sobe do zero até o valor (como a entrada do login); parado se o
+   sistema pede menos movimento. */
+function Contador({ valor, formato }: { valor: number; formato: (n: number) => string }) {
+  const semMovimento = useSemMovimento();
+  const [atual, setAtual] = useState(0);
+  const de = useRef(0);
+  useEffect(() => {
+    if (semMovimento) return setAtual(valor);
+    const inicio = performance.now();
+    const partida = de.current;
+    let quadro = 0;
+    const passo = (t: number) => {
+      const k = Math.min(1, (t - inicio) / 900);
+      const v = partida + (valor - partida) * (1 - Math.pow(1 - k, 3));
+      de.current = v;
+      setAtual(v);
+      if (k < 1) quadro = requestAnimationFrame(passo);
+    };
+    quadro = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(quadro);
+  }, [valor, semMovimento]);
+  const inteiroNoFim = Number.isInteger(valor);
+  return <span className="tabular-nums">{formato(inteiroNoFim ? Math.round(atual) : atual)}</span>;
+}
+
+type LinhaHub = {
+  id: string;
+  capturado_em: string;
+  periodo: string;
+  comissao_estimada_centavos: number | null;
+  comissao_aprovada_centavos: number | null;
+  comissao_pendente_centavos: number | null;
+  faturamento_gerado_centavos: number | null;
+  pedidos_totais: number | null;
+  cliques_totais: number | null;
+  taxa_conversao: number | null;
+  trecho_lido: { rotulo: string; valor: string }[] | null;
+};
+
+const CAMPOS_HUB = [
+  "comissao_estimada_centavos",
+  "comissao_aprovada_centavos",
+  "comissao_pendente_centavos",
+  "faturamento_gerado_centavos",
+  "pedidos_totais",
+  "cliques_totais",
+  "taxa_conversao",
+] as const;
+/* Precisão = quantos dos 7 números o hub mostrou de fato (o resto fica "—"). */
+const lidosDoHub = (l: LinhaHub) => CAMPOS_HUB.filter((c) => l[c] != null).length;
+const mesDe = (iso: string) =>
+  new Date(iso).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+const STATUS_COMANDO: Record<ComandoSinc["status"], string> = {
+  pendente: "Aguardando a extensão",
+  executando: "Lendo agora",
+  concluido: "Concluída",
+  erro: "Falhou",
+};
+
+/* Hub de afiliados do Mercado Livre: últimas leituras da extensão (RLS:
+   só a conta mestre lê metricas_hub_ml). Valor não lido fica "—". */
+function HubMercadoLivre({
+  atualizado,
+  comando,
+}: {
+  atualizado: string;
+  comando: ComandoSinc | null;
+}) {
+  const [linhas, setLinhas] = useState<LinhaHub[] | "carregando">("carregando");
+  useEffect(() => {
+    void supabase
+      .from("metricas_hub_ml" as never)
+      .select(
+        "id, capturado_em, periodo, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, trecho_lido",
+      )
+      .order("capturado_em", { ascending: false })
+      .limit(10)
+      .then(({ data }) => setLinhas((data as LinhaHub[] | null) ?? []));
+  }, [atualizado]);
+
+  const linha = linhas === "carregando" ? null : (linhas[0] ?? null);
+  const leituraMl = comando?.resultado?.marketplaces?.find((m) => m.marketplace === "mercadolivre");
+  const itens: { rotulo: string; valor: number | null; formato: (n: number) => string }[] = linha
+    ? [
+        { rotulo: "Ganho estimado", valor: linha.comissao_estimada_centavos, formato: reais },
+        { rotulo: "Comissão aprovada", valor: linha.comissao_aprovada_centavos, formato: reais },
+        { rotulo: "Comissão pendente", valor: linha.comissao_pendente_centavos, formato: reais },
+        { rotulo: "Vendas geradas", valor: linha.faturamento_gerado_centavos, formato: reais },
+        { rotulo: "Pedidos", valor: linha.pedidos_totais, formato: inteiro },
+        { rotulo: "Cliques", valor: linha.cliques_totais, formato: inteiro },
+        {
+          rotulo: "Conversão",
+          valor: linha.taxa_conversao == null ? null : Number(linha.taxa_conversao),
+          formato: pct,
+        },
+      ]
+    : [];
+  const proxima = linha
+    ? quando(new Date(new Date(linha.capturado_em).getTime() + 12 * 3600e3).toISOString())
+    : null;
+
+  return (
+    <section className="mt-4">
+      <Cartao
+        titulo="Hub de afiliados do Mercado Livre"
+        sub={linha ? `Período: ${mesDe(linha.capturado_em)} (acumulado do mês)` : "Mês atual"}
+        atraso={520}
+      >
+        {linhas === "carregando" ? (
+          <Vazio>Carregando…</Vazio>
+        ) : !linha ? (
+          <Vazio>
+            Ainda sem leitura do hub. Toque em “Sincronizar vendas agora” com a extensão aberta no
+            Chrome.
+          </Vazio>
+        ) : (
+          <>
+            <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+              <div className="min-w-0">
+                <dt className="text-[#86868b]">Última leitura</dt>
+                <dd className="font-semibold text-[#1d1d1f]">{quando(linha.capturado_em)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[#86868b]">Precisão</dt>
+                <dd
+                  className={`font-semibold ${lidosDoHub(linha) >= 5 ? "text-[#34c759]" : "text-[#ff9500]"}`}
+                >
+                  {lidosDoHub(linha)} de {CAMPOS_HUB.length} números lidos
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[#86868b]">Status</dt>
+                <dd className="font-semibold text-[#1d1d1f]">
+                  {comando
+                    ? `${STATUS_COMANDO[comando.status]}${leituraMl ? ` · ${TEXTO_LEITURA[leituraMl.status] ?? leituraMl.status}` : ""}`
+                    : "—"}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[#86868b]">Próxima leitura automática</dt>
+                <dd className="font-semibold text-[#1d1d1f]">por volta de {proxima}</dd>
+              </div>
+            </dl>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+              {itens.map((it, i) => (
+                <div
+                  key={it.rotulo}
+                  className="min-w-0 rounded-2xl bg-[#f5f5f7] p-3 animate-cartao"
+                  style={{ animationDelay: `${560 + i * 50}ms` }}
+                >
+                  <p className="text-[11px] font-semibold leading-tight text-[#6e6e73]">{it.rotulo}</p>
+                  <p className="mt-1 whitespace-nowrap text-sm font-bold tracking-tight text-[#1d1d1f] min-[360px]:text-base sm:text-lg">
+                    {it.valor == null ? "—" : <Contador valor={it.valor} formato={it.formato} />}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <h3 className="mt-5 text-sm font-bold text-[#1d1d1f]">Histórico de leituras</h3>
+            <div className="mt-2 overflow-x-auto rounded-2xl border border-[#e5e5ea]">
+              <table className="w-full min-w-[560px] text-left text-xs">
+                <thead className="bg-[#f5f5f7] text-[#6e6e73]">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">Data</th>
+                    <th className="px-3 py-2 font-semibold">Ganho estimado</th>
+                    <th className="px-3 py-2 font-semibold">Aprovada</th>
+                    <th className="px-3 py-2 font-semibold">Pendente</th>
+                    <th className="px-3 py-2 font-semibold">Vendas geradas</th>
+                    <th className="px-3 py-2 font-semibold">Pedidos</th>
+                    <th className="px-3 py-2 font-semibold">Precisão</th>
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums text-[#1d1d1f]">
+                  {linhas.map((l) => (
+                    <tr key={l.id} className="border-t border-[#e5e5ea]">
+                      <td className="whitespace-nowrap px-3 py-2">{quando(l.capturado_em)}</td>
+                      <td className="px-3 py-2">
+                        {l.comissao_estimada_centavos == null
+                          ? "—"
+                          : reais(l.comissao_estimada_centavos)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {l.comissao_aprovada_centavos == null
+                          ? "—"
+                          : reais(l.comissao_aprovada_centavos)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {l.comissao_pendente_centavos == null
+                          ? "—"
+                          : reais(l.comissao_pendente_centavos)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {l.faturamento_gerado_centavos == null
+                          ? "—"
+                          : reais(l.faturamento_gerado_centavos)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {l.pedidos_totais == null ? "—" : inteiro(l.pedidos_totais)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {lidosDoHub(l)}/{CAMPOS_HUB.length}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {!!linha.trecho_lido?.length && (
+              <details className="abertura-nativa mt-3 text-xs text-[#6e6e73]">
+                <summary className="cursor-pointer font-semibold">O que li no portal</summary>
+                <ul className="mt-2 space-y-1 break-words">
+                  {linha.trecho_lido.slice(0, 12).map((t, i) => (
+                    <li key={i}>
+                      {t.rotulo} → <span className="tabular-nums">{t.valor}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            <p className="mt-3 text-[11px] text-[#86868b]">
+              Números do mês corrente, como o hub mostra. Produtos mais vendidos ainda não aparecem:
+              o hub não mostrou essa lista na leitura.
+            </p>
+          </>
+        )}
+      </Cartao>
+    </section>
   );
 }
 
