@@ -33,6 +33,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { ColetadosHub } from "@/components/admin/ColetadosHub";
 import { LoginEmailOtp } from "@/components/LoginEmailOtp";
 import {
   Sheet,
@@ -701,6 +702,7 @@ function Admin() {
         </section>
 
         <HubMercadoLivre linhas={leiturasHub} comando={p.comando} />
+        <ColetadosHub />
       </div>
     </Tela>
   );
