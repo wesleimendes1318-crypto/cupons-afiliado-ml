@@ -86,3 +86,26 @@ test('maior opcao de itens por pagina', () => {
   assert.equal(maiorOpcao(['10', '25 itens', '50', '100 por página']), 100);
   assert.equal(maiorOpcao(['Todos', 'Mais vendidos']), null);
 });
+
+import { lerReceitaML } from '../espelho.js';
+
+test('Minha receita do hub (print de 07/11)', () => {
+  const r = lerReceitaML(['Minha receita', 'Saldo pendente', 'R$ 468,68', 'Ir para Métricas', 'Em revisão', 'R$ 192,24',
+    'Em processo de pagamento', 'R$ 276,44', 'A pagar em 12/nov', 'R$ 276,45', 'Histórico da receita',
+    'Outubro', 'Período atual', 'R$ 192,24', 'Em revisão até o fim de dezembro',
+    'Maio a setembro', 'R$ 276,45', 'Em processo de pagamento']);
+  assert.equal(r.saldo_pendente_centavos, 46868);
+  assert.equal(r.em_revisao_centavos, 19224);
+  assert.equal(r.em_pagamento_centavos, 27644);
+  assert.deepEqual(r.a_pagar, [{ data: '12/nov', centavos: 27645 }]);
+  assert.deepEqual(r.historico, [
+    { periodo: 'Outubro', atual: true, status: 'Em revisão até o fim de dezembro', centavos: 19224 },
+    { periodo: 'Maio a setembro', atual: false, status: 'Em processo de pagamento', centavos: 27645 }
+  ]);
+});
+
+test('Minha receita com valor na mesma linha', () => {
+  const r = lerReceitaML(['Saldo pendente R$ 10,00', 'A pagar em 12/nov R$ 5,00']);
+  assert.equal(r.saldo_pendente_centavos, 1000);
+  assert.deepEqual(r.a_pagar, [{ data: '12/nov', centavos: 500 }]);
+});

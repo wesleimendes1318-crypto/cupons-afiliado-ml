@@ -32,6 +32,15 @@ export type HubParaCopiloto = {
   cliques_totais: number | null;
   taxa_conversao: number | null;
   itens: ItemHub[] | null;
+  receita?: ReceitaML | null;
+};
+/** Tela "Minha receita" do hub (extensão 1.183.0). */
+export type ReceitaML = {
+  saldo_pendente_centavos: number | null;
+  em_revisao_centavos: number | null;
+  em_pagamento_centavos: number | null;
+  a_pagar: { data: string; centavos: number }[];
+  historico: { periodo: string; atual: boolean; status: string | null; centavos: number | null }[];
 };
 export type ItemHub = {
   produto: string | null;
@@ -88,6 +97,19 @@ export function contextoDoHub(leituras: HubParaCopiloto[]) {
       quantidade: i.quantidade,
     })),
     vendas_por_produto_lidas: (ultima.itens ?? []).length,
+    minha_receita: ultima.receita
+      ? {
+          saldo_pendente_reais: emReais(ultima.receita.saldo_pendente_centavos),
+          em_revisao_reais: emReais(ultima.receita.em_revisao_centavos),
+          em_processo_de_pagamento_reais: emReais(ultima.receita.em_pagamento_centavos),
+          a_pagar: ultima.receita.a_pagar.map((a) => ({ data: a.data, reais: a.centavos / 100 })),
+          historico: ultima.receita.historico.map((h) => ({
+            ...h,
+            centavos: undefined,
+            reais: emReais(h.centavos),
+          })),
+        }
+      : "tela Minha receita ainda não lida (extensão 1.183.0 + Sincronizar vendas agora)",
     historico: leituras.slice(0, 10).map((l) => ({
       lido_em: l.capturado_em,
       ganho_estimado_reais: emReais(l.comissao_estimada_centavos),
@@ -177,6 +199,7 @@ export function promptDoCopiloto(contexto: unknown, historico: MensagemCopiloto[
     "- Abra com a resposta direta em uma frase, com o número exato (R$, %, quantidade) e a data do dado.",
     "- Depois, no máximo 5 tópicos: o que o número mostra, comparação (dia a dia, histórico do hub, marketplaces) e 1 a 3 ações concretas com o produto/categoria/termo pelo nome.",
     "- Faça as contas você mesmo (somas, médias, % de variação, ranking) a partir do CONTEXTO, e diga de onde veio cada número (ex.: 'hub do ML lido em 07/11 00:25').",
+    "- Dinheiro a receber do ML: use hub_mercado_livre.minha_receita (saldo pendente, em revisão, em processo de pagamento, a pagar em <data>, histórico por período).",
     "- Comissão, a receber, aprovada, vendas por produto, tipo de venda (direta/indireta) e datas de liberação estão em hub_mercado_livre e portais_de_afiliado_mes_atual: use-os.",
     "- Se um campo está null ou a lista vem vazia, diga em uma linha qual campo falta e o que fazer (ex.: 'tocar em Sincronizar vendas agora com a extensão aberta'). Não repita avisos genéricos e não diga 'não há dados no contexto' quando o dado existe.",
     "Regras:",
@@ -216,7 +239,7 @@ export const perguntarAoCopiloto = createServerFn({ method: "POST" })
       context.supabase
         .from("metricas_hub_ml" as never)
         .select(
-          "capturado_em, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, itens",
+          "capturado_em, comissao_estimada_centavos, comissao_aprovada_centavos, comissao_pendente_centavos, faturamento_gerado_centavos, pedidos_totais, cliques_totais, taxa_conversao, itens, receita",
         )
         .order("capturado_em", { ascending: false })
         .limit(10),
