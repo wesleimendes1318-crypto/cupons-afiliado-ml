@@ -21,6 +21,8 @@ export type IntencaoDoFiltro = {
   /** Marca e modelo que a pessoa citou: o título tem de trazer os dois. */
   marca?: string | null;
   modelo?: string | null;
+  /** 08/11: the brand has nothing on ML; same type, every other shield kept. */
+  ignorarMarca?: boolean;
 };
 
 const junto = (s: string) => normalizar(s).replace(/ /g, "");
@@ -468,6 +470,23 @@ export function extrairTipoEMarca(q: string): {
   return { tipo: ps[k]!, marcaProvavel: antes ?? depois ?? null };
 }
 
+/** Brand the title must carry: the one read, or the likely one in the phrase
+    (never with a device model or an accessory, whose brand is the device's). */
+export function marcaTravada(intencao: IntencaoDoFiltro, consulta: string): string | null {
+  return (
+    intencao.marca ??
+    (intencao.modelo || acessorioDoPedido(consulta)
+      ? null
+      : extrairTipoEMarca(consulta).marcaProvavel)
+  );
+}
+
+/** Strict type named in the phrase ("camiseta"), or null. */
+export const tipoEstritoDaFrase = (q: string) => {
+  const t = extrairTipoEMarca(q).tipo;
+  return t && tipoEstrito(t) ? t : null;
+};
+
 /** O título mostra outro produto? (termo negativo do modelo, do tipo ou
     universal, com plural simples; o que a pessoa digitou nunca exclui).
     Sem tipo informado, vale o tipo da própria consulta. */
@@ -477,9 +496,7 @@ export function foraDaIntencao(
   consulta: string,
 ): boolean {
   const daFrase = extrairTipoEMarca(consulta);
-  const marca =
-    intencao.marca ??
-    (intencao.modelo || acessorioDoPedido(consulta) ? null : daFrase.marcaProvavel);
+  const marca = intencao.ignorarMarca ? null : marcaTravada(intencao, consulta);
   if (foraDoModelo(nome, marca, intencao.modelo)) return true;
   if (
     intencao.modelo &&

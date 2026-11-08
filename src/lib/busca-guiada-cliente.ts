@@ -252,7 +252,7 @@ export function chaveDaSessao(q: string, contexto: string, modo: string, no?: st
     .trim();
   let h = 5381;
   for (let i = 0; i < n.length; i++) h = ((h * 33) ^ n.charCodeAt(i)) >>> 0;
-  return `bg7_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
+  return `bg8_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
 }
 function lerDaSessao(chave: string): Resposta | null {
   try {

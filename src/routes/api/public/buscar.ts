@@ -114,8 +114,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           : CONTEXTOS[contexto];
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
-        /* Key version bump drops answers cached before a filter change (v27, 08/11: type/brand anywhere in the phrase, model lock in the preview). */
-        const chave1 = `v27|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        /* Key version bump drops answers cached before a filter change (v28, 08/11: brand off ML falls back to the same type). */
+        const chave1 = `v28|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina
           ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
           : chave1;
@@ -249,7 +249,9 @@ export const Route = createFileRoute("/api/public/buscar")({
            anúncios avulsos, que a API não lista): a extensão busca nos
            anúncios como uma pessoa faria. */
           let anuncios: { id: number; chave: string } | null = null;
-          if (exato && !achado.resultados.length && !pagina && !modoProduto) {
+          /* 08/11: brand off the catalog still asks the listings (Insider may sell there). */
+          const semAMarca = !!achado.intencao.ignorarMarca;
+          if (exato && (!achado.resultados.length || semAMarca) && !pagina && !modoProduto) {
             const { data } = await db.rpc("pedir_busca_anuncios", {
               // O que a pessoa digitou: a busca do modelo pode trazer palavra a mais ("feminino").
               p_termo:
@@ -302,6 +304,7 @@ export const Route = createFileRoute("/api/public/buscar")({
             dominiosPermitidos: achado.intencao.dominiosPermitidos ?? [],
             marca: marca ?? null,
             modelo: modelo ?? null,
+            ...(semAMarca ? { ignorarMarca: true } : {}),
             anuncios,
             ...(anunciosPecas.length ? { anunciosPecas } : {}),
             variantes: achado.variantes ?? [],
