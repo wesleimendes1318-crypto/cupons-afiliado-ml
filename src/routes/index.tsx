@@ -1800,29 +1800,32 @@ function Index() {
              rolagem, para a barra de seções do resultado ficar fixa. */
           className="relative overflow-clip text-white"
         >
+          {/* Topo SaaS (08/11, Weslei: "mais bonito, mais tecnológico,
+            encantador e estilo saas"): degradê da marca + grade fina que some
+            nas bordas + duas luzes que derivam devagar (só com movimento). */}
           <span
             aria-hidden="true"
             className={
-              "pointer-events-none absolute inset-x-0 top-0 bg-[linear-gradient(105deg,#3d8bfd_0%,#5b6cf5_45%,#a77ff0_100%)] " +
+              "hero-saas pointer-events-none absolute inset-x-0 top-0 " +
               (buscaParada ? "bottom-0" : "h-44 sm:h-48")
             }
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-24 -top-32 size-[28rem] rounded-full bg-[radial-gradient(circle,rgba(255,214,230,0.35),transparent_65%)]"
-          />
+          >
+            <span className="hero-grade" />
+            <span className="hero-luz hero-luz-1" />
+            <span className="hero-luz hero-luz-2" />
+          </span>
           <div
             className={
-              "relative mx-auto grid max-w-[1400px] gap-6 px-4 pt-4 sm:px-6 sm:pt-9 lg:px-8 " +
+              "relative mx-auto grid max-w-[1400px] gap-6 px-4 pt-5 sm:px-6 sm:pt-10 lg:px-8 " +
               (buscaParada
-                ? "pb-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start lg:gap-10 lg:pb-10"
+                ? "pb-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start lg:gap-10 lg:pb-12"
                 : "pb-0")
             }
           >
             <div className="min-w-0">
               <div className="animate-conteudo">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-ml-yellow px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#21134A]">
-                  <ShieldCheck className="size-3.5" aria-hidden="true" />
+                <span className="selo-hero inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+                  <span className="ponto-vivo" aria-hidden="true" />
                   Comparador independente
                 </span>
                 {MOSTRAR_CUPONS && atualizado && (
@@ -1832,49 +1835,59 @@ function Index() {
                 )}
                 <h1
                   className={
-                    "mt-3 font-extrabold leading-[1.02] tracking-tight sm:mt-4 " +
+                    "mt-3 font-extrabold leading-[1.02] tracking-[-0.035em] [text-wrap:balance] sm:mt-4 " +
                     (buscaParada
-                      ? "text-[1.95rem] sm:text-5xl lg:text-[4.1rem]"
+                      ? "text-[2rem] sm:text-5xl lg:text-[3.3rem] 2xl:text-[4rem]"
                       : "text-2xl sm:text-3xl")
                   }
                 >
                   O mesmo produto.
                   <br />
-                  Uma melhor escolha.
+                  <span className="texto-brilho">Uma melhor escolha.</span>
                 </h1>
                 {buscaParada && (
-                  <p className="mt-2 max-w-[46ch] text-[15px] leading-snug text-white/95 sm:mt-3 sm:text-lg">
-                    Compare preços em diferentes lojas do Mercado Livre.
-                    <br className="hidden sm:block" /> Confira as opções antes de comprar.
+                  <p className="mt-2.5 max-w-[42ch] text-[15px] leading-snug text-white/85 sm:mt-3 sm:text-lg">
+                    Compare preços em diferentes lojas do Mercado Livre antes de comprar.
                   </p>
                 )}
               </div>
               <div
                 className={
-                  "relative z-10 mt-4 text-foreground sm:mt-5 " +
+                  "relative z-10 mt-5 text-foreground sm:mt-6 " +
                   (buscaParada ? "[&>section]:mx-0 lg:[&>section]:max-w-none" : "")
                 }
               >
                 <BuscaPorLink aoMudarEstado={setBuscaParada} />
               </div>
+              {/* No celular, os 3 pontos do "Compare com clareza" (no PC eles
+                ficam no cartão ao lado da arte). */}
+              {buscaParada && (
+                <ul className="mt-4 flex flex-wrap gap-1.5 lg:hidden">
+                  {[
+                    { icone: Search, texto: "Mesmo produto em outras lojas" },
+                    { icone: ShieldCheck, texto: "Loja oficial, quando houver" },
+                    { icone: Package, texto: "Parecidos à parte" },
+                  ].map((d) => (
+                    <li
+                      key={d.texto}
+                      className="selo-hero inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
+                    >
+                      <d.icone className="size-3.5 shrink-0" aria-hidden="true" />
+                      {d.texto}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {/* Um aviso só (08/11): os dois parágrafos diziam a mesma coisa. */}
               <p
                 className={
-                  "mt-3 text-xs " +
-                  (buscaParada ? "text-white/85" : "mx-auto max-w-3xl px-1 text-secondary-ink")
+                  "mt-3 text-xs leading-relaxed " +
+                  (buscaParada ? "text-white/80" : "mx-auto max-w-3xl px-1 text-secondary-ink")
                 }
               >
-                Serviço gratuito. Posso receber comissão pelas compras feitas nos links, do programa
-                de afiliados.
+                Serviço gratuito e independente. Posso receber comissão pelas compras feitas nos
+                links, do programa de afiliados.
               </p>
-              {/* Mensagem única do site (27/09), discreta no topo. */}
-              {buscaParada && (
-                <p className="mt-1.5 max-w-[80ch] text-[11px] leading-relaxed text-white/75">
-                  Cole o link do produto. Eu mostro o mesmo produto em outras lojas dentro do
-                  Mercado Livre, do mais barato ao mais caro e com a loja oficial (quando houver).
-                  Confiro pela foto, descrição e características para encontrar o mesmo produto.
-                  Parecidos aparecem separados, com a descrição do que muda.
-                </p>
-              )}
             </div>
 
             {/* Destaque rotativo (09/10): institucional, categorias e, quando
@@ -1907,9 +1920,9 @@ function Index() {
                   key={p.titulo}
                   className="animar-passo group flex select-none items-center gap-3 rounded-2xl p-2 transition-all duration-300 hover:bg-muted/40 active:scale-[0.98] sm:justify-center sm:rounded-none sm:px-4 sm:py-2"
                 >
-                  <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#7547E8]/10 transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#7547E8]/15 group-active:scale-95">
+                  <div className="icone-passo relative flex size-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
                     <p.icone
-                      className="passo-icone size-6 text-[#7547E8] transition-all duration-300 group-hover:rotate-6 group-hover:text-[#6032d6]"
+                      className="passo-icone size-5 text-white transition-transform duration-300 group-hover:rotate-6"
                       aria-hidden="true"
                     />
                   </div>
