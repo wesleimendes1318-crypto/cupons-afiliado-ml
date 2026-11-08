@@ -41,3 +41,19 @@ export function pilulasDaFicha(c: Caracteristica[], max = 3): Caracteristica[] {
   }
   return out;
 }
+
+/** Same-product sellers other than the open one, cheapest known final cost
+    first (unknown cost never wins); rows without any link are dropped. */
+export function ordenarVendedores<
+  T extends {
+    chave: string;
+    total: number | null;
+    preco: number;
+    link: string | null;
+    urlLoja?: string | null;
+  },
+>(vendedores: T[], atual: string | null): T[] {
+  return vendedores
+    .filter((v) => v.chave !== atual && (v.link || v.urlLoja))
+    .sort((a, b) => (a.total ?? Infinity) - (b.total ?? Infinity) || a.preco - b.preco);
+}

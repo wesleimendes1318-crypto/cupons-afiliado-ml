@@ -28,6 +28,8 @@ import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CoracaoDesejo } from "@/components/CoracaoDesejo";
 import { FichaTecnicaBento } from "@/components/FichaTecnicaBento";
 import { OpinioesCompradores } from "@/components/OpinioesCompradores";
+import { OutrosVendedores } from "@/components/OutrosVendedores";
+import type { VendedorNaTabela } from "@/components/ComparacaoMarketplaces";
 import { acoesDoProduto } from "@/lib/afiliado";
 import { buscarLinkAfiliado, itemDoProduto, linkWhatsApp } from "@/lib/lista-desejos";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
@@ -81,6 +83,8 @@ export function VerDetalhesVitrine({
   fotos,
   compra,
   coracao = false,
+  vendedores = null,
+  vendedorAtual = null,
 }: {
   chave: string;
   titulo: string;
@@ -107,6 +111,10 @@ export function VerDetalhesVitrine({
   compra?: ReactNode;
   /* Wishlist heart over the photo corner (05/11); the card must be `relative`. */
   coracao?: boolean;
+  /* Same-product sellers from the comparison table (08/11): listed in the
+     drawer, cheapest final cost first; vendedorAtual is this card's row. */
+  vendedores?: VendedorNaTabela[] | null;
+  vendedorAtual?: string | null;
 }) {
   const [aberto, setAberto] = useState(false);
   const botao = useRef<HTMLButtonElement>(null);
@@ -223,6 +231,8 @@ export function VerDetalhesVitrine({
           produto={/\/p\/(MLB\d+)/i.exec(urlProduto ?? "")?.[1]?.toUpperCase() ?? mlb}
           fotos={extras}
           compra={compra}
+          vendedores={vendedores}
+          vendedorAtual={vendedorAtual}
           urlProduto={urlProduto ?? null}
           inicial={
             detalhes ? { titulo, imagem: imagem ?? null, detalhes, comparado_em: null } : undefined
@@ -245,6 +255,8 @@ function Painel({
   produto,
   fotos,
   compra,
+  vendedores,
+  vendedorAtual,
   urlProduto,
   inicial,
   fechar,
@@ -259,6 +271,8 @@ function Painel({
   produto: string | null;
   fotos: string[];
   compra: ReactNode;
+  vendedores: VendedorNaTabela[] | null;
+  vendedorAtual: string | null;
   urlProduto: string | null;
   inicial?: Resposta | undefined;
   fechar: () => void;
@@ -529,6 +543,9 @@ function Painel({
                 </p>
               )}
             </section>
+          )}
+          {vendedores && vendedores.length > 1 && (
+            <OutrosVendedores vendedores={vendedores} atual={vendedorAtual} />
           )}
           {!mlb && !inicial ? null : dados === undefined || (!lidas.length && ficha === null) ? (
             <p className="flex items-center gap-2 text-[#6e6e73]">

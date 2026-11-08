@@ -87,6 +87,7 @@ import { BotaoFoto, PainelFoto } from "@/components/BuscaPorFoto";
 import {
   ComparacaoMarketplaces,
   type ColadoParaComparar,
+  type VendedorNaTabela,
 } from "@/components/ComparacaoMarketplaces";
 import type { OfertaDoJogador } from "@/lib/comparacao-marketplaces";
 import { useBuscaPorFoto } from "@/lib/busca-foto-cliente";
@@ -2449,6 +2450,8 @@ function Foto({
     preco?: number | null | undefined;
     link?: string | null | undefined;
     detalhes?: Detalhes | null | undefined;
+    vendedores?: VendedorNaTabela[] | null | undefined;
+    vendedorAtual?: string | null | undefined;
   };
 }) {
   const [tentativa, setTentativa] = useState(0);
@@ -2464,6 +2467,8 @@ function Foto({
         link={ver.link ?? null}
         urlProduto={id?.startsWith("MLBP") ? `/p/${id.replace(/^MLBP/, "MLB")}` : (ver.url ?? null)}
         detalhes={ver.detalhes ?? null}
+        vendedores={ver.vendedores ?? null}
+        vendedorAtual={ver.vendedorAtual ?? null}
         gatilho={<Foto src={src} className="size-full rounded-[inherit]" nitida={nitida} />}
         className={className}
       />
@@ -3216,6 +3221,24 @@ function Resultado({
       : []),
   ];
 
+  /* Same-product sellers (pasted listing included, chave "colado"): the
+     marketplaces table and the details drawer of each card (08/11). */
+  const vendedoresMl: VendedorNaTabela[] = ordenarPorCustoTotal(linhasLojas)
+    .filter((l) => l.final != null)
+    .map((l) => ({
+      chave: l.chave,
+      loja: l.colado ? "Anúncio que você colou" : l.nome,
+      preco: l.final as number,
+      freteGratis: l.freteGratis ?? null,
+      custoFrete: l.custoFrete ?? null,
+      internacional: l.internacional ?? null,
+      tributos: tributosValidos(l.tributosEstimados) ?? null,
+      total: custoTotalDaOferta(l),
+      link: l.link && ehLinkDeAfiliado(l.link) ? l.link : null,
+      urlLoja: l.url,
+      melhor: l.chave === (recomendada?.chave ?? "colado"),
+    }));
+
   return (
     <ContextoAvaliacoesPorItem.Provider value={avaliacoesPorItem}>
       {/* CEP: no PC na barra de seções; no celular logo acima dela (e sempre
@@ -3305,6 +3328,8 @@ function Resultado({
                   preco: a?.preco,
                   link: semLink ? null : link,
                   detalhes: a?.detalhes,
+                  vendedores: vendedoresMl,
+                  vendedorAtual: "colado",
                 }}
               />
               <div className="min-w-0 flex-1">
@@ -3398,6 +3423,8 @@ function Resultado({
               contraImportado={coladoIncompleto}
               titulo={a?.titulo ?? null}
               colado={coladoResumo}
+              vendedores={vendedoresMl}
+              vendedorAtual={recomendada?.chave ?? null}
             />
           )}
         </div>
@@ -3600,21 +3627,7 @@ function Resultado({
               cep={a?.cepDestino ?? null}
               gerarLink={gerarLinkMl}
               chavePedido={chavePedido}
-              vendedoresMl={ordenarPorCustoTotal(linhasLojas)
-                .filter((l) => l.final != null)
-                .map((l) => ({
-                  chave: l.chave,
-                  loja: l.colado ? "Anúncio que você colou" : l.nome,
-                  preco: l.final as number,
-                  freteGratis: l.freteGratis ?? null,
-                  custoFrete: l.custoFrete ?? null,
-                  internacional: l.internacional ?? null,
-                  tributos: tributosValidos(l.tributosEstimados) ?? null,
-                  total: custoTotalDaOferta(l),
-                  link: l.link && ehLinkDeAfiliado(l.link) ? l.link : null,
-                  urlLoja: l.url,
-                  melhor: l.chave === (recomendada?.chave ?? "colado"),
-                }))}
+              vendedoresMl={vendedoresMl}
             />
           </div>
         )}
@@ -3789,8 +3802,12 @@ function VereditoEconomia({
   contraImportado = false,
   titulo = null,
   colado,
+  vendedores = null,
+  vendedorAtual = null,
 }: {
   colado: ColadoResumo;
+  vendedores?: VendedorNaTabela[] | null;
+  vendedorAtual?: string | null;
   oferta: OutraLoja;
   /* Economia medida contra o colado; null quando não dá para afirmar
      (colado internacional sem os tributos lidos, 01/11). */
@@ -3867,6 +3884,8 @@ function VereditoEconomia({
             preco: oferta.final,
             link: oferta.link,
             detalhes: oferta.detalhes,
+            vendedores,
+            vendedorAtual,
           }}
         />
         <div className="min-w-0 flex-1">
