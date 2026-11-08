@@ -658,7 +658,15 @@ export async function buscaGuiada(
   const lidaSemLinha = intencaoAnterior ?? (await interpretar(q, contexto));
   /* 07/11: a device line in the phrase ("iphone 17 pro max") always locks
      the model, even when the remote reading or the preview has none. */
-  const linha = lidaSemLinha.modelo ? null : modeloDaFrase(q);
+  /* 08/11: the phrase also wins when the reading dropped the tier
+     ("iPhone 17 Pro Max" read as "iPhone 17" let base iPhone 17 cases in). */
+  const daFrase = modeloDaFrase(q);
+  const linha =
+    daFrase &&
+    (!lidaSemLinha.modelo ||
+      !normalizar(lidaSemLinha.modelo).replace(/ /g, "").includes(daFrase.modelo.replace(/ /g, "")))
+      ? daFrase
+      : null;
   const lidaBruta = linha
     ? {
         ...lidaSemLinha,
