@@ -1646,6 +1646,8 @@ export default function BuscaPorLink({
         : {})}
       className={
         "mx-auto rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] transition-[max-width] sm:p-5 " +
+        /* Caixa parada no topo da home: borda em degradê e brilho (08/11). */
+        (parada ? "cartao-hero scroll-mt-20 " : "") +
         /* Com resultado, usa a largura da tela (Weslei, 28/09: "aproveite
            melhor o espaço"); sem resultado, a caixa do link fica enxuta. */
         ((fase === "pronto" && pedido) || resultadoOutraLoja
@@ -1653,8 +1655,10 @@ export default function BuscaPorLink({
           : "max-w-3xl")
       }
     >
-      <div className="mb-1 flex items-center gap-2">
-        <Link2 aria-hidden="true" className="size-5 text-[#7547E8]" />
+      <div className="mb-1 flex items-start gap-2">
+        <span className="icone-passo mt-px grid size-7 shrink-0 place-items-center rounded-lg">
+          <Link2 aria-hidden="true" className="size-4 text-white" />
+        </span>
         <h2 className="text-lg font-bold tracking-tight sm:text-xl">
           Cole o link ou busque o produto
         </h2>
@@ -1663,8 +1667,8 @@ export default function BuscaPorLink({
           como funciona (02/11: menos texto acima da comparação). */}
       {!((fase === "pronto" && pedido) || resultadoOutraLoja) && (
         <p className="mb-2 text-xs text-secondary-ink">
-          Com o link, procuro o mesmo produto em outras lojas e mostro onde sai mais barato. Pelo
-          nome, mostro os produtos certos para comparar.
+          Com o link, mostro onde o mesmo produto sai mais barato. Pelo nome, mostro os produtos
+          certos para comparar.
         </p>
       )}
 
@@ -1752,11 +1756,17 @@ export default function BuscaPorLink({
           <button
             type="button"
             onClick={() => {
+              /* Campo vazio: o botão segue vivo e leva ao campo (08/11: apagado
+                 parecia quebrado). */
+              if (!url.trim()) {
+                document.getElementById("campo-link-produto")?.focus();
+                return;
+              }
               sugestoes.fechar();
               void buscar(url);
             }}
-            disabled={carregando || !url.trim()}
-            className="min-h-11 flex-1 shrink-0 rounded-xl bg-ml-yellow px-5 py-2.5 text-sm font-bold text-[#21134A] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:text-base"
+            disabled={carregando}
+            className="botao-cta min-h-11 flex-1 shrink-0 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-80 sm:flex-none sm:text-base"
           >
             {carregando
               ? "Comparando..."
