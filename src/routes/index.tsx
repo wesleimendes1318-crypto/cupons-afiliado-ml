@@ -38,7 +38,6 @@ import {
 } from "react";
 
 import { GradeDepartamentos } from "@/components/GradeDepartamentos";
-import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { FerramentasHome } from "@/components/FerramentasHome";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
@@ -1818,12 +1817,12 @@ function Index() {
             className={
               "relative mx-auto grid max-w-[1400px] gap-5 px-4 pt-4 sm:px-6 sm:pt-7 lg:px-8 " +
               (buscaParada
-                ? "pb-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start lg:gap-x-8 lg:gap-y-5 lg:pb-7"
+                ? "pb-5 lg:pb-7"
                 : "pb-0")
             }
           >
-            {/* Título numa linha própria (08/11): cartão e arte começam juntos. */}
-            <div className={"min-w-0 " + (buscaParada ? "lg:col-span-2" : "")}>
+                        {/* Sem arte (08/11): no PC tudo centralizado numa coluna. */}
+            <div className={"min-w-0 " + (buscaParada ? "lg:text-center" : "")}>
               <div className="animate-conteudo">
                 <span className="selo-hero inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
                   <span className="ponto-vivo" aria-hidden="true" />
@@ -1847,17 +1846,17 @@ function Index() {
                   <span className="texto-brilho">Uma melhor escolha.</span>
                 </h1>
                 {buscaParada && (
-                  <p className="mt-2 max-w-[60ch] text-sm leading-snug text-white/85 sm:text-base">
+                  <p className="mt-2 max-w-[60ch] text-sm leading-snug lg:mx-auto text-white/85 sm:text-base">
                     Compare preços em diferentes lojas do Mercado Livre antes de comprar.
                   </p>
                 )}
               </div>
             </div>
-            <div className="min-w-0">
+            <div className={"min-w-0 " + (buscaParada ? "lg:text-center" : "")}>
               <div
                 className={
                   "relative z-10 text-foreground " +
-                  (buscaParada ? "[&>section]:mx-0 lg:[&>section]:max-w-none" : "")
+                  (buscaParada ? "[&>section]:mx-0 lg:[&>section]:mx-auto lg:text-left" : "")
                 }
               >
                 <BuscaPorLink aoMudarEstado={setBuscaParada} />
@@ -1865,7 +1864,7 @@ function Index() {
               {/* Os 3 pontos do "Compare com clareza" (08/11: o quadro ao lado da
                 arte saiu, a pedido do Weslei). */}
               {buscaParada && (
-                <ul className="mt-3 flex flex-wrap gap-1.5">
+                <ul className="mt-3 flex flex-wrap gap-1.5 lg:justify-center">
                   {[
                     { icone: Search, texto: "Mesmo produto em outras lojas" },
                     { icone: ShieldCheck, texto: "Loja oficial, quando houver" },
@@ -1893,12 +1892,6 @@ function Index() {
               </p>
             </div>
 
-            {/* Destaque rotativo (09/10): institucional, categorias e, quando
-              houver, uma oferta conferida. Só no PC; no celular a caixa do
-              link vem logo abaixo do título, sem arte. */}
-            <div className={buscaParada ? "relative hidden lg:block" : "hidden"}>
-              <DestaqueHeroRotativo />
-            </div>
           </div>
         </section>
 

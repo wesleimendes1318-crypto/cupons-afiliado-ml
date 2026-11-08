@@ -992,26 +992,6 @@ body:has(dialog[open]) [data-navegacao-rapida] {
   );
 }
 
-/* Topo rotativo (DestaqueHeroRotativo, 09/10): só a imagem flutua, 4 px
-   num ciclo lento de 6 s; o cartão de vidro e os textos ficam parados. */
-@keyframes hero-flutua {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-.hero-flutua {
-  animation: hero-flutua 6s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-flutua {
-    animation: none;
-  }
-}
-
 /* Acompanhar preço, animado (09/10): 3 repetições e para no quadro final. */
 @keyframes acomp-linha {
   0% {
