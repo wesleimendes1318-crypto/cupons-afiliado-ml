@@ -8,7 +8,7 @@
    outro. Até 8 palavras; especificação que ficou depois delas entra no fim
    (até 3, medida primeiro). Código de rastreio e SKU continuam saindo. */
 const RUIDO =
-  /\b(original|originais|lacrad[oa]s?|novo|nova|lan[cç]amentos?|promo[cç][aã]o|promo[cç][oõ]es|ofertas?|frete gr[aá]tis|envio (imediato|r[aá]pido|full)|pronta entrega|nota fiscal|com nf|nf|garantia|12x|sem juros|super|top|premium|melhor pre[cç]o|barat[oa]s?|silencios[oa]s?|econ[oô]mic[oa]s?|imperd[ií]vel|queima de estoque)\b/gi;
+  /\b(original|originais|lacrad[oa]s?|novo|nova|lan[cç]amentos?|promo[cç][aã]o|promo[cç][oõ]es|ofertas?|rel[aâ]mpago|frete gr[aá]tis|envio (imediato|r[aá]pido|full)|pronta entrega|nota fiscal|com nf|nf|garantia|12x|sem juros|super|top|premium|melhor pre[cç]o|barat[oa]s?|silencios[oa]s?|econ[oô]mic[oa]s?|imperd[ií]vel|queima de estoque)\b/gi;
 
 const RUIDO_TECNICO = /\b((c[oó]d(igo)?|sku)\.?\s*:?\s*[a-z0-9-]{4,}|[A-Z]{2}\d{9}[A-Z]{2})\b/gi;
 
