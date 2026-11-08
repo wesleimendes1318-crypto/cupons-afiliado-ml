@@ -23,6 +23,7 @@ import { buscaMlComecou, buscaMlTerminou, compararOutrosMarketplaces, voltaMlPen
 import { garimparNoPlayer } from './garimpo.js';
 import { sincronizarListas } from './listas.js';
 import { gerarLinkAfiliadoShopee } from './shopee.js';
+import { urlGarimpoNoSite } from './aba-atual.js';
 
 /* Cupons Afiliado ML - service worker (v1.1, otimizado)
 
@@ -5581,7 +5582,21 @@ async function limparCacheVelho() {
   return fora.length;
 }
 
+/* Viral finds (08/11/2026): right-click on any site (Temu, AliExpress, a
+   Facebook ad) opens the comparison on the site. No host permission needed. */
+function criarMenuGarimpo() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({ id: 'garimpar_ml', title: 'Procurar no Melhor Escolha', contexts: ['page', 'link', 'selection'] });
+  });
+}
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== 'garimpar_ml') return;
+  const url = urlGarimpoNoSite({ selectionText: info.selectionText, linkUrl: info.linkUrl, pageUrl: info.pageUrl, titulo: tab && tab.title });
+  if (url) chrome.tabs.create({ url, index: tab ? tab.index + 1 : undefined });
+});
+
 chrome.runtime.onInstalled.addListener(() => {
+  criarMenuGarimpo();
   limparCacheVelho().catch(() => {});
   armarAlarmes();
   /* Sem forcar: cada "Recarregar" da extensao baixava a lista inteira. */

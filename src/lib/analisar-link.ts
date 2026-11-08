@@ -171,7 +171,21 @@ function primeiraUrl(texto: string): URL | null {
     const candidato = corte >= 0 ? bruto.slice(0, corte + 8) : bruto;
     try {
       const u = new URL(/^https?:\/\//i.test(candidato) ? candidato : `https://${candidato}`);
-      if ((u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".")) return u;
+      if ((u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".")) {
+        /* Facebook/Instagram ad "Comprar agora" (08/11): l.facebook.com/l.php?u=<store link>. */
+        const destino = /^(l|lm)\.(facebook|instagram|messenger)\.com$/i.test(u.hostname)
+          ? u.searchParams.get("u")
+          : null;
+        if (destino) {
+          try {
+            const d = new URL(destino);
+            if (d.protocol === "https:" || d.protocol === "http:") return d;
+          } catch {
+            /* keep the wrapper */
+          }
+        }
+        return u;
+      }
     } catch {
       /* próximo */
     }

@@ -46,3 +46,20 @@ export function tituloLimpo(t) {
     .replace(/^Amazon\.com\.br\s*:\s*/i, '')
     .replace(/\s+/g, ' ').trim().slice(0, 140);
 }
+
+/** Right-click "Procurar no Melhor Escolha" (viral finds, 08/11/2026): a
+    selected text becomes a text search; a link (e.g. a Facebook ad's
+    "Comprar agora") or the open page goes to the comparison. The page title
+    only rides along for the page itself (a Temu tab title is the product). */
+export function urlGarimpoNoSite({ selectionText, linkUrl, pageUrl, titulo } = {}) {
+  const texto = String(selectionText || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  const p = new URLSearchParams();
+  if (texto && !/^https?:\/\//i.test(texto)) p.set('link', texto);
+  else if (/^https?:\/\//i.test(String(linkUrl || ''))) p.set('link', linkUrl);
+  else if (/^https?:\/\//i.test(String(pageUrl || ''))) {
+    const t = String(titulo || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    if (t) p.set('title', t);
+    p.set('link', pageUrl);
+  } else return null;
+  return `https://melhorescolha.io/?${p}`;
+}

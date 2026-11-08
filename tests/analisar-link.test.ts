@@ -195,3 +195,20 @@ test("busca do ML: lista.mercadolivre vira termo de busca", async () => {
   ])
     assert.equal(buscaDoMercadoLivre(u), null, u);
 });
+
+test("viral finds (08/11): Facebook ad redirect opens the store link inside it", () => {
+  const a = analisarLink(
+    "https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.temu.com%2Fbr%2F6-pratos-faciais-alegres-e-suporte-g-601099651234567.html%3Fx%3D1&h=AT0",
+  );
+  assert.equal(a.origem, "outro_player");
+  assert.equal(a.nomeLoja, "Temu");
+  assert.equal(a.termoIdentificado, "6 pratos faciais alegres e suporte");
+});
+
+test("viral finds (08/11): Temu share text keeps the product name", () => {
+  const a = analisarLink(
+    "Olhe este item no Temu: Conjunto de Louça de Cerâmica Limão 2/4pcs https://share.temu.com/AbCdEf123",
+  );
+  assert.equal(a.nomeLoja, "Temu");
+  assert.match(a.termoIdentificado ?? "", /Limão/);
+});

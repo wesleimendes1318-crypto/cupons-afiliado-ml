@@ -101,6 +101,13 @@ export function LinkDeOutraLoja({
   const automatica = useRef<string | null>(null);
 
   const origem = analise.origem;
+  /* Viral finds (08/11): Temu/AliExpress/Shein titles are machine-translated
+     and brandless ("6 Pratos Faciais Alegres..."), so the literal same-product
+     search finds nothing; the interpreted search looks for the ML equivalent. */
+  const modoMl: "guiada" | "produto" =
+    origem === "invalido" || /^(Temu|AliExpress|Shein)$/.test(analise.nomeLoja ?? "")
+      ? "guiada"
+      : "produto";
   const nomeTermo = analise.termoIdentificado ?? null;
   /* O produto do link lido no próprio player (foto e preço para conferir
      nos outros). */
@@ -155,7 +162,7 @@ export function LinkDeOutraLoja({
   }, [analise.termoIdentificado]);
 
   async function buscar(texto: string, modo: "guiada" | "produto") {
-    const q = texto.trim();
+    const q = texto.trim().slice(0, 160); // server caps q at 160
     if (q.length < 2 || busca.carregando) return;
     setConsulta({ q, contexto: "home", modo });
     setBusca({ carregando: true, erro: null, resposta: null });
@@ -181,7 +188,7 @@ export function LinkDeOutraLoja({
       if (mercadoLivreJunto && nomeTermo) comeco.push("mercadolivre");
     }
     setAbertos(comeco);
-    if (comeco.includes("mercadolivre") && nomeTermo) void buscar(nomeTermo, "produto");
+    if (comeco.includes("mercadolivre") && nomeTermo) void buscar(nomeTermo, modoMl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analise.urlLimpa, termoGarimpo, identificando, inicial]);
 
@@ -199,7 +206,7 @@ export function LinkDeOutraLoja({
   function abrir(p: PlayerAfiliado) {
     if (p === "mercadolivre" && !termoMl) return;
     setAbertos((a) => (a.includes(p) ? a : [...a, p]));
-    if (p === "mercadolivre" && termoMl) void buscar(termoMl, "produto");
+    if (p === "mercadolivre" && termoMl) void buscar(termoMl, modoMl);
   }
 
   const atualizarGarimpo = useCallback((p: "amazon" | "shopee", m: MudancaGarimpo) => {
@@ -234,7 +241,7 @@ export function LinkDeOutraLoja({
     termo,
     (t) => {
       setTermo(t);
-      void buscar(t, origem === "invalido" ? "guiada" : "produto");
+      void buscar(t, modoMl);
     },
     comparar,
   );
@@ -242,7 +249,7 @@ export function LinkDeOutraLoja({
   function enviar(e: FormEvent) {
     e.preventDefault();
     sugestoes.fechar();
-    void buscar(termo, origem === "invalido" ? "guiada" : "produto");
+    void buscar(termo, modoMl);
   }
 
   const lojaDoLink =
