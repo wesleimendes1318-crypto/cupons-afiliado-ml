@@ -11,6 +11,7 @@ import {
   sinaisDeProcura,
 } from "@/lib/acervo";
 import { buscaGuiada, normalizarBusca, type ResultadoBusca } from "@/lib/busca-guiada";
+import { extrairIntencaoRapida, foraDaIntencao } from "@/lib/busca-intencao";
 import { repetido } from "@/lib/curadoria";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
@@ -97,7 +98,7 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
           return json(request, { erro: "Muitas buscas seguidas. Aguarde um minuto." }, 429);
 
         const faixa = `${e.min ?? ""}-${e.max ?? ""}${e.freteACalcular ? "|f" : ""}`;
-        const chave1 = `amigo7|${faixa}|${normalizarBusca(e.termo)}`;
+        const chave1 = `amigo8|${faixa}|${normalizarBusca(e.termo)}`;
         const chave = e.pagina
           ? `${chave1}|p${e.pagina}|c${e.cursor ?? ""}|n${(e.vistos ?? []).length}`
           : chave1;
@@ -119,7 +120,12 @@ export const Route = createFileRoute("/api/public/amigo-secreto-vitrine")({
             ? Promise.resolve([] as ResultadoBusca[])
             : achadosDoGarimpo(db, e.termo, faixaPedida),
         ]);
-        const juntos = juntar(achados, doAcervo).filter(cabe);
+        /* 08/11: stored listings pass the same intent shield as a fresh search
+           (planner "jogo de lençol" served "Jogo Pratos" from the acervo). */
+        const intencao = extrairIntencaoRapida(e.termo);
+        const juntos = juntar(achados, doAcervo).filter(
+          (r) => cabe(r) && !foraDaIntencao(r.nome, intencao, e.termo),
+        );
         const prontos = ordenarPorProcura(juntos, await sinaisDeProcura(db, juntos));
         const minimo =
           e.rapido && !e.pagina ? 1 : e.pagina ? META_DO_ACERVO.seguintes : META_DO_ACERVO.primeira;
