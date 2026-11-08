@@ -12,14 +12,28 @@ import { acompanharPorLink, marcarParaDepois } from "@/lib/acompanhar-cartao";
 const CLASSE_COMPRAR =
   "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95";
 
-export function ComprarComSeguranca({ link, origem }: { link: string; origem: string }) {
+export function ComprarComSeguranca({
+  link,
+  origem,
+  destaque = false,
+}: {
+  link: string;
+  origem: string;
+  /* Main buy button of a screen: taller, round, breathing green glow. */
+  destaque?: boolean;
+}) {
   return (
     <a
       href={link}
       target="_blank"
       rel="noopener noreferrer sponsored"
       data-origem={origem}
-      className={CLASSE_COMPRAR}
+      className={
+        destaque
+          ? CLASSE_COMPRAR.replace("rounded-md", "rounded-full").replace("py-2.5", "py-3") +
+            " animate-botao-destaque"
+          : CLASSE_COMPRAR
+      }
     >
       <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
       Comprar com segurança ↗
