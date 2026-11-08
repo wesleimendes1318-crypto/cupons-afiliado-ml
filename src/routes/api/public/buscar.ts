@@ -331,6 +331,30 @@ export const Route = createFileRoute("/api/public/buscar")({
           async start(controle) {
             const enviar = (o: object) =>
               controle.enqueue(codificar.encode(`${JSON.stringify(o)}\n`));
+            /* 08/11: stage 0 = own stock only (DB, no ML read), usually < 1 s;
+               the catalog preview and the full answer replace it. */
+            let previaDoCatalogo = false;
+            const parcial = (r: Awaited<ReturnType<typeof buscaGuiada>>) => ({
+              previa: true,
+              resumo: "",
+              buscas: r.intencao.buscas,
+              resultados: r.resultados,
+              enfileirados: 0,
+              lidoEm: new Date().toISOString(),
+              proximo: null,
+            });
+            const instantanea = buscaGuiada(
+              entrada.q,
+              contextoTexto,
+              0,
+              extrairIntencaoRapida(entrada.q),
+              { instantaneo: true },
+            )
+              .then((r) => {
+                if (terminou || previaDoCatalogo || !r.resultados.length) return;
+                enviar(parcial(r));
+              })
+              .catch(() => {});
             const previa = buscaGuiada(
               entrada.q,
               contextoTexto,
@@ -340,17 +364,11 @@ export const Route = createFileRoute("/api/public/buscar")({
                 previa: true,
               },
             )
-              .then((r) => {
+              .then(async (r) => {
+                await instantanea;
                 if (terminou || !r.resultados.length) return;
-                enviar({
-                  previa: true,
-                  resumo: "",
-                  buscas: r.intencao.buscas,
-                  resultados: r.resultados,
-                  enfileirados: 0,
-                  lidoEm: new Date().toISOString(),
-                  proximo: null,
-                });
+                previaDoCatalogo = true;
+                enviar(parcial(r));
               })
               .catch(() => {});
             const f = await completar().catch(() => ({
@@ -358,7 +376,7 @@ export const Route = createFileRoute("/api/public/buscar")({
               status: 502,
             }));
             terminou = true;
-            await previa.catch(() => {});
+            await Promise.all([instantanea, previa.catch(() => {})]);
             enviar(f.corpo);
             controle.close();
           },

@@ -651,6 +651,8 @@ export async function buscaGuiada(
     cursor?: number | undefined;
     /** Quick preview (06/11): first catalog read + own stock only, no deeper reads. */
     previa?: boolean;
+    /** Instant stage (08/11): own stock only (database, no catalog read), < 1 s. */
+    instantaneo?: boolean;
   } = {},
 ) {
   const lidaSemLinha = intencaoAnterior ?? (await interpretar(q, contexto));
@@ -705,12 +707,14 @@ export async function buscaGuiada(
   const doModelo = intencao.dominiosPermitidos ?? [];
   const dominiosPorBusca = regra
     ? intencao.buscas.map(() => new Set(regra.dominios))
-    : await Promise.all(
-        intencao.buscas.map(async (b) => {
-          const s = ampliarDominios(await dominiosPrevistos(b));
-          return s ? new Set([...s, ...doModelo]) : null;
-        }),
-      );
+    : anterior.instantaneo
+      ? intencao.buscas.map(() => null)
+      : await Promise.all(
+          intencao.buscas.map(async (b) => {
+            const s = ampliarDominios(await dominiosPrevistos(b));
+            return s ? new Set([...s, ...doModelo]) : null;
+          }),
+        );
   const dominioDaVariante = regra ? new Set(regra.dominios) : (dominiosPorBusca[0] ?? null);
   /* Sem preço pedido, o aparelho grande tem piso (02/11: nicho de R$ 371 e
      placa de R$ 479 na busca de lava e seca). */
@@ -792,6 +796,20 @@ export async function buscaGuiada(
         ? new Set(dominiosPorBusca.flatMap((d) => [...d!]))
         : null;
     const estoque = doEstoque(intencao.buscas, { ...opcoes, dominios: dominiosDoEstoque });
+    /* 08/11 ("Pesquisando há 11s"): own stock answers before any ML read;
+       the same shields (foraDaIntencao, piso, fake filter, curator) apply. */
+    if (anterior.instantaneo) {
+      juntar(await estoque);
+      return {
+        intencao,
+        resultados: ordenarPorPrecoSeBarato(
+          q,
+          ordenarPelaIntencao(q, achados, (r) => r.nome),
+        ),
+        variantes: [],
+        proximo: null,
+      };
+    }
     juntar(
       await buscarNoCatalogo(intencao.buscas, {
         ...opcoes,
