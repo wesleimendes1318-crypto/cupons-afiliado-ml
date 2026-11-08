@@ -262,3 +262,10 @@ Scope: Anonymous profile, sourcing (garimpo), intelligence operation, multi-play
   item (juntarCartoesShopee) e para com 30 com preço, ou com 15 quando a
   página acabou ou duas leituras não trouxeram nada novo (META_SHOPEE),
   dentro do prazo (10-12 s).
+
+## Viral finds from Temu / ads (08/11/2026)
+Weslei asked to turn viral impulse items (Temu, AliExpress, Facebook "Daily Home Finds" ads) into Mercado Livre buys.
+- Temu/AliExpress/Shein links use the interpreted (guided) ML search, not the literal same-product search: their titles are machine-translated and brandless ("6 Pratos Faciais Alegres"). `modoMl` in `src/components/LinkDeOutraLoja.tsx`.
+- Facebook/Instagram ad redirects (`l.facebook.com/l.php?u=`) are unwrapped to the store link (`primeiraUrl`, `src/lib/analisar-link.ts`).
+- Extension 1.186.0: right-click "Procurar no Melhor Escolha" on any page/link/selection (`urlGarimpoNoSite`, `extensao/aba-atual.js`); `contextMenus` permission only, no new host permissions.
+- No nightly Temu crawler: Temu's terms forbid automated scraping and it blocks server reads. Do not build one.

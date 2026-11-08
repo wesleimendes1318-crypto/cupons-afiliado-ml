@@ -36,3 +36,16 @@ test('site comparison and clean title', () => {
   assert.equal(tituloLimpo('Fone Qcy T29 | Mercado Livre'), 'Fone Qcy T29');
   assert.equal(tituloLimpo('Amazon.com.br : Echo Dot 5'), 'Echo Dot 5');
 });
+
+test('right-click viral finds: selection, link and page', async () => {
+  const { urlGarimpoNoSite } = await import('../aba-atual.js');
+  const q = u => new URL(u).searchParams;
+  assert.equal(q(urlGarimpoNoSite({ selectionText: ' Pratos  de torrada ', pageUrl: 'https://www.facebook.com/' })).get('link'), 'Pratos de torrada');
+  const l = q(urlGarimpoNoSite({ linkUrl: 'https://l.facebook.com/l.php?u=x', pageUrl: 'https://www.facebook.com/', titulo: 'Facebook' }));
+  assert.equal(l.get('link'), 'https://l.facebook.com/l.php?u=x');
+  assert.equal(l.get('title'), null);
+  const p = q(urlGarimpoNoSite({ pageUrl: 'https://www.temu.com/br/x-g-601.html', titulo: 'Conjunto de Louça Limão - Temu' }));
+  assert.equal(p.get('title'), 'Conjunto de Louça Limão - Temu');
+  assert.equal(p.get('link'), 'https://www.temu.com/br/x-g-601.html');
+  assert.equal(urlGarimpoNoSite({ pageUrl: 'chrome://extensions' }), null);
+});
