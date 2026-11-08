@@ -1645,79 +1645,9 @@ dialog.menu-gaveta[open]::backdrop {
   }
 }
 
-/* TOPO DA HOME ESTILO SAAS (Weslei, 08/11: "melhore, deixe mais bonito, mais
-   tecnológico, encantador e estilo saas"). Mesmo degradê azul -> lilás da
-   marca, com profundidade: grade fina que some nas bordas, duas luzes que
-   derivam devagar (só com movimento liberado), título com brilho, cartão do
-   link com borda em degradê e botão principal escuro com reflexo. */
-.hero-saas {
-  overflow: hidden;
-  background:
-    radial-gradient(120% 80% at 0% 0%, rgb(61 139 253 / 0.55), transparent 60%),
-    linear-gradient(115deg, #2f6df6 0%, #5560f2 42%, #8a6cf0 78%, #b18af2 100%);
-}
-.hero-grade {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.09) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse 70% 60% at 30% 20%, #000 20%, transparent 75%);
-}
-.hero-luz {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(60px);
-  opacity: 0.55;
-}
-.hero-luz-1 {
-  width: 26rem;
-  height: 26rem;
-  right: -6rem;
-  top: -8rem;
-  background: rgb(255 196 230 / 0.7);
-}
-.hero-luz-2 {
-  width: 22rem;
-  height: 22rem;
-  left: -8rem;
-  bottom: -6rem;
-  background: rgb(94 220 255 / 0.45);
-}
-@keyframes luz-deriva {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(-2.5rem, 1.5rem) scale(1.08);
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .hero-luz-1 {
-    animation: luz-deriva 18s ease-in-out infinite;
-  }
-  .hero-luz-2 {
-    animation: luz-deriva 22s ease-in-out infinite reverse;
-  }
-}
-
-.texto-brilho {
-  background: linear-gradient(90deg, #fff 0%, #ece4ff 45%, #c9e6ff 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Pílula de vidro sobre o degradê (selo do topo e pontos no celular). */
-.selo-hero {
-  background: rgb(255 255 255 / 0.14);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    0 0 0 1px rgb(255 255 255 / 0.22);
-  backdrop-filter: blur(12px) saturate(160%);
-}
+/* TOPO DA HOME (Weslei, 08/11): primeiro "estilo saas", depois "remova o
+   gradiente": fundo claro, cartão com borda fina e sombra suave, botão
+   principal sólido. Ponto verde pulsando no selo (só com movimento). */
 .ponto-vivo {
   position: relative;
   width: 0.5rem;
@@ -1747,32 +1677,25 @@ dialog.menu-gaveta[open]::backdrop {
   }
 }
 
-/* Cartão do link no topo: borda de 1 px em degradê + brilho colorido. */
+/* Cartão do link no topo: borda fina e sombra suave. */
 .cartao-hero {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    linear-gradient(135deg, rgb(255 255 255 / 0.95), rgb(167 127 240 / 0.6), rgb(61 139 253 / 0.6))
-      border-box;
+  border: 1px solid var(--border);
   box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.6) inset,
-    0 30px 70px -30px rgb(30 16 90 / 0.6),
-    0 10px 24px -12px rgb(30 16 90 / 0.25);
+    0 1px 2px rgb(15 23 41 / 0.04),
+    0 12px 32px -16px rgb(30 16 90 / 0.18);
 }
 
-/* Ícone em degradê da marca (passos e título do cartão). */
+/* Ícone na cor da marca (passos e título do cartão). */
 .icone-passo {
-  background: linear-gradient(135deg, #7547e8, #3d8bfd);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    0 6px 14px -6px rgb(117 71 232 / 0.6);
+  background: #7547e8;
+  box-shadow: 0 4px 10px -4px rgb(117 71 232 / 0.5);
 }
 
-/* Botão principal: tinta escura com leve violeta e reflexo no mouse. */
+/* Botão principal: tinta escura sólida com reflexo no mouse. */
 .botao-cta {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #1d1240 0%, #3b2a8f 100%);
+  background: #1d1240;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.18),
     0 8px 20px -10px rgb(29 18 64 / 0.7);
@@ -1807,5 +1730,5 @@ dialog.menu-gaveta[open]::backdrop {
   }
 }
 .dark .botao-cta {
-  background: linear-gradient(135deg, #5b3fd6 0%, #3d6bfd 100%);
+  background: #5b3fd6;
 }

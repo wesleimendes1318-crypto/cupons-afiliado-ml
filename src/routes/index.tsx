@@ -1793,60 +1793,40 @@ function Index() {
           clareza". Com resultado, o topo encolhe (uma coluna, sem arte) e o
           degradê fica só atrás do título. A caixa do link nunca muda de lugar
           na árvore (não perde a comparação em andamento). */}
-        <section
-          aria-label="Melhor Escolha"
-          /* overflow-clip (não hidden): recorta a decoração sem virar área de
-             rolagem, para a barra de seções do resultado ficar fixa. */
-          className="relative overflow-clip text-white"
-        >
-          {/* Topo SaaS (08/11, Weslei: "mais bonito, mais tecnológico,
-            encantador e estilo saas"): degradê da marca + grade fina que some
-            nas bordas + duas luzes que derivam devagar (só com movimento). */}
-          <span
-            aria-hidden="true"
-            className={
-              "hero-saas pointer-events-none absolute inset-x-0 top-0 " +
-              (buscaParada ? "bottom-0" : "h-44 sm:h-48")
-            }
-          >
-            <span className="hero-grade" />
-            <span className="hero-luz hero-luz-1" />
-            <span className="hero-luz hero-luz-2" />
-          </span>
+        {/* Topo claro (Weslei, 08/11: "diminua, redimensione, deixe mais
+          confortável, remova o gradiente"). Fundo da página, sem degradê; o
+          campo e "Comparar preços" são o foco; o resto fica discreto. */}
+        <section aria-label="Melhor Escolha" className="relative">
           <div
             className={
-              "relative mx-auto grid max-w-[1400px] gap-5 px-4 pt-4 sm:px-6 sm:pt-7 lg:px-8 " +
-              (buscaParada
-                ? "pb-5 lg:pb-7"
-                : "pb-0")
+              "relative mx-auto grid max-w-[1400px] gap-4 px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8 " +
+              (buscaParada ? "pb-4 lg:pb-6" : "pb-0")
             }
           >
-                        {/* Sem arte (08/11): no PC tudo centralizado numa coluna. */}
             <div className={"min-w-0 " + (buscaParada ? "lg:text-center" : "")}>
               <div className="animate-conteudo">
-                <span className="selo-hero inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+                <span className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-ink ring-1 ring-border">
                   <span className="ponto-vivo" aria-hidden="true" />
                   Comparador independente
                 </span>
                 {MOSTRAR_CUPONS && atualizado && (
-                  <span className="ml-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                  <span className="ml-2 rounded-full bg-muted px-3 py-1 text-xs font-semibold">
                     Atualizado em {atualizado}
                   </span>
                 )}
                 <h1
                   className={
-                    "mt-2.5 font-extrabold leading-[1.04] tracking-[-0.035em] [text-wrap:balance] sm:mt-3 " +
+                    "mt-2 font-extrabold leading-[1.06] tracking-[-0.03em] [text-wrap:balance] " +
                     (buscaParada
-                      ? "text-[1.7rem] sm:text-[2.6rem] lg:text-[2.75rem] 2xl:text-[3.25rem]"
+                      ? "text-[1.55rem] sm:text-[2.1rem] lg:text-[2.35rem]"
                       : "text-2xl sm:text-3xl")
                   }
                 >
-                  O mesmo produto.
-                  <br />
-                  <span className="texto-brilho">Uma melhor escolha.</span>
+                  O mesmo produto.{" "}
+                  <span className="text-[#7547E8] dark:text-[#a78bfa]">Uma melhor escolha.</span>
                 </h1>
                 {buscaParada && (
-                  <p className="mt-2 max-w-[60ch] text-sm leading-snug lg:mx-auto text-white/85 sm:text-base">
+                  <p className="mt-1.5 max-w-[60ch] text-sm leading-snug text-secondary-ink lg:mx-auto sm:text-base">
                     Compare preços em diferentes lojas do Mercado Livre antes de comprar.
                   </p>
                 )}
@@ -1855,43 +1835,37 @@ function Index() {
             <div className={"min-w-0 " + (buscaParada ? "lg:text-center" : "")}>
               <div
                 className={
-                  "relative z-10 text-foreground " +
+                  "relative z-10 " +
                   (buscaParada ? "[&>section]:mx-0 lg:[&>section]:mx-auto lg:text-left" : "")
                 }
               >
                 <BuscaPorLink aoMudarEstado={setBuscaParada} />
               </div>
-              {/* Os 3 pontos do "Compare com clareza" (08/11: o quadro ao lado da
-                arte saiu, a pedido do Weslei). */}
+              {/* Pontos e aviso em uma faixa discreta abaixo do cartão. */}
               {buscaParada && (
-                <ul className="mt-3 flex flex-wrap gap-1.5 lg:justify-center">
+                <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-secondary-ink lg:justify-center">
                   {[
                     { icone: Search, texto: "Mesmo produto em outras lojas" },
                     { icone: ShieldCheck, texto: "Loja oficial, quando houver" },
                     { icone: Package, texto: "Parecidos à parte" },
                   ].map((d) => (
-                    <li
-                      key={d.texto}
-                      className="selo-hero inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
-                    >
-                      <d.icone className="size-3.5 shrink-0" aria-hidden="true" />
+                    <li key={d.texto} className="inline-flex items-center gap-1.5">
+                      <d.icone className="size-3.5 shrink-0 text-[#7547E8]" aria-hidden="true" />
                       {d.texto}
                     </li>
                   ))}
                 </ul>
               )}
-              {/* Um aviso só (08/11): os dois parágrafos diziam a mesma coisa. */}
               <p
                 className={
-                  "mt-3 text-xs leading-relaxed " +
-                  (buscaParada ? "text-white/80" : "mx-auto max-w-3xl px-1 text-secondary-ink")
+                  "mt-2 text-[11px] leading-relaxed text-secondary-ink " +
+                  (buscaParada ? "" : "mx-auto max-w-3xl px-1")
                 }
               >
                 Serviço gratuito e independente. Posso receber comissão pelas compras feitas nos
                 links, do programa de afiliados.
               </p>
             </div>
-
           </div>
         </section>
 
