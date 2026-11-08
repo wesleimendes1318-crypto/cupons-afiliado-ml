@@ -15,7 +15,7 @@
    - Timers só depois de montar (nada muda no HTML do servidor). */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Package, Pause, Play, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, Pause, Play } from "lucide-react";
 
 import { ehLinkDeCompra } from "@/lib/afiliado";
 import { ARTES, srcArte, srcSetArte, type Arte } from "@/lib/artes";
@@ -140,7 +140,7 @@ export function DestaqueHeroRotativo() {
       }}
     >
       {/* Imagens (só elas mudam; o quadro flutua junto). */}
-      <div className="hero-flutua relative mx-auto aspect-[774/706] w-full max-w-[30rem] overflow-hidden rounded-[2rem] bg-white/10 shadow-[0_30px_60px_-30px_rgba(20,10,60,0.65)] ring-1 ring-white/30">
+      <div className="hero-flutua relative mx-auto aspect-[5/4] w-full max-w-[30rem] overflow-hidden rounded-[2rem] bg-white/10 shadow-[0_30px_60px_-30px_rgba(20,10,60,0.65)] ring-1 ring-white/30">
         {slides.map((s, i) => {
           const visivel = i === indice;
           return (
@@ -268,24 +268,6 @@ export function DestaqueHeroRotativo() {
         )}
       </div>
 
-      {/* "Compare com clareza": fixo, abaixo da imagem (nunca sobre ela). */}
-      <div className="mx-auto mt-3 w-full max-w-[30rem] rounded-3xl border border-white/25 bg-[#1d1240]/25 px-4 py-3 backdrop-blur-md">
-        <p className="text-sm font-bold">Compare com clareza</p>
-        <ul className="mt-2 grid grid-cols-3 gap-3 text-xs leading-snug text-white/90">
-          <li className="flex flex-col gap-1">
-            <Search className="size-4 shrink-0" aria-hidden="true" />
-            Mesmo produto em diferentes lojas
-          </li>
-          <li className="flex flex-col gap-1">
-            <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-            Loja oficial, quando houver
-          </li>
-          <li className="flex flex-col gap-1">
-            <Package className="size-4 shrink-0" aria-hidden="true" />
-            Parecidos em seção separada
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }
