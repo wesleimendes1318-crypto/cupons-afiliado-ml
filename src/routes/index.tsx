@@ -41,7 +41,6 @@ import { GradeDepartamentos } from "@/components/GradeDepartamentos";
 import { DestaqueHeroRotativo } from "@/components/DestaqueHeroRotativo";
 import BuscaPorLink from "@/components/BuscaPorLink";
 import { FerramentasHome } from "@/components/FerramentasHome";
-import { BuscaGuiada } from "@/components/BuscaGuiada";
 import { ConviteTelegram } from "@/components/ConviteTelegram";
 import { InstalarApp } from "@/components/InstalarApp";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
@@ -1965,12 +1964,9 @@ function Index() {
         )}
 
         <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
-          {/* Busca guiada (05/10): para quem não tem o link, logo abaixo da
-            caixa; acima de "Explore por categoria" (Weslei, 27/10). */}
           {/* MODO DECISÃO (Weslei, 02/11): com uma comparação na tela, nada de
-            vitrines, busca guiada nem atalhos abaixo do resultado. */}
-          {buscaParada && <BuscaGuiada contexto="home" naHome className="mt-8" />}
-
+            vitrines nem atalhos abaixo do resultado. Busca guiada removida da
+            home (Weslei, 08/11): a busca do topo já cobre. */}
           {/* Every feature one tap away (Weslei, 07/11). */}
           {buscaParada && <FerramentasHome className="mt-8" />}
 
