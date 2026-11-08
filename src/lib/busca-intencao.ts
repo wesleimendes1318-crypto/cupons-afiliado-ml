@@ -12,6 +12,7 @@ import {
 
 export { modeloDaFrase };
 import { nomeTemOTipo, tipoDoProduto } from "@/lib/termo-busca";
+import { marcaDoTitulo } from "@/lib/busca-resultados";
 
 export type IntencaoDoFiltro = {
   tipoProduto?: string | null;
@@ -210,7 +211,16 @@ const NEGATIVOS_UNIVERSAIS = [
 ];
 export const BUSCA_INFANTIL =
   /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|juvenil|escolar|colecao|colecionavel)\b/;
-const NEGATIVOS_INFANTIS = ["menina", "menino", "infantil", "juvenil", "bebe", "kids", "nenem"];
+const NEGATIVOS_INFANTIS = [
+  "menina",
+  "menino",
+  "infantil",
+  "juvenil",
+  "bebe",
+  "kids",
+  "nenem",
+  "escolar",
+];
 
 /* STRICT PRODUCT TYPE (Weslei, 08/11: "Camiseta preta Oversize" showed jeans,
    fitness sets, kids' clothes and a card game; 1 real t-shirt). A concrete
@@ -267,6 +277,7 @@ const TIPOS_ESTRITOS: Record<string, string[]> = {
   ventilador: ["ventilador"],
   geladeira: ["geladeira", "refrigerador", "frigobar"],
   fogao: ["fogao"],
+  copo: ["copo"],
 };
 
 /** Synonyms of the strict type the request names, or null (no strict type). */
@@ -351,7 +362,7 @@ export function qualificadorFora(titulo: string, pedido: string): boolean {
   const masc = RE_MASC.test(titulo);
   if (g === "m" && !masc && (fem || PECA_FEMININA.test(titulo))) return true;
   if (g === "f" && masc && !fem) return true;
-  const tipoPedido = singular(tipoDoProduto(pedido) ?? "");
+  const tipoPedido = singular(extrairTipoEMarca(pedido).tipo ?? "");
   const ehRoupa = PECAS_DE_ROUPA.has(tipoPedido);
   /* "roupa de ..." is any piece of clothing, never a bag or a bottle. */
   if (
@@ -393,6 +404,70 @@ export function buscasDeRoupa(q: string): string[] {
   return pecas.map((p) => `${p} ${resto}`.trim().slice(0, 60));
 }
 
+/* TYPE AND BRAND OF THE REQUEST (Weslei, 08/11: "insider camiseta" showed a
+   women's fitness set and kids' sweatpants; the first word "insider" was
+   taken as the type, so no clothing or kids shield ran). A known type as the
+   first word, or right after one free word, is the type; that free word
+   ("insider camiseta", "stanley copo") or the one word after the type
+   ("camiseta insider") is the likely brand. Titles keep tipoDoProduto (head word). */
+const CONECTOR = /^(de|da|do|das|dos|para|pra|p|com|sem|e|em|no|na|ou)$/;
+const NAO_E_MARCA = new Set(
+  `preto preta pretos pretas branco branca brancos brancas azul azuis vermelho vermelha verde verdes rosa
+  cinza bege amarelo amarela roxo roxa marrom nude colorido colorida estampado estampada lisa liso listrado
+  listrada xadrez dourado dourada prata marinho grafite off white
+  masculino masculina masculinos masculinas feminino feminina femininos femininas unissex homem homens mulher
+  mulheres adulto adulta plus size grande grandes pequeno pequena medio media tamanho
+  oversize oversized basica basico basicas basicos slim polo gola manga longa longo curta curto social casual
+  esportivo esportiva termico termica impermeavel dry fit dryfit algodao couro jeans linho seda malha sintetico
+  tradicional moderno moderna simples luxo importado importada nacional personalizado personalizada presente
+  novo nova novos novas usado usada lindo linda bonito bonita kit jogo par pares unidade unidades
+  festa praia trabalho inverno verao frio calor top estilo modelo tipo cor original premium confortavel
+  leve resistente inteligente digital analogico eletrico eletrica automatico automatica portatil gamer
+  bluetooth wireless recarregavel magnetico ergonomico ergonomica dobravel retratil solar led rgb usb inox
+  vidro madeira plastico metal aco silicone retro vintage barato barata potente profissional caseiro caseira
+  infantil ortopedico ortopedica anatomico anatomica antiderrapante casal solteiro queen king duplex inverse
+  maternidade expresso capsula frost free`
+    .split(/\s+/)
+    .filter(Boolean),
+);
+const tipoConhecido = (p: string) =>
+  !!(TIPOS_ESTRITOS[p] ?? TIPOS_ESTRITOS[singular(p)]) ||
+  PECAS_DE_ROUPA.has(p) ||
+  PECAS_DE_ROUPA.has(singular(p));
+const podeSerMarca = (p: string) =>
+  p.length >= 3 &&
+  /[a-z]/.test(p) &&
+  !CONECTOR.test(p) &&
+  !NAO_E_MARCA.has(p) &&
+  !tipoConhecido(p) &&
+  !RE_USO_ACADEMIA.test(p) &&
+  !BUSCA_INFANTIL.test(p) &&
+  !RE_FEM.test(p) &&
+  !RE_MASC.test(p);
+
+export function extrairTipoEMarca(q: string): {
+  tipo: string | null;
+  marcaProvavel: string | null;
+} {
+  const t = normalizar(faixaDePreco(q).resto).replace(RE_VENDA, " ").replace(/\s+/g, " ").trim();
+  const acessorio = acessorioDoPedido(t);
+  /* "capinha iphone": the brand is the device's, never the case's. */
+  if (acessorio) return { tipo: acessorio, marcaProvavel: null };
+  const ps = t.split(" ").filter(Boolean);
+  /* Later in the phrase only right after one free word ("insider camiseta"):
+     "manta decorativa sofa" is a blanket, "guarda roupa" is furniture. */
+  const k = ps.findIndex(
+    (p, i) =>
+      tipoConhecido(p) && (i === 0 || (i === 1 && podeSerMarca(ps[0]!) && singular(p) !== "roupa")),
+  );
+  if (k < 0) return { tipo: tipoDoProduto(t), marcaProvavel: null };
+  const antes = k === 1 ? ps[0] : null;
+  /* After the type, only a lone second word ("camiseta insider"): longer
+     phrases are descriptions ("camiseta gola v manga longa"). */
+  const depois = ps.length === k + 2 && podeSerMarca(ps[k + 1]!) ? ps[k + 1] : null;
+  return { tipo: ps[k]!, marcaProvavel: antes ?? depois ?? null };
+}
+
 /** O título mostra outro produto? (termo negativo do modelo, do tipo ou
     universal, com plural simples; o que a pessoa digitou nunca exclui).
     Sem tipo informado, vale o tipo da própria consulta. */
@@ -401,7 +476,11 @@ export function foraDaIntencao(
   intencao: IntencaoDoFiltro,
   consulta: string,
 ): boolean {
-  if (foraDoModelo(nome, intencao.marca, intencao.modelo)) return true;
+  const daFrase = extrairTipoEMarca(consulta);
+  const marca =
+    intencao.marca ??
+    (intencao.modelo || acessorioDoPedido(consulta) ? null : daFrase.marcaProvavel);
+  if (foraDoModelo(nome, marca, intencao.modelo)) return true;
   if (
     intencao.modelo &&
     !acessorioDoPedido(consulta) &&
@@ -419,7 +498,10 @@ export function foraDaIntencao(
     !/\bseca(dora|gem)?s?\b|\blava ?seca\b|\bwasher ?dryer\b/.test(normalizar(nome))
   )
     return true;
-  const tipo = intencao.tipoProduto ?? tipoDoProduto(consulta) ?? "";
+  /* A free word read as the type ("insider") gives way to the known type. */
+  const lido = intencao.tipoProduto ?? daFrase.tipo ?? "";
+  const tipo =
+    !tipoEstrito(lido) && daFrase.tipo && tipoEstrito(daFrase.tipo) ? daFrase.tipo : lido;
   if (tipoUsadoComoDetalhe(nome, tipo, consulta)) return true;
   if (semOTipoPedido(nome, tipo, consulta)) return true;
   const t = ` ${normalizar(nome)} `;
@@ -551,12 +633,15 @@ export function extrairIntencaoRapida(q: string): {
   tipoProduto: string | null;
   contextoUso: null;
   termosNegativos: string[];
+  marca: string | null;
+  modelo: string | null;
 } {
   const { min, max, resto } = faixaDePreco(q);
   const frase = (
     (resto || normalizar(q)).replace(RE_VENDA, " ").replace(/\s+/g, " ").trim() || normalizar(q)
   ).slice(0, 60);
   const acessorio = acessorioDoPedido(frase);
+  const linha = modeloDaFrase(frase);
   let buscas = [...new Set([...regrasDoPedido(frase).flatMap((r) => r.buscas ?? []), frase])];
   if (acessorio) {
     const sem = frase
@@ -574,8 +659,14 @@ export function extrairIntencaoRapida(q: string): {
     precoMin: min,
     precoMax: max,
     resumo: "",
-    tipoProduto: acessorio ?? tipoDoProduto(frase),
+    tipoProduto: acessorio ?? extrairTipoEMarca(frase).tipo,
     contextoUso: null,
     termosNegativos: [],
+    /* 08/11: the preview locks model and brand too ("capinha iPhone 17 Pro
+       Max" showed base iPhone 17 cases before the full reading). */
+    marca: acessorio
+      ? null
+      : (linha?.marca ?? marcaDoTitulo(frase) ?? extrairTipoEMarca(frase).marcaProvavel),
+    modelo: linha?.modelo ?? null,
   };
 }
