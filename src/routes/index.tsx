@@ -1818,11 +1818,12 @@ function Index() {
             className={
               "relative mx-auto grid max-w-[1400px] gap-5 px-4 pt-4 sm:px-6 sm:pt-7 lg:px-8 " +
               (buscaParada
-                ? "pb-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-center lg:gap-8 lg:pb-7"
+                ? "pb-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start lg:gap-x-8 lg:gap-y-5 lg:pb-7"
                 : "pb-0")
             }
           >
-            <div className="min-w-0">
+            {/* Título numa linha própria (08/11): cartão e arte começam juntos. */}
+            <div className={"min-w-0 " + (buscaParada ? "lg:col-span-2" : "")}>
               <div className="animate-conteudo">
                 <span className="selo-hero inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
                   <span className="ponto-vivo" aria-hidden="true" />
@@ -1851,18 +1852,20 @@ function Index() {
                   </p>
                 )}
               </div>
+            </div>
+            <div className="min-w-0">
               <div
                 className={
-                  "relative z-10 mt-4 text-foreground sm:mt-5 " +
+                  "relative z-10 text-foreground " +
                   (buscaParada ? "[&>section]:mx-0 lg:[&>section]:max-w-none" : "")
                 }
               >
                 <BuscaPorLink aoMudarEstado={setBuscaParada} />
               </div>
-              {/* No celular, os 3 pontos do "Compare com clareza" (no PC eles
-                ficam no cartão ao lado da arte). */}
+              {/* Os 3 pontos do "Compare com clareza" (08/11: o quadro ao lado da
+                arte saiu, a pedido do Weslei). */}
               {buscaParada && (
-                <ul className="mt-3 flex flex-wrap gap-1.5 lg:hidden">
+                <ul className="mt-3 flex flex-wrap gap-1.5">
                   {[
                     { icone: Search, texto: "Mesmo produto em outras lojas" },
                     { icone: ShieldCheck, texto: "Loja oficial, quando houver" },
