@@ -25,8 +25,10 @@ import {
   extrairIntencaoRapida,
   modeloDaFrase,
   foraDaIntencao,
+  marcaTravada,
   pisoDoAparelho,
   regraDoAparelho,
+  tipoEstritoDaFrase,
 } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
 import { marcaDoTitulo, marcasDosResultados } from "@/lib/busca-resultados";
@@ -83,6 +85,8 @@ export type RespostaBusca = {
   dominiosPermitidos?: string[];
   marca?: string | null;
   modelo?: string | null;
+  /** The brand has nothing on ML: same-type items are shown (filter skips it). */
+  ignorarMarca?: boolean;
   anuncios?: { id: number; chave: string } | null;
   /** Apparel listings read by the extension, one per piece, with its lock words. */
   anunciosPecas?: { id: number; chave: string; marca: string; modelo: string }[];
@@ -112,6 +116,8 @@ export type Interpretacao = {
   /** Só quando a pessoa citou: o título do produto tem de trazer os dois. */
   marca?: string | null;
   modelo?: string | null;
+  /** The brand has nothing on ML; same-type items shown without it. */
+  ignorarMarca?: boolean;
 };
 
 const PROMPT = `Voce ajuda compradores no Brasil a achar produtos vendidos no Mercado Livre.
@@ -905,6 +911,33 @@ export async function buscaGuiada(
       }).catch(() => []),
     );
   }
+  /* BRAND NOT ON ML (Weslei, 08/11: "insider camiseta" came back empty; the
+     brand sells off ML). Same type without the brand, every other shield
+     (type, kids, gender, fakes) kept, and the notice says so. */
+  let semAMarca: { marca: string; resumo: string } | null = null;
+  const marca = marcaTravada(intencao, q);
+  const tipo = tipoEstritoDaFrase(q);
+  if (pagina === 0 && !achados.length && marca && tipo) {
+    const alternativa = { ...intencao, ignorarMarca: true };
+    const rejeitar = (nome: string) => foraDaIntencao(nome, alternativa, q);
+    const frase =
+      normalizar(q)
+        .replace(new RegExp(`\\b${normalizar(marca)}\\b`, "g"), " ")
+        .replace(/\s+/g, " ")
+        .trim() || tipo;
+    juntar(
+      await buscarNoCatalogo([frase], { ...opcoes, rejeitar, limite: 20, porBusca: 24 }).catch(
+        () => [],
+      ),
+    );
+    if (achados.length < MINIMO_RESULTADOS)
+      juntar(await maisVendidosDaCategoria(frase, { ...opcoes, rejeitar }));
+    if (achados.length)
+      semAMarca = {
+        marca,
+        resumo: `Não encontramos ${tipo} da marca ${nomeDaMarca(marca)} no Mercado Livre agora. Veja as melhores opções de ${tipo} bem avaliadas:`,
+      };
+  }
   if (listas) {
     const posicao = posicoesMaisVendidos(listas);
     achados = achados.map((r) => ({
@@ -930,8 +963,17 @@ export async function buscaGuiada(
       (r) => r.nome,
     ),
   );
-  return { intencao, resultados, variantes, proximo };
+  return {
+    intencao: semAMarca
+      ? { ...intencao, marca: semAMarca.marca, ignorarMarca: true, resumo: semAMarca.resumo }
+      : intencao,
+    resultados,
+    variantes,
+    proximo,
+  };
 }
+
+const nomeDaMarca = (m: string) => m.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 
 /** Posição na busca oficial de cada página da busca do mesmo produto. */
 export const offsetDaPagina = (pagina: number, primeira: number, demais: number) =>
