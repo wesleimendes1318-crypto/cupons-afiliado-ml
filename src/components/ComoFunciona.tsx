@@ -105,7 +105,7 @@ export function ComoFunciona() {
   return (
     <figure
       /* Compacto (08/11): largura fixa para os botões ficarem sobre o vídeo. */
-      className={"relative mx-auto mt-3 max-w-full " + (vertical ? "w-[27vh]" : "w-[32rem]")}
+      className={"relative mx-auto mt-3 max-w-full " + (vertical ? "w-[20vh]" : "w-[24rem]")}
     >
       <video
         ref={ref}

@@ -1818,7 +1818,7 @@ function Index() {
             className={
               "relative mx-auto grid max-w-[1400px] gap-5 px-4 pt-4 sm:px-6 sm:pt-7 lg:px-8 " +
               (buscaParada
-                ? "pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start lg:gap-8 lg:pb-8"
+                ? "pb-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-center lg:gap-8 lg:pb-7"
                 : "pb-0")
             }
           >
@@ -1902,7 +1902,7 @@ function Index() {
         {/* Três passos (modelo final): faixa branca logo abaixo do topo. */}
         {buscaParada && (
           <section aria-label="Como funciona" className="border-b border-border bg-card">
-            <ol className="mx-auto grid max-w-[1400px] gap-4 px-4 py-5 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border sm:px-6 lg:px-8">
+            <ol className="mx-auto grid max-w-[1400px] grid-cols-3 gap-1 px-2 py-3 sm:gap-0 sm:divide-x sm:divide-border sm:px-6 lg:px-8">
               {[
                 { icone: Link2, titulo: "1. Cole o link", texto: "Do produto que quer comprar." },
                 {
@@ -1918,7 +1918,7 @@ function Index() {
               ].map((p) => (
                 <li
                   key={p.titulo}
-                  className="animar-passo group flex select-none items-center gap-3 rounded-2xl p-2 transition-all duration-300 hover:bg-muted/40 active:scale-[0.98] sm:justify-center sm:rounded-none sm:px-4 sm:py-2"
+                  className="animar-passo group flex select-none flex-col items-center gap-1.5 rounded-2xl p-1 text-center transition-all duration-300 hover:bg-muted/40 active:scale-[0.98] sm:flex-row sm:justify-center sm:gap-3 sm:rounded-none sm:px-4 sm:py-2 sm:text-left"
                 >
                   <div className="icone-passo relative flex size-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
                     <p.icone
@@ -1927,10 +1927,10 @@ function Index() {
                     />
                   </div>
                   <span>
-                    <span className="block text-base font-bold transition-colors duration-200 group-hover:text-primary">
+                    <span className="block text-[13px] font-bold leading-tight transition-colors duration-200 group-hover:text-primary sm:text-base">
                       {p.titulo}
                     </span>
-                    <span className="block text-sm text-secondary-ink transition-colors duration-200 group-hover:text-foreground">
+                    <span className="hidden text-sm text-secondary-ink transition-colors duration-200 group-hover:text-foreground sm:block">
                       {p.texto}
                     </span>
                   </span>
@@ -1980,6 +1980,11 @@ function Index() {
           {/* MODO DECISÃO (Weslei, 02/11): com uma comparação na tela, nada de
             vitrines nem atalhos abaixo do resultado. Busca guiada removida da
             home (Weslei, 08/11): a busca do topo já cobre. */}
+          {/* Vitrines (02/11): trilhos visíveis, "Para você" primeiro para quem
+            já tem histórico; ordem em components/VitrinesHome. Logo abaixo do
+            topo (Weslei, 08/11: "já carregue as vitrines e produtos"). */}
+          {buscaParada && <VitrinesHome />}
+
           {/* Every feature one tap away (Weslei, 07/11). */}
           {buscaParada && <FerramentasHome className="mt-8" />}
 
@@ -2035,9 +2040,6 @@ function Index() {
             </section>
           )}
 
-          {/* Vitrines (02/11): trilhos visíveis, "Para você" primeiro para quem
-            já tem histórico; ordem em components/VitrinesHome. */}
-          {buscaParada && <VitrinesHome />}
 
           {/* Acompanhar preço, animado (09/10), com a caixa parada. */}
           {/* Convite do Telegram na home só com a caixa parada (com resultado,
