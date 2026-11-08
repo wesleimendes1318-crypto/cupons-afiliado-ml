@@ -1659,14 +1659,14 @@ export default function BuscaPorLink({
         <span className="icone-passo mt-px grid size-7 shrink-0 place-items-center rounded-lg">
           <Link2 aria-hidden="true" className="size-4 text-white" />
         </span>
-        <h2 className="text-lg font-bold tracking-tight sm:text-xl">
+        <h2 className="text-base font-bold tracking-tight sm:text-lg">
           Cole o link ou busque o produto
         </h2>
       </div>
       {/* Com resultado na tela, a explicação sai: o resultado já mostra
           como funciona (02/11: menos texto acima da comparação). */}
       {!((fase === "pronto" && pedido) || resultadoOutraLoja) && (
-        <p className="mb-2 text-xs text-secondary-ink">
+        <p className="mb-2 hidden text-xs text-secondary-ink sm:block">
           Com o link, mostro onde o mesmo produto sai mais barato. Pelo nome, mostro os produtos
           certos para comparar.
         </p>
