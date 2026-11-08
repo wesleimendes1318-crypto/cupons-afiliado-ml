@@ -26,9 +26,12 @@ import {
 } from "@/components/BotoesCartao";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { CoracaoDesejo } from "@/components/CoracaoDesejo";
+import { FichaTecnicaBento } from "@/components/FichaTecnicaBento";
+import { OpinioesCompradores } from "@/components/OpinioesCompradores";
 import { acoesDoProduto } from "@/lib/afiliado";
 import { buscarLinkAfiliado, itemDoProduto, linkWhatsApp } from "@/lib/lista-desejos";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
+import { caracteristicasValidas, pilulasDaFicha } from "@/lib/ficha-detalhes";
 import { propsFotoGrande } from "@/lib/foto";
 import { registrarAcaoVisitante } from "@/lib/perfil-visitante";
 
@@ -264,12 +267,6 @@ function Painel({
   const [dados, setDados] = useState<Resposta | null | undefined>(
     inicial ?? (mlb ? cache.get(chave) : null),
   );
-  const [descricaoToda, setDescricaoToda] = useState(false);
-  /* Menos informação de cara (Weslei, 18/10): destaques à vista;
-     características e descrição abrem quando a pessoa quiser. */
-  const [verCarac, setVerCarac] = useState(false);
-  const [verDescricao, setVerDescricao] = useState(false);
-  const [todosDestaques, setTodosDestaques] = useState(false);
 
   useEffect(() => {
     const d = ref.current;
@@ -328,13 +325,15 @@ function Painel({
     };
   }, [produto]);
 
-  const lidas = (dados?.detalhes?.caracteristicas ?? []).filter((c) => c && c.nome && c.valor);
+  const lidas = caracteristicasValidas(dados?.detalhes?.caracteristicas);
   /* Sem características lidas na comparação, a ficha técnica oficial. */
-  const carac = lidas.length ? lidas : (ficha ?? []);
+  const carac = lidas.length ? lidas : caracteristicasValidas(ficha);
+  const pilulas = pilulasDaFicha(carac);
   const det = dados?.detalhes ?? (carac.length ? { caracteristicas: carac } : null);
   const dest = (det?.destaques ?? []).filter(Boolean);
   const descricao = (det?.descricao ?? "").trim();
-  const longa = descricao.length > 420;
+  /* Reviews read on the listing (MLB...) or catalog product (MLBP...). */
+  const itemAval = /^MLB\d{5,}$/.test(chave) ? chave : itemDoEndereco(urlProduto);
   const foto = imagem ?? dados?.imagem ?? null;
   const galeria = [
     ...new Set(
@@ -542,94 +541,34 @@ function Painel({
             </p>
           ) : (
             <>
-              {dest.length > 0 && (
-                <section>
-                  <h4 className="text-xs font-bold uppercase tracking-wide text-[#6e6e73]">
-                    Destaques
-                  </h4>
-                  <ul className="mt-1.5 list-disc space-y-0.5 pl-4">
-                    {dest.slice(0, todosDestaques ? 12 : 5).map((d, k) => (
-                      <li key={k}>{d}</li>
-                    ))}
-                  </ul>
-                  {dest.length > 5 && (
-                    <button
-                      type="button"
-                      onClick={() => setTodosDestaques((x) => !x)}
-                      className="mt-1 font-semibold text-[#0058b0] hover:underline"
+              {/* Key specs as pills below the photo (18/10: nothing over the photo). */}
+              {pilulas.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5" aria-label="Principais características">
+                  {pilulas.map((c, k) => (
+                    <li
+                      key={k}
+                      className="animate-cartao max-w-full truncate rounded-full border border-border/60 bg-white/80 px-3 py-1 text-[12px] shadow-sm backdrop-blur-xl"
+                      style={{ animationDelay: `${k * 80}ms` }}
                     >
-                      {todosDestaques
-                        ? "Mostrar menos"
-                        : `Ver todos os ${Math.min(12, dest.length)}`}
-                    </button>
-                  )}
-                </section>
+                      <span className="text-[#6e6e73]">{c.nome}: </span>
+                      <span className="font-semibold">{c.valor}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-              {(carac.length > 0 || descricao) && (
-                <div className="flex flex-wrap gap-2">
-                  {carac.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setVerCarac((x) => !x)}
-                      aria-expanded={verCarac}
-                      className="inline-flex min-h-8 items-center gap-1 rounded-full bg-[#f5f5f7] px-3 text-[12px] font-semibold hover:bg-[#e8e8ed]"
-                    >
-                      {verCarac ? "Fechar características" : `Características (${carac.length})`}
-                      <span aria-hidden="true">{verCarac ? "▴" : "▾"}</span>
-                    </button>
-                  )}
-                  {descricao && (
-                    <button
-                      type="button"
-                      onClick={() => setVerDescricao((x) => !x)}
-                      aria-expanded={verDescricao}
-                      className="inline-flex min-h-8 items-center gap-1 rounded-full bg-[#f5f5f7] px-3 text-[12px] font-semibold hover:bg-[#e8e8ed]"
-                    >
-                      {verDescricao ? "Fechar descrição" : "Descrição do anúncio"}
-                      <span aria-hidden="true">{verDescricao ? "▴" : "▾"}</span>
-                    </button>
-                  )}
-                </div>
-              )}
-              {verCarac && carac.length > 0 && (
-                <section aria-label="Características">
-                  <table className="w-full border-collapse overflow-hidden rounded-xl">
-                    <tbody>
-                      {carac.slice(0, 40).map((c, k) => (
-                        <tr key={k} className={k % 2 ? "bg-white" : "bg-[#f5f5f7]"}>
-                          <th className="w-2/5 px-2 py-1 text-left align-top font-semibold text-[#6e6e73]">
-                            {c.nome}
-                          </th>
-                          <td className="px-2 py-1 align-top [overflow-wrap:anywhere]">
-                            {c.valor}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </section>
-              )}
-              {verDescricao && descricao && (
-                <section aria-label="Descrição do anúncio">
-                  <p className="whitespace-pre-line leading-relaxed text-[#424245]">
-                    {longa && !descricaoToda ? descricao.slice(0, 420).trimEnd() + "…" : descricao}
-                  </p>
-                  {longa && (
-                    <button
-                      type="button"
-                      onClick={() => setDescricaoToda((x) => !x)}
-                      className="mt-1 font-bold text-[#0058b0] hover:underline"
-                    >
-                      {descricaoToda ? "Mostrar menos" : "Ler descrição completa"}
-                    </button>
-                  )}
-                </section>
-              )}
+              <FichaTecnicaBento destaques={dest} caracteristicas={carac} descricao={descricao} />
               <p className="text-[11px] text-[#6e6e73]">
                 Informações lidas no anúncio quando ele foi comparado. Confira no anúncio antes de
                 comprar.
               </p>
             </>
+          )}
+          {itemAval && (
+            <OpinioesCompradores
+              item={itemAval}
+              titulo={titulo}
+              link={acoes.comprar && "href" in acoes.comprar ? acoes.comprar.href : link}
+            />
           )}
         </div>
 
@@ -637,9 +576,9 @@ function Painel({
             Comprar com o link de afiliado (pronto, o `compra` do cartão ou
             gerado no clique) e Comparar preço, sempre ao alcance do polegar. */}
         {(acoes.comprar || compra || acoes.comparar) && (
-          <div className="space-y-2 border-t border-border bg-white/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+          <div className="vidro-barra space-y-2 border-t border-border/60 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
             {acoes.comprar && "href" in acoes.comprar ? (
-              <ComprarComSeguranca link={acoes.comprar.href} origem="vitrine_detalhes" />
+              <ComprarComSeguranca link={acoes.comprar.href} origem="vitrine_detalhes" destaque />
             ) : compra ? (
               compra
             ) : acoes.comprar ? (
