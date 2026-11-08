@@ -1816,9 +1816,9 @@ function Index() {
           </span>
           <div
             className={
-              "relative mx-auto grid max-w-[1400px] gap-6 px-4 pt-5 sm:px-6 sm:pt-10 lg:px-8 " +
+              "relative mx-auto grid max-w-[1400px] gap-5 px-4 pt-4 sm:px-6 sm:pt-7 lg:px-8 " +
               (buscaParada
-                ? "pb-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start lg:gap-10 lg:pb-12"
+                ? "pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start lg:gap-8 lg:pb-8"
                 : "pb-0")
             }
           >
@@ -1835,9 +1835,9 @@ function Index() {
                 )}
                 <h1
                   className={
-                    "mt-3 font-extrabold leading-[1.02] tracking-[-0.035em] [text-wrap:balance] sm:mt-4 " +
+                    "mt-2.5 font-extrabold leading-[1.04] tracking-[-0.035em] [text-wrap:balance] sm:mt-3 " +
                     (buscaParada
-                      ? "text-[2rem] sm:text-5xl lg:text-[3.3rem] 2xl:text-[4rem]"
+                      ? "text-[1.7rem] sm:text-[2.6rem] lg:text-[2.75rem] 2xl:text-[3.25rem]"
                       : "text-2xl sm:text-3xl")
                   }
                 >
@@ -1846,14 +1846,14 @@ function Index() {
                   <span className="texto-brilho">Uma melhor escolha.</span>
                 </h1>
                 {buscaParada && (
-                  <p className="mt-2.5 max-w-[42ch] text-[15px] leading-snug text-white/85 sm:mt-3 sm:text-lg">
+                  <p className="mt-2 max-w-[60ch] text-sm leading-snug text-white/85 sm:text-base">
                     Compare preços em diferentes lojas do Mercado Livre antes de comprar.
                   </p>
                 )}
               </div>
               <div
                 className={
-                  "relative z-10 mt-5 text-foreground sm:mt-6 " +
+                  "relative z-10 mt-4 text-foreground sm:mt-5 " +
                   (buscaParada ? "[&>section]:mx-0 lg:[&>section]:max-w-none" : "")
                 }
               >
@@ -1862,7 +1862,7 @@ function Index() {
               {/* No celular, os 3 pontos do "Compare com clareza" (no PC eles
                 ficam no cartão ao lado da arte). */}
               {buscaParada && (
-                <ul className="mt-4 flex flex-wrap gap-1.5 lg:hidden">
+                <ul className="mt-3 flex flex-wrap gap-1.5 lg:hidden">
                   {[
                     { icone: Search, texto: "Mesmo produto em outras lojas" },
                     { icone: ShieldCheck, texto: "Loja oficial, quando houver" },

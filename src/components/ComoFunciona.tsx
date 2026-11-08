@@ -103,7 +103,10 @@ export function ComoFunciona() {
 
   const automatico = modo === "automatico";
   return (
-    <figure className="relative mt-3">
+    <figure
+      /* Compacto (08/11): largura fixa para os botões ficarem sobre o vídeo. */
+      className={"relative mx-auto mt-3 max-w-full " + (vertical ? "w-[27vh]" : "w-[32rem]")}
+    >
       <video
         ref={ref}
         key={`${fonte.mp4}-${modo}`}
@@ -117,7 +120,7 @@ export function ComoFunciona() {
         aria-label="Como funciona o comparador, em 28 segundos"
         className={
           "mx-auto block rounded-xl bg-black shadow-sm " +
-          (vertical ? "max-h-[72vh] w-auto max-w-full" : "aspect-video w-full")
+          (vertical ? "aspect-[9/16] w-full" : "aspect-video w-full")
         }
       >
         {/* WebM (VP9) primeiro, MP4 (H.264) para quem não toca WebM (iPhone antigo). */}
