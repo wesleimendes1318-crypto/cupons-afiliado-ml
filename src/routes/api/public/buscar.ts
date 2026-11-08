@@ -114,8 +114,8 @@ export const Route = createFileRoute("/api/public/buscar")({
           : CONTEXTOS[contexto];
         const modoProduto = entrada.modo === "produto";
         const pagina = entrada.pagina ?? 0;
-        /* Key version bump drops answers cached before a filter change (v25, 07/11: apparel listings per piece, gendered clothing must say the gender). */
-        const chave1 = `v25|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        /* Key version bump drops answers cached before a filter change (v26, 08/11: strict product type, kids shield). */
+        const chave1 = `v26|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
         const chave = pagina
           ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
           : chave1;

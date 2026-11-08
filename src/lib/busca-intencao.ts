@@ -11,7 +11,7 @@ import {
 } from "@/lib/modelo-titulo";
 
 export { modeloDaFrase };
-import { tipoDoProduto } from "@/lib/termo-busca";
+import { nomeTemOTipo, tipoDoProduto } from "@/lib/termo-busca";
 
 export type IntencaoDoFiltro = {
   tipoProduto?: string | null;
@@ -199,15 +199,96 @@ export function pisoDoAparelho(consulta: string): number | null {
   return null;
 }
 
-const NEGATIVOS_UNIVERSAIS = ["miniatura", "chaveiro", "maquete", "de brinquedo"];
-const BUSCA_INFANTIL =
-  /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|colecao|colecionavel)\b/;
+/* 08/11: wholesale lots ("Para Revender Atacado") are never a shopper's pick. */
+const NEGATIVOS_UNIVERSAIS = [
+  "miniatura",
+  "chaveiro",
+  "maquete",
+  "de brinquedo",
+  "atacado",
+  "revender",
+];
+export const BUSCA_INFANTIL =
+  /\b(brinquedos?|criancas?|infantil|menin[oa]s?|bebes?|presentes?|pelucias?|kids|juvenil|escolar|colecao|colecionavel)\b/;
+const NEGATIVOS_INFANTIS = ["menina", "menino", "infantil", "juvenil", "bebe", "kids", "nenem"];
+
+/* STRICT PRODUCT TYPE (Weslei, 08/11: "Camiseta preta Oversize" showed jeans,
+   fitness sets, kids' clothes and a card game; 1 real t-shirt). A concrete
+   piece or product in the request must be in the title (or a synonym the
+   catalog uses for it). Only these known types: a free first word ("smart",
+   "maquina") is not a type. Appliances with a fixed category (regraDoAparelho)
+   keep their domain filter instead. */
+const TIPOS_ESTRITOS: Record<string, string[]> = {
+  camiseta: ["camiseta", "t shirt", "tshirt"],
+  camisa: ["camisa"],
+  calca: ["calca"],
+  bermuda: ["bermuda"],
+  short: ["short"],
+  vestido: ["vestido"],
+  saia: ["saia"],
+  jaqueta: ["jaqueta"],
+  moletom: ["moletom", "blusao"],
+  blusa: ["blusa", "blusinha"],
+  regata: ["regata"],
+  legging: ["legging"],
+  pijama: ["pijama"],
+  cueca: ["cueca"],
+  sutia: ["sutia"],
+  meia: ["meia"],
+  bone: ["bone"],
+  tenis: ["tenis", "sneaker"],
+  sapato: ["sapato"],
+  sapatenis: ["sapatenis"],
+  chinelo: ["chinelo", "slide"],
+  sandalia: ["sandalia", "rasteira", "rasteirinha"],
+  bota: ["bota", "coturno"],
+  mochila: ["mochila"],
+  bolsa: ["bolsa"],
+  oculo: ["oculos"],
+  relogio: ["relogio", "smartwatch"],
+  fone: ["fone", "headphone", "headset", "earbud", "airpods"],
+  celular: ["celular", "smartphone", "iphone"],
+  notebook: ["notebook", "laptop", "macbook", "chromebook"],
+  tablet: ["tablet", "ipad"],
+  monitor: ["monitor"],
+  teclado: ["teclado"],
+  mouse: ["mouse"],
+  impressora: ["impressora", "multifuncional"],
+  sofa: ["sofa"],
+  colchao: ["colchao"],
+  travesseiro: ["travesseiro"],
+  lencol: ["lencol", "jogo de cama"],
+  toalha: ["toalha"],
+  panela: ["panela", "cacarola"],
+  cadeira: ["cadeira", "poltrona"],
+  perfume: ["perfume", "colonia", "parfum", "toilette"],
+  cafeteira: ["cafeteira", "maquina de cafe"],
+  liquidificador: ["liquidificador"],
+  ventilador: ["ventilador"],
+  geladeira: ["geladeira", "refrigerador", "frigobar"],
+  fogao: ["fogao"],
+};
+
+/** Synonyms of the strict type the request names, or null (no strict type). */
+function tipoEstrito(tipo: string): string[] | null {
+  const palavra = normalizar(tipo).split(" ")[0] ?? "";
+  return TIPOS_ESTRITOS[palavra] ?? TIPOS_ESTRITOS[singular(palavra)] ?? null;
+}
+
+/** The request names a strict type and the title has none of its names. */
+export function semOTipoPedido(nome: string, tipo: string, consulta: string): boolean {
+  if (regraDoAparelho(consulta)) return false;
+  const sinonimos = tipoEstrito(tipo);
+  return !!sinonimos && !sinonimos.some((s) => nomeTemOTipo(nome, s));
+}
 
 /* Weslei, 07/11 ("mesa de jantar de luxo" trouxe luminária de mesa,
    organizador de cabos de mesa, mousepad de mesa). The type word in the title
    was only a detail of another product. When the request names a kind
    ("mesa DE JANTAR", "cadeira DE ESCRITORIO") and the title is another
    product (its first word is not the type), the kind must be in the title. */
+const CONJUNTOS = new Set(["jogo", "kit", "conjunto"]);
+const QUAL_SINONIMOS: Record<string, string[]> = { cama: ["lencol"], lencol: ["cama"] };
 const NAO_E_TIPO = new Set(["luxo", "qualidade", "verdade", "marca", "presente", "boa", "bom"]);
 export function tipoUsadoComoDetalhe(nome: string, tipo: string, consulta: string): boolean {
   const raiz =
@@ -220,11 +301,19 @@ export function tipoUsadoComoDetalhe(nome: string, tipo: string, consulta: strin
   if (!qual || NAO_E_TIPO.has(qual)) return false;
   /* 07/11: "roupa de academia" is any gym piece (camiseta dry fit, bermuda de
      treino); qualificadorFora checks the piece and the gym words instead. */
-  if (raiz === "roupa" && RE_USO_ACADEMIA.test(qual)) return false;
+  if ((raiz === "roupa" || raiz === "conjunto") && RE_USO_ACADEMIA.test(qual)) return false;
   const t = ` ${normalizar(nome)} `;
   const qualRaiz = qual.replace(/(es|s)$/, "");
-  if (t.includes(` ${qual} `) || t.includes(` ${qualRaiz} `) || t.includes(` ${qualRaiz}s `))
+  if (
+    [qual, ...(QUAL_SINONIMOS[qualRaiz] ?? [])].some((w) => {
+      const r = w.replace(/(es|s)$/, "");
+      return t.includes(` ${w} `) || t.includes(` ${r} `) || t.includes(` ${r}s `);
+    })
+  )
     return false;
+  /* 08/11 (planner "jogo de lençol" showed "Jogo Pratos"): a set word heads
+     any set, so the kind is always required. */
+  if (CONJUNTOS.has(raiz)) return true;
   const cabeca = (tipoDoProduto(nome) ?? "").replace(/(es|s)$/, "");
   return cabeca !== raiz;
 }
@@ -332,16 +421,20 @@ export function foraDaIntencao(
     return true;
   const tipo = intencao.tipoProduto ?? tipoDoProduto(consulta) ?? "";
   if (tipoUsadoComoDetalhe(nome, tipo, consulta)) return true;
+  if (semOTipoPedido(nome, tipo, consulta)) return true;
   const t = ` ${normalizar(nome)} `;
   const termos = [
     ...(intencao.termosNegativos ?? []),
     ...(NEGATIVOS_POR_TIPO[tipo] ?? []),
     ...regrasDoPedido(consulta).flatMap((r) => r.negativos),
     ...(BUSCA_INFANTIL.test(pedido) ? [] : NEGATIVOS_UNIVERSAIS),
-    /* Weslei, 05/11: adult clothing ("feminino", "masculino") never shows kids' pieces. */
+    /* Weslei, 05/11: adult clothing ("feminino", "masculino") never shows kids'
+       pieces; 08/11: neither does any strict type or clothing request. */
     ...(!BUSCA_INFANTIL.test(pedido) &&
-    /\b(feminin[oa]s?|masculin[oa]s?|adult[oa]s?|mulher|homem)\b/.test(pedido)
-      ? ["menina", "menino", "infantil", "juvenil", "bebe", "kids"]
+    (/\b(feminin[oa]s?|masculin[oa]s?|adult[oa]s?|mulher|homem)\b/.test(pedido) ||
+      tipoEstrito(tipo) ||
+      PECAS_DE_ROUPA.has(singular(normalizar(tipo).split(" ")[0] ?? "")))
+      ? NEGATIVOS_INFANTIS
       : []),
   ];
   return termos.some((n) => {
