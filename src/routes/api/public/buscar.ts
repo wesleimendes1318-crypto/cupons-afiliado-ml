@@ -12,6 +12,7 @@ import { NOS, subarvore } from "@/content/taxonomia";
 import { classificar, departamentoDe } from "@/lib/classificar";
 import {
   buscasDeRoupa,
+  corrigirBusca,
   extrairIntencaoRapida,
   generoDoPedido,
   MENSAGEM_SEM_OPCOES,
@@ -113,9 +114,11 @@ export const Route = createFileRoute("/api/public/buscar")({
           ? `categoria ${no.caminho.map((s) => NOS[s]!.nome).join(" > ")}; busque so produtos dessa categoria`
           : CONTEXTOS[contexto];
         const modoProduto = entrada.modo === "produto";
+        /* 11/11: typos fixed once ("air fayer" = "air fryer"); a product title is kept as is. */
+        const termo = modoProduto ? entrada.q : corrigirBusca(entrada.q);
         const pagina = entrada.pagina ?? 0;
-        /* Key version bump drops answers cached before a filter change (v28, 08/11: brand off ML falls back to the same type). */
-        const chave1 = `v28|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(entrada.q)}`;
+        /* Key version bump drops answers cached before a filter change (v29, 11/11: typo tolerance and hybrid stock). */
+        const chave1 = `v29|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(termo)}`;
         const chave = pagina
           ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
           : chave1;
@@ -204,7 +207,7 @@ export const Route = createFileRoute("/api/public/buscar")({
 
           /* Acervo (05/11): what this search read with price and shipping is kept
            for the showcases (Amigo Secreto reads it before the catalog). */
-          if (!modoProduto) await guardarNoAcervo(db, entrada.q, achado.resultados);
+          if (!modoProduto) await guardarNoAcervo(db, termo, achado.resultados);
 
           /* Fila da vitrine: só produto com anúncio ativo, ainda não comparado
            na semana, dentro do teto por hora. */
@@ -255,8 +258,8 @@ export const Route = createFileRoute("/api/public/buscar")({
             const { data } = await db.rpc("pedir_busca_anuncios", {
               // O que a pessoa digitou: a busca do modelo pode trazer palavra a mais ("feminino").
               p_termo:
-                entrada.q.trim().split(/\s+/).length <= 8
-                  ? entrada.q
+                termo.trim().split(/\s+/).length <= 8
+                  ? termo
                   : [marca, modelo].filter(Boolean).join(" "),
               p_marca: marca ?? null,
               p_modelo: modelo ?? null,
@@ -269,13 +272,13 @@ export const Route = createFileRoute("/api/public/buscar")({
              Poucos achados: a extensão lê a busca de anúncios de cada peça,
              travada na peça e no gênero digitado (os dois no título). */
           const anunciosPecas: { id: number; chave: string; marca: string; modelo: string }[] = [];
-          const genero = generoDoPedido(entrada.q.toLowerCase());
+          const genero = generoDoPedido(termo.toLowerCase());
           if (genero && achado.resultados.length < 12 && !pagina && !modoProduto && !exato) {
             const trava = genero === "m" ? "masculin" : "feminin";
-            for (const termo of buscasDeRoupa(entrada.q)) {
-              const peca = termo.split(" ")[0]!;
+            for (const termoPeca of buscasDeRoupa(termo)) {
+              const peca = termoPeca.split(" ")[0]!;
               const { data } = await db.rpc("pedir_busca_anuncios", {
-                p_termo: termo,
+                p_termo: termoPeca,
                 p_marca: trava,
                 p_modelo: peca,
               });

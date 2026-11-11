@@ -12,7 +12,8 @@ import {
 
 export { modeloDaFrase };
 import { nomeTemOTipo, tipoDoProduto } from "@/lib/termo-busca";
-import { marcaDoTitulo } from "@/lib/busca-resultados";
+import { MARCAS, marcaDoTitulo } from "@/lib/busca-resultados";
+import { criarCorretor, type Corretor } from "@/lib/corretor-busca";
 
 export type IntencaoDoFiltro = {
   tipoProduto?: string | null;
@@ -432,6 +433,27 @@ const NAO_E_MARCA = new Set(
     .split(/\s+/)
     .filter(Boolean),
 );
+/* TYPO TOLERANCE (11/11, "air fayer mondial"): known types, clothing pieces
+   and brands are the targets; descriptive words are already right. Every
+   path that reads the phrase (intent, shields, preview) reads it corrected. */
+let corretor: Corretor | null = null;
+export function corrigirBusca(q: string): string {
+  corretor ??= criarCorretor(
+    [
+      ...Object.keys(TIPOS_ESTRITOS),
+      ...Object.values(TIPOS_ESTRITOS).flat(),
+      ...PECAS_DE_ROUPA,
+      ...MARCAS,
+      "stanley insider hering lacoste havaianas reserva tommy calvin britania cadence walita wap",
+    ],
+    [
+      ...NAO_E_MARCA,
+      "galaxy redmi poco moto iphone ipad macbook airpods playstation xbox nintendo switch alexa echo kindle",
+    ],
+  );
+  return corretor(q);
+}
+
 const tipoConhecido = (p: string) =>
   !!(TIPOS_ESTRITOS[p] ?? TIPOS_ESTRITOS[singular(p)]) ||
   PECAS_DE_ROUPA.has(p) ||
@@ -493,8 +515,9 @@ export const tipoEstritoDaFrase = (q: string) => {
 export function foraDaIntencao(
   nome: string,
   intencao: IntencaoDoFiltro,
-  consulta: string,
+  consultaDigitada: string,
 ): boolean {
+  const consulta = corrigirBusca(consultaDigitada);
   const daFrase = extrairTipoEMarca(consulta);
   const marca = intencao.ignorarMarca ? null : marcaTravada(intencao, consulta);
   if (foraDoModelo(nome, marca, intencao.modelo)) return true;
@@ -653,6 +676,7 @@ export function extrairIntencaoRapida(q: string): {
   marca: string | null;
   modelo: string | null;
 } {
+  q = corrigirBusca(q);
   const { min, max, resto } = faixaDePreco(q);
   const frase = (
     (resto || normalizar(q)).replace(RE_VENDA, " ").replace(/\s+/g, " ").trim() || normalizar(q)

@@ -212,7 +212,7 @@ export function ordenarRecomendados<T extends Ordenavel>(
 }
 
 /* Marcas conhecidas pelo título (a 1ª que aparecer). */
-const MARCAS = [
+export const MARCAS = [
   "Samsung",
   "LG",
   "Electrolux",

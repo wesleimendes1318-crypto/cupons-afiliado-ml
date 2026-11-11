@@ -22,6 +22,7 @@ import {
   acessorioDoPedido,
   buscasDeRoupa,
   comAcessorio,
+  corrigirBusca,
   extrairIntencaoRapida,
   modeloDaFrase,
   foraDaIntencao,
@@ -625,19 +626,47 @@ async function doEstoque(
           .order("atualizado_em", { ascending: false })
           .limit(120)
       : Promise.resolve({ data: [] });
-    const [{ data }, acervo] = await Promise.all([
+    /* 11/11 (hybrid search): the whole phrase ranked in the database (full
+       text + trigram similarity, fused by RRF), most relevant first. Same
+       shields below; a database without the function just skips it. */
+    const comRpc = supabaseAdmin as unknown as {
+      rpc?: (f: string, a: object) => PromiseLike<{ data: unknown; error: unknown }>;
+    };
+    const hibrido: Promise<{ data: unknown; error: unknown }> =
+      buscas[0] && typeof comRpc.rpc === "function"
+        ? Promise.resolve()
+            .then(() =>
+              comRpc.rpc!("buscar_estoque_hibrido", { p_termo: buscas[0], p_limite: 60 }),
+            )
+            .catch(() => ({ data: null, error: true }))
+        : Promise.resolve({ data: null, error: null });
+    const [{ data }, acervo, fundido] = await Promise.all([
       consulta.order("posicao", { ascending: true }).limit(120),
       doAcervo,
+      hibrido,
     ]);
-    const linhasAcervo = ((acervo.data ?? []) as unknown as LinhaEstoque[]).map((l) => ({
-      ...l,
-      dominio_ml: null,
-    }));
-    return [
+    const semDominio = (l: LinhaEstoque) => ({ ...l, dominio_ml: null });
+    const linhasAcervo = ((acervo.data ?? []) as unknown as LinhaEstoque[]).map(semDominio);
+    const doHibrido = (
+      fundido.error ? [] : ((fundido.data ?? []) as Array<LinhaEstoque & { origem?: string }>)
+    ).filter((l) => l && typeof l.nome === "string");
+    const todos = [
+      ...filtrarEstoque(
+        doHibrido.filter((l) => l.origem !== "acervo"),
+        buscas,
+        opcoes,
+      ),
+      ...filtrarEstoque(
+        doHibrido.filter((l) => l.origem === "acervo").map(semDominio),
+        buscas,
+        { ...opcoes, dominios: null },
+      ),
       ...filtrarEstoque((data ?? []) as unknown as LinhaEstoque[], buscas, opcoes),
       /* No domain column in the acervo: the type in the title decides. */
       ...filtrarEstoque(linhasAcervo, buscas, { ...opcoes, dominios: null }),
     ];
+    const vistos = new Set<string>();
+    return todos.filter((r) => !vistos.has(r.produto) && !!vistos.add(r.produto));
   } catch {
     return [];
   }
@@ -647,7 +676,7 @@ async function doEstoque(
     anúncio ativo (quando o catálogo tem). Página > 0 ("Carregar mais"): as
     mesmas buscas e variantes da 1ª página, nas posições seguintes. */
 export async function buscaGuiada(
-  q: string,
+  qDigitada: string,
   contexto: string | null,
   pagina = 0,
   intencaoAnterior: Interpretacao | null = null,
@@ -661,6 +690,10 @@ export async function buscaGuiada(
     instantaneo?: boolean;
   } = {},
 ) {
+  /* 11/11 ("air fayer mondial"): a mistyped type or brand is read as the real
+     word, so the catalog reads and every shield use the word the person meant. */
+  const q = corrigirBusca(qDigitada);
+  const corrigida = q !== qDigitada ? q.replace(/\s+/g, " ").trim() : null;
   const lidaSemLinha = intencaoAnterior ?? (await interpretar(q, contexto));
   /* 07/11: a device line in the phrase ("iphone 17 pro max") always locks
      the model, even when the remote reading or the preview has none. */
@@ -963,10 +996,12 @@ export async function buscaGuiada(
       (r) => r.nome,
     ),
   );
+  const final = semAMarca
+    ? { ...intencao, marca: semAMarca.marca, ignorarMarca: true, resumo: semAMarca.resumo }
+    : intencao;
+  const aviso = corrigida && pagina === 0 ? `Mostrando resultados para “${corrigida}”.` : "";
   return {
-    intencao: semAMarca
-      ? { ...intencao, marca: semAMarca.marca, ignorarMarca: true, resumo: semAMarca.resumo }
-      : intencao,
+    intencao: aviso ? { ...final, resumo: [aviso, final.resumo].filter(Boolean).join(" ") } : final,
     resultados,
     variantes,
     proximo,
