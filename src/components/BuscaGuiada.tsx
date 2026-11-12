@@ -694,14 +694,6 @@ export function ResultadosDaBusca({
 
       {!procurando && (resposta || cartoes.length > 0) && (
         <div className={recuo}>
-          {(relacionadas.length > 0 || emAlta.length > 0) && (
-            <Relacionadas
-              termos={relacionadas}
-              emAlta={emAlta}
-              buscarTermo={buscarTermo}
-              comparar={comparar}
-            />
-          )}
           {resumoTela && <p className="mt-3 text-sm text-secondary-ink">{resumoTela}</p>}
           {cartoes.length === 0 ? (
             !carregando &&
@@ -846,6 +838,17 @@ export function ResultadosDaBusca({
               </p>
             </>
           )}
+          {/* 11/11 (Weslei): resultado pesquisado primeiro, sempre; vitrines auxiliares no fim. */}
+          <div className="mt-6">
+            {(relacionadas.length > 0 || emAlta.length > 0) && (
+              <Relacionadas
+                termos={relacionadas}
+                emAlta={emAlta}
+                buscarTermo={buscarTermo}
+                comparar={comparar}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
