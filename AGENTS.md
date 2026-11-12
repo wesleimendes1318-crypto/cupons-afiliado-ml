@@ -28,6 +28,8 @@ Toda conta de custo de oferta (tela, bot, garimpo) passa por `custoTotalDaOferta
 ## Busca por texto
 
 - The post-search shopping assistant (`src/lib/assistente-busca.ts`, `/api/public/assistente-busca`) only picks and orders products already on screen and drops any model answer quoting a price not in the chosen items; this keeps it from inventing products or prices.
+- Typos are fixed once by `corrigirBusca` (`src/lib/corretor-busca.ts` engine, vocabulary built in `busca-intencao.ts`) before intent, shields and stock reads; it only rewrites a 5+ letter unknown word to a unique known type or brand with the same first letter. Why: "air fayer" must hit the air fryer shields, and a real word must never be rewritten.
+- Own-stock search also reads `buscar_estoque_hibrido` (full text + trigram, RRF; SQL in `supabase/migrations/20261111150000_busca_estoque_hibrido.sql`), service_role only, and its rows pass the same `filtrarEstoque` shields; a database without it just skips it. Why: phrase relevance without trusting the database for quality rules.
 - "Load more" in text search continues from a server cursor (`proximo`) over the catalog (capped at position 120) and then brand variants; pages never re-read each other's window, so "+20" does not repeat cards.
 
 - AdSense: manual units only via `src/components/Anuncio.tsx` in the Guides article template (mid + end), loaded only with ad consent; Auto Ads and Auto Optimization are ON in the AdSense panel since 02/11/2026 by owner decision, so Google may place ads site-wide (see docs/adsense.md).

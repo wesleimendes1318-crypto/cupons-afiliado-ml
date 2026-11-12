@@ -76,6 +76,8 @@ describe("typo tolerance", () => {
       "Jaqueta Corta-Vento",
       "kit relação riffel z750",
       "tv 55 polegadas",
+      "ar condicionado barato",
+      "esmalte",
     ])
       expect(corrigirBusca(q)).toBe(q);
   });
@@ -93,21 +95,19 @@ describe("typo tolerance", () => {
 
 describe("hybrid own stock (database ranking)", () => {
   test("phrase-ranked rows come first and still pass every shield", async () => {
-    linhas = [linha(9, "Fritadeira Air Fryer Mondial 3,5L Family", 279)];
+    linhas = [linha(9, "Air Fryer Mondial Oven 12L Inox", 549)];
     hibrido = [
-      linha(1, "Fritadeira Elétrica Air Fryer Mondial 4L Preta", 299),
       linha(2, "Fritadeira Air Fryer Philco 4L", 259),
-      linha(3, "Air Fryer Mondial Oven 12L Inox", 549, "acervo"),
+      linha(1, "Fritadeira Elétrica Air Fryer Mondial 4L Preta", 299, "acervo"),
     ];
     const q = "air fayer mondial";
     const r = await buscaGuiada(q, null, 0, extrairIntencaoRapida(q), { instantaneo: true });
     hibrido = null;
     expect(pedidoHibrido?.p_termo).toBe("air fryer mondial");
-    const nomes = r.resultados.map((x) => x.nome);
-    expect(nomes).not.toContain("Fritadeira Air Fryer Philco 4L");
-    expect(nomes).toContain("Fritadeira Elétrica Air Fryer Mondial 4L Preta");
-    expect(nomes).toContain("Air Fryer Mondial Oven 12L Inox");
-    expect(nomes).toContain("Fritadeira Air Fryer Mondial 3,5L Family");
+    expect(r.resultados.map((x) => x.nome)).toEqual([
+      "Fritadeira Elétrica Air Fryer Mondial 4L Preta",
+      "Air Fryer Mondial Oven 12L Inox",
+    ]);
   });
 
   test("database without the function: the regular stock read still answers", async () => {

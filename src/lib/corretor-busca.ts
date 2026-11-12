@@ -122,6 +122,9 @@ export function criarCorretor(alvos: Iterable<string>, conhecidas: Iterable<stri
       const teto = p.length >= 11 ? 2 : 1;
       for (const c of porInicial.get(p[0]!) ?? []) {
         if (p.length < 8 && (c.length !== p.length && (p.length < 6 || c.length < 7))) continue;
+        /* Only the ending differs ("condicionado" x "condicionador", "esmalte" x
+           "esmaltec"): another real word, never a typo. */
+        if (c.length !== p.length && (c.startsWith(p) || p.startsWith(c))) continue;
         const d = distanciaDeEdicao(p, c, teto);
         if (d > teto) continue;
         if (d < menor) {
