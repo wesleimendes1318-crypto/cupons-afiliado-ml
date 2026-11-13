@@ -6,6 +6,19 @@ import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { buscarGuia, GUIAS, type Bloco } from "@/content/guias";
 
 const BASE = "https://melhorescolha.io/guias";
+const AUTOR = { "@type": "Person", name: "Weslei Mendes", url: "https://melhorescolha.io/sobre" };
+const EDITORA = {
+  "@type": "Organization",
+  name: "Melhor Escolha",
+  url: "https://melhorescolha.io/",
+  logo: "https://melhorescolha.io/logo.png",
+};
+
+/** "23/09/2026" -> "2026-09-23"; anything else -> undefined (dropped by JSON.stringify). */
+function dataIso(ddmmaaaa: string): string | undefined {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(ddmmaaaa.trim());
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : undefined;
+}
 
 export const Route = createFileRoute("/guias/$slug")({
   loader: ({ params }) => {
@@ -41,6 +54,21 @@ export const Route = createFileRoute("/guias/$slug")({
             description: guia.resumo,
             inLanguage: "pt-BR",
             mainEntityOfPage: url,
+            author: AUTOR,
+            publisher: EDITORA,
+            dateModified: dataIso(guia.atualizacao),
+          }),
+        },
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: guia.perguntas.map((item) => ({
+              "@type": "Question",
+              name: item.pergunta,
+              acceptedAnswer: { "@type": "Answer", text: item.resposta },
+            })),
           }),
         },
         {
@@ -177,6 +205,21 @@ function PaginaGuia() {
           </div>
         ))}
       </div>
+
+      <p className="not-prose text-xs leading-relaxed text-secondary-ink">
+        Por Weslei Mendes, atualizado em {guia.atualizacao}.{" "}
+        <Link to="/sobre" className="font-semibold text-ml-blue hover:underline">
+          Como comparamos
+        </Link>
+        {" · "}
+        <Link to="/divulgacao-de-afiliados" className="font-semibold text-ml-blue hover:underline">
+          Divulgação de afiliados
+        </Link>
+        {" · "}
+        <Link to="/contato" className="font-semibold text-ml-blue hover:underline">
+          Contato
+        </Link>
+      </p>
 
       <Anuncio key={`fim-${guia.slug}`} slot={ADSENSE_SLOT_GUIA_FIM} />
 
