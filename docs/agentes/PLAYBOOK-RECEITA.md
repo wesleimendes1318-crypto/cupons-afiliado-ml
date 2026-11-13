@@ -9,7 +9,7 @@ Complements, does not replace, the scheduled routines in `docs/agentes.md`
 - Agents: `.claude/agents/` (diretor-receita, auditor-de-links,
   engenheiro-de-conversao, engenheiro-de-seo, editor-de-conteudo,
   analista-de-growth, revisor-de-qualidade). Commands: `/ciclo-receita`,
-  `/auditoria-afiliado`, `/revisar-mudancas`, `/backlog-receita`.
+  `/auditoria-afiliado`, `/revisar-mudancas`, `/backlog-receita`, `/novo-conteudo` (SEO guides, AdSense-safe, 13/11/2026).
 - Subagents do not schedule themselves. Entry point is `/ciclo-receita`
   (on demand). Recurring options: (1) Weslei runs it weekly; (2) headless
   `claude -p "/ciclo-receita observar"` (validated flags: `-p`,
