@@ -12,7 +12,13 @@ const jaCopiados = new Set<string>();
 
 type Estado = "copiado" | "manual" | "copiar";
 
-export function LinkPronto({ link, className = "" }: { link: string | null | undefined; className?: string }) {
+export function LinkPronto({
+  link,
+  className = "",
+}: {
+  link: string | null | undefined;
+  className?: string;
+}) {
   const valido = ehLinkDeCompra(link) ? link : null;
   const [estado, setEstado] = useState<Estado>("copiar");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,50 +49,51 @@ export function LinkPronto({ link, className = "" }: { link: string | null | und
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valido]);
 
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   if (!valido) return null;
 
+  /* Inline pill (13/11 redesign): the link and the copy button, no heavy box. */
   return (
     <div
       className={
-        "mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-muted/50 px-3 py-2 " +
+        "mt-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-muted/60 py-1 pl-3 pr-1 ring-1 ring-border/60 " +
         className
       }
       data-link-pronto
     >
       <ShieldCheck className="size-4 shrink-0 text-primary" aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Link para comprar com segurança
-        </p>
-        <a
-          href={valido}
-          target="_blank"
-          rel="noopener sponsored"
-          data-origem="link_pronto"
-          className="block truncate text-sm font-semibold text-primary underline-offset-2 hover:underline"
-        >
-          {valido.replace(/^https?:\/\//, "")}
-        </a>
-      </div>
+      <a
+        href={valido}
+        target="_blank"
+        rel="noopener sponsored"
+        data-origem="link_pronto"
+        aria-label={`Link para comprar com segurança: ${valido.replace(/^https?:\/\//, "")}`}
+        className="min-w-0 truncate text-xs font-semibold text-primary underline-offset-2 hover:underline"
+      >
+        {valido.replace(/^https?:\/\//, "")}
+      </a>
       <button
         type="button"
         onClick={() => void copiar(false)}
         aria-live="polite"
-        className="vidro-botao inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground"
+        aria-label={estado === "copiado" ? "Link copiado" : "Copiar link"}
+        className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-card px-3 text-xs font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
       >
         {estado === "copiado" ? (
           <>
             <Check className="size-3.5 text-primary" aria-hidden="true" />
-            Link copiado
+            Copiado
           </>
         ) : (
           <>
             <Copy className="size-3.5" aria-hidden="true" />
-            {estado === "manual" ? "Toque para copiar" : "Copiar link"}
+            Copiar
           </>
         )}
       </button>

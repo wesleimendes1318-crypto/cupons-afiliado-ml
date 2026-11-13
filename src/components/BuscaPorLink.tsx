@@ -45,6 +45,7 @@ import {
   Share2,
   ShieldCheck,
   TriangleAlert,
+  ArrowUpRight,
   Truck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -3315,7 +3316,7 @@ function Resultado({
               <Foto
                 src={a?.imagem}
                 nitida
-                className="size-20 shrink-0 rounded-2xl border border-border/70 bg-white p-1 transition-transform duration-300 hover:scale-105 motion-reduce:transition-none sm:size-28"
+                className="size-20 shrink-0 min-[390px]:size-28 rounded-2xl border border-border/70 bg-white p-1 transition-transform duration-300 hover:scale-105 motion-reduce:transition-none sm:size-32"
                 ver={{
                   titulo: a?.titulo,
                   url: urlColada,
@@ -3327,7 +3328,7 @@ function Resultado({
                 }}
               />
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-[15px]">
+                <p className="line-clamp-2 break-words text-base font-semibold leading-snug">
                   {semEntidades(a?.titulo) ?? "Não consegui ler este anúncio agora"}
                 </p>
                 {/* Sem nome lido (ex.: o Mercado Livre pediu verificação):
@@ -3348,7 +3349,7 @@ function Resultado({
                 )}
                 {a?.preco != null && (
                   <p className="mt-1 flex flex-wrap items-baseline gap-x-2 tabular-nums">
-                    <span className="text-lg font-bold leading-none text-foreground">
+                    <span className="text-xl font-bold leading-none tracking-tight text-foreground min-[390px]:text-2xl">
                       {brl(a.preco)}
                     </span>
                     {a?.temCupom && <span className="text-xs text-secondary-ink">sem o cupom</span>}
@@ -3398,14 +3399,45 @@ function Resultado({
               /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
                foto com foto): o cliente precisa saber antes de comprar (28/09,
                agasalho da SHOPMASP com a foto do conjunto Woven). */
-              <Alerta titulo="A foto deste anúncio é a mesma de outro produto.">
-                Outro produto: {semEntidades(fotoDeOutro.titulo)}
-                {fotoDeOutro.muda ? ` (muda: ${fotoDeOutro.muda})` : ""}. Confirme com o vendedor
-                qual produto ele envia antes de comprar.
-              </Alerta>
+              <div role="note" className="mt-2.5">
+                <p className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200/80 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-500/30">
+                  <TriangleAlert className="size-3.5 shrink-0 text-amber-600" aria-hidden="true" />
+                  Foto igual à de outro produto
+                </p>
+                <p className="mt-1 text-[11px] leading-snug text-secondary-ink [overflow-wrap:anywhere]">
+                  Outro produto: {semEntidades(fotoDeOutro.titulo)}
+                  {fotoDeOutro.muda ? ` (muda: ${fotoDeOutro.muda})` : ""}. Confirme com o vendedor
+                  qual produto ele envia antes de comprar.
+                </p>
+              </div>
             ) : null}
             <FichaEmGaveta detalhes={a?.detalhes} titulo={semEntidades(a?.titulo) ?? null} />
           </section>
+          {/* Mobile shortcut to the recommendation (13/11 redesign). Only a
+              measured saving; with the verdict card it already sits right below. */}
+          {!veredito &&
+            recomendada &&
+            !vereditoDireto &&
+            recomendada.o.ganho != null &&
+            recomendada.o.ganho >= 0.5 && (
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById("secao-recomendacao")?.scrollIntoView({
+                    behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+                      ? "auto"
+                      : "smooth",
+                    block: "start",
+                  })
+                }
+                className="mt-3 flex min-h-11 w-full items-center justify-center gap-1 rounded-full bg-success/10 px-4 text-center text-[13px] font-semibold text-success ring-1 ring-success/25 lg:hidden"
+              >
+                <span>
+                  Economize <span className="tabular-nums">{brl(recomendada.o.ganho)}</span>{" "}
+                  escolhendo a melhor loja abaixo ↓
+                </span>
+              </button>
+            )}
           {veredito && (
             <VereditoEconomia
               oferta={veredito.o}
@@ -5629,7 +5661,7 @@ function Parecidos({
       <ul
         ref={trilho}
         onScroll={aoRolar}
-        className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:block sm:space-y-3 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:items-start sm:gap-3 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
       >
         {visiveis.map(({ p, i }) => {
           const m = medidas[i];
@@ -5642,14 +5674,16 @@ function Parecidos({
               key={i}
               className={
                 /* Um só parecido ocupa a largura toda (não sobra um vão ao lado). */
-                (visiveis.length === 1 ? "w-full" : "w-[86%]") +
+                (visiveis.length === 1
+                  ? "w-full sm:col-span-2"
+                  : "w-[82vw] max-w-[320px] sm:max-w-none") +
                 " shrink-0 snap-center rounded-3xl border border-border/70 bg-card p-3.5 sm:w-auto"
               }
             >
               {/* Foto em destaque no celular: quadro branco do tamanho do
                   cartão, sem moldura cinza em volta (18/10: o fundo branco da
                   foto virava um quadro dentro do quadro). */}
-              <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-white sm:hidden">
+              <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-white sm:aspect-auto sm:h-40">
                 <Foto
                   src={p.imagem}
                   nitida
@@ -5666,18 +5700,6 @@ function Parecidos({
               </div>
               {/* Cabeçalho: foto, título e quem vende. */}
               <div className="flex items-start gap-2.5">
-                <Foto
-                  src={p.imagem}
-                  className="hidden size-14 shrink-0 rounded-xl border border-border sm:block"
-                  ver={{
-                    titulo: p.titulo,
-                    item: p.item,
-                    url: p.url,
-                    preco: p.preco,
-                    link: p.link,
-                    detalhes: p.detalhes,
-                  }}
-                />
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-semibold leading-snug">
                     {semEntidades(p.titulo)}
@@ -5820,6 +5842,7 @@ function Parecidos({
                 return (
                   <>
                     <PrincipaisDiferencas
+                      maximo={2}
                       linhas={linhas}
                       qualidade={qualidade}
                       desvantagens={desvantagens}
@@ -6145,8 +6168,8 @@ function LinhaDaLoja({
           : "inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border border-ml-blue/60 px-3.5 text-xs font-bold text-ml-blue transition-colors hover:bg-ml-blue/5"
       }
     >
-      <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
-      Comprar
+      Ver oferta
+      <ArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" />
     </a>
   ) : l.url ? (
     <VerNaLoja url={l.url} />
@@ -6165,8 +6188,8 @@ function LinhaDaLoja({
       </span>
     ) : null;
   const voceColou = l.colado ? (
-    <span className="block text-[10px] font-medium text-amber-700 dark:text-amber-300">
-      você colou
+    <span className="mt-0.5 inline-flex whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+      Anúncio que você colou
     </span>
   ) : null;
   return (
