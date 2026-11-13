@@ -50,9 +50,11 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  diferencaNaMesmaQuantidade,
   medidaDoTitulo,
   notaDeAlternativa,
   podeSerAlternativa,
+  rotuloDaQuantidade,
   rotuloDaUnidade,
   type CustoBeneficio,
   type Medida,
@@ -4791,8 +4793,16 @@ function MelhorAlternativa({
     ((colado?.freteGratis === false && (colado?.custoFrete ?? 0) > 0) ||
       (p.freteGratis === false && (p.custoFrete ?? 0) > 0));
   const base = comFrete ? tColado : (colado?.preco ?? precoBase);
-  const menos =
-    base != null ? Math.round((base - (comFrete ? (tAlt as number) : p.preco)) * 100) / 100 : null;
+  /* Different quantity (13/11): the saving is for the same quantity pasted. */
+  const eq = diferencaNaMesmaQuantidade(
+    { preco: colado?.preco ?? precoBase, titulo: tituloColado },
+    p,
+  );
+  const menos = eq
+    ? -eq.valor
+    : base != null
+      ? Math.round((base - (comFrete ? (tAlt as number) : p.preco)) * 100) / 100
+      : null;
   const textoDoColado = [
     tituloColado ?? "",
     ...(detalhesColado?.caracteristicas ?? []).map((c) => c.valor),
@@ -4828,9 +4838,11 @@ function MelhorAlternativa({
             {brl(menos)} a menos
           </span>
           <span className="block text-xs text-secondary-ink">
-            {comFrete
-              ? "no custo final, já com o frete dos dois, comparado ao anúncio que você colou"
-              : "no produto, comparado ao anúncio que você colou"}
+            {eq
+              ? `na mesma quantidade (${rotuloDaQuantidade(eq.quantidade)}), comparado ao anúncio que você colou`
+              : comFrete
+                ? "no custo final, já com o frete dos dois, comparado ao anúncio que você colou"
+                : "no produto, comparado ao anúncio que você colou"}
           </span>
         </p>
       )}
@@ -5750,24 +5762,37 @@ function Parecidos({
               {/* Preço: o valor, a forma de pagamento e a diferença. */}
               <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t border-border pt-2 tabular-nums">
                 <span className="text-lg font-bold leading-none">{brl(p.preco)}</span>
-                {p.diferenca != null && (
-                  <span
-                    className={
-                      "rounded-full px-2 py-0.5 text-[11px] font-bold " +
-                      (Math.abs(p.diferenca) < 0.5
-                        ? "bg-muted text-secondary-ink"
-                        : p.diferenca < 0
-                          ? "bg-success/15 text-success"
-                          : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400")
-                    }
-                  >
-                    {Math.abs(p.diferenca) < 0.5
-                      ? "Mesmo preço no produto"
-                      : p.diferenca < 0
-                        ? `${brl(-p.diferenca)} a menos no produto`
-                        : `${brl(p.diferenca)} a mais no produto`}
-                  </span>
-                )}
+                {(() => {
+                  /* Different quantity (café 500 g x 250 g, 13/11): the
+                     difference is for the same quantity you pasted. */
+                  const eq = diferencaNaMesmaQuantidade(
+                    { preco: precoColado, titulo: tituloColado },
+                    p,
+                  );
+                  const dif = eq ? eq.valor : p.diferenca;
+                  if (dif == null) return null;
+                  const onde = eq
+                    ? `na mesma quantidade (${rotuloDaQuantidade(eq.quantidade)})`
+                    : "no produto";
+                  return (
+                    <span
+                      className={
+                        "rounded-full px-2 py-0.5 text-[11px] font-bold " +
+                        (Math.abs(dif) < 0.5
+                          ? "bg-muted text-secondary-ink"
+                          : dif < 0
+                            ? "bg-success/15 text-success"
+                            : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400")
+                      }
+                    >
+                      {Math.abs(dif) < 0.5
+                        ? `Mesmo preço ${onde}`
+                        : dif < 0
+                          ? `${brl(-dif)} a menos ${onde}`
+                          : `${brl(dif)} a mais ${onde}`}
+                    </span>
+                  );
+                })()}
                 <FormaDePagamento
                   preco={p.preco}
                   precos={p.precos}

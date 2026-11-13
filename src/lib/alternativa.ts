@@ -132,6 +132,30 @@ export function rotuloDaUnidade(tipo: Medida["tipo"]) {
   return tipo === "ml" ? "por litro" : tipo === "g" ? "por kg" : "por unidade";
 }
 
+/** "500 g", "1 kg", "750 ml", "2 L", "3 un". */
+export function rotuloDaQuantidade(m: Medida) {
+  const n = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",");
+  if (m.tipo === "g") return m.qtd >= 1000 ? `${n(m.qtd / 1000)} kg` : `${n(m.qtd)} g`;
+  if (m.tipo === "ml") return m.qtd >= 1000 ? `${n(m.qtd / 1000)} L` : `${n(m.qtd)} ml`;
+  return `${n(m.qtd)} un`;
+}
+
+/* Weslei, 13/11 (café 500 g x 250 g): "a diferença deve ser com base no valor
+   do produto comparado". With a different quantity, the difference is the
+   other product's price scaled to the pasted quantity minus the pasted price
+   (positive = costs more). Null when the quantity is the same or unknown. */
+export function diferencaNaMesmaQuantidade(
+  colado: { preco: number | null | undefined; titulo: string | null | undefined },
+  outro: { preco: number | null | undefined; titulo: string | null | undefined },
+): { valor: number; quantidade: Medida } | null {
+  if (colado.preco == null || outro.preco == null) return null;
+  const a = medidaDoTitulo(colado.titulo);
+  const b = medidaDoTitulo(outro.titulo);
+  if (!a || !b || a.tipo !== b.tipo || a.qtd === b.qtd) return null;
+  const valor = Math.round(((outro.preco * a.qtd) / b.qtd - colado.preco) * 100) / 100;
+  return { valor, quantidade: a };
+}
+
 /* Diferenças que nunca viram alternativa, mesmo com custo-benefício melhor:
    condição, compatibilidade, voltagem, réplica, "sem" (acessório/caixa). */
 const MUDA_OUTRO_MOTIVO =
