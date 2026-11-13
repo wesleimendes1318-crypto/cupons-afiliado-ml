@@ -5,14 +5,14 @@ export const SITE_URL = "https://melhorescolha.io";
 
 export const AUTOR_NOME = "Weslei Mendes Silva";
 export const AUTOR_CARGO = "Especialista em Produtos Digitais e Comparação de Preços";
-export const AUTOR_LINKEDIN = "https://www.linkedin.com/in/wesleimendessilva";
 
 export const AUTOR_LD = {
   "@type": "Person",
   name: AUTOR_NOME,
   jobTitle: AUTOR_CARGO,
   url: `${SITE_URL}/sobre`,
-  sameAs: [`${SITE_URL}/sobre`, AUTOR_LINKEDIN, "https://www.instagram.com/wslmendes/"],
+  // LinkedIn left out until Weslei confirms the URL (13/11/2026).
+  sameAs: [`${SITE_URL}/sobre`, "https://www.instagram.com/wslmendes/"],
   alumniOf: [{ "@type": "CollegeOrUniversity", name: "FIAP" }],
 } as const;
 
