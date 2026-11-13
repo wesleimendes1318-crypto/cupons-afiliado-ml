@@ -196,7 +196,9 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
   if (bloco.tipo === "tabela")
     return (
       <div className="not-prose overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
-        <table className="w-full min-w-[480px] text-left text-sm">
+        <table
+          className={`w-full text-left text-sm ${bloco.colunas.length > 3 ? "min-w-[520px]" : ""}`}
+        >
           <caption className="px-4 pt-3 text-left text-xs font-semibold text-secondary-ink">
             {bloco.legenda}
           </caption>
@@ -339,7 +341,7 @@ function PaginaGuia() {
         verificado={guia.verificado}
       />
       {guia.resumo30 && <Resumo30 itens={guia.resumo30} />}
-      {indice.length >= 3 && palavras(guia) > 800 && <Indice titulos={indice} />}
+      {indice.length >= 3 && palavras(guia) > 600 && <Indice titulos={indice} />}
 
       {guia.blocos.slice(0, meio).map((bloco, indice) => (
         <RenderBloco key={indice} bloco={bloco} />

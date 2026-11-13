@@ -110,8 +110,12 @@ function Sobre() {
         <li>
           Quando o preço é muito mais baixo que o das lojas oficiais, isso aparece como alerta, não
           como vantagem. Os detalhes estão no{" "}
-          <Link to="/guias" className="font-semibold text-ml-blue hover:underline">
-            guias
+          <Link
+            to="/guias/$slug"
+            params={{ slug: "quanto-se-economiza-comparando-lojas" }}
+            className="font-semibold text-ml-blue hover:underline"
+          >
+            levantamento completo
           </Link>
           .
         </li>

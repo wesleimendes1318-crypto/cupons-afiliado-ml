@@ -214,6 +214,294 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
+    slug: "lava-e-seca-midea-11kg-comparativo",
+    titulo: "Lava e seca Midea 11 kg: preço em cada loja e quando comprar",
+    resumo:
+      "Comparei as versões Branca, Titanium e Ciclo Pets da lava e seca Midea 11 kg loja por loja e acompanhei o preço por 12 dias. O mesmo anúncio chegou a mudar R$ 286.",
+    descricao:
+      "Lava e seca Midea 11 kg comparada loja por loja: até R$ 229,90 de diferença no mesmo modelo, preço que muda quase todo dia e a oferta barata demais.",
+    tempo: "6 min de leitura",
+    atualizacao: "13/11/2026",
+    publicado: "13/11/2026",
+    verificado: "13/11/2026",
+    categoria: "eletrodomesticos",
+    relacionados: [
+      "geladeira-frost-free-500l-comparativo",
+      "como-saber-se-um-desconto-e-realmente-vantajoso",
+    ],
+    resumo30: [
+      {
+        rotulo: "Diferença encontrada",
+        texto: "R$ 229,90 entre lojas oficiais no mesmo modelo Branca Slim (12/11/2026).",
+      },
+      {
+        rotulo: "Preço que se mexe",
+        texto: "Um mesmo anúncio variou entre R$ 3.039,90 e R$ 3.325,90 em 12 dias.",
+      },
+      {
+        rotulo: "Recomendação",
+        texto:
+          "Na Branca Slim, R$ 3.096 em loja oficial com frete grátis foi o melhor preço. Abaixo de R$ 2.000, desconfie.",
+      },
+    ],
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "A lava e seca Midea de 11 kg foi um dos produtos mais comparados aqui em novembro. Eu juntei as comparações feitas entre 02/11 e 13/11/2026 das três versões que mais apareceram: Branca Slim Conectada, Titanium Slim Conectada e Branca com Ciclo Pets. O que encontrei vale para quase todo eletrodoméstico grande.",
+      },
+      { tipo: "h2", texto: "Qual loja vende a lava e seca Midea 11 kg mais barata?" },
+      {
+        tipo: "p",
+        texto:
+          "Na comparação de 12/11/2026 da versão Branca Slim Conectada, a loja oficial mais barata vendia por R$ 3.096,00 com frete grátis. O anúncio comparado custava R$ 3.325,90. Foram R$ 229,90 de diferença no mesmo produto, sem trocar de cor nem de versão.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Lava e seca Midea 11 kg Branca Slim Conectada, comparação de 12/11/2026",
+        colunas: ["Oferta", "Preço", "Frete", "Loja oficial"],
+        linhas: [
+          ["Mais barata", "R$ 3.096,00", "Grátis", "Sim"],
+          ["Segunda", "R$ 3.100,00", "Pago", "Não"],
+          ["Anúncio comparado", "R$ 3.325,90", "Grátis", "Não informado"],
+          ["Outras quatro lojas", "R$ 3.488,28 a R$ 3.500,00", "Pago", "Não"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "Repare na segunda colocada: R$ 4 mais cara e com frete pago. Num produto deste tamanho, qualquer frete já faz a loja oficial com frete grátis ganhar com folga, e não há motivo para arriscar.",
+      },
+      { tipo: "h2", texto: "O preço da lava e seca muda muito de um dia para o outro?" },
+      {
+        tipo: "p",
+        texto:
+          "Muda, e mais do que eu esperava. Acompanhei um mesmo anúncio da Branca Slim entre 02/11 e 13/11/2026 e o preço alternou entre R$ 3.039,90, R$ 3.126,35, R$ 3.159,60 e R$ 3.325,90, às vezes no mesmo dia. A diferença entre o menor e o maior valor foi de R$ 286,00.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Mesmo anúncio da Branca Slim Conectada, preços lidos de 02/11 a 13/11/2026",
+        colunas: ["Período", "Preços lidos"],
+        linhas: [
+          ["02/11 a 05/11", "R$ 3.126,35 a R$ 3.325,90"],
+          ["06/11 a 08/11", "R$ 3.325,90"],
+          ["09/11 a 11/11", "R$ 3.039,90 a R$ 3.159,60"],
+          ["12/11 a 13/11", "R$ 3.039,90 a R$ 3.325,90"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "A versão com Ciclo Pets fez o mesmo movimento em outra loja: R$ 3.199 em 02/11, R$ 2.999 em 04/11, R$ 3.199 em 07/11, R$ 2.999 em 09/11 e de volta a R$ 3.199 em 12/11. Um vai e vem de R$ 200 a cada dois ou três dias.",
+      },
+      {
+        tipo: "destaque",
+        titulo: "O que isso quer dizer para você",
+        texto:
+          "Neste produto, esperar a Black Friday não é a única forma de pagar menos. O preço já cai e volta várias vezes por semana. Quem acompanha compra no dia do preço baixo.",
+      },
+      { tipo: "h2", texto: "Quando o seu anúncio já é o melhor" },
+      {
+        tipo: "p",
+        texto:
+          "Nem sempre trocar de loja compensa. Na comparação de 12/11/2026 da versão Ciclo Pets, o anúncio colado custava R$ 3.199 com frete grátis, e as outras duas lojas com o mesmo produto pediam R$ 3.459 e R$ 3.559. Ali o certo era ficar com o que a pessoa já tinha achado.",
+      },
+      {
+        tipo: "p",
+        texto:
+          "Na Titanium Slim Conectada, em 04/11/2026, o anúncio colado custava R$ 3.369 com frete grátis. A loja oficial mais barata pedia R$ 3.399,90. Diferença de R$ 30,90 a favor do anúncio colado: de novo, nada a trocar.",
+      },
+      { tipo: "h2", texto: "Uma oferta de R$ 1.860 é confiável?" },
+      {
+        tipo: "p",
+        texto:
+          "Pede cuidado. Na mesma comparação da Titanium de 04/11/2026 apareceu uma oferta de R$ 1.860, quase metade do preço das lojas oficiais, de um vendedor sem selo de loja oficial. Um desconto desse tamanho num eletrodoméstico de linha é raro.",
+      },
+      {
+        tipo: "lista",
+        itens: [
+          "Confira a reputação do vendedor e quantas unidades ele já vendeu.",
+          "Veja se a nota fiscal e a garantia de fábrica aparecem na descrição.",
+          "Confira o modelo, a cor e a voltagem nas características, não só no título.",
+          "Nunca aceite pagar fora do Mercado Livre, por Pix ou link enviado em mensagem.",
+        ],
+      },
+      { tipo: "h2", texto: "Branca ou Titanium: muda o preço?" },
+      {
+        tipo: "p",
+        texto:
+          'Muda pouco e são produtos diferentes. Nas comparações de novembro, os preços mais baixos de lojas com selo oficial ou do anúncio colado ficaram em R$ 3.369 a R$ 3.399,90 na Titanium e em R$ 3.096 a R$ 3.325,90 na Branca Slim. Por isso o comparador separa as cores: uma não aparece como "mesmo produto" da outra.',
+      },
+      { tipo: "h2", texto: "Antes de comprar a lava e seca" },
+      {
+        tipo: "passos",
+        itens: [
+          "Confira a voltagem do anúncio e a da sua casa. Lava e seca na voltagem errada não funciona.",
+          "Meça o espaço: a versão Slim é mais estreita, mas confira largura, altura e profundidade.",
+          "Informe o seu CEP para ver o frete. Num produto grande, ele pode inverter a conta.",
+          "Compare pelo custo final e prefira loja oficial quando a diferença for pequena.",
+          "Se não tem pressa, acompanhe o preço por alguns dias: neste produto ele vai e volta.",
+        ],
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Cole o link da lava e seca que você está olhando e eu mostro as outras lojas de agora. A compra é feita no Mercado Livre, com pagamento protegido.",
+        botao: "Comparar o preço agora",
+        para: "/",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "Quanto custa a lava e seca Midea 11 kg?",
+        resposta:
+          "Entre 02/11 e 13/11/2026, as ofertas comparadas ficaram entre R$ 2.999 e R$ 3.899,90, conforme a versão e a loja, fora uma de R$ 1.860 de um vendedor sem selo. O preço muda quase todo dia; cole o link para ver o de agora.",
+      },
+      {
+        pergunta: "Vale esperar a Black Friday para comprar?",
+        resposta:
+          "Não necessariamente. Neste produto o preço já caiu e voltou várias vezes em novembro. Acompanhar o anúncio rende tanto quanto esperar uma data.",
+      },
+      {
+        pergunta: "Os preços do guia ainda valem?",
+        resposta:
+          "Não necessariamente. São os preços lidos nas datas indicadas, até 13/11/2026. Cole o link do anúncio para ver a comparação de agora.",
+      },
+    ],
+  },
+  {
+    slug: "quanto-se-economiza-comparando-lojas",
+    titulo: "Quanto se economiza comparando lojas: 1.285 comparações reais",
+    resumo:
+      "O levantamento de todas as comparações feitas no site entre 18/10 e 13/11/2026: em que categorias outra loja costuma ser mais barata, quanto se economiza e quando não compensa trocar.",
+    descricao:
+      "Levantamento de 1.285 comparações reais de preço entre lojas do Mercado Livre: economia mediana por categoria e faixa de preço, e quando não compensa trocar.",
+    tempo: "6 min de leitura",
+    atualizacao: "13/11/2026",
+    publicado: "13/11/2026",
+    verificado: "13/11/2026",
+    relacionados: [
+      "como-comparar-o-preco-do-mesmo-produto",
+      "como-saber-se-um-desconto-e-realmente-vantajoso",
+    ],
+    resumo30: [
+      {
+        rotulo: "Resultado geral",
+        texto: "Em 46% das 1.285 comparações, outra loja vendia o mesmo produto mais barato.",
+      },
+      { rotulo: "Quanto", texto: "Economia mediana de R$ 20,00, ou 13,6% do preço do anúncio." },
+      {
+        rotulo: "Onde mais compensa",
+        texto:
+          "Moda (68%), Eletrônicos (57%) e Acessórios para Veículos (54%) tiveram mais casos com loja mais barata.",
+      },
+    ],
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "Toda vez que alguém cola um link aqui, o site procura o mesmo produto nas outras lojas do Mercado Livre e guarda o resultado. Eu juntei todas as comparações feitas entre 18/10 e 13/11/2026 que tinham pelo menos duas lojas vendendo o mesmo produto: 1.285 no total. Este é o retrato do que elas mostram.",
+      },
+      { tipo: "h2", texto: "Com que frequência outra loja vende mais barato?" },
+      {
+        tipo: "p",
+        texto:
+          "Em 46% das comparações. Quase metade das pessoas que colaram um link estava olhando um anúncio que não era o mais barato para aquele produto. Na outra metade, o anúncio colado já era o melhor preço, e trocar de loja não traria nada.",
+      },
+      { tipo: "h2", texto: "Quanto dá para economizar, por categoria" },
+      {
+        tipo: "p",
+        texto:
+          "A economia mediana foi de R$ 20,00, ou 13,6% do preço do anúncio. Ela muda bastante de uma categoria para outra: em percentual, rende mais nos itens de casa e moda; em reais, na informática e nos eletrodomésticos.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Comparações com duas lojas ou mais, por categoria, 18/10 a 13/11/2026",
+        colunas: ["Categoria", "Comparações", "Com loja mais barata", "Economia mediana"],
+        linhas: [
+          ["Eletrodomésticos", "176", "48%", "R$ 38,92 (7,6%)"],
+          ["Beleza e Cuidado Pessoal", "172", "38%", "R$ 14,92 (14,1%)"],
+          ["Casa, Móveis e Decoração", "102", "50%", "R$ 14,00 (20,0%)"],
+          ["Brinquedos e Hobbies", "97", "33%", "R$ 17,48 (12,8%)"],
+          ["Informática", "96", "53%", "R$ 40,10 (14,0%)"],
+          ["Celulares e Telefones", "92", "51%", "R$ 25,46 (13,2%)"],
+          ["Eletrônicos, Áudio e Vídeo", "82", "57%", "R$ 34,62 (17,0%)"],
+          ["Ferramentas", "63", "44%", "R$ 16,50 (11,8%)"],
+          ["Acessórios para Veículos", "59", "54%", "R$ 20,50 (12,2%)"],
+          ["Calçados, Roupas e Bolsas", "47", "68%", "R$ 10,41 (17,3%)"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "As demais categorias tiveram menos de 45 comparações cada e ficaram fora da tabela para não tirar conclusão de amostra pequena. A economia mediana considera só as comparações em que havia uma loja mais barata.",
+      },
+      { tipo: "h2", texto: "Quanto mais caro o produto, mais vale comparar?" },
+      {
+        tipo: "p",
+        texto:
+          "Em reais, sim. Nos produtos acima de R$ 1.000, a economia mediana foi de R$ 173,44. Em percentual, acontece o contrário: os itens de até R$ 100 tiveram a maior diferença relativa, 18,3%, mas em reais isso significa R$ 8,31.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Comparações por faixa de preço do anúncio colado, 18/10 a 13/11/2026",
+        colunas: ["Preço do anúncio", "Comparações", "Com loja mais barata", "Economia mediana"],
+        linhas: [
+          ["Até R$ 100", "509", "39%", "R$ 8,31 (18,3%)"],
+          ["R$ 100 a R$ 300", "352", "53%", "R$ 20,42 (12,5%)"],
+          ["R$ 300 a R$ 1.000", "237", "52%", "R$ 61,51 (10,9%)"],
+          ["Acima de R$ 1.000", "187", "47%", "R$ 173,44 (9,5%)"],
+        ],
+      },
+      { tipo: "h2", texto: "O frete apaga a economia?" },
+      {
+        tipo: "p",
+        texto:
+          "Quase nunca, nas comparações que eu guardei. Nas economias em que o frete da loja mais barata era conhecido, ela também tinha frete grátis em quase todas. Mas isso tem uma razão: quando o frete não é conhecido, o comparador não deixa uma loja com frete pago passar na frente. Em produto grande, informe o CEP.",
+      },
+      { tipo: "h2", texto: "Quando não compensa trocar de loja" },
+      {
+        tipo: "lista",
+        itens: [
+          "Quando o anúncio que você achou já é o mais barato. Isso aconteceu em 54% das comparações.",
+          "Quando a diferença é pequena: 58 das economias ficaram abaixo de 3% do preço. Nesses casos, a loja oficial costuma valer os poucos reais.",
+          "Quando o mais barato está 30% ou mais abaixo das lojas oficiais e o vendedor não tem histórico. Aí a diferença é um alerta, não uma vitória.",
+          "Quando o prazo de entrega da loja mais barata não serve para você.",
+        ],
+      },
+      { tipo: "h2", texto: "Como os números foram calculados" },
+      {
+        tipo: "p",
+        texto:
+          "Cada comparação é a de um anúncio colado no site, com as lojas que vendiam o mesmo produto naquele momento, conferido pela foto e pelas características. Produtos apenas parecidos não entram na conta. O preço é o de quando comparei; ele muda, e por isso todos os números trazem o período.",
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Quer saber se o seu anúncio está entre os 46%? Cole o link e veja as outras lojas. A compra é feita no Mercado Livre, com pagamento protegido.",
+        botao: "Comparar o meu produto",
+        para: "/",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "De onde vêm esses números?",
+        resposta:
+          "De todas as comparações feitas no site entre 18/10 e 13/11/2026 com pelo menos duas lojas vendendo o mesmo produto: 1.285 comparações.",
+      },
+      {
+        pergunta: "A economia mediana vale para o meu produto?",
+        resposta:
+          "Não necessariamente. Ela mostra o caso típico. O seu produto pode ter diferença maior, menor ou nenhuma; cole o link para ver.",
+      },
+      {
+        pergunta: "Por que algumas categorias não aparecem na tabela?",
+        resposta:
+          "Porque tiveram poucas comparações no período. Com amostra pequena, a mediana engana.",
+      },
+    ],
+  },
+  {
     slug: "mesmo-produto-ou-parecido",
     titulo: "Mesmo produto ou só parecido? Como diferenciar",
     resumo:
