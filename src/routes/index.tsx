@@ -1,4 +1,5 @@
 import { VitrinesHome } from "@/components/VitrinesHome";
+import { AUTOR_LD } from "@/lib/autor";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -144,6 +145,15 @@ export const Route = createFileRoute("/")({
           name: "Melhor Escolha",
           url: "https://melhorescolha.io/",
           logo: "https://melhorescolha.io/logo.png",
+          description:
+            "Comparador de preços independente, sem vínculo com o Mercado Livre, a Amazon ou a Shopee. Participa de programas de afiliados.",
+          founder: AUTOR_LD,
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer support",
+            url: "https://melhorescolha.io/contato",
+            availableLanguage: "pt-BR",
+          },
           sameAs: ["https://t.me/melhorescolha_ofertas"],
         }),
       },

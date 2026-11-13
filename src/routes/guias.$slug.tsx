@@ -4,22 +4,10 @@ import { ArrowRight, Calculator, Lightbulb } from "lucide-react";
 import { Anuncio, ADSENSE_SLOT_GUIA_MEIO, ADSENSE_SLOT_GUIA_FIM } from "@/components/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { buscarGuia, GUIAS, type Bloco } from "@/content/guias";
+import { AUTOR_LD, dataIso, EDITORA_LD } from "@/lib/autor";
+import { AssinaturaAutor } from "@/components/AssinaturaAutor";
 
 const BASE = "https://melhorescolha.io/guias";
-const AUTOR = { "@type": "Person", name: "Weslei Mendes", url: "https://melhorescolha.io/sobre" };
-const EDITORA = {
-  "@type": "Organization",
-  name: "Melhor Escolha",
-  url: "https://melhorescolha.io/",
-  logo: "https://melhorescolha.io/logo.png",
-};
-
-/** "23/09/2026" -> "2026-09-23"; anything else -> undefined (dropped by JSON.stringify). */
-function dataIso(ddmmaaaa: string): string | undefined {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(ddmmaaaa.trim());
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : undefined;
-}
-
 export const Route = createFileRoute("/guias/$slug")({
   loader: ({ params }) => {
     const guia = buscarGuia(params.slug);
@@ -54,8 +42,9 @@ export const Route = createFileRoute("/guias/$slug")({
             description: guia.resumo,
             inLanguage: "pt-BR",
             mainEntityOfPage: url,
-            author: AUTOR,
-            publisher: EDITORA,
+            author: AUTOR_LD,
+            publisher: EDITORA_LD,
+            datePublished: dataIso(guia.publicado ?? guia.atualizacao),
             dateModified: dataIso(guia.atualizacao),
           }),
         },
@@ -77,8 +66,14 @@ export const Route = createFileRoute("/guias/$slug")({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Guias", item: BASE },
-              { "@type": "ListItem", position: 2, name: guia.titulo, item: url },
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Início",
+                item: "https://melhorescolha.io/",
+              },
+              { "@type": "ListItem", position: 2, name: "Guias", item: BASE },
+              { "@type": "ListItem", position: 3, name: guia.titulo, item: url },
             ],
           }),
         },
@@ -91,7 +86,10 @@ export const Route = createFileRoute("/guias/$slug")({
 
 function GuiaNaoEncontrado() {
   return (
-    <LayoutConteudo titulo="Guia não encontrado" resumo="Este endereço não corresponde a nenhum guia publicado.">
+    <LayoutConteudo
+      titulo="Guia não encontrado"
+      resumo="Este endereço não corresponde a nenhum guia publicado."
+    >
       <p>
         <Link to="/guias" className="font-semibold text-ml-blue hover:underline">
           Ver todos os guias
@@ -182,6 +180,8 @@ function PaginaGuia() {
         </>
       }
     >
+      <AssinaturaAutor publicado={guia.publicado} atualizado={guia.atualizacao} />
+
       {guia.blocos.slice(0, meio).map((bloco, indice) => (
         <RenderBloco key={indice} bloco={bloco} />
       ))}
@@ -207,7 +207,7 @@ function PaginaGuia() {
       </div>
 
       <p className="not-prose text-xs leading-relaxed text-secondary-ink">
-        Por Weslei Mendes, atualizado em {guia.atualizacao}.{" "}
+        Por Weslei Mendes Silva, atualizado em {guia.atualizacao}.{" "}
         <Link to="/sobre" className="font-semibold text-ml-blue hover:underline">
           Como comparamos
         </Link>

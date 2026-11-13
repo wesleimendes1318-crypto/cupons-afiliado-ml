@@ -17,6 +17,8 @@ export type Guia = {
   resumo: string;
   tempo: string;
   atualizacao: string;
+  /** First commit date of the guide (git log -S slug), DD/MM/AAAA. */
+  publicado?: string;
   blocos: Bloco[];
   perguntas: { pergunta: string; resposta: string }[];
 };
@@ -29,6 +31,7 @@ export const GUIAS: Guia[] = [
       "O mesmo produto costuma ser vendido por várias lojas com preços diferentes. Veja como achar e ler essa comparação.",
     tempo: "3 min de leitura",
     atualizacao: "27/09/2026",
+    publicado: "25/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -113,6 +116,7 @@ export const GUIAS: Guia[] = [
       "Comparação real entre lojas do mesmo modelo de 500 litros (Branca e Black Inox): diferença de até R$ 799 entre lojas e o peso do frete no preço final.",
     tempo: "4 min de leitura",
     atualizacao: "05/10/2026",
+    publicado: "05/10/2026",
     blocos: [
       {
         tipo: "p",
@@ -196,6 +200,7 @@ export const GUIAS: Guia[] = [
       "Foto diferente não quer dizer produto diferente, e título igual não quer dizer produto igual. O que realmente conta.",
     tempo: "4 min de leitura",
     atualizacao: "27/09/2026",
+    publicado: "25/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -271,6 +276,7 @@ export const GUIAS: Guia[] = [
       "Achou o mesmo produto mais barato? Cinco verificações rápidas para a economia não virar dor de cabeça.",
     tempo: "3 min de leitura",
     atualizacao: "25/09/2026",
+    publicado: "25/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -315,6 +321,7 @@ export const GUIAS: Guia[] = [
       "A conta de três linhas que separa o desconto anunciado do desconto que realmente cai no seu carrinho.",
     tempo: "4 min de leitura",
     atualizacao: "23/09/2026",
+    publicado: "23/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -389,6 +396,7 @@ export const GUIAS: Guia[] = [
       "Teto, valor mínimo, validade, estoque e restrição de vendedor: o que cada limite significa na prática.",
     tempo: "5 min de leitura",
     atualizacao: "23/09/2026",
+    publicado: "23/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -463,6 +471,7 @@ export const GUIAS: Guia[] = [
       "Cinco verificações rápidas para diferenciar uma oferta boa de um preço inflado com etiqueta de promoção.",
     tempo: "4 min de leitura",
     atualizacao: "23/09/2026",
+    publicado: "23/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -525,6 +534,7 @@ export const GUIAS: Guia[] = [
       "Do código copiado até a confirmação do desconto na tela de pagamento, sem perder a economia no caminho.",
     tempo: "3 min de leitura",
     atualizacao: "23/09/2026",
+    publicado: "23/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -581,6 +591,7 @@ export const GUIAS: Guia[] = [
       "Quando há mais de um cupom possível, o maior percentual quase nunca é a melhor escolha.",
     tempo: "4 min de leitura",
     atualizacao: "23/09/2026",
+    publicado: "23/09/2026",
     blocos: [
       {
         tipo: "p",
@@ -640,6 +651,7 @@ export const GUIAS: Guia[] = [
     resumo: "Sinais de que uma promoção não é o que parece e como se proteger antes de pagar.",
     tempo: "4 min de leitura",
     atualizacao: "23/09/2026",
+    publicado: "23/09/2026",
     blocos: [
       {
         tipo: "p",
