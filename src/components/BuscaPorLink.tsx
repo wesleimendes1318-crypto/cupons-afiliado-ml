@@ -132,7 +132,14 @@ import { analiseSoComAfiliado, ehLinkDeAfiliado, soAfiliado } from "@/lib/afilia
 import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
 import { semRecusados, useAnunciosRecusados } from "@/lib/anuncios-recusados";
 import { fotoNitida } from "@/lib/foto";
-import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import {
+  BotaoWhatsApp,
+  fotoGrande,
+  GaleriaProduto,
+  idDaPagina,
+  useDetalhesProduto,
+  VerDetalhesVitrine,
+} from "@/components/DetalhesVitrine";
 import { CoracaoDesejo } from "@/components/CoracaoDesejo";
 import { LinkPronto } from "@/components/LinkPronto";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
@@ -2424,6 +2431,44 @@ function fotoML(u: string | null | undefined): string | null {
   return m ? `https://http2.mlstatic.com/D_NQ_NP_${m[1]}-O.webp` : u;
 }
 
+/* Pasted product gallery, same as the product page (Weslei, 13/11: "deixar
+   a tela de comparação semelhante"): listing photo + official catalog photos,
+   thumbnails, zoom, heart and WhatsApp with his link. */
+function GaleriaDoColado({
+  url,
+  imagem,
+  titulo,
+  preco,
+  link,
+}: {
+  url: string | null;
+  imagem: string | null | undefined;
+  titulo: string;
+  preco: number | null;
+  link: string | null;
+}) {
+  const id = idDaPagina("", url);
+  const { doCatalogo } = useDetalhesProduto(id ?? "", null, id);
+  const galeria = [
+    ...new Set(
+      [fotoML(imagem), ...(doCatalogo ?? [])].filter((u): u is string => !!u).map(fotoGrande),
+    ),
+  ];
+  const desejo = { chave: url ?? "", titulo, preco, foto: galeria[0] ?? null, url, link };
+  return (
+    <GaleriaProduto
+      galeria={galeria}
+      titulo={titulo}
+      atalhos={[
+        <CoracaoDesejo key="c" compacto produto={desejo} />,
+        <BotaoWhatsApp key="w" produto={desejo} />,
+      ]}
+      carregando={!!id && doCatalogo === null}
+      alto="h-60 sm:h-72"
+    />
+  );
+}
+
 function Foto({
   src,
   className,
@@ -3293,118 +3338,135 @@ function Resultado({
             aria-label="O produto que você colou"
             className="animate-cartao scroll-mt-36 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 sm:p-4"
           >
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
-                <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
-              </p>
-              {a?.titulo && (
-                <CoracaoDesejo
-                  compacto
-                  produto={{
-                    chave: urlColada ?? "",
-                    titulo: semEntidades(a.titulo) ?? a.titulo,
-                    preco: a.preco,
-                    foto: a.imagem,
-                    url: urlColada,
-                    link: semLink ? null : link,
-                  }}
+            <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary-ink">
+              <Link2 className="size-3.5" aria-hidden="true" />O produto que você colou
+            </p>
+            {/* Product-page layout (13/11): photos left, buy info right on
+                wide screens when the card has the full width. */}
+            <div
+              className={
+                a?.imagem && !veredito
+                  ? "md:grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] md:items-start md:gap-6"
+                  : ""
+              }
+            >
+              {a?.imagem ? (
+                <GaleriaDoColado
+                  url={urlColada}
+                  imagem={a.imagem}
+                  titulo={semEntidades(a?.titulo) ?? a?.titulo ?? ""}
+                  preco={a?.preco ?? null}
+                  link={semLink ? null : link}
                 />
-              )}
-            </div>
-            <div className="flex items-start gap-3 sm:gap-4">
-              <Foto
-                src={a?.imagem}
-                nitida
-                className="size-20 shrink-0 rounded-2xl border border-border/70 bg-white p-1 transition-transform duration-300 hover:scale-105 motion-reduce:transition-none sm:size-28"
-                ver={{
-                  titulo: a?.titulo,
-                  url: urlColada,
-                  preco: a?.preco,
-                  link: semLink ? null : link,
-                  detalhes: a?.detalhes,
-                  vendedores: vendedoresMl,
-                  vendedorAtual: "colado",
-                }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-[15px]">
-                  {semEntidades(a?.titulo) ?? "Não consegui ler este anúncio agora"}
-                </p>
-                {/* Sem nome lido (ex.: o Mercado Livre pediu verificação):
+              ) : a?.titulo ? (
+                /* Heart always (06/11), even without a photo. */
+                <div className="float-right">
+                  <CoracaoDesejo
+                    compacto
+                    produto={{
+                      chave: urlColada ?? "",
+                      titulo: semEntidades(a.titulo) ?? a.titulo,
+                      preco: a.preco,
+                      foto: null,
+                      url: urlColada,
+                      link: semLink ? null : link,
+                    }}
+                  />
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <div
+                  className={
+                    "flex items-start gap-3 sm:gap-4" +
+                    (a?.imagem ? (veredito ? " mt-3" : " mt-3 md:mt-0") : "")
+                  }
+                >
+                  <div className="min-w-0 flex-1">
+                    <h2 className="line-clamp-3 break-words text-lg font-extrabold leading-snug tracking-tight sm:text-xl">
+                      {semEntidades(a?.titulo) ?? "Não consegui ler este anúncio agora"}
+                    </h2>
+                    {/* Sem nome lido (ex.: o Mercado Livre pediu verificação):
                     diz a verdade e oferece refazer, sem inventar o produto. */}
-                {!semEntidades(a?.titulo) && tentar && (
-                  <button
-                    type="button"
-                    onClick={tentar}
-                    className="mt-1 text-xs font-semibold text-[#0066cc] underline-offset-2 hover:underline"
-                  >
-                    Tentar de novo
-                  </button>
-                )}
-                {a?.aviso && (
-                  <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
-                    O anúncio informa: {a.aviso}
-                  </p>
-                )}
-                {a?.preco != null && (
-                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 tabular-nums">
-                    <span className="text-lg font-bold leading-none text-foreground">
-                      {brl(a.preco)}
-                    </span>
-                    {a?.temCupom && <span className="text-xs text-secondary-ink">sem o cupom</span>}
-                  </p>
-                )}
-                {textoDoPagamento(a?.preco, a?.precos) && (
-                  <p className="mt-0.5 text-[11px] leading-snug text-secondary-ink">
-                    {textoDoPagamento(a?.preco, a?.precos)}
-                  </p>
-                )}
-                <SeloInternacional o={{ ...(a ?? {}), final: a?.preco ?? null }} className="mt-1" />
-                {(a?.vendedor || a?.lojaOficial === true || a?.avaliacoes) && (
-                  <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary-ink">
-                    {a?.vendedor && (
-                      <span className="min-w-0 [overflow-wrap:anywhere]">
-                        Vendido por{" "}
-                        <strong className="font-semibold text-foreground">{a.vendedor}</strong>
-                      </span>
+                    {!semEntidades(a?.titulo) && tentar && (
+                      <button
+                        type="button"
+                        onClick={tentar}
+                        className="mt-1 text-xs font-semibold text-[#0066cc] underline-offset-2 hover:underline"
+                      >
+                        Tentar de novo
+                      </button>
                     )}
-                    {a?.lojaOficial === true && <SeloLojaOficial className="inline-flex" />}
-                    <Avaliacoes
-                      a={a?.avaliacoes}
-                      de={{ url: urlColada }}
-                      titulo={a?.titulo}
-                      link={semLink ? null : link}
-                      className="inline-flex"
+                    {a?.aviso && (
+                      <p className="mt-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
+                        O anúncio informa: {a.aviso}
+                      </p>
+                    )}
+                    {a?.preco != null && (
+                      <p className="mt-1 flex flex-wrap items-baseline gap-x-2 tabular-nums">
+                        <span className="text-3xl font-extrabold leading-none text-foreground">
+                          {brl(a.preco)}
+                        </span>
+                        {a?.temCupom && (
+                          <span className="text-xs text-secondary-ink">sem o cupom</span>
+                        )}
+                      </p>
+                    )}
+                    {textoDoPagamento(a?.preco, a?.precos) && (
+                      <p className="mt-0.5 text-[11px] leading-snug text-secondary-ink">
+                        {textoDoPagamento(a?.preco, a?.precos)}
+                      </p>
+                    )}
+                    <SeloInternacional
+                      o={{ ...(a ?? {}), final: a?.preco ?? null }}
+                      className="mt-1"
                     />
-                  </p>
+                    {(a?.vendedor || a?.lojaOficial === true || a?.avaliacoes) && (
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary-ink">
+                        {a?.vendedor && (
+                          <span className="min-w-0 [overflow-wrap:anywhere]">
+                            Vendido por{" "}
+                            <strong className="font-semibold text-foreground">{a.vendedor}</strong>
+                          </span>
+                        )}
+                        {a?.lojaOficial === true && <SeloLojaOficial className="inline-flex" />}
+                        <Avaliacoes
+                          a={a?.avaliacoes}
+                          de={{ url: urlColada }}
+                          titulo={a?.titulo}
+                          link={semLink ? null : link}
+                          className="inline-flex"
+                        />
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <LinkPronto link={semLink ? null : link} />
+                {a?.internacional === true && (
+                  <Alerta titulo="Atenção ao custo final: este anúncio tem envio internacional.">
+                    {coladoIncompleto
+                      ? "O preço mostrado não inclui o imposto de importação e o ICMS, cobrados no pagamento. Por isso a recomendação é uma loja que envia do Brasil, com o custo final confirmado."
+                      : "Os tributos estimados já entram na conta do custo final desta comparação."}{" "}
+                    A entrega costuma demorar mais e o padrão de tomada pode ser do exterior.
+                  </Alerta>
                 )}
-              </div>
-            </div>
-            <LinkPronto link={semLink ? null : link} />
-            {a?.internacional === true && (
-              <Alerta titulo="Atenção ao custo final: este anúncio tem envio internacional.">
-                {coladoIncompleto
-                  ? "O preço mostrado não inclui o imposto de importação e o ICMS, cobrados no pagamento. Por isso a recomendação é uma loja que envia do Brasil, com o custo final confirmado."
-                  : "Os tributos estimados já entram na conta do custo final desta comparação."}{" "}
-                A entrega costuma demorar mais e o padrão de tomada pode ser do exterior.
-              </Alerta>
-            )}
-            {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
-              <Alerta titulo="Neste anúncio a foto e o texto não batem.">
-                {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
-                envia antes de comprar.
-              </Alerta>
-            ) : fotoDeOutro ? (
-              /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
+                {a?.buscaFora?.leitura?.ia?.alertaOriginal ? (
+                  <Alerta titulo="Neste anúncio a foto e o texto não batem.">
+                    {a.buscaFora.leitura.ia.alertaOriginal} Confirme com o vendedor qual produto ele
+                    envia antes de comprar.
+                  </Alerta>
+                ) : fotoDeOutro ? (
+                  /* A foto do anúncio colado é a mesma de OUTRO produto (conferida
                foto com foto): o cliente precisa saber antes de comprar (28/09,
                agasalho da SHOPMASP com a foto do conjunto Woven). */
-              <Alerta titulo="A foto deste anúncio é a mesma de outro produto.">
-                Outro produto: {semEntidades(fotoDeOutro.titulo)}
-                {fotoDeOutro.muda ? ` (muda: ${fotoDeOutro.muda})` : ""}. Confirme com o vendedor
-                qual produto ele envia antes de comprar.
-              </Alerta>
-            ) : null}
-            <FichaEmGaveta detalhes={a?.detalhes} titulo={semEntidades(a?.titulo) ?? null} />
+                  <Alerta titulo="A foto deste anúncio é a mesma de outro produto.">
+                    Outro produto: {semEntidades(fotoDeOutro.titulo)}
+                    {fotoDeOutro.muda ? ` (muda: ${fotoDeOutro.muda})` : ""}. Confirme com o
+                    vendedor qual produto ele envia antes de comprar.
+                  </Alerta>
+                ) : null}
+                <FichaEmGaveta detalhes={a?.detalhes} titulo={semEntidades(a?.titulo) ?? null} />
+              </div>
+            </div>
           </section>
           {veredito && (
             <VereditoEconomia
