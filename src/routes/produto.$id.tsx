@@ -359,6 +359,14 @@ function Produto() {
 
           <div className="mt-4 space-y-2">
             {botaoCompra}
+            {botaoCompra && (
+              <p className="text-center text-[11px] leading-snug text-secondary-ink">
+                Você não paga nada a mais pelo nosso link. O preço pode mudar na loja.{" "}
+                <Link to="/divulgacao-de-afiliados" className="font-semibold underline">
+                  Saiba mais
+                </Link>
+              </p>
+            )}
             <SinoAcompanhar url={url} titulo={titulo} onComparar={abrirComparacao}>
               <button
                 type="button"
