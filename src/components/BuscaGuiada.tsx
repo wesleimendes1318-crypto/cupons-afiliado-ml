@@ -3,7 +3,7 @@ import { LinhaEntrega } from "@/components/LinhaEntrega";
 import { usePrazosDosItens } from "@/lib/prazo-cliente";
 import { formatarDataCompleta } from "@/lib/prazo-entrega";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { VerNaLoja } from "@/components/BuscaPorLink";
 import { EsperaAtiva, useAvisarOcupado } from "@/components/EsperaAtiva";
 import { arquetipoDoTitulo, limitarPorArquetipo } from "@/lib/curadoria";
@@ -30,7 +30,7 @@ import {
 } from "@/lib/busca-guiada-cliente";
 import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
 import { AssistenteBusca } from "@/components/AssistenteBusca";
-import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
+import { idDaPagina, VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { FaixaArte, FaixaFotos } from "@/components/FaixaArte";
 import { LinhaAvaliacoes, SeloBemAvaliado } from "@/components/Avaliacoes";
 import { SeloMarketplace } from "@/components/SeloMarketplace";
@@ -1035,6 +1035,7 @@ function Relacionadas({
   const pilula =
     "inline-flex min-h-8 shrink-0 snap-start items-center whitespace-nowrap rounded-full border border-border bg-[#f5f5f7] px-3 text-xs font-semibold text-foreground transition hover:bg-[#e8e8ed] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]";
   const pilulas = termos.filter((t) => t.tipo === "categoria" || buscarTermo);
+  const navigate = useNavigate();
   return (
     <div className="mt-3">
       {pilulas.length > 0 && (
@@ -1069,10 +1070,28 @@ function Relacionadas({
           <ul className="-mx-1 mt-1.5 flex snap-x gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {emAlta.map((p) => (
               <li key={p.url} className="w-28 shrink-0 snap-start">
+                {/* Tile opens the product page (13/11); comparing is a button there. */}
                 <button
                   type="button"
-                  onClick={() => comparar(p.url)}
-                  title={`Comparar preço: ${p.titulo}`}
+                  onClick={() => {
+                    const id = idDaPagina("", p.url);
+                    if (!id) return comparar(p.url);
+                    void navigate({
+                      to: "/produto/$id",
+                      params: { id },
+                      state: {
+                        previa: {
+                          titulo: p.titulo,
+                          imagem: p.imagem ?? null,
+                          preco: p.preco ?? null,
+                          link: null,
+                          url: p.url,
+                          fotos: [],
+                        },
+                      } as never,
+                    });
+                  }}
+                  title={p.titulo}
                   className="block w-full rounded-xl border border-border/70 bg-white p-1.5 text-left text-[#1d1d1f] transition hover:border-[#0071e3]/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
                 >
                   <span className="relative block aspect-square overflow-hidden rounded-lg bg-white">

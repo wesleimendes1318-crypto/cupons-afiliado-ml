@@ -6,6 +6,7 @@
    (sempre link de afiliado) e Comparar preço. Nada é inventado: sem detalhes guardados,
    o painel diz isso e oferece comparar de novo. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   ChevronLeft,
   ChevronRight,
@@ -56,7 +57,7 @@ const fotosCache = new Map<string, string[]>();
 const fichaCache = new Map<string, Carac[]>();
 /* Endereço padrão do mlstatic (-O): chave da galeria e miniaturas; a foto
    aberta usa a original (propsFotoGrande). */
-const fotoGrande = (u: string) =>
+export const fotoGrande = (u: string) =>
   u.replace(/^http:/, "https:").replace(/-[A-Z](\.(?:webp|jpg|jpeg|png))$/i, "-O$1");
 
 const dataCurta = (iso: string | null) =>
@@ -67,6 +68,24 @@ const dataCurta = (iso: string | null) =>
         timeZone: "America/Sao_Paulo",
       })
     : null;
+
+/** What a card already knows, passed to /produto/$id for an instant paint. */
+export type PreviaProduto = {
+  titulo: string;
+  imagem: string | null;
+  preco: number | null;
+  link: string | null;
+  url: string | null;
+  fotos: string[];
+};
+
+/** Page id of an ML product: the catalog id (/p/MLB...) or the listing. */
+export function idDaPagina(chave: string, urlProduto?: string | null): string | null {
+  const cat = /\/p\/(MLB\d{5,12})/i.exec(urlProduto ?? "")?.[1]?.toUpperCase();
+  if (cat) return cat;
+  if (/^MLB\d{5,12}$/.test(chave)) return chave;
+  return itemDoEndereco(urlProduto)?.replace(/^MLBP/, "MLB") ?? null;
+}
 
 export function VerDetalhesVitrine({
   chave,
@@ -85,6 +104,7 @@ export function VerDetalhesVitrine({
   coracao = false,
   vendedores = null,
   vendedorAtual = null,
+  modal = false,
 }: {
   chave: string;
   titulo: string;
@@ -115,8 +135,12 @@ export function VerDetalhesVitrine({
      drawer, cheapest final cost first; vendedorAtual is this card's row. */
   vendedores?: VendedorNaTabela[] | null;
   vendedorAtual?: string | null;
+  /* Inside a comparison result the drawer stays (leaving would lose the
+     comparison); everywhere else an ML product opens /produto/$id (13/11). */
+  modal?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
+  const navigate = useNavigate();
   const botao = useRef<HTMLButtonElement>(null);
   const abrirRef = useRef<() => void>(() => {});
   /* Tapping anywhere on the card opens the details (Weslei, 07/11: "Sempre
@@ -152,7 +176,24 @@ export function VerDetalhesVitrine({
   }, [chave]);
   /* Abrir fotos e detalhes é interesse aprofundado (+4 no perfil local). */
   const abrir = () => {
-    setAberto(true);
+    const pagina = modal ? null : idDaPagina(chave, urlProduto);
+    if (pagina) {
+      /* Card data paints the page at once; the rest loads there (13/11:
+         no automatic comparison, only the explicit button). */
+      const previa: PreviaProduto = {
+        titulo,
+        imagem: imagem ?? null,
+        preco: preco ?? null,
+        link: link ?? null,
+        url: urlProduto ?? null,
+        fotos: (fotos ?? []).filter((u): u is string => !!u),
+      };
+      void navigate({
+        to: "/produto/$id",
+        params: { id: pagina },
+        state: { previa } as never,
+      });
+    } else setAberto(true);
     registrarAcaoVisitante({
       tipo: "detalhes",
       produto: {
@@ -244,6 +285,75 @@ export function VerDetalhesVitrine({
   );
 }
 
+/** Details read on the listing (detalhes_da_vitrine) plus the official
+    gallery and sheet (/api/public/fotos), shared by the drawer and the
+    product page. `pronto` skips the gallery read when the page has it. */
+export function useDetalhesProduto(
+  chave: string,
+  mlb: string | null,
+  produto: string | null,
+  inicial?: Resposta,
+  pronto?: { fotos: string[]; ficha: Carac[] } | null,
+) {
+  const [dados, setDados] = useState<Resposta | null | undefined>(
+    inicial ?? (mlb ? cache.get(chave) : null),
+  );
+
+  useEffect(() => {
+    if (inicial || !mlb || cache.has(chave)) return;
+    let vivo = true;
+    void (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any).rpc("detalhes_da_vitrine", { p_chave: mlb });
+        const r = (Array.isArray(data) ? data[0] : null) as Resposta | null;
+        cache.set(chave, r ?? null);
+        if (vivo) setDados(r ?? null);
+      } catch {
+        if (vivo) setDados(null);
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [chave, mlb, inicial]);
+
+  /* Galeria: a foto do anúncio e as do catálogo oficial (ou, sem catálogo,
+     as do próprio anúncio: "sempre deve permitir ver mais fotos", 27/10). */
+  const [doCatalogo, setDoCatalogo] = useState<string[] | null>(
+    pronto?.fotos ?? (produto ? (fotosCache.get(produto) ?? null) : []),
+  );
+  const [ficha, setFicha] = useState<Carac[] | null>(
+    pronto?.ficha ?? (produto ? (fichaCache.get(produto) ?? null) : []),
+  );
+  useEffect(() => {
+    if (pronto || !produto || fotosCache.has(produto)) return;
+    let vivo = true;
+    fetch(`/api/public/fotos?produto=${produto}`)
+      .then((r) => r.json())
+      .then((j: { fotos?: string[]; ficha?: Carac[] }) => {
+        const f = Array.isArray(j.fotos) ? j.fotos : [];
+        const fi = Array.isArray(j.ficha) ? j.ficha : [];
+        fotosCache.set(produto, f);
+        fichaCache.set(produto, fi);
+        if (vivo) {
+          setDoCatalogo(f);
+          setFicha(fi);
+        }
+      })
+      .catch(() => {
+        if (vivo) {
+          setDoCatalogo([]);
+          setFicha([]);
+        }
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [produto, pronto]);
+  return { dados, doCatalogo, ficha };
+}
+
 function Painel({
   chave,
   titulo,
@@ -278,66 +388,11 @@ function Painel({
   fechar: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [dados, setDados] = useState<Resposta | null | undefined>(
-    inicial ?? (mlb ? cache.get(chave) : null),
-  );
-
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) d.showModal();
-    if (inicial || !mlb || cache.has(chave)) return;
-    let vivo = true;
-    void (async () => {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data } = await (supabase as any).rpc("detalhes_da_vitrine", { p_chave: mlb });
-        const r = (Array.isArray(data) ? data[0] : null) as Resposta | null;
-        cache.set(chave, r ?? null);
-        if (vivo) setDados(r ?? null);
-      } catch {
-        if (vivo) setDados(null);
-      }
-    })();
-    return () => {
-      vivo = false;
-    };
-  }, [chave, mlb, inicial]);
-
-  /* Galeria: a foto do anúncio e as do catálogo oficial (ou, sem catálogo,
-     as do próprio anúncio: "sempre deve permitir ver mais fotos", 27/10). */
-  const [doCatalogo, setDoCatalogo] = useState<string[] | null>(
-    produto ? (fotosCache.get(produto) ?? null) : [],
-  );
-  const [ficha, setFicha] = useState<Carac[] | null>(
-    produto ? (fichaCache.get(produto) ?? null) : [],
-  );
-  const [atual, setAtual] = useState(0);
-  const trilho = useRef<HTMLUListElement>(null);
-  useEffect(() => {
-    if (!produto || fotosCache.has(produto)) return;
-    let vivo = true;
-    fetch(`/api/public/fotos?produto=${produto}`)
-      .then((r) => r.json())
-      .then((j: { fotos?: string[]; ficha?: Carac[] }) => {
-        const f = Array.isArray(j.fotos) ? j.fotos : [];
-        const fi = Array.isArray(j.ficha) ? j.ficha : [];
-        fotosCache.set(produto, f);
-        fichaCache.set(produto, fi);
-        if (vivo) {
-          setDoCatalogo(f);
-          setFicha(fi);
-        }
-      })
-      .catch(() => {
-        if (vivo) {
-          setDoCatalogo([]);
-          setFicha([]);
-        }
-      });
-    return () => {
-      vivo = false;
-    };
-  }, [produto]);
+  }, []);
+  const { dados, doCatalogo, ficha } = useDetalhesProduto(chave, mlb, produto, inicial);
 
   const lidas = caracteristicasValidas(dados?.detalhes?.caracteristicas);
   /* Sem características lidas na comparação, a ficha técnica oficial. */
@@ -355,15 +410,8 @@ function Painel({
     ),
   ];
   const n = galeria.length;
-  const ir = (k: number) => {
-    const alvo = ((k % n) + n) % n;
-    setAtual(alvo);
-    const el = trilho.current;
-    if (el) el.scrollTo({ left: alvo * el.clientWidth, behavior: "smooth" });
-  };
   const data = dataCurta(vistoEm ?? dados?.comparado_em ?? null);
   const acoes = acoesDoProduto(link, urlProduto);
-  const [zoom, setZoom] = useState(false);
   /* The heart needs an ML address or a ready link; a listing id is enough. */
   const desejo = {
     chave,
@@ -378,25 +426,15 @@ function Painel({
   }; /* Heart always in the details (Weslei, 06/11: "precisa ter a opção de
      coração SEMPRE") plus WhatsApp, both with his link; beside the photo
      counter so the header stays clean. */
-  const atalhos = (
-    <>
-      <CoracaoDesejo compacto produto={desejo} />
-      <BotaoWhatsApp produto={desejo} />
-    </>
-  );
+  const atalhos: [ReactNode, ReactNode] = [
+    <CoracaoDesejo key="c" compacto produto={desejo} />,
+    <BotaoWhatsApp key="w" produto={desejo} />,
+  ];
 
   return (
     <dialog
       ref={ref}
       onClose={fechar}
-      onKeyDown={(e) => {
-        /* Setas do teclado passam as fotos (Esc fecha pelo próprio dialog). */
-        if (n < 2) return;
-        if (e.key === "ArrowLeft") ir(atual - 1);
-        else if (e.key === "ArrowRight") ir(atual + 1);
-        else return;
-        e.preventDefault();
-      }}
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
       }}
@@ -433,116 +471,12 @@ function Painel({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-[13px]">
           {n > 0 && (
-            <section aria-label="Fotos do produto">
-              {/* Carrossel (Weslei, 05/10: "deixe como carrossel"): desliza
-                  com o dedo (scroll-snap), setas e miniaturas acompanham.
-                  Nada por cima da foto (Weslei, 18/10: "não competindo com a
-                  foto"): setas e contador ficam na linha de baixo. */}
-              <ul
-                ref={trilho}
-                onScroll={(e) => {
-                  const el = e.currentTarget;
-                  const k = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-                  if (k !== atual) setAtual(k);
-                }}
-                className="flex h-64 snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-white ring-1 ring-black/5 [scrollbar-width:none] sm:h-80 [&::-webkit-scrollbar]:hidden"
-                aria-label="Fotos do produto"
-              >
-                {galeria.map((u, k) => (
-                  <li key={u} className="relative h-full w-full shrink-0 snap-center">
-                    <button
-                      type="button"
-                      onClick={() => setZoom(true)}
-                      aria-label={`Ampliar foto ${k + 1} de ${n}`}
-                      className="absolute inset-0 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3]"
-                    />
-                    <img
-                      {...propsFotoGrande(u)}
-                      alt={`${titulo}: foto ${k + 1} de ${n}`}
-                      loading={k === 0 ? "eager" : "lazy"}
-                      referrerPolicy="no-referrer"
-                      className="pointer-events-none absolute inset-0 h-full w-full object-contain p-2"
-                    />
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                <div className="flex justify-start">
-                  <CoracaoDesejo compacto produto={desejo} />
-                </div>
-                {n > 1 ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => ir(atual - 1)}
-                      aria-label="Foto anterior"
-                      className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
-                    >
-                      <ChevronLeft className="size-4" aria-hidden="true" />
-                    </button>
-                    <span className="min-w-12 text-center text-[12px] font-semibold tabular-nums text-[#6e6e73]">
-                      {Math.min(atual, n - 1) + 1} de {n}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => ir(atual + 1)}
-                      aria-label="Próxima foto"
-                      className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
-                    >
-                      <ChevronRight className="size-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-[11px] text-[#6e6e73]">Toque na foto para ampliar</span>
-                )}
-                <div className="flex justify-end">
-                  <BotaoWhatsApp produto={desejo} />
-                </div>
-              </div>
-              {n > 1 && (
-                <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Escolher foto">
-                  {galeria.map((u, k) => (
-                    <li key={u} className="shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => ir(k)}
-                        aria-label={`Foto ${k + 1}`}
-                        aria-current={k === atual}
-                        className={`relative block size-14 overflow-hidden rounded-xl bg-[#f5f5f7] ring-2 ${k === atual ? "ring-[#0071e3]" : "ring-transparent"}`}
-                      >
-                        <img
-                          src={u}
-                          alt=""
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          className="absolute inset-0 h-full w-full object-contain p-1 mix-blend-multiply"
-                        />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {n > 1 && (
-                <p className="mt-1 text-center text-[11px] text-[#6e6e73]">
-                  Toque na foto para ampliar
-                </p>
-              )}
-              {zoom && (
-                <FotoAmpliada
-                  galeria={galeria}
-                  atual={Math.min(atual, n - 1)}
-                  ir={ir}
-                  titulo={titulo}
-                  fechar={() => setZoom(false)}
-                />
-              )}
-              {produto && doCatalogo === null && (
-                <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-                  <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
-                  Carregando mais fotos…
-                </p>
-              )}
-            </section>
+            <GaleriaProduto
+              galeria={galeria}
+              titulo={titulo}
+              atalhos={atalhos}
+              carregando={!!produto && doCatalogo === null}
+            />
           )}
           {vendedores && vendedores.length > 1 && (
             <OutrosVendedores vendedores={vendedores} atual={vendedorAtual} />
@@ -626,9 +560,163 @@ function Painel({
   );
 }
 
+/** Photo carousel with thumbnails, arrows, heart/WhatsApp row and the
+    full-screen zoom; drawer and product page. `atalhos` = [heart, WhatsApp]. */
+export function GaleriaProduto({
+  galeria,
+  titulo,
+  atalhos,
+  carregando = false,
+  className = "",
+  alto = "h-64 sm:h-80",
+}: {
+  galeria: string[];
+  titulo: string;
+  atalhos: [ReactNode, ReactNode];
+  carregando?: boolean;
+  className?: string;
+  alto?: string;
+}) {
+  const n = galeria.length;
+  const [atual, setAtual] = useState(0);
+  const [zoom, setZoom] = useState(false);
+  const trilho = useRef<HTMLUListElement>(null);
+  const ir = (k: number) => {
+    const alvo = ((k % n) + n) % n;
+    setAtual(alvo);
+    const el = trilho.current;
+    if (el) el.scrollTo({ left: alvo * el.clientWidth, behavior: "smooth" });
+  };
+  const irRef = useRef(ir);
+  irRef.current = ir;
+  const atualRef = useRef(atual);
+  atualRef.current = atual;
+  /* Keyboard arrows browse the photos (Esc closes the dialog itself). */
+  useEffect(() => {
+    if (n < 2 || zoom) return;
+    const tecla = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, [contenteditable=true]")) return;
+      if (e.key === "ArrowLeft") irRef.current(atualRef.current - 1);
+      else if (e.key === "ArrowRight") irRef.current(atualRef.current + 1);
+      else return;
+      e.preventDefault();
+    };
+    document.addEventListener("keydown", tecla);
+    return () => document.removeEventListener("keydown", tecla);
+  }, [n, zoom]);
+  if (!n) return null;
+  return (
+    <section aria-label="Fotos do produto" className={className}>
+      {/* Carrossel (Weslei, 05/10: "deixe como carrossel"): desliza
+            com o dedo (scroll-snap), setas e miniaturas acompanham.
+            Nada por cima da foto (Weslei, 18/10: "não competindo com a
+            foto"): setas e contador ficam na linha de baixo. */}
+      <ul
+        ref={trilho}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const k = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+          if (k !== atual) setAtual(k);
+        }}
+        className={`flex ${alto} snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl bg-white ring-1 ring-black/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+        aria-label="Fotos do produto"
+      >
+        {galeria.map((u, k) => (
+          <li key={u} className="relative h-full w-full shrink-0 snap-center">
+            <button
+              type="button"
+              onClick={() => setZoom(true)}
+              aria-label={`Ampliar foto ${k + 1} de ${n}`}
+              className="absolute inset-0 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0071e3]"
+            />
+            <img
+              {...propsFotoGrande(u)}
+              alt={`${titulo}: foto ${k + 1} de ${n}`}
+              loading={k === 0 ? "eager" : "lazy"}
+              referrerPolicy="no-referrer"
+              className="pointer-events-none absolute inset-0 h-full w-full object-contain p-2"
+            />
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="flex justify-start">{atalhos[0]}</div>
+        {n > 1 ? (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => ir(atual - 1)}
+              aria-label="Foto anterior"
+              className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </button>
+            <span className="min-w-12 text-center text-[12px] font-semibold tabular-nums text-[#6e6e73]">
+              {Math.min(atual, n - 1) + 1} de {n}
+            </span>
+            <button
+              type="button"
+              onClick={() => ir(atual + 1)}
+              aria-label="Próxima foto"
+              className="grid size-8 place-items-center vidro-botao rounded-full border border-border focus-visible:outline-2 focus-visible:outline-[#0071e3]"
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <span className="text-[11px] text-[#6e6e73]">Toque na foto para ampliar</span>
+        )}
+        <div className="flex justify-end">{atalhos[1]}</div>
+      </div>
+      {n > 1 && (
+        <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Escolher foto">
+          {galeria.map((u, k) => (
+            <li key={u} className="shrink-0">
+              <button
+                type="button"
+                onClick={() => ir(k)}
+                aria-label={`Foto ${k + 1}`}
+                aria-current={k === atual}
+                className={`relative block size-14 overflow-hidden rounded-xl bg-[#f5f5f7] ring-2 ${k === atual ? "ring-[#0071e3]" : "ring-transparent"}`}
+              >
+                <img
+                  src={u}
+                  alt=""
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 h-full w-full object-contain p-1 mix-blend-multiply"
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {n > 1 && (
+        <p className="mt-1 text-center text-[11px] text-[#6e6e73]">Toque na foto para ampliar</p>
+      )}
+      {zoom && (
+        <FotoAmpliada
+          galeria={galeria}
+          atual={Math.min(atual, n - 1)}
+          ir={ir}
+          titulo={titulo}
+          fechar={() => setZoom(false)}
+        />
+      )}
+      {carregando && (
+        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
+          <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+          Carregando mais fotos…
+        </p>
+      )}
+    </section>
+  );
+}
+
 /** WhatsApp share of one product, always with Weslei's link (rule no. 1):
     the ready link, or link_de_reserva for an ML listing. */
-function BotaoWhatsApp({ produto }: { produto: Parameters<typeof itemDoProduto>[0] }) {
+export function BotaoWhatsApp({ produto }: { produto: Parameters<typeof itemDoProduto>[0] }) {
   const [enviando, setEnviando] = useState(false);
   const item = itemDoProduto(produto);
   if (!item) return null;

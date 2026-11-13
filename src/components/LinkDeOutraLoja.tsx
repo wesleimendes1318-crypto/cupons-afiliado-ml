@@ -553,6 +553,7 @@ function CartaoAncora({
         <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5 sm:size-20">
           {imagem ? (
             <VerDetalhesVitrine
+              modal
               chave={link ?? titulo ?? "link"}
               titulo={titulo ?? "O produto do seu link"}
               imagem={imagem}
@@ -694,6 +695,7 @@ function BannerVeredito({ veredito: v }: { veredito: Veredito }) {
         <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-white">
           {o.imagem ? (
             <VerDetalhesVitrine
+              modal
               chave={`${o.player}:${o.id}`}
               titulo={o.titulo}
               imagem={o.imagem}
@@ -1105,6 +1107,7 @@ function BarraDeCompra({
         <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
           {compra.imagem ? (
             <VerDetalhesVitrine
+              modal
               chave={compra.link}
               titulo={compra.titulo}
               imagem={compra.imagem}
