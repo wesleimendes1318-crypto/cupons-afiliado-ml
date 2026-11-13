@@ -1,0 +1,43 @@
+{
+  "projeto": "melhorescolha.io",
+  "autonomia": "propor_pr",
+  "niveis_permitidos_no_comando": ["observar", "propor_pr"],
+  "max_mudancas_por_ciclo": 3,
+  "max_arquivos_por_ciclo": 20,
+  "max_minutos_por_ciclo": 45,
+  "permitir_auto_merge": false,
+  "permitir_deploy": false,
+  "branch_prefix": "agentes/receita-",
+  "viewports": [320, 1280],
+  "quality_gates": ["bun test", "bunx tsc --noEmit", "bunx eslint <arquivos tocados>", "bun run build"],
+  "baseline": {
+    "data": "2026-11-13",
+    "nota": "package.json has no test/typecheck scripts; tests run with bun test (tests/), typecheck with tsc. Whole-repo `bun run lint` reported 10841 problems on main (mostly prettier, fixable), so lint is judged on touched files only. In cloud sessions bun install can fail on some tarballs (proxy 403): missing-module test errors are environment, not regressions."
+  },
+  "caminhos_de_risco": [
+    "src/lib/internacional.ts",
+    "src/lib/internacional-servidor.ts",
+    "src/lib/internacional-cliente.ts",
+    "src/lib/mesmo-produto.ts",
+    "src/lib/recomendacao-segura.ts",
+    "src/routes/api/public/",
+    "supabase/migrations/",
+    "extensao/",
+    "src/components/BuscaPorLink.tsx"
+  ],
+  "busca_congelada": [
+    "src/lib/busca-*",
+    "src/lib/corretor-busca.ts",
+    "src/lib/curadoria*.ts",
+    "src/routes/api/public/buscar.ts",
+    "src/routes/api/public/buscar-foto.ts",
+    "src/components/BuscaGuiada.tsx"
+  ],
+  "links": {
+    "mercado_livre": ["meli.la"],
+    "amazon_dominios": ["amzn.to"],
+    "amazon_tag": "melhoresc0fff-20",
+    "shopee": ["s.shopee.com.br", "shope.ee"],
+    "reserva_ms": { "pendente": 6000, "total": 12000 }
+  }
+}
