@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { AlertTriangle, CheckCircle2, Link2 } from "lucide-react";
+import { AlertTriangle, BarChart3, CheckCircle2, Link2 } from "lucide-react";
 
 import { BannerArte } from "@/components/BannerArte";
 import { CartaoCategoria } from "@/components/CartaoCategoria";
@@ -8,6 +8,15 @@ import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Vitrine } from "@/components/Vitrine";
 import { buscarCategoria } from "@/content/categorias";
+import {
+  CATEGORIA_ML,
+  dataBr,
+  lerDadosCategoria,
+  pct,
+  reais,
+  textoDosDados,
+  type DadosCategoria,
+} from "@/lib/dados-categoria";
 import { GUIAS } from "@/content/guias";
 import { buscarNo, DEPARTAMENTOS, NOS, subarvore } from "@/content/taxonomia";
 import { useVisitaCategoria } from "@/lib/perfil-visitante";
@@ -49,7 +58,18 @@ export const Route = createFileRoute("/categorias/$slug")({
     } catch {
       /* sem arte salva: a da categoria antiga ou a neutra */
     }
-    return { no, categoria: buscarCategoria(params.slug), contagem, arteDep };
+    /* Real comparison stats, department pages only (13/11). Missing function or
+       too few comparisons: no block. */
+    let dados: DadosCategoria | null = null;
+    if (no.caminho.length === 1) {
+      try {
+        const { data } = await supabase.rpc("estatisticas_categoria" as never);
+        dados = lerDadosCategoria(data, no.slug);
+      } catch {
+        /* page opens the same, without the numbers */
+      }
+    }
+    return { no, categoria: buscarCategoria(params.slug), contagem, arteDep, dados };
   },
   head: ({ params, loaderData }) => {
     if (!loaderData) {
@@ -156,8 +176,65 @@ const BOTAO_PRIMARIO =
 const BOTAO_SECUNDARIO =
   "inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-[#7547E8]";
 
+function NumerosDaCategoria({
+  slug,
+  nome,
+  dados,
+}: {
+  slug: string;
+  nome: string;
+  dados: DadosCategoria;
+}) {
+  const cartoes = [
+    { valor: String(dados.comparados), rotulo: "anúncios comparados" },
+    {
+      valor: pct((100 * dados.comEconomia) / dados.comparados),
+      rotulo: "com outra loja mais barata",
+    },
+    { valor: reais(dados.mediana), rotulo: "economia mediana" },
+  ];
+  return (
+    <section
+      className="mt-6 rounded-3xl bg-card p-5 shadow-[var(--shadow-card)] sm:p-6"
+      aria-labelledby="numeros-titulo"
+    >
+      <h2
+        id="numeros-titulo"
+        className="flex items-center gap-2 text-xl font-extrabold tracking-tight"
+      >
+        <BarChart3 className="size-5 shrink-0 text-[#0071e3]" aria-hidden="true" />O que as
+        comparações de {nome.toLowerCase()} mostram
+      </h2>
+      <dl className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+        {cartoes.map((c) => (
+          <div
+            key={c.rotulo}
+            className="flex flex-col-reverse rounded-2xl bg-muted/60 px-1.5 py-3 text-center sm:p-3"
+          >
+            <dt className="mt-1 text-[11px] leading-tight text-secondary-ink sm:text-xs">
+              {c.rotulo}
+            </dt>
+            <dd className="text-base font-extrabold tracking-tight text-foreground sm:text-2xl">
+              {c.valor}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-4 space-y-2 text-sm leading-relaxed text-secondary-ink">
+        {textoDosDados(CATEGORIA_ML[slug] ?? nome, dados).map((f) => (
+          <p key={f}>{f}</p>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-secondary-ink">
+        Dados das comparações feitas no site, atualizados sozinhos. Última comparação:{" "}
+        {dataBr(dados.fim)}. Preço muda: cole o link para ver o de agora.
+      </p>
+    </section>
+  );
+}
+
 function PaginaCategoria() {
-  const { no, categoria, contagem, arteDep } = Route.useLoaderData();
+  const { no, categoria, contagem, arteDep, dados } = Route.useLoaderData();
   /* Perfil local: a aba antiga equivalente (as da vitrine). */
   useVisitaCategoria(no.legado ?? no.slug);
   const arte = arteDoNo(no.caminho, arteDep);
@@ -218,6 +295,8 @@ function PaginaCategoria() {
             <p className="mt-2 text-secondary-ink">{chamada}</p>
           </header>
         )}
+
+        {dados && <NumerosDaCategoria slug={no.slug} nome={no.nome} dados={dados} />}
 
         {categoria && (
           <Vitrine
