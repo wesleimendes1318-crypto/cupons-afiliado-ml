@@ -1,10 +1,10 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight, Calculator, Lightbulb } from "lucide-react";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
+import { ArrowRight, Calculator, Lightbulb, ListOrdered, Zap } from "lucide-react";
 
 import { Anuncio, ADSENSE_SLOT_GUIA_MEIO, ADSENSE_SLOT_GUIA_FIM } from "@/components/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { buscarCategoria } from "@/content/categorias";
-import { buscarGuia, GUIAS, type Bloco, type Guia } from "@/content/guias";
+import { buscarGuia, GUIAS, GUIAS_REDIRECIONADOS, type Bloco, type Guia } from "@/content/guias";
 import { AUTOR_LD, dataIso, EDITORA_LD } from "@/lib/autor";
 import { AssinaturaAutor } from "@/components/AssinaturaAutor";
 
@@ -29,6 +29,8 @@ function continuarLendo(guia: Guia): Guia[] {
 
 export const Route = createFileRoute("/guias/$slug")({
   loader: ({ params }) => {
+    const destino = GUIAS_REDIRECIONADOS[params.slug];
+    if (destino) throw redirect({ to: "/guias/$slug", params: { slug: destino }, statusCode: 301 });
     const guia = buscarGuia(params.slug);
     if (!guia) throw notFound();
     return { guia };
@@ -118,8 +120,129 @@ function GuiaNaoEncontrado() {
   );
 }
 
+/** Anchor id for an h2 (Índice rápido). */
+const ancora = (texto: string) =>
+  texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const palavras = (guia: Guia) =>
+  guia.blocos
+    .map((b) =>
+      "texto" in b
+        ? b.texto
+        : "itens" in b
+          ? b.itens.join(" ")
+          : "linhas" in b
+            ? JSON.stringify(b.linhas)
+            : "",
+    )
+    .join(" ")
+    .split(/\s+/).length;
+
+function Resumo30({ itens }: { itens: NonNullable<Guia["resumo30"]> }) {
+  return (
+    <aside
+      aria-labelledby="resumo30"
+      className="not-prose rounded-2xl border border-ml-blue/25 bg-[color-mix(in_oklab,var(--ml-blue)_7%,var(--card))] p-4"
+    >
+      <p id="resumo30" className="flex items-center gap-2 text-sm font-extrabold text-foreground">
+        <Zap className="size-4 text-ml-blue" aria-hidden="true" />
+        Resumo em 30 segundos
+      </p>
+      <ul className="mt-2 space-y-1.5 text-sm text-secondary-ink">
+        {itens.map((item) => (
+          <li key={item.rotulo}>
+            <strong className="text-foreground">{item.rotulo}:</strong> {item.texto}
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+function Indice({ titulos }: { titulos: string[] }) {
+  return (
+    <details className="not-prose group rounded-2xl border border-border bg-card p-4">
+      <summary className="flex min-h-6 cursor-pointer list-none items-center gap-2 text-sm font-extrabold text-foreground">
+        <ListOrdered className="size-4 text-ml-blue" aria-hidden="true" />
+        Índice rápido
+        <span className="ml-auto text-xs font-semibold text-ml-blue group-open:hidden">Abrir</span>
+      </summary>
+      <ol className="mt-3 space-y-1.5 text-sm">
+        {titulos.map((t) => (
+          <li key={t}>
+            <a href={`#${ancora(t)}`} className="text-ml-blue hover:underline">
+              {t}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
 function RenderBloco({ bloco }: { bloco: Bloco }) {
-  if (bloco.tipo === "h2") return <h2>{bloco.texto}</h2>;
+  if (bloco.tipo === "h2")
+    return (
+      <h2 id={ancora(bloco.texto)} className="scroll-mt-24">
+        {bloco.texto}
+      </h2>
+    );
+  if (bloco.tipo === "h3") return <h3>{bloco.texto}</h3>;
+  if (bloco.tipo === "tabela")
+    return (
+      <div className="not-prose overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
+        <table className="w-full min-w-[480px] text-left text-sm">
+          <caption className="px-4 pt-3 text-left text-xs font-semibold text-secondary-ink">
+            {bloco.legenda}
+          </caption>
+          <thead>
+            <tr className="border-b border-border">
+              {bloco.colunas.map((c) => (
+                <th key={c} scope="col" className="px-4 py-2.5 font-extrabold text-foreground">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {bloco.linhas.map((linha) => (
+              <tr key={linha.join("|")}>
+                {linha.map((cel, k) =>
+                  k === 0 ? (
+                    <th key={k} scope="row" className="px-4 py-2.5 font-semibold text-foreground">
+                      {cel}
+                    </th>
+                  ) : (
+                    <td key={k} className="px-4 py-2.5 text-secondary-ink">
+                      {cel}
+                    </td>
+                  ),
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  if (bloco.tipo === "chamada")
+    return (
+      <div className="not-prose flex flex-col items-start gap-3 rounded-2xl bg-muted/50 p-4 sm:flex-row sm:items-center">
+        <p className="text-sm text-foreground">{bloco.texto}</p>
+        <Link
+          to={bloco.para}
+          {...(bloco.para === "/" ? { hash: "colar-link" } : {})}
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:brightness-110"
+        >
+          {bloco.botao}
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      </div>
+    );
   if (bloco.tipo === "p") return <p>{bloco.texto}</p>;
   if (bloco.tipo === "lista")
     return (
@@ -181,6 +304,7 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
 function PaginaGuia() {
   const { guia } = Route.useLoaderData();
   const outros = continuarLendo(guia);
+  const indice = guia.blocos.flatMap((b) => (b.tipo === "h2" ? [b.texto] : []));
   const categoria = guia.categoria ? buscarCategoria(guia.categoria) : undefined;
   /* Anúncio depois do 2º bloco do texto (ou do 1º, em guia curto). */
   const meio = Math.min(2, Math.max(1, guia.blocos.length - 1));
@@ -209,7 +333,13 @@ function PaginaGuia() {
         </>
       }
     >
-      <AssinaturaAutor publicado={guia.publicado} atualizado={guia.atualizacao} />
+      <AssinaturaAutor
+        publicado={guia.publicado}
+        atualizado={guia.atualizacao}
+        verificado={guia.verificado}
+      />
+      {guia.resumo30 && <Resumo30 itens={guia.resumo30} />}
+      {indice.length >= 3 && palavras(guia) > 800 && <Indice titulos={indice} />}
 
       {guia.blocos.slice(0, meio).map((bloco, indice) => (
         <RenderBloco key={indice} bloco={bloco} />
