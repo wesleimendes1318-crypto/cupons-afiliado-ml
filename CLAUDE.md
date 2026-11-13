@@ -98,6 +98,7 @@ Still do by hand:
 | `docs/regras/canais.md` | Telegram bot, price tracking, YouTube Shorts |
 | `docs/regras/operacao.md` | agent team, customer-first queue, account security, per-release guarantees, own Supabase, publishing |
 | `docs/agentes.md` | scheduled agent routines |
+| `docs/conteudo-automatico.md` | guides, category numbers, weekly data-guide PR, SEO/AdSense content |
 | `docs/mapa-do-codigo.md` | code map for Lovable/agents: areas, links, most connected files (regenerate with `ferramentas/mapa-do-codigo.py`) |
 | `AGENTS.md` | cost of offers, text search assistant, AdSense, ML affiliate lists |
 

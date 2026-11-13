@@ -6,7 +6,7 @@ import { LayoutConteudo } from "@/components/LayoutConteudo";
 const URL = "https://melhorescolha.io/telegram";
 const TITULO = "Ofertas comparadas no Telegram — Melhor Escolha";
 const DESCRICAO =
-  "Canal com achados reais comparados no site: o mesmo produto em outras lojas dentro do Mercado Livre, com economia de verdade. E um bot para comparar o seu produto pela conversa.";
+  "Canal com achados reais comparados no site: o mesmo produto mais barato em outra loja do Mercado Livre. E um bot que compara o seu produto pela conversa.";
 
 export const Route = createFileRoute("/telegram")({
   component: PaginaTelegram,

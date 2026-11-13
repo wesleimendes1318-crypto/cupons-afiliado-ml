@@ -1,14 +1,19 @@
+# Each crawler group is read on its own, so every group repeats the /api/ rule.
 User-agent: Googlebot
 Allow: /
+Disallow: /api/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /api/
 
 User-agent: Twitterbot
 Allow: /
+Disallow: /api/
 
 User-agent: facebookexternalhit
 Allow: /
+Disallow: /api/
 
 User-agent: *
 Allow: /

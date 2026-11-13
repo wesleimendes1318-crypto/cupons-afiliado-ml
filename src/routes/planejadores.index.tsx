@@ -9,9 +9,9 @@ import { RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { SITE } from "@/lib/lista-publica";
 import { PLANEJADORES } from "@/lib/planejadores";
 
-const TITULO = "Planejadores de compras: casa nova, enxoval, casamento e mais | Melhor Escolha";
+const TITULO = "Planejadores de compras: casa nova, enxoval e casamento";
 const DESCRICAO =
-  "Listas prontas por prioridade para casa nova, enxoval do bebê, casamento, home office e outros momentos, com ofertas para escolher e lista de presentes para o WhatsApp.";
+  "Listas por prioridade para casa nova, enxoval do bebê, casamento e home office, com ofertas comparadas e lista de presentes para mandar no WhatsApp.";
 
 export const Route = createFileRoute("/planejadores/")({
   head: () => ({

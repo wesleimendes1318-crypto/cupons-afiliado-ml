@@ -31,27 +31,7 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://melhorescolha.io/guias/como-funcionam-os-limites-dos-cupons</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://melhorescolha.io/guias/como-saber-se-um-desconto-e-realmente-vantajoso</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://melhorescolha.io/guias/como-usar-um-cupom-passo-a-passo</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://melhorescolha.io/guias/como-comparar-cupons-para-a-mesma-compra</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://melhorescolha.io/guias/como-evitar-ofertas-falsas</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -62,12 +42,12 @@
   </url>
   <url>
     <loc>https://melhorescolha.io/natal</loc>
-    <changefreq>daily</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://melhorescolha.io/dia-das-criancas</loc>
-    <changefreq>daily</changefreq>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -142,7 +122,7 @@
   </url>
   <url>
     <loc>https://melhorescolha.io/brinquedos</loc>
-    <changefreq>daily</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -249,5 +229,17 @@
     <loc>https://melhorescolha.io/planejadores/casamento</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://melhorescolha.io/guias/lava-e-seca-midea-11kg-comparativo</loc>
+    <lastmod>2026-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://melhorescolha.io/guias/quanto-se-economiza-comparando-lojas</loc>
+    <lastmod>2026-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

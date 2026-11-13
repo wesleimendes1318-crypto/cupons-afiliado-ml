@@ -6,6 +6,9 @@
 export type Bloco =
   | { tipo: "p"; texto: string }
   | { tipo: "h2"; texto: string }
+  | { tipo: "h3"; texto: string }
+  | { tipo: "tabela"; legenda: string; colunas: string[]; linhas: string[][] }
+  | { tipo: "chamada"; texto: string; botao: string; para: "/" | "/meus-precos" }
   | { tipo: "lista"; itens: string[] }
   | { tipo: "passos"; itens: string[] }
   | { tipo: "destaque"; titulo: string; texto: string }
@@ -17,6 +20,18 @@ export type Guia = {
   resumo: string;
   tempo: string;
   atualizacao: string;
+  /** First commit date of the guide (git log -S slug), DD/MM/AAAA. */
+  publicado?: string;
+  /** Meta description (140-155 chars). Falls back to resumo. */
+  descricao?: string;
+  /** Parent category slug (src/content/categorias.ts) for breadcrumb and hub links. */
+  categoria?: string;
+  /** Sibling guides shown first in "Continue lendo". */
+  relacionados?: string[];
+  /** "Resumo em 30 segundos": only real, dated findings (13/11/2026). */
+  resumo30?: { rotulo: string; texto: string }[];
+  /** Date the prices in the guide were captured, shown as "Última verificação de preços". */
+  verificado?: string;
   blocos: Bloco[];
   perguntas: { pergunta: string; resposta: string }[];
 };
@@ -29,6 +44,10 @@ export const GUIAS: Guia[] = [
       "O mesmo produto costuma ser vendido por várias lojas com preços diferentes. Veja como achar e ler essa comparação.",
     tempo: "3 min de leitura",
     atualizacao: "27/09/2026",
+    publicado: "25/09/2026",
+    descricao:
+      "O mesmo produto aparece em várias lojas com preços diferentes. Veja como comparar, ler a tabela e quanto se economizou em exemplos reais e datados.",
+    relacionados: ["mesmo-produto-ou-parecido", "o-que-conferir-antes-de-pagar"],
     blocos: [
       {
         tipo: "p",
@@ -113,6 +132,11 @@ export const GUIAS: Guia[] = [
       "Comparação real entre lojas do mesmo modelo de 500 litros (Branca e Black Inox): diferença de até R$ 799 entre lojas e o peso do frete no preço final.",
     tempo: "4 min de leitura",
     atualizacao: "05/10/2026",
+    publicado: "05/10/2026",
+    descricao:
+      "Comparação real do mesmo modelo de geladeira Frost Free 500 L em seis lojas: até R$ 799 de diferença e quando o frete pago ainda compensa no custo final.",
+    categoria: "eletrodomesticos",
+    relacionados: ["como-comparar-o-preco-do-mesmo-produto", "o-que-conferir-antes-de-pagar"],
     blocos: [
       {
         tipo: "p",
@@ -190,12 +214,304 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
+    slug: "lava-e-seca-midea-11kg-comparativo",
+    titulo: "Lava e seca Midea 11 kg: preço em cada loja e quando comprar",
+    resumo:
+      "Comparei as versões Branca, Titanium e Ciclo Pets da lava e seca Midea 11 kg loja por loja e acompanhei o preço por 12 dias. O mesmo anúncio chegou a mudar R$ 286.",
+    descricao:
+      "Lava e seca Midea 11 kg comparada loja por loja: até R$ 229,90 de diferença no mesmo modelo, preço que muda quase todo dia e a oferta barata demais.",
+    tempo: "6 min de leitura",
+    atualizacao: "13/11/2026",
+    publicado: "13/11/2026",
+    verificado: "13/11/2026",
+    categoria: "eletrodomesticos",
+    relacionados: [
+      "geladeira-frost-free-500l-comparativo",
+      "como-saber-se-um-desconto-e-realmente-vantajoso",
+    ],
+    resumo30: [
+      {
+        rotulo: "Diferença encontrada",
+        texto: "R$ 229,90 entre lojas oficiais no mesmo modelo Branca Slim (12/11/2026).",
+      },
+      {
+        rotulo: "Preço que se mexe",
+        texto: "Um mesmo anúncio variou entre R$ 3.039,90 e R$ 3.325,90 em 12 dias.",
+      },
+      {
+        rotulo: "Recomendação",
+        texto:
+          "Na Branca Slim, R$ 3.096 em loja oficial com frete grátis foi o melhor preço. Abaixo de R$ 2.000, desconfie.",
+      },
+    ],
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "A lava e seca Midea de 11 kg foi um dos produtos mais comparados aqui em novembro. Eu juntei as comparações feitas entre 02/11 e 13/11/2026 das três versões que mais apareceram: Branca Slim Conectada, Titanium Slim Conectada e Branca com Ciclo Pets. O que encontrei vale para quase todo eletrodoméstico grande.",
+      },
+      { tipo: "h2", texto: "Qual loja vende a lava e seca Midea 11 kg mais barata?" },
+      {
+        tipo: "p",
+        texto:
+          "Na comparação de 12/11/2026 da versão Branca Slim Conectada, a loja oficial mais barata vendia por R$ 3.096,00 com frete grátis. O anúncio comparado custava R$ 3.325,90. Foram R$ 229,90 de diferença no mesmo produto, sem trocar de cor nem de versão.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Lava e seca Midea 11 kg Branca Slim Conectada, comparação de 12/11/2026",
+        colunas: ["Oferta", "Preço", "Frete", "Loja oficial"],
+        linhas: [
+          ["Mais barata", "R$ 3.096,00", "Grátis", "Sim"],
+          ["Segunda", "R$ 3.100,00", "Pago", "Não"],
+          ["Anúncio comparado", "R$ 3.325,90", "Grátis", "Não informado"],
+          ["Outras quatro lojas", "R$ 3.488,28 a R$ 3.500,00", "Pago", "Não"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "Repare na segunda colocada: R$ 4 mais cara e com frete pago. Num produto deste tamanho, qualquer frete já faz a loja oficial com frete grátis ganhar com folga, e não há motivo para arriscar.",
+      },
+      { tipo: "h2", texto: "O preço da lava e seca muda muito de um dia para o outro?" },
+      {
+        tipo: "p",
+        texto:
+          "Muda, e mais do que eu esperava. Acompanhei um mesmo anúncio da Branca Slim entre 02/11 e 13/11/2026 e o preço alternou entre R$ 3.039,90, R$ 3.126,35, R$ 3.159,60 e R$ 3.325,90, às vezes no mesmo dia. A diferença entre o menor e o maior valor foi de R$ 286,00.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Mesmo anúncio da Branca Slim Conectada, preços lidos de 02/11 a 13/11/2026",
+        colunas: ["Período", "Preços lidos"],
+        linhas: [
+          ["02/11 a 05/11", "R$ 3.126,35 a R$ 3.325,90"],
+          ["06/11 a 08/11", "R$ 3.325,90"],
+          ["09/11 a 11/11", "R$ 3.039,90 a R$ 3.159,60"],
+          ["12/11 a 13/11", "R$ 3.039,90 a R$ 3.325,90"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "A versão com Ciclo Pets fez o mesmo movimento em outra loja: R$ 3.199 em 02/11, R$ 2.999 em 04/11, R$ 3.199 em 07/11, R$ 2.999 em 09/11 e de volta a R$ 3.199 em 12/11. Um vai e vem de R$ 200 a cada dois ou três dias.",
+      },
+      {
+        tipo: "destaque",
+        titulo: "O que isso quer dizer para você",
+        texto:
+          "Neste produto, esperar a Black Friday não é a única forma de pagar menos. O preço já cai e volta várias vezes por semana. Quem acompanha compra no dia do preço baixo.",
+      },
+      { tipo: "h2", texto: "Quando o seu anúncio já é o melhor" },
+      {
+        tipo: "p",
+        texto:
+          "Nem sempre trocar de loja compensa. Na comparação de 12/11/2026 da versão Ciclo Pets, o anúncio colado custava R$ 3.199 com frete grátis, e as outras duas lojas com o mesmo produto pediam R$ 3.459 e R$ 3.559. Ali o certo era ficar com o que a pessoa já tinha achado.",
+      },
+      {
+        tipo: "p",
+        texto:
+          "Na Titanium Slim Conectada, em 04/11/2026, o anúncio colado custava R$ 3.369 com frete grátis. A loja oficial mais barata pedia R$ 3.399,90. Diferença de R$ 30,90 a favor do anúncio colado: de novo, nada a trocar.",
+      },
+      { tipo: "h2", texto: "Uma oferta de R$ 1.860 é confiável?" },
+      {
+        tipo: "p",
+        texto:
+          "Pede cuidado. Na mesma comparação da Titanium de 04/11/2026 apareceu uma oferta de R$ 1.860, quase metade do preço das lojas oficiais, de um vendedor sem selo de loja oficial. Um desconto desse tamanho num eletrodoméstico de linha é raro.",
+      },
+      {
+        tipo: "lista",
+        itens: [
+          "Confira a reputação do vendedor e quantas unidades ele já vendeu.",
+          "Veja se a nota fiscal e a garantia de fábrica aparecem na descrição.",
+          "Confira o modelo, a cor e a voltagem nas características, não só no título.",
+          "Nunca aceite pagar fora do Mercado Livre, por Pix ou link enviado em mensagem.",
+        ],
+      },
+      { tipo: "h2", texto: "Branca ou Titanium: muda o preço?" },
+      {
+        tipo: "p",
+        texto:
+          'Muda pouco e são produtos diferentes. Nas comparações de novembro, os preços mais baixos de lojas com selo oficial ou do anúncio colado ficaram em R$ 3.369 a R$ 3.399,90 na Titanium e em R$ 3.096 a R$ 3.325,90 na Branca Slim. Por isso o comparador separa as cores: uma não aparece como "mesmo produto" da outra.',
+      },
+      { tipo: "h2", texto: "Antes de comprar a lava e seca" },
+      {
+        tipo: "passos",
+        itens: [
+          "Confira a voltagem do anúncio e a da sua casa. Lava e seca na voltagem errada não funciona.",
+          "Meça o espaço: a versão Slim é mais estreita, mas confira largura, altura e profundidade.",
+          "Informe o seu CEP para ver o frete. Num produto grande, ele pode inverter a conta.",
+          "Compare pelo custo final e prefira loja oficial quando a diferença for pequena.",
+          "Se não tem pressa, acompanhe o preço por alguns dias: neste produto ele vai e volta.",
+        ],
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Cole o link da lava e seca que você está olhando e eu mostro as outras lojas de agora. A compra é feita no Mercado Livre, com pagamento protegido.",
+        botao: "Comparar o preço agora",
+        para: "/",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "Quanto custa a lava e seca Midea 11 kg?",
+        resposta:
+          "Entre 02/11 e 13/11/2026, as ofertas comparadas ficaram entre R$ 2.999 e R$ 3.899,90, conforme a versão e a loja, fora uma de R$ 1.860 de um vendedor sem selo. O preço muda quase todo dia; cole o link para ver o de agora.",
+      },
+      {
+        pergunta: "Vale esperar a Black Friday para comprar?",
+        resposta:
+          "Não necessariamente. Neste produto o preço já caiu e voltou várias vezes em novembro. Acompanhar o anúncio rende tanto quanto esperar uma data.",
+      },
+      {
+        pergunta: "Os preços do guia ainda valem?",
+        resposta:
+          "Não necessariamente. São os preços lidos nas datas indicadas, até 13/11/2026. Cole o link do anúncio para ver a comparação de agora.",
+      },
+    ],
+  },
+  {
+    slug: "quanto-se-economiza-comparando-lojas",
+    titulo: "Quanto se economiza comparando lojas: 1.285 comparações reais",
+    resumo:
+      "O levantamento de todas as comparações feitas no site entre 18/10 e 13/11/2026: em que categorias outra loja costuma ser mais barata, quanto se economiza e quando não compensa trocar.",
+    descricao:
+      "Levantamento de 1.285 comparações reais de preço entre lojas do Mercado Livre: economia mediana por categoria e faixa de preço, e quando não compensa trocar.",
+    tempo: "6 min de leitura",
+    atualizacao: "13/11/2026",
+    publicado: "13/11/2026",
+    verificado: "13/11/2026",
+    relacionados: [
+      "como-comparar-o-preco-do-mesmo-produto",
+      "como-saber-se-um-desconto-e-realmente-vantajoso",
+    ],
+    resumo30: [
+      {
+        rotulo: "Resultado geral",
+        texto: "Em 46% das 1.285 comparações, outra loja vendia o mesmo produto mais barato.",
+      },
+      { rotulo: "Quanto", texto: "Economia mediana de R$ 20,00, ou 13,6% do preço do anúncio." },
+      {
+        rotulo: "Onde mais compensa",
+        texto:
+          "Moda (68%), Eletrônicos (57%) e Acessórios para Veículos (54%) tiveram mais casos com loja mais barata.",
+      },
+    ],
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "Toda vez que alguém cola um link aqui, o site procura o mesmo produto nas outras lojas do Mercado Livre e guarda o resultado. Eu juntei todas as comparações feitas entre 18/10 e 13/11/2026 que tinham pelo menos duas lojas vendendo o mesmo produto: 1.285 no total. Este é o retrato do que elas mostram.",
+      },
+      { tipo: "h2", texto: "Com que frequência outra loja vende mais barato?" },
+      {
+        tipo: "p",
+        texto:
+          "Em 46% das comparações. Quase metade das pessoas que colaram um link estava olhando um anúncio que não era o mais barato para aquele produto. Na outra metade, o anúncio colado já era o melhor preço, e trocar de loja não traria nada.",
+      },
+      { tipo: "h2", texto: "Quanto dá para economizar, por categoria" },
+      {
+        tipo: "p",
+        texto:
+          "A economia mediana foi de R$ 20,00, ou 13,6% do preço do anúncio. Ela muda bastante de uma categoria para outra: em percentual, rende mais nos itens de casa e moda; em reais, na informática e nos eletrodomésticos.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Comparações com duas lojas ou mais, por categoria, 18/10 a 13/11/2026",
+        colunas: ["Categoria", "Comparações", "Com loja mais barata", "Economia mediana"],
+        linhas: [
+          ["Eletrodomésticos", "176", "48%", "R$ 38,92 (7,6%)"],
+          ["Beleza e Cuidado Pessoal", "172", "38%", "R$ 14,92 (14,1%)"],
+          ["Casa, Móveis e Decoração", "102", "50%", "R$ 14,00 (20,0%)"],
+          ["Brinquedos e Hobbies", "97", "33%", "R$ 17,48 (12,8%)"],
+          ["Informática", "96", "53%", "R$ 40,10 (14,0%)"],
+          ["Celulares e Telefones", "92", "51%", "R$ 25,46 (13,2%)"],
+          ["Eletrônicos, Áudio e Vídeo", "82", "57%", "R$ 34,62 (17,0%)"],
+          ["Ferramentas", "63", "44%", "R$ 16,50 (11,8%)"],
+          ["Acessórios para Veículos", "59", "54%", "R$ 20,50 (12,2%)"],
+          ["Calçados, Roupas e Bolsas", "47", "68%", "R$ 10,41 (17,3%)"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "As demais categorias tiveram menos de 45 comparações cada e ficaram fora da tabela para não tirar conclusão de amostra pequena. A economia mediana considera só as comparações em que havia uma loja mais barata.",
+      },
+      { tipo: "h2", texto: "Quanto mais caro o produto, mais vale comparar?" },
+      {
+        tipo: "p",
+        texto:
+          "Em reais, sim. Nos produtos acima de R$ 1.000, a economia mediana foi de R$ 173,44. Em percentual, acontece o contrário: os itens de até R$ 100 tiveram a maior diferença relativa, 18,3%, mas em reais isso significa R$ 8,31.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Comparações por faixa de preço do anúncio colado, 18/10 a 13/11/2026",
+        colunas: ["Preço do anúncio", "Comparações", "Com loja mais barata", "Economia mediana"],
+        linhas: [
+          ["Até R$ 100", "509", "39%", "R$ 8,31 (18,3%)"],
+          ["R$ 100 a R$ 300", "352", "53%", "R$ 20,42 (12,5%)"],
+          ["R$ 300 a R$ 1.000", "237", "52%", "R$ 61,51 (10,9%)"],
+          ["Acima de R$ 1.000", "187", "47%", "R$ 173,44 (9,5%)"],
+        ],
+      },
+      { tipo: "h2", texto: "O frete apaga a economia?" },
+      {
+        tipo: "p",
+        texto:
+          "Quase nunca, nas comparações que eu guardei. Nas economias em que o frete da loja mais barata era conhecido, ela também tinha frete grátis em quase todas. Mas isso tem uma razão: quando o frete não é conhecido, o comparador não deixa uma loja com frete pago passar na frente. Em produto grande, informe o CEP.",
+      },
+      { tipo: "h2", texto: "Quando não compensa trocar de loja" },
+      {
+        tipo: "lista",
+        itens: [
+          "Quando o anúncio que você achou já é o mais barato. Isso aconteceu em 54% das comparações.",
+          "Quando a diferença é pequena: 58 das economias ficaram abaixo de 3% do preço. Nesses casos, a loja oficial costuma valer os poucos reais.",
+          "Quando o mais barato está 30% ou mais abaixo das lojas oficiais e o vendedor não tem histórico. Aí a diferença é um alerta, não uma vitória.",
+          "Quando o prazo de entrega da loja mais barata não serve para você.",
+        ],
+      },
+      { tipo: "h2", texto: "Como os números foram calculados" },
+      {
+        tipo: "p",
+        texto:
+          "Cada comparação é a de um anúncio colado no site, com as lojas que vendiam o mesmo produto naquele momento, conferido pela foto e pelas características. Produtos apenas parecidos não entram na conta. O preço é o de quando comparei; ele muda, e por isso todos os números trazem o período.",
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Quer saber se o seu anúncio está entre os 46%? Cole o link e veja as outras lojas. A compra é feita no Mercado Livre, com pagamento protegido.",
+        botao: "Comparar o meu produto",
+        para: "/",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "De onde vêm esses números?",
+        resposta:
+          "De todas as comparações feitas no site entre 18/10 e 13/11/2026 com pelo menos duas lojas vendendo o mesmo produto: 1.285 comparações.",
+      },
+      {
+        pergunta: "A economia mediana vale para o meu produto?",
+        resposta:
+          "Não necessariamente. Ela mostra o caso típico. O seu produto pode ter diferença maior, menor ou nenhuma; cole o link para ver.",
+      },
+      {
+        pergunta: "Por que algumas categorias não aparecem na tabela?",
+        resposta:
+          "Porque tiveram poucas comparações no período. Com amostra pequena, a mediana engana.",
+      },
+    ],
+  },
+  {
     slug: "mesmo-produto-ou-parecido",
     titulo: "Mesmo produto ou só parecido? Como diferenciar",
     resumo:
       "Foto diferente não quer dizer produto diferente, e título igual não quer dizer produto igual. O que realmente conta.",
     tempo: "4 min de leitura",
     atualizacao: "27/09/2026",
+    publicado: "25/09/2026",
+    descricao:
+      "Foto diferente não quer dizer produto diferente, e título igual não garante produto igual. Veja como conferir modelo, versão e quantidade antes de comprar.",
+    relacionados: ["como-comparar-o-preco-do-mesmo-produto", "o-que-conferir-antes-de-pagar"],
     blocos: [
       {
         tipo: "p",
@@ -271,6 +587,10 @@ export const GUIAS: Guia[] = [
       "Achou o mesmo produto mais barato? Cinco verificações rápidas para a economia não virar dor de cabeça.",
     tempo: "3 min de leitura",
     atualizacao: "25/09/2026",
+    publicado: "25/09/2026",
+    descricao:
+      "Achou o mesmo produto mais barato? Frete, prazo, loja, versão e pagamento: as verificações antes de pagar e quando um preço baixo demais é um alerta.",
+    relacionados: ["mesmo-produto-ou-parecido", "como-comparar-o-preco-do-mesmo-produto"],
     blocos: [
       {
         tipo: "p",
@@ -286,6 +606,40 @@ export const GUIAS: Guia[] = [
           "Reputação da loja: veja as avaliações e o histórico de vendas do vendedor.",
           "Versão certa: confira de novo modelo, voltagem, tamanho e quantidade na página do anúncio.",
           "Pagamento no site oficial: pague sempre dentro da loja, nunca por transferência ou link enviado por mensagem.",
+        ],
+      },
+      { tipo: "h2", texto: "Quando o preço baixo demais é um alerta" },
+      {
+        tipo: "p",
+        texto:
+          "Resposta curta: quando o mesmo produto aparece 30% ou mais abaixo do que cobram as lojas oficiais, trate a diferença como um sinal para conferir, não como uma vitória. Nas comparações que eu guardei, as diferenças comuns são bem menores: a mediana foi de 13,6% do preço do anúncio colado.",
+      },
+      {
+        tipo: "conta",
+        titulo: "Três casos reais em que o mais barato pedia cuidado",
+        linhas: [
+          {
+            rotulo: "Console Nintendo Switch 2, modelo nacional (02/11/2026)",
+            valor: "R$ 4.299,00 na loja oficial · a partir de R$ 2.906,32 em outras",
+          },
+          {
+            rotulo: "Lava e seca Midea 11 kg Titanium (04/11/2026)",
+            valor: "R$ 3.399,90 na oficial mais barata · R$ 1.860,00 numa loja sem selo",
+          },
+          {
+            rotulo: "Perfume Egeo Vanilla Vibe 90 mL (12/11/2026)",
+            valor: "R$ 329,90 no anúncio colado · R$ 160,00 na oferta mais baixa",
+          },
+        ],
+        nota: "Não quer dizer que essas ofertas eram golpe. Quer dizer que a diferença era grande demais para comprar sem olhar a loja, a versão e a garantia.",
+      },
+      {
+        tipo: "lista",
+        itens: [
+          "Veja se a versão é a mesma: modelo nacional ou importado, voltagem e o que vem na caixa.",
+          "Abra a reputação do vendedor e o número de vendas. Loja nova com preço muito baixo pede mais cuidado.",
+          "Procure a garantia e a nota fiscal na descrição. Sem as duas, o barato pode sair caro num defeito.",
+          "Se a diferença for pequena, a loja oficial costuma valer os poucos reais a mais.",
         ],
       },
       {
@@ -310,31 +664,45 @@ export const GUIAS: Guia[] = [
   },
   {
     slug: "como-calcular-a-economia-real-de-um-cupom",
-    titulo: "Como calcular a economia real de um cupom",
+    titulo: "Cupom no Mercado Livre: como calcular a economia real",
     resumo:
-      "A conta de três linhas que separa o desconto anunciado do desconto que realmente cai no seu carrinho.",
-    tempo: "4 min de leitura",
-    atualizacao: "23/09/2026",
+      "Teto, valor mínimo, frete e as pegadinhas que fazem um cupom de 40% valer 5%. A conta completa, os limites e quando não vale a pena usar.",
+    descricao:
+      "Como calcular quanto um cupom desconta de verdade: teto, valor mínimo, frete, qual de dois cupons rende mais e quando trocar de loja não compensa.",
+    tempo: "7 min de leitura",
+    atualizacao: "13/11/2026",
+    publicado: "23/09/2026",
+    relacionados: [
+      "como-saber-se-um-desconto-e-realmente-vantajoso",
+      "o-que-conferir-antes-de-pagar",
+    ],
+    resumo30: [
+      {
+        rotulo: "A conta",
+        texto:
+          "Desconto real = o menor valor entre compra × percentual e o teto. Abaixo do mínimo, é zero.",
+      },
+      {
+        rotulo: "A pegadinha",
+        texto: "Um cupom de 40% com teto de R$ 5 dá 5% numa compra de R$ 100.",
+      },
+      {
+        rotulo: "Antes do cupom",
+        texto:
+          "Compare o produto: em 46% das 1.285 comparações que fiz, outra loja já vendia o mesmo item mais barato.",
+      },
+    ],
     blocos: [
       {
         tipo: "p",
         texto:
-          "O número grande do cupom é uma promessa condicional. O desconto que você recebe depende de três informações que quase sempre estão escritas em letras menores: o percentual, o teto de desconto e o valor mínimo de compra.",
+          "Eu já vi muita gente escolher o cupom pelo número grande e pagar mais caro no fim. O percentual anunciado é uma promessa com condições. O que cai no seu carrinho depende de três números em letra pequena: o percentual, o teto e o valor mínimo de compra.",
       },
-      { tipo: "h2", texto: "As três informações que importam" },
-      {
-        tipo: "lista",
-        itens: [
-          "Percentual: quanto o cupom abate sobre o valor da compra. É o número que aparece no anúncio.",
-          "Teto de desconto: o valor máximo em reais que o cupom consegue abater, por maior que seja a compra.",
-          "Valor mínimo de compra: quanto você precisa gastar para o cupom sequer ser aceito.",
-        ],
-      },
-      { tipo: "h2", texto: "A conta" },
+      { tipo: "h2", texto: "Quanto um cupom desconta de verdade?" },
       {
         tipo: "p",
         texto:
-          "Multiplique o valor da compra pelo percentual. Se o resultado passar do teto, o desconto é o teto. Se a compra for menor que o mínimo exigido, o desconto é zero.",
+          "Multiplique o valor da compra pelo percentual. Se o resultado passar do teto, o desconto é o teto. Se a compra ficar abaixo do mínimo, o desconto é zero. Esse valor em reais, dividido pela compra, é o percentual efetivo: o único número que dá para comparar entre cupons.",
       },
       {
         tipo: "conta",
@@ -342,360 +710,321 @@ export const GUIAS: Guia[] = [
         linhas: [
           { rotulo: "Compra de R$ 100", valor: "40% seriam R$ 40, mas o teto corta em R$ 5" },
           { rotulo: "Desconto real", valor: "R$ 5" },
-          { rotulo: "Percentual efetivo", valor: "5% — não 40%" },
+          { rotulo: "Percentual efetivo", valor: "5%, não 40%" },
         ],
         nota: "É por isso que um cupom de 40% pode valer menos que um de 10% sem teto.",
       },
-      { tipo: "h2", texto: "O percentual efetivo" },
+      { tipo: "h2", texto: "Em que valor o cupom para de crescer?" },
       {
         tipo: "p",
         texto:
-          "Divida o desconto real pelo valor da compra. Esse é o único número comparável entre cupons diferentes. Comparar percentuais anunciados sem olhar o teto é comparar promessas, não descontos.",
+          "Todo cupom com teto tem um ponto de virada: o teto dividido pelo percentual. Acima dele, o desconto em reais fica parado. No exemplo acima, R$ 5 ÷ 0,40 = R$ 12,50. Qualquer compra maior que isso recebe sempre os mesmos R$ 5, seja de R$ 50 ou de R$ 3.000.",
+      },
+      {
+        tipo: "p",
+        texto:
+          "Em compras caras, como eletrodomésticos e celulares, o teto é atingido quase sempre. Ali o cupom vira um abatimento fixo, e quem decide o negócio é o preço do produto.",
+      },
+      { tipo: "h2", texto: "Qual de dois cupons rende mais?" },
+      {
+        tipo: "p",
+        texto:
+          "Depende de quanto você vai gastar. Um cupom de percentual alto com teto ganha em compras pequenas; um de percentual baixo sem teto ganha em compras grandes. Faça a conta em reais para o seu valor de compra, não para o percentual anunciado.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Cupom A: 50% com teto de R$ 10 · Cupom B: 12% sem teto (exemplo de cálculo)",
+        colunas: ["Valor da compra", "Cupom A", "Cupom B", "Rende mais"],
+        linhas: [
+          ["R$ 60", "R$ 10,00", "R$ 7,20", "A"],
+          ["R$ 100", "R$ 10,00", "R$ 12,00", "B"],
+          ["R$ 200", "R$ 10,00", "R$ 24,00", "B"],
+          ["R$ 500", "R$ 10,00", "R$ 60,00", "B"],
+        ],
       },
       {
         tipo: "destaque",
-        titulo: "O ponto de virada",
+        titulo: "O ponto em que B passa A",
         texto:
-          "Todo cupom com teto tem um valor de compra a partir do qual ele para de crescer: teto dividido pelo percentual. No exemplo acima, R$ 5 ÷ 0,40 = R$ 12,50. Qualquer compra acima disso recebe sempre os mesmos R$ 5.",
+          "R$ 10 ÷ 0,12 = R$ 83,33. Acima desse valor de compra, o cupom de 12% rende mais que o de 50%.",
       },
-      { tipo: "h2", texto: "Cuidados na hora de decidir" },
+      { tipo: "h2", texto: "Por que o cupom é recusado no carrinho?" },
+      {
+        tipo: "p",
+        texto:
+          "Quase sempre por um destes limites: a compra não chegou ao mínimo, o orçamento da campanha acabou, o produto é de outro vendedor ou o cupom já foi usado. Cupom é uma campanha com orçamento e regras, não um desconto livre.",
+      },
+      { tipo: "h3", texto: "Teto de desconto" },
+      {
+        tipo: "p",
+        texto:
+          "É o máximo em reais que o cupom abate. Cupons sem teto existem, costumam ter percentual baixo e são justamente os que mais valem em compras caras.",
+      },
+      { tipo: "h3", texto: "Valor mínimo de compra" },
+      {
+        tipo: "p",
+        texto:
+          "Abaixo dele o código não é aceito. É o limite que mais empurra a gastar sem precisar: só vale chegar nele com um item que você já ia comprar.",
+      },
+      { tipo: "h3", texto: "Validade e orçamento da campanha" },
+      {
+        tipo: "p",
+        texto:
+          "A validade é o prazo máximo, não uma garantia. Quando o orçamento reservado acaba, o cupom para de funcionar mesmo dentro do prazo. É a causa mais comum de um código que funcionava ontem ser recusado hoje.",
+      },
+      { tipo: "h3", texto: "Restrição de vendedor ou categoria" },
+      {
+        tipo: "p",
+        texto:
+          "Cupom de vendedor vale só nos produtos dele. O mesmo produto comprado de outro anunciante não recebe o desconto, ainda que seja idêntico.",
+      },
+      { tipo: "h2", texto: "O frete pode apagar a economia do cupom?" },
+      {
+        tipo: "p",
+        texto:
+          "Pode, e é o erro mais caro que eu vejo. Em geral o cupom abate só o valor dos produtos, não o frete. Compare sempre o custo final: produto, menos cupom, mais frete para o seu CEP.",
+      },
+      {
+        tipo: "conta",
+        titulo: "Exemplo de cálculo: cupom de R$ 10 numa loja com frete pago",
+        linhas: [
+          { rotulo: "Loja 1: R$ 120 − cupom R$ 10 + frete R$ 18", valor: "R$ 128" },
+          { rotulo: "Loja 2: R$ 122, sem cupom, frete grátis", valor: "R$ 122" },
+          { rotulo: "Melhor escolha", valor: "Loja 2, R$ 6 mais barata" },
+        ],
+        nota: "O cupom chamava atenção, mas o frete virou a conta. O comparador mostra o frete em linha própria por esse motivo.",
+      },
+      { tipo: "h2", texto: "Como aplicar o cupom sem perder o desconto" },
+      {
+        tipo: "passos",
+        itens: [
+          "Copie o código antes de sair da página onde ele está.",
+          "Abra o produto e confira se o vendedor é o mesmo do cupom.",
+          "Coloque no carrinho e veja se a compra atinge o valor mínimo.",
+          "No carrinho ou na tela de pagamento, cole o código no campo de cupom.",
+          "Confira se o total caiu e se o abatimento bate com a sua conta.",
+          "Só então conclua o pedido. Se o total não mudou, o desconto não foi aplicado.",
+        ],
+      },
       {
         tipo: "lista",
         itens: [
-          "Não aumente a compra só para atingir o valor mínimo: gastar R$ 30 a mais para economizar R$ 5 é prejuízo.",
-          "Compare o preço do produto antes do cupom. Um preço inflado anula qualquer desconto.",
-          "Confira o frete: ele pode consumir a economia inteira.",
-          "Confirme o desconto na tela de pagamento, antes de concluir o pedido.",
+          "Erro comum: digitar o código à mão e trocar uma letra parecida.",
+          "Erro comum: trocar o produto do carrinho depois de aplicar o cupom.",
+          "Erro comum: fechar pela compra rápida, que às vezes pula o campo de cupom.",
         ],
+      },
+      { tipo: "h2", texto: "Quando não vale a pena usar o cupom" },
+      {
+        tipo: "p",
+        texto:
+          "Nem todo cupom é economia. Gastar R$ 30 a mais para chegar ao mínimo e ganhar R$ 5 é prejuízo. Trocar uma loja oficial, com garantia clara, por um vendedor sem histórico para economizar poucos reais também não compensa. E um cupom sobre um preço inflado só devolve parte do que foi aumentado.",
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Antes de procurar cupom, veja se o mesmo produto já está mais barato em outra loja. Você cola o link e compra no Mercado Livre, com pagamento protegido.",
+        botao: "Comparar o preço agora",
+        para: "/",
       },
     ],
     perguntas: [
       {
-        pergunta: "O desconto incide sobre o frete?",
+        pergunta: "O desconto do cupom incide sobre o frete?",
         resposta:
-          "Em geral não. A maior parte dos cupons aplica o percentual apenas sobre o valor dos produtos. Confira no carrinho, porque a regra varia por campanha.",
+          "Em geral não. A maior parte dos cupons abate só o valor dos produtos. Confira no carrinho, porque a regra varia por campanha.",
       },
       {
         pergunta: "Posso somar dois cupons na mesma compra?",
         resposta:
-          "Normalmente não. A maioria das lojas aceita um cupom por pedido. Quando há mais de um, vale escolher o de maior desconto real, não o de maior percentual anunciado.",
-      },
-    ],
-  },
-  {
-    slug: "como-funcionam-os-limites-dos-cupons",
-    titulo: "Como funcionam os limites dos cupons",
-    resumo:
-      "Teto, valor mínimo, validade, estoque e restrição de vendedor: o que cada limite significa na prática.",
-    tempo: "5 min de leitura",
-    atualizacao: "23/09/2026",
-    blocos: [
-      {
-        tipo: "p",
-        texto:
-          "Cupom não é desconto livre: é uma campanha com orçamento e regras. Entender cada limite evita a frustração de ver o código ser recusado no carrinho.",
-      },
-      { tipo: "h2", texto: "Teto de desconto" },
-      {
-        tipo: "p",
-        texto:
-          "É o valor máximo em reais que o cupom abate. Protege o vendedor de perder muito em compras grandes e é o motivo de percentuais altos renderem pouco. Cupons sem teto são raros e costumam ter percentual baixo — e são exatamente os que mais valem em compras caras.",
-      },
-      { tipo: "h2", texto: "Valor mínimo de compra" },
-      {
-        tipo: "p",
-        texto:
-          "Abaixo desse valor o cupom simplesmente não é aceito. É o limite que mais induz a gastos desnecessários: só faz sentido chegar nele se você já ia comprar o item extra.",
-      },
-      { tipo: "h2", texto: "Validade" },
-      {
-        tipo: "p",
-        texto:
-          "A data final da campanha. Passou, o código deixa de existir. Mas atenção: a validade é o prazo máximo, não uma garantia de que o cupom durará até lá.",
-      },
-      { tipo: "h2", texto: "Orçamento e estoque da campanha" },
-      {
-        tipo: "p",
-        texto:
-          "Toda campanha tem um valor total reservado. Quando o orçamento acaba, o cupom para de funcionar mesmo dentro da validade. É a causa mais comum de um código válido ontem ser recusado hoje.",
-      },
-      { tipo: "h2", texto: "Restrição de vendedor ou de categoria" },
-      {
-        tipo: "p",
-        texto:
-          "Cupom de vendedor vale só nos produtos daquele vendedor. Comprar o mesmo produto de outro anunciante invalida o desconto, ainda que o item seja idêntico.",
+          "Normalmente não: a maioria das lojas aceita um cupom por pedido. Escolha o de maior desconto em reais para o seu valor de compra.",
       },
       {
-        tipo: "destaque",
-        titulo: "Um cupom pode sumir sem aviso",
-        texto:
-          "Orçamento esgotado, suspensão pela loja ou alteração de regra pelo vendedor tiram um cupom do ar a qualquer momento. Por isso nenhuma informação de cupom deve ser tratada como garantia — sempre confirme no carrinho.",
-      },
-      { tipo: "h2", texto: "Por que um cupom é recusado" },
-      {
-        tipo: "lista",
-        itens: [
-          "A compra não atingiu o valor mínimo.",
-          "O orçamento da campanha acabou.",
-          "O produto é de outro vendedor ou de categoria excluída.",
-          "O cupom já foi usado por você, quando há limite de um por pessoa.",
-          "A campanha foi encerrada antes da data anunciada.",
-        ],
-      },
-    ],
-    perguntas: [
-      {
-        pergunta: "O cupom estava aqui e não funcionou. Por quê?",
+        pergunta: "Dá para aplicar o cupom depois de finalizar o pedido?",
         resposta:
-          "Quase sempre porque o orçamento da campanha acabou ou o vendedor a encerrou antes do prazo. Os dados do site são uma fotografia do momento da coleta, com data indicada; a palavra final é sempre a do carrinho.",
+          "Não. O desconto precisa estar aplicado antes da confirmação. Depois, só cancelando e refazendo a compra, se a loja permitir.",
       },
       {
-        pergunta: "Cupom sem teto existe mesmo?",
+        pergunta: "Vale dividir o pedido para usar o cupom duas vezes?",
         resposta:
-          "Existe, e costuma ter percentual baixo. Em compras de valor alto ele rende muito mais que um cupom de percentual grande com teto baixo.",
+          "Raramente. Muitas campanhas limitam o uso por pessoa, e dividir costuma multiplicar o frete.",
       },
     ],
   },
   {
     slug: "como-saber-se-um-desconto-e-realmente-vantajoso",
-    titulo: "Como saber se um desconto é realmente vantajoso",
+    titulo: "Desconto real ou metade do dobro? Como saber se a oferta vale",
     resumo:
-      "Cinco verificações rápidas para diferenciar uma oferta boa de um preço inflado com etiqueta de promoção.",
-    tempo: "4 min de leitura",
-    atualizacao: "23/09/2026",
+      "O preço riscado nem sempre existiu. O que os preços que acompanhei mostram, as verificações antes de pagar e os sinais de uma oferta falsa.",
+    descricao:
+      "Como saber se um desconto é real antes da Black Friday: o que mostram 88 preços acompanhados por semanas, os sinais de oferta falsa e o que conferir.",
+    tempo: "7 min de leitura",
+    atualizacao: "13/11/2026",
+    publicado: "23/09/2026",
+    relacionados: ["o-que-conferir-antes-de-pagar", "como-calcular-a-economia-real-de-um-cupom"],
+    resumo30: [
+      {
+        rotulo: "O teste",
+        texto:
+          "Compare o preço final de hoje do mesmo produto em outras lojas. Ignore o valor riscado.",
+      },
+      {
+        rotulo: "O que os dados mostram",
+        texto:
+          "De 88 preços que acompanhei por mais de uma semana, 2 em cada 10 terminaram mais caros.",
+      },
+      {
+        rotulo: "O alerta",
+        texto: "Preço 30% ou mais abaixo das lojas oficiais pede conferência da loja e da versão.",
+      },
+    ],
     blocos: [
       {
         tipo: "p",
         texto:
-          "Desconto é sempre relativo a um preço de referência. Se a referência for inventada, o desconto também é. Estas verificações levam menos de dois minutos e evitam a maior parte dos arrependimentos.",
+          '"Metade do dobro" é o desconto sobre um preço que subiu pouco antes. O percentual é verdadeiro na etiqueta, mas a economia não existe. Desconto é sempre relativo a um preço de referência: se a referência foi inventada, o desconto também foi.',
       },
-      { tipo: "h2", texto: "1. Olhe o preço final, não o percentual" },
+      { tipo: "h2", texto: "Como saber em um minuto se o desconto é real?" },
       {
         tipo: "p",
         texto:
-          "O que sai do seu bolso é produto + frete − desconto. Compare esse número entre as opções. Percentual é só um caminho até ele.",
+          "Compare o preço final de hoje, com frete, do mesmo produto em outras lojas. Se ele está no nível das outras ou abaixo, o desconto é real. Se o valor riscado é a única referência, você não sabe. Foi por isso que eu criei o comparador: ele faz essa conferência loja por loja.",
       },
-      { tipo: "h2", texto: "2. Desconfie do preço 'de'" },
+      { tipo: "h2", texto: "O que os preços que acompanhei mostram" },
       {
         tipo: "p",
         texto:
-          "O valor riscado nem sempre foi praticado recentemente. Vale mais comparar com o que outros vendedores cobram hoje pelo mesmo item.",
-      },
-      { tipo: "h2", texto: "3. Compare o mesmo produto, não um parecido" },
-      {
-        tipo: "p",
-        texto:
-          "Modelo, capacidade, voltagem, cor e versão mudam o preço. Uma oferta imbatível costuma ser de outra versão do produto.",
-      },
-      { tipo: "h2", texto: "4. Some o frete antes de comemorar" },
-      {
-        tipo: "p",
-        texto: "Um item R$ 15 mais barato com frete R$ 25 mais caro é um item mais caro.",
-      },
-      { tipo: "h2", texto: "5. Verifique o vendedor" },
-      {
-        tipo: "p",
-        texto:
-          "Reputação, tempo de mercado e avaliações do anúncio dizem mais sobre a experiência de compra do que o desconto. Problema de entrega ou de garantia custa mais caro que qualquer economia.",
+          "Entre 18/10 e 13/11/2026 acompanhei 88 produtos que tiveram o preço lido pelo menos três vezes, com mais de sete dias entre a primeira e a última leitura. Os preços se mexem nos dois sentidos, o que derruba a ideia de que esperar sempre compensa.",
       },
       {
-        tipo: "destaque",
-        titulo: "A pergunta que resolve",
-        texto:
-          "Você compraria este produto por esse preço final se não existisse cupom nenhum? Se a resposta é não, o desconto não transformou uma compra desnecessária em uma boa compra.",
-      },
-    ],
-    perguntas: [
-      {
-        pergunta: "Vale esperar por uma data de promoção?",
-        resposta:
-          "Depende da urgência. Em datas de grande volume aparecem descontos reais e também preços ajustados para cima pouco antes. Acompanhar o preço por alguns dias dá a melhor referência.",
-      },
-      {
-        pergunta: "Desconto grande é sinal de produto ruim?",
-        resposta:
-          "Não necessariamente. Fim de linha, sobra de estoque e disputa entre vendedores geram descontos legítimos. O que vale checar é a reputação do vendedor e as avaliações do anúncio.",
-      },
-    ],
-  },
-  {
-    slug: "como-usar-um-cupom-passo-a-passo",
-    titulo: "Como usar um cupom, passo a passo",
-    resumo:
-      "Do código copiado até a confirmação do desconto na tela de pagamento, sem perder a economia no caminho.",
-    tempo: "3 min de leitura",
-    atualizacao: "23/09/2026",
-    blocos: [
-      {
-        tipo: "p",
-        texto:
-          "Boa parte dos cupons perdidos não é recusada: é esquecida. O desconto só existe se o código estiver aplicado quando o pedido é fechado.",
-      },
-      { tipo: "h2", texto: "O passo a passo" },
-      {
-        tipo: "passos",
-        itens: [
-          "Copie o código do cupom antes de sair da página onde ele está.",
-          "Abra o produto na loja e confira se o vendedor é o mesmo do cupom.",
-          "Adicione o produto ao carrinho e verifique se a compra atinge o valor mínimo.",
-          "No carrinho ou na tela de pagamento, procure o campo de cupom, código promocional ou desconto.",
-          "Cole o código e confirme.",
-          "Confira se o valor total caiu e se o abatimento bate com o esperado.",
-          "Só então conclua o pedido.",
-        ],
-      },
-      {
-        tipo: "destaque",
-        titulo: "Se o valor não mudou, não finalize",
-        texto:
-          "Cupom aceito sempre altera o total. Se o número continuou igual, o desconto não foi aplicado — vale revisar o vendedor, o valor mínimo e se a campanha ainda está no ar.",
-      },
-      { tipo: "h2", texto: "Erros comuns" },
-      {
-        tipo: "lista",
-        itens: [
-          "Digitar o código à mão e trocar uma letra por outra parecida.",
-          "Aplicar o cupom e depois trocar o produto do carrinho, o que pode invalidá-lo.",
-          "Fechar a compra pelo botão de compra rápida, que às vezes pula o campo de cupom.",
-          "Comprar do vendedor errado quando vários anunciam o mesmo item.",
-        ],
-      },
-    ],
-    perguntas: [
-      {
-        pergunta: "Dá para aplicar o cupom depois de finalizar o pedido?",
-        resposta:
-          "Não. O desconto precisa estar aplicado antes da confirmação. Depois de fechado, só cancelando e refazendo a compra, se a loja permitir.",
-      },
-      {
-        pergunta: "Posso usar o mesmo cupom mais de uma vez?",
-        resposta:
-          "Depende da campanha. Muitas limitam a um uso por pessoa. A regra aparece nas condições do próprio cupom.",
-      },
-    ],
-  },
-  {
-    slug: "como-comparar-cupons-para-a-mesma-compra",
-    titulo: "Como comparar cupons para a mesma compra",
-    resumo:
-      "Quando há mais de um cupom possível, o maior percentual quase nunca é a melhor escolha.",
-    tempo: "4 min de leitura",
-    atualizacao: "23/09/2026",
-    blocos: [
-      {
-        tipo: "p",
-        texto:
-          "Comparar cupons é comparar o desconto em reais que cada um produz para o seu valor de compra específico. O mesmo par de cupons pode trocar de posição dependendo de quanto você vai gastar.",
-      },
-      { tipo: "h2", texto: "Um exemplo que inverte" },
-      {
-        tipo: "conta",
-        titulo: "Cupom A: 50% com teto de R$ 10 · Cupom B: 12% sem teto",
+        tipo: "tabela",
+        legenda: "88 preços acompanhados por mais de 7 dias, 18/10 a 13/11/2026",
+        colunas: ["O que aconteceu", "Parte dos produtos"],
         linhas: [
-          { rotulo: "Compra de R$ 60", valor: "A dá R$ 10 · B dá R$ 7,20 → vence A" },
-          { rotulo: "Compra de R$ 200", valor: "A dá R$ 10 · B dá R$ 24 → vence B" },
+          ["Variou mais de 5% em algum momento", "39%"],
+          ["Terminou mais caro do que começou (mais de 2%)", "20%"],
+          ["Terminou mais barato do que começou (mais de 2%)", "23%"],
+          ["Variação mediana entre o menor e o maior preço", "1,1%"],
         ],
-        nota: "O cupom de 12% ganha do de 50% assim que a compra passa de R$ 83,33.",
       },
-      { tipo: "h2", texto: "O método" },
+      {
+        tipo: "p",
+        texto:
+          "A maior parte dos preços quase não se mexe. Quando se mexe, sobe tanto quanto desce. Um desconto que aparece logo depois de uma alta é exatamente o caso da metade do dobro.",
+      },
+      { tipo: "h2", texto: "Quanto o mesmo produto muda de uma loja para outra?" },
+      {
+        tipo: "p",
+        texto:
+          "Bem mais do que muda no tempo. Em 46% das 1.285 comparações feitas aqui entre 18/10 e 13/11/2026, outra loja vendia o mesmo produto mais barato que o anúncio colado. A diferença em percentual é maior nos itens baratos; em reais, nos caros.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "1.285 comparações com duas lojas ou mais, 18/10 a 13/11/2026",
+        colunas: [
+          "Preço do anúncio",
+          "Comparações",
+          "Com o mesmo produto mais barato",
+          "Economia mediana",
+        ],
+        linhas: [
+          ["Até R$ 100", "509", "39%", "R$ 8,31 (18,3%)"],
+          ["R$ 100 a R$ 300", "352", "53%", "R$ 20,42 (12,5%)"],
+          ["R$ 300 a R$ 1.000", "237", "52%", "R$ 61,51 (10,9%)"],
+          ["Acima de R$ 1.000", "187", "47%", "R$ 173,44 (9,5%)"],
+        ],
+      },
+      { tipo: "h2", texto: "Cinco verificações antes de pagar" },
       {
         tipo: "passos",
         itens: [
-          "Defina o valor da compra que você realmente pretende fazer.",
-          "Descarte os cupons cujo valor mínimo você não atinge sem gastar a mais.",
-          "Calcule o desconto de cada cupom restante, respeitando o teto.",
-          "Compare em reais e escolha o maior.",
-          "Em caso de empate, prefira o de validade mais longa e vendedor melhor avaliado.",
+          "Olhe o preço final, não o percentual: produto, mais frete, menos desconto.",
+          'Desconfie do preço "de": compare com o que outras lojas cobram hoje pelo mesmo item.',
+          "Compare o mesmo produto. Modelo, capacidade, voltagem, cor e versão mudam o preço.",
+          "Some o frete. Um item R$ 15 mais barato com frete R$ 25 mais caro é um item mais caro.",
+          "Veja o vendedor: reputação, vendas e avaliações dizem mais que o desconto.",
         ],
       },
-      {
-        tipo: "destaque",
-        titulo: "Cuidado com o mínimo",
-        texto:
-          "Um cupom que exige R$ 50 de compra quando você precisa de R$ 35 em produtos só compensa se os R$ 15 restantes forem de algo que você usaria de qualquer forma.",
-      },
-      { tipo: "h2", texto: "Quando trocar de vendedor compensa" },
+      { tipo: "h2", texto: "Quais são os sinais de uma oferta falsa?" },
       {
         tipo: "p",
         texto:
-          "Se outro vendedor tem o mesmo produto com cupom melhor, compare o preço final completo: produto, frete e prazo. Economizar R$ 12 e esperar duas semanas a mais nem sempre é bom negócio.",
+          "Preço muito abaixo de todas as outras lojas do mesmo item, vendedor sem histórico e pedido para pagar fora da plataforma são os três sinais mais fortes. Um deles sozinho pede conferência; dois juntos, distância.",
       },
-    ],
-    perguntas: [
-      {
-        pergunta: "Existe um cupom melhor para tudo?",
-        resposta:
-          "Não. A vantagem depende do valor da compra. Cupons com teto brilham em compras pequenas; cupons sem teto, em compras grandes.",
-      },
-      {
-        pergunta: "Vale dividir o pedido para usar o cupom duas vezes?",
-        resposta:
-          "Raramente. Além de muitas campanhas limitarem o uso por pessoa, dividir costuma multiplicar o frete e anular a diferença.",
-      },
-    ],
-  },
-  {
-    slug: "como-evitar-ofertas-falsas",
-    titulo: "Como evitar ofertas falsas",
-    resumo: "Sinais de que uma promoção não é o que parece e como se proteger antes de pagar.",
-    tempo: "4 min de leitura",
-    atualizacao: "23/09/2026",
-    blocos: [
-      {
-        tipo: "p",
-        texto:
-          "Oferta falsa raramente é um golpe óbvio. Costuma ser um desconto sobre um preço que nunca existiu, um produto diferente do anunciado ou uma condição que só aparece no fim.",
-      },
-      { tipo: "h2", texto: "Sinais de alerta" },
       {
         tipo: "lista",
         itens: [
-          "Preço muito abaixo de todos os outros vendedores do mesmo item.",
           "Anúncio com poucas vendas, sem avaliações e vendedor recém-criado.",
-          "Fotos genéricas ou tiradas do site do fabricante, sem foto real do produto.",
-          "Título que não bate com a descrição — capacidade, modelo ou quantidade diferentes.",
-          "Contagem regressiva que reinicia sozinha ao recarregar a página.",
-          "Pedido para fechar a compra por fora da plataforma, por aplicativo de mensagem.",
+          "Fotos genéricas do fabricante, sem foto real do produto.",
+          "Título que não bate com a descrição: capacidade, modelo ou quantidade diferentes.",
+          "Contagem regressiva que reinicia ao recarregar a página.",
+          "Cupom que pede cadastro em outro site, dados bancários ou pagamento antecipado.",
         ],
       },
       {
         tipo: "destaque",
         titulo: "Nunca pague fora da loja",
         texto:
-          "Pagamento por transferência, chave de pagamento instantâneo ou link enviado em conversa privada tira de você toda a proteção da plataforma. Compra fechada dentro da loja tem registro, garantia e canal de reclamação.",
+          "Transferência, Pix ou link enviado por mensagem tiram de você a proteção da plataforma. Compra feita dentro do Mercado Livre tem registro, garantia e canal de reclamação.",
       },
-      { tipo: "h2", texto: "Verificações rápidas antes de pagar" },
-      {
-        tipo: "passos",
-        itens: [
-          "Procure o mesmo produto em outros anúncios e compare o preço médio.",
-          "Leia as avaliações negativas, não só a nota geral.",
-          "Confira a descrição completa: modelo, quantidade, voltagem e itens inclusos.",
-          "Verifique quem vende e quem entrega.",
-          "Confirme o valor total com frete antes de concluir.",
-        ],
-      },
-      { tipo: "h2", texto: "Se algo der errado" },
+      { tipo: "h2", texto: "Quando um desconto grande é legítimo" },
       {
         tipo: "p",
         texto:
-          "Compras feitas na internet têm direito de arrependimento em até sete dias a partir do recebimento, previsto no Código de Defesa do Consumidor. Guarde comprovantes e use primeiro os canais oficiais da loja.",
+          "Fim de linha, sobra de estoque, troca de modelo e disputa entre vendedores geram descontos de verdade. O desconto grande não é o problema; o problema é não conferir a loja e a versão. Se tudo bate, aproveite.",
+      },
+      { tipo: "h2", texto: "Black Friday: comprar agora ou esperar?" },
+      {
+        tipo: "p",
+        texto:
+          "Se você precisa do produto e o preço de hoje já está no nível das outras lojas, comprar agora é razoável: pelos preços que acompanhei, esperar não garante queda. Se não tem pressa, acompanhe o preço por alguns dias para ter a sua própria referência antes de 27/11.",
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Cole o link do produto e eu aviso quando o preço cair. A compra continua no Mercado Livre, com pagamento protegido.",
+        botao: "Acompanhar um preço",
+        para: "/meus-precos",
+      },
+      { tipo: "h2", texto: "Se algo der errado depois da compra" },
+      {
+        tipo: "p",
+        texto:
+          "Compras pela internet têm direito de arrependimento em até sete dias a partir do recebimento, previsto no Código de Defesa do Consumidor. Guarde os comprovantes e use primeiro os canais oficiais da loja.",
       },
     ],
     perguntas: [
       {
-        pergunta: "Cupom que pede dados pessoais para liberar é confiável?",
-        resposta:
-          "Não. Cupom legítimo é um código aplicado no carrinho da própria loja. Nenhum deles exige cadastro em site de terceiros, pagamento antecipado ou dados bancários.",
-      },
-      {
         pergunta: "Como saber se o desconto anunciado é real?",
         resposta:
-          "Compare com o preço praticado hoje por outros vendedores do mesmo item, em vez de confiar no valor riscado do anúncio.",
+          "Compare com o preço que outras lojas cobram hoje pelo mesmo produto, com frete, em vez de confiar no valor riscado.",
+      },
+      {
+        pergunta: "Vale esperar a Black Friday para comprar?",
+        resposta:
+          "Não necessariamente. Dos 88 preços que acompanhei por mais de uma semana, 20% subiram e 23% caíram. Acompanhar o seu produto dá uma referência melhor que a data.",
+      },
+      {
+        pergunta: "Desconto grande é sinal de produto ruim?",
+        resposta:
+          "Não. Fim de linha e sobra de estoque geram descontos legítimos. Confira a reputação da loja, a versão do produto e a garantia.",
+      },
+      {
+        pergunta: "Cupom que pede dados pessoais para liberar é confiável?",
+        resposta:
+          "Não. Cupom legítimo é um código aplicado no carrinho da própria loja, sem cadastro em outro site nem pagamento antecipado.",
       },
     ],
   },
 ];
+
+/** Thin coupon guides merged into the two pillars on 13/11/2026 (301). */
+export const GUIAS_REDIRECIONADOS: Record<string, string> = {
+  "como-funcionam-os-limites-dos-cupons": "como-calcular-a-economia-real-de-um-cupom",
+  "como-usar-um-cupom-passo-a-passo": "como-calcular-a-economia-real-de-um-cupom",
+  "como-comparar-cupons-para-a-mesma-compra": "como-calcular-a-economia-real-de-um-cupom",
+  "como-evitar-ofertas-falsas": "como-saber-se-um-desconto-e-realmente-vantajoso",
+};
 
 export function buscarGuia(slug: string) {
   return GUIAS.find((guia) => guia.slug === slug);

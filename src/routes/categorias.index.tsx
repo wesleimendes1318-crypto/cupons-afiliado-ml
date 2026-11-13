@@ -63,11 +63,11 @@ export const Route = createFileRoute("/categorias/")({
   component: Categorias,
   head: () => ({
     meta: [
-      { title: "Categorias — como avaliar ofertas em cada tipo de produto" },
+      { title: "Categorias: o que conferir antes de comprar | Melhor Escolha" },
       {
         name: "description",
         content:
-          "Orientações por categoria: onde o cupom rende, o que conferir antes de comprar e os erros mais comuns em cada tipo de produto.",
+          "O que conferir antes de comprar em cada categoria, os erros mais comuns e quanto se economizou comparando lojas, com dados reais de cada departamento.",
       },
       { property: "og:title", content: "Categorias — como avaliar ofertas" },
       {
