@@ -8,6 +8,7 @@ import { LayoutConteudo } from "@/components/LayoutConteudo";
 import { AvisoAfiliado, RodapeInstitucional } from "@/components/RodapeInstitucional";
 import { Vitrine } from "@/components/Vitrine";
 import { buscarCategoria } from "@/content/categorias";
+import { GUIAS } from "@/content/guias";
 import { buscarNo, DEPARTAMENTOS, NOS, subarvore } from "@/content/taxonomia";
 import { useVisitaCategoria } from "@/lib/perfil-visitante";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,6 +143,13 @@ const arteDoNo = (caminho: string[], arteDep: string | null = null): Arte =>
   (arteDep ? arteSalva(arteDep, NOS[caminho[0] ?? ""]?.nome ?? "") : null) ??
   arteDaCategoria(NOS[caminho[caminho.length - 1] ?? ""]?.legado) ??
   ARTE_NEUTRA;
+
+/** Guides of this department first, then the general comparison guides (hub-and-spoke). */
+const guiasDaCategoria = (caminho: string[]) => {
+  const proprios = GUIAS.filter((g) => g.categoria && caminho.includes(g.categoria));
+  const gerais = GUIAS.filter((g) => !g.categoria && !proprios.includes(g));
+  return [...proprios, ...gerais].slice(0, 3);
+};
 
 const BOTAO_PRIMARIO =
   "inline-flex min-h-11 items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:brightness-110";
@@ -283,6 +291,25 @@ function PaginaCategoria() {
             </div>
           </section>
         )}
+
+        <section className="mt-8" aria-labelledby="guias-titulo">
+          <h2 id="guias-titulo" className="text-xl font-extrabold tracking-tight">
+            Guias para comprar melhor
+          </h2>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+            {guiasDaCategoria(no.caminho).map((g) => (
+              <li key={g.slug}>
+                <Link
+                  to="/guias/$slug"
+                  params={{ slug: g.slug }}
+                  className="block h-full rounded-3xl bg-card p-4 text-sm font-bold leading-snug text-foreground shadow-[var(--shadow-card)] transition-colors hover:text-[#0071e3]"
+                >
+                  {g.titulo}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {perguntas.length > 0 && (
           <section className="mt-8" aria-labelledby="faq-titulo">

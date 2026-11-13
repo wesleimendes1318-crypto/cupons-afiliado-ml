@@ -3,11 +3,30 @@ import { ArrowRight, Calculator, Lightbulb } from "lucide-react";
 
 import { Anuncio, ADSENSE_SLOT_GUIA_MEIO, ADSENSE_SLOT_GUIA_FIM } from "@/components/Anuncio";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
-import { buscarGuia, GUIAS, type Bloco } from "@/content/guias";
+import { buscarCategoria } from "@/content/categorias";
+import { buscarGuia, GUIAS, type Bloco, type Guia } from "@/content/guias";
 import { AUTOR_LD, dataIso, EDITORA_LD } from "@/lib/autor";
 import { AssinaturaAutor } from "@/components/AssinaturaAutor";
 
 const BASE = "https://melhorescolha.io/guias";
+
+/** Title tag: append the brand only while it stays within 60 characters. */
+const tituloSeo = (titulo: string) => (titulo.length <= 43 ? `${titulo} | Melhor Escolha` : titulo);
+
+/** Hub-and-spoke: declared siblings first, then guides of the same category, then the rest. */
+function continuarLendo(guia: Guia): Guia[] {
+  const outros = GUIAS.filter((g) => g.slug !== guia.slug);
+  const rel = (guia.relacionados ?? [])
+    .map((s) => outros.find((g) => g.slug === s))
+    .filter((g): g is Guia => !!g);
+  const resto = outros.filter((g) => !rel.includes(g));
+  const mesmaCategoria = resto.filter((g) => guia.categoria && g.categoria === guia.categoria);
+  return [...rel, ...mesmaCategoria, ...resto.filter((g) => !mesmaCategoria.includes(g))].slice(
+    0,
+    3,
+  );
+}
+
 export const Route = createFileRoute("/guias/$slug")({
   loader: ({ params }) => {
     const guia = buscarGuia(params.slug);
@@ -24,10 +43,10 @@ export const Route = createFileRoute("/guias/$slug")({
     const url = `${BASE}/${params.slug}`;
     return {
       meta: [
-        { title: `${guia.titulo} — Guia` },
-        { name: "description", content: guia.resumo },
+        { title: tituloSeo(guia.titulo) },
+        { name: "description", content: guia.descricao ?? guia.resumo },
         { property: "og:title", content: guia.titulo },
-        { property: "og:description", content: guia.resumo },
+        { property: "og:description", content: guia.descricao ?? guia.resumo },
         { property: "og:type", content: "article" },
         { property: "og:url", content: url },
       ],
@@ -161,7 +180,8 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
 
 function PaginaGuia() {
   const { guia } = Route.useLoaderData();
-  const outros = GUIAS.filter((item) => item.slug !== guia.slug).slice(0, 3);
+  const outros = continuarLendo(guia);
+  const categoria = guia.categoria ? buscarCategoria(guia.categoria) : undefined;
   /* Anúncio depois do 2º bloco do texto (ou do 1º, em guia curto). */
   const meio = Math.min(2, Math.max(1, guia.blocos.length - 1));
 
@@ -176,6 +196,15 @@ function PaginaGuia() {
           <Link to="/guias" className="font-semibold text-white underline hover:opacity-80">
             Todos os guias
           </Link>
+          {categoria && (
+            <Link
+              to="/categorias/$slug"
+              params={{ slug: categoria.slug }}
+              className="font-semibold text-white underline hover:opacity-80"
+            >
+              {categoria.nome}
+            </Link>
+          )}
           <span>{guia.tempo}</span>
         </>
       }

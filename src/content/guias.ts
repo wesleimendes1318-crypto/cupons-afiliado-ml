@@ -19,6 +19,12 @@ export type Guia = {
   atualizacao: string;
   /** First commit date of the guide (git log -S slug), DD/MM/AAAA. */
   publicado?: string;
+  /** Meta description (140-155 chars). Falls back to resumo. */
+  descricao?: string;
+  /** Parent category slug (src/content/categorias.ts) for breadcrumb and hub links. */
+  categoria?: string;
+  /** Sibling guides shown first in "Continue lendo". */
+  relacionados?: string[];
   blocos: Bloco[];
   perguntas: { pergunta: string; resposta: string }[];
 };
@@ -32,6 +38,9 @@ export const GUIAS: Guia[] = [
     tempo: "3 min de leitura",
     atualizacao: "27/09/2026",
     publicado: "25/09/2026",
+    descricao:
+      "O mesmo produto aparece em várias lojas com preços diferentes. Veja como comparar, ler a tabela e quanto se economizou em exemplos reais e datados.",
+    relacionados: ["mesmo-produto-ou-parecido", "o-que-conferir-antes-de-pagar"],
     blocos: [
       {
         tipo: "p",
@@ -117,6 +126,10 @@ export const GUIAS: Guia[] = [
     tempo: "4 min de leitura",
     atualizacao: "05/10/2026",
     publicado: "05/10/2026",
+    descricao:
+      "Comparação real do mesmo modelo de geladeira Frost Free 500 L em seis lojas: até R$ 799 de diferença e quando o frete pago ainda compensa no custo final.",
+    categoria: "eletrodomesticos",
+    relacionados: ["como-comparar-o-preco-do-mesmo-produto", "o-que-conferir-antes-de-pagar"],
     blocos: [
       {
         tipo: "p",
@@ -201,6 +214,9 @@ export const GUIAS: Guia[] = [
     tempo: "4 min de leitura",
     atualizacao: "27/09/2026",
     publicado: "25/09/2026",
+    descricao:
+      "Foto diferente não quer dizer produto diferente, e título igual não garante produto igual. Veja como conferir modelo, versão e quantidade antes de comprar.",
+    relacionados: ["como-comparar-o-preco-do-mesmo-produto", "o-que-conferir-antes-de-pagar"],
     blocos: [
       {
         tipo: "p",
@@ -277,6 +293,9 @@ export const GUIAS: Guia[] = [
     tempo: "3 min de leitura",
     atualizacao: "25/09/2026",
     publicado: "25/09/2026",
+    descricao:
+      "Achou o mesmo produto mais barato? Frete, prazo, loja, versão e pagamento: as verificações antes de pagar e quando um preço baixo demais é um alerta.",
+    relacionados: ["mesmo-produto-ou-parecido", "como-comparar-o-preco-do-mesmo-produto"],
     blocos: [
       {
         tipo: "p",
@@ -292,6 +311,40 @@ export const GUIAS: Guia[] = [
           "Reputação da loja: veja as avaliações e o histórico de vendas do vendedor.",
           "Versão certa: confira de novo modelo, voltagem, tamanho e quantidade na página do anúncio.",
           "Pagamento no site oficial: pague sempre dentro da loja, nunca por transferência ou link enviado por mensagem.",
+        ],
+      },
+      { tipo: "h2", texto: "Quando o preço baixo demais é um alerta" },
+      {
+        tipo: "p",
+        texto:
+          "Resposta curta: quando o mesmo produto aparece 30% ou mais abaixo do que cobram as lojas oficiais, trate a diferença como um sinal para conferir, não como uma vitória. Nas comparações que eu guardei, as diferenças comuns são bem menores: a mediana foi de 13,6% do preço do anúncio colado.",
+      },
+      {
+        tipo: "conta",
+        titulo: "Três casos reais em que o mais barato pedia cuidado",
+        linhas: [
+          {
+            rotulo: "Console Nintendo Switch 2, modelo nacional (02/11/2026)",
+            valor: "R$ 4.299,00 na loja oficial · a partir de R$ 2.906,32 em outras",
+          },
+          {
+            rotulo: "Lava e seca Midea 11 kg Titanium (04/11/2026)",
+            valor: "R$ 3.399,90 na oficial mais barata · R$ 1.860,00 numa loja sem selo",
+          },
+          {
+            rotulo: "Perfume Egeo Vanilla Vibe 90 mL (12/11/2026)",
+            valor: "R$ 329,90 no anúncio colado · R$ 160,00 na oferta mais baixa",
+          },
+        ],
+        nota: "Não quer dizer que essas ofertas eram golpe. Quer dizer que a diferença era grande demais para comprar sem olhar a loja, a versão e a garantia.",
+      },
+      {
+        tipo: "lista",
+        itens: [
+          "Veja se a versão é a mesma: modelo nacional ou importado, voltagem e o que vem na caixa.",
+          "Abra a reputação do vendedor e o número de vendas. Loja nova com preço muito baixo pede mais cuidado.",
+          "Procure a garantia e a nota fiscal na descrição. Sem as duas, o barato pode sair caro num defeito.",
+          "Se a diferença for pequena, a loja oficial costuma valer os poucos reais a mais.",
         ],
       },
       {

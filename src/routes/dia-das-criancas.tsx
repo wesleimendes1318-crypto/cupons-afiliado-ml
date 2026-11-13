@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PaginaTemporada } from "@/components/PaginaTemporada";
 
 const URL = "https://melhorescolha.io/dia-das-criancas";
-const TITULO = "Dia das Crianças: brinquedos com o menor preço conferido — Melhor Escolha";
+const TITULO = "Dia das Crianças: brinquedos com preço comparado";
 const DESCRICAO =
   "Brinquedos e presentes do Dia das Crianças já comparados: o mesmo produto mais barato em outra loja ou o menor preço confirmado.";
 

@@ -103,11 +103,11 @@ const PERGUNTAS = [
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Compare preços de produtos do Mercado Livre: menor preço | Melhor Escolha" },
+      { title: "Comparador de preços do Mercado Livre | Melhor Escolha" },
       {
         name: "description",
         content:
-          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas de lá, do menor preço ao maior, com o frete grátis indicado e a loja oficial quando houver. Grátis e independente.",
+          "Cole o link de um produto do Mercado Livre e veja o mesmo produto em outras lojas, do menor ao maior preço, com frete e loja oficial. Grátis e independente.",
       },
       {
         property: "og:title",

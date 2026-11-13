@@ -14,9 +14,9 @@ import { useVisitaCategoria } from "@/lib/perfil-visitante";
    sair no HTML (busca do Google) e se atualiza no navegador. */
 
 const URL = "https://melhorescolha.io/brinquedos";
-const TITULO = "Brinquedos por idade com o menor preço conferido | Melhor Escolha";
+const TITULO = "Brinquedos por idade com preço comparado | Melhor Escolha";
 const DESCRICAO =
-  "Brinquedos mais vendidos e as melhores escolhas para bebês, 3 a 5, 6 a 8 e 9 a 12 anos, já comparados entre as lojas do Mercado Livre. Inclui opções até R$ 30 para doação, com o frete indicado.";
+  "Brinquedos mais vendidos para bebês, 3 a 5, 6 a 8 e 9 a 12 anos, já comparados entre lojas do Mercado Livre. Inclui opções até R$ 30 para doação.";
 
 const PERGUNTAS = [
   {

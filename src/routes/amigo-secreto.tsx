@@ -45,7 +45,7 @@ import { abrirLogin, useConta } from "@/lib/auth-otp";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 
 const URL_PAGINA = "https://melhorescolha.io/amigo-secreto";
-const TITULO = "Presente de Amigo Secreto por Valor e Categoria | Ideias Prontas | Melhor Escolha";
+const TITULO = "Presente de amigo secreto por valor e categoria | Melhor Escolha";
 const DESCRICAO =
   "Monte o amigo secreto do grupo: cole os pedidos de cada pessoa e veja vitrines de presentes no valor combinado, com frete grátis incluído no preço.";
 

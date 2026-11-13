@@ -335,7 +335,7 @@ export const CATEGORIAS: Categoria[] = [
     slug: "eletrodomesticos",
     nome: "Eletrodomésticos",
     chamada:
-      "Air fryer, liquidificador, aspirador, ventilador e cafeteira: o mesmo modelo e a mesma voltagem em outras lojas, do mais barato ao mais caro, com o frete em linha própria.",
+      "Air fryer, aspirador, ventilador e cafeteira: o mesmo modelo e a mesma voltagem em outras lojas, do mais barato ao mais caro, com o frete à parte.",
     termos: [
       "eletrodomesticos",
       "eletrodomésticos",

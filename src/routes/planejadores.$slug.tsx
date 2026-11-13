@@ -39,7 +39,7 @@ export const Route = createFileRoute("/planejadores/$slug")({
   head: ({ params }) => {
     const p = planejadorDo(params.slug);
     const titulo = p
-      ? `Lista de compras para ${p.titulo.toLowerCase()} por prioridade | Melhor Escolha`
+      ? `Lista de compras para ${p.titulo.toLowerCase()} por prioridade`
       : "Planejador | Melhor Escolha";
     const descricao = p
       ? `${p.resumo} Escolha os produtos, veja quanto falta e compartilhe a lista de presentes no WhatsApp.`
