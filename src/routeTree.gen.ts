@@ -39,6 +39,7 @@ import { Route as GuiasSlugRouteImport } from './routes/guias.$slug'
 import { Route as ListaIdRouteImport } from './routes/lista.$id'
 import { Route as PlanejadoresIndexRouteImport } from './routes/planejadores.index'
 import { Route as PlanejadoresSlugRouteImport } from './routes/planejadores.$slug'
+import { Route as ProdutoIdRouteImport } from './routes/produto.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicAjudarEscolherRouteImport } from './routes/api/public/ajudar-escolher'
 import { Route as ApiPublicAmigoSecretoInterpretarRouteImport } from './routes/api/public/amigo-secreto-interpretar'
@@ -224,6 +225,11 @@ const PlanejadoresIndexRoute = PlanejadoresIndexRouteImport.update({
 const PlanejadoresSlugRoute = PlanejadoresSlugRouteImport.update({
   id: '/planejadores/$slug',
   path: '/planejadores/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProdutoIdRoute = ProdutoIdRouteImport.update({
+  id: '/produto/$id',
+  path: '/produto/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
@@ -441,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/guias/$slug': typeof GuiasSlugRoute
   '/lista/$id': typeof ListaIdRoute
   '/planejadores/$slug': typeof PlanejadoresSlugRoute
+  '/produto/$id': typeof ProdutoIdRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
   '/planejadores/': typeof PlanejadoresIndexRoute
@@ -508,6 +515,7 @@ export interface FileRoutesByTo {
   '/guias/$slug': typeof GuiasSlugRoute
   '/lista/$id': typeof ListaIdRoute
   '/planejadores/$slug': typeof PlanejadoresSlugRoute
+  '/produto/$id': typeof ProdutoIdRoute
   '/categorias': typeof CategoriasIndexRoute
   '/guias': typeof GuiasIndexRoute
   '/planejadores': typeof PlanejadoresIndexRoute
@@ -576,6 +584,7 @@ export interface FileRoutesById {
   '/guias/$slug': typeof GuiasSlugRoute
   '/lista/$id': typeof ListaIdRoute
   '/planejadores/$slug': typeof PlanejadoresSlugRoute
+  '/produto/$id': typeof ProdutoIdRoute
   '/categorias/': typeof CategoriasIndexRoute
   '/guias/': typeof GuiasIndexRoute
   '/planejadores/': typeof PlanejadoresIndexRoute
@@ -645,6 +654,7 @@ export interface FileRouteTypes {
     | '/guias/$slug'
     | '/lista/$id'
     | '/planejadores/$slug'
+    | '/produto/$id'
     | '/categorias/'
     | '/guias/'
     | '/planejadores/'
@@ -712,6 +722,7 @@ export interface FileRouteTypes {
     | '/guias/$slug'
     | '/lista/$id'
     | '/planejadores/$slug'
+    | '/produto/$id'
     | '/categorias'
     | '/guias'
     | '/planejadores'
@@ -779,6 +790,7 @@ export interface FileRouteTypes {
     | '/guias/$slug'
     | '/lista/$id'
     | '/planejadores/$slug'
+    | '/produto/$id'
     | '/categorias/'
     | '/guias/'
     | '/planejadores/'
@@ -847,6 +859,7 @@ export interface RootRouteChildren {
   GuiasSlugRoute: typeof GuiasSlugRoute
   ListaIdRoute: typeof ListaIdRoute
   PlanejadoresSlugRoute: typeof PlanejadoresSlugRoute
+  ProdutoIdRoute: typeof ProdutoIdRoute
   CategoriasIndexRoute: typeof CategoriasIndexRoute
   GuiasIndexRoute: typeof GuiasIndexRoute
   PlanejadoresIndexRoute: typeof PlanejadoresIndexRoute
@@ -1097,6 +1110,13 @@ declare module '@tanstack/react-router' {
       path: '/planejadores/$slug'
       fullPath: '/planejadores/$slug'
       preLoaderRoute: typeof PlanejadoresSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/produto/$id': {
+      id: '/produto/$id'
+      path: '/produto/$id'
+      fullPath: '/produto/$id'
+      preLoaderRoute: typeof ProdutoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -1376,6 +1396,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuiasSlugRoute: GuiasSlugRoute,
   ListaIdRoute: ListaIdRoute,
   PlanejadoresSlugRoute: PlanejadoresSlugRoute,
+  ProdutoIdRoute: ProdutoIdRoute,
   CategoriasIndexRoute: CategoriasIndexRoute,
   GuiasIndexRoute: GuiasIndexRoute,
   PlanejadoresIndexRoute: PlanejadoresIndexRoute,

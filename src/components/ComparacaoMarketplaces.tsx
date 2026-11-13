@@ -738,6 +738,7 @@ function CartaoAlternativa({
         <div className="relative h-24 overflow-hidden rounded-xl bg-white [grid-area:foto]">
           {l.imagem ? (
             <VerDetalhesVitrine
+              modal
               chave={`${l.marketplace}:${l.id}`}
               titulo={l.titulo}
               imagem={l.imagem}

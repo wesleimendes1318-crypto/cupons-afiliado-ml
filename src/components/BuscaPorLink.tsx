@@ -2453,6 +2453,7 @@ function Foto({
   if (ver && (id || src)) {
     return (
       <VerDetalhesVitrine
+        modal
         chave={id ? id.replace(/^MLBP/, "MLB") : (src ?? "")}
         titulo={semEntidades(ver.titulo) ?? "Produto"}
         imagem={src ?? null}
