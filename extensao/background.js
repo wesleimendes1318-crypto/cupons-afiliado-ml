@@ -1508,6 +1508,10 @@ function extrairAnuncio(t, finalUrl, status) {
 /* Le o anuncio a partir do service worker. Segue redirecionamento, entao um
    meli.la chega aqui e sai como a url final do produto. */
 async function lerAnuncioNoWorker(url, profundidade = 0) {
+  /* Pausado: nao bate no Mercado Livre de novo (cada batida renovava o captcha). */
+  if (await freioLigado('leitura')) {
+    return { ok: false, captcha: true, falha: 'leitura pausada: o Mercado Livre pediu verificacao de seguranca' };
+  }
   const ctrl = new AbortController();
   /* 15 s (era 25): o monitor levou 57 s so para ler o anuncio (25/09). */
   const corta = setTimeout(() => ctrl.abort(), 15000);
@@ -2369,7 +2373,18 @@ const PAUSAS_MS = [5 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000];
 
 function chaveFreio(area) { return 'freio_' + (area || 'leitura'); }
 
-async function puxarFreio(motivo, area = 'leitura', urlVerificacao = null) {
+/* 15/11: com leituras em paralelo, cada uma que batia no captcha puxava o
+   freio de novo: a pausa subia para 60 min e o celular recebia 10+ avisos
+   no mesmo minuto. Agora as chamadas entram em fila e, com a area ja
+   pausada, nao renovam a pausa nem avisam de novo. */
+let filaFreio = Promise.resolve();
+function puxarFreio(motivo, area = 'leitura', urlVerificacao = null) {
+  const vez = filaFreio.then(() => puxarFreioUmaVez(motivo, area, urlVerificacao));
+  filaFreio = vez.catch(() => {});
+  return vez;
+}
+
+async function puxarFreioUmaVez(motivo, area, urlVerificacao) {
   /* Guarda a pagina exata do desafio: e ela que o botao "Resolver
      verificacao" do popup abre para o Weslei resolver na mao. */
   if (urlVerificacao && /captcha/i.test(urlVerificacao)) {
@@ -2379,13 +2394,19 @@ async function puxarFreio(motivo, area = 'leitura', urlVerificacao = null) {
   const hoje = diaSP();
   const st = await chrome.storage.local.get(k);
   const atual = st[k] || {};
+  if (atual.ate && Date.now() < atual.ate) return;
   const vezes = (atual.dia === hoje ? (atual.vezes || 0) : 0) + 1;
   const espera = PAUSAS_MS[Math.min(vezes, PAUSAS_MS.length) - 1];
   const ate = Date.now() + espera;
 
   await chrome.storage.local.set({ [k]: { dia: hoje, vezes, ate, motivo: String(motivo) } });
   console.warn('[freio:' + area + ']', Math.round(espera / 60000) + ' min:', motivo);
-  avisarWeslei(motivo, Math.round(espera / 60000)).catch(() => {});
+  /* Uma area so avisa se nenhuma outra ja avisou numa pausa que ainda corre. */
+  const { freioAvisoAte } = await chrome.storage.local.get('freioAvisoAte');
+  if (!freioAvisoAte || Date.now() >= freioAvisoAte) {
+    await chrome.storage.local.set({ freioAvisoAte: ate });
+    avisarWeslei(motivo, Math.round(espera / 60000)).catch(() => {});
+  }
 
   try {
     const { sincToken } = await chrome.storage.local.get('sincToken');
@@ -2496,7 +2517,7 @@ async function estadoDoFreio() {
 }
 
 async function liberarFreio() {
-  await chrome.storage.local.remove([...AREAS_FREIO.map(chaveFreio), 'freioUrl']);
+  await chrome.storage.local.remove([...AREAS_FREIO.map(chaveFreio), 'freioUrl', 'freioAvisoAte']);
   avisouLivre = {};
   await limparAviso();
   try {
