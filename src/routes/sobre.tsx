@@ -4,9 +4,10 @@ import { VideoComoFuncionaEstatico } from "@/components/ComoFunciona";
 
 import { AssinaturaAutor } from "@/components/AssinaturaAutor";
 import { LayoutConteudo } from "@/components/LayoutConteudo";
-import { AUTOR_LD, AUTOR_NOME } from "@/lib/autor";
+import { AUTOR_LD, AUTOR_NOME, dataIso } from "@/lib/autor";
 
 const URL = "https://melhorescolha.io/sobre";
+const ATUALIZADO = "13/11/2026";
 
 export const Route = createFileRoute("/sobre")({
   component: Sobre,
@@ -36,7 +37,7 @@ export const Route = createFileRoute("/sobre")({
           "@type": "ProfilePage",
           url: URL,
           inLanguage: "pt-BR",
-          dateModified: "2026-11-13",
+          dateModified: dataIso(ATUALIZADO),
           mainEntity: {
             ...AUTOR_LD,
             description:
@@ -54,9 +55,9 @@ function Sobre() {
       etiqueta="Quem somos"
       titulo="Sobre o site"
       resumo="Um site independente que compara os preços dos produtos vendidos no Mercado Livre: você cola o link de um produto e vê o mesmo produto em outras lojas de lá, do mais barato ao mais caro, com a loja oficial quando houver."
-      atualizacao="13/11/2026"
+      atualizacao={ATUALIZADO}
     >
-      <AssinaturaAutor atualizado="13/11/2026" />
+      <AssinaturaAutor atualizado={ATUALIZADO} />
 
       <h2>Quem faz as comparações</h2>
       <p>

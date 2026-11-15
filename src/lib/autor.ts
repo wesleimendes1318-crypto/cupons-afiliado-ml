@@ -23,8 +23,9 @@ export const EDITORA_LD = {
   logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.png` },
 } as const;
 
-/** "23/09/2026" -> "2026-09-23"; anything else -> undefined (dropped by JSON.stringify). */
+/** "23/09/2026" -> "2026-09-23T00:00:00-03:00"; anything else -> undefined (dropped by JSON.stringify).
+   Full ISO 8601 with offset is required by Google for ProfilePage date fields. */
 export function dataIso(ddmmaaaa: string): string | undefined {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(ddmmaaaa.trim());
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : undefined;
+  return m ? `${m[3]}-${m[2]}-${m[1]}T00:00:00-03:00` : undefined;
 }
