@@ -98,9 +98,9 @@ function Sobre() {
       <h2>De onde vêm os números dos guias</h2>
       <p>
         Cada número que aparece nos guias e nas categorias saiu de uma comparação feita aqui, com
-        data. Entre 18/10 e 13/11/2026 o site guardou 1.285 comparações com pelo menos duas lojas
-        vendendo o mesmo produto. Em 46% delas havia o mesmo produto mais barato em outra loja, e a
-        diferença mediana foi de R$ 20,00 (13,6% do preço do anúncio colado).
+        data. Entre 18/10 e 16/11/2026 o site guardou 1.466 comparações com pelo menos duas lojas
+        vendendo o mesmo produto. Em 47% delas havia o mesmo produto mais barato em outra loja, e a
+        diferença mediana foi de R$ 16,46 (13,8% do preço do anúncio colado).
       </p>
       <ul>
         <li>Preço é o de quando comparei. Ele muda, e por isso todo exemplo traz a data.</li>
