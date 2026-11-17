@@ -107,6 +107,13 @@ Scope: Agents team, customer-first queue, account security, guarantees per relea
 - Proteger a conta de afiliado: sem rajadas de leitura; freio em captcha.
 - Sem janela anônima (Weslei, 26/09): toda leitura é logada, com freio em
   captcha/"tráfego suspeito" e um pedido por vez.
+- Captcha avisa UMA vez (17/11, Weslei: "Nem dormir eu consigo com tanta
+  notificação [...] Enquanto não aprovar para não enviar notificações
+  adicionais"): trava `aguardandoAprovacao` até ele liberar no popup ou a aba
+  da verificação sair do captcha. Enquanto isso as rotinas de fundo (fila,
+  preço, listas, hub, cupons, avaliações, vitrine) param; pedidos de cliente
+  seguem. Das 22h às 8h (SP) o aviso no celular vai sem som (ntfy `min`).
+  Botão "Pausar robô" no popup (`roboPausado`). Extensão 1.188.0.
 - Não trocar a Gemini pela "Lovable AI" (plano sem crédito: responde 402).
 - Nunca pedir nem colocar chaves no código ou no chat (vão nos Secrets do Lovable).
 - Banco (27/09): função que GRAVA e é pública exige a senha da extensão

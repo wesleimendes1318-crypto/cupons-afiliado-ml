@@ -93,6 +93,8 @@
   #freio { margin: 10px 12px 0; padding: 12px 14px; border-radius: var(--r2); background: rgba(255,149,0,.14); font-size: 12px; line-height: 1.4; }
   #freio b { color: var(--laranja-tinta); }
   #freiotxt { margin: 3px 0 9px; color: var(--tinta2); }
+  #robo { margin: 8px 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--tinta2); }
+  #robo .bt { width: auto; padding: 7px 12px; }
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; }
   .kv dt { color: var(--tinta2); } .kv dd { margin: 0; font-weight: 600; text-align: right; }
   .links { display: grid; gap: 6px; margin-top: 10px; }
@@ -160,6 +162,11 @@
       <button id="btverif" class="bt pri peq">1. Resolver verificação</button>
       <button id="btliberar" class="bt sec peq">2. Já resolvi, liberar</button>
     </div>
+  </div>
+
+  <div id="robo">
+    <span id="robotxt">Robô ativo</span>
+    <button id="btrobo" class="bt sec peq">Pausar robô</button>
   </div>
 
   <nav class="abas" role="tablist">

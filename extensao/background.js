@@ -2401,10 +2401,19 @@ async function puxarFreioUmaVez(motivo, area, urlVerificacao) {
 
   await chrome.storage.local.set({ [k]: { dia: hoje, vezes, ate, motivo: String(motivo) } });
   console.warn('[freio:' + area + ']', Math.round(espera / 60000) + ' min:', motivo);
-  /* Uma area so avisa se nenhuma outra ja avisou numa pausa que ainda corre. */
-  const { freioAvisoAte } = await chrome.storage.local.get('freioAvisoAte');
-  if (!freioAvisoAte || Date.now() >= freioAvisoAte) {
-    await chrome.storage.local.set({ freioAvisoAte: ate });
+  /* Uma area so avisa se nenhuma outra ja avisou numa pausa que ainda corre.
+     17/11 (Weslei: "Nem dormir eu consigo com tanta notificacao [...] Enquanto
+     nao aprovar para nao enviar notificacoes adicionais"): a pausa de 60 min
+     acabava, a leitura batia no mesmo captcha e o celular tocava de hora em
+     hora a noite toda. Agora e UM aviso e a trava 'aguardandoAprovacao' fica
+     ate ele liberar no popup (ou a aba da verificacao sair do captcha). */
+  const { freioAvisoAte, aguardandoAprovacao } =
+    await chrome.storage.local.get(['freioAvisoAte', 'aguardandoAprovacao']);
+  if (!aguardandoAprovacao && (!freioAvisoAte || Date.now() >= freioAvisoAte)) {
+    await chrome.storage.local.set({
+      freioAvisoAte: ate,
+      aguardandoAprovacao: { desde: Date.now(), motivo: String(motivo), area }
+    });
     avisarWeslei(motivo, Math.round(espera / 60000)).catch(() => {});
   }
 
@@ -2472,15 +2481,45 @@ async function avisarWeslei(motivo, minutos) {
 
   const { ntfyTopico } = await chrome.storage.local.get('ntfyTopico');
   if (ntfyTopico && /^[A-Za-z0-9_-]{4,64}$/.test(ntfyTopico)) {
+    /* 17/11: das 22h as 8h (Sao Paulo) o aviso chega sem som nem vibracao. */
+    const dormindo = horaDeDormirSP();
     try {
       await fetch('https://ntfy.sh/' + ntfyTopico, {
         method: 'POST',
-        headers: { Title: 'Cupons: verificacao do Mercado Livre', Priority: 'high', Tags: 'warning' },
+        headers: {
+          Title: 'Cupons: verificacao do Mercado Livre',
+          Priority: dormindo ? 'min' : 'high',
+          Tags: dormindo ? 'zzz' : 'warning'
+        },
         body: 'Pausa de ' + minutos + ' min: ' + motivo
             + '. No computador, clique no icone da extensao > 1. Resolver verificacao.'
+            + ' Nao chega outro aviso ate voce liberar.'
       });
     } catch (e) { /* aviso no celular e bonus */ }
   }
+}
+
+/* 22:00-07:59 em Sao Paulo: hora de dormir do Weslei. */
+function horaDeDormirSP(min = minutosAgoraSP()) {
+  return min >= 22 * 60 || min < 8 * 60;
+}
+
+/* Rotinas automaticas de fundo (fila, garimpo de vitrine, preco, listas,
+   hub, cupons, avaliacoes) ficam paradas enquanto o captcha espera o
+   Weslei ou quando ele pausa o robo no popup. Insistir de hora em hora
+   contra o mesmo captcha so arrisca a conta. Pedido de cliente na tela do
+   site continua sendo atendido (cada um respeita o freio da sua area). */
+async function roboEmEspera() {
+  const st = await chrome.storage.local.get(['aguardandoAprovacao', 'roboPausado']);
+  if (st.roboPausado) return 'robo pausado por voce';
+  if (st.aguardandoAprovacao) return 'aguardando voce resolver a verificacao';
+  return null;
+}
+
+async function pausarRobo(pausar) {
+  if (pausar) await chrome.storage.local.set({ roboPausado: true });
+  else await chrome.storage.local.remove('roboPausado');
+  return estadoDoFreio();
 }
 
 async function limparAviso() {
@@ -2505,7 +2544,7 @@ const AREAS_FREIO = ['leitura', 'etiqueta', 'link'];
 
 async function estadoDoFreio() {
   const chaves = AREAS_FREIO.map(chaveFreio);
-  const st = await chrome.storage.local.get([...chaves, 'freioUrl']);
+  const st = await chrome.storage.local.get([...chaves, 'freioUrl', 'aguardandoAprovacao', 'roboPausado']);
   const ativos = [];
   for (const a of AREAS_FREIO) {
     const f = st[chaveFreio(a)];
@@ -2513,11 +2552,14 @@ async function estadoDoFreio() {
       ativos.push({ area: a, motivo: f.motivo || '', min: Math.max(1, Math.ceil((f.ate - Date.now()) / 60000)) });
     }
   }
-  return { ativos, url: st.freioUrl || null };
+  return {
+    ativos, url: st.freioUrl || null,
+    aguardando: !!st.aguardandoAprovacao, roboPausado: !!st.roboPausado
+  };
 }
 
 async function liberarFreio() {
-  await chrome.storage.local.remove([...AREAS_FREIO.map(chaveFreio), 'freioUrl', 'freioAvisoAte']);
+  await chrome.storage.local.remove([...AREAS_FREIO.map(chaveFreio), 'freioUrl', 'freioAvisoAte', 'aguardandoAprovacao']);
   avisouLivre = {};
   await limparAviso();
   try {
@@ -5082,6 +5124,8 @@ chrome.runtime.onMessage.addListener((msg, _s, responder) => {
         } });
       } else if (msg.tipo === 'estadoFreio') {
         responder({ ok: true, dados: await estadoDoFreio() });
+      } else if (msg.tipo === 'pausarRobo') {
+        responder({ ok: true, dados: await pausarRobo(!!msg.pausar) });
       } else if (msg.tipo === 'liberarFreio') {
         responder({ ok: true, dados: await liberarFreio() });
       } else if (msg.tipo === 'abrirVerificacao') {
@@ -5630,19 +5674,21 @@ chrome.runtime.onStartup.addListener(() => {
   obterIndice().catch(() => {});
   atenderPedidos().catch(() => {});
   // Abrir o Chrome ja adianta uma rodada: nao espera os 10 minutos do alarme.
-  setTimeout(() => andarFila().catch(() => {}), 20000);
+  setTimeout(async () => { if (!(await roboEmEspera())) andarFila().catch(() => {}); }, 20000);
 });
 chrome.alarms.onAlarm.addListener(async a => {
   if (a.name === 'pedidos') {
     sinalDeVida().catch(() => {});
-    monitorarPrecos().catch(() => {});
-    lerHubDeAfiliados().catch(() => {});
-    lerCuponsDeAfiliados().catch(() => {});
-    rodarListas().catch(e => console.warn('[listas]', e.message));
-    rodarEspelho().catch(e => console.warn('[espelho]', e.message));
-    atualizarAvaliacoes().catch(() => {});
+    if (!(await roboEmEspera())) {
+      monitorarPrecos().catch(() => {});
+      lerHubDeAfiliados().catch(() => {});
+      lerCuponsDeAfiliados().catch(() => {});
+      rodarListas().catch(e => console.warn('[listas]', e.message));
+      rodarEspelho().catch(e => console.warn('[espelho]', e.message));
+      atualizarAvaliacoes().catch(() => {});
+      completarVitrine().catch(() => {});
+    }
     vigiarFila().catch(() => {});
-    completarVitrine().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.
     // Lote de 3 para nao virar porta dos fundos dos tetos diarios.
     atenderPedidosDeEtiqueta().catch(e => console.warn('[etiquetas]', e.message));
@@ -5661,6 +5707,7 @@ chrome.alarms.onAlarm.addListener(async a => {
     return;
   }
   if (a.name === 'fila') {
+    if (await roboEmEspera()) return;
     andarFila().catch(e => console.warn('[fila]', e.message));
     completarVitrine().catch(() => {});
     return;

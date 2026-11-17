@@ -421,14 +421,31 @@ $('urlcli').addEventListener('paste', () => setTimeout(() => {
    libera manualmente se precisar. */
 async function mostrarFreio() {
   const r = await pedir({ tipo: 'estadoFreio' });
-  const ativos = (r && r.ok && r.dados && r.dados.ativos) || [];
-  $('freio').hidden = !ativos.length;
-  if (!ativos.length) return;
+  const d = (r && r.ok && r.dados) || {};
+  const ativos = d.ativos || [];
+  mostrarRobo(!!d.roboPausado);
+  $('freio').hidden = !ativos.length && !d.aguardando;
+  if ($('freio').hidden) return;
   const nomes = { leitura: 'leitura de anúncios', etiqueta: 'criação de etiquetas', link: 'gerador de links' };
-  $('freiotxt').textContent = ativos
-    .map(a => `${nomes[a.area] || a.area}: volta em ${a.min} min (${a.motivo})`)
-    .join(' · ');
+  const partes = ativos.map(a => `${nomes[a.area] || a.area}: volta em ${a.min} min (${a.motivo})`);
+  /* 17/11: depois do 1º aviso o celular fica quieto e as rotinas de fundo
+     esperam até o Weslei liberar aqui. */
+  if (d.aguardando) partes.push('Robô de fundo parado e avisos no celular silenciados até você liberar.');
+  $('freiotxt').textContent = partes.join(' · ');
 }
+
+function mostrarRobo(pausado) {
+  $('robotxt').textContent = pausado ? 'Robô pausado (pedidos do site seguem)' : 'Robô ativo';
+  $('btrobo').textContent = pausado ? 'Retomar robô' : 'Pausar robô';
+  $('btrobo').dataset.pausado = pausado ? '1' : '';
+}
+
+$('btrobo').addEventListener('click', async () => {
+  const pausar = !$('btrobo').dataset.pausado;
+  $('btrobo').textContent = pausar ? 'Pausando…' : 'Retomando…';
+  await pedir({ tipo: 'pausarRobo', pausar });
+  await mostrarFreio();
+});
 
 $('btverif').addEventListener('click', async () => {
   $('btverif').textContent = 'Abrindo…';
