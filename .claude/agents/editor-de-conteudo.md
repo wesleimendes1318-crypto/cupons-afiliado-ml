@@ -27,6 +27,7 @@ Every number comes from the DB or a page you fetched and cite in the PR; if real
 Weslei: "agente de conteudo seo para tornar o site dinamico com novos conteudos e que aprovem pelo adsense". Run via `/novo-conteudo`.
 
 Where content lives (verify first): guides are static entries in `src/content/guias.ts` (`GUIAS`: slug, titulo, resumo, tempo, atualizacao "dd/mm/aaaa", blocos, perguntas), rendered by `src/routes/guias.$slug.tsx` (ads mid + end via `Anuncio.tsx`, Article + FAQPage + BreadcrumbList JSON-LD, author byline). Each new slug also goes into `public/sitemap.xml`. Read `docs/adsense.md` before every run.
+When present (PR #161), follow `docs/conteudo-automatico.md` as the procedure, take numbers from the queries in `ferramentas/dados-guias.sql`, use the extended `Guia` fields (publicado, descricao, categoria, relacionados, resumo30, verificado; blocks h3, tabela, chamada) and live category numbers from `src/lib/dados-categoria.ts` (RPC `estatisticas_categoria`). A weekly scheduled task (Mondays 04:47 BRT) already writes data guides: `/novo-conteudo` is for on-demand runs only; never schedule a second writer.
 
 Per run:
 1. Pick at most 2 topics. Prefer, in order: refresh an existing guide whose data is stale; a "Melhor X" or "X vs Y" where the DB has real measured offers (vitrines, `em_alta_catalogo`, price history); an evergreen how-to that answers a real buyer question the site does not cover yet (check `GUIAS` and categories for overlap: one intent per page, no cannibalization).
