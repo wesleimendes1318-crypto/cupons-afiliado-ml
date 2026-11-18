@@ -1,5 +1,11 @@
 /* Espaço de anúncio do Google AdSense — inerte por padrão (ver docs/adsense.md).
 
+   ESTADO REAL (18/11/2026): a conta pub-5848712376900651 existe, mas o site
+   melhorescolha.io foi REPROVADO em 11/11/2026 por "Conteúdo de baixo valor"
+   (painel: "Requer atenção"). Propriedade verificada, ads.txt e meta tag
+   corretos e os blocos renderizam, mas toda requisição volta
+   data-ad-status="unfilled". Nenhuma receita até aprovar numa nova revisão.
+
    - Sem VITE_ADSENSE_CLIENT no formato ca-pub-XXXXXXXXXXXXXXXX: nada é
      renderizado, nada ocupa altura e nenhum script é baixado.
    - Sem consentimento na categoria "publicidade": também null. Se a pessoa
@@ -20,7 +26,7 @@ declare global {
   }
 }
 
-/* Publisher ID público (02/11, conta aprovada); VITE_ADSENSE_CLIENT ainda pode trocar. */
+/* Publisher ID público (02/11; site reprovado em 11/11, ver o topo); VITE_ADSENSE_CLIENT ainda pode trocar. */
 export const ADSENSE_CLIENTE =
   (import.meta.env.VITE_ADSENSE_CLIENT ?? "").trim() || "ca-pub-5848712376900651";
 

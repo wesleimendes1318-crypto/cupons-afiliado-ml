@@ -1,6 +1,18 @@
 # Google AdSense
 
-**Ligado desde 02/11/2026** com o Publisher ID `ca-pub-5848712376900651`
+## Estado real (18/11/2026)
+- A conta `pub-5848712376900651` existe e está acessível, com o perfil de
+  pagamentos completo.
+- O site melhorescolha.io foi **REPROVADO em 11/11/2026** por "Conteúdo de
+  baixo valor". Status no painel: **"Requer atenção"**.
+- A propriedade do site está verificada; `ads.txt` e meta tag estão corretos e
+  os dois blocos manuais renderizam, mas toda requisição volta
+  `data-ad-status="unfilled"` porque o site não está aprovado.
+- **Nenhuma receita é possível** até o site ser aprovado numa nova revisão.
+  (Versões anteriores deste arquivo diziam "ligado desde 02/11/2026" e "conta
+  aprovada": isso estava errado.)
+
+O código usa o Publisher ID `ca-pub-5848712376900651`
 (padrão em `src/components/Anuncio.tsx`; `VITE_ADSENSE_CLIENT` ainda pode trocar).
 O código `adsbygoogle.js` vai no `<head>` de todas as páginas, no HTML do
 servidor, logo depois do consentimento negado por padrão, e `/ads.txt` já tem a
@@ -30,7 +42,9 @@ unidades manuais só aparecem para quem autorizou; quem revogar deixa de vê-las
 **Anúncios Automáticos e Otimização Automática LIGADOS no painel** para
 melhorescolha.io desde 02/11/2026, por decisão do dono. Com eles ligados, o
 Google pode inserir anúncios fora dos guias (home, comparação e o caminho até o
-link de afiliado), além dos dois blocos manuais dos guias.
+link de afiliado), além dos dois blocos manuais dos guias. Enquanto o site
+estiver reprovado (ver "Estado real"), nenhum anúncio é servido, nem automático
+nem manual.
 
 ## Onde aparecem
 Só no artigo individual dos Guias (`/guias/<slug>`): um depois do 2º bloco do

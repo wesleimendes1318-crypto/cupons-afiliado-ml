@@ -11,11 +11,13 @@ export type Categoria = {
   /** Chamada da página (09/10): o que o site faz nesta categoria, sem
       promessa de cupom nem de preço. */
   chamada: string;
-  /** Termos usados na base de cupons que pertencem a esta categoria. */
-  termos: string[];
-  resumo: string;
-  atualizacao: string;
-  introducao: string[];
+  /** Termos usados na base de cupons que pertencem a esta categoria.
+      Este e os três campos abaixo são do conteúdo antigo e não aparecem na
+      página; os departamentos de 18/11 vêm sem eles. */
+  termos?: string[];
+  resumo?: string;
+  atualizacao?: string;
+  introducao?: string[];
   comoAvaliar: string[];
   cuidados: string[];
   perguntas: { pergunta: string; resposta: string }[];
@@ -413,6 +415,267 @@ export const CATEGORIAS: Categoria[] = [
         pergunta: "O site indica EPI sem CA?",
         resposta:
           "O site mostra o que o anúncio informa. Antes de comprar EPI para trabalho, confira o número do CA na descrição do anúncio.",
+      },
+    ],
+  },
+  {
+    slug: "moveis",
+    nome: "Móveis",
+    chamada:
+      "Sofás, racks, guarda-roupas e cadeiras: o mesmo móvel em outras lojas, do mais barato ao mais caro, com as medidas e o frete conferidos.",
+    comoAvaliar: [
+      "Meça o vão onde o móvel vai ficar e compare com largura, altura e profundidade do anúncio.",
+      "Meça também portas, corredores e elevador por onde a caixa ou o móvel montado precisa passar.",
+      "Leia se o móvel chega montado ou desmontado e se a montagem está incluída no preço.",
+      "Compare o material da estrutura e do tampo (MDF, MDP, madeira maciça), não só a foto.",
+      "Em cadeiras e poltronas, confira o peso máximo suportado informado pelo fabricante.",
+      "Simule o frete para o seu CEP: móvel grande costuma ter frete alto e prazo mais longo.",
+    ],
+    cuidados: [
+      "A foto do anúncio quase sempre mostra o móvel decorado; confira o que vem de fato na caixa.",
+      "Cor de madeira e de tecido varia entre a foto e o produto; leia o nome exato do acabamento.",
+      "Ao receber, abra e confira as peças antes de assinar: avaria no transporte é mais fácil de reclamar na hora.",
+      "Guarde a caixa e o manual até terminar a montagem, para o caso de faltar parafuso ou peça.",
+      "Móvel com medida diferente, mesmo parecido, não é o mesmo produto e não deve ser comparado como igual.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Como saber se o móvel cabe no meu espaço?",
+        resposta:
+          "Meça o vão e deixe uma folga para abrir portas e gavetas. Depois compare com as medidas do anúncio, que costumam estar nas características ou na descrição. Se o anúncio não informa as medidas, pergunte ao vendedor antes de comprar.",
+      },
+      {
+        pergunta: "Vale pagar pela montagem?",
+        resposta:
+          "Em guarda-roupa, cozinha e móveis com muitas peças, a montagem profissional evita peça empenada e porta desalinhada. Some o valor da montagem ao preço antes de comparar com um anúncio que já a inclui.",
+      },
+      {
+        pergunta: "O que fazer se o móvel chegar avariado?",
+        resposta:
+          "Fotografe a caixa e as peças antes de montar e registre a reclamação pelo próprio pedido. Não monte a peça danificada: isso pode atrapalhar a troca.",
+      },
+    ],
+  },
+  {
+    slug: "saude",
+    nome: "Saúde e bem-estar",
+    chamada:
+      "Termômetros, medidores de pressão, suplementos e itens de cuidado: o mesmo produto em outras lojas, do mais barato ao mais caro, conferido pela foto.",
+    comoAvaliar: [
+      "Procure o registro ou a notificação na Anvisa no anúncio ou na foto da embalagem.",
+      "Confira a data de validade informada pelo vendedor antes de comprar, principalmente em suplementos.",
+      "Em suplementos, compare a quantidade por porção e o número de porções da embalagem, não só o tamanho do pote.",
+      "Em aparelhos como medidor de pressão e termômetro, confira se o modelo tem certificação do Inmetro.",
+      "Prefira loja oficial da marca ou farmácia com reputação alta em produtos que você vai ingerir.",
+    ],
+    cuidados: [
+      "Embalagem sem lacre, com lacre rompido ou rótulo em outra língua é motivo para não comprar.",
+      "Preço muito abaixo das outras lojas em suplemento de marca conhecida pode indicar produto falsificado ou perto de vencer.",
+      "Produto que promete curar doença ou emagrecer sem esforço não tem respaldo e não deveria estar à venda assim.",
+      "Medicamento e item que exige receita não se compra por anúncio; procure uma farmácia.",
+      "Ao receber, confira lote e validade na embalagem e compare com o que o anúncio informou.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Como saber se o suplemento é original?",
+        resposta:
+          "Compre de loja oficial ou de vendedor com reputação alta e confira lacre, lote e validade ao receber. Desconfie de preço muito abaixo das outras lojas para a mesma marca e o mesmo tamanho.",
+      },
+      {
+        pergunta: "Onde vejo o registro na Anvisa?",
+        resposta:
+          "O número costuma estar no rótulo e, em muitos anúncios, na descrição ou nas fotos da embalagem. Com ele, dá para consultar o produto no site da própria Anvisa.",
+      },
+      {
+        pergunta: "Pote maior é sempre mais vantajoso?",
+        resposta:
+          "Só se você consumir tudo antes da validade. Divida o preço pelo número de porções para comparar potes de tamanhos diferentes.",
+      },
+    ],
+  },
+  {
+    slug: "pet",
+    nome: "Pet shop",
+    chamada:
+      "Ração, petiscos, areia, caminhas e brinquedos: o mesmo produto e o mesmo tamanho de pacote em outras lojas, do mais barato ao mais caro, com o frete à parte.",
+    comoAvaliar: [
+      "Confira se a ração é indicada para o porte e a idade do seu animal: filhote, adulto ou idoso, porte pequeno, médio ou grande.",
+      "Compare o peso do pacote e calcule o preço por quilo antes de escolher o mais barato.",
+      "Veja a data de validade informada no anúncio e quanto tempo o pacote vai durar na sua casa.",
+      "Simule o frete para o seu CEP: pacote pesado de ração ou areia costuma ter frete alto.",
+      "Em coleiras, roupas e caminhas, meça o animal e compare com a tabela de tamanhos do anúncio.",
+    ],
+    cuidados: [
+      "Troca de ração deve ser gradual; comprar outra marca só pelo preço pode causar problema digestivo no animal.",
+      "Pacote grande aberto perde qualidade com o tempo; guarde bem fechado e longe da umidade.",
+      "Antipulgas e vermífugos têm dose pelo peso do animal; confira a faixa de peso da embalagem.",
+      "Ao receber, confira se o pacote não chegou furado ou amassado e se a validade bate com o anúncio.",
+      "Pacote com outro peso não é o mesmo produto: compare sempre o mesmo tamanho ou o preço por quilo.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Pacote grande de ração compensa?",
+        resposta:
+          "Compensa quando o preço por quilo é menor e o animal consome tudo dentro da validade, com o pacote bem guardado. Para animal pequeno, um pacote enorme pode perder o sabor antes de acabar.",
+      },
+      {
+        pergunta: "Por que o frete da ração é tão caro?",
+        resposta:
+          "O frete pesa conforme o peso e o tamanho da embalagem, e ração e areia são pesadas. Por isso vale comparar o preço final com o frete, não só o preço do pacote.",
+      },
+      {
+        pergunta: "Como escolher o tamanho da coleira ou da roupa?",
+        resposta:
+          "Meça o pescoço, o peito e o comprimento do animal com uma fita métrica e compare com a tabela do anúncio. Entre dois tamanhos, o maior costuma ser mais confortável.",
+      },
+    ],
+  },
+  {
+    slug: "esportes",
+    nome: "Esportes e lazer",
+    chamada:
+      "Bicicletas, halteres, esteiras, tênis e itens de camping: o mesmo produto em outras lojas, do mais barato ao mais caro, com tamanho e frete conferidos.",
+    comoAvaliar: [
+      "Em bicicleta, confira o tamanho do quadro e do aro indicados para a sua altura.",
+      "Em esteira, banco e barra, compare o peso máximo do usuário informado pelo fabricante.",
+      "Meça o espaço livre em casa antes de comprar equipamento de academia, com folga para usar e guardar.",
+      "Em halteres e anilhas, compare o peso de cada peça e o material, não só o preço do conjunto.",
+      "Em roupas e calçados esportivos, use a tabela de medidas da marca e não o tamanho que você costuma usar.",
+      "Simule o frete para o seu CEP: equipamento pesado ou volumoso muda o preço final.",
+    ],
+    cuidados: [
+      "Equipamento usado acima do peso suportado desgasta rápido e pode quebrar durante o uso.",
+      "Esteira e bicicleta ergométrica elétricas têm voltagem; confira antes de comprar.",
+      "Bicicleta pode chegar parcialmente desmontada e precisar de regulagem; leia o que vem na caixa.",
+      "Barraca, colchão inflável e saco de dormir têm capacidade de pessoas e temperatura indicadas; confira para o seu uso.",
+      "Conjunto com outro peso ou outra quantidade de peças não é o mesmo produto, mesmo com a foto parecida.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Como escolher o tamanho da bicicleta?",
+        resposta:
+          "O fabricante indica o tamanho do quadro pela altura de quem vai pedalar, e essa tabela costuma estar no anúncio. Quadro errado cansa e machuca; na dúvida, pergunte ao vendedor informando sua altura.",
+      },
+      {
+        pergunta: "Quanto espaço preciso para uma esteira?",
+        resposta:
+          "Além das medidas da esteira, deixe espaço livre atrás e dos lados por segurança. Se o espaço é pequeno, procure modelos dobráveis e confira a medida dobrada no anúncio.",
+      },
+      {
+        pergunta: "Peso máximo do usuário importa mesmo?",
+        resposta:
+          "Importa. Ele define o limite seguro do motor, da estrutura e da lona. Escolha um modelo com folga acima do seu peso para o equipamento durar mais.",
+      },
+    ],
+  },
+  {
+    slug: "bebes",
+    nome: "Bebês e maternidade",
+    chamada:
+      "Carrinhos, cadeirinhas, berços, mamadeiras e fraldas: o mesmo produto em outras lojas, do mais barato ao mais caro, com a faixa etária indicada no anúncio.",
+    comoAvaliar: [
+      "Confira a faixa etária e o peso indicados para o bebê em carrinhos, cadeirinhas, andadores e brinquedos.",
+      "Procure o selo do Inmetro no anúncio ou na foto da embalagem em carrinho, berço, cadeirinha, chupeta e mamadeira.",
+      "Em cadeirinha de carro, confira o grupo de peso e o tipo de fixação compatível com o seu carro.",
+      "Em berço e cercadinho, compare as medidas com o colchão que você já tem ou vai comprar.",
+      "Em fraldas, compare o preço por unidade dentro do mesmo tamanho, não o preço do pacote.",
+    ],
+    cuidados: [
+      "Produto infantil sem certificação do Inmetro não segue a norma de segurança obrigatória; não vale a economia.",
+      "Cadeirinha usada ou de procedência desconhecida pode ter sofrido batida que não aparece por fora.",
+      "Peças pequenas e cordões soltos são risco de engasgo e estrangulamento; leia a idade mínima indicada.",
+      "Bebê cresce rápido: pacote grande de fralda ou roupa de um tamanho só pode sobrar.",
+      "Ao receber, confira se o produto tem manual em português e etiqueta com dados do fabricante ou importador.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Por que o selo do Inmetro é tão importante em produtos para bebê?",
+        resposta:
+          "Para vários itens infantis, como carrinho, berço, cadeirinha de carro, chupeta e mamadeira, a certificação é obrigatória e confirma que o produto passou nos testes da norma de segurança. Sem o selo, não há garantia de que o produto foi testado.",
+      },
+      {
+        pergunta: "Como escolher a cadeirinha de carro certa?",
+        resposta:
+          "Escolha pelo peso e pela idade do bebê, que definem o grupo da cadeirinha, e confira se o tipo de fixação serve no seu carro. Prefira produto novo, com selo do Inmetro e manual em português.",
+      },
+      {
+        pergunta: "Vale comprar fralda em pacote grande?",
+        resposta:
+          "Vale quando o preço por unidade é menor e o bebê ainda vai usar aquele tamanho por um tempo. Perto da troca de tamanho, pacotes menores evitam sobra.",
+      },
+    ],
+  },
+  {
+    slug: "mercado",
+    nome: "Mercado e alimentos",
+    chamada:
+      "Café, bebidas, alimentos e itens de despensa: o mesmo produto e o mesmo tamanho em outras lojas, do mais barato ao mais caro, com o frete em linha própria.",
+    comoAvaliar: [
+      "Calcule o preço por quilo ou por litro para comparar embalagens de tamanhos diferentes.",
+      "Confira a data de validade informada pelo vendedor, principalmente em compra de caixa fechada.",
+      "Some o frete: em item barato ele pode custar mais que a diferença de preço entre as lojas.",
+      "Em kits e caixas, confira quantas unidades vêm e o tamanho de cada uma.",
+      "Leia se o produto é a versão tradicional, zero açúcar, sem lactose ou outra variação: o preço muda.",
+    ],
+    cuidados: [
+      "Caixa grande só compensa se você consumir tudo antes de vencer.",
+      "Produto perto da validade às vezes aparece com preço baixo; leia a descrição antes de comprar.",
+      "Bebida e alimento chegam amassados ou vazando com alguma frequência; confira a embalagem ao receber.",
+      "Pacote com outro peso ou outro volume não é o mesmo produto, mesmo com a mesma marca e a mesma foto.",
+    ],
+    perguntas: [
+      {
+        pergunta: "Vale comprar mercado pela internet?",
+        resposta:
+          "Vale em itens que não estragam rápido e quando o preço final, já com o frete, fica abaixo do que você paga perto de casa. Em item barato e avulso, o frete costuma apagar a vantagem.",
+      },
+      {
+        pergunta: "Como comparar embalagens de tamanhos diferentes?",
+        resposta:
+          "Divida o preço pelo peso ou pelo volume para chegar ao preço por quilo ou por litro. A embalagem maior nem sempre é a mais barata por quilo.",
+      },
+      {
+        pergunta: "E se o produto chegar perto de vencer?",
+        resposta:
+          "Confira a validade assim que receber. Se estiver diferente do que o anúncio informou, registre a reclamação pelo próprio pedido.",
+      },
+    ],
+  },
+  {
+    slug: "papelaria",
+    nome: "Papelaria e escritório",
+    chamada:
+      "Cadernos, papel sulfite, canetas, mochilas e material de escritório: o mesmo produto e a mesma quantidade em outras lojas, do mais barato ao mais caro.",
+    comoAvaliar: [
+      "Confira quantas unidades ou folhas vêm no pacote e calcule o preço por unidade.",
+      "Em papel, compare a gramatura (g/m²) e o tamanho da folha: papel mais grosso custa mais e serve para outro uso.",
+      "Em cadernos, compare o número de matérias, de folhas e o tipo de capa, não só a foto.",
+      "Em canetas e marcadores, confira a espessura da ponta e as cores incluídas no conjunto.",
+      "Em refil, cartucho e toner, confira o modelo exato da impressora compatível.",
+      "Some o frete: em compra pequena de papelaria ele pode pesar mais que o próprio produto.",
+    ],
+    cuidados: [
+      "Pacote com foto de várias unidades pode vender só uma; leia a quantidade no título e na descrição.",
+      "Cartucho e toner compatíveis custam menos que os originais, mas não são o mesmo produto.",
+      "Lista de material escolar costuma pedir marca ou especificação; confira antes de trocar pelo mais barato.",
+      "Caixa de papel é pesada; confira se chegou sem umidade e sem folhas amassadas.",
+      "Pacote com outra quantidade ou outra gramatura não é o mesmo produto, mesmo com a mesma marca.",
+    ],
+    perguntas: [
+      {
+        pergunta: "O que é gramatura do papel?",
+        resposta:
+          "É o peso do papel por metro quadrado, indicado em g/m². Quanto maior, mais grosso e firme o papel. Para imprimir no dia a dia, o papel sulfite comum resolve; para capa e convite, procure gramatura mais alta.",
+      },
+      {
+        pergunta: "Cartucho compatível vale a pena?",
+        resposta:
+          "Pode valer pelo preço, mas confira se o modelo é compatível com a sua impressora e a reputação do vendedor. Na comparação, compatível e original não são tratados como o mesmo produto.",
+      },
+      {
+        pergunta: "Como comparar pacotes de quantidades diferentes?",
+        resposta:
+          "Divida o preço pelo número de unidades ou de folhas. Assim fica claro se o pacote maior é de fato mais barato por unidade.",
       },
     ],
   },
