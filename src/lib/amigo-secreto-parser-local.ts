@@ -488,16 +488,18 @@ export function categoriasPedidas(texto: string, nome?: string | null): Set<stri
     one titled with the person's name or gender. The seasonal one stays. */
 export function vitrinesSemInvencao(i: Interpretacao, texto: string, nome?: string | null): Interpretacao {
   const pedidas = categoriasPedidas(texto, nome);
-  const vitrines = i.vitrines.filter((v) => {
-    const t = sem(v.titulo);
-    if (/ideias|da epoca/.test(t)) return true;
-    if (ehSoMetadado(v.titulo, nome)) return false;
-    const limpo = TEMAS.reduce((x, [re]) => x.replace(re, " "), t);
-    const cats = CATEGORIAS.filter((c) => c.chaves.test(limpo)).map((c) => c.id);
-    if (TEMAS.some(([re]) => re.test(t))) cats.push("decoracao-tema");
-    return !cats.length || cats.some((c) => pedidas.has(c));
-  });
-  return { ...i, vitrines };
+  return { ...i, vitrines: i.vitrines.filter((v) => vitrinePedida(v.titulo, pedidas, nome)) };
+}
+
+/** One showcase title against the categories the text asks for. */
+export function vitrinePedida(titulo: string, pedidas: Set<string>, nome?: string | null): boolean {
+  const t = sem(titulo);
+  if (/ideias|da epoca/.test(t)) return true;
+  if (ehSoMetadado(titulo, nome)) return false;
+  const limpo = TEMAS.reduce((x, [re]) => x.replace(re, " "), t);
+  const cats = CATEGORIAS.filter((c) => c.chaves.test(limpo)).map((c) => c.id);
+  if (TEMAS.some(([re]) => re.test(t))) cats.push("decoracao-tema");
+  return !cats.length || cats.some((c) => pedidas.has(c));
 }
 
 /** Badges shown on the wish panel: "Shorts: M", "Calçado: 35". */

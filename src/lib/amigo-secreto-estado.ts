@@ -1,4 +1,5 @@
-import { lerPerfil } from "@/lib/amigo-secreto-perfil";
+import { categoriasPedidas, vitrinePedida } from "@/lib/amigo-secreto-parser-local";
+import { lerPerfil, textoParaLeitura } from "@/lib/amigo-secreto-perfil";
 /* AMIGO SECRETO: saving the list (05/11). Instant save on this device
    (localStorage, melhorescolha_amigo_secreto_v2) and, signed in, in the
    account (table amigo_secreto_conta, RLS per user). Only what the person
@@ -76,6 +77,10 @@ export function lerGuardado(bruto: unknown): EstadoAmigoSecreto {
     const nome = str(x?.["nome"], 40).trim();
     if (!nome) return [];
     const t = (x["tamanhosIdentificados"] ?? {}) as Record<string, unknown>;
+    /* 18/11 (Nath): lists saved before PR #166 kept "Calçados femininos
+       tamanho 35" from a bare size; saved showcases get the same check. */
+    const desejos = str(x["desejosTexto"], 600);
+    const pedidas = desejos ? categoriasPedidas(textoParaLeitura(desejos, lerPerfil(x["perfil"])), nome) : null;
     return [
       {
         id: str(x["id"], 20) || novoId(),
@@ -99,6 +104,7 @@ export function lerGuardado(bruto: unknown): EstadoAmigoSecreto {
             .slice(0, 6);
           const titulo = str(v?.["titulo"], 70).trim();
           if (!titulo || !termos.length) return [];
+          if (pedidas && !vitrinePedida(titulo, pedidas, nome)) return [];
           return [{ ...novaVitrine({ titulo, icone: str(v["icone"], 4) || "🎁", termos }), id: str(v["id"], 20) || novoId() }];
         }),
       },

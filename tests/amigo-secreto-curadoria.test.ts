@@ -68,7 +68,7 @@ describe("amigo secreto: skincare, bijuterias e calçados (05/11)", () => {
 
 /* 18/11: Nath's real list (production screenshots). */
 import { kitsDoPresente, type Candidato } from "@/lib/amigo-secreto-kit";
-import { interpretarLocal, vitrinesSemInvencao } from "@/lib/amigo-secreto-parser-local";
+import { categoriasPedidas, interpretarLocal, vitrinePedida, vitrinesSemInvencao } from "@/lib/amigo-secreto-parser-local";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 
 const NATH =
@@ -153,5 +153,16 @@ describe("amigo secreto: Nath's list (18/11)", () => {
       const baratos = dentro!.itens.filter((x) => x.preco < 25);
       if (melhor) for (const b of baratos) expect(melhor.itens).not.toContain(b);
     }
+  });
+
+  test("saved shoe showcase from a bare size is dropped; honey never fills shoes", () => {
+    const pedidas = categoriasPedidas(NATH, "Nath");
+    expect(vitrinePedida("Calçados femininos tamanho 35", pedidas, "Nath")).toBe(false);
+    expect(vitrinePedida("Skincare e autocuidado", pedidas, "Nath")).toBe(true);
+    const sapatos = contextoDaVitrine({ titulo: "Calçados femininos tamanho 35", termosBusca: ["mule feminino"] }, "gosta de sandália 35");
+    expect(sapatos.tipo).toBe("calcado");
+    for (const t of ["Mel de abelha 100% puro 1 Kg florada silvestre", "Extrato de Própolis Verde Apis Flora 30ml", "Melado de Cana de Açúcar 1.300 Gramas"])
+      expect(aprovadoNaVitrine(t, sapatos)).toBe(false);
+    expect(aprovadoNaVitrine("Mule Feminino Bico Fino Salto Baixo", sapatos)).toBe(true);
   });
 });
