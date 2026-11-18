@@ -22,7 +22,7 @@ export type TipoVitrine = "roupa" | "calcado" | "livros" | "tema" | "beleza" | "
    mustard, 1 kg honey and barbecue sauce. Pantry staples and cleaning goods
    are never a gift, unless the person typed that item. */
 const CONDIMENTOS_E_DESPENSA =
-  /\b(ketchup|catchup|mostarda|maionese|barbecue|molho de tomate|molho ingles|molho shoyu|extrato de tomate|vinagre|oleo de soja|azeite comum|tempero pronto|caldo de galinha|caldo knorr|sazon|arroz|feijao|farinha|acucar refinado|sal refinado|leite em po|leite condensado|creme de leite|detergente|amaciante|sabao em po|mel puro|mel silvestre|mel \d+ ?(kg|g|gr)|\d+ ?(kg|g) de mel)\b/;
+  /\b(ketchup|catchup|mostarda|maionese|barbecue|molho de tomate|molho ingles|molho shoyu|extrato de tomate|vinagre|oleo de soja|azeite comum|tempero pronto|caldo de galinha|caldo knorr|sazon|arroz|feijao|farinha|acucar refinado|sal refinado|leite em po|leite condensado|creme de leite|detergente|amaciante|sabao em po|mel de abelha|mel puro|mel silvestre|mel organico|mel \d+ ?(kg|g|gr)|\d+ ?(kg|g) de mel|melado|propolis|xarope)\b/;
 
 /* Toys/novelty kits sneaking into beauty (05/11: a Zona Criativa kit). */
 const NAO_E_SKINCARE =
@@ -247,6 +247,9 @@ export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
   if (c.tipo === "livros" && /\b(figurinhas?|album|pacotes?|adesivos?|cartas colecionaveis|marcenaria)\b/.test(t))
     return false;
   if (c.tipo === "roupa" && !/\b(short|shorts|top|tops|legging|calca|camiseta|camisetas|camisa|polo|regata|blusa|conjunto|bermuda|jeans|macaquinho|macacao|jaqueta|moletom|vestido|saia|cropped|body|pijama|meia|meias|sutia|biquini|maio|bone|viseira|cinto|carteira|bolsa|garrafa|toalha|squeeze)\b/.test(t))
+    return false;
+  /* 18/11: honey and propolis (category best sellers) filled a shoe showcase. */
+  if (c.tipo === "calcado" && !/\b(calcados?|sapatos?|sapatilhas?|tenis|sandalias?|chinelos?|rasteir\w*|mules?|mocassi\w*|papetes?|slides?|botas?|botinhas?|scarpins?|tamancos?|crocs|havaianas|melissa|anabela|salto|alpargatas?|oxford|loafer)\b/.test(t))
     return false;
   /* Gym showcase: the piece has to be gym wear (05/11: a dress and a watch showed up). */
   if (c.tipo === "roupa" && c.academia && !/\b(fitness|academia|treino|dry ?fit|esportiv[oa]|legging|tops?|shorts?|cropped|ciclista|corrida|yoga|compressao|bermuda|regata|macaquinho|garrafa|squeeze|toalha|bolsa)\b/.test(t))
