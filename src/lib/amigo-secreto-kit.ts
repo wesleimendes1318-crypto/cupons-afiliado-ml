@@ -5,12 +5,34 @@
    with unknown shipping never enters a kit. Quality first: best-seller rank
    and official store (tierDeQualidade); no rating data exists on the cards,
    so ratings are not used. */
+import type { TipoVitrine } from "@/lib/amigo-secreto-curadoria";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 import { arquetipoDoTitulo, tierDeQualidade } from "@/lib/curadoria";
 import { custoTotalDaOferta } from "@/lib/internacional";
 
 export type EstiloKit = "custo" | "luxo";
-export type Candidato = { r: Resultado; grupo: string };
+export type Candidato = { r: Resultado; grupo: string; tipo?: TipoVitrine };
+
+/* 18/11 (Nath): a R$ 17 sandal and a "Kit Escolar Compactor 4 Canetas" sat
+   next to luxury skincare. A gift kit for a beauty / jewelry / treats person
+   keeps to those; shoes need the exact fit and never enter a mixed kit. */
+const AFINS: TipoVitrine[] = ["beleza", "joia", "gourmet"];
+const PAPELARIA_BARATA =
+  /\b(kit escolar|canetas?|lapis|lapiseira|borracha|apontador|fichario|clipes?|grampeador|marca ?texto|estojo escolar|caderno escolar|corretivo)\b/i;
+/* Below this share of the ceiling an item is a filler; the "even better" kit
+   never repeats a filler of the base kit. */
+export const PARTE_ENCHIMENTO = 0.25;
+
+/** Drops items that break the kit's coherence (see AFINS). */
+export function candidatosCoerentes(candidatos: Candidato[]): Candidato[] {
+  const temAfins = candidatos.some((c) => c.tipo && AFINS.includes(c.tipo));
+  const temOutros = candidatos.some((c) => c.tipo !== "calcado");
+  return candidatos.filter((c) => {
+    if (c.tipo === "calcado" && temOutros) return false;
+    if (temAfins && c.tipo !== "beleza" && PAPELARIA_BARATA.test(c.r.nome)) return false;
+    return true;
+  });
+}
 export type Kit = { itens: Resultado[]; total: number };
 
 export const FOLGA_MELHOR = 0.2;
@@ -50,13 +72,14 @@ export function montarKit(
   const rnd = aleatorio(opcoes.seed);
   const luxo = opcoes.estilo === "luxo";
   const tetoItem = luxo ? limite : limite * PARTE_MAX_ITEM;
-  const lista = candidatos
-    .map((c) => ({ ...c, custo: custoDoCartao(c.r), tier: tierDeQualidade(c.r), sorte: rnd() }))
+  const lista = candidatosCoerentes(candidatos)
+    .map((c) => ({ ...c, custo: custoDoCartao(c.r), tier: tierDeQualidade(c.r), afim: c.tipo && AFINS.includes(c.tipo) ? 1 : 0, sorte: rnd() }))
     .filter((c): c is typeof c & { custo: number } => c.custo != null && c.custo > 0 && c.custo <= tetoItem)
     /* Quality tier decides; the draw only reorders inside a tier. Luxury
        also prefers the pricier piece of the same tier (fewer, better items). */
     .sort((a, b) =>
       b.tier - a.tier ||
+      b.afim - a.afim ||
       (opcoes.estilo === "luxo" ? b.custo - a.custo : 0) ||
       a.sorte - b.sorte,
     );
@@ -96,7 +119,14 @@ export function kitsDoPresente(
   opcoes: { estilo: EstiloKit; seed: number; misturar: boolean; minimo?: number | null },
 ): { dentro: Kit | null; melhor: Kit | null } {
   const dentro = montarKit(candidatos, tetoValor, opcoes);
-  const melhor = montarKit(candidatos, tetoValor * (1 + FOLGA_MELHOR), { ...opcoes, seed: opcoes.seed + 7919 });
+  const enchimento = new Set(
+    (dentro?.itens ?? []).filter((r) => (custoDoCartao(r) ?? 0) < tetoValor * PARTE_ENCHIMENTO),
+  );
+  const melhor = montarKit(
+    candidatos.filter((c) => !enchimento.has(c.r)),
+    tetoValor * (1 + FOLGA_MELHOR),
+    { ...opcoes, seed: opcoes.seed + 7919 },
+  );
   const igual =
     melhor && dentro && melhor.itens.length === dentro.itens.length && melhor.itens.every((x) => dentro.itens.includes(x));
   return { dentro, melhor: melhor && melhor.total > tetoValor && !igual ? melhor : null };

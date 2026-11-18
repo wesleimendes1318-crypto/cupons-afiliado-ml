@@ -166,11 +166,17 @@ const CATEGORIAS: Categoria[] = [
   },
   {
     id: "skincare",
-    chaves: /skin ?care|autocuidado|beleza|facial|maquiagem|cosmetic|hidratante|cuidados? com a pele/,
+    /* 18/11 (Nath): handmade soaps and nail polish are beauty wishes too.
+       "artesanal" alone is not a key: "geleia artesanal" is a treat. */
+    chaves: /skin ?care|autocuidado|beleza|facial|maquiagem|cosmetic|hidratante|cuidados? com a pele|sabonet|esmalte|\bunhas?\b|manicure|\bbanho\b|oleo corporal/,
     icone: "🌿",
     titulo: () => "Skincare e autocuidado",
-    /* Best brands first (Weslei, 05/11). */
-    termos: () => [
+    /* Best brands first (Weslei, 05/11); what the person named leads. */
+    termos: (c) => [
+      ...(c.pedidos?.some((p) => /sabonet|artesana/.test(p))
+        ? ["sabonetes artesanais perfumados", "kit sabonetes vegetais presente", "sabonete liquido corporal perfumado"]
+        : []),
+      ...(c.pedidos?.some((p) => /esmalte|unha|manicure/.test(p)) ? ["kit esmaltes cores neutras", "kit manicure tratamento unhas"] : []),
       "sallve kit",
       "principia skincare",
       "cerave hidratante",
@@ -253,6 +259,22 @@ const CATEGORIAS: Categoria[] = [
     extras: ["porta retrato", "manta decorativa"],
   },
   {
+    /* 18/11: "geleia de morango" became Heinz ketchup and barbecue sauce:
+       treats get their own gift-box showcase. */
+    id: "doces_gourmet",
+    chaves: /geleia|\bdoces?\b|chocolate|trufa|bombo(m|ns)|alfajor|biscoito fino|panetone|chocotone|cafe especial|petisco gourmet|brigadeiro gourmet/,
+    icone: "🍓",
+    titulo: () => "Geleias, chocolates e delícias artesanais",
+    termos: (c) => {
+      const p = (c.pedidos ?? []).join(" ");
+      const geleia = ["geleia artesanal frutas vermelhas", "geleia francesa gourmet", "kit geleias artesanais degustacao"];
+      const doces = ["caixa de bombons finos presente", "alfajor artesanal caixa presente", "trufas artesanais caixa presente"];
+      const cafe = ["cafe especial em graos gourmet"];
+      return /geleia/.test(p) ? [...geleia, ...doces, ...cafe] : /cafe/.test(p) ? [...cafe, ...doces, ...geleia] : [...doces, ...geleia, ...cafe];
+    },
+    extras: ["kit chocolates importados", "cesta de cafe da manha presente"],
+  },
+  {
     id: "cozinha",
     chaves: /cozinha|cafe\b|cafeteira|cha\b|vinho|drink|churrasco/,
     icone: "☕",
@@ -329,6 +351,26 @@ export function tamanhosDoTexto(texto: string): TamanhosAmigo {
   };
 }
 
+/* 18/11 (Nath): a name, a gender, an age or a size is about the person, not
+   a wish ("Nath", "mulher", "calçado 35" became showcases and ML searches). */
+const RE_GENERO_SOLTO = /^(e\s+)?(mulher|homem|feminin[oa]|masculin[oa]|unissex|ela|ele|menina|menino)$/;
+const RE_IDADE_SOLTA = /^(tem\s+)?(\d{1,2}\s*anos?|adult[oa]|jovem|idos[oa])$/;
+const RE_TAMANHO_SOLTO = new RegExp(
+  `^(tamanho\\s+)?(calcados?|sapatos?|tenis|sandalias?|chinelos?|tam(anho)?|numero|numeracao|pe|roupas?|veste|camisetas?|blusas?|calcas?|shorts?)\\s*(n[oº.]?\\s*)?(3[3-9]|4[0-6]|${TAM.toLowerCase()})$`,
+);
+/* A wish verb keeps the piece a wish: "gosta de tênis 37", "quer sandália". */
+const RE_DESEJO = /\b(gosta|gostaria|quer|queria|ama|adora|curte|deseja|sonha|precisa|pediu)\b/;
+
+/** True when the piece only describes the person (name, gender, age, size). */
+export function ehSoMetadado(pedaco: string, nome?: string | null): boolean {
+  const s = sem(pedaco).replace(/[.!:]+$/g, "").trim();
+  if (!s) return true;
+  if (RE_DESEJO.test(s)) return false;
+  const primeiro = sem(nome ?? "").trim();
+  if (primeiro && (s === primeiro || s === primeiro.split(/\s+/)[0])) return true;
+  return RE_GENERO_SOLTO.test(s) || RE_IDADE_SOLTA.test(s) || RE_TAMANHO_SOLTO.test(s);
+}
+
 /** Top-level pieces: commas, semicolons, lines, " ou " and "/" outside parentheses. */
 export function pedacosDoTexto(texto: string): string[] {
   const saida: string[] = [];
@@ -354,7 +396,11 @@ export function interpretarLocal(texto: string, nome?: string | null): Interpret
   const tamanhos = tamanhosDoTexto(bruto);
   const usadas = new Map<string, { cat: Categoria; ctx: Ctx }>();
   const avulsas: string[] = [];
-  for (const pedaco of pedacosDoTexto(bruto)) {
+  const pedacos = pedacosDoTexto(bruto);
+  /* The text often starts with the name itself ("Nath, mulher, ..."). */
+  const nomeLido = nome ?? (pedacos.length > 1 && /^\p{Lu}[\p{L}'’]+$/u.test(pedacos[0]!) && !CATEGORIAS.some((c) => c.chaves.test(sem(pedacos[0]!))) ? pedacos[0] : null);
+  for (const pedaco of pedacos) {
+    if (ehSoMetadado(pedaco, nomeLido)) continue;
     const s = sem(pedaco);
     const temas = TEMAS.filter(([re]) => re.test(s)).map(([, n]) => n);
     const cores = CORES.filter(([re]) => re.test(s)).map(([, n]) => n);
@@ -366,6 +412,8 @@ export function interpretarLocal(texto: string, nome?: string | null): Interpret
       if (!casa) continue;
       /* Decoration with a theme is the themed showcase, not the generic one. */
       if (cat.id === "decoracao" && temas.length) continue;
+      /* "Café especial" is the treats showcase, not kitchen gear. */
+      if (cat.id === "cozinha" && CATEGORIAS.find((x) => x.id === "doces_gourmet")!.chaves.test(limpo)) continue;
       /* Gym wear is the gym showcase, not everyday clothes. */
       if (cat.id === "roupas" && CATEGORIAS[0]!.chaves.test(limpo)) continue;
       achou = true;
@@ -418,6 +466,38 @@ export function interpretarLocal(texto: string, nome?: string | null): Interpret
     termos: [...new Set([...epoca.termos.slice(0, 4), ...extras, ...IDEIAS_PADRAO])].slice(0, 8),
   });
   return { tamanhos, vitrines };
+}
+
+/** Category ids the text really asks for (metadata pieces left out). */
+export function categoriasPedidas(texto: string, nome?: string | null): Set<string> {
+  const ids = new Set<string>();
+  for (const pedaco of pedacosDoTexto(texto.slice(0, 600))) {
+    if (ehSoMetadado(pedaco, nome)) continue;
+    const s = sem(pedaco);
+    const temas = TEMAS.filter(([re]) => re.test(s));
+    const limpo = TEMAS.reduce((x, [re]) => x.replace(re, " "), s);
+    if (temas.length) ids.add("decoracao-tema");
+    for (const cat of CATEGORIAS) if (cat.chaves.test(limpo)) ids.add(cat.id);
+  }
+  return ids;
+}
+
+/** 18/11 (Nath): the model invented "Escritório e papelaria", "Decoração e
+    jardinagem" and a shoe showcase from "calçado 35". A model showcase whose
+    title names a known category the text never asked for is dropped; so is
+    one titled with the person's name or gender. The seasonal one stays. */
+export function vitrinesSemInvencao(i: Interpretacao, texto: string, nome?: string | null): Interpretacao {
+  const pedidas = categoriasPedidas(texto, nome);
+  const vitrines = i.vitrines.filter((v) => {
+    const t = sem(v.titulo);
+    if (/ideias|da epoca/.test(t)) return true;
+    if (ehSoMetadado(v.titulo, nome)) return false;
+    const limpo = TEMAS.reduce((x, [re]) => x.replace(re, " "), t);
+    const cats = CATEGORIAS.filter((c) => c.chaves.test(limpo)).map((c) => c.id);
+    if (TEMAS.some(([re]) => re.test(t))) cats.push("decoracao-tema");
+    return !cats.length || cats.some((c) => pedidas.has(c));
+  });
+  return { ...i, vitrines };
 }
 
 /** Badges shown on the wish panel: "Shorts: M", "Calçado: 35". */

@@ -579,7 +579,7 @@ function PaginaAmigoSecreto() {
             minimo={faixa.min}
             preparar={(v) => {
               const ctx = aplicarPerfil(contextoDaVitrine(v, textoParaLeitura(ativo.desejosTexto ?? "", ativo.perfil), ativo.nome), ativo.perfil);
-              return { termos: ampliarTermos(v.termosBusca, ctx), aprovar: (x) => aprovadoNaVitrine(x.nome, ctx) };
+              return { termos: ampliarTermos(v.termosBusca, ctx), aprovar: (x) => aprovadoNaVitrine(x.nome, ctx), tipo: ctx.tipo };
             }}
           />
         )}

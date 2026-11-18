@@ -11,6 +11,7 @@ import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { carregarAte, idsDoResultado, passosIniciais } from "@/lib/amigo-secreto-busca";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 import { FOLGA_MELHOR, PARTE_MAX_ITEM, kitsDoPresente, type Candidato, type EstiloKit, type Kit } from "@/lib/amigo-secreto-kit";
+import type { TipoVitrine } from "@/lib/amigo-secreto-curadoria";
 import type { VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -19,7 +20,11 @@ const chip = (ativo: boolean) =>
   (ativo ? "bg-[#0071e3] text-white" : "bg-card ring-1 ring-border");
 
 /** Same terms and curation the showcase uses (passed by the page). */
-export type PrepararKit = (v: VitrineCategoriaAmigo) => { termos: string[]; aprovar: (r: Resultado) => boolean };
+export type PrepararKit = (v: VitrineCategoriaAmigo) => {
+  termos: string[];
+  aprovar: (r: Resultado) => boolean;
+  tipo: TipoVitrine;
+};
 
 const MAX_VITRINES_KIT = 4;
 
@@ -94,9 +99,10 @@ export function KitPresente({
 
   const { dentro, melhor } = useMemo(() => {
     const fonte = origem === "todas" ? fontes : fontes.filter((v) => v.id === origem);
-    const candidatos: Candidato[] = fonte.flatMap((v) =>
-      [...(pecas[v.id] ?? []), ...v.produtos].map((r) => ({ r, grupo: v.id })),
-    );
+    const candidatos: Candidato[] = fonte.flatMap((v) => {
+      const { tipo } = preparar(v);
+      return [...(pecas[v.id] ?? []), ...v.produtos].map((r) => ({ r, grupo: v.id, tipo }));
+    });
     return kitsDoPresente(candidatos, teto, { estilo, seed, minimo, misturar: origem === "todas" && fonte.length > 1 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vitrines, pecas, origem, estilo, seed, teto, minimo]);
@@ -104,7 +110,7 @@ export function KitPresente({
   if (!comProdutos.length && !buscando.length && !Object.values(pecas).some((p) => p.length)) return null;
 
   return (
-    <section aria-labelledby="kit-presente" className="animate-conteudo rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-border sm:p-6">
+    <section aria-labelledby="kit-presente" className="animate-conteudo scroll-mt-36 rounded-3xl bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-border sm:p-6">
       <h2 id="kit-presente" className="text-lg font-extrabold tracking-tight sm:text-xl">
         🎁 Kit presente para {nome}
       </h2>

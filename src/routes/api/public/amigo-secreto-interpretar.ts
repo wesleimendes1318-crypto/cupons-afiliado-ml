@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { generoDaPessoa } from "@/lib/amigo-secreto-curadoria";
-import { interpretacaoDoModelo, interpretarLocal } from "@/lib/amigo-secreto-parser-local";
+import { interpretacaoDoModelo, interpretarLocal, vitrinesSemInvencao } from "@/lib/amigo-secreto-parser-local";
 import type { Interpretacao } from "@/lib/amigo-secreto-tipos";
 import { excedeuLimite, json, origemPermitida, respostaOptions } from "@/lib/public-ai-api";
 
@@ -36,6 +36,15 @@ Roupa citada so com tamanho ("Roupa P") nao e vitrine: vai em tamanhos. A ULTIMA
 Brasil = Natal e verao: copo termico, praia, viagem, confraternizacao) que combinem com a pessoa.
 tamanhos: {"roupa": "P|M|G|GG" ou null, "calcado": "33".."44" ou null,
 "observacoes": "Shorts: M · Tops: G" ou null}.
+CRITICO: crie vitrines SO para temas, itens e hobbies citados EXPLICITAMENTE no texto. Nunca
+invente categorias nao pedidas (nada de papelaria, jardinagem, decoracao ou bolsas se o texto
+nao pedir). Se a pessoa pediu so 2 ou 3 coisas, gere SO essas 2 ou 3 vitrines mais a ultima
+"Ideias da época". Qualidade e relevancia valem mais que quantidade.
+Nome, genero ("mulher", "homem"), idade e tamanhos ("calçado 35", "camiseta M") sao dados da
+pessoa: nunca viram vitrine nem termo de busca. Sem pedido explicito de roupa ou calcado, nao
+crie vitrine de roupa ou calcado.
+Comidas pedidas (geleia, chocolate, cafe) viram itens de presente artesanais ou gourmet
+(geleia artesanal, caixa de bombons finos), nunca itens de mercado (ketchup, molhos, mel em pote).
 Nunca invente produto, preco ou loja. Nunca fale de inteligencia artificial.
 Responda SO com JSON minificado: {"tamanhos": {...}, "vitrines": [{"titulo": "...", "icone": "...", "termos": ["..."]}]}
 Lista`;
@@ -83,15 +92,17 @@ export const Route = createFileRoute("/api/public/amigo-secreto-interpretar")({
           }),
         ]);
         clearTimeout(timer);
-        if (!lida) return json(request, { ...local, fonte: "local" });
+        const conferida = lida ? vitrinesSemInvencao(lida, entrada.texto, entrada.nome) : null;
+        /* Only the seasonal showcase left (or less): the local reading is better. */
+        if (!conferida || conferida.vitrines.length < 2) return json(request, { ...local, fonte: "local" });
         /* Sizes the text states win over the model's reading. */
         return json(request, {
           tamanhos: {
-            roupa: local.tamanhos.roupa ?? lida.tamanhos.roupa ?? null,
-            calcado: local.tamanhos.calcado ?? lida.tamanhos.calcado ?? null,
-            observacoes: local.tamanhos.observacoes ?? lida.tamanhos.observacoes ?? null,
+            roupa: local.tamanhos.roupa ?? conferida.tamanhos.roupa ?? null,
+            calcado: local.tamanhos.calcado ?? conferida.tamanhos.calcado ?? null,
+            observacoes: local.tamanhos.observacoes ?? conferida.tamanhos.observacoes ?? null,
           },
-          vitrines: lida.vitrines,
+          vitrines: conferida.vitrines,
           fonte: "modelo",
         });
       },

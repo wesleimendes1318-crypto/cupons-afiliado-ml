@@ -131,7 +131,7 @@ export function VitrineCategoria({
           ? vitrine.erro
           : `Ainda não achamos opções ${ampliar?.freteACalcular ? "" : "com frete grátis "}${faixa}.`);
   return (
-    <section aria-label={vitrine.titulo} className="animate-cartao min-w-0">
+    <section aria-label={vitrine.titulo} className="animate-cartao min-w-0 scroll-mt-36">
       <header className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h3 className="flex items-start gap-2 text-lg font-extrabold tracking-tight sm:text-xl">

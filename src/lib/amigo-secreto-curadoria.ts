@@ -16,7 +16,13 @@ const sem = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-export type TipoVitrine = "roupa" | "calcado" | "livros" | "tema" | "beleza" | "joia" | "ideias" | "outro";
+export type TipoVitrine = "roupa" | "calcado" | "livros" | "tema" | "beleza" | "joia" | "gourmet" | "ideias" | "outro";
+
+/* 18/11 (Nath): "geleia de morango" filled a showcase with Heinz ketchup,
+   mustard, 1 kg honey and barbecue sauce. Pantry staples and cleaning goods
+   are never a gift, unless the person typed that item. */
+const CONDIMENTOS_E_DESPENSA =
+  /\b(ketchup|catchup|mostarda|maionese|barbecue|molho de tomate|molho ingles|molho shoyu|extrato de tomate|vinagre|oleo de soja|azeite comum|tempero pronto|caldo de galinha|caldo knorr|sazon|arroz|feijao|farinha|acucar refinado|sal refinado|leite em po|leite condensado|creme de leite|detergente|amaciante|sabao em po|mel puro|mel silvestre|mel \d+ ?(kg|g|gr)|\d+ ?(kg|g) de mel)\b/;
 
 /* Toys/novelty kits sneaking into beauty (05/11: a Zona Criativa kit). */
 const NAO_E_SKINCARE =
@@ -40,6 +46,8 @@ export type ContextoVitrine = {
   /** Franchise keys ("star wars", "marvel"). */
   temas: string[];
   academia: boolean;
+  /** Pantry words the person typed (ketchup asked = ketchup allowed). */
+  despensa?: string[];
 };
 
 /* Franchise -> words a product title of it carries. */
@@ -194,9 +202,11 @@ export function contextoDaVitrine(
         ? "livros"
         : /calcado|tenis|sandalia|chinelo|rasteir|sapat|papete|bota\b/.test(base) && !/academia|fitness/.test(base)
           ? "calcado"
+          : /geleia|chocolate|bombo(m|ns)|trufa|alfajor|delicias|gourmet|doces|panetone|chocotone|cafe especial/.test(base)
+            ? "gourmet"
           : /roupa|academia|fitness|camiseta|\bshorts?\b|legging|\btops?\b|blusa|vestido|calca|pijama|moletom|conjunto|bermuda|regata|lingerie|biquini|maio/.test(base)
             ? "roupa"
-            : /skin ?care|maquiagem|beleza|autocuidado|facial|cosmetic/.test(base)
+            : /skin ?care|maquiagem|beleza|autocuidado|facial|cosmetic|sabonet|esmalte|manicure|\bbanho\b/.test(base)
               ? "beleza"
               : /bijuteri|semijoia|joia|colar|brinco|pulseira|\banel\b/.test(base)
                 ? "joia"
@@ -207,6 +217,7 @@ export function contextoDaVitrine(
     genero: generoDaPessoa(textoDaPessoa, nome),
     temas,
     academia: /academia|fitness|treino|gym|corrida/.test(base),
+    despensa: [...sem(textoDaPessoa).matchAll(new RegExp(CONDIMENTOS_E_DESPENSA.source, "g"))].map((m) => m[0]),
   };
 }
 
@@ -214,6 +225,11 @@ export function contextoDaVitrine(
 export function aprovadoNaVitrine(titulo: string, c: ContextoVitrine): boolean {
   const t = sem(titulo);
   if (!t) return false;
+  const despensa = CONDIMENTOS_E_DESPENSA.exec(t)?.[0];
+  if (despensa && !(c.despensa ?? []).some((d) => d.split(" ")[0] === despensa.split(" ")[0])) return false;
+  /* Treats showcase: the catalog fills thin searches with other best sellers. */
+  if (c.tipo === "gourmet" && !/\b(geleias?|chocolates?|bombo(m|ns)|trufas?|alfajor(es)?|doces?|biscoitos?|cookies?|panetone|chocotone|cafe|cacau|brigadeiros?|macarons?|caixa|cesta|kit|presente|gourmet|artesana(l|is)|nutella|lindt|ferrero|kopenhagen|cacau show)\b/.test(t))
+    return false;
   if (c.adulto && (c.tipo === "roupa" || c.tipo === "calcado")) {
     if (VESTUARIO_INFANTIL.test(t)) return false;
     if (NAO_E_ROUPA.test(t)) return false;
@@ -440,6 +456,19 @@ const POOLS_POR_TEMA: Array<[RegExp, string[]]> = [
     ],
   ],
 ];
+/* 18/11: gift-box treats, never supermarket items. */
+const GOURMET_PRESENTE = [
+  "geleia artesanal frutas vermelhas",
+  "geleia francesa gourmet",
+  "kit geleias artesanais degustacao",
+  "caixa de bombons finos presente",
+  "alfajor artesanal caixa presente",
+  "trufas artesanais caixa presente",
+  "chocolate lindt presente",
+  "cafe especial em graos gourmet",
+  "cesta de cafe da manha presente",
+  "kit chocolates importados",
+];
 const JOIA_MASCULINA = [
   "corrente masculina prata 925",
   "pulseira masculina prata 925",
@@ -519,6 +548,7 @@ function poolDeTermos(termos: string[], c: ContextoVitrine, agora: Date): string
   if (c.tipo === "livros") extra.push(...LIVROS_DESEJO);
   if (c.tipo === "tema") for (const k of c.temas) extra.push(...(FRANQUIAS[k]?.termos ?? []));
   if (c.tipo === "beleza") extra.push(...BELEZA_UNIVERSAL);
+  if (c.tipo === "gourmet") extra.push(...GOURMET_PRESENTE);
   if (c.tipo === "joia") extra.push(...(c.genero === "masculino" ? JOIA_MASCULINA : JOIA_DESEJO));
   if (c.tipo === "outro")
     for (const [re, lista] of POOLS_POR_TEMA) if (re.test(sem(termos.join(" ")))) extra.push(...lista);

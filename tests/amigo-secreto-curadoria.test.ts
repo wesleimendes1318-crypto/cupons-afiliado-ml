@@ -65,3 +65,93 @@ describe("amigo secreto: skincare, bijuterias e calçados (05/11)", () => {
     expect(aprovadoNaVitrine("Sandália Feminina Salto Baixo Bloco Vizzano", pe)).toBe(true);
   });
 });
+
+/* 18/11: Nath's real list (production screenshots). */
+import { kitsDoPresente, type Candidato } from "@/lib/amigo-secreto-kit";
+import { interpretarLocal, vitrinesSemInvencao } from "@/lib/amigo-secreto-parser-local";
+import type { Resultado } from "@/lib/busca-guiada-cliente";
+
+const NATH =
+  "Nath, mulher, calçado 35, gosta de produtos sobre cuidados com a pele, sabonetes artesanais, esmaltes, colar de material semiprecioso, geleia de morango";
+
+describe("amigo secreto: Nath's list (18/11)", () => {
+  const lida = interpretarLocal(NATH);
+  const titulos = lida.vitrines.map((v) => v.titulo.toLowerCase());
+  const termos = lida.vitrines.flatMap((v) => v.termos);
+
+  test("name, gender and shoe size never become showcases or searches", () => {
+    expect(titulos.some((t) => /^nath|^mulher|cal[cç]ado/.test(t))).toBe(false);
+    expect(termos.some((t) => /^(nath|mulher)$/.test(t) || /sand[aá]lia|calcado|cal[cç]ado/.test(t))).toBe(false);
+    expect(lida.tamanhos.calcado).toBe("35");
+  });
+
+  test("beauty, jewelry and treats showcases with the named items", () => {
+    expect(titulos).toContain("skincare e autocuidado");
+    expect(termos).toContain("sabonetes artesanais perfumados");
+    expect(termos).toContain("kit esmaltes cores neutras");
+    expect(titulos.some((t) => /bijuterias/.test(t))).toBe(true);
+    const doces = lida.vitrines.find((v) => /geleias/i.test(v.titulo));
+    expect(doces?.termos[0]).toBe("geleia artesanal frutas vermelhas");
+    expect(titulos.some((t) => /escrit|papelaria|decora|jardin|bolsas/.test(t))).toBe(false);
+  });
+
+  test("model showcases the text never asked for are dropped", () => {
+    const modelo = {
+      tamanhos: { roupa: null, calcado: "35", observacoes: null },
+      vitrines: [
+        { titulo: "Skincare e autocuidado", icone: "🌿", termos: ["serum facial"] },
+        { titulo: "Calçados femininos", icone: "👠", termos: ["sandália feminina"] },
+        { titulo: "Escritório e papelaria", icone: "🖊️", termos: ["kit canetas"] },
+        { titulo: "Decoração e jardinagem", icone: "🪴", termos: ["vaso"] },
+        { titulo: "Nath", icone: "🎁", termos: ["nath"] },
+        { titulo: "Ideias da época", icone: "💡", termos: ["copo termico"] },
+      ],
+    };
+    expect(vitrinesSemInvencao(modelo, NATH, "Nath").vitrines.map((v) => v.titulo)).toEqual([
+      "Skincare e autocuidado",
+      "Ideias da época",
+    ]);
+  });
+
+  test("a wish verb keeps shoes a wish", () => {
+    expect(interpretarLocal("gosta de tênis 37, livros").vitrines.some((v) => /cal[cç]ados/i.test(v.titulo))).toBe(true);
+  });
+
+  test("grocery condiments never enter a treats showcase", () => {
+    const doces = contextoDaVitrine(
+      { titulo: "Geleias, chocolates e delícias artesanais", termosBusca: ["geleia artesanal frutas vermelhas"] },
+      NATH,
+      "Nath",
+    );
+    expect(doces.tipo).toBe("gourmet");
+    for (const t of ["Ketchup Heinz 397g", "Mostarda Heinz Amarela 255g", "Mel Puro 1kg Silvestre", "Molho Barbecue Heinz 397g"])
+      expect(aprovadoNaVitrine(t, doces)).toBe(false);
+    expect(aprovadoNaVitrine("Geleia Artesanal De Morango 250g", doces)).toBe(true);
+    expect(aprovadoNaVitrine("Caixa De Bombons Finos Presente", doces)).toBe(true);
+    /* Typed it, gets it. */
+    const pediu = contextoDaVitrine({ titulo: "Churrasco", termosBusca: ["kit churrasco"] }, "ama ketchup e churrasco");
+    expect(aprovadoNaVitrine("Ketchup Heinz 397g", pediu)).toBe(true);
+  });
+
+  test("gift kit keeps to beauty, jewelry and treats; the better kit drops the fillers", () => {
+    const r = (id: number, nome: string, preco: number): Resultado => ({
+      produto: `MLB${id}`, item: `MLB${id}0`, nome, imagem: null, preco, url: `https://meli.la/x${id}`, freteGratis: true,
+    });
+    const c: Candidato[] = [
+      { r: r(1, "Kit Escolar Compactor 4 Canetas", 12), grupo: "ideias", tipo: "ideias" },
+      { r: r(2, "Sandália Rasteira Feminina", 17), grupo: "calcados", tipo: "calcado" },
+      { r: r(3, "Sabonete Artesanal Lavanda", 19), grupo: "pele", tipo: "beleza" },
+      { r: r(4, "Sérum Vitamina C Facial", 45), grupo: "pele", tipo: "beleza" },
+      { r: r(5, "Colar Pedra Quartzo Rosa Prata", 40), grupo: "joia", tipo: "joia" },
+      { r: r(6, "Geleia Artesanal Morango", 22), grupo: "doces", tipo: "gourmet" },
+      { r: r(7, "Caixa Bombons Finos", 55), grupo: "doces", tipo: "gourmet" },
+    ];
+    for (const seed of [1, 2, 3]) {
+      const { dentro, melhor } = kitsDoPresente(c, 100, { estilo: "custo", seed, misturar: true });
+      expect(dentro).not.toBeNull();
+      expect(dentro!.itens.some((x) => /canetas|sand[aá]lia/i.test(x.nome))).toBe(false);
+      const baratos = dentro!.itens.filter((x) => x.preco < 25);
+      if (melhor) for (const b of baratos) expect(melhor.itens).not.toContain(b);
+    }
+  });
+});
