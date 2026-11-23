@@ -118,7 +118,7 @@ export const Route = createFileRoute("/api/public/buscar")({
         const termo = modoProduto ? entrada.q : corrigirBusca(entrada.q);
         const pagina = entrada.pagina ?? 0;
         /* Key version bump drops answers cached before a filter change (v29, 11/11: typo tolerance and hybrid stock). */
-        const chave1 = `v29|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(termo)}`;
+        const chave1 = `v30|${modoProduto ? "produto" : no ? `no:${no.slug}` : contexto}|${normalizarBusca(termo)}`;
         const chave = pagina
           ? `${chave1}|p${pagina}|c${entrada.cursor ?? ""}|n${(entrada.vistos ?? []).length}`
           : chave1;

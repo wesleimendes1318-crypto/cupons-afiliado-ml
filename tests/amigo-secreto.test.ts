@@ -35,7 +35,8 @@ describe("amigo secreto: leitura dos pedidos", () => {
     const t = r.vitrines.map((v) => v.titulo);
     expect(r.tamanhos.roupa).toBe("P");
     expect(r.tamanhos.calcado).toBe("35");
-    expect(t.some((x) => /Calçados femininos tamanho 35/.test(x))).toBe(true);
+    /* PR #167 (18/11): a bare size ("calçado 35") is a size, not a shoe request. */
+    expect(t.some((x) => /Calçados femininos tamanho 35/.test(x))).toBe(false);
     expect(t.some((x) => /Skincare/.test(x))).toBe(true);
     expect(t.some((x) => /dourado/.test(x))).toBe(true);
     expect(t.some((x) => /Bolsas/.test(x))).toBe(true);

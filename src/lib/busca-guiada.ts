@@ -15,7 +15,7 @@
    gera o link de afiliado. Textos públicos não citam IA. */
 import { ACERVO_HORAS, curinga } from "@/lib/acervo";
 import { curarResultados } from "@/lib/curadoria";
-import { ampliarDominios } from "@/lib/familias-dominio";
+import { ampliarDominios, DOMINIOS_CALCADOS, soCalcados } from "@/lib/familias-dominio";
 import { ErroApiMl, mlGet } from "@/lib/ml-api";
 import { nomeTemOTipo, termoDoProduto, tipoDoProduto } from "@/lib/termo-busca";
 import {
@@ -30,6 +30,7 @@ import {
   pisoDoAparelho,
   regraDoAparelho,
   tipoEstritoDaFrase,
+  ehBuscaDeCalcado,
 } from "@/lib/busca-intencao";
 import { normalizar, ordenarPelaIntencao } from "@/lib/busca-sugestoes";
 import { marcaDoTitulo, marcasDosResultados } from "@/lib/busca-resultados";
@@ -758,7 +759,8 @@ export async function buscaGuiada(
       ? intencao.buscas.map(() => null)
       : await Promise.all(
           intencao.buscas.map(async (b) => {
-            const s = ampliarDominios(await dominiosPrevistos(b));
+            const previstos = ampliarDominios(await dominiosPrevistos(b));
+            const s = ehBuscaDeCalcado(q) ? soCalcados(previstos) : previstos;
             return s ? new Set([...s, ...doModelo]) : null;
           }),
         );
@@ -1097,10 +1099,16 @@ async function maisVendidosDaCategoria(
   try {
     let listas = lidas;
     if (!listas) {
-      const d = await mlGet<Array<{ category_id?: string }>>(
-        `/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(termoDoProduto(q, 12))}`,
+      const d = await mlGet<Array<{ category_id?: string; domain_id?: string }>>(
+        `/sites/MLB/domain_discovery/search?limit=4&q=${encodeURIComponent(termoDoProduto(q, 12))}`,
       );
-      listas = await lerMaisVendidos([String((Array.isArray(d) ? d[0]?.category_id : "") ?? "")]);
+      const previstos = Array.isArray(d) ? d : [];
+      /* 23/11: "rasteirinha moleca" predicts sauces first; footwear takes
+         the first footwear category instead. */
+      const escolhida = ehBuscaDeCalcado(q)
+        ? previstos.find((p) => DOMINIOS_CALCADOS.includes(String(p.domain_id ?? "")))
+        : previstos[0];
+      listas = await lerMaisVendidos([String(escolhida?.category_id ?? "")]);
     }
     /* Paralelo (02/11): ficha e oferta de cada um, 6 por vez; até 12
        produtos por categoria (8 sem categoria conhecida), na ordem oficial. */

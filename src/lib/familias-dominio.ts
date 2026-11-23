@@ -6,6 +6,21 @@
    family brings its siblings; the product type still has to be in the name
    (tipoDaBusca), so a gym handle never passes as a short. */
 
+/* Footwear: IDs checked live on /domain_discovery 23/11/2026 (the old
+   MLB-SANDALS / MLB-BOOTS / MLB-LOAFERS never come back from the API). */
+export const DOMINIOS_CALCADOS = [
+  "MLB-SNEAKERS",
+  "MLB-SANDALS_AND_CLOGS",
+  "MLB-BOOTS_AND_BOOTIES",
+  "MLB-LOAFERS_AND_OXFORDS",
+  "MLB-FLATS",
+  "MLB-HEELS_AND_WEDGES",
+  "MLB-SLIPPERS",
+  "MLB-HIKING_BOOTS",
+  "MLB-MOTORCYCLE_BOOTS",
+  "MLB-DANCE_SNEAKERS_AND_SHOES",
+];
+
 const FAMILIAS: string[][] = [
   [
     "MLB-SPORT_SHORTS",
@@ -36,8 +51,16 @@ const FAMILIAS: string[][] = [
     "MLB-JEWELRY_SETS",
     "MLB-ANKLETS",
   ],
-  ["MLB-SNEAKERS", "MLB-SPORT_SHOES", "MLB-SANDALS", "MLB-SLIPPERS", "MLB-FLIP_FLOPS", "MLB-BOOTS", "MLB-LOAFERS"],
-  ["MLB-HANDBAGS", "MLB-BACKPACKS", "MLB-WALLETS", "MLB-SHOULDER_BAGS", "MLB-TOTE_BAGS", "MLB-CLUTCHES", "MLB-FANNY_PACKS"],
+  DOMINIOS_CALCADOS,
+  [
+    "MLB-HANDBAGS",
+    "MLB-BACKPACKS",
+    "MLB-WALLETS",
+    "MLB-SHOULDER_BAGS",
+    "MLB-TOTE_BAGS",
+    "MLB-CLUTCHES",
+    "MLB-FANNY_PACKS",
+  ],
 ];
 
 const POR_DOMINIO = new Map<string, string[]>();
@@ -48,4 +71,14 @@ export function ampliarDominios(s: Set<string> | null): Set<string> | null {
   const out = new Set(s);
   for (const d of s) for (const irmao of POR_DOMINIO.get(d) ?? []) out.add(irmao);
   return out;
+}
+
+/* 23/11 (Weslei: "rasteirinha moleca" showed ketchup and candy): the API
+   predicts MLB-SAUCES_AND_DRESSINGS and MLB-CANDIES ahead of
+   MLB-SANDALS_AND_CLOGS. A footwear request keeps only footwear domains
+   (unchanged when the prediction has none). */
+export function soCalcados(s: Set<string> | null): Set<string> | null {
+  if (!s) return s;
+  const f = new Set([...s].filter((d) => DOMINIOS_CALCADOS.includes(d)));
+  return f.size ? new Set(DOMINIOS_CALCADOS) : s;
 }
