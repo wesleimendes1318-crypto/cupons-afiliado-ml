@@ -231,6 +231,31 @@ const NEGATIVOS_INFANTIS = [
    catalog uses for it). Only these known types: a free first word ("smart",
    "maquina") is not a type. Appliances with a fixed category (regraDoAparelho)
    keep their domain filter instead. */
+const CALCADOS = [
+  "calcado",
+  "tenis",
+  "sneaker",
+  "sapato",
+  "sapatenis",
+  "chinelo",
+  "slide",
+  "sandalia",
+  "rasteira",
+  "rasteirinha",
+  "papete",
+  "tamanco",
+  "tamanquinho",
+  "babuche",
+  "mocassim",
+  "loafer",
+  "oxford",
+  "sapatilha",
+  "scarpin",
+  "bota",
+  "botinha",
+  "coturno",
+  "crocs",
+];
 const TIPOS_ESTRITOS: Record<string, string[]> = {
   camiseta: ["camiseta", "t shirt", "tshirt"],
   camisa: ["camisa"],
@@ -253,8 +278,18 @@ const TIPOS_ESTRITOS: Record<string, string[]> = {
   sapato: ["sapato"],
   sapatenis: ["sapatenis"],
   chinelo: ["chinelo", "slide"],
-  sandalia: ["sandalia", "rasteira", "rasteirinha"],
+  sandalia: ["sandalia", "rasteira", "rasteirinha", "papete", "tamanco", "anabela"],
   bota: ["bota", "coturno"],
+  /* 23/11 (footwear searches showed food): each word is its own type. */
+  calcado: CALCADOS,
+  rasteira: ["rasteira", "rasteirinha", "sandalia"],
+  rasteirinha: ["rasteirinha", "rasteira", "sandalia"],
+  papete: ["papete", "sandalia"],
+  tamanco: ["tamanco", "tamanquinho", "babuche", "clog", "sandalia"],
+  mocassim: ["mocassim", "mocassin", "loafer", "dockside", "sapato"],
+  sapatilha: ["sapatilha"],
+  scarpin: ["scarpin", "salto alto", "sapato"],
+  coturno: ["coturno", "bota"],
   mochila: ["mochila"],
   bolsa: ["bolsa"],
   oculo: ["oculos"],
@@ -288,6 +323,19 @@ function tipoEstrito(tipo: string): string[] | null {
   const palavra = normalizar(tipo).split(" ")[0] ?? "";
   return TIPOS_ESTRITOS[palavra] ?? TIPOS_ESTRITOS[singular(palavra)] ?? null;
 }
+
+/** The phrase asks for footwear (its strict type is a footwear word). */
+export function ehBuscaDeCalcado(q: string): boolean {
+  const t = tipoEstritoDaFrase(q);
+  const p = t ? normalizar(t).split(" ")[0]! : "";
+  return CALCADOS.includes(p) || CALCADOS.includes(singular(p));
+}
+
+/* FOOD SHIELD (23/11): a fashion or footwear request never shows groceries,
+   whatever the predicted domain. "chocolate", "caramelo", "cafe" are colors
+   and stay out of the list. */
+const RE_COMIDA =
+  /\b(ketchup|catchup|maionese|mostarda|molhos?|shoyu|temperos?|pirulitos?|chicletes?|bombons?|biscoitos?|bolachas?|salgadinhos?|batata (frita|palha)|paes|pao|refeic(ao|oes) pronta|alimentos?|guloseimas?|geleias?|doce de leite)\b/;
 
 /** The request names a strict type and the title has none of its names. */
 export function semOTipoPedido(nome: string, tipo: string, consulta: string): boolean {
@@ -545,6 +593,11 @@ export function foraDaIntencao(
   if (tipoUsadoComoDetalhe(nome, tipo, consulta)) return true;
   if (semOTipoPedido(nome, tipo, consulta)) return true;
   const t = ` ${normalizar(nome)} `;
+  const p0 = normalizar(tipo).split(" ")[0] ?? "";
+  const pecaOuCalcado = [p0, singular(p0)].some(
+    (w) => CALCADOS.includes(w) || PECAS_DE_ROUPA.has(w),
+  );
+  if (pecaOuCalcado && RE_COMIDA.test(t) && !RE_COMIDA.test(` ${pedido} `)) return true;
   const termos = [
     ...(intencao.termosNegativos ?? []),
     ...(NEGATIVOS_POR_TIPO[tipo] ?? []),
