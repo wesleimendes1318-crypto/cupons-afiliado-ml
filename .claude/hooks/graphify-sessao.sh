@@ -5,5 +5,7 @@
 export PATH="$HOME/.local/bin:$PATH"
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
 command -v graphify >/dev/null || { command -v uv >/dev/null && uv tool install -q "graphifyy[sql]==0.9.102" >/dev/null 2>&1; }
+# No uv in some cloud containers (24/11): fall back to pip.
+command -v graphify >/dev/null || python3 -m pip install -q --user "graphifyy[sql]==0.9.102" >/dev/null 2>&1 || python3 -m pip install -q --break-system-packages "graphifyy[sql]==0.9.102" >/dev/null 2>&1
 command -v graphify >/dev/null && timeout 120 graphify update . >/dev/null 2>&1
 exit 0
