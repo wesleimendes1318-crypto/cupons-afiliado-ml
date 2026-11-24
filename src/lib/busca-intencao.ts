@@ -335,7 +335,7 @@ export function ehBuscaDeCalcado(q: string): boolean {
    whatever the predicted domain. "chocolate", "caramelo", "cafe" are colors
    and stay out of the list. */
 const RE_COMIDA =
-  /\b(ketchup|catchup|maionese|mostarda|molhos?|shoyu|temperos?|pirulitos?|chicletes?|bombons?|biscoitos?|bolachas?|salgadinhos?|batata (frita|palha)|paes|pao|refeic(ao|oes) pronta|alimentos?|guloseimas?|geleias?|doce de leite)\b/;
+  /\b(ketchup|catchup|maionese|mostarda|molhos?|shoyu|temperos?|pirulitos?|chicletes?|balas?|gelatinas?|bombons?|biscoitos?|bolachas?|salgadinhos?|batata (frita|palha)|paes|pao|refeic(ao|oes) pronta|alimentos?|guloseimas?|geleias?|doce de leite)\b/;
 
 /** The request names a strict type and the title has none of its names. */
 export function semOTipoPedido(nome: string, tipo: string, consulta: string): boolean {
@@ -598,6 +598,15 @@ export function foraDaIntencao(
     (w) => CALCADOS.includes(w) || PECAS_DE_ROUPA.has(w),
   );
   if (pecaOuCalcado && RE_COMIDA.test(t) && !RE_COMIDA.test(` ${pedido} `)) return true;
+  /* 24/11 audit: any other typed product ("smart tv", "air fryer") never shows
+     groceries either, unless the title also names that product. */
+  if (
+    p0.length > 2 &&
+    RE_COMIDA.test(t) &&
+    !RE_COMIDA.test(` ${pedido} `) &&
+    ![p0, singular(p0)].some((w) => t.includes(` ${w}`))
+  )
+    return true;
   const termos = [
     ...(intencao.termosNegativos ?? []),
     ...(NEGATIVOS_POR_TIPO[tipo] ?? []),
