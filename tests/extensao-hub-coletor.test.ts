@@ -64,3 +64,25 @@ test("batches of 100", () => {
   assert.equal(JSON.stringify(lotes.map((l) => l.length)), "[100,100,50]"); // other vm realm: compare as JSON
   assert.equal(L.fatiar([]).length, 0);
 });
+
+// 1.189.0: the collector runs on any ML page (search results, stores, offers).
+test("search result card: no commission, installments never become the price", () => {
+  const i = L.lerCartao({
+    href: "https://www.mercadolivre.com.br/samsung-galaxy-a55/p/MLB123456789?pdp_filters=item_id%3AMLB5566778899#polycard_client=search",
+    texto: ["Samsung", "Smartphone Samsung Galaxy A55 5g 256gb Azul", "Por Samsung", "4.8", "(1234)", "R$", "2.499", "R$", "1.899", "24% OFF",
+      "em", "10x R$ 189,90 sem juros", "Frete grátis"].join("\n"),
+    riscado: "R$2.499",
+  })!;
+  assert.equal(i.item, "MLB5566778899");
+  assert.match(String(i.url), /^https:\/\/www\.mercadolivre\.com\.br\//);
+  assert.equal(i.titulo, "Smartphone Samsung Galaxy A55 5g 256gb Azul");
+  assert.equal(i.preco, 1899);
+  assert.equal(i.preco_original, 2499);
+  assert.equal(i.comissao_pct, null);
+});
+
+test("manifest: collector scripts load on every Mercado Livre page", () => {
+  const m = JSON.parse(readFileSync(new URL("../extensao/manifest.json", import.meta.url), "utf8"));
+  const cs = m.content_scripts.find((c: { js: string[] }) => c.js.includes("hub-coletor.js"));
+  assert.deepEqual(cs.matches, ["*://*.mercadolivre.com.br/*"]);
+});
