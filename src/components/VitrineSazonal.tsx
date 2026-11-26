@@ -67,6 +67,12 @@ import {
 } from "@/lib/avaliacoes-vitrine";
 import { passaNaQualidade, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
 import { atributoProduto } from "@/lib/perfil-visitante";
+import {
+  categoriaBlackFriday,
+  ofertaExtraBlackFriday,
+  ofertasBlackFriday,
+  type LinhaBlackFriday,
+} from "@/lib/black-friday";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -134,6 +140,36 @@ export function useOfertas() {
 
 export const daTemporada = (t: Temporada, ofertas: Oferta[]) =>
   ofertas.filter((o) => combinaComTemporada(t, o.titulo));
+
+/** Extra Black Friday pool (26/11: "adicione o maximo de produtos"):
+    compared in 7 days or read from the catalog in 12 h (ofertas_black_friday). */
+export function useOfertasBlackFriday(ativa = true) {
+  const [lista, setLista] = useState<Oferta[]>([]);
+  useEffect(() => {
+    if (!ativa) return;
+    let vivo = true;
+    void (async () => {
+      try {
+        const { data } = await supabase.rpc(
+          "ofertas_black_friday" as never,
+          { p_limite: 200 } as never,
+        );
+        if (vivo && Array.isArray(data))
+          setLista(
+            (data as LinhaBlackFriday[])
+              .map((l) => ofertaExtraBlackFriday(l))
+              .filter((o): o is Oferta => o != null),
+          );
+      } catch {
+        /* no reading: the curated list alone */
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [ativa]);
+  return lista;
+}
 
 /* ------------------------------------------------------------------
    VITRINE DE CAMPANHAS (Weslei, 05/10: experiência visual encantadora,
@@ -819,6 +855,9 @@ export function VitrineSazonal({
   const { ofertas, carregou: carregouOfertas } = useOfertas();
   const { campanhas, carregou: carregouCampanhas } = useCampanhasAtivas();
   const carregou = campanhas ? carregouCampanhas : carregouOfertas;
+  const extrasBlackFriday = useOfertasBlackFriday(
+    temporadas.some((t) => t.id === "black_friday" && !antecipada(t)),
+  );
 
   const secoes = useMemo(() => {
     const usados = new Set<string>();
@@ -828,12 +867,29 @@ export function VitrineSazonal({
         if (campanhas) {
           const db = campanhas.find((c) => c.slug === SLUG_DA_TEMPORADA[t.id]);
           if (!db) return [];
-          /* Até 24 por seção, só a lista curada da campanha. */
-          const lista = ofertasDaCampanha(db, usados).slice(0, 24);
+          /* Até 24 por seção, só a lista curada da campanha. Black Friday
+             (26/11): curated first, then every other valid offer. */
+          const bf = t.id === "black_friday";
+          const todas = bf
+            ? ofertasBlackFriday([
+                ofertasDaCampanha(db, usados),
+                ofertas.filter(
+                  (o) => combinaComTemporada(t, o.titulo) || categoriaBlackFriday(o.titulo),
+                ),
+                extrasBlackFriday,
+              ]).filter((o) => !usados.has(o.chave))
+            : ofertasDaCampanha(db, usados);
+          const lista = todas.slice(0, 24);
           lista.forEach((o) => usados.add(o.chave));
           /* Black Friday has no calendar page: its campaign page (26/11). */
-          const pagina = t.id === "black_friday" ? `/campanhas/${db.slug}` : t.pagina;
-          return [{ c: { ...t, slug: db.slug, pagina }, lista, total: db.produtos.length }];
+          const pagina = bf ? `/campanhas/${db.slug}` : t.pagina;
+          return [
+            {
+              c: { ...t, slug: db.slug, pagina },
+              lista,
+              total: bf ? todas.length : db.produtos.length,
+            },
+          ];
         }
         const todas = daTemporada(t, ofertas).filter((o) => !usados.has(o.chave));
         const lista = todas.slice(0, 24);
@@ -851,7 +907,7 @@ export function VitrineSazonal({
       })
       .filter((x) => x.lista.length >= 3);
     return [...doCalendario, ...doBanco];
-  }, [ofertas, temporadas, campanhas]);
+  }, [ofertas, temporadas, campanhas, extrasBlackFriday]);
 
   /* "Já é o menor preço" fora das temporadas (estratégia geral). */
   const menores = useMemo(() => {
