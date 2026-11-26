@@ -56,6 +56,11 @@ export type Oferta = {
   recente: boolean;
   /* Quando foi comparado (para "preço de dd/mm"). */
   vistoEm?: string;
+  /* Badges (26/11), only when known: free shipping confirmed on the shown
+     offer; seller seals read with the campaign product. */
+  freteGratis?: boolean;
+  lojaOficial?: boolean;
+  mercadoLider?: string | null;
 };
 
 const recente = (iso: string) => Date.now() - Date.parse(iso) < 24 * 3600_000;

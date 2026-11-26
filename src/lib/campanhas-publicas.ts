@@ -66,6 +66,8 @@ export function ofertaDaCampanha(p: ProdutoDaCampanha, agora = Date.now()): Ofer
     urlProduto: p.url_produto,
     recente: agora - Date.parse(p.conferido_em) < 24 * 3600_000,
     vistoEm: p.conferido_em,
+    lojaOficial: p.loja_oficial === true,
+    mercadoLider: p.mercado_lider ?? null,
   };
 }
 
