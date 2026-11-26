@@ -150,3 +150,8 @@ test("pool dedupes the same product title across sources", () => {
   ]);
   assert.equal(lista.length, 1);
 });
+
+test("every offer in the Black Friday pool carries the seal", () => {
+  const [o] = ofertasBlackFriday([[oferta({ chave: "s", titulo: "Selo" })]]);
+  assert.equal(o?.selo, "Black Friday");
+});
