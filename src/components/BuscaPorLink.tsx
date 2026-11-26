@@ -954,12 +954,14 @@ function Historico({
    during the Black Friday season, with the box idle and empty. */
 const ATALHOS_BLACK_FRIDAY = [
   { rotulo: "🎮 PS5 Slim", termo: "playstation 5 slim" },
-  { rotulo: "🔥 GTA 6", termo: "gta 6" },
-  { rotulo: "🎁 Gift card PlayStation", termo: "gift card playstation store" },
-  { rotulo: "📱 iPhone 16", termo: "iphone 16" },
-  { rotulo: "🍳 Air fryer", termo: "air fryer 5 litros" },
+  { rotulo: "📱 iPhone 16 / 15", termo: "iphone" },
+  { rotulo: "📱 Galaxy S24 / A55", termo: "smartphone samsung galaxy" },
   { rotulo: "📺 Smart TV 50\" 4K", termo: "smart tv 50 4k" },
-  { rotulo: "🔊 JBL Flip 6", termo: "jbl flip 6" },
+  { rotulo: "🍳 Air fryer 5L+", termo: "air fryer 5 litros" },
+  { rotulo: "🤖 Robô aspirador", termo: "robo aspirador" },
+  { rotulo: "💻 Notebook", termo: "notebook" },
+  { rotulo: "🔊 JBL Bluetooth", termo: "jbl flip" },
+  { rotulo: "👟 Tênis esportivo", termo: "tenis esportivo" },
 ] as const;
 
 function AtalhosBlackFriday({ buscar }: { buscar: (termo: string) => void }) {
