@@ -34,11 +34,11 @@ test("categories by title, accessories out", () => {
 test("pool: free shipping confirmed, no repeats, biggest % first", () => {
   const lista = ofertasBlackFriday([
     [
-      oferta({ chave: "a", preco: 90, antes: 100, economia: 10 }),
-      oferta({ chave: "b", preco: 50, antes: 100, economia: 50 }),
-      oferta({ chave: "c", preco: 10, antes: 100, economia: 90, freteGratis: undefined }),
+      oferta({ chave: "a", titulo: "A", preco: 90, antes: 100, economia: 10 }),
+      oferta({ chave: "b", titulo: "B", preco: 50, antes: 100, economia: 50 }),
+      oferta({ chave: "c", titulo: "C", preco: 10, antes: 100, economia: 90, freteGratis: undefined }),
     ],
-    [oferta({ chave: "b", preco: 1, antes: 100, economia: 99 })],
+    [oferta({ chave: "b", titulo: "B2", preco: 1, antes: 100, economia: 99 })],
   ]);
   assert.deepEqual(
     lista.map((o) => o.chave),
@@ -87,4 +87,66 @@ test("seller badge only from known seals", () => {
     "Loja oficial",
   );
   assert.equal(selosDoCartao(oferta({}), undefined).vendedor, null);
+});
+
+test("extra rows: devices only, real price, buy path, honest type", async () => {
+  const { ofertaExtraBlackFriday } = await import("../src/lib/black-friday");
+  const base = {
+    chave: "MLB1",
+    imagem: null,
+    loja: null,
+    visto_em: new Date().toISOString(),
+    loja_oficial: true,
+  };
+  const cat = ofertaExtraBlackFriday({
+    ...base,
+    titulo: "Smart TV 50 4K Samsung",
+    tipo: "menor",
+    preco: "2299",
+    antes: "2299",
+    economia: "0",
+    link: null,
+    url_produto: "https://www.mercadolivre.com.br/p/MLB1?pdp_filters=item_id%3AMLB2",
+    fonte: "catalogo",
+  });
+  assert.equal(cat?.tipo, "menor");
+  assert.equal(cat?.antes, 2299); // "Preço conferido", no discount claim
+  assert.equal(cat?.lojaOficial, true);
+  assert.equal(cat?.freteGratis, true);
+  const linha = (o: object) =>
+    ofertaExtraBlackFriday({
+      ...base,
+      tipo: "menor",
+      preco: "100",
+      antes: "100",
+      economia: "0",
+      link: "https://meli.la/x",
+      url_produto: null,
+      fonte: "comparado",
+      titulo: "Air Fryer Mondial 5L",
+      ...o,
+    } as never);
+  assert.equal(linha({ titulo: "Capa para iPhone 16" }), null);
+  assert.equal(linha({ titulo: "Air Fryer Mondial 5L usada" }), null);
+  assert.equal(linha({ preco: null }), null);
+  assert.equal(linha({ link: "https://www.mercadolivre.com.br/x" }), null); // bare URL, no affiliate
+  assert.equal(linha({})?.lojaOficial, undefined); // compared rows: seals from selos_da_vitrine
+  const mesmo = linha({ tipo: "mesmo", preco: "246.32", antes: "282.30", economia: "35.98" });
+  assert.equal(mesmo?.tipo, "mesmo");
+  assert.equal(mesmo?.economia, 35.98);
+});
+
+test("pool dedupes the same product title across sources", () => {
+  const lista = ofertasBlackFriday([
+    [oferta({ chave: "a", titulo: "Smart Tv 43 AOC" })],
+    [
+      oferta({
+        chave: "MLB9",
+        titulo: "smart tv 43  aoc",
+        link: null,
+        urlProduto: "https://www.mercadolivre.com.br/p/MLB9",
+      }),
+    ],
+  ]);
+  assert.equal(lista.length, 1);
 });

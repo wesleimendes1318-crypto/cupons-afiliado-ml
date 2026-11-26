@@ -9,6 +9,7 @@ import {
   ofertasDaCampanha,
   SecaoCampanha,
   useOfertas,
+  useOfertasBlackFriday,
 } from "@/components/VitrineSazonal";
 import {
   CATEGORIAS_BLACK_FRIDAY,
@@ -147,12 +148,14 @@ function PaginaCampanha() {
 
 /* /campanhas/black-friday (Weslei, 26/11): category selector at the top and
    the biggest verified discount first, free shipping confirmed only. Pool:
-   the curated campaign plus showcase offers that already passed the same
-   checks (useOfertas). Every buy button is the card's affiliate link. */
+   the curated campaign, showcase offers that already passed the same
+   checks (useOfertas) and ofertas_black_friday (compared in 7 days or read
+   from the catalog in 12 h). Every buy button is the card's affiliate link. */
 const BLACK_FRIDAY = TEMPORADAS.find((t) => t.id === "black_friday")!;
 
 function BlackFriday({ publica, lista }: { publica: CampanhaPublica; lista: Oferta[] }) {
   const { ofertas, carregou } = useOfertas();
+  const extras = useOfertasBlackFriday();
   const [categoria, setCategoria] = useState<CategoriaBlackFriday | null>(null);
   const todas = useMemo(
     () =>
@@ -160,8 +163,9 @@ function BlackFriday({ publica, lista }: { publica: CampanhaPublica; lista: Ofer
         lista,
         daTemporada(BLACK_FRIDAY, ofertas),
         ofertas.filter((o) => categoriaBlackFriday(o.titulo)),
+        extras,
       ]),
-    [lista, ofertas],
+    [lista, ofertas, extras],
   );
   /* Only categories with real offers get a chip (never an empty shelf). */
   const comOfertas = CATEGORIAS_BLACK_FRIDAY.filter((k) =>
