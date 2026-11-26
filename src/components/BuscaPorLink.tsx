@@ -138,6 +138,7 @@ import { fotoNitida } from "@/lib/foto";
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
 import { CoracaoDesejo } from "@/components/CoracaoDesejo";
 import { LinkPronto } from "@/components/LinkPronto";
+import { temporadasAtivas } from "@/lib/sazonal";
 /* Ritmo da consulta: rapido no comeco, calmo depois.
 
    Com a ponte avisando a extensao na hora do pedido, a resposta costuma chegar
@@ -945,6 +946,40 @@ function Historico({
         ))}
       </ul>
     </div>
+  );
+}
+
+/* BLACK FRIDAY SHORTCUTS (Weslei, 26/11): one tap runs the same universal
+   text search as typing the term (no change to the search itself). Only
+   during the Black Friday season, with the box idle and empty. */
+const ATALHOS_BLACK_FRIDAY = [
+  { rotulo: "🎮 PS5 Slim", termo: "playstation 5 slim" },
+  { rotulo: "🔥 GTA 6", termo: "gta 6" },
+  { rotulo: "🎁 Gift card PlayStation", termo: "gift card playstation store" },
+  { rotulo: "📱 iPhone 16", termo: "iphone 16" },
+  { rotulo: "🍳 Air fryer", termo: "air fryer 5 litros" },
+  { rotulo: "📺 Smart TV 50\" 4K", termo: "smart tv 50 4k" },
+  { rotulo: "🔊 JBL Flip 6", termo: "jbl flip 6" },
+] as const;
+
+function AtalhosBlackFriday({ buscar }: { buscar: (termo: string) => void }) {
+  if (!temporadasAtivas().some((t) => t.id === "black_friday")) return null;
+  return (
+    <nav
+      aria-label="Atalhos da Black Friday"
+      className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {ATALHOS_BLACK_FRIDAY.map((a) => (
+        <button
+          key={a.termo}
+          type="button"
+          onClick={() => buscar(a.termo)}
+          className="inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-card px-3.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:border-[#7547E8] hover:bg-[#EEE9FD] hover:text-[#21134A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3] dark:hover:bg-white/10 dark:hover:text-foreground"
+        >
+          {a.rotulo}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -1781,6 +1816,7 @@ export default function BuscaPorLink({
         escolher={foto.escolher}
         consentir={foto.consentir}
       />
+      {parada && !url.trim() && <AtalhosBlackFriday buscar={compararDaFoto} />}
       {/* Com resultado, o CEP vai para a barra de seções. */}
       {!(fase === "pronto" && pedido) && <SeloCep regiao={regiao} trocar={trocarCep} />}
       {fase === "parado" && !pedido && (

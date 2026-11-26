@@ -13,7 +13,7 @@
    só com link de afiliado e comparação de menos de 24 h (senão "Ver o
    preço de agora"; preço velho não vira compra, regra de 02/10). */
 import { VerDetalhesVitrine } from "@/components/DetalhesVitrine";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
 import { ComprarComSeguranca, LinhaComparar } from "@/components/BotoesCartao";
@@ -28,6 +28,7 @@ import {
   type TemaVisualId,
 } from "@/lib/campanha-visual";
 import { seloDoMenorPreco } from "@/lib/selos";
+import { selosDoCartao, useSelosDaVitrine, type LinhaSelos } from "@/lib/selos-vitrine";
 import { lerFretesDaVitrine, semEconomiaSemFrete } from "@/lib/frete-vitrine";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -120,7 +121,9 @@ export function useOfertas() {
       if (o.tipo !== "menor" && !descontoReal(o.economia, o.antes)) continue;
       if (!passaNaQualidade(avaliacaoDaOferta(notas, o.chave, o.link), exigir)) continue;
       vistas.add(o.chave);
-      lista.push(o);
+      /* Economy only survives with melhor_frete_gratis, "menor" only with
+         frete_gratis, alternatives require alt_frete_gratis: all confirmed. */
+      lista.push({ ...o, freteGratis: true });
     }
     /* Economia de verdade primeiro; "menor preço" com diferença pequena
        depois dos descontos maiores. */
@@ -279,12 +282,15 @@ export function CartaoOferta({
   o,
   className = "",
   atraso = 0,
+  selos,
 }: {
   o: Oferta;
   className?: string;
   atraso?: number;
+  selos?: LinhaSelos;
 }) {
   const c = classificacao(o);
+  const s = selosDoCartao(o, selos);
   const avaliacoes = useContext(ContextoAvaliacoes);
   const avaliacao = avaliacaoDaOferta(avaliacoes, o.chave, o.link);
   const quando = o.recente ? "Conferido hoje" : `Preço de ${dataCurta(o.vistoEm) ?? "antes"}`;
@@ -350,6 +356,25 @@ export function CartaoOferta({
           {brl(o.preco)}
         </p>
         <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[#515154]">{c.linha}</p>
+        {(s.menor30d || s.freteGratis || s.vendedor) && (
+          <p className="mt-1 flex flex-wrap gap-1">
+            {s.menor30d && (
+              <span className="rounded-full bg-[#fde8e8] px-2 py-0.5 text-[10px] font-bold text-[#b3261e]">
+                🔥 Menor preço dos últimos 30 dias
+              </span>
+            )}
+            {s.freteGratis && (
+              <span className="rounded-full bg-[#e8f5ec] px-2 py-0.5 text-[10px] font-bold text-[#14692e]">
+                Frete grátis confirmado
+              </span>
+            )}
+            {s.vendedor && (
+              <span className="rounded-full bg-[#e8f1fd] px-2 py-0.5 text-[10px] font-bold text-[#0058b0]">
+                {s.vendedor}
+              </span>
+            )}
+          </p>
+        )}
         <p className="mt-0.5 truncate text-[11px] text-[#6e6e73]">
           {o.loja ? `Vendido por ${o.loja}` : " "}
         </p>
@@ -459,6 +484,7 @@ export function GradeOfertas({
   const trilho = useRef<HTMLUListElement>(null);
   const chavesDaLista = useMemo(() => todasDaLista.map((o) => o.chave), [todasDaLista]);
   const avaliacoes = useAvaliacoesDaVitrine(chavesDaLista);
+  const selos = useSelosDaVitrine(chavesDaLista);
   /* Campanha curada no servidor duas vezes por dia: nota que caiu depois
      da curadoria também tira o cartão (só a nota baixa conhecida barra). */
   const lista = todasDaLista.filter(
@@ -475,7 +501,13 @@ export function GradeOfertas({
       <ContextoAvaliacoes.Provider value={avaliacoes}>
         <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
           {lista.map((o, i) => (
-            <CartaoOferta key={o.chave} o={o} atraso={i} className={largura} />
+            <CartaoOferta
+              key={o.chave}
+              o={o}
+              atraso={i}
+              className={largura}
+              selos={selos.get(o.chave)}
+            />
           ))}
           {completar && <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />}
         </ul>
@@ -491,7 +523,13 @@ export function GradeOfertas({
           className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0"
         >
           {lista.map((o, i) => (
-            <CartaoOferta key={o.chave} o={o} atraso={i} className={largura} />
+            <CartaoOferta
+              key={o.chave}
+              o={o}
+              atraso={i}
+              className={largura}
+              selos={selos.get(o.chave)}
+            />
           ))}
           <CartaoColar p={p} natal={natal} naHome={naHome} className={largura} />
         </ul>
@@ -572,7 +610,9 @@ export function ofertasDaCampanha(c: CampanhaPublica, usados?: Set<string>) {
   for (const p of c.produtos ?? []) {
     const o = ofertaDaCampanha(p, agora);
     if (!o || !o.link || usados?.has(o.chave)) continue;
-    lista.push(o);
+    /* Calendar campaigns are curated by the agent with confirmed free
+       shipping; manual ones (TikTok picks) may not be. */
+    lista.push(c.fonte === "calendario" ? { ...o, freteGratis: true } : o);
   }
   return lista;
 }
@@ -584,11 +624,16 @@ export function SecaoCampanha({
   lista,
   total,
   naHome = true,
+  filtro,
+  fileira = true,
 }: {
   c: CampanhaVitrine;
   lista: Oferta[];
   total: number;
   naHome?: boolean;
+  /* Campaign page (26/11): category selector above the grid, full grid. */
+  filtro?: ReactNode;
+  fileira?: boolean;
 }) {
   const { tema } = temaDaCampanha(c, lista);
   const v = TEMAS_VISUAIS[tema];
@@ -671,7 +716,14 @@ export function SecaoCampanha({
         </div>
       </div>
       <div id={`ofertas-${c.id}`} className="px-4 pb-5 pt-4 sm:px-7 sm:pb-6">
-        <GradeOfertas p={p} lista={lista} naHome={naHome} natal={tema === "natal"} />
+        {filtro}
+        <GradeOfertas
+          p={p}
+          lista={lista}
+          naHome={naHome}
+          natal={tema === "natal"}
+          fileira={fileira}
+        />
       </div>
     </section>
   );
@@ -779,7 +831,9 @@ export function VitrineSazonal({
           /* Até 24 por seção, só a lista curada da campanha. */
           const lista = ofertasDaCampanha(db, usados).slice(0, 24);
           lista.forEach((o) => usados.add(o.chave));
-          return [{ c: { ...t, slug: db.slug }, lista, total: db.produtos.length }];
+          /* Black Friday has no calendar page: its campaign page (26/11). */
+          const pagina = t.id === "black_friday" ? `/campanhas/${db.slug}` : t.pagina;
+          return [{ c: { ...t, slug: db.slug, pagina }, lista, total: db.produtos.length }];
         }
         const todas = daTemporada(t, ofertas).filter((o) => !usados.has(o.chave));
         const lista = todas.slice(0, 24);
