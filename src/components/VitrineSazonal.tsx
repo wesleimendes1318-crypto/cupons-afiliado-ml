@@ -142,7 +142,7 @@ export const daTemporada = (t: Temporada, ofertas: Oferta[]) =>
   ofertas.filter((o) => combinaComTemporada(t, o.titulo));
 
 /** Extra Black Friday pool (26/11: "adicione o maximo de produtos"):
-    compared in 7 days or read from the catalog in 12 h (ofertas_black_friday). */
+    compared in 7 days or read from the catalog in 72 h (ofertas_black_friday). */
 export function useOfertasBlackFriday(ativa = true) {
   const [lista, setLista] = useState<Oferta[]>([]);
   useEffect(() => {
@@ -379,6 +379,11 @@ export function CartaoOferta({
       <div className="flex flex-1 flex-col border-t border-[#f0f0f2] p-3">
         {/* Abaixo da foto, a classificação (altura fixa: os títulos alinham). */}
         <p className="flex min-h-5 flex-wrap items-center gap-1">
+          {o.selo && (
+            <span className="whitespace-nowrap rounded-full bg-[#121218] px-2 py-0.5 text-[10px] font-bold text-white">
+              🖤 {o.selo}
+            </span>
+          )}
           <span
             className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${c.chipClasse}`}
           >

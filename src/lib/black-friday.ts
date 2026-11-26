@@ -59,7 +59,7 @@ export function ofertasBlackFriday(listas: Oferta[][]): Oferta[] {
     if (vistas.has(o.chave) || vistas.has(nome)) continue;
     vistas.add(o.chave);
     vistas.add(nome);
-    saida.push(o);
+    saida.push({ ...o, selo: "Black Friday" });
   }
   return saida.sort(
     (a, b) => percentualDoDesconto(b) - percentualDoDesconto(a) || b.economia - a.economia,

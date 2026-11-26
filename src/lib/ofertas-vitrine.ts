@@ -61,6 +61,8 @@ export type Oferta = {
   freteGratis?: boolean;
   lojaOficial?: boolean;
   mercadoLider?: string | null;
+  /* Campaign seal on the card (26/11: "selo de black"). */
+  selo?: string;
 };
 
 const recente = (iso: string) => Date.now() - Date.parse(iso) < 24 * 3600_000;

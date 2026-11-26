@@ -150,7 +150,7 @@ function PaginaCampanha() {
    the biggest verified discount first, free shipping confirmed only. Pool:
    the curated campaign, showcase offers that already passed the same
    checks (useOfertas) and ofertas_black_friday (compared in 7 days or read
-   from the catalog in 12 h). Every buy button is the card's affiliate link. */
+   from the catalog in 72 h). Every buy button is the card's affiliate link. */
 const BLACK_FRIDAY = TEMPORADAS.find((t) => t.id === "black_friday")!;
 
 function BlackFriday({ publica, lista }: { publica: CampanhaPublica; lista: Oferta[] }) {
