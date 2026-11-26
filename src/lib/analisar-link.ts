@@ -22,7 +22,7 @@ export interface AnaliseLink {
   termoIdentificado?: string;
   /* Nome da loja para o texto da tela (nunca em botão de compra). */
   nomeLoja?: string;
-  /* Encurtado (meli.la, amzn.to, a.co, shope.ee...): o servidor resolve. */
+  /* Encurtado (meli.la, amzn.to, a.co, link.amazon, shope.ee...): o servidor resolve. */
   encurtado?: boolean;
 }
 
@@ -31,7 +31,8 @@ const RE_URL = /(?:https?:\/\/|www\.)[^\s"'<>]+/gi;
 const RE_ML =
   /(^|\.)(mercadolivre\.com\.br|mercadolivre\.com|mercadolibre\.com(\.[a-z]{2})?|meli\.la)$/i;
 const RE_AMAZON_BR = /(^|\.)amazon\.com\.br$/i;
-const RE_AMAZON_CURTO = /^(amzn\.to|a\.co|amzn\.com\.br)$/i;
+/* link.amazon (26/11): new Amazon share shortener, redirects to /dp/ASIN. */
+const RE_AMAZON_CURTO = /^(amzn\.to|a\.co|amzn\.com\.br|link\.amazon)$/i;
 const RE_SHOPEE = /(^|\.)shopee\.com\.br$/i;
 const RE_SHOPEE_CURTO = /^(shope\.ee|s\.shopee\.com\.br)$/i;
 
