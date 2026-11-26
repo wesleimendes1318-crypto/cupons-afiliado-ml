@@ -45,6 +45,22 @@ test("3. Amazon: ASIN do /dp/ e encurtado amzn.to", () => {
   assert.equal(curto.urlLimpa, "https://amzn.to/3xyz");
 });
 
+test("3a. Amazon link.amazon (pasted twice in one field)", () => {
+  const a = analisarLink("https://link.amazon/B0bU17G7q https://link.amazon/B0bU17G7q");
+  assert.equal(a.origem, "amazon");
+  assert.equal(a.encurtado, true);
+  assert.equal(a.nomeLoja, "Amazon");
+  assert.equal(a.urlLimpa, "https://link.amazon/B0bU17G7q");
+  const colado = analisarLink("https://link.amazon/B0bU17G7qhttps://link.amazon/B0bU17G7q");
+  assert.equal(colado.urlLimpa, "https://link.amazon/B0bU17G7q");
+  // Where it lands (checked live 26/11): ASIN read, store tracking dropped.
+  const destino = analisarLink(
+    "https://www.amazon.com.br/dp/B0CP6CR795?lv=shuf&linkCode=ml1&tag=melhoresc0fff-20&plpRedirect=mhFallback",
+  );
+  assert.equal(destino.identificador, "B0CP6CR795");
+  assert.equal(destino.urlLimpa, "https://www.amazon.com.br/dp/B0CP6CR795");
+});
+
 test("3b. Amazon com nome no endereço e rastreio", () => {
   const a = analisarLink(
     "https://www.amazon.com.br/Echo-Dot-5%C2%AA-gera%C3%A7%C3%A3o-Cor-Preta/dp/B09B8V1LZ3/ref=sr_1_1?crid=ABC&tag=outro-20",
