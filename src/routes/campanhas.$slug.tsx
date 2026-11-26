@@ -17,7 +17,7 @@ import {
   ofertasBlackFriday,
   type CategoriaBlackFriday,
 } from "@/lib/black-friday";
-import { TEMPORADAS } from "@/lib/sazonal";
+import { DESCRICAO_BLACK_FRIDAY, TEMPORADAS } from "@/lib/sazonal";
 import { supabase } from "@/integrations/supabase/client";
 import { useRevalidarAoVoltar, type CampanhaPublica } from "@/lib/campanhas-publicas";
 import type { Oferta } from "@/lib/ofertas-vitrine";
@@ -182,7 +182,7 @@ function BlackFriday({ publica, lista }: { publica: CampanhaPublica; lista: Ofer
     }`;
   return (
     <SecaoCampanha
-      c={campanhaDoBanco(publica, false)}
+      c={{ ...campanhaDoBanco(publica, false), descricao: DESCRICAO_BLACK_FRIDAY }}
       lista={visiveis}
       total={visiveis.length}
       naHome={false}

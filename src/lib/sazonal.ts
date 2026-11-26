@@ -61,6 +61,9 @@ export type Temporada = {
 /* Paleta da campanha: vem do sistema visual (src/lib/campanha-visual.ts). */
 export type TemaCampanha = PaletaCampanha;
 
+export const DESCRICAO_BLACK_FRIDAY =
+  "Contra a Black Fraude: desconto só aparece quando foi medido contra outra loja, e todo produto aqui tem frete grátis confirmado. Nada de metade do dobro.";
+
 export const TEMPORADAS: readonly Temporada[] = [
   {
     id: "criancas",
@@ -155,6 +158,9 @@ export const TEMPORADAS: readonly Temporada[] = [
       "aspirador robô xiaomi",
     ],
     temaVisual: "black_friday",
+    /* Anti "Black Fraude" (Weslei, 26/11): true for every card shown, since a
+       discount only appears when measured against another store. */
+    descricao: DESCRICAO_BLACK_FRIDAY,
     tema: PALETAS.black_friday,
   },
   {
