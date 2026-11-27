@@ -516,6 +516,20 @@ export function ofertasDoCatalogo(html) {
   return saida;
 }
 
+/* PRICE ROBOT (Weslei, 27/11: "sempre deve ter" price on search cards).
+   The catalog page's own buy box: the offer marked "selected":true inside
+   buy_box_offers (the first one when none is marked). Never an item from a
+   carousel or another product (same closed object as ofertasDoCatalogo). */
+export function ofertaDaCaixaDeCompra(html) {
+  const ofertas = ofertasDoCatalogo(html).filter(o => o.preco != null);
+  if (!ofertas.length) return null;
+  const t = String(html);
+  const i = t.indexOf('"buy_box_offers":{');
+  const bloco = objetoJson(t, i + '"buy_box_offers":'.length) || '';
+  const m = /"selected"\s*:\s*true\s*,\s*"type"\s*:\s*"[A-Z_]+"\s*,\s*"item_id"\s*:\s*"(MLB\d+)"/.exec(bloco);
+  return (m && ofertas.find(o => o.item === m[1])) || ofertas[0];
+}
+
 /* DECISAO: o que mostrar ao cliente.
 
    Pedido do Weslei, 23/09: "buscar o mesmo produto em outra loja caso a do

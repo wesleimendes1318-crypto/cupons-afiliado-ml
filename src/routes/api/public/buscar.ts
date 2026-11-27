@@ -1,4 +1,5 @@
 import { guardarNoAcervo } from "@/lib/acervo";
+import { comPrecosDoRobo } from "@/lib/precos-robo";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -141,7 +142,7 @@ export const Route = createFileRoute("/api/public/buscar")({
           return r.data?.resposta ?? null;
         };
         const guardada = await lerGuardada(chave);
-        if (guardada) return json(request, guardada);
+        if (guardada) return json(request, await comPrecosDoRobo(db, guardada));
 
         const completar = async (): Promise<{ corpo: object; status: number }> => {
           let achado: {
@@ -317,7 +318,9 @@ export const Route = createFileRoute("/api/public/buscar")({
           if (achado.resultados.length || enfileirados)
             await db.from("busca_guiada").insert({ chave, contexto, resposta, enfileirados });
           gravarMemoria(chave, resposta);
-          return { corpo: resposta, status: 200 };
+          /* Robot prices join at serve time (cached answers stay raw, so a
+             price is never older than PRECO_ROBO_HORAS). */
+          return { corpo: await comPrecosDoRobo(db, resposta), status: 200 };
         };
 
         /* TWO STAGES (Weslei, 06/11: "3-6 s esperando"): the interpretation
