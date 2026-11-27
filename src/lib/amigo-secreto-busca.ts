@@ -134,7 +134,7 @@ export async function carregarAte(opcoes: {
   aprovar?: (r: Resultado) => boolean;
   /** Sibling terms added 4 at a time when every term ran out (06/11: "+20" never dies). */
   termosReserva?: string[];
-}): Promise<{ novos: Resultado[]; passos: PassoTermo[]; erro: string | null }> {
+}): Promise<{ novos: Resultado[]; passos: PassoTermo[]; erro: string | null; travado: boolean }> {
   const passos = opcoes.passos.map((p) => ({ ...p }));
   const novos: Resultado[] = [];
   const titulos = TITULOS.get(opcoes.vistos) ?? [];
@@ -142,7 +142,11 @@ export async function carregarAte(opcoes: {
   let erro: string | null = null;
   let falhas = 0;
   let chamadas = 0;
-  const maximo = opcoes.maxChamadas ?? 30;
+  /* 26/11 (Weslei): 30 calls chasing an empty target piled up 429s. */
+  const maximo = opcoes.maxChamadas ?? 12;
+  /* Circuit breaker: two batches in a row with nothing inside the budget stop the load. */
+  let lotesVazios = 0;
+  let travado = false;
   /* Speed (Weslei, 05/11): up to 3 terms read at the same time. */
   while (chamadas < maximo && novos.length < opcoes.alvo) {
     if (opcoes.cancelado?.()) break;
@@ -168,6 +172,7 @@ export async function carregarAte(opcoes: {
     );
     if (opcoes.cancelado?.()) break;
     let parar = false;
+    let algumNaFaixa = false;
     respostas.forEach((r, i) => {
       const passo = passos[lote[i]!]!;
       if (!r.resposta) {
@@ -182,6 +187,7 @@ export async function carregarAte(opcoes: {
       const naFaixa = (r.resposta.resultados ?? []).filter((x) =>
         cabeNaFaixa(x, opcoes.faixa.min, opcoes.faixa.max, opcoes.faixa.freteACalcular === true),
       );
+      if (naFaixa.length) algumNaFaixa = true;
       /* Checked one by one: same listing, same photo, same model or a
          near-identical title already in this person's showcases stays out. */
       const novosDoTermo = naFaixa.filter((x) => {
@@ -202,7 +208,15 @@ export async function carregarAte(opcoes: {
       passo.vazias = naFaixa.length ? 0 : (passo.vazias ?? 0) + 1;
       passo.fim = r.resposta.proximo == null || passo.vazias >= 2;
     });
-    if (parar) break;
+    if (parar) {
+      travado = true;
+      break;
+    }
+    lotesVazios = algumNaFaixa ? 0 : lotesVazios + 1;
+    if (lotesVazios >= 2) {
+      travado = true;
+      break;
+    }
   }
-  return { novos, passos, erro: novos.length ? null : erro };
+  return { novos, passos, erro: novos.length ? null : erro, travado };
 }

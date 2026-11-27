@@ -76,12 +76,12 @@ export const CHAVE_LOCAL = "melhorescolha_amigo_secreto_v2";
 /** Weslei, 05/11: the budget starts open (0 = any value). */
 export const ORCAMENTO_PADRAO = { min: 0, max: 0 } as const;
 /** First load of each showcase; "+20 opções" after it. */
-/* Weslei, 06/11: "no mínimo 50 resultados iniciais". Cards show as they
-   arrive (stored listings answer at once), so the rail is never empty while
-   the rest loads; "+20 opções" continues on demand. */
-export const META_POR_VITRINE = 50;
+/* Weslei, 26/11: 50 on open took minutes (up to 60 calls per showcase while
+   the catalog answered 403/429). First render is 12; "+20 opções" continues
+   on demand. */
+export const META_POR_VITRINE = 12;
 export const LOTE_EXTRA = 20;
 /** Weslei, 05/11 ("melhore a quantidade de anúncios"): after every showcase
-    shows its first 50, each one keeps filling in the background, one at a
-    time, up to this many real products inside the budget. */
-export const META_FUNDO = 100;
+    shows its first batch, each one fills once in the background, one at a
+    time, up to this many (26/11: 100 -> 36, thin showcases no longer retry). */
+export const META_FUNDO = 36;

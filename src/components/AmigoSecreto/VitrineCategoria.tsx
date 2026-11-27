@@ -17,7 +17,7 @@ import { CartaoBusca, doCatalogo } from "@/components/BuscaGuiada";
 import { BotaoCoracao } from "@/components/CoracaoDesejo";
 import type { Resultado } from "@/lib/busca-guiada-cliente";
 import { arquetipoDoTitulo, limitarPorArquetipo, qualidadePrimeiro } from "@/lib/curadoria";
-import type { VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
+import { META_POR_VITRINE, type VitrineCategoriaAmigo } from "@/lib/amigo-secreto-tipos";
 
 /* Weslei, 05/11: gentle, true waiting copy (no jargon). Only what the
    search really does: catalog offers incl. official stores, free shipping
@@ -109,8 +109,8 @@ export function VitrineCategoria({
   const controles = !contadorFixo && vitrine.produtos.length > 3;
   const n = vitrine.produtos.length;
   const frase = useFraseDeEspera(vitrine.carregando);
-  /* 50 on open, then the next block of 20 ("X de 50 produtos"). */
-  const meta = n < 50 ? 50 : Math.ceil((n + 1) / 20) * 20;
+  /* First batch on open, then the next block of 20 ("X de 12 produtos"). */
+  const meta = n < META_POR_VITRINE ? META_POR_VITRINE : Math.ceil((n + 1) / 20) * 20;
   /* Weslei, 06/11: always offer more. Terms ran out: widen (shipping to
      calculate first, then the next value), otherwise read the next page. */
   const maisResultados = () => {

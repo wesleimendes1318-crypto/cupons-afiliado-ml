@@ -32,3 +32,21 @@ test("termos acabaram: entram os de reserva e a vitrine segue carregando", async
   expect(restamReservas(r.passos, ["b", "c", "d", "e"])).toBe(true);
   expect(restamReservas(r.passos, ["b", "c"])).toBe(false);
 });
+
+test("freio: dois lotes seguidos sem nada na faixa param a carga (sem 30 chamadas)", async () => {
+  let n = 0;
+  globalThis.fetch = (async () => {
+    n += 1;
+    return new Response(JSON.stringify({ resultados: [], proximo: null }), { status: 200 });
+  }) as typeof fetch;
+  const r = await carregarAte({
+    passos: passosIniciais(["a", "b", "c"]),
+    faixa: { min: 0, max: 120 },
+    vistos: new Set(),
+    alvo: 12,
+    termosReserva: ["d", "e", "f", "g", "h", "i", "j", "k"],
+  });
+  expect(r.travado).toBe(true);
+  expect(r.novos.length).toBe(0);
+  expect(n).toBeLessThanOrEqual(6);
+});

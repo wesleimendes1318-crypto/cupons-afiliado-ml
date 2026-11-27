@@ -1,7 +1,7 @@
 /* AMIGO SECRETO (Weslei, 05/11): one page per group draw. Each person's wish
    text turns into themed showcases (2-6 + "Ideias criativas"), each filled
    from the catalog search with products whose real cost (price + confirmed
-   free shipping) fits the budget; 50 on the first load, "+20 opções" after.
+   free shipping) fits the budget; 12 on the first load, "+20 opções" after.
    Every buy button is the site card (rule no. 1: affiliate link on click). */
 import { createFileRoute } from "@tanstack/react-router";
 import { Gift } from "lucide-react";
@@ -242,8 +242,11 @@ function PaginaAmigoSecreto() {
          fewer, the same terms complete with "frete a calcular" listings
          (price inside the budget, shipping shown on the card). */
       const faltam = META_POR_VITRINE - (v.produtos.length + r.novos.length);
-      if (alvo === META_POR_VITRINE && !faixa.freteACalcular && faltam > 0) {
+      /* 26/11: no second pass when the first one was cut by the breaker or a
+         429 (the catalog is not answering), and a short one otherwise. */
+      if (alvo === META_POR_VITRINE && !faixa.freteACalcular && faltam > 0 && !r.travado) {
         await carregarAte({
+          maxChamadas: 6,
           passos: passosIniciais(ampliarTermos(v.termosBusca, ctx)),
           faixa: { ...faixa, freteACalcular: true },
           vistos: seen,
@@ -277,13 +280,11 @@ function PaginaAmigoSecreto() {
     /* Background fill: once nothing is loading, one showcase at a time grows to META_FUNDO. */
     if (fila.length) return;
     const abertas = ativo.vitrines.filter(
-      /* Thin showcases (< 4) get up to 3 background rounds, the rest one. */
-      (v) => v.temMais && !v.erro && v.produtos.length < META_FUNDO && (completadas.current.get(v.id) ?? 0) < (v.produtos.length < 4 ? 3 : 1),
+      /* 26/11: one background round, only for showcases that already found
+         products; thin or empty ones wait for "+20 opções" (no retry storm). */
+      (v) => v.temMais && !v.erro && v.produtos.length >= 4 && v.produtos.length < META_FUNDO && !completadas.current.has(v.id),
     );
-    /* Thin showcases (< 4 on the first batch) are filled first. */
-    const fina = abertas.find((v) => v.produtos.length < 4 && !v.carregando);
-    /* A thin showcase does not wait for the others; the rest fill one at a time. */
-    const proxima = fina && emCurso < 3 ? fina : emCurso ? undefined : abertas.find((v) => !v.carregando);
+    const proxima = emCurso ? undefined : abertas[0];
     if (!proxima) return;
     completadas.current.set(proxima.id, (completadas.current.get(proxima.id) ?? 0) + 1);
     void carregar(ativo.id, proxima, META_FUNDO - proxima.produtos.length);
