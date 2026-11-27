@@ -742,22 +742,24 @@ async function rodarRoboDePrecos() {
     /* Search page first (logged): one read prices dozens of cards of a term
        someone searched. A term is read at most once every 6 h. */
     if (!semCookie) {
-      const { precosTermos = {} } = await chrome.storage.local.get('precosTermos');
+      /* Key per parser version: a fixed parser rereads terms at once. */
+      const { precosTermos199: precosTermos = {} } = await chrome.storage.local.get('precosTermos199');
       for (const k of Object.keys(precosTermos)) if (Date.now() - precosTermos[k] > 6 * 3600e3) delete precosTermos[k];
       const b = await buscaParaPrecos(sincToken, Object.keys(precosTermos));
       if (b) {
         precosTermos[b.termo] = Date.now();
-        await chrome.storage.local.set({ precosTermos });
+        await chrome.storage.local.set({ precosTermos199: precosTermos });
         const l = await lerPaginaParaPreco(urlDeBusca(b.termo), true);
         if (l.muro) {
           await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler precos', 'leitura', l.r.url);
           gravarDiagnostico(sincToken, 'robo-precos', { versao: chrome.runtime.getManifest().version, busca: b.termo, parou: 'captcha (freio)' }).catch(() => {});
           return;
         }
-        const achados = l.r.ok ? precosDaBuscaDaLoja(l.t, b.produtos) : [];
+        const diagB = {};
+        const achados = l.r.ok ? precosDaBuscaDaLoja(l.t, b.produtos, diagB) : [];
         if (achados.length) await gravarPrecos(sincToken, achados);
         gravarDiagnostico(sincToken, 'robo-precos', { versao: chrome.runtime.getManifest().version, busca: b.termo,
-          pedidos: (b.produtos || []).length, gravados: achados.length, http: l.r.status, kb: Math.round(String(l.t || '').length / 1024) }).catch(() => {});
+          pedidos: (b.produtos || []).length, gravados: achados.length, http: l.r.status, kb: Math.round(String(l.t || '').length / 1024), ...diagB }).catch(() => {});
         return;
       }
     }

@@ -766,3 +766,15 @@ test('robo de precos: pagina de busca da loja preenche os produtos pedidos (27/1
   assert.deepEqual(precosDaBuscaDaLoja(html, ['MLB1000001', 'MLB1000002', 'MLB1000003']),
     [{ produto: 'MLB1000001', item: 'MLB5000001', preco: 89.9, loja_oficial: false, internacional: false }]);
 });
+
+test('robo de precos: cartao HTML da busca da loja com /p/ e item (27/11)', async () => {
+  const { precosDaBuscaDaLoja } = await import('../comparador.js');
+  const html = '<li class="ui-search-layout__item"><a href="https://www.mercadolivre.com.br/mochila-x/p/MLB1000001?pdp_filters=item_id%3AMLB5000001#x">Mochila</a>'
+    + '<span class="andes-money-amount__fraction">149</span><span class="andes-money-amount__cents">90</span></li>'
+    + '<li class="ui-search-layout__item"><a href="https://www.mercadolivre.com.br/y/p/MLB1000002?pdp_filters=item_id%3AMLB5000002">Y</a>'
+    + '<span class="andes-money-amount__fraction">99</span> Compra internacional</li>';
+  const d = {};
+  assert.deepEqual(precosDaBuscaDaLoja(html, ['MLB1000001', 'MLB1000002'], d),
+    [{ produto: 'MLB1000001', item: 'MLB5000001', preco: 149.9, loja_oficial: false, internacional: false }]);
+  assert.equal(d.pedidosNaPagina, 2);
+});

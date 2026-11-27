@@ -872,14 +872,44 @@ export function polycards(limpo) {
    each card of a catalog product we searched gets that card's own offer and
    price (the link /p/<produto>?pdp_filters=item_id:<item> opens that offer).
    Only products in `produtos`; never international or used; first card wins. */
-export function precosDaBuscaDaLoja(html, produtos) {
+export function precosDaBuscaDaLoja(html, produtos, diag = null) {
   const quero = new Set(produtos || []);
-  const limpo = String(html || '').replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+  const texto = String(html || '');
   const saida = new Map();
-  for (const c of polycards(limpo)) {
-    if (!c.catalogo || !quero.has(c.catalogo) || saida.has(c.catalogo)) continue;
-    if (c.internacional || c.usado || !(c.preco > 0)) continue;
-    saida.set(c.catalogo, { produto: c.catalogo, item: c.item, preco: c.preco, loja_oficial: false, internacional: false });
+  const d = diag || {};
+  const aceitar = (cat, item, preco, pedaco) => {
+    if (!cat || !item || !quero.has(cat) || saida.has(cat)) return;
+    if (!(preco > 0) || /internacional|"is_cbt"\s*:\s*true|"cbt_/i.test(pedaco)
+        || /\bUsado\b|Recondicionado|"condition"\s*:\s*"(?:used|refurbished)"/i.test(pedaco)) return;
+    saida.set(cat, { produto: cat, item, preco, loja_oficial: false, internacional: false });
+  };
+  /* 1. HTML cards (27/11 21:55: polycards alone gave 0 of 59 on a 1.4 MB page). */
+  let blocos = texto.split(/ui-search-layout__item/);
+  if (blocos.length <= 1) blocos = texto.split(/class="[^"]*poly-card[\s"]/);
+  d.cartoes = Math.max(0, blocos.length - 1);
+  d.comCatalogo = 0;
+  for (const b of blocos.slice(1)) {
+    const pedaco = b.slice(0, 12000);
+    const end = enderecoDoCartao(pedaco);
+    if (end && end.catalogo) d.comCatalogo++;
+    if (end) aceitar(end.catalogo, end.item, precoDoCartao(pedaco), pedaco);
+  }
+  /* 2. JSON polycards. */
+  const limpo = texto.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+  const cards = polycards(limpo);
+  d.polycards = cards.length;
+  for (const c of cards) {
+    if (c.internacional || c.usado) continue;
+    aceitar(c.catalogo, c.item, c.preco, '');
+  }
+  /* What catalog ids the page links at all, to see a mismatch from afar. */
+  const naPagina = new Set([...limpo.matchAll(/\/p\/(MLB\d{6,})/gi)].map(m => m[1].toUpperCase()));
+  d.catalogosNaPagina = naPagina.size;
+  d.pedidosNaPagina = [...quero].filter(x => naPagina.has(x)).length;
+  d.amostra = [...naPagina].slice(0, 5);
+  if (!d.comCatalogo && !cards.length) {
+    const k = limpo.search(/\/p\/MLB\d{6,}/);
+    d.trecho = k >= 0 ? limpo.slice(Math.max(0, k - 300), k + 500) : limpo.slice(0, 300);
   }
   return [...saida.values()];
 }
