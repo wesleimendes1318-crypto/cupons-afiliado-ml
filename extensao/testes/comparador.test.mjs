@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  palavrasDoTitulo, pareceMesmoProduto, ofertasDaBusca, ofertasDoCatalogo,
+  palavrasDoTitulo, pareceMesmoProduto, ofertasDaBusca, ofertasDoCatalogo, ofertaDaCaixaDeCompra,
   precoDoCartao, itemDoUrl, escolherAlternativas, ehCaptcha, urlDeBusca, pecaNoLugarDoAparelho
 } from '../comparador.js';
 
@@ -714,4 +714,13 @@ test('escolha: pela metade do preco nunca e o mesmo produto (27/11)', () => {
   ];
   const r = escolherAlternativas(achados, { finalAtual: 4850, itemAtual: 'MLB8059853222' });
   assert.deepEqual(r.map(x => x.item), ['MLB5000000001']);
+});
+
+test('robo de precos: a oferta marcada na caixa de compra do produto', () => {
+  const marcada = '"buy_box_offers":{"offers":[{"selected":false,"type":"OFFER","item_id":"MLB1000000001","price":{"value":89.5}},'
+    + '{"selected":true,"type":"BUY_BOX","item_id":"MLB1000000002","price":{"value":99.9}}]},"carousel":{"item_id":"MLB9999999999","price":{"value":20.34}}';
+  assert.deepEqual(ofertaDaCaixaDeCompra(marcada), { item: 'MLB1000000002', preco: 99.9 });
+  const semMarca = '"buy_box_offers":{"offers":[{"item_id":"MLB1000000003","price":{"value":150}}]}';
+  assert.deepEqual(ofertaDaCaixaDeCompra(semMarca), { item: 'MLB1000000003', preco: 150 });
+  assert.equal(ofertaDaCaixaDeCompra('<html>sem bloco</html>'), null);
 });

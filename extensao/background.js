@@ -10,9 +10,9 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, gravarCuponsV2, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
          buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas,
-         comandoEspelhoPendente, gravarMetricasAfiliado } from './sincronia.js';
+         comandoEspelhoPendente, gravarMetricasAfiliado, precosPendentes, gravarPrecos } from './sincronia.js';
 import { sincronizarEspelho } from './espelho.js';
-import { ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
+import { ofertaDaCaixaDeCompra, ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
          primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial, produtoEmDestaque,
@@ -708,6 +708,58 @@ async function completarVitrine() {
   } catch (e) {
     gravarDiagnostico(sincToken, 'vitrine-fotos', { erro: String(e.message || e).slice(0, 200) }).catch(() => {});
   } finally { completandoVitrine = false; }
+}
+
+/* ROBO DE PRECOS (Weslei, 27/11: "pode adicionar os valores! sempre deve ter!").
+   The ML API refuses /products/{id}/items (403 even with his token), so the
+   search cards had no price. Every 5 min, up to 8 catalog pages, ONE AT A
+   TIME, 4-7 s apart, WITHOUT the account cookie (credentials: 'omit': his
+   affiliate session is never used). The buy box price goes to the database;
+   the site shows it for 12 h. A captcha, 403 or 429 stops the robot for 2 h.
+   International offers are stored as such and never shown. */
+let precificando = false;
+let precosUltima = 0;
+async function rodarRoboDePrecos() {
+  if (precificando || Date.now() - precosUltima < 5 * 60e3) return;
+  if (typeof atendendo !== 'undefined' && atendendo) return;
+  const { sincToken, precosParadoAte } = await chrome.storage.local.get(['sincToken', 'precosParadoAte']);
+  if (!sincToken || (precosParadoAte && Date.now() < precosParadoAte)) return;
+  precificando = true;
+  precosUltima = Date.now();
+  const registro = [];
+  const linhas = [];
+  try {
+    const lista = await precosPendentes(sincToken, 8);
+    for (const it of lista) {
+      if (!/^MLB\d+$/.test(String(it.produto || ''))) continue;
+      const url = 'https://www.mercadolivre.com.br/p/' + it.produto;
+      let r = null, t = '';
+      try {
+        r = await fetch(url, { credentials: 'omit', redirect: 'follow' });
+        t = r.ok ? await r.text() : '';
+      } catch (e) { registro.push({ p: it.produto, erro: String(e.message || e).slice(0, 80) }); continue; }
+      if (!r.ok || ehCaptcha(t, r.url)) {
+        const motivo = r.ok ? 'captcha' : 'HTTP ' + r.status;
+        registro.push({ p: it.produto, parou: motivo });
+        if (!r.ok && r.status === 404) { linhas.push({ produto: it.produto, item: null, preco: null }); continue; }
+        await chrome.storage.local.set({ precosParadoAte: Date.now() + 2 * 3600e3 });
+        break;
+      }
+      const caixa = ofertaDaCaixaDeCompra(t);
+      /* Used or refurbished buy box: no price (the site only shows new). */
+      const o = caixa && condicaoDoHtml(t, caixa.item) !== 'used' && condicaoDoHtml(t, caixa.item) !== 'refurbished' ? caixa : null;
+      let internacional = false;
+      try { internacional = !!(o && envioInternacionalDoHtml(t, o.item)?.internacional); } catch (e) { /* desconhecido = nacional */ }
+      linhas.push({ produto: it.produto, item: o ? o.item : null, preco: o ? o.preco : null,
+                    loja_oficial: o ? lojaOficialDoHtml(t, o.item) === true : false, internacional });
+      registro.push({ p: it.produto, preco: o ? o.preco : null, int: internacional || undefined });
+      await sleep(4000 + Math.random() * 3000);
+    }
+    if (linhas.length) await gravarPrecos(sincToken, linhas);
+    gravarDiagnostico(sincToken, 'robo-precos', { versao: chrome.runtime.getManifest().version, pedidos: lista.length, registro }).catch(() => {});
+  } catch (e) {
+    gravarDiagnostico(sincToken, 'robo-precos', { erro: String(e.message || e).slice(0, 200) }).catch(() => {});
+  } finally { precificando = false; }
 }
 
 /* ================================================================
@@ -5687,6 +5739,7 @@ chrome.alarms.onAlarm.addListener(async a => {
       rodarEspelho().catch(e => console.warn('[espelho]', e.message));
       atualizarAvaliacoes().catch(() => {});
       completarVitrine().catch(() => {});
+      rodarRoboDePrecos().catch(() => {});
     }
     vigiarFila().catch(() => {});
     // Quem clicou "Gerar o codigo deste cupom" no site esta esperando na tela.

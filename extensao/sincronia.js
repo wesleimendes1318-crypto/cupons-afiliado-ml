@@ -535,6 +535,20 @@ export async function gravarDiagnostico(token, tipo, dados) {
   } catch (e) { /* so diagnostico */ }
 }
 
+/* PRICE ROBOT (27/11): catalog products the searches showed without a price
+   (and stale best sellers); the extension reads each page and sends back the
+   buy box price. Errors go up so the round records them. */
+export async function precosPendentes(token, limite = 8) {
+  if (!token) return [];
+  const l = await chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_fila', { p_token: token, p_limite: limite });
+  return Array.isArray(l) ? l : [];
+}
+
+export async function gravarPrecos(token, linhas) {
+  if (!token || !linhas.length) return 0;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_gravar', { p_token: token, p_linhas: linhas });
+}
+
 /* Vitrine: produtos antigos sem foto (a extensao completa aos poucos). */
 export async function vitrineSemFoto(token, limite = 5) {
   if (!token) return [];
