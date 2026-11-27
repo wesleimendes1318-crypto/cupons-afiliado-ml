@@ -544,6 +544,12 @@ export async function precosPendentes(token, limite = 8) {
   return Array.isArray(l) ? l : [];
 }
 
+export async function buscaParaPrecos(token, pular = []) {
+  if (!token) return null;
+  const l = await chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_buscas', { p_token: token, p_pular: pular });
+  return Array.isArray(l) && l[0] && l[0].termo ? l[0] : null;
+}
+
 export async function gravarPrecos(token, linhas) {
   if (!token || !linhas.length) return 0;
   return chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_gravar_v2', { p_token: token, p_linhas: linhas });
