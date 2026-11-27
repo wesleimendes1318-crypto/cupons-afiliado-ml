@@ -5,11 +5,13 @@
    Preço é o de quando foi comparado, com a data. Rodapé fixo com Comprar
    (sempre link de afiliado) e Comparar preço. Nada é inventado: sem detalhes guardados,
    o painel diz isso e oferece comparar de novo. */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent as CliqueReact, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Images,
   LoaderCircle,
   MessageCircle,
@@ -32,6 +34,7 @@ import { OpinioesCompradores } from "@/components/OpinioesCompradores";
 import { OutrosVendedores } from "@/components/OutrosVendedores";
 import type { VendedorNaTabela } from "@/components/ComparacaoMarketplaces";
 import { acoesDoProduto } from "@/lib/afiliado";
+import { textoRecomendacao } from "@/lib/compartilhar-oferta";
 import { buscarLinkAfiliado, itemDoProduto, linkWhatsApp } from "@/lib/lista-desejos";
 import { itemDoEndereco } from "@/lib/avaliacoes-detalhe";
 import { caracteristicasValidas, pilulasDaFicha } from "@/lib/ficha-detalhes";
@@ -219,7 +222,10 @@ export function VerDetalhesVitrine({
           compacto
           produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }}
         />
-        <BotaoWhatsApp produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }} />
+        <BotaoWhatsApp
+          vertical
+          produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }}
+        />
       </div>
     ) : null;
   if (!mlb && !imagem && !extras.length)
@@ -714,44 +720,107 @@ export function GaleriaProduto({
   );
 }
 
-/** WhatsApp share of one product, always with Weslei's link (rule no. 1):
-    the ready link, or link_de_reserva for an ML listing. */
-export function BotaoWhatsApp({ produto }: { produto: Parameters<typeof itemDoProduto>[0] }) {
+/** WhatsApp + "Copiar" of one product (27/11: branded recommendation with
+    his affiliate link and the product page, src/lib/compartilhar-oferta.ts).
+    The link is always his (rule no. 1): the ready link, or link_de_reserva
+    for an ML listing; without one, nothing is sent or copied. */
+export function BotaoWhatsApp({
+  produto,
+  vertical = false,
+}: {
+  produto: Parameters<typeof itemDoProduto>[0];
+  vertical?: boolean;
+}) {
   const [enviando, setEnviando] = useState(false);
+  const [copiado, setCopiado] = useState<"ok" | "erro" | null>(null);
   const item = itemDoProduto(produto);
   if (!item) return null;
-  const enviar = async () => {
+  const pagina = idDaPagina(produto.chave, item.url);
+  const montar = async () => {
+    const l = await buscarLinkAfiliado(item);
+    return l ? textoRecomendacao({ titulo: item.titulo, preco: item.preco, link: l, pagina }) : null;
+  };
+  const enviar = async (e: CliqueReact<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
     setEnviando(true);
     /* Opened now (popup blockers), filled after the link comes back. */
     const janela = window.open("", "_blank");
-    const l = await buscarLinkAfiliado(item);
+    const texto = await montar();
     setEnviando(false);
-    if (!l) {
+    if (!texto) {
       janela?.close();
       return;
     }
-    const preco = item.preco != null ? `\n💰 ${brl(item.preco)}` : "";
-    const url = linkWhatsApp(
-      `Olha este achado: *${item.titulo.replace(/[*_~`]/g, "")}*${preco}\n👉 ${l}`,
-    );
+    const url = linkWhatsApp(texto);
     if (janela) janela.location.href = url;
     else window.location.href = url;
   };
+  const copiar = async (e: CliqueReact<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const pronto = montar();
+    let ok = false;
+    try {
+      /* Safari only copies inside the tap: hand it the pending text. */
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": pronto.then((t) => {
+              if (!t) throw new Error("sem link");
+              return new Blob([t], { type: "text/plain" });
+            }),
+          }),
+        ]);
+        ok = true;
+      } else {
+        const t = await pronto;
+        if (t) {
+          await navigator.clipboard.writeText(t);
+          ok = true;
+        }
+      }
+    } catch {
+      ok = false;
+    }
+    setCopiado(ok ? "ok" : "erro");
+    window.setTimeout(() => setCopiado(null), 2000);
+  };
+  const classe =
+    "vidro-botao grid size-9 place-items-center rounded-full shadow-sm transition active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]";
   return (
-    <button
-      type="button"
-      onClick={() => void enviar()}
-      disabled={enviando}
-      aria-label={`Enviar no WhatsApp: ${item.titulo}`}
-      title="Enviar no WhatsApp"
-      className="vidro-botao grid size-9 place-items-center rounded-full shadow-sm transition active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
-    >
-      {enviando ? (
-        <LoaderCircle className="size-[18px] animate-spin" aria-hidden="true" />
-      ) : (
-        <MessageCircle className="size-[18px] text-[#25d366]" aria-hidden="true" />
-      )}
-    </button>
+    <span className={"flex gap-1.5" + (vertical ? " flex-col" : "")}>
+      <button
+        type="button"
+        onClick={(e) => void enviar(e)}
+        disabled={enviando}
+        aria-label={`Enviar no WhatsApp: ${item.titulo}`}
+        title="Enviar no WhatsApp"
+        className={classe}
+      >
+        {enviando ? (
+          <LoaderCircle className="size-[18px] animate-spin" aria-hidden="true" />
+        ) : (
+          <MessageCircle className="size-[18px] text-[#25d366]" aria-hidden="true" />
+        )}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => void copiar(e)}
+        aria-label={`Copiar recomendação: ${item.titulo}`}
+        title={copiado === "ok" ? "Recomendação copiada" : copiado === "erro" ? "Não deu para copiar" : "Copiar recomendação"}
+        className={classe}
+      >
+        {copiado === "ok" ? (
+          <Check className="size-[18px] text-[#34c759]" aria-hidden="true" />
+        ) : (
+          <Copy className="size-[18px] text-[#1d1d1f] dark:text-white" aria-hidden="true" />
+        )}
+        <span className="sr-only" aria-live="polite">
+          {copiado === "ok" ? "Recomendação copiada" : copiado === "erro" ? "Não deu para copiar" : ""}
+        </span>
+      </button>
+    </span>
   );
 }
 
