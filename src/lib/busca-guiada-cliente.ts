@@ -33,6 +33,8 @@ export type Resposta = {
   resultados: Resultado[];
   enfileirados: number;
   lidoEm?: string;
+  /* Streamed preview (replaced by the full answer). */
+  previa?: boolean;
   /* Intenção entendida (filtro final no navegador). */
   tipoProduto?: string | null;
   contextoUso?: string | null;
@@ -229,7 +231,7 @@ export async function buscarProdutos(
     } else j = (await r.json()) as Resposta & { erro?: string };
     if (!r.ok || !j || j.erro) {
       /* Full search failed after the preview: the preview stays. */
-      if (vista) return { resposta: vista, erro: null };
+      if (vista) return { resposta: { ...vista, previa: false }, erro: null };
       return { resposta: null, erro: j?.erro ?? "A busca não respondeu agora. Tente de novo." };
     }
     if (chaveCache && j.resultados?.length) gravarNaSessao(chaveCache, j);
@@ -252,7 +254,7 @@ export function chaveDaSessao(q: string, contexto: string, modo: string, no?: st
     .trim();
   let h = 5381;
   for (let i = 0; i < n.length; i++) h = ((h * 33) ^ n.charCodeAt(i)) >>> 0;
-  return `bg11_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
+  return `bg12_cache_${contexto}_${modo}_${no ?? ""}_${h.toString(36)}_${n.length}`;
 }
 function lerDaSessao(chave: string): Resposta | null {
   try {

@@ -293,7 +293,7 @@ export function BuscaGuiada({
       vitrine: foto 4:3 limpa que abre fotos e detalhes, selo da loja, nota
       real, preço de referência com a hora, frete em linha própria, "Comprar
       com segurança" (afiliado) e "Comparar preço";
-   3. 16 de cara e "Carregar mais resultados (+20 opções)" enquanto o
+   3. 24 de cara e "Carregar mais resultados (+24 opções)" enquanto o
       catálogo tiver mais, com uma faixa de curadoria a cada 12;
    4. nota acima de 4,5 (quando lida) na frente; nota mais baixa no fim. */
 
@@ -305,7 +305,9 @@ export type ConsultaBusca = {
   no?: string;
 };
 
-const LOTE = 20;
+/* 27/11: 24 fits the 2, 3 and 4 column grids evenly. */
+const LOTE = 24;
+const emPrevia = (r: { previa?: boolean } | null | undefined) => !!r?.previa;
 const CURADORIA_A_CADA = 12;
 
 export type CartaoDaBusca = {
@@ -612,7 +614,12 @@ export function ResultadosDaBusca({
     setExtras([]);
     setPagina(1);
     /* Sem a 1ª página do catálogo (erro ou nada achado), não há "mais". */
-    setFim(!consulta || !resposta?.resultados.length || resposta?.proximo === null);
+    /* The streamed preview always says proximo null: only the full answer ends it. */
+    setFim(
+      !consulta ||
+        !resposta?.resultados.length ||
+        (resposta?.proximo === null && !emPrevia(resposta)),
+    );
     setCarregandoMais(false);
     setVisiveis(LOTE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -622,7 +629,8 @@ export function ResultadosDaBusca({
     focar.current = Math.min(visiveis, cartoes.length);
     const alvo = visiveis + LOTE;
     setVisiveis(alvo);
-    if (!fim && cartoes.length < alvo) void lerPaginas(pagina, alvo, cartoes.length);
+    if (!fim && !emPrevia(resposta) && cartoes.length < alvo)
+      void lerPaginas(pagina, alvo, cartoes.length);
   }
 
   /* Foco no 1º cartão novo, com rolagem suave (teclado e leitor de tela). */
@@ -776,6 +784,19 @@ export function ResultadosDaBusca({
                   />
                 ))}
               </ul>
+              {carregandoMais && (
+                <ul
+                  aria-hidden="true"
+                  className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
+                >
+                  {Array.from({ length: 4 }, (_, k) => (
+                    <li
+                      key={k}
+                      className={`h-64 animate-pulse rounded-3xl bg-muted/70 ${k === 2 ? "hidden sm:block" : k === 3 ? "hidden xl:block" : ""}`}
+                    />
+                  ))}
+                </ul>
+              )}
               {filtrarPrazo && !consultandoPrazo && naGrade.length === 0 && (
                 <p className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                   Nenhuma opção confirmou entrega até {formatarDataCompleta(limite!)} para seu CEP.
@@ -811,15 +832,19 @@ export function ResultadosDaBusca({
                   <button
                     type="button"
                     onClick={carregarMais}
-                    disabled={carregandoMais}
+                    disabled={
+                      carregandoMais || (emPrevia(resposta) && ordenados.length <= visiveis)
+                    }
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#0071e3]/40 bg-white px-5 text-sm font-semibold text-[#0058b0] transition hover:bg-[#f5f5f7] disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0071e3]"
                   >
-                    {carregandoMais ? (
+                    {carregandoMais || (emPrevia(resposta) && ordenados.length <= visiveis) ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     ) : null}
                     {carregandoMais
                       ? "Carregando mais opções…"
-                      : "Carregar mais resultados (+20 opções)"}
+                      : emPrevia(resposta) && ordenados.length <= visiveis
+                        ? "Buscando mais opções…"
+                        : `Carregar mais resultados (+${LOTE} opções)`}
                   </button>
                 </div>
               )}
