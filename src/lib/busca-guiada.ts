@@ -306,18 +306,31 @@ type OfertasDoProduto = {
    request read mostly the same products; a short memo keeps that one API read. */
 const OFERTAS = new Map<string, { em: number; p: Promise<OfertasDoProduto> }>();
 const OFERTAS_MS = 120_000;
+/* 27/11 (more results): with /items refused for every product, each search
+   spent one doomed read per card. After 3 refusals in a row the read is
+   skipped for 10 min (same "no price" card), then tried again. */
+let recusasSeguidas = 0;
+let itensBloqueadosAte = 0;
 function ofertasDoProduto(id: string): Promise<OfertasDoProduto> {
   const agora = Date.now();
   const m = OFERTAS.get(id);
   if (m && agora - m.em < OFERTAS_MS) return m.p;
+  if (agora < itensBloqueadosAte)
+    return Promise.reject(new ErroApiMl(403, "PA_UNAUTHORIZED_RESULT_FROM_POLICIES"));
   if (OFERTAS.size >= 3000) OFERTAS.delete(OFERTAS.keys().next().value!);
   const p = mlGet<OfertasDoProduto>(`/products/${id}/items?limit=5`);
   OFERTAS.set(id, { em: agora, p });
   /* 27/11: ML answers 403 (PA_UNAUTHORIZED_RESULT_FROM_POLICIES) to app tokens
      on /items; that refusal stays memoized so the next pass does not re-read. */
-  p.catch((e) => {
-    if (!(e instanceof ErroApiMl && e.status === 403)) OFERTAS.delete(id);
-  });
+  p.then(
+    () => {
+      recusasSeguidas = 0;
+    },
+    (e) => {
+      if (!(e instanceof ErroApiMl && e.status === 403)) return void OFERTAS.delete(id);
+      if (++recusasSeguidas >= 3) itensBloqueadosAte = Date.now() + 10 * 60_000;
+    },
+  );
   return p;
 }
 
@@ -436,9 +449,9 @@ export async function buscarNoCatalogo(
 ) {
   const max = opcoes.max ?? 8;
   const porBusca = opcoes.porBusca ?? 4;
-  const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 20);
+  const limite = Math.min(Math.max(opcoes.limite ?? 6, 1), 50);
   const offset = Math.min(Math.max(Math.floor(opcoes.offset ?? 0), 0), 900);
-  const TETO = Math.min(opcoes.teto ?? 18, 48);
+  const TETO = Math.min(opcoes.teto ?? 18, 80);
   /* PARALELO (Weslei, 02/11: busca por texto rápida). 1) as buscas ao mesmo
      tempo; 2) os candidatos de todas, na ordem de antes, com as ofertas lidas
      6 por vez; 3) a escolha final na mesma ordem e com os mesmos limites. */
@@ -491,9 +504,15 @@ export async function buscarNoCatalogo(
   return resultados;
 }
 
-const LIDOS_NA_PRIMEIRA = 24;
+/* 27/11 (Weslei: "muito mais resultados"): the catalog search takes up to 50
+   per read (checked live 27/11: limit=50 answers 200). The 1st page aims at
+   40 cards and each "Carregar mais" at 24; never below 20 when the catalog
+   has them. Fewer correct cards still beat more wrong ones: every shield runs. */
+const LIDOS_NA_PRIMEIRA = 50;
 export const MINIMO_RESULTADOS = 20;
-const MAXIMO_PAGINA = 30;
+export const ALVO_PRIMEIRA = 40;
+export const ALVO_SEGUINTE = 24;
+const MAXIMO_PAGINA = 60;
 /* A busca oficial do catálogo só vai até a posição 120 (offset 120 = 400,
    medido em 02/11). Mais fundo, só com outra busca (a marca junto). */
 const FIM_DO_CATALOGO = 120;
@@ -510,7 +529,8 @@ export function passosDasSeguintes(buscas: string[], variantes: string[]): Passo
   const passos: Passo[] = [];
   /* 05/11 ("está limitando"): the 1st page stops at 20 cards, often after
      offset 0 only, so "+20" starts at 24 (re-reads are skipped by `ignorar`). */
-  for (const offset of [24, 44, 64, 84, FIM_DO_CATALOGO - 20]) passos.push({ buscas, offset });
+  /* 27/11: the 1st page reads 0-50 at once, so "+24" starts at 50. */
+  for (const offset of [50, 70, 90, FIM_DO_CATALOGO - 20]) passos.push({ buscas, offset });
   for (const v of variantes)
     for (let o = 0; o + 20 <= FIM_DO_CATALOGO; o += 20) passos.push({ buscas: [v], offset: o });
   return passos;
@@ -775,7 +795,7 @@ export async function buscaGuiada(
   /* Sem preço pedido, o aparelho grande tem piso (02/11: nicho de R$ 371 e
      placa de R$ 479 na busca de lava e seca). */
   const piso = intencao.precoMin || intencao.precoMax ? null : pisoDoAparelho(q);
-  const maximo = 24;
+  const maximo = 48;
   const opcoes = {
     precoMin: intencao.precoMin,
     precoMax: intencao.precoMax,
@@ -783,7 +803,7 @@ export async function buscaGuiada(
     tipoDaBusca: true,
     rejeitar: (nome: string) => foraDaIntencao(nome, intencao, q),
     max: maximo,
-    teto: 44,
+    teto: 80,
   };
   const excluir = new Set(anterior.excluir ?? []);
   let achados: ResultadoBusca[] = [];
@@ -812,9 +832,17 @@ export async function buscaGuiada(
       }),
     });
 
+  /* Own stock (em_alta + acervo + hybrid): read on every page; the shown
+     products are in `excluir`, so each "Carregar mais" takes the next ones. */
+  const dominiosDoEstoque = regra
+    ? new Set(regra.dominios)
+    : dominiosPorBusca.every(Boolean)
+      ? new Set(dominiosPorBusca.flatMap((d) => [...d!]))
+      : null;
   let variantes = anterior.variantes ?? [];
   let proximo: number | null = null;
   if (pagina > 0) {
+    juntar(await doEstoque(intencao.buscas, { ...opcoes, dominios: dominiosDoEstoque }));
     /* "Carregar mais": do cursor em diante, 2 leituras por vez, até juntar
        20 novos ou o prazo acabar; devolve onde parou. */
     const base = intencao.buscas[0] ?? q.slice(0, 60);
@@ -827,7 +855,7 @@ export async function buscaGuiada(
     let k = Math.max(0, anterior.cursor ?? (pagina - 1) * 4);
     while (
       k < passos.length &&
-      achados.length < MINIMO_RESULTADOS &&
+      achados.length < ALVO_SEGUINTE &&
       Date.now() - inicio < PRAZO_DA_PAGINA_MS
     ) {
       const lote = passos.slice(k, k + 2);
@@ -838,7 +866,7 @@ export async function buscaGuiada(
     /* Catalog ran dry (apparel: most catalog products have no offer): the
        category best sellers complete the page once, then it ends. */
     if (
-      achados.length < MINIMO_RESULTADOS &&
+      achados.length < ALVO_SEGUINTE &&
       proximo === null &&
       !anterior.excluir?.includes("fim-mv")
     ) {
@@ -846,11 +874,6 @@ export async function buscaGuiada(
     }
   } else {
     /* O estoque próprio é lido junto com a 1ª leitura do catálogo. */
-    const dominiosDoEstoque = regra
-      ? new Set(regra.dominios)
-      : dominiosPorBusca.every(Boolean)
-        ? new Set(dominiosPorBusca.flatMap((d) => [...d!]))
-        : null;
     const estoque = doEstoque(intencao.buscas, { ...opcoes, dominios: dominiosDoEstoque });
     /* 08/11 ("Pesquisando há 11s"): own stock answers before any ML read;
        the same shields (foraDaIntencao, piso, fake filter, curator) apply. */
@@ -875,7 +898,7 @@ export async function buscaGuiada(
       }),
     );
     if (anterior.previa) {
-      if (achados.length < MINIMO_RESULTADOS) juntar(await estoque);
+      juntar(await estoque);
       return {
         intencao,
         resultados: ordenarPorPrecoSeBarato(
@@ -903,35 +926,36 @@ export async function buscaGuiada(
         }),
       );
     }
-    if (achados.length < MINIMO_RESULTADOS) juntar(await estoque);
-    /* Mais fundo nas mesmas buscas (24-84), de 20 em 20. */
+    /* 27/11: own stock always joins (priced cards), not only below 20. */
+    juntar(await estoque);
+    /* Mais fundo nas mesmas buscas (50-90), de 20 em 20. */
     /* Speed (05/11): the deeper reads go in parallel, not one after another. */
-    if (achados.length < MINIMO_RESULTADOS) {
+    if (achados.length < ALVO_PRIMEIRA) {
       const fundo = await Promise.all(
-        [24, 44].map((offset) => ler({ buscas: intencao.buscas, offset }).catch(() => [])),
+        [50, 70].map((offset) => ler({ buscas: intencao.buscas, offset }).catch(() => [])),
       );
       for (const r of fundo) juntar(r);
       if (achados.length < MINIMO_RESULTADOS)
-        juntar(await ler({ buscas: intencao.buscas, offset: 64 }));
+        juntar(await ler({ buscas: intencao.buscas, offset: 90 }));
     }
     /* As marcas que apareceram viram variantes ("geladeira frost free
        brastemp"): completam a 1ª página e alimentam o "Carregar mais". */
     variantes = variantesPorMarca(intencao.buscas[0] ?? q.slice(0, 60), achados);
     if (!variantes.length) variantes = variantesPorCor(intencao.buscas[0] ?? q.slice(0, 60));
     proximo = 0;
-    if (achados.length && achados.length < MINIMO_RESULTADOS && variantes.length) {
+    if (achados.length && achados.length < ALVO_PRIMEIRA && variantes.length) {
       juntar(await ler({ buscas: variantes.slice(0, 4), offset: 0 }));
     }
   }
   /* Aparelho: a posição na lista oficial de mais vendidos marca cada um
      (ordem "Mais vendidos" na tela) e, abaixo de 20, a lista completa. */
   const listas = regra ? await lerMaisVendidos(regra.categorias) : undefined;
-  if (pagina === 0 && achados.length < MINIMO_RESULTADOS) {
+  if (pagina === 0 && achados.length < ALVO_PRIMEIRA) {
     juntar(await maisVendidosDaCategoria(q, opcoes, listas));
   }
   /* 07/11 (apparel: few catalog products have an offer): best sellers of
      each piece's own category (camisetas esportivas, shorts...). */
-  if (pagina === 0 && pecas.length && achados.length < MINIMO_RESULTADOS) {
+  if (pagina === 0 && pecas.length && achados.length < ALVO_PRIMEIRA) {
     for (const r of await Promise.all(pecas.map((p) => maisVendidosDaCategoria(p, opcoes))))
       juntar(r);
   }
