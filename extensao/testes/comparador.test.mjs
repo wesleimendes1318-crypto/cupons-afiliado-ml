@@ -732,3 +732,17 @@ test('robo de precos: pagina /p/ de um vendedor so (sem buy_box_offers), 27/11',
   assert.deepEqual(ofertaDaCaixaDeCompra(pagina), { item: 'MLB7000001', preco: 199.9 });
   assert.equal(ofertaDaCaixaDeCompra('"melidata_event":{"path":"/pdp","event_data":{"item_id":"MLB7000001"}}'), null);
 });
+
+test('robo de precos: caixa escondida, vendedores em /p/<id>/s (MLB68335217, 27/11 21:21)', async () => {
+  const { opcoesDeCompra, ofertaDaListaDeVendedores } = await import('../comparador.js');
+  const p = '"buy_box_offers":{"id":"buy_box_offers","type":"buy_box_offers","state":"HIDDEN"},'
+    + '"others_products":{"id":"others_products","type":"others_products","state":"VISIBLE","title":{"text":"Opções de compra:"},'
+    + '"products":[{"title":{"text":"5 produtos novos a partir de {price}","values":{"price":{"type":"price","value":44,"currency_symbol":"R$"}}},'
+    + '"action":{"target":"https:\\u002F\\u002Fwww.mercadolivre.com.br\\u002Fperfume-masculino-arma-secreta\\u002Fp\\u002FMLB68335217\\u002Fs","timeout":0}}]}';
+  assert.deepEqual(opcoesDeCompra(p), { minimo: 44, url: 'https://www.mercadolivre.com.br/perfume-masculino-arma-secreta/p/MLB68335217/s' });
+  assert.equal(opcoesDeCompra(p.replace('"VISIBLE"', '"HIDDEN"')), null);
+  const s = '"carousel":{"item_id":"MLB9000000001","price":{"value":20.34}},'
+    + '{"item_id":"MLB5000000001","price":{"value":44}},{"item_id":"MLB5000000002","price":{"value":51.9}}';
+  assert.deepEqual(ofertaDaListaDeVendedores(s, 44), { item: 'MLB5000000001', preco: 44 });
+  assert.equal(ofertaDaListaDeVendedores(s, 39.9), null);
+});

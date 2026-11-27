@@ -15,7 +15,7 @@ import { sincronizarEspelho } from './espelho.js';
 import { ofertaDaCaixaDeCompra, ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
-         primeiroAnuncioDaLista, lojaDoAnuncio, produtoDoPerfilSocial, produtoEmDestaque,
+         primeiroAnuncioDaLista, lojaDoAnuncio, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO, ehBuscaML } from './atendimento.js';
@@ -765,14 +765,36 @@ async function rodarRoboDePrecos() {
         await chrome.storage.local.set({ precosPausaAte: Date.now() + 2 * 3600e3 });
         break;
       }
-      const caixa = ofertaDaCaixaDeCompra(t);
+      let caixa = ofertaDaCaixaDeCompra(t);
+      let fonte = t;
+      let vend = null;
+      /* Buy box HIDDEN, sellers listed apart (27/11 21:21): one more read, same
+         brakes, and only the offer priced exactly at the announced minimum. */
+      const opc = !caixa && !semCookie ? opcoesDeCompra(t) : null;
+      if (opc) {
+        try {
+          await sleep(3000 + Math.random() * 2000);
+          const l2 = await lerPaginaParaPreco(opc.url, true);
+          if (l2.muro) {
+            await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler precos', 'leitura', l2.r.url);
+            registro.push({ p: it.produto, parou: 'captcha (freio) em /s' });
+            break;
+          }
+          if (l2.r.ok) {
+            caixa = ofertaDaListaDeVendedores(l2.t, opc.minimo);
+            fonte = l2.t;
+            vend = { minimo: opc.minimo, achou: !!caixa, kb: Math.round(l2.t.length / 1024),
+                     trecho: caixa ? undefined : (() => { const k = l2.t.search(/"item_id"/); return k >= 0 ? l2.t.slice(k, k + 600) : undefined; })() };
+          } else vend = { http: l2.r.status };
+        } catch (e) { vend = { erro: String(e.message || e).slice(0, 80) }; }
+      }
       /* Used or refurbished buy box: no price (the site only shows new). */
-      const o = caixa && condicaoDoHtml(t, caixa.item) !== 'used' && condicaoDoHtml(t, caixa.item) !== 'refurbished' ? caixa : null;
+      const o = caixa && condicaoDoHtml(fonte, caixa.item) !== 'used' && condicaoDoHtml(fonte, caixa.item) !== 'refurbished' ? caixa : null;
       let internacional = false;
-      try { internacional = !!(o && envioInternacionalDoHtml(t, o.item)?.internacional); } catch (e) { /* desconhecido = nacional */ }
+      try { internacional = !!(o && envioInternacionalDoHtml(fonte, o.item)?.internacional); } catch (e) { /* desconhecido = nacional */ }
       linhas.push({ produto: it.produto, item: o ? o.item : null, preco: o ? o.preco : null,
-                    loja_oficial: o ? lojaOficialDoHtml(t, o.item) === true : false, internacional });
-      registro.push({ p: it.produto, preco: o ? o.preco : null, int: internacional || undefined, logada: !semCookie || undefined,
+                    loja_oficial: o ? lojaOficialDoHtml(fonte, o.item) === true : false, internacional });
+      registro.push({ p: it.produto, preco: o ? o.preco : null, int: internacional || undefined, logada: !semCookie || undefined, vend: vend || undefined,
                       ...(o ? {} : { bb: t.includes('"buy_box_offers"'), comprar: itemDaCompra(t), ev: (t.match(/melidata_event/g) || []).length, kb: Math.round(t.length / 1024),
                         /* Offer block shape only (product data, no account data): to fix the parser. */
                         semEstoque: /indispon[ií]vel|sem estoque|Pausado/i.test(t) || undefined,

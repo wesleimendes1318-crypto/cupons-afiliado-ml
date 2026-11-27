@@ -536,6 +536,40 @@ export function ofertaDaCaixaDeCompra(html) {
   return (m && ofertas.find(o => o.item === m[1])) || ofertas[0];
 }
 
+/* Buy box HIDDEN but "Opcoes de compra" VISIBLE (27/11 21:21, MLB68335217:
+   "5 produtos novos a partir de {price}" with value 44, target /p/<id>/s).
+   Returns { minimo, url } of that block, or null. */
+export function opcoesDeCompra(html) {
+  const t = String(html);
+  const i = t.indexOf('"others_products":{');
+  if (i < 0) return null;
+  const bloco = objetoJson(t, i + '"others_products":'.length);
+  if (!bloco || !/"state"\s*:\s*"VISIBLE"/.test(bloco)) return null;
+  const v = /"type"\s*:\s*"price"\s*,\s*"value"\s*:\s*([\d.]+)/.exec(bloco);
+  const u = /"target"\s*:\s*"(https:(?:\\u002F|\/){2}www\.mercadolivre\.com\.br[^"]*?(?:\\u002F|\/)p(?:\\u002F|\/)MLB\d+(?:\\u002F|\/)s[^"]*)"/.exec(bloco);
+  const minimo = v ? Number(v[1]) : null;
+  if (!(minimo > 0) || !u) return null;
+  return { minimo, url: u[1].replace(/\\u002F/g, '/') };
+}
+
+/* The sellers page (/p/<id>/s): the offer whose price is EXACTLY the
+   "a partir de" price the product page announced. That cross-check is what
+   keeps a carousel or sponsored item from being taken as the cheapest offer. */
+export function ofertaDaListaDeVendedores(html, minimo) {
+  const t = String(html);
+  if (!(minimo > 0)) return null;
+  const marcas = [...t.matchAll(/"item_id"\s*:\s*"(MLB\d{6,})"/g)];
+  for (let k = 0; k < marcas.length; k++) {
+    const ini = marcas[k].index;
+    const fim = Math.min(k + 1 < marcas.length ? marcas[k + 1].index : t.length, ini + 8000);
+    const jan = t.slice(ini, fim);
+    const p = /"price"\s*:\s*\{[^}]{0,400}?"value"\s*:\s*([\d.]+)/.exec(jan)
+           || /"price"\s*:\s*([\d.]+)\s*[,}]/.exec(jan);
+    if (p && Math.abs(Number(p[1]) - minimo) < 0.005) return { item: marcas[k][1], preco: Number(p[1]) };
+  }
+  return null;
+}
+
 /* DECISAO: o que mostrar ao cliente.
 
    Pedido do Weslei, 23/09: "buscar o mesmo produto em outra loja caso a do
