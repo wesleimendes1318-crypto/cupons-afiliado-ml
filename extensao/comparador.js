@@ -536,6 +536,13 @@ export function ofertaDaCaixaDeCompra(html) {
   return (m && ofertas.find(o => o.item === m[1])) || ofertas[0];
 }
 
+/* No active seller: the page's price component is HIDDEN and it says the
+   product is unavailable (27/11 21:31-21:42, 4 of 4 logged reads). */
+export function semVendedorNaPagina(html) {
+  const t = String(html);
+  return /"id":"price","type":"price","state":"HIDDEN"/.test(t) && /indispon[ií]vel|sem estoque|Pausado/i.test(t);
+}
+
 /* Buy box HIDDEN but "Opcoes de compra" VISIBLE (27/11 21:21, MLB68335217:
    "5 produtos novos a partir de {price}" with value 44, target /p/<id>/s).
    Returns { minimo, url } of that block, or null. */

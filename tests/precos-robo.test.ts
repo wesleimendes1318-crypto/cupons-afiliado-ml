@@ -36,6 +36,14 @@ describe("price robot on search cards (27/11)", () => {
     expect(d!.preco).toBeNull(); // not read yet
   });
 
+  test("a product the robot found with no seller is never shown (27/11)", () => {
+    const linhas = [
+      { produto: "MLB1", item: null, preco: null, loja_oficial: false, internacional: false, sem_vendedor: true },
+      { produto: "MLB2", item: null, preco: null, loja_oficial: false, internacional: false, sem_vendedor: false },
+    ];
+    expect(aplicarPrecosDoRobo([card("MLB1"), card("MLB2"), card("MLB3", 50)], linhas).map((r) => r.produto)).toEqual(["MLB2", "MLB3"]);
+  });
+
   test("a price outside the requested range drops the card", () => {
     const linhas = [
       { produto: "MLB1", item: "MLB11", preco: 900, loja_oficial: false, internacional: false },
