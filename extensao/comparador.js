@@ -468,10 +468,30 @@ function ordenarParaIA(lista) {
    Primeiro o formato conhecido; se o Mercado Livre mudar a ordem dos campos,
    cai numa leitura mais tolerante: cada item_id do bloco com o primeiro preco
    que aparece antes do proximo item_id. */
+/* So o objeto buy_box_offers, ate a chave que o fecha (27/11: a fatia fixa de
+   300 mil caracteres pegava item_id de OUTROS produtos da pagina, carrosseis e
+   patrocinados, e um mini game de R$ 20,34 virou "o mesmo" PS5 de R$ 4.850). */
+export function objetoJson(texto, ini) {
+  let nivel = 0;
+  let aspas = false;
+  for (let k = ini; k < texto.length && k < ini + 300000; k++) {
+    const c = texto[k];
+    if (aspas) {
+      if (c === '\\') k++;
+      else if (c === '"') aspas = false;
+    } else if (c === '"') aspas = true;
+    else if (c === '{') nivel++;
+    else if (c === '}' && --nivel === 0) return texto.slice(ini, k + 1);
+  }
+  return null;
+}
+
 export function ofertasDoCatalogo(html) {
   const i = String(html).indexOf('"buy_box_offers":{');
   if (i < 0) return [];
-  const bloco = html.slice(i, i + 300000);
+  /* Sem fechar o objeto, nao ha como saber onde a lista acaba: nada entra. */
+  const bloco = objetoJson(String(html), i + '"buy_box_offers":'.length);
+  if (!bloco) return [];
 
   const estrita = /"selected"\s*:\s*(?:true|false)\s*,\s*"type"\s*:\s*"([A-Z_]+)"\s*,\s*"item_id"\s*:\s*"(MLB\d+)"/g;
   let marcas = [...bloco.matchAll(estrita)].map(m => ({ index: m.index, item: m[2] }));
@@ -519,6 +539,8 @@ export function escolherAlternativas(achados, { finalAtual, temCupomAqui, vended
   const validos = (achados || []).filter(a =>
     a && a.final != null && Number.isFinite(a.final) && a.preco != null
     && (!itemAtual || a.item !== itemAtual)
+    /* 27/11: pela metade do preco (ou menos) nunca e o mesmo produto. */
+    && a.final >= finalAtual * 0.5
     /* Mesma loja so entra com OUTRO anuncio mais barato (Camelo, 25/09). */
     && (!meu || !a.vendedor || norm(a.vendedor) !== meu || a.final <= finalAtual - 0.5))
     .map(a => (meu && a.vendedor && norm(a.vendedor) === meu ? { ...a, mesmaLoja: true } : a));

@@ -649,3 +649,15 @@ Scope: Comparison engine: same-product rules, photo check, alternatives, safe re
     "Mostrando N de M comentários", "Ver todas as avaliações no anúncio"
     só com meli.la e "lidas na página do anúncio em dd/mm/aaaa". Sem
     distribuição/opiniões lidas, o painel diz que ainda não foram lidas.
+
+## Preço impossível do mesmo produto (27/11/2026)
+Weslei: "Erro gravíssimo" / "No meu site nada deve ser falso, enganoso ou
+internacional!". The PS5 Slim (R$ 4.850) showed R$ 20,34 and the button opened
+a mini game: the extension read item ids of other products inside the /p/ page.
+Rule: another offer of the SAME product at half the product's own price or
+less (`PISO_MESMO_PRODUTO = 0.5`, `precoImpossivel` in
+`src/lib/preco-suspeito.ts`) is never the same product. It is dropped in the
+extension (`escolherAlternativas`, `ofertasDoCatalogo` reads only the closed
+buy_box_offers object), in the DB functions (migration
+20261127130000) and on every reader (vitrine, Black Friday, product page,
+comparison, Telegram). When in doubt, hide the offer; never show a wrong price.

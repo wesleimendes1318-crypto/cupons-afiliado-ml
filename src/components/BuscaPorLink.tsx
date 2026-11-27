@@ -61,7 +61,7 @@ import {
 } from "@/lib/alternativa";
 import { SeloCep, useCepDestino } from "@/components/CepDestino";
 import { AvisosDoPrazo, FiltroPrazo, usePrazos } from "@/components/FiltroPrazo";
-import { precoMuitoAbaixo } from "@/lib/preco-suspeito";
+import { precoMuitoAbaixo, semOfertasImpossiveis } from "@/lib/preco-suspeito";
 import { vantagensDaOferta, type OfertaComVantagens } from "@/lib/vantagens-oferta";
 import { seguraParaRecomendar } from "@/lib/recomendacao-segura";
 import { aplicarPrazo } from "@/lib/prazo-entrega";
@@ -2675,7 +2675,7 @@ function Resultado({
   const a = useMemo(() => {
     if (!analiseBase) return analiseBase;
     const comEnvio = aplicarEnvio(analiseBase, envio);
-    return semRecusados(comEnvio, recusados);
+    return semOfertasImpossiveis(semRecusados(comEnvio, recusados));
   }, [analiseBase, recusados, envio]);
   const link = pedido.link ?? "";
   const dispositivo = useDispositivo();

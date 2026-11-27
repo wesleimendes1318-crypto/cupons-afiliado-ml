@@ -696,3 +696,22 @@ test('um cartao so ou amostra vazia: null (o caminho do anuncio unico ja cobre)'
   assert.equal(produtoEmDestaque([POST[0]]), null);
   assert.equal(produtoEmDestaque(null), null);
 });
+
+test('catalogo: so as ofertas DENTRO do buy_box_offers (PS5 x mini game, 27/11)', () => {
+  const html = '"buy_box_offers":{"offers":[{"item_id":"MLB8059853222","price":{"value":4850}},'
+    + '{"item_id":"MLB5000000001","price":{"value":4799.99}}]},'
+    + '"carousel":{"items":[{"item_id":"MLB4087696459","price":{"value":20.34}}]}';
+  assert.deepEqual(ofertasDoCatalogo(html), [
+    { item: 'MLB8059853222', preco: 4850 }, { item: 'MLB5000000001', preco: 4799.99 }]);
+  // Objeto sem fechar: nao ha como saber onde acaba, nada entra.
+  assert.deepEqual(ofertasDoCatalogo('"buy_box_offers":{"offers":[{"item_id":"MLB1","price":{"value":1}'), []);
+});
+
+test('escolha: pela metade do preco nunca e o mesmo produto (27/11)', () => {
+  const achados = [
+    { item: 'MLB4087696459', preco: 20.34, final: 20.34, vendedor: 'X' },
+    { item: 'MLB5000000001', preco: 4799.99, final: 4799.99, vendedor: 'Y' },
+  ];
+  const r = escolherAlternativas(achados, { finalAtual: 4850, itemAtual: 'MLB8059853222' });
+  assert.deepEqual(r.map(x => x.item), ['MLB5000000001']);
+});

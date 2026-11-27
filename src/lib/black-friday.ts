@@ -7,6 +7,7 @@ import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import { pareceFalso } from "@/lib/falsificado";
 import type { Oferta } from "@/lib/ofertas-vitrine";
 import { RE_CONDICAO_RUIM } from "@/lib/vitrine-recomendavel";
+import { precoImpossivel } from "@/lib/preco-suspeito";
 
 export const CATEGORIAS_BLACK_FRIDAY = [
   {
@@ -97,6 +98,9 @@ export function ofertaExtraBlackFriday(l: LinhaBlackFriday, agora = Date.now()):
   const url = l.url_produto && /^https:\/\/(www\.)?mercadoli[vb]re\.com/i.test(l.url_produto) ? l.url_produto : null;
   if (!link && !url) return null;
   /* "mesmo" only with a measured cheaper store; otherwise just the price. */
+  /* 27/11: a "same product" at half price or less is another product: the
+     link opens it, so the whole card goes (PS5 R$ 4.850 x mini game R$ 20,34). */
+  if (l.tipo === "mesmo" && precoImpossivel(preco, antes)) return null;
   const mesmo = l.tipo === "mesmo" && economia > 0 && antes > preco;
   return {
     chave: l.chave,

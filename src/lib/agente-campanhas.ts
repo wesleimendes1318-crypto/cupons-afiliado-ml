@@ -37,6 +37,7 @@ import {
 import { combinaComTemporada, SLUG_DA_TEMPORADA, TEMPORADAS } from "@/lib/sazonal";
 import { avaliacoesValidas } from "@/lib/avaliacoes";
 import { pontuacaoDaAvaliacao, type ResumoQualidade } from "@/lib/qualidade-avaliacao";
+import { vitrineSemImpossivel } from "@/lib/preco-suspeito";
 
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
@@ -109,7 +110,7 @@ export async function gerirCampanhas(db: Db) {
     t.rpc("vitrine", { p_limite: 300 }),
     t.rpc("vitrine_menor_preco", { p_limite: 300 }),
   ]);
-  const itens = (v.data ?? []) as ItemDaVitrine[];
+  const itens = ((v.data ?? []) as ItemDaVitrine[]).map(vitrineSemImpossivel);
   const menores = (m.data ?? []) as ItemMenorPreco[];
   const chaves = [...new Set([...itens.map((i) => i.chave), ...menores.map((i) => i.chave)])];
   const { data: fretes } = await t

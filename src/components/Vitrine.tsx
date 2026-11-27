@@ -31,6 +31,7 @@ import {
   type MapaAvaliacoes,
 } from "@/lib/avaliacoes-vitrine";
 import { passaNaQualidade } from "@/lib/qualidade-avaliacao";
+import { vitrineSemImpossivel } from "@/lib/preco-suspeito";
 
 const NOME_CATEGORIA: Record<string, string> = Object.fromEntries([
   ...CATEGORIAS.map((c) => [c.slug, c.nome] as const),
@@ -195,7 +196,7 @@ export function Vitrine({
           lerFretesDaVitrine(),
         ]);
         if (!vivo || !Array.isArray(data)) return;
-        const lidos = data as ItemVitrine[];
+        const lidos = (data as ItemVitrine[]).map(vitrineSemImpossivel);
         /* Nota das pessoas de cada oferta (10/10), da última comparação. */
         const mapa = await lerAvaliacoesDaVitrine(lidos.map((i) => i.chave));
         if (!vivo) return;

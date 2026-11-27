@@ -31,6 +31,7 @@ import { itemDoEndereco, useAvaliacoesPorItens } from "@/lib/avaliacoes-detalhe"
 import { caracteristicasValidas, pilulasDaFicha } from "@/lib/ficha-detalhes";
 import { SITE } from "@/lib/lista-publica";
 import { lerProdutoPagina, type ItemMesmoTipo, type ProdutoPagina } from "@/lib/produto-pagina";
+import { precoImpossivel } from "@/lib/preco-suspeito";
 import { bemAvaliadosPrimeiro, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
 import { funcionaEm, rotuloVoltagem, voltagemDaRegiao, voltagemDoTexto } from "@/lib/voltagem";
 
@@ -163,7 +164,10 @@ function Produto() {
     (id.length <= 12
       ? `https://www.mercadolivre.com.br/p/${id}`
       : `https://produto.mercadolivre.com.br/${id.replace(/^MLB/, "MLB-")}`);
-  const acoes = acoesDoProduto(pv?.link ?? null, url);
+  /* 27/11: a card price at half the product's own price or less came from
+     another product (PS5 x mini game): neither its price nor its link is used. */
+  const pvRuim = d?.preco != null && precoImpossivel(pv?.preco, d.preco);
+  const acoes = acoesDoProduto(pvRuim ? null : (pv?.link ?? null), url);
   const linkPronto = acoes.comprar && "href" in acoes.comprar ? acoes.comprar.href : null;
   const gerar = acoes.comprar && "gerar" in acoes.comprar ? acoes.comprar.gerar : null;
 
@@ -173,8 +177,8 @@ function Produto() {
   const apiServe =
     d?.preco != null &&
     !d.precoDeReferencia &&
-    (!pv?.preco || doLink?.startsWith("MLBP") || doLink === d.item);
-  const preco = apiServe ? d!.preco : (pv?.preco ?? d?.preco ?? null);
+    (!pv?.preco || pvRuim || doLink?.startsWith("MLBP") || doLink === d.item);
+  const preco = apiServe ? d!.preco : ((pvRuim ? null : pv?.preco) ?? d?.preco ?? null);
   const original = apiServe ? d!.precoOriginal : null;
   const desconto = original && preco ? Math.round((1 - preco / original) * 100) : 0;
   const itemEntrega =
