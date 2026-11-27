@@ -746,3 +746,10 @@ test('robo de precos: caixa escondida, vendedores em /p/<id>/s (MLB68335217, 27/
   assert.deepEqual(ofertaDaListaDeVendedores(s, 44), { item: 'MLB5000000001', preco: 44 });
   assert.equal(ofertaDaListaDeVendedores(s, 39.9), null);
 });
+
+test('robo de precos: produto sem vendedor (preco HIDDEN + indisponivel), 27/11 21:42', async () => {
+  const { semVendedorNaPagina } = await import('../comparador.js');
+  assert.equal(semVendedorNaPagina('"id":"price","type":"price","state":"HIDDEN"},... Produto indisponível'), true);
+  assert.equal(semVendedorNaPagina('"id":"price","type":"price","state":"VISIBLE"},... indisponível'), false);
+  assert.equal(semVendedorNaPagina('"id":"price","type":"price","state":"HIDDEN"}'), false);
+});

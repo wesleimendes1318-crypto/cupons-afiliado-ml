@@ -14,6 +14,7 @@ export type LinhaPrecoRobo = {
   preco: number | string | null;
   loja_oficial: boolean | null;
   internacional: boolean | null;
+  sem_vendedor?: boolean | null;
 };
 
 export function aplicarPrecosDoRobo(
@@ -25,6 +26,8 @@ export function aplicarPrecosDoRobo(
   return resultados.flatMap((r) => {
     if (r.preco != null) return [r];
     const l = porProduto.get(r.produto);
+    // 27/11: read by the robot and nobody sells it; never show it.
+    if (l?.sem_vendedor) return [];
     const preco = l?.preco == null ? NaN : Number(l.preco);
     if (!l || l.internacional || !l.item || !/^MLB\d+$/.test(l.item) || !(preco > 0)) return [r];
     if (faixa.precoMax && preco > faixa.precoMax * 1.05) return [];
@@ -80,7 +83,7 @@ async function preencherPrecos(db: Db, resposta: RespostaBusca): Promise<Respost
   try {
     const { data, error } = await db
       .from("precos_robo")
-      .select("produto,item,preco,loja_oficial,internacional")
+      .select("produto,item,preco,loja_oficial,internacional,sem_vendedor")
       .in("produto", ids)
       .gte("lido_em", new Date(Date.now() - PRECO_ROBO_HORAS * 3600_000).toISOString());
     if (error || !Array.isArray(data) || !data.length) return resposta;

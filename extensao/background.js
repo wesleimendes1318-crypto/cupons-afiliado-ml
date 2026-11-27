@@ -15,7 +15,7 @@ import { sincronizarEspelho } from './espelho.js';
 import { ofertaDaCaixaDeCompra, ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
-         primeiroAnuncioDaLista, lojaDoAnuncio, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
+         primeiroAnuncioDaLista, lojaDoAnuncio, semVendedorNaPagina, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO, ehBuscaML } from './atendimento.js';
@@ -793,11 +793,13 @@ async function rodarRoboDePrecos() {
       let internacional = false;
       try { internacional = !!(o && envioInternacionalDoHtml(fonte, o.item)?.internacional); } catch (e) { /* desconhecido = nacional */ }
       linhas.push({ produto: it.produto, item: o ? o.item : null, preco: o ? o.preco : null,
-                    loja_oficial: o ? lojaOficialDoHtml(fonte, o.item) === true : false, internacional });
+                    loja_oficial: o ? lojaOficialDoHtml(fonte, o.item) === true : false, internacional,
+                    /* 27/11 21:31-21:42: price HIDDEN + "indisponivel", no seller list: nobody sells it. */
+                    sem_vendedor: !o && !opc && semVendedorNaPagina(t) });
       registro.push({ p: it.produto, preco: o ? o.preco : null, int: internacional || undefined, logada: !semCookie || undefined, vend: vend || undefined,
                       ...(o ? {} : { bb: t.includes('"buy_box_offers"'), comprar: itemDaCompra(t), ev: (t.match(/melidata_event/g) || []).length, kb: Math.round(t.length / 1024),
                         /* Offer block shape only (product data, no account data): to fix the parser. */
-                        semEstoque: /indispon[ií]vel|sem estoque|Pausado/i.test(t) || undefined,
+                        semEstoque: semVendedorNaPagina(t) || undefined,
                         trecho: (() => { const k = t.search(/"id":"price"|"type":"price"/); return k >= 0 ? t.slice(k, k + 600) : undefined; })() }) });
       if (semCookie) await sleep(4000 + Math.random() * 3000);
     }

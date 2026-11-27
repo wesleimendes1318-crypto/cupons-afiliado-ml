@@ -546,7 +546,7 @@ export async function precosPendentes(token, limite = 8) {
 
 export async function gravarPrecos(token, linhas) {
   if (!token || !linhas.length) return 0;
-  return chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_gravar', { p_token: token, p_linhas: linhas });
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_gravar_v2', { p_token: token, p_linhas: linhas });
 }
 
 /* Vitrine: produtos antigos sem foto (a extensao completa aos poucos). */
