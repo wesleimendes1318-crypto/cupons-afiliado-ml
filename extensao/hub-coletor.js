@@ -5,7 +5,13 @@
    per-card checkbox, sends the marked items in batches of 100 to
    registrar_hub (extension token, via background). Commission % stays
    between this page (his own logged-in hub) and the private RPC.
-   No scraped text goes through innerHTML. */
+   No scraped text goes through innerHTML.
+   1.189.0 (25/11/2026, Weslei: "deve funcionar no mercado livre inteiro, eu
+   também devo ter a opção de selecionar anuncio por anuncio"): runs on every
+   ML page. Outside the hub it only shows a small "Coletar" pill; the dock,
+   checkboxes and observer start on tap (nothing touches ML pages until he
+   asks). Product pages add the page's own listing. Same RPC, so every item
+   still goes through pedir_link_agente -> his meli.la. */
 (() => {
   'use strict';
   const L = globalThis.meHubLeitura;
@@ -20,6 +26,8 @@
 
   const dados = new Map();        // item -> { info, card }
   const marcados = new Set();
+  const noHub = /^\/afiliados\/hub/.test(location.pathname);
+  const ROTULO = noHub ? 'Carregar +100' : 'Carregar mais';
   let rolando = false;
   let enviando = false;
 
@@ -41,10 +49,18 @@
     dock.setAttribute('aria-label', 'Coletor do Hub');
     const topo = el('div', 'me-hub-topo');
     const marca = el('div', 'me-hub-marca');
-    marca.append(el('span', 'me-hub-dot'), el('b', null, 'Coletor do Hub'));
+    marca.append(el('span', 'me-hub-dot'), el('b', null, noHub ? 'Coletor do Hub' : 'Coletor'));
     cont = el('span', 'me-hub-contador');
     cont.setAttribute('aria-live', 'polite');
     topo.append(marca, cont);
+    if (!noHub) {
+      // Bottom-left off the hub: the product page island (.me-flutuante) sits bottom-right.
+      dock.classList.add('esq');
+      const fechar = bt('me-hub-fechar', '×');
+      fechar.setAttribute('aria-label', 'Minimizar coletor');
+      fechar.addEventListener('click', () => { parar(); dock.hidden = true; pilula.hidden = false; });
+      topo.append(fechar);
+    }
 
     const filtros = el('div', 'me-hub-filtros');
     const filtro = (nome, teste) => {
@@ -53,7 +69,7 @@
       filtros.append(b);
     };
     filtro('Todos', () => true);
-    filtro('Ganhos ≥ 10%', i => (i.comissao_pct || 0) >= 10);
+    if (noHub) filtro('Ganhos ≥ 10%', i => (i.comissao_pct || 0) >= 10);   // rate only exists on the hub
     filtro('Mais vendidos', i => i.mais_vendido);
     filtro('Com desconto', i => (i.desconto_pct || 0) > 0);
     const limpar = bt('me-hub-tag', 'Limpar');
@@ -61,7 +77,7 @@
     filtros.append(limpar);
 
     const acoes = el('div', 'me-hub-acoes');
-    btRolar = bt('me-hub-bt sec', 'Carregar +100');
+    btRolar = bt('me-hub-bt sec', ROTULO);
     btEnviar = bt('me-hub-bt pri', 'Enviar para o site');
     btEnviar.disabled = true;
     acoes.append(btRolar, btEnviar);
@@ -109,7 +125,45 @@
   }
 
   /* ---------------------------------------------------------------- cards */
+  function prenderSelo(item, info, card) {
+    const selo = el('label', 'me-hub-card-check');
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.setAttribute('aria-label', 'Selecionar ' + (info.titulo || item));
+    selo.append(chk, el('span', null, 'Selecionar'));
+    // The card may sit inside the product link: never navigate on this tap.
+    selo.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      marcar(item, !marcados.has(item)); atualizar();
+    });
+    if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
+    card.prepend(selo);
+    card.dataset.meHub = item;
+    dados.set(item, { info, card, chk });
+  }
+
+  /* Product page: the listing of the page itself (it has no link to itself). */
+  function varrerPagina() {
+    const item = L.itemDoLink(location.href);
+    const h1 = document.querySelector('h1.ui-pdp-title, h1');
+    const preco = document.querySelector('meta[itemprop="price"]');
+    if (!item || dados.has(item) || !h1 || !preco || !Number(preco.content)) return;
+    const card = h1.closest('.ui-pdp-header') || h1.parentElement;
+    if (!card || card.dataset.meHub) return;
+    const riscado = document.querySelector('.ui-pdp-price s, .ui-pdp-price__original-value');
+    const og = document.querySelector('meta[property="og:image"]');
+    const info = L.lerCartao({
+      href: location.href,
+      texto: h1.innerText + '\nR$ ' + Number(preco.content).toFixed(2).replace('.', ','),
+      riscado: riscado && riscado.innerText, imagem: og && og.content
+    });
+    if (!info || info.preco == null) return;
+    info.posicao = 0;
+    prenderSelo(item, info, card);
+  }
+
   function varrer() {
+    if (!noHub) varrerPagina();
     let pos = dados.size;
     for (const a of document.querySelectorAll('a[href*="MLB"]')) {
       if (dock.contains(a)) continue;
@@ -123,21 +177,7 @@
       const info = L.lerCartao({ href: a.href, texto: card.innerText, riscado: riscado && riscado.innerText, imagem: img && (img.currentSrc || img.src) });
       if (!info || info.preco == null) continue;   // price still rendering: next pass
       info.posicao = ++pos;
-      card.dataset.meHub = item;
-
-      const selo = el('label', 'me-hub-card-check');
-      const chk = document.createElement('input');
-      chk.type = 'checkbox';
-      chk.setAttribute('aria-label', 'Selecionar ' + (info.titulo || item));
-      selo.append(chk, el('span', null, 'Selecionar'));
-      // The card may sit inside the product link: never navigate on this tap.
-      selo.addEventListener('click', e => {
-        e.preventDefault(); e.stopPropagation();
-        marcar(item, !marcados.has(item)); atualizar();
-      });
-      if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
-      card.prepend(selo);
-      dados.set(item, { info, card, chk });
+      prenderSelo(item, info, card);
     }
     atualizar();
   }
@@ -145,7 +185,7 @@
   /* --------------------------------------------------------------- scroll */
   function parar(msg) {
     rolando = false;
-    btRolar.textContent = 'Carregar +100';
+    btRolar.textContent = ROTULO;
     btRolar.classList.remove('ativo');
     if (msg) aviso(msg);
   }
@@ -174,7 +214,9 @@
       parado = dados.size > antes ? 0 : parado + 1;
       aviso(`Rolando… ${dados.size} encontrados`, null);
     }
-    if (rolando) parar(parado >= 8 ? `Fim da lista: ${dados.size} encontrados.` : `${dados.size} encontrados. Pode marcar e enviar.`);
+    if (rolando) parar(parado >= 8
+      ? (noHub ? `Fim da lista: ${dados.size} encontrados.` : `Fim da página: ${dados.size} encontrados. Envie e siga para a próxima página.`)
+      : `${dados.size} encontrados. Pode marcar e enviar.`);
   }
 
   /* ----------------------------------------------------------------- send */
@@ -206,8 +248,9 @@
   }
 
   /* ---------------------------------------------------------------- start */
+  let pilula;
   function iniciar() {
-    if (document.getElementById('me-hub-dock')) return;
+    if (document.getElementById('me-hub-dock')) { dock.hidden = false; if (pilula) pilula.hidden = true; return; }
     montarDock();
     varrer();
     let t;
@@ -219,8 +262,20 @@
   }
   /* The daily background read opens this page in a hidden tab: no dock
      there (the checkboxes would change the cards it reads). */
-  if (document.visibilityState === 'visible') iniciar();
+  /* Off the hub: only a pill, and only where there are listings to collect. */
+  function oferecer() {
+    if (pilula || !(L.itemDoLink(location.href) || document.querySelector('a[href*="MLB"]'))) return;
+    pilula = bt('me-hub-pilula', 'Coletar anúncios');
+    pilula.addEventListener('click', () => { pilula.hidden = true; iniciar(); });
+    document.body.appendChild(pilula);
+  }
+  const comecar = () => {
+    if (noHub) return iniciar();
+    oferecer();
+    setTimeout(oferecer, 3000);   // search pages render cards late
+  };
+  if (document.visibilityState === 'visible') comecar();
   else document.addEventListener('visibilitychange', function v() {
-    if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', v); iniciar(); }
+    if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', v); comecar(); }
   });
 })();

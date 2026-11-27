@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Conferidor de Cupons",
-  "version": "1.188.0",
+  "version": "1.189.0",
   "incognito": "spanning",
   "description": "Confere o desconto real dos cupons de afiliado: teto, compra minima e validade, direto na pagina do anuncio.",
   "author": "Weslei Mendes",
@@ -57,7 +57,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.mercadolivre.com.br/afiliados/hub*"
+        "*://*.mercadolivre.com.br/*"
       ],
       "js": [
         "hub-leitura.js",
