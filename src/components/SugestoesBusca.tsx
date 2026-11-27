@@ -24,6 +24,7 @@ import {
 } from "@/lib/busca-sugestoes";
 import { obterPerfil, sugestoesDoPerfil } from "@/lib/perfil-visitante";
 import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
+import { precoImpossivel } from "@/lib/preco-suspeito";
 
 const ESPERA_MS = 180;
 
@@ -48,6 +49,7 @@ export function carregarProdutos(): Promise<ProdutoConhecido[]> {
       url_produto: string | null;
       link: string | null;
       melhor_link: string | null;
+      melhor_preco: number | null;
       visto_em: string | null;
     }>;
     const e = (Array.isArray(emAlta.data) ? emAlta.data : []) as Array<{
@@ -65,7 +67,7 @@ export function carregarProdutos(): Promise<ProdutoConhecido[]> {
         preco: i.preco,
         url: i.url_produto,
         link: i.link,
-        outroLink: i.melhor_link,
+        outroLink: precoImpossivel(i.melhor_preco, i.preco) ? null : i.melhor_link,
         vistoEm: i.visto_em,
       })),
       ...e.map((i) => ({

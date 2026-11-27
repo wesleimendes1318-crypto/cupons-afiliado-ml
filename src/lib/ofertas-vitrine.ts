@@ -5,6 +5,7 @@
    pelo menos 2 lojas (src/lib/menor-preco.ts). Só link de afiliado. */
 import { ehLinkDeAfiliado } from "@/lib/afiliado";
 import { menorPrecoVale } from "@/lib/menor-preco";
+import { vitrineSemImpossivel } from "@/lib/preco-suspeito";
 
 export type ItemVitrine = {
   chave: string;
@@ -70,7 +71,8 @@ const recente = (iso: string) => Date.now() - Date.parse(iso) < 24 * 3600_000;
 /* A melhor oferta de cada produto comparado: o mesmo produto em outra loja
    ou, se economiza mais, a alternativa (que só entra na vitrine com
    qualidade equivalente ou superior; ver alternativa_da_analise). */
-export function ofertaDo(i: ItemVitrine): Oferta | null {
+export function ofertaDo(bruto: ItemVitrine): Oferta | null {
+  const i = vitrineSemImpossivel(bruto);
   const mesmo =
     (i.economia ?? 0) > 0 && i.melhor_preco != null && i.preco != null
       ? {

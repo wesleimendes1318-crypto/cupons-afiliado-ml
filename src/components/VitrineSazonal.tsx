@@ -73,6 +73,7 @@ import {
   ofertasBlackFriday,
   type LinhaBlackFriday,
 } from "@/lib/black-friday";
+import { vitrineSemImpossivel } from "@/lib/preco-suspeito";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -101,7 +102,10 @@ export function useOfertas() {
         const mapa = await lerAvaliacoesDaVitrine(chaves);
         if (!vivo) return;
         setNotas(mapa);
-        if (Array.isArray(v.data)) setItens(semEconomiaSemFrete(v.data as ItemVitrine[], fretes));
+        if (Array.isArray(v.data))
+          setItens(
+            semEconomiaSemFrete((v.data as ItemVitrine[]).map(vitrineSemImpossivel), fretes),
+          );
         if (Array.isArray(m.data))
           setMenores(
             (m.data as ItemMenorPreco[]).filter((i) => fretes.get(i.chave)?.frete_gratis === true),

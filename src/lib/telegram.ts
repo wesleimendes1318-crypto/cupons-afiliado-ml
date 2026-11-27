@@ -16,7 +16,7 @@ import {
 import { nomeParaTela, type AnaliseLink } from "@/lib/analisar-link";
 import { linhaDasAvaliacoes } from "@/lib/avaliacoes";
 import { ehLinkDeCompra, gerarUrlAfiliadoAmazon } from "@/lib/afiliado";
-import { custosDoMesmoProduto } from "@/lib/preco-suspeito";
+import { custosDoMesmoProduto, semOfertasImpossiveis } from "@/lib/preco-suspeito";
 
 /* Bot do Telegram (02/10): mensagens com as mesmas regras da tela. */
 
@@ -129,10 +129,12 @@ function linhasDaOpcao(o: Opcao) {
 
 /** Mensagem da comparação, com as mesmas regras da tela. */
 export function mensagemDaComparacao(
-  analise: Record<string, unknown>,
+  bruta: Record<string, unknown>,
   link: string | null,
   urlColado: string,
 ) {
+  /* 27/11: "same product" at half price or less never goes out (PS5 x mini game). */
+  const analise = semOfertasImpossiveis(bruta as never) as Record<string, unknown>;
   const opcoes = opcoesDaAnalise(analise, link);
   /* Anúncio enviado sem link de afiliado (10/10: link da ficha descartado,
      ou geração que falhou): entra na conta do preço e, sendo o melhor, a
