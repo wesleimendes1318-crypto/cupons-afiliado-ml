@@ -772,7 +772,8 @@ async function rodarRoboDePrecos() {
       try { internacional = !!(o && envioInternacionalDoHtml(t, o.item)?.internacional); } catch (e) { /* desconhecido = nacional */ }
       linhas.push({ produto: it.produto, item: o ? o.item : null, preco: o ? o.preco : null,
                     loja_oficial: o ? lojaOficialDoHtml(t, o.item) === true : false, internacional });
-      registro.push({ p: it.produto, preco: o ? o.preco : null, int: internacional || undefined, logada: !semCookie || undefined });
+      registro.push({ p: it.produto, preco: o ? o.preco : null, int: internacional || undefined, logada: !semCookie || undefined,
+                      ...(o ? {} : { bb: t.includes('"buy_box_offers"'), comprar: itemDaCompra(t), ev: (t.match(/melidata_event/g) || []).length, kb: Math.round(t.length / 1024) }) });
       if (semCookie) await sleep(4000 + Math.random() * 3000);
     }
     if (linhas.length) await gravarPrecos(sincToken, linhas);

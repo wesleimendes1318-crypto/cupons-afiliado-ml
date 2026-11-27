@@ -522,7 +522,13 @@ export function ofertasDoCatalogo(html) {
    carousel or another product (same closed object as ofertasDoCatalogo). */
 export function ofertaDaCaixaDeCompra(html) {
   const ofertas = ofertasDoCatalogo(html).filter(o => o.preco != null);
-  if (!ofertas.length) return null;
+  if (!ofertas.length) {
+    /* One seller only (27/11 20:17-20:28: 4 logged /p/ reads, no buy_box_offers):
+       the item of the page's own buy button and its own price event. */
+    const item = itemDaCompra(html);
+    const p = item && precosDoItem(html, item);
+    return p && p.cheio != null ? { item, preco: p.cheio } : null;
+  }
   const t = String(html);
   const i = t.indexOf('"buy_box_offers":{');
   const bloco = objetoJson(t, i + '"buy_box_offers":'.length) || '';
