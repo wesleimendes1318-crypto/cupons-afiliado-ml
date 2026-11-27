@@ -56,8 +56,13 @@ type Db = {
 /* Weslei, 27/11: "nunca deixe sem valor". A card without a real, recent price
    is not shown at all (it stays in the cached raw answer, so the robot still
    reads it and it comes back with its price). */
-export const soComPreco = <T extends { preco: number | null }>(itens: T[]) =>
-  itens.filter((r) => r.preco != null && r.preco > 0);
+// Weslei, 27/11 16:54 (card): wait for the robot to fill prices before hiding.
+// Turn on once precos_robo covers most searched cards.
+export const ESCONDER_SEM_PRECO = false;
+export const soComPreco = <T extends { preco: number | null }>(
+  itens: T[],
+  esconder = ESCONDER_SEM_PRECO,
+) => (esconder ? itens.filter((r) => r.preco != null && r.preco > 0) : itens);
 
 /** The answer with the robot's fresh prices, without the cards still unpriced. */
 export async function comPrecosDoRobo(db: Db, resposta: RespostaBusca): Promise<RespostaBusca> {
