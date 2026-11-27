@@ -224,6 +224,7 @@ export function VerDetalhesVitrine({
         />
         <BotaoWhatsApp
           vertical
+          vistoEm={vistoEm}
           produto={{ chave, titulo, preco, foto: imagem, url: urlProduto, link }}
         />
       </div>
@@ -434,7 +435,7 @@ function Painel({
      counter so the header stays clean. */
   const atalhos: [ReactNode, ReactNode] = [
     <CoracaoDesejo key="c" compacto produto={desejo} />,
-    <BotaoWhatsApp key="w" produto={desejo} />,
+    <BotaoWhatsApp key="w" produto={desejo} vistoEm={vistoEm} />,
   ];
 
   return (
@@ -727,9 +728,12 @@ export function GaleriaProduto({
 export function BotaoWhatsApp({
   produto,
   vertical = false,
+  vistoEm = null,
 }: {
   produto: Parameters<typeof itemDoProduto>[0];
   vertical?: boolean;
+  /* When the shown price was read; without it the message has no price. */
+  vistoEm?: string | null | undefined;
 }) {
   const [enviando, setEnviando] = useState(false);
   const [copiado, setCopiado] = useState<"ok" | "erro" | null>(null);
@@ -738,7 +742,7 @@ export function BotaoWhatsApp({
   const pagina = idDaPagina(produto.chave, item.url);
   const montar = async () => {
     const l = await buscarLinkAfiliado(item);
-    return l ? textoRecomendacao({ titulo: item.titulo, preco: item.preco, link: l, pagina }) : null;
+    return l ? textoRecomendacao({ titulo: item.titulo, preco: item.preco, vistoEm, link: l, pagina }) : null;
   };
   const enviar = async (e: CliqueReact<HTMLButtonElement>) => {
     e.stopPropagation();

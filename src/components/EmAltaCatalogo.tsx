@@ -309,6 +309,7 @@ export function CartaoEmAlta({
         titulo={i.nome}
         imagem={i.imagem}
         preco={Number(i.preco)}
+        vistoEm={i.atualizado_em}
         urlProduto={i.url}
         fotos={[i.imagem2]}
         compra={<VerNaLoja url={i.url} grande />}
