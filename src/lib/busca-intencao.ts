@@ -601,7 +601,7 @@ export function foraDaIntencao(
   /* 24/11 audit: any other typed product ("smart tv", "air fryer") never shows
      groceries either, unless the title also names that product. */
   if (
-    p0.length > 2 &&
+    p0.length >= 2 &&
     RE_COMIDA.test(t) &&
     !RE_COMIDA.test(` ${pedido} `) &&
     ![p0, singular(p0)].some((w) => t.includes(` ${w}`))

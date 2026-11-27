@@ -313,7 +313,11 @@ function ofertasDoProduto(id: string): Promise<OfertasDoProduto> {
   if (OFERTAS.size >= 3000) OFERTAS.delete(OFERTAS.keys().next().value!);
   const p = mlGet<OfertasDoProduto>(`/products/${id}/items?limit=5`);
   OFERTAS.set(id, { em: agora, p });
-  p.catch(() => OFERTAS.delete(id));
+  /* 27/11: ML answers 403 (PA_UNAUTHORIZED_RESULT_FROM_POLICIES) to app tokens
+     on /items; that refusal stays memoized so the next pass does not re-read. */
+  p.catch((e) => {
+    if (!(e instanceof ErroApiMl && e.status === 403)) OFERTAS.delete(id);
+  });
   return p;
 }
 
@@ -363,7 +367,12 @@ async function comOferta(
   } catch (e) {
     /* Produto sem oferta ativa fica de fora; na busca do mesmo produto,
        o sem oferta destacada entra sem preço (a comparação acha as lojas). */
-    if (opcoes.aceitarSemOferta && e instanceof ErroApiMl && e.status === 404)
+    /* 27/11 (Weslei: "smart tv 50 4k" came back empty): with the offers read
+       refused (401/403) or throttled (429), every catalog product was dropped.
+       It now enters without a price, only "Comparar preço" (no buy button with
+       item ""), and the comparison finds the store and the affiliate link. */
+    const bloqueado = e instanceof ErroApiMl && [401, 403, 429].includes(e.status);
+    if (bloqueado || (opcoes.aceitarSemOferta && e instanceof ErroApiMl && e.status === 404))
       return {
         produto: id,
         item: "",
@@ -371,6 +380,7 @@ async function comOferta(
         imagem,
         preco: null,
         url: `https://www.mercadolivre.com.br/p/${id}`,
+        voltagem: voltagemDosAtributos(p.attributes) ?? voltagemDoTexto(nome),
       };
     return null;
   }
@@ -636,9 +646,7 @@ async function doEstoque(
     const hibrido: Promise<{ data: unknown; error: unknown }> =
       buscas[0] && typeof comRpc.rpc === "function"
         ? Promise.resolve()
-            .then(() =>
-              comRpc.rpc!("buscar_estoque_hibrido", { p_termo: buscas[0], p_limite: 60 }),
-            )
+            .then(() => comRpc.rpc!("buscar_estoque_hibrido", { p_termo: buscas[0], p_limite: 60 }))
             .catch(() => ({ data: null, error: true }))
         : Promise.resolve({ data: null, error: null });
     const [{ data }, acervo, fundido] = await Promise.all([
@@ -657,11 +665,10 @@ async function doEstoque(
         buscas,
         opcoes,
       ),
-      ...filtrarEstoque(
-        doHibrido.filter((l) => l.origem === "acervo").map(semDominio),
-        buscas,
-        { ...opcoes, dominios: null },
-      ),
+      ...filtrarEstoque(doHibrido.filter((l) => l.origem === "acervo").map(semDominio), buscas, {
+        ...opcoes,
+        dominios: null,
+      }),
       ...filtrarEstoque((data ?? []) as unknown as LinhaEstoque[], buscas, opcoes),
       /* No domain column in the acervo: the type in the title decides. */
       ...filtrarEstoque(linhasAcervo, buscas, { ...opcoes, dominios: null }),
