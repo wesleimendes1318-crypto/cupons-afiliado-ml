@@ -724,3 +724,11 @@ test('robo de precos: a oferta marcada na caixa de compra do produto', () => {
   assert.deepEqual(ofertaDaCaixaDeCompra(semMarca), { item: 'MLB1000000003', preco: 150 });
   assert.equal(ofertaDaCaixaDeCompra('<html>sem bloco</html>'), null);
 });
+
+test('robo de precos: pagina /p/ de um vendedor so (sem buy_box_offers), 27/11', async () => {
+  const { ofertaDaCaixaDeCompra } = await import('../comparador.js');
+  const pagina = '"melidata_event":{"path":"/pdp","event_data":{"item_id":"MLB7000001","price":199.9,"original_price":249}},'
+    + '"melidata_event":{"path":"/pdp/buy_action","event_data":{"item_id":"MLB7000001"}}';
+  assert.deepEqual(ofertaDaCaixaDeCompra(pagina), { item: 'MLB7000001', preco: 199.9 });
+  assert.equal(ofertaDaCaixaDeCompra('"melidata_event":{"path":"/pdp","event_data":{"item_id":"MLB7000001"}}'), null);
+});
