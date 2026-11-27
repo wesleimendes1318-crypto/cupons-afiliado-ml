@@ -763,7 +763,7 @@ export function BotaoWhatsApp({
   const copiar = async (e: CliqueReact<HTMLButtonElement>) => {
     e.stopPropagation();
     e.preventDefault();
-    const pronto = montar();
+    const pronto = buscarLinkAfiliado(item); /* 27/11 Weslei: copy = only his affiliate link. */
     let ok = false;
     try {
       /* Safari only copies inside the tap: hand it the pending text. */
@@ -811,8 +811,8 @@ export function BotaoWhatsApp({
       <button
         type="button"
         onClick={(e) => void copiar(e)}
-        aria-label={`Copiar recomendação: ${item.titulo}`}
-        title={copiado === "ok" ? "Recomendação copiada" : copiado === "erro" ? "Não deu para copiar" : "Copiar recomendação"}
+        aria-label={`Copiar link: ${item.titulo}`}
+        title={copiado === "ok" ? "Link copiado" : copiado === "erro" ? "Não deu para copiar" : "Copiar link"}
         className={classe}
       >
         {copiado === "ok" ? (
@@ -821,7 +821,7 @@ export function BotaoWhatsApp({
           <Copy className="size-[18px] text-[#1d1d1f] dark:text-white" aria-hidden="true" />
         )}
         <span className="sr-only" aria-live="polite">
-          {copiado === "ok" ? "Recomendação copiada" : copiado === "erro" ? "Não deu para copiar" : ""}
+          {copiado === "ok" ? "Link copiado" : copiado === "erro" ? "Não deu para copiar" : ""}
         </span>
       </button>
     </span>
