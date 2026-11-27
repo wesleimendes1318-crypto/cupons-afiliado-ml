@@ -28,7 +28,11 @@ test("categories by title, accessories out", () => {
   assert.equal(categoriaBlackFriday("Smart Tv 43 Aoc Led Roku Full Hd"), "tvs");
   assert.equal(categoriaBlackFriday("Air Fryer Mondial 5L"), "eletrodomesticos");
   assert.equal(categoriaBlackFriday("Notebook Lenovo IdeaPad 3"), "informatica");
-  assert.equal(categoriaBlackFriday("Perfume 100ml"), null);
+  assert.equal(categoriaBlackFriday("Perfume 100ml"), "beleza");
+  assert.equal(categoriaBlackFriday("LEGO Classic Maleta Criativa 213 Peças"), "brinquedos");
+  assert.equal(categoriaBlackFriday("Ventilador De Teto Ventisol"), "casa");
+  assert.equal(categoriaBlackFriday("Tênis Feminino Caminhada"), "moda");
+  assert.equal(categoriaBlackFriday("Cabo USB"), null);
 });
 
 test("pool: free shipping confirmed, no repeats, biggest % first", () => {
@@ -154,4 +158,30 @@ test("pool dedupes the same product title across sources", () => {
 test("every offer in the Black Friday pool carries the seal", () => {
   const [o] = ofertasBlackFriday([[oferta({ chave: "s", titulo: "Selo" })]]);
   assert.equal(o?.selo, "Black Friday");
+});
+
+test("27/11: bad readings out, best rated catalog rows in with seller seal", async () => {
+  const { ofertaExtraBlackFriday } = await import("../src/lib/black-friday");
+  // PS5 at R$ 20,34 "R$ 4.829 a menos" is a bad reading, never a deal
+  const pool = ofertasBlackFriday([
+    [oferta({ chave: "ps5", titulo: "PS5 Slim", preco: 20.34, antes: 4850, economia: 4829.66 })],
+  ]);
+  assert.equal(pool.length, 0);
+  const avaliado = ofertaExtraBlackFriday({
+    chave: "MLB9",
+    titulo: "Ventilador De Teto C/ Controle 6 Vel. Fenix Ventisol",
+    imagem: null,
+    tipo: "menor",
+    preco: "299",
+    antes: "299",
+    economia: "0",
+    loja: null,
+    link: null,
+    url_produto: "https://www.mercadolivre.com.br/p/MLB9",
+    visto_em: new Date().toISOString(),
+    loja_oficial: true,
+    fonte: "avaliado",
+  });
+  assert.equal(avaliado?.lojaOficial, true);
+  assert.equal(avaliado?.economia, 0); // no discount claim without a measured price
 });
