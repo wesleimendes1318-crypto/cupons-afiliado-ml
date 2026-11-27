@@ -146,7 +146,8 @@ export const daTemporada = (t: Temporada, ofertas: Oferta[]) =>
   ofertas.filter((o) => combinaComTemporada(t, o.titulo));
 
 /** Extra Black Friday pool (26/11: "adicione o maximo de produtos"):
-    compared in 7 days or read from the catalog in 72 h (ofertas_black_friday). */
+    compared in 7 days, or best rated catalog listings read in 72 h
+    (ofertas_black_friday, 27/11: "produtos de qualidade excelente"). */
 export function useOfertasBlackFriday(ativa = true) {
   const [lista, setLista] = useState<Oferta[]>([]);
   useEffect(() => {

@@ -31,6 +31,33 @@ export const CATEGORIAS_BLACK_FRIDAY = [
     nome: "Informática",
     re: /\b(notebook|monitor|ssd|mem[oó]ria ram|teclado|mouse|tablet|ipad|impressora|roteador|placa de v[ií]deo|processador)\b/i,
   },
+  {
+    id: "audio",
+    nome: "Áudio e relógios",
+    re: /\b(jbl|fone|headphone|earbuds|airpods|caixa (de )?som|soundbar|smartwatch|apple watch|galaxy watch)\b/i,
+  },
+  /* 27/11 "produtos de qualidade excelente": best rated catalog items of
+     every department (ofertas_black_friday fonte "avaliado"). */
+  {
+    id: "casa",
+    nome: "Casa",
+    re: /\b(ventilador|aquecedor|ferro de passar|panela|jogo de cama|toalha|edredom|travesseiro|colch[aã]o|lumin[aá]ria|cadeira|mesa|ventisol|brit[aâ]nia)\b/i,
+  },
+  {
+    id: "beleza",
+    nome: "Beleza",
+    re: /\b(perfume|protetor solar|hidratante|sabonete|shampoo|condicionador|creme|s[eé]rum|maquiagem|desodorante|lo[cç][aã]o|col[oô]nia|skincare|facial|corporal|botic[aá]rio|natura)\b/i,
+  },
+  {
+    id: "brinquedos",
+    nome: "Brinquedos",
+    re: /\b(lego|brinquedo|boneca|pel[uú]cia|jogo de tabuleiro|quebra-cabe[cç]a|hot wheels|patrulha canina|jogo detetive|banco imobili[aá]rio|blocos de montar)\b/i,
+  },
+  {
+    id: "moda",
+    nome: "Moda e calçados",
+    re: /\b(t[eê]nis|sapat[eê]nis|sand[aá]lia|chinelo|bota|sapato|camiseta|cal[cç]a|jaqueta|vestido|rel[oó]gio)\b/i,
+  },
 ] as const;
 
 export type CategoriaBlackFriday = (typeof CATEGORIAS_BLACK_FRIDAY)[number]["id"];
@@ -56,6 +83,8 @@ export function ofertasBlackFriday(listas: Oferta[][]): Oferta[] {
   for (const o of listas.flat()) {
     /* No link yet: the card's VerNaLoja generates his link on click. */
     if (o.freteGratis !== true || !(o.link || o.urlProduto)) continue;
+    /* Over 70% off is a bad reading, not a deal (26/11: PS5 at R$ 20,34). */
+    if (percentualDoDesconto(o) > 0.7) continue;
     const nome = o.titulo.toLowerCase().replace(/\s+/g, " ").trim();
     if (vistas.has(o.chave) || vistas.has(nome)) continue;
     vistas.add(o.chave);
@@ -81,7 +110,7 @@ export type LinhaBlackFriday = {
   url_produto: string | null;
   visto_em: string;
   loja_oficial: boolean | null;
-  fonte: "comparado" | "catalogo";
+  fonte: "comparado" | "catalogo" | "avaliado";
 };
 
 /** Row as a card offer, or null when it is not a device of the season, is
@@ -116,6 +145,6 @@ export function ofertaExtraBlackFriday(l: LinhaBlackFriday, agora = Date.now()):
     recente: agora - Date.parse(l.visto_em) < 24 * 3600_000,
     vistoEm: l.visto_em,
     freteGratis: true,
-    ...(l.fonte === "catalogo" ? { lojaOficial: l.loja_oficial === true } : {}),
+    ...(l.fonte !== "comparado" ? { lojaOficial: l.loja_oficial === true } : {}),
   };
 }
