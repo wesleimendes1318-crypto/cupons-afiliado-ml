@@ -858,10 +858,30 @@ export function polycards(limpo) {
     saida.push({
       item: id, catalogo: cat ? cat.toUpperCase() : null, url,
       titulo: desescapar(titulo), preco: parseFloat(preco),
-      imagem: foto ? 'https://http2.mlstatic.com/D_NQ_NP_' + foto + '-O.webp' : null
+      imagem: foto ? 'https://http2.mlstatic.com/D_NQ_NP_' + foto + '-O.webp' : null,
+      /* 27/11: price robot never takes an international or used card. */
+      internacional: /internacional|"is_cbt"\s*:\s*true|"cbt_/i.test(bloco),
+      usado: /\bUsado\b|Recondicionado|"condition"\s*:\s*"(?:used|refurbished)"/i.test(bloco)
     });
   }
   return saida;
+}
+
+/* PRICE ROBOT, search page (Weslei, 27/11: "precisa inserir o valor assim
+   como os outros possuem"). One read of lista.mercadolivre.com.br/<termo>:
+   each card of a catalog product we searched gets that card's own offer and
+   price (the link /p/<produto>?pdp_filters=item_id:<item> opens that offer).
+   Only products in `produtos`; never international or used; first card wins. */
+export function precosDaBuscaDaLoja(html, produtos) {
+  const quero = new Set(produtos || []);
+  const limpo = String(html || '').replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+  const saida = new Map();
+  for (const c of polycards(limpo)) {
+    if (!c.catalogo || !quero.has(c.catalogo) || saida.has(c.catalogo)) continue;
+    if (c.internacional || c.usado || !(c.preco > 0)) continue;
+    saida.set(c.catalogo, { produto: c.catalogo, item: c.item, preco: c.preco, loja_oficial: false, internacional: false });
+  }
+  return [...saida.values()];
 }
 
 /* LOJA OFICIAL (Weslei, 27/09: a mais barata do agasalho era a loja oficial

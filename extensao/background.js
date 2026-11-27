@@ -10,12 +10,12 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, gravarCuponsV2, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
          buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas,
-         comandoEspelhoPendente, gravarMetricasAfiliado, precosPendentes, gravarPrecos } from './sincronia.js';
+         comandoEspelhoPendente, gravarMetricasAfiliado, precosPendentes, gravarPrecos, buscaParaPrecos } from './sincronia.js';
 import { sincronizarEspelho } from './espelho.js';
 import { ofertaDaCaixaDeCompra, ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
-         primeiroAnuncioDaLista, lojaDoAnuncio, semVendedorNaPagina, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
+         primeiroAnuncioDaLista, lojaDoAnuncio, semVendedorNaPagina, precosDaBuscaDaLoja, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO, ehBuscaML } from './atendimento.js';
@@ -739,6 +739,28 @@ async function rodarRoboDePrecos() {
   const registro = [];
   const linhas = [];
   try {
+    /* Search page first (logged): one read prices dozens of cards of a term
+       someone searched. A term is read at most once every 6 h. */
+    if (!semCookie) {
+      const { precosTermos = {} } = await chrome.storage.local.get('precosTermos');
+      for (const k of Object.keys(precosTermos)) if (Date.now() - precosTermos[k] > 6 * 3600e3) delete precosTermos[k];
+      const b = await buscaParaPrecos(sincToken, Object.keys(precosTermos));
+      if (b) {
+        precosTermos[b.termo] = Date.now();
+        await chrome.storage.local.set({ precosTermos });
+        const l = await lerPaginaParaPreco(urlDeBusca(b.termo), true);
+        if (l.muro) {
+          await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler precos', 'leitura', l.r.url);
+          gravarDiagnostico(sincToken, 'robo-precos', { versao: chrome.runtime.getManifest().version, busca: b.termo, parou: 'captcha (freio)' }).catch(() => {});
+          return;
+        }
+        const achados = l.r.ok ? precosDaBuscaDaLoja(l.t, b.produtos) : [];
+        if (achados.length) await gravarPrecos(sincToken, achados);
+        gravarDiagnostico(sincToken, 'robo-precos', { versao: chrome.runtime.getManifest().version, busca: b.termo,
+          pedidos: (b.produtos || []).length, gravados: achados.length, http: l.r.status, kb: Math.round(String(l.t || '').length / 1024) }).catch(() => {});
+        return;
+      }
+    }
     const lista = await precosPendentes(sincToken, semCookie ? 8 : 1);
     for (const it of lista) {
       if (!/^MLB\d+$/.test(String(it.produto || ''))) continue;

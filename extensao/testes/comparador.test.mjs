@@ -753,3 +753,16 @@ test('robo de precos: produto sem vendedor (preco HIDDEN + indisponivel), 27/11 
   assert.equal(semVendedorNaPagina('"id":"price","type":"price","state":"VISIBLE"},... indisponível'), false);
   assert.equal(semVendedorNaPagina('"id":"price","type":"price","state":"HIDDEN"}'), false);
 });
+
+test('robo de precos: pagina de busca da loja preenche os produtos pedidos (27/11)', async () => {
+  const { precosDaBuscaDaLoja } = await import('../comparador.js');
+  const card = (cat, item, preco, extra = '') => '"polycard":{"metadata":{"id":"' + item + '","url":"www.mercadolivre.com.br/x/p/' + cat + '"},'
+    + '"components":[{"title":{"text":"Mochila Escolar ' + item + '"}},{"price":{"current_price":{"value":' + preco + '}}}' + extra + ']}';
+  const html = card('MLB1000001', 'MLB5000001', 89.9)
+    + card('MLB1000001', 'MLB5000002', 79.9)
+    + card('MLB1000002', 'MLB5000003', 120, ',{"text":"Compra internacional"}')
+    + card('MLB1000003', 'MLB5000004', 60, ',{"text":"Usado"}')
+    + card('MLB1000009', 'MLB5000005', 30);
+  assert.deepEqual(precosDaBuscaDaLoja(html, ['MLB1000001', 'MLB1000002', 'MLB1000003']),
+    [{ produto: 'MLB1000001', item: 'MLB5000001', preco: 89.9, loja_oficial: false, internacional: false }]);
+});
