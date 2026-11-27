@@ -53,8 +53,19 @@ type Db = {
   };
 };
 
-/** The answer with the robot's fresh prices on the cards that had none. */
+/* Weslei, 27/11: "nunca deixe sem valor". A card without a real, recent price
+   is not shown at all (it stays in the cached raw answer, so the robot still
+   reads it and it comes back with its price). */
+export const soComPreco = <T extends { preco: number | null }>(itens: T[]) =>
+  itens.filter((r) => r.preco != null && r.preco > 0);
+
+/** The answer with the robot's fresh prices, without the cards still unpriced. */
 export async function comPrecosDoRobo(db: Db, resposta: RespostaBusca): Promise<RespostaBusca> {
+  const r = await preencherPrecos(db, resposta);
+  return { ...r, resultados: soComPreco(r.resultados ?? []) };
+}
+
+async function preencherPrecos(db: Db, resposta: RespostaBusca): Promise<RespostaBusca> {
   const ids = [
     ...new Set((resposta.resultados ?? []).filter((r) => r.preco == null).map((r) => r.produto)),
   ]

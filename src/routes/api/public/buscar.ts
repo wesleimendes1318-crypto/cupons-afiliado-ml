@@ -1,5 +1,5 @@
 import { guardarNoAcervo } from "@/lib/acervo";
-import { comPrecosDoRobo } from "@/lib/precos-robo";
+import { comPrecosDoRobo, soComPreco } from "@/lib/precos-robo";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -347,7 +347,7 @@ export const Route = createFileRoute("/api/public/buscar")({
               previa: true,
               resumo: "",
               buscas: r.intencao.buscas,
-              resultados: r.resultados,
+              resultados: soComPreco(r.resultados),
               enfileirados: 0,
               lidoEm: new Date().toISOString(),
               proximo: null,
@@ -360,7 +360,7 @@ export const Route = createFileRoute("/api/public/buscar")({
               { instantaneo: true },
             )
               .then((r) => {
-                if (terminou || previaDoCatalogo || !r.resultados.length) return;
+                if (terminou || previaDoCatalogo || !soComPreco(r.resultados).length) return;
                 enviar(parcial(r));
               })
               .catch(() => {});
@@ -375,7 +375,7 @@ export const Route = createFileRoute("/api/public/buscar")({
             )
               .then(async (r) => {
                 await instantanea;
-                if (terminou || !r.resultados.length) return;
+                if (terminou || !soComPreco(r.resultados).length) return;
                 previaDoCatalogo = true;
                 enviar(parcial(r));
               })
