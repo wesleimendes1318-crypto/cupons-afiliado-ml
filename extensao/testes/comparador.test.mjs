@@ -778,3 +778,24 @@ test('robo de precos: cartao HTML da busca da loja com /p/ e item (27/11)', asyn
     [{ produto: 'MLB1000001', item: 'MLB5000001', preco: 149.9, loja_oficial: false, internacional: false }]);
   assert.equal(d.pedidosNaPagina, 2);
 });
+
+test('busca da loja entra no acervo: so nacional, novo, frete gratis provado, preco sao (28/11)', async () => {
+  const { ofertasParaAcervo } = await import('../comparador.js');
+  const frete = ',{"type":"shipping","shipping":{"text":"Frete grátis"}}';
+  const card = (cat, item, preco, extra = '') => '"polycard":{"metadata":{"id":"' + item + '","url":"www.mercadolivre.com.br/x/p/' + cat + '"},'
+    + '"pictures":{"pictures":[{"id":"123456-MLB78901234_112024"}]},'
+    + '"components":[{"title":{"text":"Air Fryer Mondial ' + item + '"}},{"price":{"current_price":{"value":' + preco + '}}}' + extra + ']}';
+  const html = card('MLB1000001', 'MLB5000001', 299.9, frete)
+    + card('MLB1000001', 'MLB5000002', 279.9, frete) // same product: first card wins
+    + card('MLB1000002', 'MLB5000003', 199, '') // shipping unknown: out
+    + card('MLB1000003', 'MLB5000004', 150, frete + ',{"text":"Compra internacional"}')
+    + card('MLB1000004', 'MLB5000005', 4664550, frete); // x1000 misread: out
+  const l = ofertasParaAcervo(html, 'Air Fryer 5 Litros');
+  assert.equal(l.length, 1);
+  assert.deepEqual(l[0], {
+    produto: 'MLB1000001', item: 'MLB5000001', nome: 'Air Fryer Mondial MLB5000001',
+    imagem: 'https://http2.mlstatic.com/D_NQ_NP_123456-MLB78901234_112024-O.webp', foto: 'foto:123456-MLB78901234_112024',
+    preco: 299.9, frete_gratis: true, internacional: false, loja_oficial: false,
+    url: 'https://www.mercadolivre.com.br/p/MLB1000001?pdp_filters=item_id%3AMLB5000001', termos: ['air fryer 5 litros']
+  });
+});

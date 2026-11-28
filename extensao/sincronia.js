@@ -555,6 +555,12 @@ export async function gravarPrecos(token, linhas) {
   return chamarRpc(SUPABASE + '/rest/v1/rpc/robo_precos_gravar_v2', { p_token: token, p_linhas: linhas });
 }
 
+/* 28/11: store search page cards into the acervo our search reads. */
+export async function guardarNoAcervo(token, linhas) {
+  if (!token || !linhas.length) return 0;
+  return chamarRpc(SUPABASE + '/rest/v1/rpc/robo_acervo_guardar', { p_token: token, p_linhas: linhas });
+}
+
 /* Vitrine: produtos antigos sem foto (a extensao completa aos poucos). */
 export async function vitrineSemFoto(token, limite = 5) {
   if (!token) return [];

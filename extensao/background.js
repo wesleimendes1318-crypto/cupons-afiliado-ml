@@ -10,12 +10,12 @@ import { sincronizarComSite, completarCondicoes, condicoesDe,
          vitrineSemFoto, vitrineCompletar, conferirNoServidor, proximoMonitor, gravarMonitor, freteNoServidor, registrarHub, gravarCuponsV2, multilojaPendentes,
          avaliacoesPendentes, gravarAvaliacoes, clientesEsperando, garimposPendentes,
          buscasAnunciosPendentes, gravarBuscaAnuncios, listasTarefas, gravarListas,
-         comandoEspelhoPendente, gravarMetricasAfiliado, precosPendentes, gravarPrecos, buscaParaPrecos } from './sincronia.js';
+         comandoEspelhoPendente, gravarMetricasAfiliado, precosPendentes, gravarPrecos, buscaParaPrecos, guardarNoAcervo } from './sincronia.js';
 import { sincronizarEspelho } from './espelho.js';
 import { ofertaDaCaixaDeCompra, ofertasDaBusca, ofertasDoCatalogo, urlDaOferta, urlDeBusca, itemDoUrl, lojaOficialDoHtml,
          condicaoDoHtml, dominioDoHtml, detalhesDoAnuncio, detalhesResumidos, juntarAchados, precosDoItem, envioInternacionalDoHtml, fatosDoOriginal, itemDaCompra, escolherParaConferir, relacionadosDaPagina, seloDoVendedor, avaliacaoDoItem, detalheDasAvaliacoes, semAvaliacoesNaPagina, soMarcaEModelo, sugeridosExtras,
          escolherAlternativas, ehCaptcha, ehTituloDeDesafio, desescapar, MAX_CANDIDATOS_BUSCA, MAX_CANDIDATOS_IA, freteGratisDaBusca,
-         primeiroAnuncioDaLista, lojaDoAnuncio, semVendedorNaPagina, precosDaBuscaDaLoja, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
+         primeiroAnuncioDaLista, lojaDoAnuncio, semVendedorNaPagina, precosDaBuscaDaLoja, ofertasParaAcervo, opcoesDeCompra, ofertaDaListaDeVendedores, produtoDoPerfilSocial, produtoEmDestaque,
          identificadoresDoAnuncio, variacaoEscolhida, candidatosDeCartoes, pecaNoLugarDoAparelho, MUDA_PECA, soEspeculacao, enderecoDaOfertaLida, anunciosDoModelo } from './comparador.js';
 import { criarAtendimento, lerResposta, limparUrl, resolverEncurtado, avaliar, avaliarCupom,
          PAGINA_GERADOR, ROTA_CRIAR, TAG_PADRAO, ehBuscaML } from './atendimento.js';
@@ -743,12 +743,12 @@ async function rodarRoboDePrecos() {
        someone searched. A term is read at most once every 6 h. */
     if (!semCookie) {
       /* Key per parser version: a fixed parser rereads terms at once. */
-      const { precosTermos199: precosTermos = {} } = await chrome.storage.local.get('precosTermos199');
+      const { precosTermos200: precosTermos = {} } = await chrome.storage.local.get('precosTermos200');
       for (const k of Object.keys(precosTermos)) if (Date.now() - precosTermos[k] > 6 * 3600e3) delete precosTermos[k];
       const b = await buscaParaPrecos(sincToken, Object.keys(precosTermos));
       if (b) {
         precosTermos[b.termo] = Date.now();
-        await chrome.storage.local.set({ precosTermos199: precosTermos });
+        await chrome.storage.local.set({ precosTermos200: precosTermos });
         const l = await lerPaginaParaPreco(urlDeBusca(b.termo), true);
         if (l.muro) {
           await puxarFreio('o Mercado Livre pediu verificacao de seguranca ao ler precos', 'leitura', l.r.url);
@@ -758,8 +758,12 @@ async function rodarRoboDePrecos() {
         const diagB = {};
         const achados = l.r.ok ? precosDaBuscaDaLoja(l.t, b.produtos, diagB) : [];
         if (achados.length) await gravarPrecos(sincToken, achados);
+        /* 28/11: the store's own priced cards join our search (acervo). */
+        const acervo = l.r.ok ? ofertasParaAcervo(l.t, b.termo) : [];
+        let noAcervo = 0;
+        if (acervo.length) noAcervo = await guardarNoAcervo(sincToken, acervo).catch(() => -1);
         gravarDiagnostico(sincToken, 'robo-precos', { versao: chrome.runtime.getManifest().version, busca: b.termo,
-          pedidos: (b.produtos || []).length, gravados: achados.length, http: l.r.status, kb: Math.round(String(l.t || '').length / 1024), ...diagB }).catch(() => {});
+          pedidos: (b.produtos || []).length, gravados: achados.length, acervo: acervo.length, noAcervo, http: l.r.status, kb: Math.round(String(l.t || '').length / 1024), ...diagB }).catch(() => {});
         return;
       }
     }
