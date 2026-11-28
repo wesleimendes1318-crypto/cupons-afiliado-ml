@@ -20,7 +20,16 @@
    depender de o Weslei estar online para responder.
 */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 import { AcompanharPreco } from "@/components/AcompanharPreco";
@@ -956,7 +965,7 @@ const ATALHOS_BLACK_FRIDAY = [
   { rotulo: "🎮 PS5 Slim", termo: "playstation 5 slim" },
   { rotulo: "📱 iPhone 16 / 15", termo: "iphone" },
   { rotulo: "📱 Galaxy S24 / A55", termo: "smartphone samsung galaxy" },
-  { rotulo: "📺 Smart TV 50\" 4K", termo: "smart tv 50 4k" },
+  { rotulo: '📺 Smart TV 50" 4K', termo: "smart tv 50 4k" },
   { rotulo: "🍳 Air fryer 5L+", termo: "air fryer 5 litros" },
   { rotulo: "🤖 Robô aspirador", termo: "robo aspirador" },
   { rotulo: "💻 Notebook", termo: "notebook" },
@@ -3275,7 +3284,7 @@ function Resultado({
     }));
 
   return (
-    <ContextoAvaliacoesPorItem.Provider value={avaliacoesPorItem}>
+    <ContextosDoResultado avaliacoes={avaliacoesPorItem} linkDoColado={semLink ? null : link}>
       {/* CEP: no PC na barra de seções; no celular logo acima dela (e sempre
           aqui quando não há barra). */}
       {seloCep && (
@@ -3831,7 +3840,7 @@ function Resultado({
           )}
         </div>
       </div>
-    </ContextoAvaliacoesPorItem.Provider>
+    </ContextosDoResultado>
   );
 }
 
@@ -4221,6 +4230,30 @@ function MelhorOpcao({
    de afiliado da PÁGINA DO PRODUTO (link_de_reserva), que abre a oferta em
    destaque: o botão diz que o preço pode ser outro. Se o link desta loja sair
    depois, ele toma o lugar da reserva. */
+/* Zero dead end (Weslei, 27/11): inside a comparison, when another store's
+   link can't be produced and there is no product-page reserve, the button
+   falls back to the affiliate link of the product the visitor pasted,
+   clearly labeled as that product (never as this store's offer). */
+const ContextoLinkDoColado = createContext<string | null>(null);
+
+function ContextosDoResultado({
+  avaliacoes,
+  linkDoColado,
+  children,
+}: {
+  avaliacoes: Parameters<typeof ContextoAvaliacoesPorItem.Provider>[0]["value"];
+  linkDoColado: string | null;
+  children: ReactNode;
+}) {
+  return (
+    <ContextoLinkDoColado.Provider value={linkDoColado}>
+      <ContextoAvaliacoesPorItem.Provider value={avaliacoes}>
+        {children}
+      </ContextoAvaliacoesPorItem.Provider>
+    </ContextoLinkDoColado.Provider>
+  );
+}
+
 export function VerNaLoja({
   url,
   grande = false,
@@ -4250,6 +4283,7 @@ export function VerNaLoja({
   const [estado, setEstado] = useState<"parado" | "gerando" | "falhou">("parado");
   const [link, setLink] = useState<string | null>(null);
   const [reserva, setReserva] = useState<string | null>(null);
+  const linkDoColado = useContext(ContextoLinkDoColado);
   const comTexto = grande || cartao || pilula;
 
   async function buscarReserva() {
@@ -4391,6 +4425,36 @@ export function VerNaLoja({
       </span>
     );
   }
+  if (estado === "falhou" && ehLinkDeAfiliado(linkDoColado))
+    return (
+      <span className={pilula ? "flex shrink-0 flex-col items-end" : "block"}>
+        <a
+          href={linkDoColado.trim()}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          tabIndex={tabIndex}
+          className={
+            pilula
+              ? classePilula
+              : cartao
+                ? classeCartao
+                : grande
+                  ? "botao-seguro inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-success py-2.5 text-center text-sm font-bold text-white hover:brightness-95"
+                  : classePequena + " border-ml-blue bg-ml-blue text-white hover:brightness-110"
+          }
+        >
+          {comTexto ? "Ver o produto que você colou ↗" : "Ver o que você colou ↗"}
+        </a>
+        <span
+          className={
+            "mt-0.5 block text-[10px] leading-snug text-secondary-ink " +
+            (pilula ? "text-right" : "")
+          }
+        >
+          O link desta loja não saiu agora: abre o anúncio que você colou, com o preço dele.
+        </span>
+      </span>
+    );
   return (
     <button
       type="button"
