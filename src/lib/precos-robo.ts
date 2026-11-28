@@ -60,8 +60,9 @@ type Db = {
    is not shown at all (it stays in the cached raw answer, so the robot still
    reads it and it comes back with its price). */
 // Weslei, 27/11 16:54 (card): wait for the robot to fill prices before hiding.
-// Turn on once precos_robo covers most searched cards.
-export const ESCONDER_SEM_PRECO = false;
+// 28/11 01:16 (card "As duas coisas"): hide now; most unpriced cards are
+// products nobody sells (not even on the store's own search page).
+export const ESCONDER_SEM_PRECO = true;
 export const soComPreco = <T extends { preco: number | null }>(
   itens: T[],
   esconder = ESCONDER_SEM_PRECO,
