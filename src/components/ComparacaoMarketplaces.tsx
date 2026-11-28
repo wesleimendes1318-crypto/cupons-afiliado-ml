@@ -557,6 +557,10 @@ function Acao({
 }) {
   const o = c.oferta;
   const mk = c.jogador === "mercadolivre" ? null : c.jogador;
+  /* Zero dead end (27/11): while the Amazon check runs, the tagged Amazon
+     search is already clickable. */
+  if (c.situacao === "conferindo" && c.jogador === "amazon")
+    return <ConferirNaLoja titulo={colado.titulo} />;
   if (c.situacao === "conferindo" || c.situacao === "carregando")
     return (
       <span
@@ -1237,13 +1241,28 @@ export function ComparacaoMarketplaces({
                     Sem outras lojas do mesmo produto.
                   </p>
                 ) : pendentes[aba] != null ? (
-                  <p className="text-[13px] text-secondary-ink">
-                    Buscando na {NOME_DO_JOGADOR[aba]}: leva de 30 segundos a 2 minutos.
-                  </p>
+                  <div className="flex flex-col items-start gap-2">
+                    <p className="text-[13px] text-secondary-ink">
+                      Buscando na {NOME_DO_JOGADOR[aba]}: leva de 30 segundos a 2 minutos.
+                      {aba === "amazon" && " Enquanto isso, você já pode ver a busca na loja."}
+                    </p>
+                    {aba === "amazon" && (
+                      <div className="w-full max-w-xs">
+                        <ConferirNaLoja titulo={colado.titulo} />
+                      </div>
+                    )}
+                  </div>
                 ) : consultado(aba) ? (
-                  <p className="text-[13px] text-secondary-ink">
-                    Não localizei o mesmo produto na {NOME_DO_JOGADOR[aba]} nesta análise.
-                  </p>
+                  <div className="flex flex-col items-start gap-2">
+                    <p className="text-[13px] text-secondary-ink">
+                      Não localizei o mesmo produto na {NOME_DO_JOGADOR[aba]} nesta análise.
+                    </p>
+                    {aba === "amazon" && (
+                      <div className="w-full max-w-xs">
+                        <ConferirNaLoja titulo={colado.titulo} />
+                      </div>
+                    )}
+                  </div>
                 ) : podePedir ? (
                   <button
                     type="button"
