@@ -7,7 +7,7 @@ import { RE_PECA_PARTE } from "@/lib/conferir-produto";
 import { pareceFalso } from "@/lib/falsificado";
 import type { Oferta } from "@/lib/ofertas-vitrine";
 import { RE_CONDICAO_RUIM } from "@/lib/vitrine-recomendavel";
-import { precoImpossivel } from "@/lib/preco-suspeito";
+import { precoAbsurdo, precoImpossivel } from "@/lib/preco-suspeito";
 
 export const CATEGORIAS_BLACK_FRIDAY = [
   {
@@ -121,6 +121,7 @@ export function ofertaExtraBlackFriday(l: LinhaBlackFriday, agora = Date.now()):
   const antes = Number(l.antes);
   const economia = Number(l.economia ?? 0);
   if (!titulo || !(preco > 0) || !Number.isFinite(antes) || !Number.isFinite(economia)) return null;
+  if (precoAbsurdo(preco, antes)) return null;
   if (!categoriaBlackFriday(titulo)) return null;
   if (RE_CONDICAO_RUIM.test(titulo) || RE_PECA_PARTE.test(titulo) || pareceFalso(titulo)) return null;
   const link = ehLinkDeAfiliado(l.link) ? l.link : null;

@@ -31,7 +31,7 @@ import { itemDoEndereco, useAvaliacoesPorItens } from "@/lib/avaliacoes-detalhe"
 import { caracteristicasValidas, pilulasDaFicha } from "@/lib/ficha-detalhes";
 import { SITE } from "@/lib/lista-publica";
 import { lerProdutoPagina, type ItemMesmoTipo, type ProdutoPagina } from "@/lib/produto-pagina";
-import { precoImpossivel } from "@/lib/preco-suspeito";
+import { precoAbsurdo, precoImpossivel } from "@/lib/preco-suspeito";
 import { bemAvaliadosPrimeiro, reprovadaPelaAvaliacao } from "@/lib/qualidade-avaliacao";
 import { funcionaEm, rotuloVoltagem, voltagemDaRegiao, voltagemDoTexto } from "@/lib/voltagem";
 
@@ -178,7 +178,9 @@ function Produto() {
     d?.preco != null &&
     !d.precoDeReferencia &&
     (!pv?.preco || pvRuim || doLink?.startsWith("MLBP") || doLink === d.item);
-  const preco = apiServe ? d!.preco : ((pvRuim ? null : pv?.preco) ?? d?.preco ?? null);
+  const lido = apiServe ? d!.preco : ((pvRuim ? null : pv?.preco) ?? d?.preco ?? null);
+  /* 28/11: an out-of-scale price (misread x1000) is never shown. */
+  const preco = precoAbsurdo(lido) ? null : lido;
   const original = apiServe ? d!.precoOriginal : null;
   const desconto = original && preco ? Math.round((1 - preco / original) * 100) : 0;
   const itemEntrega =
