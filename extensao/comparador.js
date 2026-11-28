@@ -914,6 +914,36 @@ export function precosDaBuscaDaLoja(html, produtos, diag = null) {
   return [...saida.values()];
 }
 
+/* SEARCH PAGE INTO OUR SEARCH (Weslei card 28/11 01:16 "As duas coisas"):
+   every national, new, priced catalog card of the store's search page becomes
+   an acervo row (real price of that card's own offer, link opens it), so our
+   search shows the products the store shows. Only cards with free shipping
+   PROVEN on the page: unknown shipping is never stored as paid or free.
+   Price cap 50.000: a x1000 misread (28/11 audit) never reaches the site. */
+export const termoDoAcervo = (termo) => String(termo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+
+export function ofertasParaAcervo(html, termo) {
+  const texto = String(html || '');
+  const limpo = texto.replace(/\\u002F/gi, '/').replace(/\\"/g, '"');
+  const gratis = freteGratisDaBusca(texto);
+  const t = termoDoAcervo(termo);
+  const vistos = new Set();
+  const saida = [];
+  for (const c of polycards(limpo)) {
+    if (!c.catalogo || c.internacional || c.usado || vistos.has(c.catalogo)) continue;
+    if (!(c.preco > 0 && c.preco <= 50000) || gratis.get(c.item) !== true) continue;
+    vistos.add(c.catalogo);
+    const foto = (/(\d+-MLB\d+_\d+)/.exec(c.imagem || '') || [])[1];
+    saida.push({
+      produto: c.catalogo, item: c.item, nome: c.titulo.slice(0, 160), imagem: c.imagem,
+      foto: foto ? 'foto:' + foto : null, preco: c.preco, frete_gratis: true,
+      internacional: false, loja_oficial: false, url: c.url, termos: t ? [t] : []
+    });
+  }
+  return saida.slice(0, 60);
+}
+
 /* LOJA OFICIAL (Weslei, 27/09: a mais barata do agasalho era a loja oficial
    da adidas). A pagina do anuncio traz, no evento de medicao do vendedor,
    "seller_name":"adidas",...,"official_store_id":3154 (medido nas amostras
