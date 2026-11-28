@@ -86,8 +86,8 @@ describe("price robot on search cards (27/11)", () => {
     expect((await comPrecosDoRobo(db(false), resposta)).resultados[0]!.preco).toBe(50);
     expect(Date.now() - Date.parse(desde)).toBeGreaterThan(11.9 * 3600_000);
     expect(Date.now() - Date.parse(desde)).toBeLessThan(12.1 * 3600_000);
-    // Hiding is off until the robot fills prices (his card, 27/11 16:54).
-    expect((await comPrecosDoRobo(db(true), resposta)).resultados).toHaveLength(1);
+    // Hiding on (his card, 28/11 01:16): a card without a real price is not shown.
+    expect((await comPrecosDoRobo(db(true), resposta)).resultados).toHaveLength(0);
     const misto = [card("MLB7", 120), card("MLB8")];
     expect(soComPreco(misto, true).map((r) => r.produto)).toEqual(["MLB7"]);
   });
