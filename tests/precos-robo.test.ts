@@ -92,3 +92,14 @@ describe("price robot on search cards (27/11)", () => {
     expect(soComPreco(misto, true).map((r) => r.produto)).toEqual(["MLB7"]);
   });
 });
+
+describe("cached search re-run when nearly empty (28/11)", () => {
+  test("under 8 cards and read over 30 min ago re-runs; otherwise cache", async () => {
+    const { refazerCache } = await import("@/lib/precos-robo");
+    const agora = Date.parse("2026-11-28T02:00:00Z");
+    expect(refazerCache(0, "2026-11-28T01:09:00Z", agora)).toBe(true);
+    expect(refazerCache(0, "2026-11-28T01:45:00Z", agora)).toBe(false);
+    expect(refazerCache(12, "2026-11-28T00:00:00Z", agora)).toBe(false);
+    expect(refazerCache(3, undefined, agora)).toBe(true);
+  });
+});

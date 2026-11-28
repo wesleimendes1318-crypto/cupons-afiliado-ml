@@ -1,5 +1,5 @@
 import { guardarNoAcervo } from "@/lib/acervo";
-import { comPrecosDoRobo, soComPreco } from "@/lib/precos-robo";
+import { comPrecosDoRobo, refazerCache, soComPreco } from "@/lib/precos-robo";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -142,7 +142,13 @@ export const Route = createFileRoute("/api/public/buscar")({
           return r.data?.resposta ?? null;
         };
         const guardada = await lerGuardada(chave);
-        if (guardada) return json(request, await comPrecosDoRobo(db, guardada));
+        if (guardada) {
+          const servida = await comPrecosDoRobo(db, guardada);
+          /* 28/11: unpriced cards are hidden, so an old answer can be nearly
+             empty while the price robot has since filled the acervo with the
+             store's priced cards: re-run it (at most every 30 min). */
+          if (!refazerCache(servida.resultados.length, guardada.lidoEm)) return json(request, servida);
+        }
 
         const completar = async (): Promise<{ corpo: object; status: number }> => {
           let achado: {
