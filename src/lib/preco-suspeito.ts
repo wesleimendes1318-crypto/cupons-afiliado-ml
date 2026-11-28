@@ -77,14 +77,65 @@ export function precoImpossivel(
   return o != null && b != null && o < b * PISO_MESMO_PRODUTO;
 }
 
+/* PRICE OUT OF SCALE (28/11): a page read multiplied a price by 1000 (PS5
+   R$ 4.664,55 stored as 4664550, perfume R$ 279.000, TV R$ 98.919). No
+   product compared here costs more than R$ 50.000 (largest real one seen:
+   sauna R$ 26.833), so a higher price is a misread and the card is hidden. */
+export const TETO_PRECO = 50_000;
+
+export function precoAbsurdo(...precos: Array<number | string | null | undefined>): boolean {
+  return precos.some((p) => {
+    const n = num(p);
+    return n != null && n > TETO_PRECO;
+  });
+}
+
+/* SHIPPING OUT OF SCALE (28/11): the shipping API answered R$ 6.097,56 for a
+   R$ 280 air fryer. Shipping above max(R$ 500, 2x the price) is a misread:
+   it becomes unknown ("confira no anúncio"), never a cost shown or summed. */
+export function freteAbsurdo(
+  custo: number | string | null | undefined,
+  preco: number | string | null | undefined,
+): boolean {
+  const c = num(custo);
+  const p = num(preco) ?? 0;
+  return c != null && c > Math.max(500, 2 * p);
+}
+
+type ComFrete = {
+  final?: number | boolean | null;
+  preco?: number | null;
+  custoFrete?: number | null;
+  freteGratis?: boolean | null;
+};
+const semFreteAbsurdo = <O extends ComFrete>(o: O): O =>
+  o && freteAbsurdo(o.custoFrete, typeof o.final === "number" ? o.final : o.preco)
+    ? { ...o, custoFrete: null, freteGratis: null }
+    : o;
+
 type ComLojas = {
   preco?: number | null;
   outraLoja?: { final?: number | null; preco?: number | null } | null;
   outrasLojas?: Array<{ final?: number | null; preco?: number | null }> | null;
 };
 
+/** The analysis with every out-of-scale shipping cost turned unknown. */
+export function semFretesAbsurdos<T extends ComLojas>(a: T): T {
+  const r = a as unknown as Record<string, unknown>;
+  const lista = (k: string) =>
+    Array.isArray(r[k]) ? { [k]: (r[k] as ComFrete[]).map(semFreteAbsurdo) } : {};
+  return {
+    ...(semFreteAbsurdo(a as ComFrete) as object),
+    ...lista("outrasLojas"),
+    ...lista("referencias"),
+    ...lista("parecidos"),
+    ...(r["outraLoja"] ? { outraLoja: semFreteAbsurdo(r["outraLoja"] as ComFrete) } : {}),
+  } as T;
+}
+
 /** A análise sem as "outras lojas" de preço impossível (mesma régua). */
-export function semOfertasImpossiveis<T extends ComLojas>(a: T): T {
+export function semOfertasImpossiveis<T extends ComLojas>(bruta: T): T {
+  const a = semFretesAbsurdos(bruta);
   const base = a.preco;
   const ruim = (o: { final?: number | null; preco?: number | null } | null | undefined) =>
     !!o && precoImpossivel(o.final ?? o.preco, base);

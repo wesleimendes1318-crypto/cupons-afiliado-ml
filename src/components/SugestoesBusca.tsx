@@ -24,7 +24,7 @@ import {
 } from "@/lib/busca-sugestoes";
 import { obterPerfil, sugestoesDoPerfil } from "@/lib/perfil-visitante";
 import { ehTituloDeDesafio } from "@/lib/titulo-desafio";
-import { precoImpossivel } from "@/lib/preco-suspeito";
+import { precoAbsurdo, precoImpossivel } from "@/lib/preco-suspeito";
 
 const ESPERA_MS = 180;
 
@@ -61,7 +61,7 @@ export function carregarProdutos(): Promise<ProdutoConhecido[]> {
       frete_gratis: boolean | null;
     }>;
     return [
-      ...v.map((i) => ({
+      ...v.filter((i) => !precoAbsurdo(i.preco, i.melhor_preco)).map((i) => ({
         titulo: i.titulo,
         imagem: i.imagem,
         preco: i.preco,
