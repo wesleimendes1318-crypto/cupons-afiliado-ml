@@ -370,16 +370,176 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
-    slug: "quanto-se-economiza-comparando-lojas",
-    titulo: "Quanto se economiza comparando lojas: 1.285 comparações reais",
+    slug: "patinete-infantil-3-rodas-led-comparativo",
+    titulo: "Patinete infantil 3 rodas com LED: preço em cada loja e o frete",
     resumo:
-      "O levantamento de todas as comparações feitas no site entre 18/10 e 13/11/2026: em que categorias outra loja costuma ser mais barata, quanto se economiza e quando não compensa trocar.",
+      "Comparei loja por loja os dois patinetes infantis de 3 rodas com LED mais procurados aqui e acompanhei o preço por quase quatro semanas. O mesmo patinete custava de R$ 51,90 a R$ 279,90.",
     descricao:
-      "Levantamento de 1.285 comparações reais de preço entre lojas do Mercado Livre: economia mediana por categoria e faixa de preço, e quando não compensa trocar.",
+      "Patinete infantil 3 rodas com LED comparado loja por loja: o mesmo modelo de R$ 51,90 a R$ 279,90, o frete que muda a conta e quando o seu anúncio já é o melhor.",
     tempo: "6 min de leitura",
-    atualizacao: "13/11/2026",
+    atualizacao: "16/11/2026",
+    publicado: "16/11/2026",
+    verificado: "16/11/2026",
+    categoria: "brinquedos",
+    relacionados: [
+      "quanto-se-economiza-comparando-lojas",
+      "como-saber-se-um-desconto-e-realmente-vantajoso",
+    ],
+    resumo30: [
+      {
+        rotulo: "Diferença encontrada",
+        texto:
+          "O mesmo patinete de 3 rodas com LED custava de R$ 51,90 a R$ 279,90 conforme a loja (11/11/2026).",
+      },
+      {
+        rotulo: "O frete decide",
+        texto:
+          "No modelo Luppy, o menor preço de etiqueta, R$ 49,90, cobrava frete. A loja oficial a R$ 54,90 tinha frete grátis.",
+      },
+      {
+        rotulo: "Recomendação",
+        texto:
+          "Pague perto de R$ 50 a R$ 55 com frete grátis. Nos dois casos o anúncio mais barato já era o que as pessoas tinham achado.",
+      },
+    ],
+    blocos: [
+      {
+        tipo: "p",
+        texto:
+          "O patinete infantil de 3 rodas com luz de LED nas rodas esteve no topo dos produtos mais comparados aqui em novembro. Dois anúncios somaram 20 comparações entre 18/10 e 11/11/2026: um patinete dobrável sem marca no título e o Luppy azul da Maxi Toys. Juntei a comparação loja por loja de 11/11/2026 e todos os preços que li de cada um desde outubro.",
+      },
+      { tipo: "h2", texto: "Qual loja vende o patinete infantil 3 rodas mais barato?" },
+      {
+        tipo: "p",
+        texto:
+          "No patinete dobrável sem marca, o próprio anúncio comparado foi o mais barato: R$ 51,90, de loja oficial e com frete grátis, em 11/11/2026. As outras quatro lojas com o mesmo produto pediam de R$ 78,87 a R$ 279,90, todas com frete grátis e nenhuma com selo de loja oficial.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Patinete infantil 3 rodas com LED, dobrável, comparação de 11/11/2026",
+        colunas: ["Oferta", "Preço", "Frete", "Loja oficial"],
+        linhas: [
+          ["Anúncio comparado", "R$ 51,90", "Grátis", "Sim"],
+          ["Segunda", "R$ 78,87", "Grátis", "Não"],
+          ["Terceira", "R$ 89,99", "Grátis", "Não"],
+          ["Quarta", "R$ 139,99", "Grátis", "Não"],
+          ["Mais cara", "R$ 279,90", "Grátis", "Não"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "A segunda colocada já custava R$ 26,97 a mais, e a mais cara cobrava mais de cinco vezes o preço do anúncio comparado pelo mesmo patinete. Em brinquedo isso é comum: o mesmo item aparece em lojas que só repassam o produto com outra margem. Quem compra sem comparar pode pagar o dobro sem perceber.",
+      },
+      { tipo: "h2", texto: "O frete pode mudar qual é o mais barato?" },
+      {
+        tipo: "p",
+        texto:
+          "Pode, e no patinete Luppy mudou. Na comparação de 11/11/2026, o anúncio comparado tinha o menor preço de etiqueta, R$ 49,90, mas não oferecia frete grátis e não era de loja oficial. Logo acima vinha uma loja oficial a R$ 54,90 com frete grátis. Se o frete até a sua casa passar de R$ 5,00, a loja oficial sai mais barata.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Patinete infantil 3 rodas LED dobrável Luppy azul, comparação de 11/11/2026",
+        colunas: ["Oferta", "Preço", "Frete", "Loja oficial"],
+        linhas: [
+          ["Anúncio comparado", "R$ 49,90", "Pago", "Não"],
+          ["Mais barata com frete grátis", "R$ 54,90", "Grátis", "Sim"],
+          ["Terceira", "R$ 56,00", "Grátis", "Não"],
+          ["Quarta", "R$ 59,90", "Grátis", "Sim"],
+          ["Outras três lojas", "R$ 78,87 a R$ 130,00", "Grátis", "Não"],
+        ],
+      },
+      {
+        tipo: "destaque",
+        titulo: "O que isso quer dizer para você",
+        texto:
+          "Num brinquedo de R$ 50, um frete de R$ 10 ou R$ 15 pesa muito. Informe o seu CEP antes de decidir: a diferença de R$ 5,00 entre a etiqueta mais baixa e a loja oficial com frete grátis some na primeira cobrança de entrega.",
+      },
+      { tipo: "h2", texto: "O preço do patinete muda muito?" },
+      {
+        tipo: "p",
+        texto:
+          "Muda pouco e volta sempre ao mesmo lugar. Li o preço do patinete dobrável 11 vezes entre 18/10 e 11/11/2026 e ele só alternou entre dois valores: R$ 47,75 e R$ 51,90. O Luppy fez o mesmo em 7 leituras entre 23/10 e 11/11/2026, entre R$ 47,40 e R$ 49,90.",
+      },
+      {
+        tipo: "tabela",
+        legenda: "Preços lidos de cada anúncio, 18/10 a 11/11/2026",
+        colunas: ["Anúncio", "Leituras", "Menor preço", "Maior preço", "Datas do menor preço"],
+        linhas: [
+          ["Patinete dobrável", "11", "R$ 47,75", "R$ 51,90", "18/10, 29/10, 02/11 e 03/11"],
+          ["Patinete Luppy", "7", "R$ 47,40", "R$ 49,90", "23/10, 29/10 e 03/11"],
+        ],
+      },
+      {
+        tipo: "p",
+        texto:
+          "A queda foi de R$ 4,15 no patinete dobrável e de R$ 2,50 no Luppy, e nos dois casos o preço baixo apareceu e sumiu em poucos dias. Não vale esperar semanas por ela: a economia é pequena perto do que se perde comprando na loja errada.",
+      },
+      { tipo: "h2", texto: "Quando o seu anúncio já é o melhor" },
+      {
+        tipo: "p",
+        texto:
+          "Nos dois patinetes, o anúncio que as pessoas colaram aqui já era o de menor preço de etiqueta. No dobrável, ele ainda era de loja oficial e tinha frete grátis: não havia nada a trocar. No Luppy, a única dúvida era o frete, que só o seu CEP responde.",
+      },
+      {
+        tipo: "p",
+        texto:
+          "Isso combina com o resto dos brinquedos. Entre 18/10 e 16/11/2026, das 99 comparações de Brinquedos e Hobbies feitas no site, só 32% tinham o mesmo brinquedo mais barato em outra loja, a menor parte entre as categorias com mais comparações. Quando havia, a economia mediana foi de R$ 17,48, ou 12,8% do preço. Em brinquedo, comparar serve mais para não cair na loja cara do que para achar um desconto escondido.",
+      },
+      { tipo: "h2", texto: "Patinete de R$ 279,90 é melhor que o de R$ 51,90?" },
+      {
+        tipo: "p",
+        texto:
+          "Não, se for o mesmo produto. O comparador só coloca na mesma lista os anúncios que vendem o mesmo patinete, conferido pela foto e pelas características. Uma diferença dessas é preço alto, não qualidade maior. Se você estiver em dúvida, abra o anúncio caro e confira se ele não traz algo a mais, como capacete ou outra cor no kit.",
+      },
+      { tipo: "h2", texto: "Antes de comprar o patinete" },
+      {
+        tipo: "passos",
+        itens: [
+          "Confira a idade e o peso máximo indicados no anúncio, não só a foto.",
+          "Procure o selo do Inmetro na descrição ou nas fotos da embalagem: brinquedo vendido no Brasil precisa dele.",
+          "Veja se as luzes de LED funcionam com o movimento das rodas ou com pilha, para não ser surpreendido.",
+          "Informe o seu CEP e compare o custo final, com frete.",
+          "Entre preços próximos, prefira a loja oficial com frete grátis.",
+        ],
+      },
+      {
+        tipo: "chamada",
+        texto:
+          "Cole o link do patinete que você está olhando e eu mostro as outras lojas de agora. A compra é feita no Mercado Livre, com pagamento protegido.",
+        botao: "Comparar o preço agora",
+        para: "/",
+      },
+    ],
+    perguntas: [
+      {
+        pergunta: "Quanto custa o patinete infantil de 3 rodas com LED?",
+        resposta:
+          "Na comparação de 11/11/2026, os dois modelos mais procurados aqui custavam de R$ 49,90 a R$ 279,90, conforme a loja. Os menores preços lidos desde outubro foram R$ 47,40 e R$ 47,75.",
+      },
+      {
+        pergunta: "Vale esperar o preço cair?",
+        resposta:
+          "Pouco. Entre 18/10 e 11/11/2026 a queda foi de R$ 2,50 a R$ 4,15 e durou poucos dias. Comparar as lojas rende mais que esperar.",
+      },
+      {
+        pergunta: "Os preços do guia ainda valem?",
+        resposta:
+          "Não necessariamente. São os preços lidos nas datas indicadas, até 11/11/2026. Cole o link do anúncio para ver a comparação de agora.",
+      },
+    ],
+  },
+  {
+    slug: "quanto-se-economiza-comparando-lojas",
+    titulo: "Quanto se economiza comparando lojas: 1.466 comparações reais",
+    resumo:
+      "O levantamento de todas as comparações feitas no site entre 18/10 e 16/11/2026: em que categorias outra loja costuma ser mais barata, quanto se economiza e quando não compensa trocar.",
+    descricao:
+      "Levantamento de 1.466 comparações reais de preço entre lojas do Mercado Livre: economia mediana por categoria e faixa de preço, e quando não compensa trocar.",
+    tempo: "6 min de leitura",
+    atualizacao: "16/11/2026",
     publicado: "13/11/2026",
-    verificado: "13/11/2026",
+    verificado: "16/11/2026",
     relacionados: [
       "como-comparar-o-preco-do-mesmo-produto",
       "como-saber-se-um-desconto-e-realmente-vantajoso",
@@ -387,48 +547,48 @@ export const GUIAS: Guia[] = [
     resumo30: [
       {
         rotulo: "Resultado geral",
-        texto: "Em 46% das 1.285 comparações, outra loja vendia o mesmo produto mais barato.",
+        texto: "Em 47% das 1.466 comparações, outra loja vendia o mesmo produto mais barato.",
       },
-      { rotulo: "Quanto", texto: "Economia mediana de R$ 20,00, ou 13,6% do preço do anúncio." },
+      { rotulo: "Quanto", texto: "Economia mediana de R$ 16,46, ou 13,8% do preço do anúncio." },
       {
         rotulo: "Onde mais compensa",
         texto:
-          "Moda (68%), Eletrônicos (57%) e Acessórios para Veículos (54%) tiveram mais casos com loja mais barata.",
+          "Moda (65%), Eletrônicos (58%) e Acessórios para Veículos (57%) tiveram mais casos com loja mais barata.",
       },
     ],
     blocos: [
       {
         tipo: "p",
         texto:
-          "Toda vez que alguém cola um link aqui, o site procura o mesmo produto nas outras lojas do Mercado Livre e guarda o resultado. Eu juntei todas as comparações feitas entre 18/10 e 13/11/2026 que tinham pelo menos duas lojas vendendo o mesmo produto: 1.285 no total. Este é o retrato do que elas mostram.",
+          "Toda vez que alguém cola um link aqui, o site procura o mesmo produto nas outras lojas do Mercado Livre e guarda o resultado. Eu juntei todas as comparações feitas entre 18/10 e 16/11/2026 que tinham pelo menos duas lojas vendendo o mesmo produto: 1.466 no total. Este é o retrato do que elas mostram.",
       },
       { tipo: "h2", texto: "Com que frequência outra loja vende mais barato?" },
       {
         tipo: "p",
         texto:
-          "Em 46% das comparações. Quase metade das pessoas que colaram um link estava olhando um anúncio que não era o mais barato para aquele produto. Na outra metade, o anúncio colado já era o melhor preço, e trocar de loja não traria nada.",
+          "Em 47% das comparações. Quase metade das pessoas que colaram um link estava olhando um anúncio que não era o mais barato para aquele produto. Na outra metade, o anúncio colado já era o melhor preço, e trocar de loja não traria nada.",
       },
       { tipo: "h2", texto: "Quanto dá para economizar, por categoria" },
       {
         tipo: "p",
         texto:
-          "A economia mediana foi de R$ 20,00, ou 13,6% do preço do anúncio. Ela muda bastante de uma categoria para outra: em percentual, rende mais nos itens de casa e moda; em reais, na informática e nos eletrodomésticos.",
+          "A economia mediana foi de R$ 16,46, ou 13,8% do preço do anúncio. Ela muda bastante de uma categoria para outra: em percentual, rende mais em eletrônicos, moda e itens de casa; em reais, na informática, nos eletrônicos e nos eletrodomésticos.",
       },
       {
         tipo: "tabela",
-        legenda: "Comparações com duas lojas ou mais, por categoria, 18/10 a 13/11/2026",
+        legenda: "Comparações com duas lojas ou mais, por categoria, 18/10 a 16/11/2026",
         colunas: ["Categoria", "Comparações", "Com loja mais barata", "Economia mediana"],
         linhas: [
-          ["Eletrodomésticos", "176", "48%", "R$ 38,92 (7,6%)"],
-          ["Beleza e Cuidado Pessoal", "172", "38%", "R$ 14,92 (14,1%)"],
-          ["Casa, Móveis e Decoração", "102", "50%", "R$ 14,00 (20,0%)"],
-          ["Brinquedos e Hobbies", "97", "33%", "R$ 17,48 (12,8%)"],
-          ["Informática", "96", "53%", "R$ 40,10 (14,0%)"],
-          ["Celulares e Telefones", "92", "51%", "R$ 25,46 (13,2%)"],
-          ["Eletrônicos, Áudio e Vídeo", "82", "57%", "R$ 34,62 (17,0%)"],
-          ["Ferramentas", "63", "44%", "R$ 16,50 (11,8%)"],
-          ["Acessórios para Veículos", "59", "54%", "R$ 20,50 (12,2%)"],
-          ["Calçados, Roupas e Bolsas", "47", "68%", "R$ 10,41 (17,3%)"],
+          ["Beleza e Cuidado Pessoal", "201", "40%", "R$ 12,45 (14,5%)"],
+          ["Eletrodomésticos", "200", "49%", "R$ 30,93 (8,7%)"],
+          ["Casa, Móveis e Decoração", "151", "56%", "R$ 9,93 (15,9%)"],
+          ["Celulares e Telefones", "101", "50%", "R$ 20,93 (13,2%)"],
+          ["Brinquedos e Hobbies", "99", "32%", "R$ 17,48 (12,8%)"],
+          ["Informática", "98", "53%", "R$ 37,55 (12,6%)"],
+          ["Eletrônicos, Áudio e Vídeo", "86", "58%", "R$ 31,68 (17,3%)"],
+          ["Ferramentas", "72", "44%", "R$ 16,50 (13,1%)"],
+          ["Acessórios para Veículos", "60", "57%", "R$ 16,75 (12,2%)"],
+          ["Calçados, Roupas e Bolsas", "55", "65%", "R$ 10,62 (17,3%)"],
         ],
       },
       {
@@ -440,17 +600,17 @@ export const GUIAS: Guia[] = [
       {
         tipo: "p",
         texto:
-          "Em reais, sim. Nos produtos acima de R$ 1.000, a economia mediana foi de R$ 173,44. Em percentual, acontece o contrário: os itens de até R$ 100 tiveram a maior diferença relativa, 18,3%, mas em reais isso significa R$ 8,31.",
+          "Em reais, sim. Nos produtos acima de R$ 1.000, a economia mediana foi de R$ 175,88. Em percentual, acontece o contrário: os itens de até R$ 100 tiveram a maior diferença relativa, 16,8%, mas em reais isso significa R$ 7,40.",
       },
       {
         tipo: "tabela",
-        legenda: "Comparações por faixa de preço do anúncio colado, 18/10 a 13/11/2026",
+        legenda: "Comparações por faixa de preço do anúncio colado, 18/10 a 16/11/2026",
         colunas: ["Preço do anúncio", "Comparações", "Com loja mais barata", "Economia mediana"],
         linhas: [
-          ["Até R$ 100", "509", "39%", "R$ 8,31 (18,3%)"],
-          ["R$ 100 a R$ 300", "352", "53%", "R$ 20,42 (12,5%)"],
-          ["R$ 300 a R$ 1.000", "237", "52%", "R$ 61,51 (10,9%)"],
-          ["Acima de R$ 1.000", "187", "47%", "R$ 173,44 (9,5%)"],
+          ["Até R$ 100", "652", "42%", "R$ 7,40 (16,8%)"],
+          ["R$ 100 a R$ 300", "381", "52%", "R$ 19,43 (12,0%)"],
+          ["R$ 300 a R$ 1.000", "243", "52%", "R$ 63,88 (11,8%)"],
+          ["Acima de R$ 1.000", "190", "47%", "R$ 175,88 (9,8%)"],
         ],
       },
       { tipo: "h2", texto: "O frete apaga a economia?" },
@@ -463,8 +623,8 @@ export const GUIAS: Guia[] = [
       {
         tipo: "lista",
         itens: [
-          "Quando o anúncio que você achou já é o mais barato. Isso aconteceu em 54% das comparações.",
-          "Quando a diferença é pequena: 58 das economias ficaram abaixo de 3% do preço. Nesses casos, a loja oficial costuma valer os poucos reais.",
+          "Quando o anúncio que você achou já é o mais barato. Isso aconteceu em 53% das comparações.",
+          "Quando a diferença é pequena: 63 das economias ficaram abaixo de 3% do preço. Nesses casos, a loja oficial costuma valer os poucos reais.",
           "Quando o mais barato está 30% ou mais abaixo das lojas oficiais e o vendedor não tem histórico. Aí a diferença é um alerta, não uma vitória.",
           "Quando o prazo de entrega da loja mais barata não serve para você.",
         ],
@@ -478,7 +638,7 @@ export const GUIAS: Guia[] = [
       {
         tipo: "chamada",
         texto:
-          "Quer saber se o seu anúncio está entre os 46%? Cole o link e veja as outras lojas. A compra é feita no Mercado Livre, com pagamento protegido.",
+          "Quer saber se o seu anúncio está entre os 47%? Cole o link e veja as outras lojas. A compra é feita no Mercado Livre, com pagamento protegido.",
         botao: "Comparar o meu produto",
         para: "/",
       },
@@ -487,7 +647,7 @@ export const GUIAS: Guia[] = [
       {
         pergunta: "De onde vêm esses números?",
         resposta:
-          "De todas as comparações feitas no site entre 18/10 e 13/11/2026 com pelo menos duas lojas vendendo o mesmo produto: 1.285 comparações.",
+          "De todas as comparações feitas no site entre 18/10 e 16/11/2026 com pelo menos duas lojas vendendo o mesmo produto: 1.466 comparações.",
       },
       {
         pergunta: "A economia mediana vale para o meu produto?",
@@ -670,7 +830,7 @@ export const GUIAS: Guia[] = [
     descricao:
       "Como calcular quanto um cupom desconta de verdade: teto, valor mínimo, frete, qual de dois cupons rende mais e quando trocar de loja não compensa.",
     tempo: "7 min de leitura",
-    atualizacao: "13/11/2026",
+    atualizacao: "16/11/2026",
     publicado: "23/09/2026",
     relacionados: [
       "como-saber-se-um-desconto-e-realmente-vantajoso",
@@ -689,7 +849,7 @@ export const GUIAS: Guia[] = [
       {
         rotulo: "Antes do cupom",
         texto:
-          "Compare o produto: em 46% das 1.285 comparações que fiz, outra loja já vendia o mesmo item mais barato.",
+          "Compare o produto: em 47% das 1.466 comparações que fiz (18/10 a 16/11/2026), outra loja já vendia o mesmo item mais barato.",
       },
     ],
     blocos: [
@@ -859,8 +1019,9 @@ export const GUIAS: Guia[] = [
     descricao:
       "Como saber se um desconto é real antes da Black Friday: o que mostram 88 preços acompanhados por semanas, os sinais de oferta falsa e o que conferir.",
     tempo: "7 min de leitura",
-    atualizacao: "13/11/2026",
+    atualizacao: "16/11/2026",
     publicado: "23/09/2026",
+    verificado: "16/11/2026",
     relacionados: ["o-que-conferir-antes-de-pagar", "como-calcular-a-economia-real-de-um-cupom"],
     resumo30: [
       {
@@ -894,15 +1055,15 @@ export const GUIAS: Guia[] = [
       {
         tipo: "p",
         texto:
-          "Entre 18/10 e 13/11/2026 acompanhei 88 produtos que tiveram o preço lido pelo menos três vezes, com mais de sete dias entre a primeira e a última leitura. Os preços se mexem nos dois sentidos, o que derruba a ideia de que esperar sempre compensa.",
+          "Entre 18/10 e 16/11/2026 acompanhei 88 produtos que tiveram o preço lido pelo menos três vezes, com mais de sete dias entre a primeira e a última leitura. Os preços se mexem nos dois sentidos, o que derruba a ideia de que esperar sempre compensa.",
       },
       {
         tipo: "tabela",
-        legenda: "88 preços acompanhados por mais de 7 dias, 18/10 a 13/11/2026",
+        legenda: "88 preços acompanhados por mais de 7 dias, 18/10 a 16/11/2026",
         colunas: ["O que aconteceu", "Parte dos produtos"],
         linhas: [
           ["Variou mais de 5% em algum momento", "39%"],
-          ["Terminou mais caro do que começou (mais de 2%)", "20%"],
+          ["Terminou mais caro do que começou (mais de 2%)", "19%"],
           ["Terminou mais barato do que começou (mais de 2%)", "23%"],
           ["Variação mediana entre o menor e o maior preço", "1,1%"],
         ],
@@ -916,11 +1077,11 @@ export const GUIAS: Guia[] = [
       {
         tipo: "p",
         texto:
-          "Bem mais do que muda no tempo. Em 46% das 1.285 comparações feitas aqui entre 18/10 e 13/11/2026, outra loja vendia o mesmo produto mais barato que o anúncio colado. A diferença em percentual é maior nos itens baratos; em reais, nos caros.",
+          "Bem mais do que muda no tempo. Em 47% das 1.466 comparações feitas aqui entre 18/10 e 16/11/2026, outra loja vendia o mesmo produto mais barato que o anúncio colado. A diferença em percentual é maior nos itens baratos; em reais, nos caros.",
       },
       {
         tipo: "tabela",
-        legenda: "1.285 comparações com duas lojas ou mais, 18/10 a 13/11/2026",
+        legenda: "1.466 comparações com duas lojas ou mais, 18/10 a 16/11/2026",
         colunas: [
           "Preço do anúncio",
           "Comparações",
@@ -928,10 +1089,10 @@ export const GUIAS: Guia[] = [
           "Economia mediana",
         ],
         linhas: [
-          ["Até R$ 100", "509", "39%", "R$ 8,31 (18,3%)"],
-          ["R$ 100 a R$ 300", "352", "53%", "R$ 20,42 (12,5%)"],
-          ["R$ 300 a R$ 1.000", "237", "52%", "R$ 61,51 (10,9%)"],
-          ["Acima de R$ 1.000", "187", "47%", "R$ 173,44 (9,5%)"],
+          ["Até R$ 100", "652", "42%", "R$ 7,40 (16,8%)"],
+          ["R$ 100 a R$ 300", "381", "52%", "R$ 19,43 (12,0%)"],
+          ["R$ 300 a R$ 1.000", "243", "52%", "R$ 63,88 (11,8%)"],
+          ["Acima de R$ 1.000", "190", "47%", "R$ 175,88 (9,8%)"],
         ],
       },
       { tipo: "h2", texto: "Cinco verificações antes de pagar" },
@@ -1002,7 +1163,7 @@ export const GUIAS: Guia[] = [
       {
         pergunta: "Vale esperar a Black Friday para comprar?",
         resposta:
-          "Não necessariamente. Dos 88 preços que acompanhei por mais de uma semana, 20% subiram e 23% caíram. Acompanhar o seu produto dá uma referência melhor que a data.",
+          "Não necessariamente. Dos 88 preços que acompanhei por mais de uma semana, 19% subiram e 23% caíram. Acompanhar o seu produto dá uma referência melhor que a data.",
       },
       {
         pergunta: "Desconto grande é sinal de produto ruim?",
