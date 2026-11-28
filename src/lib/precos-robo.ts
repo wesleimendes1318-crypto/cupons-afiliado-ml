@@ -96,3 +96,9 @@ async function preencherPrecos(db: Db, resposta: RespostaBusca): Promise<Respost
     return resposta;
   }
 }
+
+/** Re-run a cached search that serves under 8 priced cards, if read > 30 min ago. */
+export function refazerCache(servidos: number, lidoEm: string | undefined, agora = Date.now()) {
+  const t = lidoEm ? Date.parse(lidoEm) : NaN;
+  return servidos < 8 && (Number.isNaN(t) || agora - t > 30 * 60_000);
+}
